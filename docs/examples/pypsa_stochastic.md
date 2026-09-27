@@ -63,6 +63,8 @@ def build():
 <!-- gallery:begin -->
 The two-stage class of a plain `n.optimize()`: a network with scenarios, stated on rung 1's transport and rung 3's expansion in a file of its own. Everything over a snapshot spans a scenario as well; capacity does not — it is chosen once, before the future is known — and the cost is the expectation over the scenarios' weights. With a risk preference PyPSA adds the CVaR rows: an excess per scenario and the tail's average, blended into the objective. A dimension a run may not have cannot ride on `examples/pypsa.yaml`, so this class lives here.
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

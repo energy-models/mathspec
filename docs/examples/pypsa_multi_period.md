@@ -111,6 +111,8 @@ def build():
 <!-- gallery:begin -->
 The multi-period class of a plain `n.optimize()`: `multi_investment_periods`, stated on rungs 1 and 3 in a file of its own. A snapshot belongs to an investment period, an asset stands in the periods its build year and lifetime span, and capacity is paid once per period it stands in, each period weighted; a carrier may grow only so much per period. Which snapshots an asset is active in is data prep, because a `where` reaches only the frame's own dimensions. A dimension a run may not have cannot ride on `examples/pypsa.yaml`, so this class lives here.
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

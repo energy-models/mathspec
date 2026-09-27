@@ -248,3 +248,39 @@ def test_a_quadratic_the_data_decides_claims_nothing(patch, says):
     assert dict(verdict.nonconvex) == {}, 'nothing is proven nonconvex'
     (reason,) = verdict.undecided.values()
     assert says in reason
+
+
+# ---------------------------------------------------------------------------
+# the one line a program prints as
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ('path', 'line'),
+    [
+        pytest.param(
+            'dispatch.yaml',
+            '<Program LP: 2 dimensions, 3 parameters, 1 variable, 1 constraint, minimize>',
+            id='an-lp-says-nothing-of-convexity',
+        ),
+        pytest.param(
+            'pypsa_quadratic.yaml',
+            '<Program QP, convexity undecided: 6 dimensions, 13 parameters, 2 variables, 5 constraints, minimize>',
+            id='a-quadratic-kind-carries-its-verdict',
+        ),
+        pytest.param(
+            'piecewise.yaml',
+            '<Program LP: 3 dimensions, 4 parameters, 2 variables, 1 constraint, 1 curve, minimize>',
+            id='a-curve-is-counted-where-there-is-one',
+        ),
+    ],
+)
+def test_a_program_prints_as_one_line_naming_its_class(path, line):
+    program = schema_of(EXAMPLES / path).program
+    assert repr(program) == line
+    assert str(program) == line, 'str falls back to the same line'
+
+
+def test_a_program_with_no_objective_says_so():
+    program = schema_of(BASE, objective=None).program
+    assert repr(program).endswith(', no objective>')

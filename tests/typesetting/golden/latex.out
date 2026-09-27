@@ -7,6 +7,8 @@
 
 \noindent every character a notation escapes, set as text: link\_to, 100\% \& \#1 costs \$5 \{net\} \textasciitilde{} \textasciicircum{} \textbackslash{} *star* @ref <label>, and \texttt{a\_name} in backticks set in code
 
+\noindent A mixed-integer quadratic program (MIQP) whose convexity the data decides: the objective squares 'p' with a coefficient whose sign the file does not state --- an assumptions: entry bounding 'cost' on one side of zero decides it.
+
 \paragraph{Sets}
 \begin{description}
 \item[{$\mathcal{T}$}] index $t$ --- \texttt{snapshot} (\texttt{int} coordinates) with $\mathrm{season\_of}: \mathcal{T} \to \mathcal{S},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T}$

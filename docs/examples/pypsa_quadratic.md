@@ -64,6 +64,8 @@ def build():
 <!-- gallery:begin -->
 The quadratic class of a plain `n.optimize()`: PyPSA's `marginal_cost_quadratic`, stated on rung 1's transport surface in a file of its own. One file cannot carry a quadratic objective beside commitment's integer variables and still solve on HiGHS, because degree is the spec's property and not the data's. So the class a free solver takes as a QP lives here, and `examples/pypsa.yaml` stays the mixed-integer one. PyPSA also carries the attribute on storage units and stores; each is one more term of the same shape.
 
+A quadratic program (QP) whose convexity the data decides: the objective squares 'Generator\_p' with a coefficient whose sign the file does not state — an assumptions: entry bounding 'Generator\_marginal\_cost\_quadratic' on one side of zero decides it.
+
 #### Sets
 
 | Symbol | Meaning |

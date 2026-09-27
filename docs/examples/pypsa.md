@@ -1209,6 +1209,8 @@ concatenation of the regime blocks, `p0`/`p1` derived from `Link-p`.
 <!-- gallery:begin -->
 The spec of the model a plain `n.optimize()` builds, in one file. Every declaration is named `Component_attribute` after the PyPSA statement it stands for, and each constraint's description opens with the linopy name PyPSA gives that row, so the two can be read side by side. PyPSA's regimes — extendable, committable — are data columns and become `where:` masks. Bounds are the explicit rows PyPSA writes, so their duals are row duals. Parameters no PyPSA table carries verbatim are computed in data prep and say so in their description.
 
+A mixed-integer linear program (MILP).
+
 #### Sets
 
 | Symbol | Meaning |

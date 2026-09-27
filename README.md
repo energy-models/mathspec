@@ -116,6 +116,8 @@ Least-cost dispatch of a generator fleet against an hourly load.
 
 Least-cost dispatch of a generator fleet against an hourly load.
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

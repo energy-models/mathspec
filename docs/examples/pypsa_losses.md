@@ -76,6 +76,8 @@ def build():
 <!-- gallery:begin -->
 The lossy class of a plain `n.optimize()`: `transmission_losses` in its tangent form, stated on rung 6's lines in a file of its own. A line dissipates a loss its flow buys along a fan of tangents to the quadratic curve, half at either end — a variable and rows the keyword adds, which no `where:` can add to `examples/pypsa.yaml`. The fan's slopes and offsets are data prep, one per segment.
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

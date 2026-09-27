@@ -93,6 +93,8 @@ def build():
 <!-- gallery:begin -->
 The relaxed class of a plain `n.optimize()`: `linearized_unit_commitment`, stated on rung 1's transport surface in a file of its own. The status, its starts and its stops are shares in \[0, 1\] rather than binaries — a domain is the spec's, not the data's — and four rows PyPSA adds only under the keyword tighten the relaxation where a unit's start and stop cost the same. `examples/pypsa.yaml` stays the integer one.
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

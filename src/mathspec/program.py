@@ -949,6 +949,28 @@ class Program:
             if isinstance(group, Mapping):
                 object.__setattr__(self, f.name, Sealed(group))
 
+    def __repr__(self) -> str:
+        """One line: the problem class, then how many of each declaration, then the objective's sense.
+
+        The declarations themselves are in the groups; spelled out here, the
+        line for a network model runs past a hundred thousand characters.
+        """
+        verdict = self.problem_class
+        kind = verdict.kind
+        if 'Q' in kind:
+            kind += {True: ', convex', False: ', nonconvex', None: ', convexity undecided'}[verdict.convex]
+        counted = [
+            (len(self.dimensions), 'dimension'),
+            (len(self.parameters), 'parameter'),
+            (len(self.variables), 'variable'),
+            (len(self.constraints), 'constraint'),
+            (len(self.sos), 'set'),
+            (len(self.piecewise), 'curve'),
+        ]
+        parts = [f'{n} {noun}' + ('' if n == 1 else 's') for n, noun in counted if n or noun not in ('set', 'curve')]
+        parts.append(self.objective.sense if self.objective is not None else 'no objective')
+        return f'<Program {kind}: {", ".join(parts)}>'
+
     def _by_position(self) -> Iterator[tuple[QuadraticPosition, tuple[Expression, ...]]]:
         """The row-building expressions, grouped by the position they stand in."""
         yield 'objective', (self.objective.expression,) if self.objective is not None else ()
