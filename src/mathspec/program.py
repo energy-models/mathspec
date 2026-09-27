@@ -79,6 +79,8 @@ __all__ = [
     'Power',
     'Predicate',
     'PredicateOperator',
+    'ProblemClass',
+    'ProblemKind',
     'Program',
     'Pullback',
     'PulledBackPredicate',
@@ -157,6 +159,12 @@ SosType = Literal[1, 2]
 #: with [`PIECEWISE_METHODS`][mathspec.spec.PIECEWISE_METHODS], which says what each one
 #: emits, by ``tests/test_schema.py``.
 PiecewiseMethod = Literal['adjacency', 'sos2', 'convex', 'lp']
+
+#: What kind of program a solver is handed, in the names solvers file problems
+#: under: ``MI`` where a variable is integral or a set is declared, then ``LP``
+#: where every row and the objective are affine, ``QP`` where only the
+#: objective is quadratic, and ``QCP`` where a constraint is.
+ProblemKind = Literal['LP', 'MILP', 'QP', 'MIQP', 'QCP', 'MIQCP']
 
 
 # --------------------------------------------------------------------------
@@ -862,6 +870,40 @@ class Separability:
         return replace(self, ahead=ahead, undecided=tuple(r for r in self.undecided if r not in folded))
 
 
+@dataclass(frozen=True)
+class ProblemClass:
+    """What kind of program a solver is handed, and whether its quadratic part is convex.
+
+    Convex means what a solver's check means: the quadratic part of a
+    minimized objective and of a ``<=`` row is positive semidefinite, of a
+    maximized objective and of a ``>=`` row negative semidefinite, and of an
+    ``==`` row zero. For a mixed-integer kind it is the continuous relaxation
+    that is convex or not. Both verdicts are proofs from the file alone, so a
+    declaration whose curvature turns on numbers the file does not bound is
+    neither.
+
+    Attributes:
+        kind: The problem kind, reading a ``piecewise:`` block as the rows it
+            states: ``adjacency`` writes binaries, ``sos2`` a set.
+        nonconvex: Each declaration whose quadratic part is not convex for any
+            data that builds the term, to the term that shows it.
+        undecided: Each declaration whose curvature only data decides, to the
+            term it turns on and, where one would decide it, the assumption to
+            state.
+    """
+
+    kind: ProblemKind
+    nonconvex: Mapping[str, str]
+    undecided: Mapping[str, str]
+
+    @property
+    def convex(self) -> bool | None:
+        """``True`` for any data the assumptions admit, ``False`` for any data that builds a [`nonconvex`][] term, else ``None``."""
+        if self.nonconvex:
+            return False
+        return None if self.undecided else True
+
+
 @dataclass(frozen=True, kw_only=True)
 class Program:
     """A complete declarative description of a mathematical program, with no data in it.
@@ -972,6 +1014,21 @@ class Program:
         from mathspec.separability import separabilities
 
         return Sealed(separabilities(self))
+
+    @cached_property
+    def problem_class(self) -> ProblemClass:
+        """What kind of program this is, and whether its quadratic part is convex — decided once, then held.
+
+        Unlike [`footprint`][], a curve still under [`piecewise`][] counts as
+        the rows it states, so a program and the program of its expansion
+        answer alike. A parameter's sign is read from an ``assumptions:``
+        entry with no ``where:`` that compares it against a number, such as
+        ``cost >= 0``; the consumer attaching the data checks that entry, so
+        a convex verdict holds for any data that passes it.
+        """
+        from mathspec.convexity import problem_class
+
+        return problem_class(self)
 
 
 # --------------------------------------------------------------------------

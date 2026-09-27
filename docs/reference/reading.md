@@ -180,7 +180,60 @@ sorted(kind.__name__ for kind in footprint.kinds)  # ['Constant', 'Multiply', 'P
 Every field is a set, and an empty field means the program does not use the
 construct. Whether a solver takes a construct is the engine's question
 ([what counts as language](../about/what-counts-as-language.md#what-each-tool-decides-for-itself)).
-Convexity is not reported: it depends on the numbers.
+
+## Asking what kind of problem it is
+
+`program.problem_class` names the kind of problem, and says whether its
+quadratic part is convex. A curve still on the program counts as the rows it
+states, so the program and its expansion give one answer:
+
+```python
+program.problem_class.kind  # 'LP'
+rows.problem_class.kind  # 'LP'
+program.problem_class.convex  # True
+```
+
+`kind` is `LP`, `QP` or `QCP`, with `MI` in front where a variable is
+`integer` or `binary`, or where the program declares a set. `QP` has a
+quadratic objective and affine rows. `QCP` has a quadratic row. A `piecewise:`
+block with `method: adjacency` or `method: sos2` makes the program
+mixed-integer.
+
+`convex` is `True`, `False` or `None`. Convex means what a solver checks: the
+quadratic part is positive semidefinite in a minimized objective and a `<=`
+row, negative semidefinite in a maximized objective and a `>=` row, and zero
+in an `==` row. For a mixed-integer kind, the verdict is about the continuous
+relaxation.
+
+- `True` holds for all data that passes the program's assumptions.
+- `False` holds for all data that builds the term that `nonconvex` names.
+- `None` means only the data can decide. `undecided` names the term. Where
+  an assumption would decide it, `undecided` also names the parameter to
+  bound.
+
+A parameter gets a sign from an `assumptions:` entry that has no `where:`
+and compares the parameter with a number:
+
+```python
+cost = {
+    'dimensions': {'generator': {'dtype': 'str'}},
+    'parameters': {'c2': {'dims': ['generator']}},
+    'variables': {'p': {'dims': ['generator'], 'bounds': {'lower': 0}}},
+    'objective': {'sense': 'minimize', 'expression': 'sum(c2 * p * p)'},
+}
+unsigned = to_spec(cost).program.problem_class
+unsigned.kind  # 'QP'
+unsigned.convex  # None
+"bounding 'c2'" in unsigned.undecided['objective']  # True
+
+cost['assumptions'] = {'c2_is_never_negative': {'holds': 'c2 >= 0'}}
+to_spec(cost).program.problem_class.convex  # True
+```
+
+A square, such as `c2 * p * p`, is convex when its coefficient cannot be
+negative. A product of two different variables is `False` when no other
+quadratic term in the same objective or row reads one of the two variables.
+In all other cases, a product of two different expressions is `None`.
 
 ## Asking whether an axis can be cut
 
