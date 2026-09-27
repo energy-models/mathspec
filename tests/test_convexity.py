@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from mathspec import advice
 from tests.fixtures import SMALL_MODEL, expanded, override, schema_of
 
 EXAMPLES = Path(__file__).resolve().parents[1] / 'examples'
@@ -265,7 +266,7 @@ def test_a_quadratic_the_data_decides_claims_nothing(patch, says):
         ),
         pytest.param(
             'pypsa_quadratic.yaml',
-            '<Program QP, convexity undecided: 6 dimensions, 13 parameters, 2 variables, 5 constraints, minimize>',
+            '<Program QP, convex: 6 dimensions, 13 parameters, 2 variables, 5 constraints, minimize>',
             id='a-quadratic-kind-carries-its-verdict',
         ),
         pytest.param(
@@ -281,6 +282,78 @@ def test_a_program_prints_as_one_line_naming_its_class(path, line):
     assert str(program) == line, 'str falls back to the same line'
 
 
+def test_an_undecided_verdict_is_named_in_the_line():
+    program = schema_of(BASE, **{'objective.expression': 'sum(c * x * x, over=g)'}).program
+    assert repr(program).startswith('<Program QP, convexity undecided: ')
+
+
 def test_a_program_with_no_objective_says_so():
     program = schema_of(BASE, objective=None).program
     assert repr(program).endswith(', no objective>')
+
+
+# ---------------------------------------------------------------------------
+# the advice: a sign to state, where stating it is the whole fix
+# ---------------------------------------------------------------------------
+
+
+def _convexity_notes(**patch):
+    return [note for note in advice(schema_of(BASE, **patch)) if note.kind == 'convexity']
+
+
+@pytest.mark.parametrize(
+    ('patch', 'subject', 'holds'),
+    [
+        pytest.param({'objective.expression': 'sum(c * x * x, over=g)'}, 'objective', 'c >= 0', id='minimized'),
+        pytest.param(
+            {'objective.expression': 'sum(c * x * x, over=g)', 'objective.sense': 'maximize'},
+            'objective',
+            'c <= 0',
+            id='maximized',
+        ),
+        pytest.param(
+            {'objective.expression': 'sum(c * k * x * x, over=g)'}, 'objective', 'c >= 0 AND k >= 0', id='two-at-once'
+        ),
+        pytest.param({'constraints.r.expression': 'c * x * x <= 1'}, 'r', 'c >= 0', id='an-at-most-row'),
+        pytest.param({'constraints.r.expression': 'c * x * x >= 1'}, 'r', 'c <= 0', id='an-at-least-row'),
+    ],
+)
+def test_the_note_names_the_assumption_that_decides_it(patch, subject, holds):
+    (note,) = _convexity_notes(**patch)
+    assert note.subject == subject
+    assert f'holds "{holds}"' in str(note)
+
+
+@pytest.mark.parametrize(
+    'patch',
+    [
+        pytest.param({'objective.expression': 'sum(c * x * x, over=g)'}, id='minimized'),
+        pytest.param({'objective.expression': 'sum(c * k * x * x, over=g)'}, id='two-at-once'),
+        pytest.param({'constraints.r.expression': 'c * x * x >= 1'}, id='an-at-least-row'),
+    ],
+)
+def test_stating_what_the_note_says_proves_it_convex(patch):
+    """The note is a rewrite, so applying it is the test: the file it describes is convex and draws no note."""
+    (note,) = _convexity_notes(**patch)
+    holds = str(note).rpartition('holds "')[2].removesuffix('".')
+    fixed = {**patch, 'assumptions': {'stated': {'holds': holds}}}
+    assert schema_of(BASE, **fixed).program.problem_class.convex is True
+    assert _convexity_notes(**fixed) == [], 'the note goes once its assumption is stated'
+
+
+@pytest.mark.parametrize(
+    'patch',
+    [
+        pytest.param({'objective.expression': 'sum(x * x, over=g)'}, id='convex'),
+        pytest.param({'objective.expression': 'sum(x * y, over=g)'}, id='nonconvex-is-a-model-the-author-may-mean'),
+        pytest.param({'objective.expression': 'sum(c * x * y, over=g)'}, id='a-cross-term-no-sign-decides'),
+        pytest.param(
+            {'objective.expression': 'sum(c * x * x, over=g) - sum(c * y * y, over=g)'},
+            id='a-sign-that-makes-one-term-convex-makes-the-other-not',
+        ),
+        pytest.param({'constraints.r.expression': 'c * x * x == 4'}, id='an-equality-no-sign-decides'),
+        pytest.param({}, id='affine'),
+    ],
+)
+def test_no_note_where_no_stated_sign_is_the_fix(patch):
+    assert _convexity_notes(**patch) == []

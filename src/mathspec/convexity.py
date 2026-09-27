@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, assert_never
 
 from mathspec._sealed import Sealed
+from mathspec.errors import Advice
 from mathspec.program import (
     Add,
     Cases,
@@ -131,8 +132,8 @@ def problem_class(program: Program) -> ProblemClass:
     known = _parameter_signs(program)
     nonconvex: dict[str, str] = {}
     undecided: dict[str, str] = {}
-    for label, need, sides in _positions(program):
-        terms = [term for expression, scale in sides for term in _terms(expression, scale, frozenset(), known)]
+    for label, _, need, sides in _positions(program):
+        terms = _collected(sides, known)
         if not terms:
             continue
         verdict, reason = _verdict(terms, need)
@@ -141,6 +142,44 @@ def problem_class(program: Program) -> ProblemClass:
         elif verdict == 'undecided':
             undecided[label] = reason
     return ProblemClass(kind=_kind(program), nonconvex=Sealed(nonconvex), undecided=Sealed(undecided))
+
+
+def convexity_notes(program: Program) -> list[Advice]:
+    """Name each undecided declaration that one stated sign for its unsigned parameters would prove convex.
+
+    Stating that sign is the whole fix, and one ``assumptions:`` entry states
+    it for every parameter at once. A cross term no sign decides draws no
+    note, and neither does a declaration proven nonconvex, which is a model
+    the author may mean.
+    """
+    known = _parameter_signs(program)
+    notes: list[Advice] = []
+    for label, subject, need, sides in _positions(program):
+        unsigned = sorted({name for term in _collected(sides, known) for name in term.unsigned})
+        for signs, op, never in ((NON_NEGATIVE, '>=', 'negative'), (NON_POSITIVE, '<=', 'positive')):
+            if (
+                unsigned
+                and _verdict(_collected(sides, {**known, **dict.fromkeys(unsigned, signs)}), need)[0] == 'convex'
+            ):
+                names = ', '.join(f"'{name}'" for name in unsigned)
+                holds = ' AND '.join(f'{name} {op} 0' for name in unsigned)
+                opening = 'The objective' if label == 'objective' else label[0].upper() + label[1:]
+                notes.append(
+                    Advice(
+                        'convexity',
+                        subject,
+                        f'{opening} is convex for all data once {names} {"is" if len(unsigned) == 1 else "are"} '
+                        f'never {never}, and no assumption states that, so only the data decides now.\n'
+                        f'State it: an assumptions: entry with no where: that holds "{holds}".',
+                    )
+                )
+                break
+    return notes
+
+
+def _collected(sides: tuple[tuple[Expression, Signs], ...], known: Mapping[str, Signs]) -> list[_Term]:
+    """Every product term of one position, each side signed as it enters."""
+    return [term for expression, scale in sides for term in _terms(expression, scale, frozenset(), known)]
 
 
 def _kind(program: Program) -> ProblemKind:
@@ -155,16 +194,16 @@ def _kind(program: Program) -> ProblemKind:
     return _KINDS[integral, shape]
 
 
-def _positions(program: Program) -> Iterator[tuple[str, Need, tuple[tuple[Expression, Signs], ...]]]:
-    """Each declaration a solver checks, with the need its sense sets and each side signed as it enters.
+def _positions(program: Program) -> Iterator[tuple[str, str, Need, tuple[tuple[Expression, Signs], ...]]]:
+    """Each declaration a solver checks — its label, its name — with the need its sense sets and each side signed as it enters.
 
     A row reads as ``lhs - rhs`` against zero, so its right side enters negated.
     """
     if program.objective is not None:
         need: Need = 'psd' if program.objective.sense == 'minimize' else 'nsd'
-        yield 'objective', need, ((program.objective.expression, POSITIVE),)
+        yield 'objective', 'objective', need, ((program.objective.expression, POSITIVE),)
     for name, row in program.constraints.items():
-        yield f"constraint '{name}'", _NEEDS[row.sense], ((row.lhs, POSITIVE), (row.rhs, NEGATIVE))
+        yield f"constraint '{name}'", name, _NEEDS[row.sense], ((row.lhs, POSITIVE), (row.rhs, NEGATIVE))
 
 
 def _verdict(terms: list[_Term], need: Need) -> tuple[Literal['convex', 'nonconvex', 'undecided'], str]:

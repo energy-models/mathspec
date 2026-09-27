@@ -139,6 +139,16 @@ constraints:
       + sum(at(Link_p, by=Link_output_link, over=link, into=link_output) * Link_efficiency, by=Link_output_bus, over=link_output, into=bus)
       == sum(Load_p_set, by=Load_bus, over=load, into=bus)
 
+assumptions:
+  quadratic_costs_are_never_negative:
+    holds: >-
+      Generator_marginal_cost_quadratic >= 0 AND Link_marginal_cost_quadratic >= 0
+      AND snapshot_weightings_objective >= 0
+    description: >-
+      a quadratic cost and a snapshot weighting are never negative in PyPSA, so
+      every square in the objective has a coefficient of one sign and the
+      objective is convex for all data that passes this
+
 objective:
   sense: minimize
   description: operating cost, linear and quadratic, each snapshot weighted by the hours it stands for

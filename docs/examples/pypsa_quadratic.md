@@ -64,7 +64,7 @@ def build():
 <!-- gallery:begin -->
 The quadratic class of a plain `n.optimize()`: PyPSA's `marginal_cost_quadratic`, stated on rung 1's transport surface in a file of its own. One file cannot carry a quadratic objective beside commitment's integer variables and still solve on HiGHS, because degree is the spec's property and not the data's. So the class a free solver takes as a QP lives here, and `examples/pypsa.yaml` stays the mixed-integer one. PyPSA also carries the attribute on storage units and stores; each is one more term of the same shape.
 
-A quadratic program (QP) whose convexity the data decides: the objective squares 'Generator\_p' with a coefficient whose sign the file does not state — an assumptions: entry bounding 'Generator\_marginal\_cost\_quadratic' on one side of zero decides it.
+A convex quadratic program (QP).
 
 #### Sets
 
@@ -213,6 +213,23 @@ p_{t,g} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 
 ```math
 f_{t,l} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `quadratic_costs_are_never_negative`
+
+```yaml
+quadratic_costs_are_never_negative:
+  holds: >-
+    Generator_marginal_cost_quadratic >= 0 AND Link_marginal_cost_quadratic >= 0
+    AND snapshot_weightings_objective >= 0
+  description: >-
+    a quadratic cost and a snapshot weighting are never negative in PyPSA, so
+    every square in the objective has a coefficient of one sign and the
+    objective is convex for all data that passes this
+```
+
+```math
+\mathrm{c}^{(2)}_{t,g} \ge 0 \wedge \mathrm{c}^{f,(2)}_{t,l} \ge 0 \wedge \mathrm{w}_{t} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ l \in \mathcal{L}
 ```
 <!-- gallery:end -->
 

@@ -32,6 +32,7 @@ loads.
 | --------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | `never-an-axis` | a dimension nothing is indexed by, nothing aggregates into and no relation targets                                | remove it, or keep it knowingly if its declarations are still to come |
 | `unbounded`     | a variable that no constraint, set or curve uses, whose objective term pushes it towards a bound it does not have | give it a finite bound, or the constraint that was meant to define it |
+| `convexity`     | a quadratic objective or row that is convex only if a parameter has a sign that no assumption states              | the assumption to state, with the sign that proves it convex          |
 
 ```text
 Variable 'slack' makes this spec unbounded: no constraint names it, and
@@ -40,6 +41,21 @@ objective in. No data can change that, so the solve would answer `unbounded`
 and name nothing.
 Give it a finite bounds.lower, or the constraint that was meant to define it.
 ```
+
+A `convexity` note names every parameter in the declaration whose sign no
+assumption states, and one assumption that states all of their signs:
+
+```text
+The objective is convex for all data once 'cost' is never negative, and no
+assumption states that, so only the data decides now.
+State it: an assumptions: entry with no where: that holds "cost >= 0".
+```
+
+A spec that states that assumption is convex for all data that passes it, and
+it gets no note. There is no note for a declaration that is
+[nonconvex](../reading.md#asking-what-kind-of-problem-it-is), because a
+nonconvex model can be intended. There is also no note where a stated sign
+cannot decide convexity, such as for a product of two different variables.
 
 `advice` is silent where the answer depends on the data: an objective
 coefficient that is a parameter, or a `where:` that leaves one slice of a

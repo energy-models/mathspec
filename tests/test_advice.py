@@ -68,16 +68,27 @@ def test_a_dimension_something_reaches_is_in_use(patch):
     )
 
 
-#: A model with one note of each kind: nothing reaches `h`, and `p` is driven
-#: down by the objective with an open lower bound and no constraint on it.
-BOTH_KINDS = override(UNREACHED, **{'objective.expression': 'sum(p)', 'variables.p.bounds': {'lower': None}})
+#: A model with one note of each kind: nothing reaches `h`, `p` is driven
+#: down by the objective with an open lower bound and no constraint on it, and
+#: `x` is squared under `c`, whose sign no assumption states.
+EVERY_KIND = override(
+    UNREACHED,
+    **{
+        'objective.expression': 'sum(p) + sum(c * x * x)',
+        'variables.p.bounds': {'lower': None},
+        'variables.x': {'dims': ['g']},
+    },
+)
 
 
-def test_both_kinds_of_note_come_through_the_one_door():
-    notes = advice(BOTH_KINDS)
-    assert [(n.kind, n.subject) for n in notes] == [('never-an-axis', 'h'), ('unbounded', 'p')], (
-        'the never-an-axis advice comes first, then the unboundedness advice'
-    )
+def test_every_kind_of_note_comes_through_the_one_door():
+    notes = advice(EVERY_KIND)
+    assert [(n.kind, n.subject) for n in notes] == [
+        ('never-an-axis', 'h'),
+        ('unbounded', 'p'),
+        ('convexity', 'objective'),
+    ], 'the never-an-axis advice comes first, then the unboundedness advice, then the convexity advice'
+
     assert {n.kind for n in notes} == set(get_args(AdviceKind)), (
         'every kind a consumer can pin against is one this file produces'
     )
@@ -101,9 +112,10 @@ def _written(model: dict, tmp_path: Path) -> Path:
 )
 def test_the_answer_does_not_turn_on_which_state_it_is_asked_of(form, tmp_path):
     """A `Program` was advised of one kind and every other input of two (#210), with no signal that a rule had been skipped."""
-    assert [(n.kind, n.subject) for n in advice(form(BOTH_KINDS, tmp_path))] == [
+    assert [(n.kind, n.subject) for n in advice(form(EVERY_KIND, tmp_path))] == [
         ('never-an-axis', 'h'),
         ('unbounded', 'p'),
+        ('convexity', 'objective'),
     ], 'one model, one answer, whichever of the four the caller happens to hold'
 
 

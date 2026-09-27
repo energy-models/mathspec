@@ -230,7 +230,8 @@ cost['assumptions'] = {'c2_is_never_negative': {'holds': 'c2 >= 0'}}
 to_spec(cost).program.problem_class.convex  # True
 ```
 
-A square, such as `c2 * p * p`, is convex when its coefficient cannot be
+[`advice`](language/errors.md#what-advice-warns-about) names the assumption
+to state. A square, such as `c2 * p * p`, is convex when its coefficient cannot be
 negative. A product of two different variables is `False` when no other
 quadratic term in the same objective or row reads one of the two variables.
 In all other cases, a product of two different expressions is `None`.
