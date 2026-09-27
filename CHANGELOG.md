@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat: a spec reports how its optimum moves with a parameter, which for a fixed decision is a Benders cut ([#749](https://github.com/energy-models/mathspec/pull/749))
 - feat: a decided variable becomes a supplied number, so a subproblem is a call on the whole model ([#748](https://github.com/energy-models/mathspec/pull/748))
 - feat: advice names the assumption that proves a quadratic objective or row convex ([#747](https://github.com/energy-models/mathspec/pull/747))
 - feat: a program names its problem class and proves from the file whether its quadratic part is convex ([#746](https://github.com/energy-models/mathspec/pull/746))
