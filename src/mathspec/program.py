@@ -187,12 +187,14 @@ class Variable:
 
 @dataclass(frozen=True)
 class Dual:
-    """A constraint's dual — its shadow price, read after the solve.
+    """A constraint's dual — the rate the optimal objective rises with the constraint's right side, read after the solve.
 
-    Stands only under an [`ExpressionDeclaration`][] the math never reads:
-    the loader refuses ``dual()`` anywhere a solver ingests. One value per
-    coordinate of the named constraint's own ``dims`` frame: the leaf reshapes
-    nothing, like a parameter.
+    Of ``lhs <= rhs`` it is the rate in ``d`` of ``lhs <= rhs + d``, for every
+    comparator and under either sense. Stands only under an
+    [`ExpressionDeclaration`][] the math never reads: the loader refuses
+    ``dual()`` anywhere a solver ingests. One value per coordinate of the named
+    constraint's own ``dims`` frame: the leaf reshapes nothing, like a
+    parameter.
     """
 
     constraint: str
