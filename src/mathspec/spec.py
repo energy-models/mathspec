@@ -857,6 +857,46 @@ class Spec(_StrictBlock):
             expanded = expand_sets(expanded)
         return expanded
 
+    def fix(self, *names: str) -> Spec:
+        """This spec with each named variable read as a number someone else decided.
+
+        Each variable becomes a parameter under the same name and over the
+        same dims, so every expression naming it goes on reading it: a Benders
+        subproblem, a myopic step or a rolling window is a call on the whole
+        model rather than a second file kept in step with it. A ``binary`` or
+        ``integer`` variable becomes an ``int`` parameter, and a continuous one
+        a ``float``. Its bounds, and a binary's ``0`` and ``1``, become the
+        assumption ``<name>_within_bounds``, under the variable's own
+        ``where:``, which the consumer attaching the numbers checks.
+
+        A masked variable with ``absence: undefined`` does not exist outside
+        its mask, and a row reading it there is not built; a parameter reads
+        ``0`` there instead. So every read of it that no summing operator
+        absorbs must stand under its mask: the row's ``where:`` or a case's
+        ``when`` holding every conjunct of it. A constraint that reads it
+        unguarded takes the mask into its own ``where:``, which drops the rows
+        the absence dropped. A reported expression reading it is not guarded:
+        where it read nothing, it now reads ``0``.
+
+        Args:
+            names: The variables to fix, each once. All are fixed in one
+                rewrite, and the result is validated once.
+
+        Returns:
+            A new spec. ``spec.fix('a').fix('b')`` equals ``spec.fix('a', 'b')``.
+
+        Raises:
+            SchemaError: A name that is not a variable, or one given twice.
+            LanguageError: A variable a set or a curve still names, whose
+                fix [`expand`][] has to come first; a read the variable's mask
+                cannot be carried to, named with the reader; or a spec the
+                rewrite leaves outside the language, such as a row that no
+                longer names a variable.
+        """
+        from mathspec.fixing import fix
+
+        return fix(self, names)
+
     @model_validator(mode='after')
     def _names_are_names(self) -> Spec:
         """Every declaration is keyed by something an expression could write.
