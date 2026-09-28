@@ -15,50 +15,49 @@ compose as `override(merge({…}), {…})`.
 
 ## A library of components
 
-1. **Write the coupling surface as a spec.** One flow per port, one balance
-   per bus. Nothing in it names a component class.
+1. **Write the network as a spec.** It declares the injection at a bus as an
+   [empty sum](../reference/language/declarations.md#a-term-a-file-adds),
+   `empty: true` over its frame, and balances it. Nothing in it names a
+   component class.
 
-   ```yaml title="surface.yaml"
+   ```yaml title="network.yaml"
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
-     port: { dtype: str }
-   relations:
-     Port_bus: { key: port, values: bus }
-   variables:
-     Port_p:
-       dims: [snapshot, port]
-       description: what a port puts into its bus
+   expressions:
+     Bus_injection:
+       dims: [snapshot, bus]
+       empty: true
+       description: what the components put into a bus
    constraints:
      Bus_balance:
        dims: [snapshot, bus]
-       expression: sum(Port_p, by=Port_bus, over=port, into=bus) == 0
+       expression: Bus_injection == 0
    ```
 
-2. **Write each component file against that surface.** It declares its own
-   dimension, its own math, and one relation into `port`. It names `Port_p`
-   under [`given`](../reference/language/declarations.md#given), because the
-   surface introduces that column and this file only reads it.
+2. **Write each component file against the network.** It declares its own
+   dimension and its own math. It says what it puts into a bus as a named
+   expression, and names that expression as the `term:` of a
+   [`given`](../reference/language/declarations.md#given) entry for
+   `Bus_injection`.
 
    ```yaml title="generator.yaml"
    dimensions:
      snapshot: { dtype: int }
-     port: { dtype: str }
+     bus: { dtype: str }
      generator: { dtype: str }
    relations:
-     Generator_port: { key: generator, values: port }
-   given:
-     variables:
-       Port_p: { dims: [snapshot, port] }
+     Generator_bus: { key: generator, values: bus }
    parameters:
      Generator_p_nom: { dims: [generator] }
      Generator_marginal_cost: { dims: [generator] }
    variables:
      Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
-   constraints:
-     Generator_injection:
-       dims: [snapshot, generator]
-       expression: at(Port_p, by=Generator_port, over=port, into=generator) == Generator_p
+   expressions:
+     Generator_injection: sum(Generator_p, by=Generator_bus, over=generator, into=bus)
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus], term: Generator_injection }
    objective:
      sense: minimize
      expression: sum(Generator_p * Generator_marginal_cost)
@@ -67,43 +66,66 @@ compose as `override(merge({…}), {…})`.
    ```yaml title="load.yaml"
    dimensions:
      snapshot: { dtype: int }
-     port: { dtype: str }
+     bus: { dtype: str }
      load: { dtype: str }
    relations:
-     Load_port: { key: load, values: port }
-   given:
-     variables:
-       Port_p: { dims: [snapshot, port] }
+     Load_bus: { key: load, values: bus }
    parameters:
      Load_p_set: { dims: [snapshot, load] }
-   constraints:
-     Load_withdrawal:
-       dims: [snapshot, load]
-       expression: at(Port_p, by=Load_port, over=port, into=load) == -Load_p_set
+   expressions:
+     Load_injection: -sum(Load_p_set, by=Load_bus, over=load, into=bus)
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus], term: Load_injection }
    ```
 
    Each file loads on its own and prints as math on its own.
 
 3. **Merge the files you need.** Each fragment is given a name, and that name
-   is what a refusal calls it. The order the fragments are given in does not
-   change the spec.
+   is what a refusal calls it.
 
    ```python
    import mathspec as ms
 
-   spec = ms.merge({'surface': 'surface.yaml', 'generator': 'generator.yaml', 'load': 'load.yaml'})
+   spec = ms.merge({'network': 'network.yaml', 'generator': 'generator.yaml', 'load': 'load.yaml'})
    ```
 
-   `merge` folds each given declaration into the declaration that introduces
-   it, so `spec` declares `Port_p` once and carries no `given:`. The objectives
-   of the fragments are summed, each term in parentheses, in the order the
-   fragment names sort in.
+   `spec` writes `Bus_injection` as `Generator_injection + Load_injection`, and
+   keeps each term as a named expression. It carries no `given:`. The
+   objectives of the fragments are summed, each term in parentheses.
 
-4. **Add a component class without touching the balance.** A component file
-   pins the flow at its own port rather than adding a term to the balance, so
-   `Bus_balance` is written once and stays as it is however many files are
-   merged. What grows is the data: which ports exist, and which bus each one
-   sits on.
+4. **Add a component without touching the network.** A new file adds its own
+   term, and `network.yaml` stays as it is.
+
+   ```yaml title="store.yaml"
+   dimensions:
+     snapshot: { dtype: int }
+     bus: { dtype: str }
+     store: { dtype: str }
+   relations:
+     Store_bus: { key: store, values: bus }
+   parameters:
+     Store_e_nom: { dims: [store] }
+   variables:
+     Store_p: { dims: [snapshot, store] }
+     Store_e: { dims: [snapshot, store], bounds: { lower: 0, upper: Store_e_nom } }
+   constraints:
+     Store_energy_balance:
+       dims: [snapshot, store]
+       expression: Store_e == shift(Store_e, along=snapshot, offset=1, edge='wrap') - Store_p
+   expressions:
+     Store_injection: sum(Store_p, by=Store_bus, over=store, into=bus)
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus], term: Store_injection }
+   ```
+
+   With `'store': 'store.yaml'` in the call, `Bus_injection` is
+   `Generator_injection + Load_injection + Store_injection`.
+
+A library can also couple its components through a flow variable per port,
+which each component pins at its own port.
+[A component library](../examples/library/index.md) is written that way.
 
 ## What a fragment may share
 
@@ -130,18 +152,34 @@ fragments 'gas' and 'coal' both declare the parameter 'Generator_p_nom'. Two of 
 ```
 
 A term is a named expression like any other, so the terms of two fragments
-need two names. Name each term after its component, such as `generation` and
-`consumption`, rather than after the sum it adds to.
+need two names. Name each term after its component, such as
+`Generator_injection` and `Load_injection`.
 
 ## A column read one way and introduced another
 
 What a fragment states about a column it reads has to agree with the fragment
 that introduces the column. The reader may say less, such as the frame with no
-`domain`, and may not say something else. Here the generator reads `Port_p` as
-binary:
+`domain`, and may not say something else. Here a file that caps emissions
+reads `Generator_p` as binary:
+
+```yaml title="emissions.yaml"
+dimensions:
+  snapshot: { dtype: int }
+  generator: { dtype: str }
+given:
+  variables:
+    Generator_p: { dims: [snapshot, generator], domain: binary }
+parameters:
+  Generator_co2: { dims: [generator] }
+  co2_cap: { dims: [] }
+constraints:
+  co2_limit:
+    dims: []
+    expression: sum(Generator_p * Generator_co2) <= co2_cap
+```
 
 ```text
-fragment 'generator' reads the given variable 'Port_p' as {'dims': ['snapshot', 'port'], 'domain': 'binary'}, where 'surface' introduces it as {'dims': ['snapshot', 'port'], 'domain': 'continuous', 'absence': 'undefined', 'description': 'what a port puts into its bus'}. A given declaration says the same as the declaration it is folded into, or less: restate the frame as the introducer declares it, or leave the field out.
+fragment 'emissions' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'absence': 'undefined'}. A given declaration says the same as the declaration it is folded into, or less: restate the frame as the introducer declares it, or leave the field out.
 ```
 
 Two fragments that both only read a column have to read it the same way, and
