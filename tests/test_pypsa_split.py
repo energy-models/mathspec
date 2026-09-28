@@ -38,17 +38,17 @@ def test_a_fragment_loads_on_its_own(name):
 
 
 def test_the_fragments_merge_to_the_one_file(model):
-    merged = merge(PATHS, description=model.data['description'])
+    merged = merge(list(PATHS.values()), description=model.data['description'])
     assert canonical_yaml(merged) == canonical_yaml(to_spec(SOURCE))
     assert not merged.program.given, 'every name a fragment reads, another fragment declares'
 
 
 def test_each_sum_is_its_terms_by_name_and_each_term_stays(model):
-    merged = merge(PATHS)
+    merged = merge(list(PATHS.values()))
     assert merged.expressions['Bus_injection'].expression == (
         'Generator_injection + Line_injection + Link_injection + Load_injection + Process_injection'
         ' + StorageUnit_injection + Store_injection + Transformer_injection'
-    ), 'the terms in the order the fragment names sort in'
+    ), 'the terms in the order the files are given in'
     assert set(model.terms) <= set(merged.expressions), 'every term is a named expression of the composed spec'
 
 
@@ -90,7 +90,7 @@ def _family(name: str, dropped: list[str]) -> bool:
 def test_leaving_a_topic_out_leaves_a_whole_model(dropped):
     kept = {name: path for name, path in PATHS.items() if not _family(name, dropped.split())}
     assert len(kept) < len(PATHS), f'{dropped} names a fragment'
-    assert not merge(kept).program.given, f'nothing that stays reads what {dropped} declares'
+    assert not merge(list(kept.values())).program.given, f'nothing that stays reads what {dropped} declares'
 
 
 def test_every_sum_is_declared_empty_with_its_description_in_one_fragment(model):
@@ -118,10 +118,10 @@ def test_leaving_out_the_owner_of_a_sum_no_model_goes_without_is_refused(dropped
     """Only the owner declares the sum, so without it the terms land on no name rather than define one."""
     kept = {name: path for name, path in PATHS.items() if name != dropped}
     with pytest.raises(LanguageError, match=rf"add a term to '{sum_name}', which no fragment declares"):
-        merge(kept)
+        merge(list(kept.values()))
 
 
 @pytest.mark.parametrize('fmt', sorted(FORMATS))
 def test_every_fragment_and_the_composition_print(fmt):
     assert all(typeset(path, fmt) for path in PATHS.values()), f'a fragment rendered nothing in {fmt}'
-    assert typeset(merge(PATHS), fmt)
+    assert typeset(merge(list(PATHS.values())), fmt)
