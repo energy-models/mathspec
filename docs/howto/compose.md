@@ -15,20 +15,20 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
 
 ## A library of components
 
-1. **Write the network as a spec.** It declares the injection at a bus as an
-   [empty sum](../reference/language/declarations.md#a-term-a-file-adds),
-   `empty: true` over its frame, and balances it. Nothing in it names a
-   component class.
+1. **Write the network as a spec.** It balances the injection at a bus, and
+   reads the injection under
+   [`given`](../reference/language/declarations.md#given): what the components
+   put in is theirs to say. Nothing in it names a component class.
 
    ```yaml title="network.yaml"
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
-   expressions:
-     Bus_injection:
-       dims: [snapshot, bus]
-       empty: true
-       description: what the components put into a bus
+   given:
+     expressions:
+       Bus_injection:
+         dims: [snapshot, bus]
+         description: what the components put into a bus
    constraints:
      Bus_balance:
        dims: [snapshot, bus]
@@ -36,9 +36,9 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    ```
 
 2. **Write each component file against the network.** It declares its own
-   dimension and its own math. It says what it puts into a bus as a named
-   expression, and names that expression as the `term:` of a
-   [`given`](../reference/language/declarations.md#given) entry for
+   dimension and its own math. It reads `Bus_injection` too, and says what it
+   puts into a bus as a named expression, a
+   [term](../reference/language/declarations.md#terms) whose `adds_to:` names
    `Bus_injection`.
 
    ```yaml title="generator.yaml"
@@ -53,11 +53,13 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      Generator_marginal_cost: { dims: [generator] }
    variables:
      Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
-   expressions:
-     Generator_injection: sum(Generator_p, by=Generator_bus, over=generator, into=bus)
    given:
      expressions:
-       Bus_injection: { dims: [snapshot, bus], term: Generator_injection }
+       Bus_injection: { dims: [snapshot, bus] }
+   expressions:
+     Generator_injection:
+       expression: sum(Generator_p, by=Generator_bus, over=generator, into=bus)
+       adds_to: Bus_injection
    objective:
      sense: minimize
      expression: sum(Generator_p * Generator_marginal_cost)
@@ -72,11 +74,13 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      Load_bus: { key: load, values: bus }
    parameters:
      Load_p_set: { dims: [snapshot, load] }
-   expressions:
-     Load_injection: -sum(Load_p_set, by=Load_bus, over=load, into=bus)
    given:
      expressions:
-       Bus_injection: { dims: [snapshot, bus], term: Load_injection }
+       Bus_injection: { dims: [snapshot, bus] }
+   expressions:
+     Load_injection:
+       expression: -sum(Load_p_set, by=Load_bus, over=load, into=bus)
+       adds_to: Bus_injection
    ```
 
    Each file loads on its own and prints as math on its own.
@@ -91,11 +95,11 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    spec = ms.merge(['network.yaml', 'generator.yaml', 'load.yaml'])
    ```
 
-   `spec` writes `Bus_injection` as `Generator_injection + Load_injection`, and
-   keeps each term as a named expression. It carries no `given:`. The
-   objectives of the fragments are summed, each term in parentheses, in the
-   order of the list. The order changes no meaning:
-   [`canonical`](compare.md) writes the same text for every order.
+   `spec` defines `Bus_injection` as `Generator_injection + Load_injection`,
+   and keeps each term as a named expression. Nothing is left under `given:`,
+   so `spec` is fully defined. The objectives of the fragments are summed,
+   each term in parentheses, in the order of the list. The order changes no
+   meaning: [`canonical`](compare.md) writes the same text for every order.
 
 4. **Add a component without touching the network.** A new file adds its own
    term, and `network.yaml` stays as it is.
@@ -116,15 +120,24 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      Store_energy_balance:
        dims: [snapshot, store]
        expression: Store_e == shift(Store_e, along=snapshot, offset=1, edge='wrap') - Store_p
-   expressions:
-     Store_injection: sum(Store_p, by=Store_bus, over=store, into=bus)
    given:
      expressions:
-       Bus_injection: { dims: [snapshot, bus], term: Store_injection }
+       Bus_injection: { dims: [snapshot, bus] }
+   expressions:
+     Store_injection:
+       expression: sum(Store_p, by=Store_bus, over=store, into=bus)
+       adds_to: Bus_injection
    ```
 
-   With `'store.yaml'` added to the list, `Bus_injection` is
-   `Generator_injection + Load_injection + Store_injection`.
+   Add the file to the list:
+
+   ```python
+   spec = ms.merge(['network.yaml', 'generator.yaml', 'load.yaml', 'store.yaml'])
+   ```
+
+   `Bus_injection` is `Generator_injection + Load_injection + Store_injection`.
+   A merged spec defines `Bus_injection`, so it takes no further term: merge
+   every fragment in one list.
 
 A library can also couple its components through a flow variable per port,
 which each component pins at its own port.
