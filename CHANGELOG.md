@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- fix(typeset): a substituted term that opens with a minus prints as a subtraction ([#759](https://github.com/energy-models/mathspec/pull/759))
 - docs: a file restates a shared dimension as its dtype alone, and `merge` carries the one description written for it ([#743](https://github.com/energy-models/mathspec/pull/743))
 - feat(language): a sum other files add terms to is declared as an expression with `empty: true` ([#742](https://github.com/energy-models/mathspec/pull/742))
 - docs(notation): the notation page shows a named expression whose declared frame is wider than its body ([#756](https://github.com/energy-models/mathspec/pull/756))
