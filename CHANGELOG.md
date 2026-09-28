@@ -14,6 +14,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 - feat: advice names the assumption that proves a quadratic objective or row convex ([#747](https://github.com/energy-models/mathspec/pull/747))
 - feat: a program names its problem class and proves from the file whether its quadratic part is convex ([#746](https://github.com/energy-models/mathspec/pull/746))
+- docs: the composition how-to builds a component library from terms each file adds to a sum ([#762](https://github.com/energy-models/mathspec/pull/762))
 - docs(pypsa): a single spec covers every pypsa model class and component ([#620](https://github.com/energy-models/mathspec/pull/620))
 - docs(pypsa): the pypsa spec is also 24 topic files that merge back to it, each component adding its share of a sum by name ([#736](https://github.com/energy-models/mathspec/pull/736))
 - fix(typeset): a substituted term that opens with a minus prints as a subtraction ([#759](https://github.com/energy-models/mathspec/pull/759))
