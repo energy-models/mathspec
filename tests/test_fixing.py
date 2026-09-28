@@ -17,11 +17,11 @@ from pathlib import Path
 import pytest
 
 from mathspec import LanguageError, SchemaError
-from tests.fixtures import SMALL_MODEL, override, schema_of
+from tests.fixtures import SMALL_MODEL, schema_of, varied
 
 EXAMPLES = Path(__file__).resolve().parents[1] / 'examples'
 
-BASE = override(
+BASE = varied(
     SMALL_MODEL,
     parameters={**SMALL_MODEL['parameters'], 'cap_max': {'dims': ['g']}},
     variables={
@@ -36,7 +36,7 @@ BASE = override(
 )
 
 #: `cap` exists only where `flag`, and is read outside a sum by `within`.
-MASKED = override(BASE, **{'variables.cap.where': 'flag'})
+MASKED = varied(BASE, **{'variables.cap.where': 'flag'})
 
 
 def _fixed(model=BASE, *names, **patch):

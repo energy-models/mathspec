@@ -16,7 +16,7 @@ from __future__ import annotations
 import pytest
 
 from mathspec import LanguageError, SchemaError
-from tests.fixtures import override, schema_of
+from tests.fixtures import schema_of, varied
 from tests.test_fixing import MONOLITH
 
 SUBPROBLEM = schema_of(MONOLITH).fix('cap').to_dict()
@@ -61,7 +61,7 @@ def test_the_rows_sides_decide_the_sign_and_its_comparator_does_not(capacity, wr
 
 def test_maximize_takes_the_same_expression():
     """The dual is the rise of the objective with the right side under either sense, so nothing flips."""
-    raw = override(SUBPROBLEM, objective={'sense': 'maximize', 'expression': '-sum(cap * invest) - sum(p * cost)'})
+    raw = varied(SUBPROBLEM, objective={'sense': 'maximize', 'expression': '-sum(cap * invest) - sum(p * cost)'})
     assert _written(raw, 'cap')['cap'] == '-invest + sum(dual(capacity) * avail, over=snapshot)'
 
 
