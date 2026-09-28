@@ -11,9 +11,9 @@ other files. Do [your first spec](first-spec.md) first.
 
 ## The network
 
-Make a file `network.yaml`. It balances every bus, and it reads the injection
-at a bus under [`given:`](reference/language/declarations.md#given) rather
-than defining it:
+Make a file `network.yaml`. It balances every bus. It defines the injection at
+a bus as an [empty expression](reference/language/named.md#an-empty-expression),
+`expression: null`, which the other files fill:
 
 ```yaml title="network.yaml"
 description: Every bus is balanced in every snapshot.
@@ -22,11 +22,11 @@ dimensions:
   snapshot: { dtype: int, description: dispatch periods }
   bus: { description: network nodes }
 
-given:
-  expressions:
-    injection:
-      dims: [snapshot, bus]
-      description: what the components put into a bus, less what they take out
+expressions:
+  injection:
+    dims: [snapshot, bus]
+    expression: null
+    description: what the components put into a bus, less what they take out
 
 constraints:
   balance:
@@ -40,11 +40,38 @@ Check the file:
 python -m mathspec check network.yaml
 ```
 
-The check accepts it, and notes the expression it reads:
+The check accepts it, and prints nothing.
 
-```text
-expression 'injection' is read here and declared elsewhere: the model this one is layered onto provides it. A consumer checks that it does, on the same frame, and refuses the program where it does not. A fragment is composed instead: merge() folds this declaration into the one a sibling introduces.
+Print the math of the file on its own:
+
+```python
+import mathspec as ms
+
+print(ms.to_markdown('network.yaml', legend=False))
 ```
+
+The file does not know what the injection holds, so its definition prints as
+dots:
+
+!!! example "Rendered output"
+
+    Every bus is balanced in every snapshot.
+
+    #### Subject to
+
+    **`balance`**
+
+    ```math
+    \mathit{injection}_{t,b} = 0 \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+    ```
+
+    #### Definitions
+
+    **`injection`**
+
+    ```math
+    \mathit{injection}_{t,b} = \dots \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+    ```
 
 ## The generators
 
@@ -105,8 +132,6 @@ expression 'injection' is read here and declared elsewhere, and this file adds a
 Print the math of the file on its own:
 
 ```python
-import mathspec as ms
-
 print(ms.to_markdown('generators.yaml', legend=False))
 ```
 
@@ -188,7 +213,7 @@ print(spec.expressions['injection'].expression)
 ```
 
 The injection is the sum of the two terms by name, in the order of the file
-names. Each term stays a named expression of the merged spec:
+names, and the empty definition adds nothing. Each term stays a named expression of the merged spec:
 
 ```text
 generation + consumption
@@ -218,6 +243,12 @@ print(ms.to_markdown(spec, legend=False))
 
     #### Definitions
 
+    **`injection`**
+
+    ```math
+    \mathit{injection}_{t,b} = \mathit{generation}_{t,b} + \mathrm{consumption}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+    ```
+
     **`generation`**
 
     ```math
@@ -228,12 +259,6 @@ print(ms.to_markdown(spec, legend=False))
 
     ```math
     \mathrm{consumption}_{t,b} = -\mathrm{demand}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
-    ```
-
-    **`injection`**
-
-    ```math
-    \mathit{injection}_{t,b} = \mathit{generation}_{t,b} + \mathrm{consumption}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
     ```
 
     #### Variable domains
@@ -370,11 +395,11 @@ Merge the generators and the loads without the network:
 ms.merge({'generators': 'generators.yaml', 'loads': 'loads.yaml'})
 ```
 
-`merge` refuses it. A term adds to a name another file has, and without the
-network no file defines, reads or uses `injection`:
+`merge` refuses it. A term adds to a definition another file writes, and
+without the network no file defines `injection`:
 
 ```text
-fragments 'generators' and 'loads' add a term to 'injection', which no fragment defines, reads or uses. A term adds to a name another file has: define it under 'expressions:', read it under 'given: expressions:', or fix the spelling.
+fragments 'generators' and 'loads' add a term to 'injection', which no fragment defines. A term adds to a definition another file writes under 'expressions:': define it there, as `expression: null` where the terms are all of it, or fix the spelling.
 ```
 
 ## Where to next

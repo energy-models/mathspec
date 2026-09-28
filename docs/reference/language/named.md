@@ -81,6 +81,8 @@ Each case prints as one row of the definition, and `otherwise:` as the last:
 $$\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \cr \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \cr \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\thinspace t \in \mathcal{T},\enspace g \in \mathcal{G}$$
 
 A named expression carries **exactly one** of `expression:` and `cases:`.
+`expression: null` counts as an `expression:`: it is
+[an empty expression](#an-empty-expression).
 
 | Key         |                                                                              |
 | ----------- | ---------------------------------------------------------------------------- |
@@ -120,6 +122,38 @@ widen a `when`, give the `shift` an `edge=`, or set `absence: zero` on the
 masked variable.
 
 `cases:` is not accepted inside a `macros:` template.
+
+## An empty expression
+
+`expression: null` defines a quantity with no body of its own. Other files add
+[terms](declarations.md#a-term-a-file-adds) to it, and
+[`merge`](../../howto/compose.md#a-library-of-components) sums them.
+
+```yaml
+dimensions:
+  snapshot: { dtype: int }
+  bus: { dtype: str }
+expressions:
+  injection:
+    dims: [snapshot, bus]
+    expression: null
+    description: what the components put into a bus
+constraints:
+  balance:
+    dims: [snapshot, bus]
+    expression: injection == 0
+```
+
+`dims:` is required, because no body gives the frame. `cases:` and
+`otherwise:` are refused beside it. On its own, the file reads the name as it
+reads a [given expression](declarations.md#given-expressions): a quantity over
+the frame, of degree one, that a `where` does not read. The program holds it
+under `given.expressions`, marked `empty`. The definition prints as dots:
+
+$$\mathit{injection}_{t,b} = \dots \qquad \forall\thinspace t \in \mathcal{T},\enspace b \in \mathcal{B}$$
+
+The legend lists it under _Definitions_. It draws no advice. A merge that adds
+no term to it keeps it empty.
 
 ## Reported expressions
 

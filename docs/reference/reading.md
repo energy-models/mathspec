@@ -173,7 +173,9 @@ model this one is layered onto. An expression reads a given expression as a
 A given expression with a `term` is one this file adds to:
 `program.given.expressions[name].term` is the term: the `Named` node of the
 entry of `program.expressions` it names. The name is still one the program
-reads and does not build.
+reads and does not build. An [empty expression](language/named.md#an-empty-expression)
+is under `program.given.expressions` too, with `empty` set: the file defines
+the name, and the terms other files add are its whole body.
 
 ```python
 layer = to_spec(

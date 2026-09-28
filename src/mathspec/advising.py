@@ -53,7 +53,8 @@ def _given(program: Program) -> list[Advice]:
     A note rather than a refusal: the file is a spec somebody meant, and only
     the consumer can tell whether the model it is layered onto provides the
     name. An expression this file adds a term to is completed by `merge`
-    rather than by a host, so its note says that instead.
+    rather than by a host, so its note says that instead. An empty expression
+    draws none: ``expression: null`` already says that other files fill it.
     """
     given = program.given
     return [
@@ -62,6 +63,7 @@ def _given(program: Program) -> list[Advice]:
         *(
             Advice('given', name, _term_note(name) if block.term is not None else _given_note('expression', name))
             for name, block in given.expressions.items()
+            if not block.empty
         ),
         *(Advice('given', name, _given_note('row family', name)) for name in given.constraints),
     ]

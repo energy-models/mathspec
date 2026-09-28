@@ -8,8 +8,9 @@ A balance reads what every component puts into a bus, and a component file
 says what it puts there: a named expression of its own, which the `term:` on
 its `given: expressions:` entry names. The file reads the name as the whole
 sum, alone and composed. `merge` defines the name as the definition one
-fragment writes, if any, plus every term by name, and keeps each term, so
-nothing has to declare that the name is a sum.
+fragment writes plus every term by name, and keeps each term, so nothing has
+to declare that the name is a sum. A definition the terms are all of is
+written `expression: null`.
 """
 
 from __future__ import annotations
@@ -28,7 +29,18 @@ from mathspec import (
     typeset_declaration,
 )
 from mathspec.program import Named, Variable, walk
-from tests.fixtures import BALANCE, BUS_DIMS, BUS_FRAME, INJECTION
+from tests.fixtures import BALANCE as READER
+from tests.fixtures import BUS_DIMS, BUS_FRAME, INJECTION
+
+#: A balance that defines the injection as empty, for the terms to fill, and reads it.
+BALANCE = {
+    'dimensions': BUS_DIMS,
+    'expressions': {'injection': {'dims': BUS_FRAME, 'expression': None, 'description': INJECTION}},
+    'constraints': {'balance': {'dims': BUS_FRAME, 'expression': 'injection == 0'}},
+}
+
+#: An empty definition and nothing else, for readers to read.
+HUB = {'dimensions': BUS_DIMS, 'expressions': {'injection': {'dims': BUS_FRAME, 'expression': None}}}
 
 #: A generator fleet: what it puts in is its term.
 FLEET = {
@@ -161,6 +173,59 @@ def test_the_advice_says_the_file_adds_a_term():
 
 
 # ---------------------------------------------------------------------------
+# an empty expression
+# ---------------------------------------------------------------------------
+
+
+def test_an_empty_expression_loads_alone_as_a_quantity_over_its_frame():
+    """Alone, the file reads the name as it reads a given expression, so its balance is a row on a quantity."""
+    program = to_spec(BALANCE).program
+    empty = program.given.expressions['injection']
+    assert empty.empty
+    assert empty.dims == ('snapshot', 'bus')
+    assert 'injection' not in program.expressions, 'an empty expression has no body to hold'
+    assert program.constraints['balance'].lhs == Variable('injection')
+
+
+def test_an_empty_expression_is_written_back_as_null():
+    spec = to_spec(BALANCE)
+    assert spec.to_dict()['expressions']['injection'] == {
+        'dims': BUS_FRAME,
+        'expression': None,
+        'description': INJECTION,
+    }, 'the null is the definition, not an absence to drop'
+    assert 'expression: null' in spec.to_yaml(canonical=True)
+    assert to_spec(spec.to_yaml()) == spec
+
+
+def test_an_empty_expression_draws_no_advice():
+    """The null already says that other files fill it; the note for a reading would say another file defines it."""
+    assert not advice(BALANCE), 'the file is explicit about everything it leaves to others'
+
+
+def test_an_empty_expression_no_term_fills_stays_empty_once_composed():
+    composed = merge({'hub': HUB, 'balance': READER})
+    assert composed.expressions['injection'].empty
+    assert not composed.given, 'the reading is folded into the empty definition'
+
+
+def test_the_sum_keeps_the_frame_of_its_definition():
+    """A term narrower than the definition broadcasts along the rest, as the file that defines the name reads it.
+
+    The composed definition once dropped the `dims:` its fragment wrote, so its frame was the terms' alone.
+    """
+    shed = {
+        'dimensions': BUS_DIMS,
+        'variables': {'shed': {'dims': ['bus']}},
+        'given': {'expressions': {'injection': {'dims': BUS_FRAME, 'term': 'shedding'}}},
+        'expressions': {'shedding': 'shed'},
+    }
+    composed = merge({'balance': BALANCE, 'shed': shed})
+    assert composed.expressions['injection'].dims == BUS_FRAME
+    assert composed.program.expressions['injection'].dims == ('snapshot', 'bus')
+
+
+# ---------------------------------------------------------------------------
 # merge
 # ---------------------------------------------------------------------------
 
@@ -201,18 +266,23 @@ def test_a_definition_that_is_more_than_a_name_is_bracketed():
     assert composed.expressions['injection'].expression == '(slack - slack / 2) + demand_injection'
 
 
-def test_the_sum_takes_the_readers_description():
+def test_the_sum_keeps_the_description_of_its_empty_definition():
     composed = merge({'fleet': FLEET, 'demand': DEMAND, 'balance': BALANCE})
+    assert composed.program.expressions['injection'].description == INJECTION
+
+
+def test_the_sum_takes_the_readers_description_where_the_definition_has_none():
+    composed = merge({'hub': HUB, 'fleet': FLEET, 'balance': READER})
     assert composed.program.expressions['injection'].description == INJECTION
 
 
 def test_two_readers_that_word_the_sum_apart_give_it_the_first_wording_in_name_order():
     """The sum once took the wording of whichever reader was passed first."""
-    capped = {**BALANCE, 'given': {'expressions': {'injection': {'dims': BUS_FRAME, 'description': 'a cap'}}}}
+    capped = {**READER, 'given': {'expressions': {'injection': {'dims': BUS_FRAME, 'description': 'a cap'}}}}
     capped = {**capped, 'constraints': {'capped': {'dims': BUS_FRAME, 'expression': 'injection <= 10'}}}
     for fragments in (
-        {'capped': capped, 'balance': BALANCE, 'fleet': FLEET},
-        {'balance': BALANCE, 'capped': capped, 'fleet': FLEET},
+        {'capped': capped, 'balance': READER, 'hub': HUB, 'fleet': FLEET},
+        {'balance': READER, 'capped': capped, 'hub': HUB, 'fleet': FLEET},
     ):
         assert merge(fragments).expressions['injection'].description == INJECTION, "the wording of 'balance'"
 
@@ -245,9 +315,22 @@ def test_a_cased_term_is_added_like_any_other():
     [
         pytest.param(
             {'fleet': FLEET, 'demand': DEMAND},
-            r"fragments 'demand' and 'fleet' add a term to 'injection', which no fragment defines, reads or uses\. "
-            r'.*or fix the spelling\.$',
+            r"fragments 'demand' and 'fleet' add a term to 'injection', which no fragment defines\. "
+            r'.*as `expression: null` where the terms are all of it, or fix the spelling\.$',
             id='terms-and-nothing-else-with-no-near-miss',
+        ),
+        pytest.param(
+            {'balance': READER, 'fleet': FLEET},
+            r"fragment 'fleet' adds a term to 'injection', which no fragment defines\.",
+            id='terms-on-a-reading-and-no-definition',
+        ),
+        pytest.param(
+            {
+                'fleet': {**FLEET, 'constraints': {'capped': {'dims': BUS_FRAME, 'expression': 'injection <= 10'}}},
+                'demand': DEMAND,
+            },
+            r"fragments 'demand' and 'fleet' add a term to 'injection', which no fragment defines\.",
+            id='terms-on-a-use-and-no-definition',
         ),
         pytest.param(
             {
@@ -260,15 +343,12 @@ def test_a_cased_term_is_added_like_any_other():
     ],
 )
 def test_terms_that_land_on_no_name_are_refused(fragments, message):
-    """Merge fills a reading or extends a definition; it never invents a name, which is what a typo would ask for."""
+    """Merge extends a definition; it never invents a name, which is what a typo would ask for.
+
+    A reading or a use once took the terms as the whole definition. An empty definition is written out now.
+    """
     with pytest.raises(LanguageError, match=message):
         merge(fragments)
-
-
-def test_a_term_lands_on_a_name_a_contributor_s_own_math_uses():
-    capped = {**FLEET, 'constraints': {'capped': {'dims': BUS_FRAME, 'expression': 'injection <= 10'}}}
-    composed = merge({'fleet': capped, 'demand': DEMAND})
-    assert composed.program.expressions['injection'].in_math
 
 
 def test_one_term_alone_is_its_name():
@@ -315,7 +395,7 @@ def test_a_cased_definition_a_term_adds_to_is_refused():
 
 
 def test_two_readers_that_disagree_about_the_frame_are_refused():
-    narrow = {**BALANCE, 'given': {'expressions': {'injection': {'dims': ['bus']}}}}
+    narrow = {**READER, 'given': {'expressions': {'injection': {'dims': ['bus']}}}}
     narrow = {**narrow, 'constraints': {'balance': {'dims': ['bus'], 'expression': 'injection == 0'}}}
     with pytest.raises(LanguageError, match=r"say different things about the given expression 'injection'"):
         merge({'balance': narrow, 'fleet': FLEET})
@@ -341,6 +421,18 @@ def test_a_definition_over_a_dimension_the_readers_do_not_state_is_refused():
         merge({'network': wide, 'demand': DEMAND})
 
 
+def test_a_reader_over_less_than_the_empty_definition_is_refused():
+    wide = {
+        'dimensions': {**BUS_DIMS, 'carrier': {'dtype': 'str'}},
+        'expressions': {'injection': {'dims': [*BUS_FRAME, 'carrier'], 'expression': None}},
+    }
+    with pytest.raises(
+        LanguageError,
+        match=r"'balance' reads the given expression 'injection' as .*'hub' introduces it over \['bus', 'carrier', 'snapshot'\]",
+    ):
+        merge({'hub': wide, 'balance': READER, 'demand': DEMAND})
+
+
 def test_a_patch_changes_a_term_by_its_name_and_null_drops_it():
     doubled = override(DEMAND, {'double': {'expressions': {'demand_injection': '-2 * load'}}})
     assert doubled.expressions['demand_injection'].expression == '-2 * load'
@@ -358,13 +450,26 @@ def test_the_legend_names_the_term_the_file_adds():
     assert 'an expression this file adds `demand_injection` to' in given
 
 
-@pytest.mark.parametrize('spec', [pytest.param(BALANCE, id='a-reader'), pytest.param(FLEET, id='a-contributor')])
+@pytest.mark.parametrize('spec', [pytest.param(READER, id='a-reader'), pytest.param(FLEET, id='a-contributor')])
 def test_a_given_expression_prints_no_line_of_its_own(spec):
     """The term prints as the definition it is; the name it adds to prints in the legend, with or without a term."""
     with pytest.raises(
         LanguageError, match=r"'injection' is a given expression, and a given declaration prints no line"
     ):
         typeset_declaration(spec, 'injection', 'latex')
+
+
+@pytest.mark.parametrize(
+    ('fmt', 'dots'), [pytest.param('latex', r'= \dots', id='latex'), pytest.param('typst', '= dots.h', id='typst')]
+)
+def test_an_empty_expression_prints_as_dots(fmt, dots):
+    assert dots in typeset_declaration(BALANCE, 'injection', fmt)
+
+
+def test_the_legend_lists_an_empty_expression_under_definitions():
+    page = to_markdown(BALANCE)
+    assert '#### Given' not in page, 'the file defines the name, and reads nothing it does not'
+    assert '`injection` over' in page.split('#### Definitions')[1]
 
 
 def test_the_composed_sum_prints_its_terms_by_name():

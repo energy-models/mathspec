@@ -464,6 +464,11 @@ class ExpressionBlock(_StrictBlock):
     is constant along the rest. A quantity whose value varies by region is
     written as ``cases:`` over a declared ``dims:``, with an ``otherwise:``
     for the rest — see the language reference.
+
+    ``expression: null`` over a declared ``dims:`` is an empty expression: a
+    definition with no body of its own, which the terms other files add fill
+    once [`merge`][mathspec.composition.merge] composes them. Alone, the file
+    reads it as it reads a given expression.
     """
 
     _label: ClassVar[str] = 'a named expression'
@@ -483,14 +488,26 @@ class ExpressionBlock(_StrictBlock):
     def _from_string(cls, data: object) -> object:
         return {'expression': data} if isinstance(data, str) else data
 
+    @property
+    def empty(self) -> bool:
+        """Whether the entry is written as ``expression: null``: a definition the terms other files add fill."""
+        return 'expression' in self.model_fields_set and self.expression is None
+
     @model_validator(mode='after')
     def _one_form_or_the_other(self) -> Self:
-        """One ``expression:``, or ``cases:`` with the ``otherwise:`` and ``dims:`` they need."""
-        if bool(self.cases) == (self.expression is not None):
+        """One ``expression:``, possibly ``null``, or ``cases:`` with the ``otherwise:`` and ``dims:`` they need."""
+        if bool(self.cases) == ('expression' in self.model_fields_set):
             got = 'both' if self.cases else 'neither'
             msg = (
                 f'a named expression is one `expression:` or a set of `cases:`, and this has {got}. '
-                f'Cases are for a quantity whose value varies by region; one expression is everything else.'
+                f'Cases are for a quantity whose value varies by region; one expression is everything else, '
+                f'and `expression: null` is an empty one, which the terms other files add fill.'
+            )
+            raise ValueError(msg)
+        if self.empty and self.dims is None:
+            msg = (
+                '`expression: null` needs a `dims:` — an empty expression has no body to give the frame '
+                'it is read over, and the terms that fill it are read over that frame.'
             )
             raise ValueError(msg)
         if self.cases and self.dims is None:
@@ -529,8 +546,7 @@ class ExpressionBlock(_StrictBlock):
             written['cases'] = {name: case.model_dump() for name, case in self.cases.items()}
             written['otherwise'] = self.otherwise
             return written
-        assert self.expression is not None
-        if self.description is None and self.dims is None:
+        if self.expression is not None and self.description is None and self.dims is None:
             return self.expression
         written = {'dims': list(self.dims)} if self.dims is not None else {}
         written['expression'] = self.expression
@@ -778,14 +794,14 @@ def _without_absence(value: object) -> object:
     kept = {}
     for key, before in value.items():
         after = _without_absence(before)
-        if not _is_absent(after) and after != {}:
+        if not _is_absent(key, after) and after != {}:
             kept[key] = after
     return kept
 
 
-def _is_absent(value: object) -> bool:
-    """Whether *value* is a null."""
-    return value is None
+def _is_absent(key: object, value: object) -> bool:
+    """Whether *value* is a null, but under ``expression:``, where a null is the empty expression rather than an absence."""
+    return value is None and key != 'expression'
 
 
 class Spec(_StrictBlock):
@@ -896,7 +912,7 @@ class Spec(_StrictBlock):
         """Absence is not serialised: a null, a mapping that stripping emptied, a section declaring nothing.
 
         An empty list stays, being a value rather than an absence (``dims:
-        []`` is a scalar). On the serializer so that ``model_dump``,
+        []`` is a scalar), and so does ``expression: null``, the empty expression. On the serializer so that ``model_dump``,
         [`to_dict`][] and [`to_yaml`][] agree.
         """
         return cast('dict[str, object]', _without_absence(handler(self)))

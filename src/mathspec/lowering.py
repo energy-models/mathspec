@@ -52,6 +52,7 @@ from mathspec.resolution import (
     resolve_expression_text,
     resolve_where_text,
 )
+from mathspec.spec import GivenExpressionBlock
 from mathspec.validation import emitted_name_errors, reference_errors
 
 if TYPE_CHECKING:
@@ -99,6 +100,7 @@ def lower(schema: Spec) -> Program:
     errors = reference_errors(schema)
     if errors:
         raise SchemaError('\n'.join(errors))
+    schema, empty = _opened(schema)
 
     ns = Namespace(schema)
     for mname, macro in schema.macros.items():
@@ -261,7 +263,7 @@ def lower(schema: Spec) -> Program:
                 name: GivenDeclaration(tuple(g.dims), g.description) for name, g in schema.given.constraints.items()
             },
             expressions={
-                name: GivenDeclaration(tuple(g.dims), g.description, term=terms.get(name))
+                name: GivenDeclaration(tuple(g.dims), g.description, term=terms.get(name), empty=name in empty)
                 for name, g in schema.given.expressions.items()
             },
         ),
@@ -271,6 +273,27 @@ def lower(schema: Spec) -> Program:
         raise SchemaError('\n'.join(errors))
     check_schema(schema, program)
     return program
+
+
+def _opened(schema: Spec) -> tuple[Spec, frozenset[str]]:
+    """*schema* with each empty expression read as a given expression, and the names moved.
+
+    An empty expression has no body to resolve, and the file reads it as it
+    reads a given expression: a quantity over its frame, of degree one, that
+    no ``where`` reads. Moved under ``given: expressions:``, every rule a
+    given expression is held to holds it. It runs once the names are checked
+    on the file as written, so a refusal names the section the file wrote.
+    """
+    moved = {
+        name: GivenExpressionBlock(dims=list(block.dims or []), description=block.description)
+        for name, block in schema.expressions.items()
+        if block.empty
+    }
+    if not moved:
+        return schema, frozenset()
+    given = schema.given.model_copy(update={'expressions': {**schema.given.expressions, **moved}})
+    kept = {name: block for name, block in schema.expressions.items() if name not in moved}
+    return schema.model_copy(update={'expressions': kept, 'given': given}), frozenset(moved)
 
 
 def _frame_of(name: str, entry: Named, schema: Spec) -> tuple[str, ...]:

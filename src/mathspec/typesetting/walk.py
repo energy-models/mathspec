@@ -709,20 +709,30 @@ class Walk:
         """The named expressions that print under their own symbol: every one, or only the unsubstitutable when inlining.
 
         Inlining leaves a name standing only where substitution cannot reach
-        it — a ``cases`` block, and an entry the objective and constraints
-        never read, which is a quantity reported back rather than solved for.
+        it — a ``cases`` block, an entry the objective and constraints never
+        read, which is a quantity reported back rather than solved for, and an
+        empty expression, which has no body. The empty ones come last.
         """
         entries = self.program.expressions
+        empty = [name for name, given in self.program.given.expressions.items() if given.empty]
         if not self.inline_expressions:
-            return list(entries)
-        return [name for name, entry in entries.items() if isinstance(entry.expression, Cases) or not entry.in_math]
+            return [*entries, *empty]
+        kept = [name for name, entry in entries.items() if isinstance(entry.expression, Cases) or not entry.in_math]
+        return [*kept, *empty]
 
     def definition(self, name: str) -> Line:
-        """The line defining one named expression, ``symbol = body`` over its frame."""
-        body = self.program.expressions[name].expression
-        frame = self._frame_of(name)
-        ctx = self._context(frame)
-        rendered = self.format.cases(self._arms(body, ctx)) if isinstance(body, Cases) else self._expression(body, ctx)
+        """The line defining one named expression, ``symbol = body`` over its frame, and ``symbol = …`` where it is empty."""
+        if name in self.program.expressions:
+            body = self.program.expressions[name].expression
+            frame = self._frame_of(name)
+            ctx = self._context(frame)
+            rendered = (
+                self.format.cases(self._arms(body, ctx)) if isinstance(body, Cases) else self._expression(body, ctx)
+            )
+        else:
+            frame = list(self.program.given.expressions[name].dims)
+            ctx = self._context(frame)
+            rendered = self._op('dots')
         return Line(
             label=name,
             left=ctx.indexed(self.symbols.name[name], frame),
@@ -743,8 +753,9 @@ class Walk:
                 one of them.
         """
         program = self.program
+        empty = {name for name, given in program.given.expressions.items() if given.empty}
         kinds = {
-            'named expression': (program.expressions, self.definition),
+            'named expression': ({*program.expressions, *empty}, self.definition),
             'constraint': (program.constraints, self._constraint),
             'assumption': (program.assumptions, self._assumption),
             'curve': (program.piecewise, self._piecewise),

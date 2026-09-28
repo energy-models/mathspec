@@ -624,6 +624,9 @@ class GivenDeclaration:
     description: str | None = None
     #: The [`Named`][] node of the term this program adds to the name, or ``None`` where it only reads it.
     term: Named | None = None
+    #: Whether this program defines the name as an empty expression, which
+    #: the terms other files add fill, rather than reading one another file defines.
+    empty: bool = False
 
 
 @dataclass(frozen=True)
@@ -640,7 +643,8 @@ class GivenTargets:
     variables: Mapping[str, GivenDeclaration] = Sealed({})
     #: Row families the host model provides, by name, read back after the solve.
     constraints: Mapping[str, GivenDeclaration] = Sealed({})
-    #: Named expressions the host model defines, by name.
+    #: Named expressions the host model defines, by name, and the empty
+    #: expressions this program defines, which the terms other files add fill.
     expressions: Mapping[str, GivenDeclaration] = Sealed({})
 
     def __post_init__(self) -> None:

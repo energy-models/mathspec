@@ -142,8 +142,8 @@ def _rendered_trees() -> Iterator[object]:
         yield assumption.predicate.root
         if assumption.where is not None:
             yield assumption.where.root
-    for name in schema.expressions:
-        yield program.expressions[name].expression
+    for entry in program.expressions.values():
+        yield entry.expression
     for curve in program.piecewise.values():
         yield from (link.expression for link in curve.links)
 

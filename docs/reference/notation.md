@@ -126,6 +126,7 @@ parameters:
 | $`\mathit{lcoe}`$ | `lcoe` (scalar) |
 | $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{T} \times \mathcal{B}`$ |
 | $`\mathrm{startup\_cost}`$ | `startup_cost` over $`\mathcal{T} \times \mathcal{G}`$ — what starting a unit in this snapshot costs, which the horizon's edge changes |
+| $`\mathit{imports}`$ | `imports` over $`\mathcal{T} \times \mathcal{B}`$, empty here: the terms other files add fill it — what neighbouring areas put into a bus |
 
 Upright is what the data supplies — a parameter such as $`\mathrm{p}^{\mathrm{max}}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`p`$. An index is italic too, being what a quantifier chooses, and a set is script.
 
@@ -730,6 +731,21 @@ expressions:
 
 ```math
 \mathit{marginal\_price}_{t,b} = \lambda_{\mathrm{balance},t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+```
+
+#### Empty expression
+
+an empty expression: the terms other files add fill it, so its body prints as dots
+
+```yaml
+expressions:
+  imports:
+    dims: [snapshot, bus]
+    expression: null
+```
+
+```math
+\mathit{imports}_{t,b} = \dots \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
 ```
 
 ### Shifts

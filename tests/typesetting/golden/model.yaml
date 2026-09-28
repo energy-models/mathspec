@@ -152,6 +152,10 @@ expressions:
       opening: { when: "position(snapshot) == 0", expression: cost }
       winter: { when: "position(snapshot) > 0 and season_of == 'winter'", expression: cost * 2 }
     otherwise: 0
+  imports: # an empty expression: the terms other files add fill it, so its body prints as dots
+    description: what neighbouring areas put into a bus
+    dims: [snapshot, bus]
+    expression: null
 
 constraints:
   budgeted: # names the plain expression: its symbol prints here, its definition once below

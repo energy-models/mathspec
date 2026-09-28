@@ -211,7 +211,7 @@ def typeset_declaration(
     givens = {
         'parameter': given.parameters,
         'variable': given.variables,
-        'expression': given.expressions,
+        'expression': {name: g for name, g in given.expressions.items() if not g.empty},
         'constraint': given.constraints,
     }
     given_kind = next((kind for kind, group in givens.items() if name in group), None)

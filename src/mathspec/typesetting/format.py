@@ -62,6 +62,7 @@ OperatorName = Literal[
     'dual',
     'minimize',
     'maximize',
+    'dots',
 ]
 
 #: Every operator a walk can emit, by the name the walk uses for it, with its
@@ -69,7 +70,8 @@ OperatorName = Literal[
 #: so no format can be missing one. ``such_that`` is the colon in
 #: "∀ t ∈ T : condition", ``times`` sits between sets in the legend,
 #: ``maps_to`` is the → in a coordinate map, ``curve`` and ``hull`` are the two
-#: sets a ``piecewise:`` block states its links lie on, and the three
+#: sets a ``piecewise:`` block states its links lie on, ``dots`` is the body
+#: of an empty expression, which the terms other files add fill, and the three
 #: translations are three conventions: plain leaves the vacated position absent,
 #: ``cyclic_*`` wraps, ``edge_*`` fills it with the value it carries as a
 #: subscript.
@@ -108,6 +110,7 @@ OPERATOR_SPELLINGS: dict[OperatorName, tuple[str, str]] = {
     'dual': (r'\lambda', 'lambda'),
     'minimize': (r'\min', 'min'),
     'maximize': (r'\max', 'max'),
+    'dots': (r'\dots', 'dots.h'),
 }
 
 #: The set form, for the test pinning each format's table against the vocabulary.

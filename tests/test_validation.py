@@ -1815,7 +1815,18 @@ class TestExpressionCases:
                 'this has both',
                 id='both',
             ),
-            pytest.param({'description': 'nothing at all'}, 'this has neither', id='neither'),
+            pytest.param(
+                {'description': 'nothing at all'},
+                'this has neither. Cases are for a quantity whose value varies by region; one expression is '
+                'everything else, and `expression: null` is an empty one',
+                id='neither',
+            ),
+            pytest.param(
+                {'expression': None, 'dims': ['snapshot'], 'cases': OPENING, 'otherwise': 0},
+                'this has both',
+                id='null-beside-cases',
+            ),
+            pytest.param({'expression': None}, '`expression: null` needs a `dims:`', id='null-without-dims'),
             pytest.param({'cases': OPENING, 'otherwise': 0}, '`cases:` needs a `dims:`', id='no-dims'),
             pytest.param(
                 {'dims': ['snapshot', 'generator'], 'cases': OPENING},

@@ -270,15 +270,15 @@ given:
 ```
 
 ```yaml
-# balance.yaml reads the sum
+# balance.yaml defines the sum as empty, and reads it
 dimensions:
   snapshot: { dtype: int }
   bus: { dtype: str }
-given:
-  expressions:
-    injection:
-      dims: [snapshot, bus]
-      description: what the components put into a bus
+expressions:
+  injection:
+    dims: [snapshot, bus]
+    expression: null
+    description: what the components put into a bus
 constraints:
   balance:
     dims: [snapshot, bus]
@@ -293,22 +293,25 @@ The typeset legend lists the entry under _Given_ and names the term, and the
 math prints the term under _Definitions_ as its own line.
 
 [`merge`](../../howto/compose.md#a-library-of-components) defines the name as
-the definition one fragment writes under `expressions:`, if any, plus every
-term by its name, in fragment-name order, and keeps each term as a named
-expression of the composed spec. Nothing declares that the name is a sum: a
-term adds to whatever the other files define, as a fragment's objective adds
-to the objective, and a later merge adds to the composed definition the same
-way. The file that defines the name does not opt in. It reads the name as its
-own definition alone, and as the definition plus every term once composed;
-whoever composes the files answers for that sum. A term has to land on a name another file
-has: one that defines it, reads it with no term of its own, or uses it in its
-math. Terms alone are refused, with the near miss named, since `merge` fills
-a reading or extends a definition and never invents a name. A definition
-written as `cases:` is refused, since it is summed as written: name the cased
-body as its own expression, and define the name as that name. A cased term is
-added like any other, by its name. The definition keeps its own description,
-or takes the first a reader wrote. Two files that both define the name under
-`expressions:` are refused as a collision, and the message names `term:`.
+the definition one fragment writes under `expressions:` plus every term by its
+name, in fragment-name order, and keeps each term as a named expression of the
+composed spec. Nothing declares that the name is a sum: a term adds to
+whatever the other files define, as a fragment's objective adds to the
+objective, and a later merge adds to the composed definition the same way. The
+file that defines the name does not opt in. It reads the name as its own
+definition alone, and as the definition plus every term once composed;
+whoever composes the files answers for that sum. A definition that is only
+the terms is written as
+[an empty expression](named.md#an-empty-expression), `expression: null`, and
+the terms alone fill it. A term has to land on a definition. A name that
+another file only reads under `given:`, or only uses in its math, is refused,
+with the near miss named, since `merge` extends a definition and never invents
+a name. A definition written as `cases:` is refused, since it is summed as
+written: name the cased body as its own expression, and define the name as
+that name. A cased term is added like any other, by its name. The definition
+keeps its own frame and description, or takes the first description a reader
+wrote. Two files that both define the name under `expressions:` are refused as
+a collision, and the message names `term:`.
 
 ## `constraints`
 
