@@ -13,6 +13,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - fix(language): dual(c) is the rate at which the optimal objective rises with the right side of c, so an equality has a sign too ([#751](https://github.com/energy-models/mathspec/pull/751))
+- docs(notation): the notation page shows a named expression whose declared frame is wider than its body ([#756](https://github.com/energy-models/mathspec/pull/756))
 - feat(language): a named expression may declare the frame it is read over ([#741](https://github.com/energy-models/mathspec/pull/741))
 - docs: code examples on the site are readable in light and dark mode, and a diagram shows what mathspec leaves to engines and other tools ([#730](https://github.com/energy-models/mathspec/pull/730))
 - docs: the site follows the reader's light or dark setting, and a page shows where it sits in the navigation ([#727](https://github.com/energy-models/mathspec/pull/727))
