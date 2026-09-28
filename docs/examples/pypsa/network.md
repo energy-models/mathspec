@@ -1,7 +1,14 @@
-# SPDX-FileCopyrightText: mathspec Contributors
-#
-# SPDX-License-Identifier: MIT
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
 
+# The network
+
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the buses and the balance at each of them. It declares `Bus_injection` as an empty sum, `empty: true`, which every component adds its injection to.
+
+<!-- gallery:begin -->
+```yaml
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -35,3 +42,35 @@ constraints:
       carries load, and this file does not yet.
     dims: [scenario, snapshot, bus]
     expression: Bus_injection == 0
+```
+
+#### Sets
+
+| Symbol | Meaning |
+|---|---|
+| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` — network nodes |
+
+#### Definitions
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
+
+#### Subject to
+
+**`Bus_nodal_balance`**
+
+```math
+\mathit{Bus\_injection}_{\xi,t,n} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+```
+
+#### Definitions
+
+**`Bus_injection`**
+
+```math
+\mathit{Bus\_injection}_{\xi,t,n} = \cdots \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+```
+<!-- gallery:end -->
