@@ -442,6 +442,17 @@ def test_the_legend_names_the_term_the_file_adds():
     assert 'an expression this file adds `demand_injection` to' in given
 
 
+def test_inlining_keeps_the_definition_of_a_term():
+    """A term is read only through the sum it adds to, and that reads as a
+    symbol, so substitution never reaches the term's body: `defined()` dropped
+    it as read by the math, and the page named a term it never defined."""
+    inlined = to_markdown(DEMAND, inline_expressions=True)
+    assert '#### Definitions' in inlined, 'the term is the one definition the file has'
+    assert '`demand_injection` over' in inlined.split('#### Definitions')[1], (
+        'the term prints under its own name, as the legend says it does'
+    )
+
+
 def test_the_owner_s_sum_prints_as_a_definition_with_no_body():
     """The owner declares the name, so it prints under Definitions as ``symbol = ⋯``, and not under Given."""
     rendered = to_markdown(NETWORK)
