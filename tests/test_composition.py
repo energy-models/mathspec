@@ -322,7 +322,7 @@ def test_a_whole_declaration_is_created_and_the_model_loads():
         ),
         pytest.param({'parameters': {'co2': {'dtype': 'float'}}}, 'a parameter needs `dims`', id='short-of-its-frame'),
         pytest.param(
-            {'expressions': {'spend': {'description': 'what is spent'}}},
+            {'expressions': {'spend': {'dims': ['snapshot']}}},
             'one `expression:` or a set of `cases:`',
             id='short-of-what-it-says',
         ),
