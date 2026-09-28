@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+constraints:
+  balance_conversion:
+    description: >-
+      `balance_conversion` for a plant with no turbine type — a conversion
+      technology puts out, before its losses, what it takes in after them.
+      Extraction and backpressure plants have rows of their own
+    where: base_tech == 'conversion' AND NOT include_storage AND NOT turbine_type

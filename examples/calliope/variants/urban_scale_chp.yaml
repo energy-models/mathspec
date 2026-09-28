@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+constraints:
+  balance_conversion:
+    description: >-
+      `balance_conversion` for every conversion technology but `chp` — it
+      puts out, before its losses, what it takes in after them
+    where: base_tech == 'conversion' AND NOT include_storage AND NOT techs == chp

@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+parameters:
+  purchased_units:
+    description: "`purchased_units` — the units bought, fixed in operate mode. Calliope's default is `.inf`"
+    dims: [nodes, techs]
+
+variables:
+  purchased_units: null
+
+constraints:
+  storage_capacity_units_milp: null
+  flow_capacity_units_milp: null
+  unit_capacity_max_systemwide_milp: null
+  unit_capacity_min_systemwide_milp: null
+  flow_capacity_max_purchase_milp: null
+  flow_capacity_max_purchase_milp_big_m: null
+  storage_capacity_max_purchase_milp: null
+  flow_capacity_minimum: null
+  flow_capacity_minimum_purchased: null
+  storage_capacity_minimum: null
+  storage_capacity_minimum_purchased: null
+  area_use_minimum: null
+  area_use_minimum_purchased: null
+  source_capacity_minimum: null
+  source_capacity_minimum_purchased: null
+  flow_capacity_systemwide_min_purchased: null
+
+expressions:
+  cost_investment_purchase: null

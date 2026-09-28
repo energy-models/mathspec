@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+parameters:
+  flow_cap_max_relative_per_ts:
+    description: "`flow_cap_max_relative_per_ts` — the share of its flow capacity a technology may put out in a time step; given only where set"
+    dims: [nodes, techs, timesteps]
+
+given:
+  parameters:
+    flow_out_parasitic_eff: { dims: [nodes, techs, carriers, timesteps] }
+  variables:
+    flow_out: { dims: [nodes, techs, carriers, timesteps] }
+    flow_cap: { dims: [nodes, techs, carriers] }
+
+constraints:
+  max_time_varying_flow_cap:
+    description: "`max_time_varying_flow_cap` — outflow is at most a share of the flow capacity that varies in time"
+    dims: [nodes, techs, carriers, timesteps]
+    where: flow_out AND flow_cap_max_relative_per_ts
+    expression: flow_out <= flow_cap_max_relative_per_ts * flow_cap * flow_out_parasitic_eff

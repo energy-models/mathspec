@@ -66,8 +66,8 @@ not need, in three groups:
   and `Program`: an engine such as specsolve, a renderer, a checker.
 - **Contributing** is for someone who changes mathspec itself.
 - **Proofs of concept** holds the notation page, which renders the typesetting
-  test spec, and the PyPSA pages. The PyPSA pages stay in `docs/examples/`,
-  where `tools/gallery.py` writes them.
+  test spec, and the PyPSA and Calliope pages. Those stay in
+  `docs/examples/`, where `tools/gallery.py` writes them.
 
 A page in Development keeps the folder of its kind.
 

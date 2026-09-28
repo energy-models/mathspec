@@ -1,0 +1,81 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  costs:
+    description: Calliope's `costs` — cost classes, such as monetary and CO2
+
+parameters:
+  area_use_min:
+    description: "`area_use_min` — least area use. Calliope's default is 0, and data prep fills it"
+    dims: [nodes, techs]
+  area_use_max:
+    description: "`area_use_max` — most area use. Calliope's default is `.inf`, and data prep fills it"
+    dims: [nodes, techs]
+  area_use_per_flow_cap:
+    description: "`area_use_per_flow_cap` — area use per unit of flow capacity; given only where set"
+    dims: [nodes, techs]
+  available_area:
+    description: "`available_area` — the area every technology at a node may use; given only where set"
+    dims: [nodes]
+  cost_area_use:
+    description: "`cost_area_use` — the cost of one unit of area use"
+    dims: [nodes, techs, costs]
+
+variables:
+  area_use:
+    description: >-
+      `area_use` — the area a technology uses. Calliope builds it where
+      `area_use_min` is given at all; the least area use is data here, so
+      it is built where that is above zero
+    dims: [nodes, techs]
+    where: area_use_min > 0 OR area_use_max OR area_use_per_flow_cap OR sink_unit == per_area OR source_unit == per_area
+    bounds: { lower: area_use_min, upper: area_use_max }
+    absence: zero
+
+expressions:
+  cost_investment_area_use:
+    description: "`cost_investment_area_use` — the investment cost of area use"
+    expression: cost_area_use * area_use
+
+given:
+  parameters:
+    flow_cap_max: { dims: [nodes, techs] }
+    sink_unit: { dims: [nodes, techs], dtype: str }
+    source_unit: { dims: [nodes, techs], dtype: str }
+  variables:
+    flow_cap: { dims: [nodes, techs, carriers] }
+  expressions:
+    cost_investment: { dims: [nodes, techs, costs], term: cost_investment_area_use }
+
+constraints:
+  force_zero_area_use:
+    description: "`force_zero_area_use` — a technology with no flow capacity uses no area"
+    dims: [nodes, techs]
+    where: area_use AND flow_cap_max == 0
+    expression: area_use == 0
+  area_use_per_flow_capacity:
+    description: "`area_use_per_flow_capacity` — area use follows flow capacity, where set"
+    dims: [nodes, techs, carriers]
+    where: flow_cap AND area_use AND area_use_per_flow_cap
+    expression: area_use == flow_cap * area_use_per_flow_cap
+  area_use_capacity_per_loc:
+    description: >-
+      `area_use_capacity_per_loc` — the technologies at a node use at most
+      its available area. Calliope's `where: area_use` over a node reads as
+      any technology there using area
+    dims: [nodes]
+    where: count(area_use, over=techs) >= 1 AND available_area
+    expression: sum(area_use, over=techs) <= available_area
+
+assumptions:
+  unbounded_area_use_cost:
+    description: Calliope's `unbounded_area_use_cost` — a negative area cost needs a finite maximum
+    holds: NOT cost_area_use < 0 OR area_use_max

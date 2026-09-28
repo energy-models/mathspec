@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+parameters:
+  sink_use_min:
+    description: "`sink_use_min` — least sink use in a time step, per unit of `sink_unit`"
+    dims: [nodes, techs, timesteps]
+  sink_use_max:
+    description: "`sink_use_max` — most sink use in a time step, per unit of `sink_unit`; given only where set"
+    dims: [nodes, techs, timesteps]
+  sink_use_equals:
+    description: "`sink_use_equals` — the sink use required in a time step, such as a demand profile; given only where set"
+    dims: [nodes, techs, timesteps]
+  sink_unit:
+    description: >-
+      `sink_unit` — what the sink is per: `absolute`, `per_area` of area
+      use, or `per_cap` of flow capacity. Calliope's default is
+      `absolute`, which is what a technology with no row reads as
+    dims: [nodes, techs]
+    dtype: str
+
+expressions:
+  flow_cap_in:
+    description: "`where(flow_cap, carrier_in)` — the flow capacity of the carriers a technology consumes"
+    dims: [nodes, techs, carriers]
+    cases:
+      consumed:
+        when: carrier_in
+        expression: flow_cap
+    otherwise: 0
+  sink_scaler:
+    description: "`$sink_scaler` — what the sink parameters are per: area use, flow capacity, or one"
+    dims: [nodes, techs]
+    cases:
+      per_area:
+        when: sink_unit == per_area
+        expression: area_use
+      per_cap:
+        when: sink_unit == per_cap
+        expression: sum(flow_cap_in, over=carriers)
+    otherwise: 1
+
+given:
+  parameters:
+    base_tech: { dims: [techs], dtype: str }
+    carrier_in: { dims: [nodes, techs, carriers], dtype: bool }
+  variables:
+    flow_cap: { dims: [nodes, techs, carriers] }
+    area_use: { dims: [nodes, techs] }
+  expressions:
+    flow_in_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+
+constraints:
+  balance_demand_equals:
+    description: "`balance_demand` where `sink_use_equals` is set — a demand technology takes in what its sink requires"
+    dims: [nodes, techs, carriers, timesteps]
+    where: carrier_in AND base_tech == 'demand' AND sink_use_equals
+    expression: flow_in_inc_eff == sink_use_equals * sink_scaler
+  balance_demand_max:
+    description: "`balance_demand` where only `sink_use_max` is set — a demand technology takes in at most what its sink allows"
+    dims: [nodes, techs, carriers, timesteps]
+    where: carrier_in AND base_tech == 'demand' AND NOT sink_use_equals AND sink_use_max
+    expression: flow_in_inc_eff <= sink_use_max * sink_scaler
+  balance_demand_min_use:
+    description: "`balance_demand_min_use` — a demand technology takes in at least its least sink use"
+    dims: [nodes, techs, carriers, timesteps]
+    where: carrier_in AND sink_use_min AND NOT sink_use_equals AND base_tech == 'demand'
+    expression: flow_in_inc_eff >= sink_use_min * sink_scaler
+
+assumptions:
+  finite_sink_use:
+    description: Calliope's `finite_source_use`, for the sink — a required use is finite
+    holds: NOT sink_use_equals == inf
+  sink_unit_one_of:
+    description: Calliope's `one_of` on `sink_unit`
+    holds: sink_unit == absolute OR sink_unit == per_area OR sink_unit == per_cap
+    where: sink_unit

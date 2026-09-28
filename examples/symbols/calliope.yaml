@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+# How `examples/calliope/` prints. The names are Calliope's and print as
+# themselves, so a row reads beside Calliope's own math; only the dimensions
+# take a letter, as Calliope's iterators take a word.
+notation: latex
+dimensions:
+  nodes: { index: n, set: '\mathcal{N}' }
+  techs: { index: i, set: '\mathcal{I}' }
+  carriers: { index: c, set: '\mathcal{C}' }
+  costs: { index: k, set: '\mathcal{K}' }
+  timesteps: { index: t, set: '\mathcal{T}' }
+  clusters: { index: l, set: '\mathcal{L}' }
+  datesteps: { index: d, set: '\mathcal{D}' }
+  months: { index: m, set: '\mathcal{M}' }
+  pieces: { index: p, set: '\mathcal{P}' }
+  breakpoints: { index: b, set: '\mathcal{B}' }
+names: {}

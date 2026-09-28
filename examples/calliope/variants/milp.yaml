@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+parameters:
+  flow_cap_min:
+    description: >-
+      `flow_cap_min` — least flow capacity, scaled by the units bought where
+      a technology buys units; given only where set, as no bound reads it
+  flow_cap_min_systemwide:
+    description: >-
+      `flow_cap_min_systemwide` — least flow capacity of a technology over
+      every node, scaled by the units bought where it buys units; given only
+      where set
+  flow_out_min_relative:
+    description: >-
+      `flow_out_min_relative` — least outflow, per unit of flow capacity. For
+      a continuous technology it holds in every time step; given only where
+      set
+  storage_cap_min:
+    description: "`storage_cap_min` — least storage capacity; given only where set, as no bound reads it"
+  area_use_min:
+    description: "`area_use_min` — least area use; given only where set, as no bound reads it"
+  source_cap_min:
+    description: "`source_cap_min` — least source capacity; given only where set, as no bound reads it"
+
+variables:
+  flow_cap: { bounds: { lower: 0 } }
+  area_use: { bounds: { lower: 0 } }
+  source_cap: { bounds: { lower: 0 } }
+  storage_cap: { bounds: { lower: 0 } }
+
+constraints:
+  flow_out_max:
+    description: "`flow_out_max` — a continuous technology's outflow is at most its flow capacity over the time step"
+    where: carrier_out AND NOT operating_units
+  flow_out_min:
+    description: "`flow_out_min` — a continuous technology's outflow is at least its least share of the flow capacity"
+    where: flow_cap AND flow_out_min_relative AND NOT operating_units
+  flow_in_max:
+    description: "`flow_in_max` — a continuous technology's inflow is at most its flow capacity over the time step"
+    where: carrier_in AND NOT operating_units
+  flow_capacity_systemwide_min:
+    description: >-
+      `flow_capacity_systemwide_min` where no unit is bought — the flow
+      capacity over every node is at least the system-wide minimum
+    where: count(flow_cap, over=nodes) >= 1 AND flow_cap_min_systemwide AND NOT count(purchased_units, over=nodes) >= 1

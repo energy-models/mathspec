@@ -1,0 +1,159 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+  costs:
+    description: Calliope's `costs` — cost classes, such as monetary and CO2
+
+parameters:
+  source_eff:
+    description: "`source_eff` — the share of the source a supply technology takes in. Calliope's default is 1, and data prep fills it"
+    dims: [nodes, techs, timesteps]
+  source_use_min:
+    description: "`source_use_min` — least source use in a time step, per unit of `source_unit`"
+    dims: [nodes, techs, timesteps]
+  source_use_max:
+    description: "`source_use_max` — most source use in a time step, per unit of `source_unit`; given only where set"
+    dims: [nodes, techs, timesteps]
+  source_use_equals:
+    description: "`source_use_equals` — the source use required in a time step, per unit of `source_unit`; given only where set"
+    dims: [nodes, techs, timesteps]
+  source_unit:
+    description: >-
+      `source_unit` — what the source is per: `absolute`, `per_area` of
+      area use, or `per_cap` of flow capacity. Calliope's default is
+      `absolute`, which is what a technology with no row reads as
+    dims: [nodes, techs]
+    dtype: str
+  source_cap_min:
+    description: "`source_cap_min` — least source capacity. Calliope's default is 0, and data prep fills it"
+    dims: [nodes, techs]
+  source_cap_max:
+    description: "`source_cap_max` — most source capacity. Calliope's default is `.inf`, and data prep fills it"
+    dims: [nodes, techs]
+  source_cap_equals_flow_cap:
+    description: "`source_cap_equals_flow_cap` — whether the source capacity equals the flow capacity"
+    dims: [nodes, techs]
+    dtype: bool
+  cost_source_use:
+    description: "`cost_source_use` — the cost of one unit of source use"
+    dims: [nodes, techs, costs, timesteps]
+  cost_source_cap:
+    description: "`cost_source_cap` — the cost of one unit of source capacity"
+    dims: [nodes, techs, costs]
+
+variables:
+  source_use:
+    description: "`source_use` — what a supply technology takes in from outside the system in a time step"
+    dims: [nodes, techs, timesteps]
+    where: base_tech == 'supply'
+    bounds: { lower: 0 }
+    absence: zero
+  source_cap:
+    description: "`source_cap` — the most a supply technology can take in from outside the system"
+    dims: [nodes, techs]
+    where: base_tech == 'supply'
+    bounds: { lower: source_cap_min, upper: source_cap_max }
+    absence: zero
+
+expressions:
+  flow_cap_out:
+    description: "`where(flow_cap, carrier_out)` — the flow capacity of the carriers a technology produces"
+    dims: [nodes, techs, carriers]
+    cases:
+      produced:
+        when: carrier_out
+        expression: flow_cap
+    otherwise: 0
+  source_scaler:
+    description: "`$source_scaler` — what the source parameters are per: area use, flow capacity, or one"
+    dims: [nodes, techs]
+    cases:
+      per_area:
+        when: source_unit == per_area
+        expression: area_use
+      per_cap:
+        when: source_unit == per_cap
+        expression: sum(flow_cap_out, over=carriers)
+    otherwise: 1
+  cost_investment_source_cap:
+    description: "`cost_investment_source_cap` — the investment cost of source capacity"
+    expression: cost_source_cap * source_cap
+  supply_cost_operation_variable: timestep_weights * cost_source_use * source_use
+  curtailment:
+    description: >-
+      `curtailment` — the share of the available source a supply technology
+      leaves unused in a time step; reported
+    expression: 1 - source_use / (source_use_max * source_scaler)
+  total_curtailment:
+    description: "`total_curtailment` — the share of the available source left unused over the whole time; reported"
+    expression: 1 - sum(source_use, over=timesteps) / sum(source_use_max * source_scaler, over=timesteps)
+
+given:
+  parameters:
+    base_tech: { dims: [techs], dtype: str }
+    carrier_out: { dims: [nodes, techs, carriers], dtype: bool }
+    include_storage: { dims: [nodes, techs], dtype: bool }
+    timestep_resolution: { dims: [timesteps] }
+    timestep_weights: { dims: [timesteps] }
+  variables:
+    flow_cap: { dims: [nodes, techs, carriers] }
+    area_use: { dims: [nodes, techs] }
+  expressions:
+    flow_out_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+    cost_investment: { dims: [nodes, techs, costs], term: cost_investment_source_cap }
+    cost_operation_variable: { dims: [nodes, techs, costs, timesteps], term: supply_cost_operation_variable }
+
+constraints:
+  source_max:
+    description: "`source_max` — source use is at most the source capacity over the time step"
+    dims: [nodes, techs, timesteps]
+    where: source_cap
+    expression: source_use <= timestep_resolution * source_cap
+  source_capacity_equals_flow_capacity:
+    description: "`source_capacity_equals_flow_capacity` — a supply technology's source capacity equals its flow capacity, where set"
+    dims: [nodes, techs, carriers]
+    where: flow_cap AND source_cap AND source_cap_equals_flow_cap
+    expression: source_cap == flow_cap
+  balance_supply_no_storage:
+    description: "`balance_supply_no_storage` — a supply technology with no store puts out what it takes from its source"
+    dims: [nodes, techs, carriers, timesteps]
+    where: carrier_out AND base_tech == 'supply' AND NOT include_storage
+    expression: flow_out_inc_eff == source_use * source_eff
+  source_availability_supply_equals:
+    description: "`source_availability_supply` where `source_use_equals` is set — source use is what is available"
+    dims: [nodes, techs, timesteps]
+    where: source_use AND source_use_equals
+    expression: source_use == source_use_equals * source_scaler
+  source_availability_supply_max:
+    description: "`source_availability_supply` where only `source_use_max` is set — source use is at most what is available"
+    dims: [nodes, techs, timesteps]
+    where: source_use AND NOT source_use_equals AND source_use_max
+    expression: source_use <= source_use_max * source_scaler
+  balance_supply_min_use:
+    description: "`balance_supply_min_use` — source use is at least its least use"
+    dims: [nodes, techs, timesteps]
+    where: source_use_min AND NOT source_use_equals AND base_tech == 'supply'
+    expression: source_use >= source_use_min * source_scaler
+
+assumptions:
+  unbounded_source_use_cost:
+    description: Calliope's `unbounded_source_use_cost` — a negative source capacity cost needs a finite maximum
+    holds: NOT cost_source_cap < 0 OR source_cap_max
+  finite_source_use:
+    description: Calliope's `finite_source_use`, for the source — a required use is finite
+    holds: NOT source_use_equals == inf
+  source_unit_one_of:
+    description: Calliope's `one_of` on `source_unit`
+    holds: source_unit == absolute OR source_unit == per_area OR source_unit == per_cap
+    where: source_unit

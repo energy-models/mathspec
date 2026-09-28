@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+given:
+  parameters:
+    base_tech: { dims: [techs], dtype: str }
+    include_storage: { dims: [nodes, techs], dtype: bool }
+  expressions:
+    flow_out_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+    flow_in_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+
+constraints:
+  balance_conversion:
+    description: "`balance_conversion` — a conversion technology puts out, before its losses, what it takes in after them"
+    dims: [nodes, techs, timesteps]
+    where: base_tech == 'conversion' AND NOT include_storage
+    expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)

@@ -1,0 +1,278 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+  costs:
+    description: Calliope's `costs` — cost classes, such as monetary and CO2
+
+parameters:
+  cap_method:
+    description: >-
+      `cap_method` — `continuous` or `integer`: whether a technology's
+      capacity is bought in whole units. Calliope's default is
+      `continuous`, which is what a technology with no row reads as
+    dims: [nodes, techs]
+    dtype: str
+  integer_dispatch:
+    description: "`integer_dispatch` — whether a unit-bought technology runs in whole units"
+    dims: [nodes, techs]
+    dtype: bool
+  force_async_flow:
+    description: "`force_async_flow` — whether a technology may not take in and put out in one time step"
+    dims: [nodes, techs]
+    dtype: bool
+  flow_cap_per_unit:
+    description: "`flow_cap_per_unit` — the flow capacity of one unit; given only where set"
+    dims: [nodes, techs]
+  storage_cap_per_unit:
+    description: "`storage_cap_per_unit` — the storage capacity of one unit; given only where set"
+    dims: [nodes, techs]
+  purchased_units_min:
+    description: "`purchased_units_min` — least units bought. Calliope's default is 0, and data prep fills it"
+    dims: [nodes, techs]
+  purchased_units_max:
+    description: "`purchased_units_max` — most units bought. Calliope's default is `.inf`, and data prep fills it"
+    dims: [nodes, techs]
+  purchased_units_min_systemwide:
+    description: "`purchased_units_min_systemwide` — least units of a technology bought over every node"
+    dims: [techs]
+  purchased_units_max_systemwide:
+    description: "`purchased_units_max_systemwide` — most units of a technology bought over every node; given only where set"
+    dims: [techs]
+  cost_purchase:
+    description: "`cost_purchase` — the cost of one unit bought"
+    dims: [nodes, techs, costs]
+  cost_purchase_per_distance:
+    description: "`cost_purchase_per_distance` — the cost of one unit of a link bought, per unit of distance"
+    dims: [nodes, techs, costs]
+
+variables:
+  purchased_units:
+    description: "`purchased_units` — how many units of a technology are bought"
+    dims: [nodes, techs]
+    where: cap_method == integer
+    domain: integer
+    bounds: { lower: purchased_units_min, upper: purchased_units_max }
+    absence: zero
+  operating_units:
+    description: "`operating_units` — how many bought units run in a time step"
+    dims: [nodes, techs, timesteps]
+    where: integer_dispatch AND cap_method == integer
+    domain: integer
+    bounds: { lower: 0 }
+    absence: zero
+  async_flow_switch:
+    description: "`async_flow_switch` — whether a technology puts out, rather than takes in, in a time step"
+    dims: [nodes, techs, timesteps]
+    where: force_async_flow
+    domain: binary
+    absence: zero
+  available_flow_cap:
+    description: "`available_flow_cap` — the flow capacity in a time step: the whole of it where the technology runs, none where it does not"
+    dims: [nodes, techs, carriers, timesteps]
+    where: flow_cap AND integer_dispatch AND flow_cap_max AND NOT flow_cap_per_unit
+    bounds: { lower: 0 }
+    absence: zero
+
+expressions:
+  cost_investment_purchase:
+    description: "`cost_investment_purchase` — the investment cost of the units bought; a link's cost is split between its two ends"
+    dims: [nodes, techs, costs]
+    cases:
+      transmission:
+        when: base_tech == 'transmission'
+        expression: (cost_purchase + cost_purchase_per_distance * distance) * purchased_units * 0.5
+    otherwise: cost_purchase * purchased_units
+
+given:
+  parameters:
+    base_tech: { dims: [techs], dtype: str }
+    distance: { dims: [techs] }
+    bigM: { dims: [] }
+    timestep_resolution: { dims: [timesteps] }
+    timestep_weights: { dims: [timesteps] }
+    flow_cap_min: { dims: [nodes, techs] }
+    flow_cap_max: { dims: [nodes, techs] }
+    flow_cap_min_systemwide: { dims: [techs, carriers] }
+    flow_out_min_relative: { dims: [nodes, techs, timesteps] }
+    flow_out_parasitic_eff: { dims: [nodes, techs, carriers, timesteps] }
+    storage_cap_min: { dims: [nodes, techs] }
+    storage_cap_max: { dims: [nodes, techs] }
+    area_use_min: { dims: [nodes, techs] }
+    source_cap_min: { dims: [nodes, techs] }
+  variables:
+    flow_cap: { dims: [nodes, techs, carriers] }
+    flow_out: { dims: [nodes, techs, carriers, timesteps] }
+    flow_in: { dims: [nodes, techs, carriers, timesteps] }
+    storage: { dims: [nodes, techs, timesteps] }
+    storage_cap: { dims: [nodes, techs] }
+    area_use: { dims: [nodes, techs] }
+    source_cap: { dims: [nodes, techs] }
+  expressions:
+    cost_investment: { dims: [nodes, techs, costs], term: cost_investment_purchase }
+
+constraints:
+  unit_commitment_milp:
+    description: "`unit_commitment_milp` — at most the units bought run"
+    dims: [nodes, techs, timesteps]
+    where: operating_units AND purchased_units
+    expression: operating_units <= purchased_units
+  flow_out_max_milp:
+    description: "`flow_out_max_milp` — outflow is at most what the running units can put out"
+    dims: [nodes, techs, carriers, timesteps]
+    where: flow_out AND operating_units AND flow_cap_per_unit
+    expression: flow_out <= operating_units * timestep_resolution * flow_cap_per_unit * flow_out_parasitic_eff
+  flow_in_max_milp:
+    description: "`flow_in_max_milp` — inflow is at most what the running units can take in"
+    dims: [nodes, techs, carriers, timesteps]
+    where: flow_in AND operating_units AND flow_cap_per_unit
+    expression: flow_in <= operating_units * timestep_resolution * flow_cap_per_unit
+  flow_out_min_milp_per_unit:
+    description: "`flow_out_min_milp` where `flow_cap_per_unit` is set — outflow is at least the running units' least share"
+    dims: [nodes, techs, carriers, timesteps]
+    where: flow_out AND operating_units AND flow_out_min_relative AND flow_cap_per_unit
+    expression: flow_out >= operating_units * timestep_resolution * flow_cap_per_unit * flow_out_min_relative
+  flow_out_min_milp_available:
+    description: "`flow_out_min_milp` where the available flow capacity is built — outflow is at least its least share of it"
+    dims: [nodes, techs, carriers, timesteps]
+    where: flow_out AND operating_units AND flow_out_min_relative AND available_flow_cap
+    expression: flow_out >= available_flow_cap * timestep_resolution * flow_out_min_relative
+  storage_capacity_units_milp:
+    description: "`storage_capacity_units_milp` — storage capacity is the units bought times the capacity of one"
+    dims: [nodes, techs]
+    where: storage_cap AND purchased_units AND storage_cap_per_unit
+    expression: storage_cap == purchased_units * storage_cap_per_unit
+  flow_capacity_units_milp:
+    description: "`flow_capacity_units_milp` — flow capacity is the units bought times the capacity of one"
+    dims: [nodes, techs, carriers]
+    where: flow_cap AND purchased_units AND flow_cap_per_unit
+    expression: flow_cap == purchased_units * flow_cap_per_unit
+  flow_capacity_max_purchase_milp:
+    description: "`flow_capacity_max_purchase_milp` where `flow_cap_max` is set — no flow capacity unless a unit is bought"
+    dims: [nodes, techs, carriers]
+    where: flow_cap AND purchased_units AND flow_cap_max
+    expression: flow_cap <= flow_cap_max * purchased_units
+  flow_capacity_max_purchase_milp_big_m:
+    description: "`flow_capacity_max_purchase_milp` where `flow_cap_max` is not set — the same, with `bigM` for the maximum"
+    dims: [nodes, techs, carriers]
+    where: flow_cap AND purchased_units AND NOT flow_cap_max
+    expression: flow_cap <= bigM * purchased_units
+  storage_capacity_max_purchase_milp:
+    description: "`storage_capacity_max_purchase_milp` — no storage capacity unless a unit is bought"
+    dims: [nodes, techs]
+    where: purchased_units AND storage_cap_max
+    expression: storage_cap <= storage_cap_max * purchased_units
+  unit_capacity_max_systemwide_milp:
+    description: "`unit_capacity_max_systemwide_milp` — the units of a technology bought over every node are at most its system-wide maximum"
+    dims: [techs]
+    where: count(purchased_units, over=nodes) >= 1 AND purchased_units_max_systemwide
+    expression: sum(purchased_units, over=nodes) <= purchased_units_max_systemwide
+  unit_capacity_min_systemwide_milp:
+    description: >-
+      `unit_capacity_min_systemwide_milp` — the units of a technology bought
+      over every node are at least its system-wide minimum. Calliope builds
+      it where the system-wide maximum is set, as here
+    dims: [techs]
+    where: count(purchased_units, over=nodes) >= 1 AND purchased_units_max_systemwide
+    expression: sum(purchased_units, over=nodes) >= purchased_units_min_systemwide
+  async_flow_in_milp:
+    description: "`async_flow_in_milp` — no inflow in a time step the switch gives to outflow"
+    dims: [nodes, techs, timesteps]
+    where: async_flow_switch
+    expression: sum(flow_in, over=carriers) <= (1 - async_flow_switch) * bigM
+  async_flow_out_milp:
+    description: "`async_flow_out_milp` — no outflow in a time step the switch gives to inflow"
+    dims: [nodes, techs, timesteps]
+    where: async_flow_switch
+    expression: sum(flow_out, over=carriers) <= async_flow_switch * bigM
+  available_flow_cap_continuous:
+    description: "`available_flow_cap_continuous` — the available flow capacity is at most the flow capacity"
+    dims: [nodes, techs, carriers, timesteps]
+    where: available_flow_cap
+    expression: available_flow_cap <= flow_cap
+  available_flow_cap_binary:
+    description: "`available_flow_cap_binary` — the available flow capacity is zero where no unit runs"
+    dims: [nodes, techs, carriers, timesteps]
+    where: available_flow_cap
+    expression: available_flow_cap <= flow_cap_max * operating_units
+  available_flow_cap_max_binary_continuous_switch:
+    description: "`available_flow_cap_max_binary_continuous_switch` — the available flow capacity is the whole flow capacity where the units run"
+    dims: [nodes, techs, carriers, timesteps]
+    where: available_flow_cap
+    expression: available_flow_cap >= flow_cap + (operating_units - purchased_units) * flow_cap_max
+  flow_capacity_minimum:
+    description: "`flow_capacity_minimum` where no unit is bought — flow capacity is at least its least"
+    dims: [nodes, techs, carriers]
+    where: flow_cap AND flow_cap_min AND NOT purchased_units
+    expression: flow_cap >= flow_cap_min
+  flow_capacity_minimum_purchased:
+    description: "`flow_capacity_minimum` where units are bought — flow capacity is at least its least, if a unit is bought"
+    dims: [nodes, techs, carriers]
+    where: flow_cap AND flow_cap_min AND purchased_units
+    expression: flow_cap >= flow_cap_min * purchased_units
+  storage_capacity_minimum:
+    description: "`storage_capacity_minimum` where no unit is bought — storage capacity is at least its least"
+    dims: [nodes, techs]
+    where: storage_cap_min AND NOT purchased_units
+    expression: storage_cap >= storage_cap_min
+  storage_capacity_minimum_purchased:
+    description: "`storage_capacity_minimum` where units are bought — storage capacity is at least its least, if a unit is bought"
+    dims: [nodes, techs]
+    where: storage_cap_min AND purchased_units
+    expression: storage_cap >= storage_cap_min * purchased_units
+  area_use_minimum:
+    description: "`area_use_minimum` where no unit is bought — area use is at least its least"
+    dims: [nodes, techs]
+    where: area_use_min AND NOT purchased_units
+    expression: area_use >= area_use_min
+  area_use_minimum_purchased:
+    description: "`area_use_minimum` where units are bought — area use is at least its least, if a unit is bought"
+    dims: [nodes, techs]
+    where: area_use_min AND purchased_units
+    expression: area_use >= area_use_min * purchased_units
+  source_capacity_minimum:
+    description: "`source_capacity_minimum` where no unit is bought — source capacity is at least its least"
+    dims: [nodes, techs]
+    where: base_tech == 'supply' AND source_cap_min AND NOT purchased_units
+    expression: source_cap >= source_cap_min
+  source_capacity_minimum_purchased:
+    description: "`source_capacity_minimum` where units are bought — source capacity is at least its least, if a unit is bought"
+    dims: [nodes, techs]
+    where: base_tech == 'supply' AND source_cap_min AND purchased_units
+    expression: source_cap >= source_cap_min * purchased_units
+  flow_capacity_systemwide_min_purchased:
+    description: >-
+      `flow_capacity_systemwide_min` where units are bought — the flow
+      capacity over every node is at least the system-wide minimum times the
+      units bought. The patch narrows the base row to where none are
+    dims: [techs, carriers]
+    where: count(flow_cap, over=nodes) >= 1 AND flow_cap_min_systemwide AND count(purchased_units, over=nodes) >= 1
+    expression: sum(flow_cap, over=nodes) >= flow_cap_min_systemwide * sum(purchased_units, over=nodes)
+
+assumptions:
+  distance_only_for_transmission_milp:
+    description: Calliope's `distance_only_for_transmission_milp` — only a link sets a per-distance purchase cost
+    holds: base_tech == 'transmission' OR NOT cost_purchase_per_distance
+  conflicting_flow_caps:
+    description: Calliope's `conflicting_flow_caps` — a technology sets a capacity per unit or a capacity range, not both
+    holds: NOT ((flow_cap_max OR flow_cap_min) AND flow_cap_per_unit)
+  unit_commitment_only_for_units:
+    description: Calliope's `unit_commitment_only_for_units` — integer dispatch needs integer units
+    holds: NOT integer_dispatch OR cap_method == integer
+  conflicting_storage_caps:
+    description: Calliope's `conflicting_storage_caps` — a technology sets a storage capacity per unit or a range, not both
+    holds: NOT ((storage_cap_max OR storage_cap_min) AND storage_cap_per_unit)
+  cap_method_one_of:
+    description: Calliope's `one_of` on `cap_method`
+    holds: cap_method == continuous OR cap_method == integer
+    where: cap_method

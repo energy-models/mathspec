@@ -1,0 +1,122 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+parameters:
+  turbine_type:
+    description: "`turbine_type` — `extraction` or `backpressure`: the kind of turbine a combined heat and power plant has"
+    dims: [nodes, techs]
+    dtype: str
+  power_loss_factor:
+    description: "`power_loss_factor` — `cv`, the power an extraction turbine loses per unit of heat. Calliope's default is 1, and data prep fills it"
+    dims: [nodes, techs]
+  power_to_heat_ratio:
+    description: "`power_to_heat_ratio` — `cb`, the backpressure ratio. Calliope's default is 1, and data prep fills it"
+    dims: [nodes, techs]
+  boiler_eff:
+    description: "`boiler_eff` — the efficiency of the boiler fuel may be diverted to; given only where set"
+    dims: [nodes, techs]
+
+expressions:
+  chp_electricity_out:
+    description: "`flow_out[carriers=electricity]`"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      electricity:
+        when: carriers == electricity
+        expression: flow_out
+    otherwise: 0
+  chp_heat_out:
+    description: "`flow_out[carriers=heat]`"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      heat:
+        when: carriers == heat
+        expression: flow_out
+    otherwise: 0
+  chp_electricity_out_eff:
+    description: "`flow_out_eff[carriers=electricity]`"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      electricity:
+        when: carriers == electricity
+        expression: flow_out_eff
+    otherwise: 0
+  chp_electricity_out_inc_eff:
+    description: "`flow_out_inc_eff[carriers=electricity]`"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      electricity:
+        when: carriers == electricity
+        expression: flow_out_inc_eff
+    otherwise: 0
+
+given:
+  parameters:
+    base_tech: { dims: [techs], dtype: str }
+    include_storage: { dims: [nodes, techs], dtype: bool }
+    flow_out_eff: { dims: [nodes, techs, carriers, timesteps] }
+  variables:
+    flow_out: { dims: [nodes, techs, carriers, timesteps] }
+  expressions:
+    flow_out_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+    flow_in_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+
+constraints:
+  balance_conversion_backpressure:
+    description: >-
+      `balance_conversion` for a backpressure plant with no boiler — the
+      plant puts out, before losses, as much electricity as it takes in fuel
+      after them. The patch keeps the base row off these plants
+    dims: [nodes, techs, timesteps]
+    where: base_tech == 'conversion' AND NOT include_storage AND turbine_type == backpressure AND NOT boiler_eff
+    expression: sum(chp_electricity_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
+  chp_extraction_line:
+    description: "`chp_extraction_line` — an extraction plant puts out at most the electricity its fuel gives, less what the heat costs"
+    dims: [nodes, techs, timesteps]
+    where: turbine_type == extraction
+    expression: >-
+      sum(chp_electricity_out, over=carriers)
+      <= sum(flow_in_inc_eff, over=carriers) * sum(chp_electricity_out_eff, over=carriers)
+      - sum(chp_heat_out, over=carriers) * power_loss_factor
+  chp_backpressure_line_min:
+    description: "`chp_backpressure_line_min` — an extraction plant puts out at least the backpressure ratio of electricity per unit of heat"
+    dims: [nodes, techs, timesteps]
+    where: turbine_type == extraction
+    expression: sum(chp_electricity_out, over=carriers) >= sum(chp_heat_out, over=carriers) * power_to_heat_ratio
+  chp_backpressure_line_max:
+    description: "`chp_backpressure_line_max` — a backpressure plant with a boiler puts out at most the backpressure ratio of electricity per unit of heat"
+    dims: [nodes, techs, timesteps]
+    where: turbine_type == backpressure AND boiler_eff
+    expression: sum(chp_electricity_out, over=carriers) <= sum(chp_heat_out, over=carriers) * power_to_heat_ratio
+  chp_divert_fuel_to_boiler:
+    description: "`chp_divert_fuel_to_boiler` — a backpressure plant with a boiler puts out at most the heat its fuel gives through turbine and boiler"
+    dims: [nodes, techs, timesteps]
+    where: turbine_type == backpressure AND boiler_eff
+    expression: >-
+      sum(chp_heat_out, over=carriers)
+      <= sum(flow_in_inc_eff, over=carriers) * boiler_eff
+      - sum(chp_electricity_out, over=carriers)
+      * (boiler_eff / sum(chp_electricity_out_eff, over=carriers) - 1 / power_to_heat_ratio)
+  chp_backpressure_line_equals:
+    description: "`chp_backpressure_line_equals` — a backpressure plant with no boiler puts out the backpressure ratio of electricity per unit of heat"
+    dims: [nodes, techs, timesteps]
+    where: turbine_type == backpressure AND NOT boiler_eff
+    expression: sum(chp_electricity_out, over=carriers) == sum(chp_heat_out, over=carriers) * power_to_heat_ratio
+
+assumptions:
+  turbine_type_one_of:
+    description: Calliope's `one_of` on `turbine_type`
+    holds: turbine_type == extraction OR turbine_type == backpressure
+    where: turbine_type

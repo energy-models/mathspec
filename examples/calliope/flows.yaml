@@ -1,0 +1,259 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  costs:
+    description: Calliope's `costs` — cost classes, such as monetary and CO2
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+relations:
+  link_from:
+    description: >-
+      `link_from` — the node a transmission technology links from. Calliope
+      reads it as `map_dim(nodes, link_from)`, a mask over technology and
+      node, which is the relation's own row test
+    key: [techs, nodes]
+  link_to:
+    description: >-
+      `link_to` — the node a transmission technology links to, read as
+      `link_from` is
+    key: [techs, nodes]
+
+parameters:
+  base_tech:
+    description: >-
+      `base_tech` — the abstract class a technology derives from: demand,
+      supply, conversion, storage or transmission
+    dims: [techs]
+    dtype: str
+  carrier_in:
+    description: "`carrier_in` — whether a technology consumes a carrier at a node"
+    dims: [nodes, techs, carriers]
+    dtype: bool
+  carrier_out:
+    description: "`carrier_out` — whether a technology produces a carrier at a node"
+    dims: [nodes, techs, carriers]
+    dtype: bool
+  include_storage:
+    description: >-
+      `include_storage` — whether a technology that is not a storage one
+      carries a store all the same
+    dims: [nodes, techs]
+    dtype: bool
+  one_way:
+    description: "`one_way` — whether a transmission technology carries flow only from `link_from` to `link_to`"
+    dims: [techs]
+    dtype: bool
+  flow_cap_min:
+    description: >-
+      `flow_cap_min` — least flow capacity. Calliope's default is 0; a bound
+      has a row wherever the variable has one, so data prep fills it
+    dims: [nodes, techs]
+  flow_cap_max:
+    description: >-
+      `flow_cap_max` — most flow capacity. Calliope's default is `.inf`,
+      which data prep fills, and a `where` reads as not given
+    dims: [nodes, techs]
+  flow_cap_min_systemwide:
+    description: "`flow_cap_min_systemwide` — least flow capacity of a technology over every node; given only where set"
+    dims: [techs, carriers]
+  flow_cap_max_systemwide:
+    description: "`flow_cap_max_systemwide` — most flow capacity of a technology over every node; given only where set"
+    dims: [techs, carriers]
+  flow_out_min_relative:
+    description: "`flow_out_min_relative` — least outflow, per unit of flow capacity; given only where set"
+    dims: [nodes, techs, timesteps]
+  flow_out_eff:
+    description: "`flow_out_eff` — the share of flow that leaves a technology as outflow. Calliope's default is 1, and data prep fills it"
+    dims: [nodes, techs, carriers, timesteps]
+  flow_in_eff:
+    description: "`flow_in_eff` — the share of inflow that enters a technology. Calliope's default is 1, and data prep fills it"
+    dims: [nodes, techs, carriers, timesteps]
+  flow_out_parasitic_eff:
+    description: "`flow_out_parasitic_eff` — what is left after the plant's own use. Calliope's default is 1, and data prep fills it"
+    dims: [nodes, techs, carriers, timesteps]
+  flow_out_eff_per_distance:
+    description: "`flow_out_eff_per_distance` — the outflow efficiency of a link per unit of distance. Calliope's default is 1, and data prep fills it"
+    dims: [nodes, techs, carriers, timesteps]
+  flow_in_eff_per_distance:
+    description: "`flow_in_eff_per_distance` — the inflow efficiency of a link per unit of distance. Calliope's default is 1, and data prep fills it"
+    dims: [nodes, techs, carriers, timesteps]
+  distance:
+    description: >-
+      `distance` — the length of a transmission link. Calliope's default is
+      1, which data prep fills, where it does not derive one from the
+      coordinates of the nodes
+    dims: [techs]
+  flow_ramping:
+    description: "`flow_ramping` — the most flow may change in an hour, per unit of flow capacity; given only where set"
+    dims: [nodes, techs]
+  cost_flow_cap:
+    description: "`cost_flow_cap` — the cost of one unit of flow capacity"
+    dims: [nodes, techs, costs]
+  cost_flow_cap_per_distance:
+    description: "`cost_flow_cap_per_distance` — the cost of one unit of flow capacity per unit of link distance"
+    dims: [nodes, techs, costs]
+  cost_flow_out:
+    description: "`cost_flow_out` — the cost of one unit of outflow"
+    dims: [nodes, techs, costs, timesteps]
+  cost_flow_in:
+    description: "`cost_flow_in` — the cost of one unit of inflow"
+    dims: [nodes, techs, costs, timesteps]
+  cost_om_annual:
+    description: "`cost_om_annual` — the annual cost of one unit of flow capacity"
+    dims: [nodes, techs, costs]
+
+variables:
+  flow_cap:
+    description: "`flow_cap` — the flow capacity of a technology, its nominal or nameplate capacity"
+    dims: [nodes, techs, carriers]
+    where: carrier_in OR carrier_out
+    bounds: { lower: flow_cap_min, upper: flow_cap_max }
+    absence: zero
+  flow_out:
+    description: >-
+      `flow_out` — the outflow of a technology in a time step. A one-way link
+      has none at the node it links from
+    dims: [nodes, techs, carriers, timesteps]
+    where: carrier_out AND NOT (one_way AND link_from)
+    bounds: { lower: 0 }
+    absence: zero
+  flow_in:
+    description: >-
+      `flow_in` — the inflow to a technology in a time step. A one-way link
+      has none at the node it links to
+    dims: [nodes, techs, carriers, timesteps]
+    where: carrier_in AND NOT (one_way AND link_to)
+    bounds: { lower: 0 }
+    absence: zero
+
+expressions:
+  flow_out_inc_eff:
+    description: "`flow_out_inc_eff` — outflow before the losses on the way out"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      transmission:
+        when: base_tech == 'transmission'
+        expression: flow_out / (flow_out_eff * flow_out_parasitic_eff * flow_out_eff_per_distance ** distance)
+    otherwise: flow_out / (flow_out_eff * flow_out_parasitic_eff)
+  flow_in_inc_eff:
+    description: "`flow_in_inc_eff` — inflow after the losses on the way in"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      transmission:
+        when: base_tech == 'transmission'
+        expression: flow_in * flow_in_eff * flow_in_eff_per_distance ** distance
+    otherwise: flow_in * flow_in_eff
+  ramping_flow:
+    description: >-
+      `$flow` of `ramping_up` and `ramping_down` — the flow a ramping limit
+      holds, per hour: outflow, inflow, or their difference where a
+      technology has both
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      out:
+        when: carrier_out AND NOT carrier_in
+        expression: flow_out / timestep_resolution
+      in:
+        when: carrier_in AND NOT carrier_out
+        expression: flow_in / timestep_resolution
+    otherwise: (flow_out - flow_in) / timestep_resolution
+  cost_flow_cap_sum:
+    description: >-
+      `$cost_sum` of `cost_investment_flow_cap` — what one unit of flow
+      capacity costs; a link's cost is split between its two ends
+    dims: [nodes, techs, costs]
+    cases:
+      transmission:
+        when: base_tech == 'transmission'
+        expression: (cost_flow_cap + cost_flow_cap_per_distance * distance) * 0.5
+    otherwise: cost_flow_cap
+  cost_investment_flow_cap:
+    description: "`cost_investment_flow_cap` — the investment cost of flow capacity"
+    expression: cost_flow_cap_sum * flow_cap
+  flows_carrier_flow: sum(flow_out, over=techs) - sum(flow_in, over=techs)
+  flows_cost_investment: sum(cost_investment_flow_cap, over=carriers)
+  flows_cost_operation_variable: >-
+    timestep_weights * (sum(cost_flow_out * flow_out, over=carriers) + sum(cost_flow_in * flow_in, over=carriers))
+  flows_cost_operation_fixed: annualisation_weight * sum(cost_om_annual * flow_cap, over=carriers)
+
+given:
+  parameters:
+    timestep_resolution: { dims: [timesteps] }
+    timestep_weights: { dims: [timesteps] }
+  expressions:
+    annualisation_weight:
+      description: the share of a year the modelled time steps stand for
+      dims: []
+    carrier_flow: { dims: [nodes, carriers, timesteps], term: flows_carrier_flow }
+    cost_investment: { dims: [nodes, techs, costs], term: flows_cost_investment }
+    cost_operation_variable: { dims: [nodes, techs, costs, timesteps], term: flows_cost_operation_variable }
+    cost_operation_fixed: { dims: [nodes, techs, costs], term: flows_cost_operation_fixed }
+
+constraints:
+  flow_out_max:
+    description: "`flow_out_max` — outflow is at most the flow capacity over the time step, less the plant's own use"
+    dims: [nodes, techs, carriers, timesteps]
+    where: carrier_out
+    expression: flow_out <= flow_cap * timestep_resolution * flow_out_parasitic_eff
+  flow_out_min:
+    description: "`flow_out_min` — outflow is at least its least share of the flow capacity"
+    dims: [nodes, techs, carriers, timesteps]
+    where: flow_cap AND flow_out_min_relative
+    expression: flow_out >= flow_cap * timestep_resolution * flow_out_min_relative
+  flow_in_max:
+    description: "`flow_in_max` — inflow is at most the flow capacity over the time step"
+    dims: [nodes, techs, carriers, timesteps]
+    where: carrier_in
+    expression: flow_in <= flow_cap * timestep_resolution
+  flow_capacity_systemwide_max:
+    description: "`flow_capacity_systemwide_max` — the flow capacity of a technology over every node is at most its system-wide maximum"
+    dims: [techs, carriers]
+    where: count(flow_cap, over=nodes) >= 1 AND flow_cap_max_systemwide
+    expression: sum(flow_cap, over=nodes) <= flow_cap_max_systemwide
+  flow_capacity_systemwide_min:
+    description: "`flow_capacity_systemwide_min` — the flow capacity of a technology over every node is at least its system-wide minimum"
+    dims: [techs, carriers]
+    where: count(flow_cap, over=nodes) >= 1 AND flow_cap_min_systemwide
+    expression: sum(flow_cap, over=nodes) >= flow_cap_min_systemwide
+  ramping_up:
+    description: "`ramping_up` — flow rises from one time step to the next by at most its ramping share of the flow capacity"
+    dims: [nodes, techs, carriers, timesteps]
+    where: (carrier_in OR carrier_out) AND flow_ramping AND position(timesteps) > 0
+    expression: ramping_flow - shift(ramping_flow, along=timesteps, offset=1) <= flow_ramping * flow_cap
+  ramping_down:
+    description: "`ramping_down` — flow falls from one time step to the next by at most its ramping share of the flow capacity"
+    dims: [nodes, techs, carriers, timesteps]
+    where: (carrier_in OR carrier_out) AND flow_ramping AND position(timesteps) > 0
+    expression: -1 * flow_ramping * flow_cap <= ramping_flow - shift(ramping_flow, along=timesteps, offset=1)
+
+assumptions:
+  must_have_base:
+    description: Calliope's `must_have_base` — every technology derives from an abstract class
+    holds: base_tech
+  base_tech_one_of:
+    description: Calliope's `one_of` on `base_tech`
+    holds: >-
+      base_tech == 'demand' OR base_tech == 'supply' OR base_tech == 'conversion'
+      OR base_tech == 'storage' OR base_tech == 'transmission'
+  distance_only_for_transmission:
+    description: >-
+      Calliope's `distance_only_for_transmission` — only a link sets a
+      distance or a per-distance value. Data prep fills the defaults, so a
+      technology that is not a link keeps them
+    holds: >-
+      distance == 1 AND flow_in_eff_per_distance == 1
+      AND flow_out_eff_per_distance == 1 AND NOT cost_flow_cap_per_distance
+    where: NOT base_tech == 'transmission'
+  unbounded_flow_cap_cost:
+    description: Calliope's `unbounded_flow_cap_cost` — a negative flow capacity cost needs a finite maximum
+    holds: NOT cost_flow_cap < 0 OR flow_cap_max

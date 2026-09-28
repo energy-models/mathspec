@@ -1,0 +1,97 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+parameters:
+  net_import_share:
+    description: >-
+      `net_import_share` — the share of a node's flows that imports may make
+      up. Calliope's default is 1, and data prep fills it. Calliope reads it
+      per node and in a row over a group of nodes; a parameter here has one
+      shape, so it is one number
+    dims: []
+
+expressions:
+  flow_out_transmission_techs:
+    description: "`flow_out_transmission_techs` — the outflow of transmission technologies, that is, imports"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      transmission:
+        when: carrier_out AND base_tech == 'transmission'
+        expression: flow_out
+    otherwise: 0
+  electricity_imports:
+    description: "`flow_out_transmission_techs[carriers=electricity]`"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      electricity:
+        when: carriers == electricity
+        expression: flow_out_transmission_techs
+    otherwise: 0
+  electricity_balance:
+    description: "`$total_energy_balance` — the outflow of electricity at a node, less its inflow"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      electricity:
+        when: carriers == electricity
+        expression: flow_out - flow_in
+    otherwise: 0
+  node_group_heat_imports:
+    description: "`flow_out_transmission_techs[nodes=$node_group, carriers=$carrier]` — heat imports at nodes `a` and `c`"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      group:
+        when: (nodes == 'a' OR nodes == 'c') AND carriers == heat
+        expression: flow_out_transmission_techs
+    otherwise: 0
+  node_group_heat_balance:
+    description: "`$total_energy_balance` of the node group — the outflow of heat at nodes `a` and `c`, less its inflow"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      group:
+        when: (nodes == 'a' OR nodes == 'c') AND carriers == heat
+        expression: flow_out - flow_in
+    otherwise: 0
+
+given:
+  parameters:
+    base_tech: { dims: [techs], dtype: str }
+    carrier_out: { dims: [nodes, techs, carriers], dtype: bool }
+  variables:
+    flow_out: { dims: [nodes, techs, carriers, timesteps] }
+    flow_in: { dims: [nodes, techs, carriers, timesteps] }
+
+constraints:
+  net_import_share_max:
+    description: >-
+      `net_import_share_max` — electricity imports at a node are at most
+      their share of its electricity balance in each time step. Calliope's
+      `where: any(flow_out_transmission_techs, over=techs)` reads as a link
+      at the node putting out any carrier
+    dims: [nodes, timesteps]
+    where: count(count(carrier_out, over=carriers) >= 1 AND base_tech == 'transmission', over=techs) >= 1
+    expression: >-
+      net_import_share * sum(sum(electricity_imports, over=techs), over=carriers)
+      <= sum(sum(electricity_balance, over=techs), over=carriers)
+  net_annual_import_share_max:
+    description: "`net_annual_import_share_max` — electricity imports at a node are at most their share of its electricity balance over the year"
+    dims: [nodes]
+    where: count(count(carrier_out, over=carriers) >= 1 AND base_tech == 'transmission', over=techs) >= 1
+    expression: >-
+      net_import_share * sum(sum(sum(electricity_imports, over=techs), over=carriers), over=timesteps)
+      <= sum(sum(sum(electricity_balance, over=techs), over=carriers), over=timesteps)
+  net_annual_import_share_max_node_group:
+    description: "`net_annual_import_share_max_node_group` — heat imports at nodes `a` and `c` are at most their share of the group's heat balance over the year"
+    dims: []
+    expression: net_import_share * sum(node_group_heat_imports) <= sum(node_group_heat_balance)

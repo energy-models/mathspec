@@ -25,6 +25,11 @@ docs/examples/library/generator.md
 docs/examples/library/load.md
 docs/examples/library/composed.md
 docs/examples/pypsa/*.md
+docs/examples/calliope/*.md
+docs/examples/calliope/extensions/*.md
+docs/examples/calliope/variants/*.md
+# The port record is written by hand, so prettier keeps its tables.
+!docs/examples/calliope/port.md
 
 # The PyPSA reference scripts write this file; prettier would reformat what
 # they stamp, and the two would fight over it exactly as above.

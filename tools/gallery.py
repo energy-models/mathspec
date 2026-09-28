@@ -17,6 +17,7 @@ import json
 import re
 import textwrap
 from functools import partial
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import yaml
@@ -30,8 +31,6 @@ from tools.notation import equations
 from tools.spec_math import OPERATORS, PROBES, _section, rendered_probe
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from mathspec.spec import Spec
 
 PAGES = ROOT / 'docs' / 'examples'
@@ -43,6 +42,13 @@ PYPSA = ROOT / 'examples' / 'pypsa'
 #: PyPSA split prints in the one file's table, cut the same way.
 LIBRARY_SYMBOLS = ROOT / 'examples' / 'symbols' / 'library.yaml'
 PYPSA_SYMBOLS = ROOT / 'examples' / 'symbols' / 'pypsa.yaml'
+#: Calliope's math: its base as one fragment per topic, each file beyond the
+#: base that adds to it, and the patches its modes and its rewrites of a base
+#: row are written as. Every page prints in one table, cut as above.
+CALLIOPE = ROOT / 'examples' / 'calliope'
+CALLIOPE_BASE = sorted(CALLIOPE.glob('*.yaml'))
+CALLIOPE_EXTENSIONS = sorted((CALLIOPE / 'extensions').glob('*.yaml'))
+CALLIOPE_SYMBOLS = ROOT / 'examples' / 'symbols' / 'calliope.yaml'
 BEGIN, END = '<!-- gallery:begin -->', '<!-- gallery:end -->'
 
 #: Page -> the spec it shows. One spec per page, because a gallery of
@@ -54,10 +60,33 @@ MODELS = {
     'library/generator.md': LIBRARY / 'generator.yaml',
     'library/load.md': LIBRARY / 'load.yaml',
     **{f'pypsa/{path.stem}.md': path for path in sorted(PYPSA.glob('*.yaml'))},
+    **{f'calliope/{path.stem}.md': path for path in CALLIOPE_BASE},
+    **{f'calliope/extensions/{path.stem}.md': path for path in CALLIOPE_EXTENSIONS},
 }
 
 #: The index of the PyPSA split: its two tables are read off the fragments.
 SPLIT_INDEX = 'pypsa/index.md'
+#: The index of the Calliope port: the same two tables, over the base and every extension.
+CALLIOPE_INDEX = 'calliope/index.md'
+
+
+def _calliope(*extensions: str) -> list[Path]:
+    """The base fragments, then the named extensions, in the order `merge` takes them."""
+    return [*CALLIOPE_BASE, *(CALLIOPE / 'extensions' / f'{name}.yaml' for name in extensions)]
+
+
+#: Page -> the fragments a Calliope patch is laid over, and the patches laid
+#: before it. A patch is not a spec, so its page prints what it writes, as the
+#: spec it lands on prints it.
+CALLIOPE_VARIANTS: dict[str, tuple[list[Path], list[str]]] = {
+    'calliope/variants/milp.md': (_calliope('milp'), []),
+    'calliope/variants/operate.md': (_calliope(), []),
+    'calliope/variants/operate_milp.md': (_calliope('milp'), ['milp', 'operate']),
+    'calliope/variants/spores.md': (_calliope(), []),
+    'calliope/variants/storage_inter_cluster.md': (_calliope(), []),
+    'calliope/variants/chp_htp.md': (_calliope('chp_htp'), []),
+    'calliope/variants/urban_scale_chp.md': (_calliope('urban_scale_chp'), []),
+}
 
 #: Page -> the fragments whose composition it shows, and the patches laid over
 #: it. The spec is what `merge` returns, which no file in the tree holds, so
@@ -119,26 +148,46 @@ def fragment_block(path: Path, table_path: Path) -> str:
 
 
 def split_index_block() -> str:
-    """The PyPSA split's two tables: each sum with the fragment that declares it and the terms, and each fragment.
+    """The PyPSA split's two tables, read off its fragments."""
+    return sum_tables({path.stem: (path, f'{path.stem}.md') for path in sorted(PYPSA.glob('*.yaml'))})
 
-    Both are read off the fragments, so the index cannot name a term or an
-    owner the files no longer have.
+
+def calliope_index_block() -> str:
+    """The Calliope port's two tables, over the base fragments and then every extension."""
+    return sum_tables(
+        {
+            **{path.stem: (path, f'{path.stem}.md') for path in CALLIOPE_BASE},
+            **{path.stem: (path, f'extensions/{path.stem}.md') for path in CALLIOPE_EXTENSIONS},
+        }
+    )
+
+
+def sum_tables(fragments: dict[str, tuple[Path, str]]) -> str:
+    """Each sum with the fragment that declares it and the terms, then each fragment.
+
+    Both are read off the fragments, so an index cannot name a term or an
+    owner the files no longer have. The owner of a sum is the fragment that
+    declares it under ``expressions:``, empty or with a body of its own.
     """
-    specs = {path.stem: to_spec(path) for path in sorted(PYPSA.glob('*.yaml'))}
-    owners: dict[str, tuple[str, tuple[str, ...]]] = {}
+    specs = {name: to_spec(path) for name, (path, _) in fragments.items()}
+    href = {name: link for name, (_, link) in fragments.items()}
     terms: dict[str, dict[str, str]] = {}
     for name, spec in specs.items():
         for hub, entry in spec.given.expressions.items():
             if entry.term is not None:
                 terms.setdefault(hub, {})[name] = entry.term
-        for hub, block in spec.expressions.items():
-            if block.expression is None and not block.cases:
-                owners[hub] = (name, tuple(block.dims or ()))
+    owners = {
+        hub: (name, tuple(spec.expressions[hub].dims or ()))
+        for name, spec in specs.items()
+        for hub in terms
+        if hub in spec.expressions
+    }
     sums = ['| Sum | Over | Declared in | The terms, by the fragment that adds each |', '| --- | --- | --- | --- |']
     for hub, by_fragment in sorted(terms.items(), key=lambda item: -len(item[1])):
         reader, dims = owners[hub]
-        cells = ', '.join(f'[`{term}`]({fragment}.md)' for fragment, term in sorted(by_fragment.items()))
-        sums.append(f'| `{hub}` | `{", ".join(dims)}` | [{reader}]({reader}.md) | {cells} |')
+        cells = ', '.join(f'[`{term}`]({href[fragment]})' for fragment, term in sorted(by_fragment.items()))
+        over = f'`{", ".join(dims)}`' if dims else 'nothing: one number'
+        sums.append(f'| `{hub}` | {over} | [{reader}]({href[reader]}) | {cells} |')
     files = [
         '| Fragment | Parameters | Variables | Constraints | Reads | Adds to |',
         '| --- | --- | --- | --- | --- | --- |',
@@ -148,10 +197,44 @@ def split_index_block() -> str:
         reads = len(given.parameters) + len(given.variables) + len(given.expressions) + len(given.constraints)
         adds = ', '.join(f'`{hub}`' for hub, entry in given.expressions.items() if entry.term is not None)
         files.append(
-            f'| [{name}]({name}.md) | {len(spec.parameters)} | {len(spec.variables)} | {len(spec.constraints)} '
+            f'| [{name}]({href[name]}) | {len(spec.parameters)} | {len(spec.variables)} | {len(spec.constraints)} '
             f'| {reads} | {adds} |'
         )
     return '### The sums\n\n' + '\n'.join(sums) + '\n\n### The fragments\n\n' + '\n'.join(files)
+
+
+def variant_block(page: str) -> str:
+    """A Calliope patch: the call that lays it, the file, then each declaration it writes as the patched spec prints it.
+
+    A patch that removes a declaration names it in a list, since what is gone
+    has no line to print.
+    """
+    fragments, before = CALLIOPE_VARIANTS[page]
+    path = CALLIOPE / 'variants' / f'{Path(page).stem}.yaml'
+    patches = [CALLIOPE / 'variants' / f'{name}.yaml' for name in before] + [path]
+    patched = override(merge(fragments), patches)
+    table = symbols_for(patched, CALLIOPE_SYMBOLS)
+    extensions = [f.stem for f in fragments if f.parent.name == 'extensions']
+    listed = ', '.join(repr(f'extensions/{name}.yaml') for name in extensions)
+    merged = f'ms.merge(base + [{listed}])' if extensions else 'ms.merge(base)'
+    laid = ', '.join(repr(f'variants/{patch.name}') for patch in patches)
+    call = f'ms.override(\n    {merged},\n    [{laid}],\n)'
+    written = yaml.safe_load(path.read_text())
+    parts = [f'```python\n{call}\n```', f'```yaml title="variants/{path.name}"\n{without_header(path)}\n```']
+    removed = []
+    for section in ('variables', 'expressions', 'constraints', 'assumptions'):
+        for name, entry in (written.get(section) or {}).items():
+            if entry is None:
+                removed.append(f'`{name}`')
+                continue
+            line = typeset_declaration(patched, name, 'markdown', symbols=table, inline_expressions=False)
+            parts.append(f'**`{name}`**\n\n```math\n{line}\n```')
+    if written.get('objective'):
+        page_math = to_markdown(patched, symbols=table, numbered=False)
+        parts.append('**The objective**\n\n' + _section(page_math, 'Objective').removeprefix('#### Objective').strip())
+    if removed:
+        parts.append(f'Removed: {", ".join(removed)}.')
+    return '\n\n'.join(parts)
 
 
 def composed_block(fragments: list[Path], patches: dict[str, Path]) -> str:
@@ -358,6 +441,12 @@ def block(page: str) -> str:
         return composed_block(*COMPOSED[page])
     if page == SPLIT_INDEX:
         return split_index_block()
+    if page == CALLIOPE_INDEX:
+        return calliope_index_block()
+    if page in CALLIOPE_VARIANTS:
+        return variant_block(page)
+    if CALLIOPE in MODELS[page].parents:
+        return fragment_block(MODELS[page], CALLIOPE_SYMBOLS)
     if MODELS[page].parent == LIBRARY:
         return fragment_block(MODELS[page], LIBRARY_SYMBOLS)
     if MODELS[page].parent == PYPSA:
@@ -373,7 +462,7 @@ def rendered(page: str, text: str) -> str:
 
 
 def pages() -> list[str]:
-    return [*MODELS, *COMPOSED, *DECLARED, 'operators.md', SPLIT_INDEX]
+    return [*MODELS, *COMPOSED, *DECLARED, 'operators.md', SPLIT_INDEX, CALLIOPE_INDEX, *CALLIOPE_VARIANTS]
 
 
 def main(argv: list[str] | None = None) -> int:

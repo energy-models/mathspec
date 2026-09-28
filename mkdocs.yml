@@ -81,7 +81,7 @@ nav:
   # writes a tool against `Spec` and `Program` (an engine such as specsolve, a
   # renderer, a checker), whoever changes mathspec itself, and the proofs of
   # concept: the notation page, which renders the typesetting test spec, and
-  # the PyPSA pages. The PyPSA pages stay in `docs/examples/`, where
+  # the PyPSA and Calliope pages. Those stay in `docs/examples/`, where
   # `tools/gallery.py` writes them.
   - Development:
       - Building on mathspec:
@@ -121,6 +121,47 @@ nav:
               - Lines: examples/pypsa/line.md
               - Transformers: examples/pypsa/transformer.md
               - Loads: examples/pypsa/load.md
+          - Calliope in fragments:
+              - examples/calliope/index.md
+              - The port record: examples/calliope/port.md
+              - Settings: examples/calliope/settings.md
+              - The balance: examples/calliope/balance.md
+              - Flows: examples/calliope/flows.md
+              - The cost: examples/calliope/cost.md
+              - Supply: examples/calliope/supply.md
+              - Demand: examples/calliope/demand.md
+              - Conversion: examples/calliope/conversion.md
+              - Storage: examples/calliope/storage.md
+              - Supply with storage: examples/calliope/supply_storage.md
+              - Area: examples/calliope/area.md
+              - Transmission: examples/calliope/transmission.md
+              - Export: examples/calliope/export.md
+              - Feasibility: examples/calliope/feasibility.md
+              - Reporting: examples/calliope/reporting.md
+              - Extensions:
+                  - MILP: examples/calliope/extensions/milp.md
+                  - Annual energy balance: examples/calliope/extensions/annual_energy_balance.md
+                  - CHP plants: examples/calliope/extensions/chp_htp.md
+                  - Demand share as a decision: examples/calliope/extensions/demand_share_per_timestep_decision.md
+                  - Fuel distribution: examples/calliope/extensions/fuel_dist.md
+                  - Time-varying flow limit: examples/calliope/extensions/max_time_varying.md
+                  - Monthly peak flow charge: examples/calliope/extensions/monthly_peak_flow_charge.md
+                  - Net import share: examples/calliope/extensions/net_import_share.md
+                  - Piecewise linear costs: examples/calliope/extensions/piecewise_linear_costs.md
+                  - Piecewise linear efficiency: examples/calliope/extensions/piecewise_linear_efficiency.md
+                  - Flow share over the whole time: examples/calliope/extensions/share_all_timesteps.md
+                  - Flow share per time step: examples/calliope/extensions/share_per_timestep.md
+                  - Piecewise linear costs with SOS2: examples/calliope/extensions/sos2_piecewise_linear_costs.md
+                  - Uptime and downtime limits: examples/calliope/extensions/uptime_downtime_limits.md
+                  - Urban-scale CHP: examples/calliope/extensions/urban_scale_chp.md
+              - Variants:
+                  - The MILP patch: examples/calliope/variants/milp.md
+                  - Operate mode: examples/calliope/variants/operate.md
+                  - Operate mode, with MILP: examples/calliope/variants/operate_milp.md
+                  - SPORES: examples/calliope/variants/spores.md
+                  - Inter-cluster storage: examples/calliope/variants/storage_inter_cluster.md
+                  - The CHP patch: examples/calliope/variants/chp_htp.md
+                  - The urban-scale CHP patch: examples/calliope/variants/urban_scale_chp.md
 
 theme:
   palette:

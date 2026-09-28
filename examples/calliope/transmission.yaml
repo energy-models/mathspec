@@ -1,0 +1,69 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+relations:
+  link_from:
+    description: >-
+      `link_from` — the node a transmission technology links from. Calliope
+      reads it as `map_dim(nodes, link_from)`, a mask over technology and
+      node, which is the relation's own row test
+    key: [techs, nodes]
+  link_to:
+    description: >-
+      `link_to` — the node a transmission technology links to, read as
+      `link_from` is
+    key: [techs, nodes]
+
+expressions:
+  flow_cap_from:
+    description: "`where(flow_cap, map_dim(nodes, link_from))` — a link's flow capacity at the node it links from"
+    dims: [nodes, techs, carriers]
+    cases:
+      from:
+        when: link_from
+        expression: flow_cap
+    otherwise: 0
+  flow_cap_to:
+    description: "`where(flow_cap, map_dim(nodes, link_to))` — a link's flow capacity at the node it links to"
+    dims: [nodes, techs, carriers]
+    cases:
+      to:
+        when: link_to
+        expression: flow_cap
+    otherwise: 0
+
+given:
+  parameters:
+    base_tech: { dims: [techs], dtype: str }
+    carrier_out: { dims: [nodes, techs, carriers], dtype: bool }
+  variables:
+    flow_cap: { dims: [nodes, techs, carriers] }
+  expressions:
+    flow_out_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+    flow_in_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+
+constraints:
+  balance_transmission:
+    description: "`balance_transmission` — a link puts out at one end, before losses, what it takes in at the other after them"
+    dims: [techs, timesteps]
+    where: base_tech == 'transmission'
+    expression: >-
+      sum(sum(flow_out_inc_eff, over=nodes), over=carriers)
+      == sum(sum(flow_in_inc_eff, over=nodes), over=carriers)
+  symmetric_transmission:
+    description: "`symmetric_transmission` — a link has the same flow capacity at both ends"
+    dims: [techs, carriers]
+    where: count(carrier_out, over=nodes) >= 1 AND base_tech == 'transmission'
+    expression: sum(flow_cap_from, over=nodes) == sum(flow_cap_to, over=nodes)
