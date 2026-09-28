@@ -13,6 +13,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - fix(language): dual(c) is the rate at which the optimal objective rises with the right side of c, so an equality has a sign too ([#751](https://github.com/energy-models/mathspec/pull/751))
+- fix(language): merge and override take a list of files, and its order is the order of the terms and of the patches ([#761](https://github.com/energy-models/mathspec/pull/761))
 - docs: the composition how-to builds a component library from terms each file adds to a sum ([#762](https://github.com/energy-models/mathspec/pull/762))
 - docs(pypsa): a single spec covers every pypsa model class and component ([#620](https://github.com/energy-models/mathspec/pull/620))
 - docs(pypsa): the pypsa spec is also 24 topic files that merge back to it, each component adding its share of a sum by name ([#736](https://github.com/energy-models/mathspec/pull/736))

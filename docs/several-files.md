@@ -183,16 +183,16 @@ expression 'injection' is read here and declared elsewhere, and this file adds a
 
 ## Merge the files
 
-Merge the three files in Python. Each name is what an error calls that file:
+Merge the three files in Python. Give them as a list:
 
 ```python
-spec = ms.merge({'network': 'network.yaml', 'generators': 'generators.yaml', 'loads': 'loads.yaml'})
+spec = ms.merge(['network.yaml', 'generators.yaml', 'loads.yaml'])
 print(spec.expressions['injection'].expression)
 print(spec.dimensions['snapshot'].description)
 ```
 
-The injection is the sum of the two terms by name, in the order of the file
-names. Each term stays a named expression of the merged spec. The dimension
+The injection is the sum of the two terms by name, in the order of the list.
+Each term stays a named expression of the merged spec. The dimension
 carries the one description written for it, the network's:
 
 ```text
@@ -291,18 +291,16 @@ objective:
 Merge the four files:
 
 ```python
-spec = ms.merge(
-    {'network': 'network.yaml', 'generators': 'generators.yaml', 'loads': 'loads.yaml', 'imports': 'imports.yaml'}
-)
+spec = ms.merge(['network.yaml', 'generators.yaml', 'loads.yaml', 'imports.yaml'])
 print(spec.expressions['injection'].expression)
 print(spec.objective.expression)
 ```
 
-The injection has a third term, and the objective sums the two objectives.
-`network.yaml` did not change:
+The injection has a third term at the end, and the objective sums the two
+objectives. `network.yaml` did not change:
 
 ```text
-generation + purchase + consumption
+generation + consumption + purchase
 (sum(dispatch * cost)) + (sum(imported * import_price))
 ```
 
@@ -347,15 +345,7 @@ variable 'dispatch' is read here and declared elsewhere: the model this one is l
 Merge all five files:
 
 ```python
-spec = ms.merge(
-    {
-        'network': 'network.yaml',
-        'generators': 'generators.yaml',
-        'loads': 'loads.yaml',
-        'imports': 'imports.yaml',
-        'emissions': 'emissions.yaml',
-    }
-)
+spec = ms.merge(['network.yaml', 'generators.yaml', 'loads.yaml', 'imports.yaml', 'emissions.yaml'])
 print(sorted(spec.constraints))
 print(bool(spec.program.given))
 ```
@@ -373,14 +363,14 @@ False
 Merge the generators and the loads without the network:
 
 ```python
-ms.merge({'generators': 'generators.yaml', 'loads': 'loads.yaml'})
+ms.merge(['generators.yaml', 'loads.yaml'])
 ```
 
 `merge` refuses it. A term adds to a name another file declares, and without
 the network no file declares `injection`:
 
 ```text
-fragments 'generators' and 'loads' add a term to 'injection', which no fragment declares. A term adds to a name another file declares under 'expressions:': declare it there, as `empty: true` over a `dims:` where the files add every term, or fix the spelling.
+fragments 'generators.yaml' and 'loads.yaml' add a term to 'injection', which no fragment declares. A term adds to a name another file declares under 'expressions:': declare it there, as `empty: true` over a `dims:` where the files add every term, or fix the spelling.
 ```
 
 ## Where to next
