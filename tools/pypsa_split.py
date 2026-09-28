@@ -387,7 +387,7 @@ def check(folder: Path) -> int:
     print(f'{len(paths) - failed}/{len(paths)} fragments load alone')
     one = to_spec(SOURCE)
     try:
-        merged = merge(paths, description=one.description)
+        merged = merge(list(paths.values()), description=one.description)
     except LanguageError as e:
         print(f'merge refuses the fragments: {e}')
         return 1

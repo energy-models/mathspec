@@ -162,10 +162,10 @@ def composed_block(fragments: list[Path], patches: dict[str, Path]) -> str:
     refused on its own, so its tab carries the patch file and then the whole
     document of the spec it is laid over.
     """
-    model = merge({path.stem: path for path in fragments})
+    model = merge(fragments)
     tabs = [tab('As composed', to_markdown(model, symbols=symbols_for(model), numbered=False).strip())]
     for name, path in patches.items():
-        patched = override(model, {name: path})
+        patched = override(model, [path])
         tabs.append(
             tab(
                 f'With {name}',
