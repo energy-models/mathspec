@@ -172,8 +172,8 @@ given:
     scenario_weight: { dims: [scenario] }
     transmission_losses: { dims: [], dtype: bool }
   expressions:
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Transformer_injection }
-    Cycle_angle_sum: { dims: [scenario, snapshot, cycle], term: Transformer_angle_sum }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
 
 expressions:
   Transformer_s_monitored:
@@ -188,11 +188,13 @@ expressions:
       + sum(Transformer_s, by=Transformer_bus1, over=transformer, into=bus)
       - (0.5 * sum(Transformer_loss, by=Transformer_bus0, over=transformer, into=bus))
       - (0.5 * sum(Transformer_loss, by=Transformer_bus1, over=transformer, into=bus))
+    adds_to: Bus_injection
   Transformer_angle_sum:
     expression: >-
       sum(Transformer_s * Transformer_cycle_weight, over=transformer)
       + sum(Transformer_phase_shift_weight, over=transformer)
       + sum(Transformer_phase_shift * Transformer_phase_shift_cycle_weight, over=transformer)
+    adds_to: Cycle_angle_sum
 
 constraints:
   Transformer_fix_s_lower:

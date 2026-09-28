@@ -46,7 +46,7 @@ parameters:
 
 given:
   expressions:
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Load_injection }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Load_demand:
@@ -58,7 +58,9 @@ expressions:
     cases:
       active: { when: Load_active, expression: Load_sign * Load_p_set }
     otherwise: 0
-  Load_injection: sum(Load_demand, by=Load_bus, over=load, into=bus)
+  Load_injection:
+    expression: sum(Load_demand, by=Load_bus, over=load, into=bus)
+    adds_to: Bus_injection
 ```
 
 #### Sets

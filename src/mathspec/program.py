@@ -617,17 +617,11 @@ class GivenDeclaration:
 
     The frame is the whole declaration. A consumer looks the name up in the
     model this one is layered onto, checks the frame against what it finds,
-    and refuses a name the host does not provide. An empty sum is the one
-    entry this program declares itself: its body is what the other files add.
+    and refuses a name the host does not provide.
     """
 
     dims: tuple[str, ...]
     description: str | None = None
-    #: The [`Named`][] node of the term this program adds to the name, or ``None`` where it only reads it.
-    term: Named | None = None
-    #: Whether this program declares the name itself, as an ``empty: true``
-    #: expression, and leaves the body to the files that add terms.
-    empty: bool = False
 
 
 @dataclass(frozen=True)
@@ -703,9 +697,9 @@ class ObjectiveDeclaration:
 class ExpressionDeclaration:
     """A named quantity — one the math reads, or one only read back after a solve.
 
-    ``in_math`` where the objective, a constraint or a term this program
-    adds to a given expression reads it, directly or through another entry or
-    a macro; its body then stands inside
+    ``in_math`` where the objective, a constraint or a term of a given
+    expression reads it, directly or through another entry or a macro, and
+    where it is such a term itself; its body then stands inside
     [`Program.roots`][] and is held to the degree rules where it is
     read. Otherwise nothing a solver sees contains it: it is a reported
     quantity, its body held to no degree, the one place a [`Dual`][] may
@@ -718,6 +712,8 @@ class ExpressionDeclaration:
     dims: tuple[str, ...]
     in_math: bool
     description: str | None = None
+    #: The given expression this entry is a term of, or ``None``.
+    adds_to: str | None = None
 
 
 @dataclass(frozen=True)
