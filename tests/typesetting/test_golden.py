@@ -199,9 +199,12 @@ def test_the_golden_model_calls_every_operator_in_the_language():
 #: to quote. A refusal of the name asked for renders nothing, and
 #: `test_declaration.py` pins both. One program has one convexity verdict, and
 #: the fixture's is undecided, so the class sentence of a convex program is the
-#: arm a different model takes; `test_formats.py` pins it.
+#: arm a different model takes; `test_formats.py` pins it. An empty sum draws
+#: advice until its terms arrive, and `check` accepts the fixture in silence,
+#: so the fixture declares none; `test_terms.py` prints one.
 UNREACHABLE = {
     walk: {
+        'rendered = self.format.ellipsis',
         'return self.format.cases(self._arms(node, ctx)), _ATOM',
         'assert_never(node)',
         'assert_never(check)',

@@ -147,6 +147,9 @@ expressions:
     dims: [generator, snapshot]
     expression: eta * p_max
   lcoe: sum(p * cost) / sum(p) # nothing in the math reads it, so its divisor may carry a variable
+  net: # a plain expression that opens with a minus
+    description: what a snapshot spills, less what it lacks
+    expression: -spill + slack
   marginal_price: dual(balance) # the row dual of a constraint, the one builtin only an entry the math never reads may call
   startup_cost: # a quantity defined by region: no two cases overlap, and `otherwise` is the rest
     description: what starting a unit in this snapshot costs, which the horizon's edge changes
@@ -169,6 +172,9 @@ constraints:
   balance: # sum over a relation
     dims: [snapshot, bus]
     expression: sum(p, by=gen_bus, over=generator, into=bus) + spill - slack == load
+  netted: # names the signed sum on the right of a plus: inlined, its minus prints as a subtraction
+    dims: [snapshot, bus]
+    expression: sum(p, by=gen_bus, over=generator, into=bus) + net == load
   ramp: # roll (cyclic) and shift (acyclic) in one equation
     dims: [snapshot, generator]
     expression: p - shift(p, along=snapshot, offset=1, edge='wrap') <= shift(p, along=snapshot, offset=1) + p_max
