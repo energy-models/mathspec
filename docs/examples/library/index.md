@@ -58,7 +58,7 @@ It edits `Generator_p`, which `generator.yaml` introduces, and names
 `to_spec` refuses it on its own. It is laid over the composition:
 
 ```python
-ms.override(ms.merge(fragments), {'commitment': 'variants/commitment.yaml'})
+ms.override(ms.merge(fragments), ['variants/commitment.yaml'])
 ```
 
 The [composed spec](composed.md) carries the patch and the math it makes, in a
