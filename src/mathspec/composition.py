@@ -29,16 +29,15 @@ What that means for each section:
   both named.
 * **The objectives are summed**, each term in parentheses, in the order the
   fragments are given in, and the senses have to agree.
-* **A term is added to the name it writes into.** A named expression with
+* **Terms fill a name every fragment reads.** A named expression with
   ``adds_to:`` is a term of a ``given: expressions:`` entry of its own
-  fragment. The composed spec writes that name as the body one fragment
-  defines, if any, plus every term by its name, in the order the fragments
-  are given in, and keeps each term as a named expression. A definition
-  written as ``cases:`` is refused, since it is summed as written. A later
-  merge adds to the composed body the same way. Some fragment has to read
-  the name for more than adding to it: define it, read it without adding to
-  it, or use it in its math. A name only its terms read is what a misspelt
-  ``given:`` entry looks like, so it is refused.
+  fragment. The composed spec defines that name as every term by its name,
+  in the order the fragments are given in, over the frame the readers
+  state, and keeps each term as a named expression. A name one fragment
+  defines takes no term: its body means what its file says. Some fragment
+  has to read the name for more than adding to it: read it without adding
+  to it, or use it in its math. A name only its terms read is what a
+  misspelt ``given:`` entry looks like, so it is refused.
 * **A given declaration is folded** into the declaration that introduces the
   name, once the reader is checked to say the same as the introducer or less.
   A given expression's body may carry no dimension its reader does not state,
@@ -167,7 +166,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     for section in OWNED_SECTIONS:
         if claimed := _claimed(read, section):
             merged[section] = claimed
-    if summed := _summed(read, loaded, _mapping(merged.get('expressions')), readings['expressions']):
+    if summed := _summed(loaded, _mapping(merged.get('expressions')), readings['expressions'], read):
         merged['expressions'] = {
             key: _without(block, 'adds_to') for key, block in {**_mapping(merged.get('expressions')), **summed}.items()
         }
@@ -295,8 +294,8 @@ def _claimed(read: Mapping[str, dict[str, object]], section: str) -> dict[str, o
                         f"name each fragment's term apart, such as after its component."
                     )
                 hint = (
-                    " If one fragment adds to the other's definition, write what it adds as an expression of "
-                    "its own with `adds_to:`, and read the definition under 'given: expressions:'."
+                    ' A sum several fragments add to is defined by none of them: each reads it under '
+                    "'given: expressions:' and adds its part with `adds_to:`."
                     if section == 'expressions'
                     else ''
                 )
@@ -326,61 +325,47 @@ def _terms(read: Mapping[str, dict[str, object]], key: str) -> list[tuple[str, s
 
 
 def _summed(
-    read: Mapping[str, dict[str, object]],
     loaded: Mapping[str, Spec],
     defined: Mapping[str, object],
     readings: Mapping[str, object],
+    read: Mapping[str, dict[str, object]],
 ) -> dict[str, object]:
-    """Every name a fragment adds a term to, its body written as the definer's body plus the terms.
+    """Every name a fragment adds a term to, defined as its terms by name over the frame the readers state.
 
-    The definer's body comes first where one fragment defines the name, then
-    every term by its name in the order the fragments are given in. Where no
-    fragment defines it, the terms are all of it, over the frame the readings
-    state, so the composed load holds the terms to that frame. A definition
-    written as ``cases:`` is refused, since it is summed as written and a set
-    of cases is no one body. The block keeps the definer's description, or
-    takes the first a reader wrote.
+    The composed load holds the terms to that frame. A name a fragment
+    defines takes no term, so a body means what its file says; the refusal
+    names both fragments.
     """
     summed: dict[str, object] = {}
     for key, reading in readings.items():
         terms = _terms(read, key)
         if not terms:
             continue
-        _read_elsewhere(loaded, defined, key, [name for name, _ in terms])
-        base = _as_mapping(defined[key]) if key in defined else {'dims': _mapping(reading)['dims']}
-        if base.get('cases'):
+        contributors = [name for name, _ in terms]
+        if key in defined:
             raise LanguageError(
-                f"fragment '{_author_of(read, 'expressions', key)}' defines {key!r} as `cases:`, and fragment "
-                f"'{terms[0][0]}' adds a term to it. The definition is summed as written, and a set of cases is no "
-                f'one body: name the cased body as its own expression, and define {key!r} as that name.'
+                f"fragment '{_author_of(read, 'expressions', key)}' defines {key!r}, and fragment "
+                f"'{contributors[0]}' adds a term to it. A body means what its file says, so a term fills only a "
+                f'name every fragment reads: write the term into that body, or read {key!r} under '
+                f"'given: expressions:' in that fragment too and add its body as a term with `adds_to:`."
             )
-        bodies = [term for _, term in terms]
-        if base.get('expression') is not None:
-            bodies.insert(0, cast('str', base['expression']))
-        block = {f: base[f] for f in ('dims', 'description') if base.get(f)}
-        block['expression'] = ' + '.join(_summand(body) for body in bodies) if len(bodies) > 1 else bodies[0]
-        if 'description' not in block and (said := _mapping(reading).get('description')):
+        _read_elsewhere(loaded, key, contributors)
+        block = {'dims': _mapping(reading)['dims'], 'expression': ' + '.join(term for _, term in terms)}
+        if said := _mapping(reading).get('description'):
             block['description'] = said
         summed[key] = block
     return summed
 
 
-def _read_elsewhere(
-    loaded: Mapping[str, Spec],
-    defined: Mapping[str, object],
-    key: str,
-    contributors: list[str],
-) -> None:
+def _read_elsewhere(loaded: Mapping[str, Spec], key: str, contributors: list[str]) -> None:
     """Refuse terms that write into a name nothing but the terms reads.
 
-    A fragment reads the name for more than adding to it where it defines
-    it, reads it under ``given:`` and adds nothing, or uses it in its math. A
-    name only its terms read is what a misspelt ``given:`` entry looks like,
-    since the file that uses the sum reads it under the right spelling, so
-    the refusal names the near miss among the names the fragments read.
+    A fragment reads the name for more than adding to it where it reads it
+    under ``given:`` and adds nothing, or uses it in its math. A name only
+    its terms read is what a misspelt ``given:`` entry looks like, since the
+    file that uses the sum reads it under the right spelling, so the refusal
+    names the near miss among the names the fragments read.
     """
-    if key in defined:
-        return
     for name, spec in loaded.items():
         if key in spec.program.given.expressions and (name not in contributors or _uses(spec.program, key)):
             return
@@ -393,9 +378,9 @@ def _read_elsewhere(
     who = f"fragments {spelled} and '{contributors[-1]}' add" if spelled else f"fragment '{contributors[0]}' adds"
     near = f' {hint}' if (hint := did_you_mean(key, known - {key}, listing=False)) else ''
     raise LanguageError(
-        f'{who} a term to {key!r}, and no other fragment reads it: none defines it, reads it without adding '
-        f'to it, or uses it in its math. A term writes into a sum the rest of the spec reads: add the fragment '
-        f"that reads it, or fix the spelling under 'given:'.{near}"
+        f'{who} a term to {key!r}, and no other fragment reads it: none reads it without adding to it, or '
+        f'uses it in its math. A term writes into a sum the rest of the spec reads: add the fragment that '
+        f"reads it, or fix the spelling under 'given:'.{near}"
     )
 
 
@@ -407,11 +392,6 @@ def _uses(program: Program, key: str) -> bool:
         *(link.expression for curve in program.piecewise.values() for link in curve.links),
     ]
     return any(isinstance(node, Variable) and node.name == key for node in walk(*trees))
-
-
-def _summand(body: str) -> str:
-    """*body* as one operand of a sum: a sum of names needs no brackets, and any other body may."""
-    return body if all(part.isidentifier() for part in body.split(' + ')) else f'({body})'
 
 
 def _as_mapping(block: object) -> dict[str, object]:

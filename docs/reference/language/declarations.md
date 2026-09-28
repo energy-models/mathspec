@@ -292,21 +292,21 @@ degree two, as what reads the sum is. All of this is checked at load. The
 typeset legend lists the entry under _Given_ and names the term, and the math
 prints the term under _Definitions_ as its own line.
 
-[`merge`](../../howto/compose.md#a-library-of-components) writes the name as
-the body one file defines, if any, plus every term by its name, in the order
-the files are given in. It keeps each term as a named expression, without its
-`adds_to:`. Where no file defines the name, the terms are all of it, over the
-frame the readers state. The file that defines the name does not opt in, and
-a later merge adds to the composed body the same way. A body written as
-`cases:` is refused, since it is summed as written: name the cased body as its
-own expression, and define the name as that name. A cased term is added like
-any other, by its name. The sum keeps the definer's description, or takes the
-first a reader wrote.
+[`merge`](../../howto/compose.md#a-library-of-components) defines the name
+as every term by its name, in the order the files are given in, over the frame
+the readers state. It keeps each term as a named expression, without its
+`adds_to:`. A cased term is added like any other, by its name. The sum takes
+the first description a reader wrote.
 
-Some file has to read the name for more than adding to it: define it, read it
-and add nothing, or use it in its math. Terms that only their own files read
-are refused, with the near miss, since that is what a misspelt `given:` entry
-looks like. Two files that both define the name are refused as a collision.
+A name one file defines takes no term, so a body means what its file says. A
+file that has a part of its own, such as a slack, reads the name and adds that
+part as a term. A merged spec defines its sums, so it takes no further terms:
+merge every fragment in one list.
+
+Some file has to read the name for more than adding to it: read it and add
+nothing, or use it in its math. Terms that only their own files read are
+refused, with the near miss, since that is what a misspelt `given:` entry
+looks like.
 
 ## `constraints`
 
