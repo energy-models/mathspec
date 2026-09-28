@@ -16,14 +16,14 @@ from pathlib import Path
 import pytest
 
 from mathspec import advice
-from tests.fixtures import SMALL_MODEL, expanded, override, schema_of
+from tests.fixtures import SMALL_MODEL, expanded, schema_of, varied
 
 EXAMPLES = Path(__file__).resolve().parents[1] / 'examples'
 
 #: Every spec under examples/, which also holds symbol tables and reference data.
-SPECS = sorted(p for p in EXAMPLES.rglob('*.yaml') if not {'symbols', 'references'} & set(p.parts))
+SPECS = sorted(p for p in EXAMPLES.rglob('*.yaml') if not {'symbols', 'references', 'variants'} & set(p.parts))
 
-BASE = override(
+BASE = varied(
     SMALL_MODEL,
     variables={'x': {'dims': ['g']}, 'y': {'dims': ['g']}},
     constraints={'r': {'dims': ['g'], 'expression': 'x <= 1'}},
