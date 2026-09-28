@@ -7,9 +7,9 @@
 A balance reads what every component puts into a bus, and a component file
 says what it puts there: a named expression of its own, whose `adds_to:` names
 the `given: expressions:` entry of its file it writes into. The given entry is
-the read, and `adds_to:` the write. `merge` defines the name as the body one
-fragment writes, if any, plus every term by name, and keeps each term, so no
-file has to declare that the name is a sum.
+the read, and `adds_to:` the write. `merge` defines the name as every term by
+name, and keeps each term, so no file has to declare that the name is a sum. A
+name one fragment defines takes no term, so a body means what its file says.
 """
 
 from __future__ import annotations
@@ -70,6 +70,15 @@ SLACKED = {
     'dimensions': BUS_DIMS,
     'variables': {'slack': {'dims': BUS_FRAME}},
     'expressions': {'injection': {'expression': 'slack', 'description': 'the slack, and what the components add'}},
+    'constraints': {'balance': {'dims': BUS_FRAME, 'expression': 'injection == 0'}},
+}
+
+#: The same network with its slack written as a term of the injection it reads.
+SLACK_TERM = {
+    'dimensions': BUS_DIMS,
+    'variables': {'slack': {'dims': BUS_FRAME}},
+    'given': {'expressions': {'injection': {'dims': BUS_FRAME, 'description': INJECTION}}},
+    'expressions': {'slack_injection': {'expression': 'slack', 'adds_to': 'injection'}},
     'constraints': {'balance': {'dims': BUS_FRAME, 'expression': 'injection == 0'}},
 }
 
@@ -213,26 +222,42 @@ def test_the_order_the_fragments_are_given_in_reaches_no_canonical_text():
     assert canonical_yaml(one) == canonical_yaml(other)
 
 
-def test_a_term_is_added_to_the_definition_one_fragment_writes():
-    composed = merge([SLACKED, FLEET, DEMAND])
-    assert composed.expressions['injection'].expression == 'slack + generator_injection + demand_injection'
-    assert composed.expressions['injection'].description == 'the slack, and what the components add', (
-        'the definition keeps its own description'
-    )
+@pytest.mark.parametrize(
+    'definer',
+    [
+        pytest.param(SLACKED, id='a-definition-a-file-writes'),
+        pytest.param(merge([BALANCE, DEMAND, FLEET]), id='a-sum-a-merge-wrote'),
+        pytest.param(
+            {
+                **SLACKED,
+                'parameters': {'on': {'dims': BUS_FRAME, 'dtype': 'bool'}},
+                'expressions': {
+                    'injection': {
+                        'dims': BUS_FRAME,
+                        'cases': {'on': {'when': 'on', 'expression': 'slack'}},
+                        'otherwise': '0',
+                    }
+                },
+            },
+            id='a-cased-definition',
+        ),
+    ],
+)
+def test_a_term_on_a_name_a_fragment_defines_is_refused(definer):
+    """A body means what its file says, so no other file extends it, a composed one included.
+
+    A term once landed on any definition, so a file's own body read one way
+    alone and another way once merged, with nothing in the file to say so.
+    """
+    with pytest.raises(LanguageError, match=r"'#1' defines 'injection', and fragment '#2' adds a term to it"):
+        merge([definer, STORAGE])
 
 
-def test_the_file_that_defines_the_name_reads_the_extended_sum_once_composed():
-    """A contributor decides alone. The defining file does not opt in, and whoever composes answers for the sum."""
-    assert to_spec(SLACKED).expressions['injection'].expression == 'slack'
-    composed = merge([SLACKED, DEMAND])
-    assert composed.constraints['balance'].expression == 'injection == 0'
-    assert composed.expressions['injection'].expression == 'slack + demand_injection'
-
-
-def test_a_definition_that_is_more_than_a_sum_of_names_is_bracketed():
-    network = {**SLACKED, 'expressions': {'injection': 'slack - slack / 2'}}
-    composed = merge([network, DEMAND])
-    assert composed.expressions['injection'].expression == '(slack - slack / 2) + demand_injection'
+def test_a_file_adds_its_own_part_as_a_term_of_what_it_reads():
+    """What a definition once carried, the slack, is a term of the network's own reading."""
+    composed = merge([SLACK_TERM, FLEET, DEMAND])
+    assert composed.expressions['injection'].expression == 'slack_injection + generator_injection + demand_injection'
+    assert composed.expressions['injection'].description == INJECTION
 
 
 def test_the_sum_takes_the_readers_description():
@@ -244,13 +269,6 @@ def test_two_readers_that_word_the_sum_apart_give_it_the_first_wording():
     capped = {**CAPPED, 'given': {'expressions': {'injection': {'dims': BUS_FRAME, 'description': 'a cap'}}}}
     assert merge([capped, BALANCE]).expressions['injection'].description == 'a cap'
     assert merge([BALANCE, capped]).expressions['injection'].description == INJECTION
-
-
-def test_a_composed_spec_takes_more_terms_in_a_second_merge():
-    """The fragment names where its term goes, so a composed definition takes it like any other."""
-    shipped = merge([BALANCE, DEMAND, FLEET])
-    extended = merge([shipped, STORAGE])
-    assert extended.expressions['injection'].expression == 'demand_injection + generator_injection + store_injection'
 
 
 def test_a_cased_term_is_added_like_any_other():
@@ -302,8 +320,8 @@ def test_terms_only_their_own_files_read_are_refused(fragments, message):
     ('reader', 'contributor'),
     [
         pytest.param(BALANCE, FLEET, id='a-fragment-that-reads-and-adds-nothing'),
-        pytest.param(SLACKED, DEMAND, id='a-fragment-that-defines-it'),
-        pytest.param(CAPPED, DEMAND, id='a-contributor-whose-math-reads-it'),
+        pytest.param(SLACK_TERM, DEMAND, id='a-contributor-whose-math-reads-it'),
+        pytest.param(CAPPED, DEMAND, id='a-contributor-whose-own-constraint-reads-it'),
     ],
 )
 def test_a_fragment_that_reads_the_sum_for_more_than_adding_lets_the_terms_land(reader, contributor):
@@ -331,7 +349,7 @@ def test_two_definitions_collide_and_the_message_names_adds_to():
         merge([SLACKED, other])
     message = str(raised.value)
     assert "both declare the expression 'injection'" in message
-    assert "`adds_to:`, and read the definition under 'given: expressions:'" in message
+    assert "each reads it under 'given: expressions:' and adds its part with `adds_to:`" in message
 
 
 def test_two_terms_of_one_name_collide():
@@ -345,18 +363,6 @@ def test_two_terms_of_one_name_collide():
         merge([BALANCE, DEMAND, twin])
 
 
-def test_a_cased_definition_a_term_adds_to_is_refused():
-    cased = {
-        **SLACKED,
-        'parameters': {'on': {'dims': BUS_FRAME, 'dtype': 'bool'}},
-        'expressions': {
-            'injection': {'dims': BUS_FRAME, 'cases': {'on': {'when': 'on', 'expression': 'slack'}}, 'otherwise': '0'}
-        },
-    }
-    with pytest.raises(LanguageError, match=r"'#1' defines 'injection' as `cases:`, and fragment '#2' adds"):
-        merge([cased, DEMAND])
-
-
 def test_two_readers_that_disagree_about_the_frame_are_refused():
     narrow = {**BALANCE, 'given': {'expressions': {'injection': {'dims': ['bus']}}}}
     narrow = {**narrow, 'constraints': {'balance': {'dims': ['bus'], 'expression': 'injection == 0'}}}
@@ -368,20 +374,6 @@ def test_a_term_over_fewer_dimensions_merges_where_another_carries_the_rest():
     flat = {**DEMAND, 'parameters': {'load': {'dims': ['bus']}}}
     composed = merge([BALANCE, flat, FLEET])
     assert composed.program.expressions['injection'].dims == ('snapshot', 'bus')
-
-
-def test_a_definition_over_a_dimension_the_readers_do_not_state_is_refused():
-    wide = {
-        **SLACKED,
-        'dimensions': {**BUS_DIMS, 'carrier': {'dtype': 'str'}},
-        'variables': {'slack': {'dims': [*BUS_FRAME, 'carrier']}},
-    }
-    wide = {**wide, 'constraints': {'balance': {'dims': [*BUS_FRAME, 'carrier'], 'expression': 'injection == 0'}}}
-    with pytest.raises(
-        LanguageError,
-        match=r"'#2' reads the given expression 'injection' as .*'#1' introduces it over \['bus', 'carrier', 'snapshot'\]",
-    ):
-        merge([wide, DEMAND])
 
 
 def test_a_patch_changes_a_term_by_its_name_and_null_drops_what_it_adds_to():

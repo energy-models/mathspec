@@ -367,7 +367,7 @@ ms.merge(['generators.yaml', 'loads.yaml'])
 the network no file declares `injection`:
 
 ```text
-fragments 'generators.yaml' and 'loads.yaml' add a term to 'injection', and no other fragment reads it: none defines it, reads it without adding to it, or uses it in its math. A term writes into a sum the rest of the spec reads: add the fragment that reads it, or fix the spelling under 'given:'.
+fragments 'generators.yaml' and 'loads.yaml' add a term to 'injection', and no other fragment reads it: none reads it without adding to it, or uses it in its math. A term writes into a sum the rest of the spec reads: add the fragment that reads it, or fix the spelling under 'given:'.
 ```
 
 ## Where to next
