@@ -398,8 +398,10 @@ class Walk:
             return self.format.superscript(base, self._expression(node.exponent, ctx)), _PRECEDENCE['**']
         op: BinaryOperator = '*' if isinstance(node, Multiply) else '+'
         precedence = _PRECEDENCE[op]
+        operand = self._substituted(node.right)
+        if op == '+' and isinstance(operand, Add):
+            return self._binary(Add(Add(node.left, operand.left), operand.right), ctx)
         left = self._expression(node.left, ctx, need=precedence)
-        operand = node.right
         if op == '+':
             while (unsigned := _unsigned(operand)) is not None:
                 operand, op = unsigned, '-' if op == '+' else '+'
@@ -408,6 +410,15 @@ class Walk:
         right = self._expression(operand, ctx, need=need)
         names: dict[BinaryOperator, OperatorName] = {'*': 'cdot', '+': 'plus', '-': 'minus'}
         return self.format.joined([left, right], self._op(names[op])), precedence
+
+    def _substituted(self, node: Expression) -> Expression:
+        """*node*, a plain named expression replaced by its body where inlining prints the body.
+
+        [`_binary`][] folds the sign of the result, so a substituted term prints as its body written out.
+        """
+        while self.inline_expressions and isinstance(node, Named) and not isinstance(node.body, Cases):
+            node = node.body
+        return node
 
     def _sum(self, node: Sum, ctx: _Context) -> tuple[str, int]:
         """A reduction over named dims: one dummy index per dim, in declaration order."""
