@@ -123,6 +123,7 @@ parameters:
 |---|---|
 | $`\mathrm{spend}^{\mathrm{cap}}`$ | `spend_cap` over $`\mathcal{G}`$ |
 | $`\mathit{spend}`$ | `spend` over $`\mathcal{T}`$ — what a snapshot's dispatch costs |
+| $`\mathrm{rating}`$ | `rating` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{lcoe}`$ | `lcoe` (scalar) |
 | $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{T} \times \mathcal{B}`$ |
 | $`\mathrm{startup\_cost}`$ | `startup_cost` over $`\mathcal{T} \times \mathcal{G}`$ — what starting a unit in this snapshot costs, which the horizon's edge changes |
@@ -645,6 +646,21 @@ constraints:
 p_{t,g} \le \mathrm{startup\_cost}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
+#### Expression with a declared frame in a constraint
+
+names the expression with a declared frame: the row reads it at every snapshot, though its body has no snapshot
+
+```yaml
+constraints:
+  under_rating:
+    dims: [snapshot, generator]
+    expression: p <= rating
+```
+
+```math
+p_{t,g} \le \mathrm{rating}_{g,t} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
 #### Plain named expression
 
 a plain named expression: its symbol prints where it is used, its body once as a definition
@@ -657,6 +673,21 @@ expressions:
 
 ```math
 \mathit{spend}_{t} = \sum_{g \in \mathcal{G}} p_{t,g} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
+```
+
+#### Named expression with a declared frame
+
+a frame wider than the body, in an order of its own: the value is the same at every snapshot
+
+```yaml
+expressions:
+  rating:
+    dims: [generator, snapshot]
+    expression: eta * p_max
+```
+
+```math
+\mathrm{rating}_{g,t} = \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Expression defined by cases
