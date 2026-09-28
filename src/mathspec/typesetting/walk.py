@@ -241,9 +241,9 @@ class Walk:
         entry = self.program.expressions.get(name) or self.program.given.expressions[name]
         return list(entry.dims)
 
-    def _owned(self) -> list[str]:
-        """The sums this file declares with a frame and no body, which other files add terms to."""
-        return [name for name, block in self.program.given.expressions.items() if block.owned]
+    def _empty(self) -> list[str]:
+        """The sums this file declares ``empty: true``, which other files add terms to."""
+        return [name for name, block in self.program.given.expressions.items() if block.empty]
 
     def _op(self, name: OperatorName) -> str:
         return self.format.operators[name]
@@ -722,9 +722,9 @@ class Walk:
         """
         entries = self.program.expressions
         if not self.inline_expressions:
-            return [*entries, *self._owned()]
+            return [*entries, *self._empty()]
         standing = [name for name, entry in entries.items() if isinstance(entry.expression, Cases) or not entry.in_math]
-        return [*standing, *self._owned()]
+        return [*standing, *self._empty()]
 
     def definition(self, name: str) -> Line:
         """The line defining one named expression, ``symbol = body`` over its frame, or ``symbol = ⋯`` for a sum with no body yet."""
@@ -758,7 +758,7 @@ class Walk:
         """
         program = self.program
         kinds = {
-            'named expression': ({*program.expressions, *self._owned()}, self.definition),
+            'named expression': ({*program.expressions, *self._empty()}, self.definition),
             'constraint': (program.constraints, self._constraint),
             'assumption': (program.assumptions, self._assumption),
             'curve': (program.piecewise, self._piecewise),

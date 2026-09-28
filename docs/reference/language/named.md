@@ -43,9 +43,12 @@ expressions:
     description: the nominal capacity, the same in every snapshot
 ```
 
-An entry with a `dims:` and no body at all is an **empty sum**: a quantity
-this file declares and other files add terms to, through
-[`merge`](../../howto/compose.md#a-library-of-components). Alone, the file
+An entry written `empty: true` over a `dims:` is an **empty sum**: a
+quantity this file declares and other files add terms to, through
+[`merge`](../../howto/compose.md#a-library-of-components). It has no
+`expression:`, `cases:` or `otherwise:`, and `dims:` is required. `empty`
+defaults to `false`, and a spec writes it only where it is `true`. An entry
+with a `dims:` and no body, and no `empty: true`, is refused. Alone, the file
 reads it as a column over the frame, the way it reads a
 [given expression](declarations.md#given-expressions), and its definition
 prints as `injection = ⋯`: the name is declared here, and the body is what
@@ -89,7 +92,8 @@ Each case prints as one row of the definition, and `otherwise:` as the last:
 
 $$\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \cr \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \cr \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\thinspace t \in \mathcal{T},\enspace g \in \mathcal{G}$$
 
-A named expression carries **exactly one** of `expression:` and `cases:`.
+A named expression carries **exactly one** of `expression:` and `cases:`, or
+is an [empty sum](#expressions), `empty: true`.
 
 | Key         |                                                                              |
 | ----------- | ---------------------------------------------------------------------------- |

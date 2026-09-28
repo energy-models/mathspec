@@ -64,7 +64,7 @@ def _given(program: Program) -> list[Advice]:
                 'given',
                 name,
                 _sum_note(name)
-                if block.owned
+                if block.empty
                 else _term_note(name)
                 if block.term is not None
                 else _given_note('expression', name),

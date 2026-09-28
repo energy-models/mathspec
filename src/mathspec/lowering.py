@@ -269,7 +269,7 @@ def lower(schema: Spec) -> Program:
                     name: GivenDeclaration(tuple(g.dims), g.description, term=terms.get(name))
                     for name, g in schema.given.expressions.items()
                 },
-                **{name: GivenDeclaration(tuple(e.dims or ()), e.description, owned=True) for name, e in empty.items()},
+                **{name: GivenDeclaration(tuple(e.dims or ()), e.description, empty=True) for name, e in empty.items()},
             },
         ),
         description=schema.description,

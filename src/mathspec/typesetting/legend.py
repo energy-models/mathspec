@@ -180,7 +180,7 @@ class Legend:
                     block.description,
                 )
                 for g, block in program.given.expressions.items()
-                if not block.owned
+                if not block.empty
             ),
             *(
                 self._entry(
@@ -192,10 +192,10 @@ class Legend:
             ),
         ]
         shown = set(defined)
-        owned = {e: block for e, block in program.given.expressions.items() if block.owned}
+        empty = {e: block for e, block in program.given.expressions.items() if block.empty}
         definitions = [
             self._entry(self.symbols.name[e], f'{fmt.mono(e)}{self._over(list(block.dims))}', block.description)
-            for e, block in {**program.expressions, **owned}.items()
+            for e, block in {**program.expressions, **empty}.items()
             if e in shown
         ]
         groups = (

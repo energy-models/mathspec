@@ -86,21 +86,69 @@ def _demand(term: str = 'demand_injection', body: object = '-load', **fields: ob
 
 
 def test_an_empty_sum_loads_alone_and_reads_as_a_column():
-    """The owner declares the name with a frame and no body; alone, its math reads a column nothing defines yet."""
+    """The owner declares the name `empty: true`; alone, its math reads a column nothing defines yet."""
     program = to_spec(NETWORK).program
     assert 'injection' not in program.expressions, 'no body, so no definition'
     sum_ = program.given.expressions['injection']
-    assert sum_.owned and sum_.dims == ('snapshot', 'bus') and sum_.description == INJECTION
+    assert sum_.empty and sum_.dims == ('snapshot', 'bus') and sum_.description == INJECTION
     assert program.constraints['balance'].dims == ('snapshot', 'bus'), 'the row reads it over the frame'
 
 
-def test_an_empty_sum_needs_a_frame():
-    with pytest.raises(LanguageError, match=r'this has neither.*An entry with a `dims:` and no body is a sum'):
-        to_spec({**NETWORK, 'expressions': {'injection': {'description': INJECTION}}})
+@pytest.mark.parametrize(
+    ('entry', 'message'),
+    [
+        pytest.param({'empty': True}, r'`empty: true` needs a `dims:`', id='no-frame'),
+        pytest.param(
+            {'dims': BUS_FRAME},
+            r'this has neither.*A sum other files add every term to is written `empty: true`, over a `dims:`',
+            id='a-frame-and-no-body',
+        ),
+        pytest.param(
+            {'dims': BUS_FRAME, 'empty': False},
+            r'this has neither.*written `empty: true`',
+            id='empty-false-and-no-body',
+        ),
+        pytest.param(
+            {'dims': BUS_FRAME, 'empty': True, 'expression': '0'},
+            r'`empty: true` is a sum with no body of its own, and this also has `expression:`',
+            id='beside-a-body',
+        ),
+        pytest.param(
+            {'dims': BUS_FRAME, 'empty': True, 'cases': {'a': {'when': 'load > 0', 'expression': '1'}}, 'otherwise': 0},
+            r'this also has `cases:` and `otherwise:`',
+            id='beside-cases',
+        ),
+    ],
+)
+def test_an_empty_sum_is_written_as_empty_true_over_a_frame(entry, message):
+    """A frame with no body once loaded as an empty sum, so a forgotten body went unnoticed."""
+    spec = {**NETWORK, 'parameters': {'load': {'dims': BUS_FRAME}}, 'expressions': {'injection': entry}}
+    with pytest.raises(LanguageError, match=message):
+        to_spec(spec)
+
+
+def test_empty_false_is_the_default_and_is_not_written():
+    entry = SLACKED['expressions']['injection']
+    written = to_spec({**SLACKED, 'expressions': {'injection': {**entry, 'empty': False}}})
+    assert written.to_dict()['expressions']['injection'] == entry, 'the default is not written back'
 
 
 def test_an_empty_sum_round_trips():
-    assert to_spec(NETWORK).to_dict()['expressions']['injection'] == {'dims': BUS_FRAME, 'description': INJECTION}
+    assert to_spec(NETWORK).to_dict()['expressions']['injection'] == {
+        'dims': BUS_FRAME,
+        'empty': True,
+        'description': INJECTION,
+    }, 'the flag is written back, and nothing else is added'
+    assert to_spec(to_spec(NETWORK).to_yaml()) == to_spec(NETWORK)
+
+
+def test_a_patch_empties_a_definition():
+    """A body is dropped by a null and the sum marked by the flag, so neither spelling means two things."""
+    slacked = override(
+        SLACKED, {'open': {'expressions': {'injection': {'expression': None, 'empty': True, 'dims': BUS_FRAME}}}}
+    )
+    assert slacked.expressions['injection'].empty
+    assert slacked.program.given.expressions['injection'].empty
 
 
 def test_the_advice_says_other_files_fill_the_sum():
@@ -302,7 +350,7 @@ def test_the_composed_sum_keeps_the_owner_s_frame():
     """The frame the owner declared holds the terms to it when the composed spec loads."""
     composed = merge({'network': NETWORK, 'fleet': FLEET, 'demand': DEMAND})
     assert composed.expressions['injection'].dims == BUS_FRAME
-    narrow = {**NETWORK, 'expressions': {'injection': {'dims': ['bus'], 'description': INJECTION}}}
+    narrow = {**NETWORK, 'expressions': {'injection': {'dims': ['bus'], 'empty': True, 'description': INJECTION}}}
     narrow = {**narrow, 'constraints': {'balance': {'dims': ['bus'], 'expression': 'injection == 0'}}}
     with pytest.raises(LanguageError, match=r"the body carries dims \['snapshot'\] outside the dims: \['bus'\]"):
         merge({'network': narrow, 'fleet': FLEET})

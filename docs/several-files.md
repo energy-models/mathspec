@@ -12,8 +12,8 @@ other files. Do [your first spec](first-spec.md) first.
 ## The network
 
 Make a file `network.yaml`. It balances every bus, and it declares the
-injection at a bus as a sum with a frame and no body: what the components
-put in is theirs to say, in
+injection at a bus as an empty sum, `empty: true`: what the components put
+in is theirs to say, in
 [a term](reference/language/declarations.md#a-term-a-file-adds) each.
 
 ```yaml title="network.yaml"
@@ -26,6 +26,7 @@ dimensions:
 expressions:
   injection:
     dims: [snapshot, bus]
+    empty: true
     description: what the components put into a bus, less what they take out
 
 constraints:
@@ -379,7 +380,7 @@ ms.merge({'generators': 'generators.yaml', 'loads': 'loads.yaml'})
 the network no file declares `injection`:
 
 ```text
-fragments 'generators' and 'loads' add a term to 'injection', which no fragment declares. A term adds to a name another file declares under 'expressions:': declare it there, with a `dims:` and no body where the files add every term, or fix the spelling.
+fragments 'generators' and 'loads' add a term to 'injection', which no fragment declares. A term adds to a name another file declares under 'expressions:': declare it there, as `empty: true` over a `dims:` where the files add every term, or fix the spelling.
 ```
 
 ## Where to next

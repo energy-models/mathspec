@@ -249,8 +249,8 @@ the whole sum, alone and composed, and the term is its part of it. A file that
 only reads the name writes no term.
 
 The name is an `expressions:` block of one other file. Where that file has
-nothing of its own to put in, it declares the sum with a frame and no body,
-an [empty sum](named.md#expressions), reads it as a column until the terms
+nothing of its own to put in, it declares the sum `empty: true` over a
+frame, an [empty sum](named.md#expressions), reads it as a column until the terms
 arrive, and prints its definition as `injection = ⋯`:
 
 ```yaml
@@ -282,6 +282,7 @@ dimensions:
 expressions:
   injection:
     dims: [snapshot, bus]
+    empty: true
     description: what the components put into a bus
 constraints:
   balance:

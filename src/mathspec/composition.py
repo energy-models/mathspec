@@ -28,8 +28,8 @@ What that means for each section:
   name order, and the senses have to agree.
 * **A term is added to the expression it names.** A ``given: expressions:``
   entry with a ``term:`` names the expression its fragment adds to the name.
-  The name is an ``expressions:`` block of one other fragment: a sum with a
-  frame and no body, or a definition. The composed spec writes its body as
+  The name is an ``expressions:`` block of one other fragment: a sum written
+  ``empty: true``, or a definition. The composed spec writes its body as
   that body, if it has one, plus every term by its name, in the fragments'
   name order, and keeps each term as the named expression its fragment
   declares. A definition written as ``cases:`` is refused, since it is summed
@@ -360,10 +360,10 @@ def _landed(
 ) -> None:
     """Refuse terms that name no ``expressions:`` block of any fragment.
 
-    A term adds to a name another file declares: a sum with a frame and no
-    body, or a definition. Terms alone would define a name nothing declared,
-    which is what a mistyped name looks like, so the refusal names the near
-    miss among the names a term could land on, which a term is not.
+    A term adds to a name another file declares: a sum written ``empty:
+    true``, or a definition. Terms alone would define a name nothing
+    declared, which is what a mistyped name looks like, so the refusal names
+    the near miss among the names a term could land on, which a term is not.
     """
     if key in defined:
         return
@@ -379,8 +379,8 @@ def _landed(
     near = f' {hint}' if (hint := did_you_mean(key, known, listing=False)) else ''
     raise LanguageError(
         f'{who} a term to {key!r}, which no fragment declares. A term adds to a name another file declares '
-        f"under 'expressions:': declare it there, with a `dims:` and no body where the files add every term, "
-        f'or fix the spelling.{near}'
+        f"under 'expressions:': declare it there, as `empty: true` over a `dims:` where the files add "
+        f'every term, or fix the spelling.{near}'
     )
 
 

@@ -625,9 +625,9 @@ class GivenDeclaration:
     description: str | None = None
     #: The [`Named`][] node of the term this program adds to the name, or ``None`` where it only reads it.
     term: Named | None = None
-    #: Whether this program declares the name itself, as an expression with a
-    #: frame and no body, and leaves the body to the files that add terms.
-    owned: bool = False
+    #: Whether this program declares the name itself, as an ``empty: true``
+    #: expression, and leaves the body to the files that add terms.
+    empty: bool = False
 
 
 @dataclass(frozen=True)
