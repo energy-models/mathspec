@@ -96,22 +96,14 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from pathlib import Path
 
-#: The declarations that are the coordinate space rather than the math. A patch
-#: may add one, and may restate one its base already declares word for word; it
-#: may not say something else about it, and it may not remove it.
 SHARED_SECTIONS = ('dimensions', 'relations')
 
-#: The declarations a patch edits, creates or removes: every other section of
-#: the schema keyed by declaration name, read off it so that none is left out.
 OWNED_SECTIONS = tuple(
     name
     for name, field in Spec.model_fields.items()
     if get_origin(field.annotation) is dict and name not in SHARED_SECTIONS
 )
 
-#: What ``given:`` holds, by the key each kind sits under and what one entry of
-#: it is called. The key is the introducing section's name too, which is what
-#: lets [`merge`][] fold a given declaration into the one that introduces it.
 GIVEN_KINDS = {
     'parameters': 'given parameter',
     'variables': 'given variable',
@@ -119,11 +111,8 @@ GIVEN_KINDS = {
     'expressions': 'given expression',
 }
 
-#: Every section keyed by declaration name. ``objective`` is one declaration
-#: rather than a mapping of them, and is laid over field by field beside these.
 SECTIONS = (*SHARED_SECTIONS, *OWNED_SECTIONS, 'given')
 
-#: What one entry is called where dropping the key's last letter does not say it.
 IRREGULAR = {
     'piecewise': 'piecewise curve',
     'sos': 'special-ordered set',
@@ -500,8 +489,6 @@ def _definer_frame(loaded: Mapping[str, Spec], key: str) -> frozenset[str]:
     return frozenset(frame)
 
 
-#: The given kinds whose names share the flat namespace an expression reads.
-#: A row family is named only in ``dual()``, apart from it.
 READ_KINDS = ('parameters', 'variables', 'expressions')
 
 

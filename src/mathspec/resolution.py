@@ -88,8 +88,6 @@ class Namespace:
         self.schema = schema
         variables = {**schema.variables, **schema.given.variables, **schema.given.expressions}
         parameters = {**schema.parameters, **schema.given.parameters}
-        #: Every name an expression reads as a column: the variables, and the
-        #: given expressions, whose bodies another file holds.
         self.variables = frozenset(variables)
         self.parameters = frozenset(parameters)
         self.dimensions = frozenset(schema.dimensions)

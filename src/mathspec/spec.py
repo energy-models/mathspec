@@ -819,10 +819,7 @@ class Spec(_StrictBlock):
     relations: dict[str, RelationBlock] = {}
     parameters: dict[str, ParameterBlock] = {}
     variables: dict[str, VariableBlock] = {}
-    #: What this file reads and does not build ([`GivenBlock`][]): data
-    #: under ``parameters:``, columns under ``variables:``, row families under
-    #: ``constraints:`` and definitions under ``expressions:``. Empty in a file
-    #: that stands alone.
+    #: What this file reads and does not build ([`GivenBlock`][]). Empty in a file that stands alone.
     given: GivenBlock = GivenBlock()
     constraints: dict[str, ConstraintBlock] = {}
     objective: ObjectiveBlock | None = None

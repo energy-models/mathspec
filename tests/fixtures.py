@@ -60,8 +60,7 @@ SMALL_MODEL: dict[str, Any] = {
 }
 
 #: The frame a bus balance runs over, and the balance itself: a fragment that
-#: reads `injection` under `given:` and defines none of the injections. The
-#: tests of `given:` and of terms both compose it with component fragments.
+#: reads `injection` under `given:` and defines none of the injections.
 BUS_DIMS: dict[str, Any] = {'snapshot': {'dtype': 'int'}, 'bus': {'dtype': 'str'}}
 BUS_FRAME = ['snapshot', 'bus']
 INJECTION = 'what the components put into a bus'
