@@ -46,6 +46,7 @@ from mathspec.program import (
     RelationDeclaration,
     carries_variable,
 )
+from mathspec.spec import empty_sums
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -71,6 +72,7 @@ class Namespace:
     __slots__ = (
         '_loading',
         '_named',
+        'bodies',
         'constraints',
         'dimensions',
         'dtypes',
@@ -86,9 +88,11 @@ class Namespace:
         #: dim-checked against, since macros, named expressions and the dim
         #: rules read declarations the flat listing below does not carry.
         self.schema = schema
-        variables = {**schema.variables, **schema.given.variables, **schema.given.expressions}
+        empty = empty_sums(schema)
+        variables = {**schema.variables, **schema.given.variables, **schema.given.expressions, **empty}
         parameters = {**schema.parameters, **schema.given.parameters}
         self.variables = frozenset(variables)
+        self.bodies = frozenset(name for name in schema.expressions if name not in empty)
         self.parameters = frozenset(parameters)
         self.dimensions = frozenset(schema.dimensions)
         #: The declared constraint names, off the flat namespace: a bare name
@@ -110,7 +114,7 @@ class Namespace:
         #: each leaf a where names, the way a relation leaf carries ``over``.
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: tuple(pd.dims) for p, pd in parameters.items()},
-            **{v: tuple(vd.dims) for v, vd in variables.items()},
+            **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
         }
         #: named expression -> its resolved node, or ``None``, and its refusals;
         #: filled the first time anything reads the name.
@@ -197,7 +201,7 @@ class Namespace:
                         continue
                 else:
                     pending.extend(nested(node))
-        names = (n.name for n in nodes(*arithmetic) if isinstance(n, NameNode) and n.name in self.schema.expressions)
+        names = (n.name for n in nodes(*arithmetic) if isinstance(n, NameNode) and n.name in self.bodies)
         return tuple(dict.fromkeys(names))
 
     def kind(self, name: str) -> DeclarationKind | None:

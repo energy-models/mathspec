@@ -154,15 +154,17 @@ def test_a_guarded_read_leaves_the_row_as_written(patch):
 def test_the_pypsa_capacities_are_guarded_where_they_are_read():
     """Every pointwise read of an extendable capacity already stands under
     `..._extendable`, so the fix adds no mask; what only decided capacity moves
-    to assumptions, and dispatch no longer shares a column across snapshots."""
+    to assumptions, and only the risk measure still shares a column across snapshots."""
     spec = schema_of(EXAMPLES / 'pypsa.yaml')
-    names = [name for name in spec.program.variables if name.endswith('_nom_ext')] + ['Generator_n_mod']
+    names = [name for name in spec.program.variables if name.endswith(('_nom_ext', '_n_mod'))]
     fixed = spec.fix(*names)
     masks = {name: row.where for name, row in spec.program.constraints.items()}
     assert [name for name, row in fixed.program.constraints.items() if row.where != masks[name]] == [], (
         'no constraint gained a where'
     )
-    assert fixed.program.separability['snapshot'].linking_columns == (), 'no column links two snapshots'
+    assert fixed.program.separability['snapshot'].linking_columns == ('CVaR_a', 'CVaR_theta', 'CVaR'), (
+        'the risk measure is taken over every snapshot, and nothing else links two'
+    )
 
 
 # ---------------------------------------------------------------------------

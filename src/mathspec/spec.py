@@ -464,6 +464,11 @@ class ExpressionBlock(_StrictBlock):
     is constant along the rest. A quantity whose value varies by region is
     written as ``cases:`` over a declared ``dims:``, with an ``otherwise:``
     for the rest — see the language reference.
+
+    ``empty: true`` over a declared ``dims:``, with no body, is an **empty
+    sum**: a quantity this file declares and other files add terms to,
+    through [`merge`][mathspec.composition.merge]. Alone, the file reads it as
+    a column over the frame, as it reads a given expression.
     """
 
     _label: ClassVar[str] = 'a named expression'
@@ -476,6 +481,8 @@ class ExpressionBlock(_StrictBlock):
     cases: Annotated[dict[str, ExpressionCase], Field(min_length=1)] = {}
     #: The value wherever no case's ``when`` holds, printed as the last row.
     otherwise: Expression | None = None
+    #: Whether the entry is an empty sum: no body of its own, and the terms other files add are all of it.
+    empty: bool = False
     description: str | None = None
 
     @model_validator(mode='before')
@@ -485,12 +492,21 @@ class ExpressionBlock(_StrictBlock):
 
     @model_validator(mode='after')
     def _one_form_or_the_other(self) -> Self:
-        """One ``expression:``, or ``cases:`` with the ``otherwise:`` and ``dims:`` they need."""
-        if bool(self.cases) == (self.expression is not None):
-            got = 'both' if self.cases else 'neither'
+        """One ``expression:``, ``cases:`` with the ``otherwise:`` and ``dims:`` they need, or ``empty: true`` over a ``dims:``."""
+        if self.empty:
+            self._check_empty()
+            return self
+        if self.cases and self.expression is not None:
             msg = (
-                f'a named expression is one `expression:` or a set of `cases:`, and this has {got}. '
-                f'Cases are for a quantity whose value varies by region; one expression is everything else.'
+                'a named expression is one `expression:` or a set of `cases:`, and this has both. '
+                'Cases are for a quantity whose value varies by region; one expression is everything else.'
+            )
+            raise ValueError(msg)
+        if not self.cases and self.expression is None:
+            msg = (
+                'a named expression is one `expression:` or a set of `cases:`, and this has neither. '
+                'Cases are for a quantity whose value varies by region; one expression is everything else. '
+                'A sum other files add every term to is written `empty: true`, over a `dims:`.'
             )
             raise ValueError(msg)
         if self.cases and self.dims is None:
@@ -514,6 +530,22 @@ class ExpressionBlock(_StrictBlock):
             raise ValueError(msg)
         return self
 
+    def _check_empty(self) -> None:
+        """An empty sum has a frame and nothing else to be read over: no body, no cases, no fallback."""
+        written = [f'`{key}:`' for key in ('expression', 'cases', 'otherwise') if getattr(self, key)]
+        if written:
+            msg = (
+                f'`empty: true` is a sum with no body of its own, and this also has {" and ".join(written)}. '
+                f'Drop `empty:` to keep the body, or drop the body: the terms other files add are all of it.'
+            )
+            raise ValueError(msg)
+        if self.dims is None:
+            msg = (
+                '`empty: true` needs a `dims:` — an empty sum has no body to give the frame it is read over, '
+                'and the terms that fill it are read over that frame.'
+            )
+            raise ValueError(msg)
+
     @classmethod
     @override
     def __get_pydantic_json_schema__(cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler) -> dict[str, object]:
@@ -529,11 +561,13 @@ class ExpressionBlock(_StrictBlock):
             written['cases'] = {name: case.model_dump() for name, case in self.cases.items()}
             written['otherwise'] = self.otherwise
             return written
-        assert self.expression is not None
-        if self.description is None and self.dims is None:
+        if self.expression is not None and self.description is None and self.dims is None:
             return self.expression
         written = {'dims': list(self.dims)} if self.dims is not None else {}
-        written['expression'] = self.expression
+        if self.empty:
+            written['empty'] = True
+        else:
+            written['expression'] = self.expression
         if self.description is not None:
             written['description'] = self.description
         return written
@@ -1071,6 +1105,11 @@ class Spec(_StrictBlock):
         """
         _ = self.program
         return self
+
+
+def empty_sums(schema: Spec) -> dict[str, ExpressionBlock]:
+    """The named expressions of *schema* written ``empty: true``: the sums other files add terms to."""
+    return {name: e for name, e in schema.expressions.items() if e.empty}
 
 
 def _formulations(asked: tuple[str, ...]) -> tuple[Formulation, ...]:

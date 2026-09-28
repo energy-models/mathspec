@@ -265,8 +265,8 @@ def test_a_quadratic_the_data_decides_claims_nothing(patch, says):
             id='an-lp-says-nothing-of-convexity',
         ),
         pytest.param(
-            'pypsa_quadratic.yaml',
-            '<Program QP, convex: 6 dimensions, 13 parameters, 2 variables, 5 constraints, minimize>',
+            'pypsa.yaml',
+            '<Program MIQCP, convexity undecided: 19 dimensions, 245 parameters, 48 variables, 226 constraints, minimize>',
             id='a-quadratic-kind-carries-its-verdict',
         ),
         pytest.param(
