@@ -162,6 +162,45 @@ and the relation a `PulledBackPredicate` reads is in its `.names_read`.
 and `~`, `&` and `|` combine masks into a mask. A mask folds as it is built, so a boolean literal
 stands at a mask's root or nowhere. A `Region`'s `when` is a `Mask` too.
 
+## What a program does not build
+
+`program.given.parameters`, `program.given.variables`,
+`program.given.expressions` and `program.given.constraints` name what the spec
+reads and does not build ([given](language/declarations.md#given)). Every
+other group is a build instruction. These four are names to look up in the
+model this one is layered onto. An expression reads a given expression as a
+`Variable` of that name, over the frame under `program.given.expressions`.
+A given expression with a `term` is one this file adds to:
+`program.given.expressions[name].term` is the term: the `Named` node of the
+entry of `program.expressions` it names. The name is still one the program
+reads and does not build.
+
+```python
+layer = to_spec(
+    {
+        'dimensions': {'snapshot': {'dtype': 'int'}, 'bus': {'dtype': 'str'}},
+        'given': {
+            'variables': {'p': {'dims': ['snapshot', 'bus']}},
+            'constraints': {'balance': {'dims': ['snapshot', 'bus']}},
+        },
+        'parameters': {'rate': {'dims': ['bus']}},
+        'constraints': {'cap': {'dims': [], 'expression': 'sum(p * rate) <= 100'}},
+        'expressions': {'price': {'expression': 'dual(balance)'}},
+    }
+).program
+
+sorted(layer.variables)  # []
+sorted(layer.given.variables)  # ['p']
+layer.given.constraints['balance'].dims  # ('snapshot', 'bus')
+```
+
+The host model provides each name: it holds a column or a row family of that
+name. A consumer that builds the program checks that the host provides each
+name on the same frame, and refuses the program where it does not. A consumer
+with no host refuses a program whose four groups are not all empty. `advice`
+returns one note of kind `given` per name
+([what `advice` warns about](language/errors.md#what-advice-warns-about)).
+
 ## Asking what a program uses
 
 `program.footprint` says which of the language's constructs one program uses.
@@ -284,3 +323,50 @@ that data as a file. Both round-trip, so `to_spec(spec.to_dict()) == spec`.
 `to_yaml()` writes every value and omits every absence. `domain: continuous` is
 written out. A `null` and an empty section are left out.
 `dims: []` is written, because it says the declaration is a scalar.
+
+## Comparing two specs
+
+`to_yaml(canonical=True)` writes the normal form: the one text every file that
+states the same spec writes. Two specs then differ in a diff only where they
+differ as specs.
+
+```python
+spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(canonical=True)  # True
+```
+
+- **The sections come in one order**, whatever order the file wrote them in:
+  `version`, `description`, `dimensions`, `relations`, `parameters`,
+  `variables`, `constraints`, `objective`, `expressions`, `macros`,
+  `piecewise`, `sos`, `assumptions`. The keys of a declaration also come in one
+  order.
+- **Declarations are sorted by name** within each section.
+- **Every expression is printed from its parsed tree**, so the spacing and the
+  brackets are the printer's rather than the author's.
+- **The terms of a sum are sorted**, and so are the factors of a product and the
+  keyword arguments of a call. Subtraction, division, exponentiation and a
+  call's positional arguments keep the order the file wrote, because moving
+  those changes what the spec says.
+- **A sum of two or more terms is broken one term to a line**, each under its
+  own sign. A term that changes is then one line of a diff.
+- **A constant is never folded into another.** `2 * 3` stays `2 * 3`, because a
+  coefficient that changed is what a reviewer is looking for.
+
+Four things are left as the file wrote them. They are a predicate in the
+`where` grammar, the order of a `cases:` block's regions, the order of a
+declaration's `dims`, and the order of a piecewise block's links. A difference
+in any of them is a difference in the text.
+
+Sorting `variables:` changes the order a
+[`piecewise:`](language/piecewise.md) expansion meets them in, so a constraint
+the expansion emits can carry its dims in another order. The frame is the same
+set of dimensions.
+
+The normal form loads to the same spec. It does not load to a `Spec` equal to
+the original: a reprinted expression is a different string. Writing the form out
+again gives the same text, which is what the line above says.
+
+`python -m mathspec canonical spec.yaml` writes it from a shell. `--write`
+rewrites the file in the form, and `--check` exits with status 1 if the file is
+not in the form. The form holds no YAML comments, so `--write` drops them.
+[Compare two specs](../howto/compare.md) shows how to diff two files in this
+form.
