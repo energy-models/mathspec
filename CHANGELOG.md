@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(language): a reported quotient is absent where its divisor is zero, whether a solve or the data gave that zero ([#PR](https://github.com/energy-models/mathspec/pull/PR))
 - fix(language): merge and override take a list of files, and its order is the order of the terms and of the patches ([#761](https://github.com/energy-models/mathspec/pull/761))
 - docs: the composition how-to builds a component library from terms each file adds to a sum ([#762](https://github.com/energy-models/mathspec/pull/762))
 - docs(pypsa): a single spec covers every pypsa model class and component ([#620](https://github.com/energy-models/mathspec/pull/620))

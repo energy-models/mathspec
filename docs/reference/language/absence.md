@@ -122,6 +122,8 @@ load.
 ## Reported values
 
 A [reported expression](named.md#reported-expressions) inherits the absence of
-the solved numbers it reads, by the rules above. A quotient whose divisor solved
-to zero is absent too. A deleted row has
+the solved numbers it reads, by the rules above. A quotient is absent where its
+divisor is absent, and where its divisor is zero, whether a solve or the data
+gave that zero. A divisor parameter with a missing row is still refused, because
+a missing row is not absence. A deleted row has
 [no dual](named.md#reading-a-constraints-dual).
