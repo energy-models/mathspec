@@ -218,12 +218,12 @@ given:
     GlobalConstraint_counts_snapshot: { dims: [scenario, global_constraint, snapshot], dtype: bool }
   expressions:
     GlobalConstraint_snapshot_closes: { dims: [scenario, global_constraint, snapshot] }
-    primary_energy: { dims: [scenario, global_constraint], term: StorageUnit_primary_energy }
-    operational_limit: { dims: [scenario, global_constraint], term: StorageUnit_operational_limit }
-    tech_capacity_expansion: { dims: [global_constraint], term: StorageUnit_tech_capacity_expansion }
-    scenario_opex: { dims: [scenario], term: StorageUnit_opex }
-    Carrier_additions: { dims: [period, carrier], term: StorageUnit_additions }
-    Bus_injection: { dims: [scenario, snapshot, bus], term: StorageUnit_injection }
+    primary_energy: { dims: [scenario, global_constraint] }
+    operational_limit: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   StorageUnit_charge_carried_in:
@@ -280,23 +280,29 @@ expressions:
   StorageUnit_primary_energy:
     expression: >-
       -sum(sum((StorageUnit_state_of_charge * StorageUnit_closing_weight) * StorageUnit_primary_energy_weight, over=snapshot), over=storage_unit)
+    adds_to: primary_energy
   StorageUnit_operational_limit:
     expression: >-
       -sum(sum((StorageUnit_state_of_charge * StorageUnit_closing_weight) * StorageUnit_operational_limit_weight, over=snapshot), over=storage_unit)
+    adds_to: operational_limit
   StorageUnit_tech_capacity_expansion:
     expression: sum(StorageUnit_p_nom_ext * StorageUnit_tech_capacity_weight, over=storage_unit)
+    adds_to: tech_capacity_expansion
   StorageUnit_opex:
     expression: >-
       sum(sum(((StorageUnit_p_dispatch * StorageUnit_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=storage_unit), over=snapshot)
       + sum(sum((((StorageUnit_p_dispatch * StorageUnit_p_dispatch) * StorageUnit_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=storage_unit), over=snapshot)
       + sum(sum(((StorageUnit_state_of_charge * StorageUnit_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=storage_unit), over=snapshot)
       + sum(sum(((StorageUnit_spill * StorageUnit_spill_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=storage_unit), over=snapshot)
+    adds_to: scenario_opex
   StorageUnit_additions:
     expression: >-
       sum(StorageUnit_p_nom_ext * StorageUnit_first_active, by=StorageUnit_carrier, over=storage_unit, into=carrier)
+    adds_to: Carrier_additions
   StorageUnit_injection:
     expression: >-
       sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), by=StorageUnit_bus, over=storage_unit, into=bus)
+    adds_to: Bus_injection
 
 constraints:
   StorageUnit_fix_p_dispatch_lower:
