@@ -68,8 +68,9 @@ parameters:
     description: >-
       share of the flow that arrives at an output port, PyPSA's `efficiency`,
       `efficiency2`, … read long — negative where that port consumes rather
-      than delivers
-    dims: [scenario, link_output]
+      than delivers. Read at the snapshot the flow arrives, so a delayed port
+      delivers at its arrival snapshot's efficiency (`constraints.py:1522`)
+    dims: [scenario, snapshot, link_output]
   Link_output_delay:
     description: >-
       snapshots a port's delivery lags its link's flow — PyPSA's `delay`,
@@ -221,18 +222,19 @@ expressions:
     otherwise: Link_p_nom
   Link_output_arrival:
     description: >-
-      what a link delivers to an output port at a snapshot — its flow after the
-      port's efficiency, delayed by the port's `delay` within its investment
-      period; where the port is `cyclic_delay` the delayed flow wraps from the
-      period's end, and where it is not the flow still in transit at the
-      period's first snapshots is lost. A port that does not delay (`delay`
+      what a link delivers to an output port at a snapshot — its flow delayed
+      by the port's `delay` within its investment period, times the port's
+      efficiency at the snapshot the flow arrives; where the port is
+      `cyclic_delay` the delayed flow wraps from the period's end, and where it
+      is not the flow still in transit at the period's first snapshots is
+      lost. A port that does not delay (`delay`
       zero) delivers its flow unshifted, cyclic or not
     dims: [scenario, snapshot, link_output]
     cases:
       wrapping:
         when: Link_output_cyclic_delay
-        expression: shift(at(Link_p, by=Link_output_link, over=link, into=link_output) * Link_efficiency, along=snapshot, offset=Link_output_delay, edge='wrap', by=snapshot_period, within=period)
-    otherwise: shift(at(Link_p, by=Link_output_link, over=link, into=link_output) * Link_efficiency, along=snapshot, offset=Link_output_delay, edge=0, by=snapshot_period, within=period)
+        expression: shift(at(Link_p, by=Link_output_link, over=link, into=link_output), along=snapshot, offset=Link_output_delay, edge='wrap', by=snapshot_period, within=period) * Link_efficiency
+    otherwise: shift(at(Link_p, by=Link_output_link, over=link, into=link_output), along=snapshot, offset=Link_output_delay, edge=0, by=snapshot_period, within=period) * Link_efficiency
   Link_injection:
     expression: >-
       -sum(Link_p, by=Link_bus0, over=link, into=bus)

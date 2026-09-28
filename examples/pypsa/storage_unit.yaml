@@ -79,10 +79,10 @@ parameters:
     dims: [scenario, storage_unit]
   StorageUnit_efficiency_store:
     description: share of the power drawn from the bus that becomes charge
-    dims: [scenario, storage_unit]
+    dims: [scenario, snapshot, storage_unit]
   StorageUnit_efficiency_dispatch:
     description: share of the charge drawn down that reaches the bus
-    dims: [scenario, storage_unit]
+    dims: [scenario, snapshot, storage_unit]
   StorageUnit_sign:
     description: >-
       the sign net dispatch enters its bus's balance with — PyPSA's `sign`,

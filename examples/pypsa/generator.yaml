@@ -114,9 +114,9 @@ parameters:
   Generator_primary_energy_weight:
     description: >-
       the constrained attribute per unit of energy at the bus — the carrier's
-      `co2_emissions` over the generator's efficiency, data prep; a generator
+      `co2_emissions` over the generator's efficiency at the snapshot, data prep; a generator
       of an unweighted carrier has no row
-    dims: [scenario, global_constraint, generator]
+    dims: [scenario, global_constraint, snapshot, generator]
   Generator_operational_limit_weight:
     description: one where the generator is in the row's set — data prep; one outside it has no row
     dims: [scenario, global_constraint, generator]

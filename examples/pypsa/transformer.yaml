@@ -73,12 +73,12 @@ parameters:
     dims: [transformer, cycle]
   Transformer_phase_shift_weight:
     description: >-
-      a fixed transformer's phase shift in radians, signed by its orientation
-      in the cycle — a constant added to the cycle sum, data prep; zero for a
+      a fixed transformer's phase shift in radians at each snapshot, signed by
+      its orientation in the cycle — a constant added to the cycle sum, data prep; zero for a
       varying transformer, whose shift is a decision instead, so the constant and
       the variable term never both count a shift. A transformer with no shift or
       in no cycle has no row
-    dims: [transformer, cycle]
+    dims: [snapshot, transformer, cycle]
   Transformer_phase_shift_varying:
     description: >-
       whether a transformer's phase shift is a decision — PyPSA's
