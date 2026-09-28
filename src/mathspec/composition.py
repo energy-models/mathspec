@@ -144,7 +144,9 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
             declare one name; two fragments say different things about one
             dimension, relation or given declaration; a fragment reads a name as
             something other than what its sibling introduces, as another kind
-            of thing, or over fewer dimensions than its body carries; two fragments are
+            of thing, or over fewer dimensions than its body carries; a fragment
+            adds a term to a name another fragment defines; a name is read by
+            nothing but the fragments that add a term to it; two fragments are
             written against different language versions; their objectives run
             opposite ways; or the composed spec does not load.
         FileNotFoundError: A ``str`` with no newline that names no file.
@@ -166,10 +168,9 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     for section in OWNED_SECTIONS:
         if claimed := _claimed(read, section):
             merged[section] = claimed
-    if summed := _summed(loaded, _mapping(merged.get('expressions')), readings['expressions'], read):
-        merged['expressions'] = {
-            key: _without(block, 'adds_to') for key, block in {**_mapping(merged.get('expressions')), **summed}.items()
-        }
+    summed = _summed(loaded, _mapping(merged.get('expressions')), readings['expressions'], read)
+    if expressions := {**_mapping(merged.get('expressions')), **summed}:
+        merged['expressions'] = {key: _without(block, 'adds_to') for key, block in expressions.items()}
     if given := _folded(read, merged, loaded, readings):
         merged['given'] = given
     if (objective := _summed_objective(read)) is not None:
@@ -385,10 +386,15 @@ def _read_elsewhere(loaded: Mapping[str, Spec], key: str, contributors: list[str
 
 
 def _uses(program: Program, key: str) -> bool:
-    """Whether *program*'s math reads the given expression *key*, which it reads as a column."""
+    """Whether *program*'s math reads the given expression *key*, which it reads as a column.
+
+    A reported expression builds no row, so a read there is not a read in the
+    math, and a fragment whose only use of the name is to report it is still
+    one that may have misspelt it.
+    """
     trees = [
         *program.roots,
-        *(e.expression for e in program.expressions.values()),
+        *(e.expression for e in program.expressions.values() if e.in_math),
         *(link.expression for curve in program.piecewise.values() for link in curve.links),
     ]
     return any(isinstance(node, Variable) and node.name == key for node in walk(*trees))

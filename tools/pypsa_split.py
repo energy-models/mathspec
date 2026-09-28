@@ -355,12 +355,13 @@ GIVEN_KINDS = {'parameters': ('dtype',), 'variables': ('domain',), 'expressions'
 
 
 def _term_block(block: str, hub: str) -> str:
-    """A term's source block with the hub it adds to, the one-line form opened into a mapping to carry it."""
+    """A term's source block with the hub it adds to, the one-line and the folded forms opened into a mapping to carry it."""
     head, _, rest = block.partition('\n')
     name, _, inline = head.partition(':')
-    if inline.strip():
-        return f'{name}:\n    expression: {inline.strip()}\n    adds_to: {hub}'
-    return f'{head}\n{rest}\n    adds_to: {hub}'
+    if not (scalar := inline.strip()):
+        return f'{head}\n{rest}\n    adds_to: {hub}'
+    body = f'{scalar}\n{rest}' if scalar[0] in '>|' else scalar
+    return f'{name}:\n    expression: {body}\n    adds_to: {hub}'
 
 
 def _given(model: Model, kind: str, given: set[Key], stated: Mapping[str, list[str]], homes: set[str]) -> str:

@@ -308,10 +308,30 @@ def test_a_cased_term_is_added_like_any_other():
             r"fragment '#2' adds a term to 'injecton', and no other fragment reads it.*Did you mean 'injection'\?",
             id='a-misspelt-given-entry',
         ),
+        pytest.param(
+            [
+                BALANCE,
+                {
+                    **FLEET,
+                    'given': {'expressions': {'injecton': {'dims': BUS_FRAME}}},
+                    'expressions': {
+                        'generator_injection': {**FLEET['expressions']['generator_injection'], 'adds_to': 'injecton'},
+                        'twice': 'injecton * 2',
+                    },
+                },
+            ],
+            r"fragment '#2' adds a term to 'injecton', and no other fragment reads it.*Did you mean 'injection'\?",
+            id='a-misspelt-given-entry-the-same-file-reports',
+        ),
     ],
 )
 def test_terms_only_their_own_files_read_are_refused(fragments, message):
-    """A misspelt `given:` entry loads in its own file, and is refused where nothing else reads the name."""
+    """A misspelt `given:` entry loads in its own file, and is refused where nothing else reads the name.
+
+    A reported expression builds no row, so reading the name there is not
+    the use in the math the refusal asks for: `_uses` counted it, and a
+    contributor that reported its misspelt sum passed the check.
+    """
     with pytest.raises(LanguageError, match=message):
         merge(fragments)
 

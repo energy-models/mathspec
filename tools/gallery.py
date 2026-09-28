@@ -30,6 +30,7 @@ from tools.notation import equations
 from tools.spec_math import OPERATORS, PROBES, _section, rendered_probe
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
     from mathspec.spec import Spec
@@ -125,20 +126,37 @@ def split_index_block() -> str:
     reader the files no longer have. The reader is the fragment that reads
     the sum with its description and adds nothing to it.
     """
-    specs = {path.stem: to_spec(path) for path in sorted(PYPSA.glob('*.yaml'))}
+    return split_index({path.stem: to_spec(path) for path in sorted(PYPSA.glob('*.yaml'))})
+
+
+def split_index(specs: Mapping[str, Spec]) -> str:
+    """The two tables for *specs*, each fragment under its name.
+
+    Raises:
+        ValueError: A sum that no fragment reads with a description while
+            adding nothing to it, so the index has no reader to name.
+    """
     readers: dict[str, tuple[str, tuple[str, ...]]] = {}
-    terms: dict[str, dict[str, str]] = {}
+    terms: dict[str, list[tuple[str, str]]] = {}
     for name, spec in specs.items():
-        adds = {block.adds_to: term for term, block in spec.expressions.items() if block.adds_to is not None}
-        for hub, term in adds.items():
-            terms.setdefault(hub, {})[name] = term
+        adds = {block.adds_to for block in spec.expressions.values() if block.adds_to is not None}
+        for term, block in spec.expressions.items():
+            if block.adds_to is not None:
+                terms.setdefault(block.adds_to, []).append((name, term))
         for hub, entry in spec.given.expressions.items():
             if entry.description and hub not in adds:
                 readers[hub] = (name, tuple(entry.dims))
+    if unread := sorted(set(terms) - set(readers)):
+        spelled = ', '.join(f'{hub!r}' for hub in unread)
+        msg = (
+            f'no fragment reads {spelled} with a description and adds nothing to it, so the index has no reader '
+            f"to name: describe each under 'given: expressions:' in the fragment that reads it."
+        )
+        raise ValueError(msg)
     sums = ['| Sum | Over | Read in | The terms, by the fragment that adds each |', '| --- | --- | --- | --- |']
     for hub, by_fragment in sorted(terms.items(), key=lambda item: -len(item[1])):
         reader, dims = readers[hub]
-        cells = ', '.join(f'[`{term}`]({fragment}.md)' for fragment, term in sorted(by_fragment.items()))
+        cells = ', '.join(f'[`{term}`]({fragment}.md)' for fragment, term in sorted(by_fragment))
         sums.append(f'| `{hub}` | `{", ".join(dims)}` | [{reader}]({reader}.md) | {cells} |')
     files = [
         '| Fragment | Parameters | Variables | Constraints | Reads | Adds to |',
@@ -147,7 +165,8 @@ def split_index_block() -> str:
     for name, spec in specs.items():
         given = spec.given
         reads = len(given.parameters) + len(given.variables) + len(given.expressions) + len(given.constraints)
-        adds = ', '.join(f'`{block.adds_to}`' for block in spec.expressions.values() if block.adds_to is not None)
+        hubs = dict.fromkeys(block.adds_to for block in spec.expressions.values() if block.adds_to is not None)
+        adds = ', '.join(f'`{hub}`' for hub in hubs)
         files.append(
             f'| [{name}]({name}.md) | {len(spec.parameters)} | {len(spec.variables)} | {len(spec.constraints)} '
             f'| {reads} | {adds} |'

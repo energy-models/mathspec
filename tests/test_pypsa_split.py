@@ -18,10 +18,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import yaml
 
 from mathspec import FORMATS, LanguageError, merge, to_spec, typeset
 from mathspec.canonical import canonical_yaml
-from tools.pypsa_split import SOURCE, SUM_HOME, Model, fragments
+from tests.fixtures import BALANCE
+from tests.test_terms import DEMAND, FLEET
+from tools.gallery import split_index
+from tools.pypsa_split import SOURCE, SUM_HOME, Model, _term_block, fragments
 
 FOLDER = Path(__file__).resolve().parent.parent / 'examples' / 'pypsa'
 PATHS = {path.stem: path for path in sorted(FOLDER.glob('*.yaml'))}
@@ -127,3 +131,35 @@ def test_leaving_out_the_reader_of_a_sum_no_model_goes_without_is_refused(droppe
 def test_every_fragment_and_the_composition_print(fmt):
     assert all(typeset(path, fmt) for path in PATHS.values()), f'a fragment rendered nothing in {fmt}'
     assert typeset(merge(list(PATHS.values())), fmt)
+
+
+@pytest.mark.parametrize(
+    'block',
+    [
+        pytest.param('  Name: a + b', id='one-line'),
+        pytest.param('  Name: >-\n      a\n      + b', id='folded'),
+        pytest.param('  Name:\n    expression: a + b', id='mapping'),
+    ],
+)
+def test_a_term_block_carries_its_body_in_every_source_form(block):
+    """A folded body follows a `>-` on the head line, which the splitter read as a one-line expression and dropped."""
+    assert yaml.safe_load(_term_block(block, 'hub')) == {'Name': {'expression': 'a + b', 'adds_to': 'hub'}}
+
+
+def test_the_split_index_names_a_hub_once_per_fragment_and_needs_a_described_reader():
+    """A fragment with two terms into one sum adds to it once, and a sum nobody reads with a description has no reader to name."""
+    twice = {
+        **FLEET,
+        'expressions': {
+            **FLEET['expressions'],
+            'curtailment': {'expression': 'sum(gen_p, by=gen_bus, over=generator, into=bus)', 'adds_to': 'injection'},
+        },
+    }
+    specs = {'balance': to_spec(BALANCE), 'fleet': to_spec(twice), 'demand': to_spec(DEMAND)}
+    index = split_index(specs)
+    assert '| [fleet](fleet.md) | 0 | 1 | 0 | 1 | `injection` |' in index, 'two terms into one sum, listed once'
+    assert '[`demand_injection`](demand.md), [`curtailment`](fleet.md), [`generator_injection`](fleet.md)' in index, (
+        'every term of the fragment, by fragment then by name'
+    )
+    with pytest.raises(ValueError, match=r"no fragment reads 'injection' with a description and adds nothing to it"):
+        split_index({'fleet': specs['fleet'], 'demand': specs['demand']})
