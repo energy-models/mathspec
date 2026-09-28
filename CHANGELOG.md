@@ -15,6 +15,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 - feat: a decided variable becomes a supplied number, so a subproblem is a call on the whole model ([#748](https://github.com/energy-models/mathspec/pull/748))
 - feat: advice names the assumption that proves a quadratic objective or row convex ([#747](https://github.com/energy-models/mathspec/pull/747))
 - feat: a program names its problem class and proves from the file whether its quadratic part is convex ([#746](https://github.com/energy-models/mathspec/pull/746))
+- docs(notation): the notation page shows a named expression whose declared frame is wider than its body ([#756](https://github.com/energy-models/mathspec/pull/756))
 - feat(language): a named expression may declare the frame it is read over ([#741](https://github.com/energy-models/mathspec/pull/741))
 - docs: code examples on the site are readable in light and dark mode, and a diagram shows what mathspec leaves to engines and other tools ([#730](https://github.com/energy-models/mathspec/pull/730))
 - docs: the site follows the reader's light or dark setting, and a page shows where it sits in the navigation ([#727](https://github.com/energy-models/mathspec/pull/727))
