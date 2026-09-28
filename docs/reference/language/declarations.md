@@ -299,7 +299,7 @@ math prints the term under _Definitions_ as its own line.
 
 [`merge`](../../howto/compose.md#a-library-of-components) writes the name's
 body as the owner's body, if it has one, plus every term by its name, in
-fragment-name order, and keeps each term as a named expression of the
+the order the files are given in, and keeps each term as a named expression of the
 composed spec. An empty sum keeps its frame, so the composed spec holds the
 terms to it. A term adds to whatever the owner wrote, as a fragment's
 objective adds to the objective, and a later merge adds to the composed body

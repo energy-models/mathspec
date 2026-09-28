@@ -11,7 +11,7 @@ What [the surface](surface.md), [generators](generator.md) and
 ```python
 import mathspec as ms
 
-spec = ms.merge({'surface': 'surface.yaml', 'generator': 'generator.yaml', 'load': 'load.yaml'})
+spec = ms.merge(['surface.yaml', 'generator.yaml', 'load.yaml'])
 ```
 
 The file below is `spec`, the spec `merge` returns, written as YAML with
@@ -30,7 +30,7 @@ above. **With commitment** lays `variants/commitment.yaml` over it with
 generator a committed unit:
 
 ```python
-committed = ms.override(spec, {'commitment': 'variants/commitment.yaml'})
+committed = ms.override(spec, ['variants/commitment.yaml'])
 ```
 
 A patch is refused on its own, since it edits declarations it does not
