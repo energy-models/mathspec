@@ -13,6 +13,8 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - docs: the composition how-to builds a component library from terms each file adds to a sum ([#762](https://github.com/energy-models/mathspec/pull/762))
+- feat(language): a term names the sum it adds to with `adds_to:`, and no file marks a sum as open ([#763](https://github.com/energy-models/mathspec/pull/763))
+- fix(language): merge and override take a list of files, and its order is the order of the terms and of the patches ([#761](https://github.com/energy-models/mathspec/pull/761))
 - docs(pypsa): a single spec covers every pypsa model class and component ([#620](https://github.com/energy-models/mathspec/pull/620))
 - docs(pypsa): the pypsa spec is also 24 topic files that merge back to it, each component adding its share of a sum by name ([#736](https://github.com/energy-models/mathspec/pull/736))
 - fix(typeset): a substituted term that opens with a minus prints as a subtraction ([#759](https://github.com/energy-models/mathspec/pull/759))

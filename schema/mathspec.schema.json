@@ -166,8 +166,20 @@
       "anyOf": [
         {
           "additionalProperties": false,
-          "description": "A named quantity: one arithmetic expression, referenced by the math or read back after a solve.\n\nWritten in YAML as a bare string, or as a mapping once it carries a\n``description:`` \u2014 and serialised back to whichever form it was written in,\nso a round trip through [`Spec.to_yaml`][] reproduces the file::\n\n    expressions:\n      total_generation: sum(p, over=generator)\n      emissions:\n        expression: sum(p * rate, over=generator)\n        description: CO2 released, the quantity the cap bounds\n\n``dims:`` declares the frame the quantity is read over. A plain entry may\nleave it out, and its body then decides the frame; a body that carries a\ndimension the frame does not name is refused, and one that carries fewer\nis constant along the rest. A quantity whose value varies by region is\nwritten as ``cases:`` over a declared ``dims:``, with an ``otherwise:``\nfor the rest \u2014 see the language reference.\n\n``empty: true`` over a declared ``dims:``, with no body, is an **empty\nsum**: a quantity this file declares and other files add terms to,\nthrough [`merge`][mathspec.composition.merge]. Alone, the file reads it as\na column over the frame, as it reads a given expression.",
+          "description": "A named quantity: one arithmetic expression, referenced by the math or read back after a solve.\n\nWritten in YAML as a bare string, or as a mapping once it carries a\n``description:`` \u2014 and serialised back to whichever form it was written in,\nso a round trip through [`Spec.to_yaml`][] reproduces the file::\n\n    expressions:\n      total_generation: sum(p, over=generator)\n      emissions:\n        expression: sum(p * rate, over=generator)\n        description: CO2 released, the quantity the cap bounds\n\n``dims:`` declares the frame the quantity is read over. A plain entry may\nleave it out, and its body then decides the frame; a body that carries a\ndimension the frame does not name is refused, and one that carries fewer\nis constant along the rest. A quantity whose value varies by region is\nwritten as ``cases:`` over a declared ``dims:``, with an ``otherwise:``\nfor the rest \u2014 see the language reference.\n\n``adds_to:`` names a ``given: expressions:`` entry of this file, and\nmakes this entry a term of it: a write, where the given entry is the read.\n[`merge`][mathspec.composition.merge] defines that name as every term\nthe files add to it, by name. The term is read over at most the\nframe the given entry states, and does not read the name it adds to.",
           "properties": {
+            "adds_to": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Adds To"
+            },
             "cases": {
               "additionalProperties": {
                 "$ref": "#/$defs/ExpressionCase"
@@ -203,11 +215,6 @@
               ],
               "default": null,
               "title": "Dims"
-            },
-            "empty": {
-              "default": false,
-              "title": "Empty",
-              "type": "boolean"
             },
             "expression": {
               "anyOf": [
@@ -347,7 +354,7 @@
     },
     "GivenExpressionBlock": {
       "additionalProperties": false,
-      "description": "A named expression this file reads and another file defines.\n\nThe frame is all this file states. This file reads the name as a quantity\nover that frame, affine in the columns, as it reads a given variable: the\nbody is the definer's, and the composed spec holds the body to the rules\nof every place this file reads it.\n\n``term:`` names the expression this file adds to the name, one this file\ndeclares under ``expressions:`` and reads over at most the frame.\n[`merge`][mathspec.composition.merge] adds it by name to the definition\nanother file writes and to the terms other files add, and keeps it as a\nnamed expression. The file itself reads the name as the whole sum, alone\nand composed.",
+      "description": "A named expression this file reads and another file defines.\n\nThe frame is all this file states. This file reads the name as a quantity\nover that frame, affine in the columns, as it reads a given variable: the\nbody is the definer's, and the composed spec holds the body to the rules\nof every place this file reads it.\n\nA named expression of this file may add to the name with ``adds_to:``.\n[`merge`][mathspec.composition.merge] then defines the name as every\nterm the files add, where no file defines it. The file itself reads the\nname as the whole sum, alone and composed.",
       "properties": {
         "description": {
           "anyOf": [
@@ -367,18 +374,6 @@
           },
           "title": "Dims",
           "type": "array"
-        },
-        "term": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Term"
         }
       },
       "required": [

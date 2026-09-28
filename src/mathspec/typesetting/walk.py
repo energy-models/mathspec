@@ -241,10 +241,6 @@ class Walk:
         entry = self.program.expressions.get(name) or self.program.given.expressions[name]
         return list(entry.dims)
 
-    def _empty(self) -> list[str]:
-        """The sums this file declares ``empty: true``, which other files add terms to."""
-        return [name for name, block in self.program.given.expressions.items() if block.empty]
-
     def _op(self, name: OperatorName) -> str:
         return self.format.operators[name]
 
@@ -717,9 +713,7 @@ class Walk:
         quantity it names. Every declared one prints, used or not. Inlining
         substitutes away the plain ones the math reads; a ``cases`` block has
         no single body to substitute, and an entry the math never reads has
-        nowhere to be substituted *into*, so both still print. A sum other
-        files add terms to prints last, as ``symbol = ⋯``: this file declares
-        the name and states no body for it.
+        nowhere to be substituted *into*, so both still print.
         """
         return [self.definition(name) for name in self.defined()]
 
@@ -727,24 +721,20 @@ class Walk:
         """The named expressions that print under their own symbol: every one, or only the unsubstitutable when inlining.
 
         Inlining leaves a name standing only where substitution cannot reach
-        it — a ``cases`` block, an entry the objective and constraints never
-        read, which is a quantity reported back rather than solved for, and a
-        sum with no body yet.
+        it — a ``cases`` block, and an entry the objective and constraints never
+        read, which is a quantity reported back rather than solved for.
         """
         entries = self.program.expressions
         if not self.inline_expressions:
-            return [*entries, *self._empty()]
-        standing = [name for name, entry in entries.items() if isinstance(entry.expression, Cases) or not entry.in_math]
-        return [*standing, *self._empty()]
+            return list(entries)
+        return [name for name, entry in entries.items() if isinstance(entry.expression, Cases) or not entry.in_math]
 
     def definition(self, name: str) -> Line:
-        """The line defining one named expression, ``symbol = body`` over its frame, or ``symbol = ⋯`` for a sum with no body yet."""
-        entry = self.program.expressions.get(name)
+        """The line defining one named expression, ``symbol = body`` over its frame."""
+        entry = self.program.expressions[name]
         frame = self._frame_of(name)
         ctx = self._context(frame)
-        if entry is None:
-            rendered = self.format.ellipsis
-        elif isinstance(entry.expression, Cases):
+        if isinstance(entry.expression, Cases):
             rendered = self.format.cases(self._arms(entry.expression, ctx))
         else:
             rendered = self._expression(entry.expression, ctx)
@@ -769,7 +759,7 @@ class Walk:
         """
         program = self.program
         kinds = {
-            'named expression': ({*program.expressions, *self._empty()}, self.definition),
+            'named expression': (program.expressions, self.definition),
             'constraint': (program.constraints, self._constraint),
             'assumption': (program.assumptions, self._assumption),
             'curve': (program.piecewise, self._piecewise),

@@ -14,11 +14,10 @@ Every fragment loads, prints and gets advice on its own. What it reads and does
 not declare, it states under
 [`given`](../../reference/language/declarations.md#given). A component that
 puts something into a sum every component adds to, such as the bus balance or
-the operating cost, names its share as an expression of its own and adds it
-with a [`term`](../../reference/language/declarations.md#a-term-a-file-adds).
-One fragment declares each sum as an
-[empty sum](../../reference/language/named.md#expressions), `empty: true`, so a
-term always lands. A new component is one new file, and the network does
+the operating cost, names its share as an expression of its own, a
+[term](../../reference/language/declarations.md#terms) whose `adds_to:` names
+the sum. One fragment reads each sum and adds nothing to it, so the terms
+always have a reader. A new component is one new file, and the network does
 not change.
 
 The split is written by `tools/pypsa_split.py` from the one file and checked
@@ -31,17 +30,17 @@ Three kinds of file. A **component** owns PyPSA's class of that name: its
 dimension, its data, its columns, its rows, and its share of each sum. The
 committable classes, `Generator`, `Link` and `Process`, are cut by feature into
 a file each for the class, its commitment, its ramping and its maintenance,
-and the three sets read alike because PyPSA's rows do. An **owner** declares
-a sum as `empty: true` over its frame, and the row that reads it: the network
-declares `Bus_injection`, power flow declares `Cycle_angle_sum`. **Settings**
-holds what every topic reads, the weightings and the flags, and declares the
-totals whose own readers, the cost, the carriers and the global constraints, a
-model may leave out.
+and the three sets read alike because PyPSA's rows do. An **owner** reads a
+sum with its description, and holds the row that reads it: the network reads
+`Bus_injection`, power flow reads `Cycle_angle_sum`. **Settings** holds what
+every topic reads, the weightings and the flags, and reads the totals whose
+own readers, the cost, the carriers and the global constraints, a model may
+leave out.
 
 <!-- gallery:begin -->
 ### The sums
 
-| Sum | Over | Declared in | The terms, by the fragment that adds each |
+| Sum | Over | Read in | The terms, by the fragment that adds each |
 | --- | --- | --- | --- |
 | `scenario_opex` | `scenario` | [settings](settings.md) | [`Generator_opex`](generator.md), [`Generator_commitment_opex`](generator_commitment.md), [`Link_opex`](link.md), [`Link_commitment_opex`](link_commitment.md), [`Process_opex`](process.md), [`Process_commitment_opex`](process_commitment.md), [`StorageUnit_opex`](storage_unit.md), [`Store_opex`](store.md) |
 | `Bus_injection` | `scenario, snapshot, bus` | [network](network.md) | [`Generator_injection`](generator.md), [`Line_injection`](line.md), [`Link_injection`](link.md), [`Load_injection`](load.md), [`Process_injection`](process.md), [`StorageUnit_injection`](storage_unit.md), [`Store_injection`](store.md), [`Transformer_injection`](transformer.md) |
@@ -70,14 +69,14 @@ model may leave out.
 | [link_maintenance](link_maintenance.md) | 5 | 4 | 13 | 9 |  |
 | [link_ramping](link_ramping.md) | 5 | 0 | 6 | 14 |  |
 | [load](load.md) | 3 | 0 | 0 | 1 | `Bus_injection` |
-| [network](network.md) | 0 | 0 | 1 | 0 |  |
-| [power_flow](power_flow.md) | 0 | 0 | 1 | 0 |  |
+| [network](network.md) | 0 | 0 | 1 | 1 |  |
+| [power_flow](power_flow.md) | 0 | 0 | 1 | 1 |  |
 | [process](process.md) | 21 | 3 | 9 | 12 | `tech_capacity_expansion`, `scenario_opex`, `Carrier_additions`, `Bus_injection` |
 | [process_commitment](process_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
 | [process_maintenance](process_maintenance.md) | 5 | 4 | 13 | 9 |  |
 | [process_ramping](process_ramping.md) | 5 | 0 | 6 | 14 |  |
 | [security](security.md) | 2 | 0 | 8 | 10 |  |
-| [settings](settings.md) | 9 | 0 | 0 | 0 |  |
+| [settings](settings.md) | 9 | 0 | 0 | 7 |  |
 | [storage_unit](storage_unit.md) | 34 | 5 | 20 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `Carrier_additions`, `Bus_injection` |
 | [store](store.md) | 27 | 3 | 10 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `Carrier_additions`, `Bus_injection` |
 | [transformer](transformer.md) | 19 | 4 | 11 | 4 | `Bus_injection`, `Cycle_angle_sum` |

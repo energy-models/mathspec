@@ -219,13 +219,12 @@ constraints:
     expression: injection == 0
 ```
 
-| Field         |                                                                                 |                |
-| ------------- | ------------------------------------------------------------------------------- | -------------- |
-| `dims`        | required. The dimensions the expression runs over                               |                |
-| `term`        | one expression: what this file adds to the name ([a term](#a-term-a-file-adds)) | default `null` |
-| `description` | free text                                                                       | default `null` |
+| Field         |                                                   |                |
+| ------------- | ------------------------------------------------- | -------------- |
+| `dims`        | required. The dimensions the expression runs over |                |
+| `description` | free text                                         | default `null` |
 
-There is no body but the term this file adds, if any. This file reads the name
+There is no body. A [term](#terms) of this file may add to the name. This file reads the name
 as it reads a given variable: a quantity over the frame, of degree one. A
 `where` does not read it, because a mask is built before any variable exists.
 A name declared under both `expressions:` and `given: expressions:` is
@@ -240,18 +239,14 @@ term carries it. The composed spec holds the body to the rules of every place
 this file reads it: a square of a given expression that is quadratic is
 refused once folded.
 
-#### A term a file adds
+#### Terms
 
-`term:` names the expression this file adds to the name. The term is an
-ordinary named expression of this file, so it takes `cases:`, a description
-and every other field a named expression takes. The file reads the name as
-the whole sum, alone and composed, and the term is its part of it. A file that
-only reads the name writes no term.
-
-The name is an `expressions:` block of one other file. Where that file has
-nothing of its own to put in, it declares the sum `empty: true` over a
-frame, an [empty sum](named.md#expressions), reads it as a column until the terms
-arrive, and prints its definition as `injection = ⋯`:
+A named expression with `adds_to:` is a **term**. It writes into a given
+expression of its own file: the given entry is the read, and `adds_to:` is
+the write. The term is an ordinary named expression, so it takes `cases:`, a
+description and every other field a named expression takes. The file reads
+the name as the whole sum, alone and composed, and the term is its part of
+it.
 
 ```yaml
 # fleet.yaml adds a term
@@ -263,57 +258,55 @@ relations:
   gen_bus: { key: generator, values: bus }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
+given:
+  expressions:
+    injection: { dims: [snapshot, bus] }
 expressions:
   generation:
     description: what the fleet puts into a bus
     expression: sum(gen_p, by=gen_bus, over=generator, into=bus)
+    adds_to: injection
+```
+
+```yaml
+# balance.yaml reads the sum, and adds nothing to it
+dimensions:
+  snapshot: { dtype: int }
+  bus: { dtype: str }
 given:
   expressions:
     injection:
       dims: [snapshot, bus]
-      term: generation
-```
-
-```yaml
-# balance.yaml declares the sum, and adds nothing to it
-dimensions:
-  snapshot: { dtype: int }
-  bus: { dtype: str }
-expressions:
-  injection:
-    dims: [snapshot, bus]
-    empty: true
-    description: what the components put into a bus
+      description: what the components put into a bus
 constraints:
   balance:
     dims: [snapshot, bus]
     expression: injection == 0
 ```
 
-Each file loads alone. The term names an expression the file declares, and
-that expression does not read the name it adds to, directly or through
-another name. It carries no dimension the entry does not state, and it is
-held to degree two, as what reads the sum is. All of this is checked at load.
-The typeset legend lists the entry under _Given_ and names the term, and the
-math prints the term under _Definitions_ as its own line.
+Each file loads alone. `adds_to:` names a `given: expressions:` entry of the
+same file, and a name the file does not read there is refused with the near
+miss. The term does not read the name it adds to, directly or through another
+name. It carries no dimension the entry does not state, and it is held to
+degree two, as what reads the sum is. All of this is checked at load. The
+typeset legend lists the entry under _Given_ and names the term, and the math
+prints the term under _Definitions_ as its own line.
 
-[`merge`](../../howto/compose.md#a-library-of-components) writes the name's
-body as the owner's body, if it has one, plus every term by its name, in
-fragment-name order, and keeps each term as a named expression of the
-composed spec. An empty sum keeps its frame, so the composed spec holds the
-terms to it. A term adds to whatever the owner wrote, as a fragment's
-objective adds to the objective, and a later merge adds to the composed body
-the same way. The owner does not opt in. A file with a body reads it alone,
-and the body plus every term once composed; whoever composes the files
-answers for that sum. A term has to land on an `expressions:` block another
-file declares. Terms alone are refused, with the near miss named, since
-`merge` fills or extends what a file declared and never invents a name. A
-body written as `cases:` is refused, since it is summed as written: name the
-cased body as its own expression, and define the name as that name. A cased
-term is added like any other, by its name. The block keeps the owner's
-description, or takes the first a reader wrote. Two files that both declare
-the name under `expressions:` are refused as a collision, and the message
-names `term:`.
+[`merge`](../../howto/compose.md#a-library-of-components) defines the name
+as every term by its name, in the order the files are given in, over the frame
+the readers state. It keeps each term as a named expression, without its
+`adds_to:`. A cased term is added like any other, by its name. The sum takes
+the first description a reader wrote.
+
+A name one file defines takes no term, so a body means what its file says. A
+file that has a part of its own, such as a slack, reads the name and adds that
+part as a term. A merged spec defines its sums, so it takes no further terms:
+merge every fragment in one list.
+
+Some file has to read the name for more than adding to it: read it and add
+nothing, or use it in its math. Terms that only their own files read are
+refused, with the near miss, since that is what a misspelt `given:` entry
+looks like.
 
 ## `constraints`
 
