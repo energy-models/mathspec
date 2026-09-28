@@ -143,6 +143,9 @@ expressions:
   spend: # a plain named expression: its symbol prints where it is used, its body once as a definition
     description: what a snapshot's dispatch costs
     expression: sum(p * cost, over=generator)
+  rating: # a frame wider than the body, in an order of its own: the value is the same at every snapshot
+    dims: [generator, snapshot]
+    expression: eta * p_max
   lcoe: sum(p * cost) / sum(p) # nothing in the math reads it, so its divisor may carry a variable
   marginal_price: dual(balance) # the row dual of a constraint, the one builtin only an entry the math never reads may call
   startup_cost: # a quantity defined by region: no two cases overlap, and `otherwise` is the rest
@@ -160,6 +163,9 @@ constraints:
   starts: # names the cased expression: its symbol prints here, its block once below
     dims: [snapshot, generator]
     expression: p <= startup_cost
+  under_rating: # names the expression with a declared frame: the row reads it at every snapshot, though its body has no snapshot
+    dims: [snapshot, generator]
+    expression: p <= rating
   balance: # sum over a relation
     dims: [snapshot, bus]
     expression: sum(p, by=gen_bus, over=generator, into=bus) + spill - slack == load
