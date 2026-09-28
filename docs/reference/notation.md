@@ -634,7 +634,7 @@ constraints:
 
 #### Signed sum substituted into a plus
 
-names the signed sum on the right of a plus: inlined, it prints as `- spill + slack`, not `+ -spill + slack`
+names the signed sum on the right of a plus: inlined, its minus prints as a subtraction
 
 ```yaml
 constraints:
@@ -708,7 +708,7 @@ expressions:
 
 #### Plain expression that is a signed sum
 
-a plain expression whose body is a sum that opens with a minus
+a plain expression that opens with a minus
 
 ```yaml
 expressions:

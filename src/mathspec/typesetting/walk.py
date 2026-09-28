@@ -412,13 +412,9 @@ class Walk:
         return self.format.joined([left, right], self._op(names[op])), precedence
 
     def _substituted(self, node: Expression) -> Expression:
-        """*node* with a plain named expression replaced by its body where inlining prints the body anyway.
+        """*node*, a plain named expression replaced by its body where inlining prints the body.
 
-        Done before the sign folding of [`_binary`][], so a term that opens
-        with a minus prints as a subtraction once substituted, as it does
-        written out: ``a + t`` with ``t: -b`` is ``a - b``, not ``a + -b``. A
-        body that is itself a sum is re-associated to the left for the same
-        reason: ``a + (-b + c)`` prints as ``a - b + c``.
+        [`_binary`][] folds the sign of the result, so a substituted term prints as its body written out.
         """
         while self.inline_expressions and isinstance(node, Named) and not isinstance(node.body, Cases):
             node = node.body
