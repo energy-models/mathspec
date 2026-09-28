@@ -91,11 +91,7 @@ class Namespace:
         empty = empty_sums(schema)
         variables = {**schema.variables, **schema.given.variables, **schema.given.expressions, **empty}
         parameters = {**schema.parameters, **schema.given.parameters}
-        #: Every name an expression reads as a column: the variables, the
-        #: given expressions, whose bodies another file holds, and the empty
-        #: sums, whose bodies other files add.
         self.variables = frozenset(variables)
-        #: The named expressions with a body, which is what a name resolves to.
         self.bodies = frozenset(name for name in schema.expressions if name not in empty)
         self.parameters = frozenset(parameters)
         self.dimensions = frozenset(schema.dimensions)

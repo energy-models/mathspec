@@ -234,7 +234,6 @@ class Walk:
         #: Substitute each plain named expression where it is used, rather than
         #: printing its symbol there and its definition once.
         self.inline_expressions = inline_expressions
-        #: Every parameter the math reads, declared here or given.
         self._parameters = {**program.parameters, **program.given.parameters}
 
     def _frame_of(self, name: str) -> list[str]:

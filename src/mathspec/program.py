@@ -623,9 +623,7 @@ class GivenDeclaration:
 
     dims: tuple[str, ...]
     description: str | None = None
-    #: The term this program adds to a given expression, or ``None`` where it
-    #: only reads the name: the [`Named`][] node of the entry the term names,
-    #: read over at most ``dims``.
+    #: The [`Named`][] node of the term this program adds to the name, or ``None`` where it only reads it.
     term: Named | None = None
     #: Whether this program declares the name itself, as an expression with a
     #: frame and no body, and leaves the body to the files that add terms.
@@ -646,9 +644,7 @@ class GivenTargets:
     variables: Mapping[str, GivenDeclaration] = Sealed({})
     #: Row families the host model provides, by name, read back after the solve.
     constraints: Mapping[str, GivenDeclaration] = Sealed({})
-    #: Named expressions the host model defines, by name. An expression reads
-    #: each as a [`Variable`][] over the frame declared here, since the
-    #: body is the host's.
+    #: Named expressions the host model defines, by name.
     expressions: Mapping[str, GivenDeclaration] = Sealed({})
 
     def __post_init__(self) -> None:
@@ -949,9 +945,7 @@ class Program:
     #: named expression is outside the language is refused by every verb that
     #: reads the file rather than only by the one that reads the expression.
     expressions: Mapping[str, ExpressionDeclaration] = Sealed({})
-    #: What this program reads and does not build ([`GivenTargets`][]). A
-    #: model it is layered onto provides each name; nothing here emits a
-    #: column or a row.
+    #: What this program reads and does not build ([`GivenTargets`][]), for a host model to provide.
     given: GivenTargets = GivenTargets()
     #: What the file as a whole is, as its ``description:`` says.
     description: str | None = None
