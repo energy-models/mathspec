@@ -39,9 +39,9 @@ from mathspec.program import (
     PiecewiseDeclaration,
     Program,
     SosDeclaration,
-    Variable,
     VariableDeclaration,
     VariableDefined,
+    variables_of,
     walk,
 )
 from mathspec.resolution import (
@@ -55,6 +55,8 @@ from mathspec.resolution import (
 from mathspec.validation import emitted_name_errors, reference_errors
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
+
     from mathspec.program import Expression
     from mathspec.spec import AssumptionBlock, Spec
 
@@ -124,11 +126,7 @@ def lower(schema: Spec) -> Program:
         if node is not None:
             entries[ename] = node
 
-    terms = [
-        _term(name, target, schema, ns, errors)
-        for name in entries
-        if (target := schema.expressions[name].adds_to) is not None
-    ]
+    terms = _terms(entries, schema, ns, errors)
 
     variables = {}
     for vname, vdef in schema.variables.items():
@@ -184,7 +182,7 @@ def lower(schema: Spec) -> Program:
     if objective is not None:
         roots.append(objective.expression)
     roots.extend(link for links in curves.values() for link in links)
-    roots.extend(term for term in terms if term is not None)
+    roots.extend(terms)
     in_math = frozenset(node.name for node in walk(*roots) if isinstance(node, Named))
 
     piecewise = {}
@@ -255,6 +253,36 @@ def lower(schema: Spec) -> Program:
     return program
 
 
+def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str]) -> list[Named]:
+    """Every entry with ``adds_to:`` that loads as a term, with a refusal in *errors* for each other.
+
+    A term that reads its own sum, directly or through the sums the file's
+    other terms add to, defines that sum by itself whatever the other files
+    add, so the one file decides it.
+    """
+    resolved = {
+        name: (target, entry)
+        for name in entries
+        if (target := schema.expressions[name].adds_to) is not None
+        and (entry := _term(name, target, schema, ns, errors)) is not None
+    }
+    sums: dict[str, list[Named]] = {}
+    for target, entry in resolved.values():
+        sums.setdefault(target, []).append(entry)
+    terms = []
+    for name, (target, entry) in resolved.items():
+        through = _loop(target, entry, sums)
+        if through is None:
+            terms.append(entry)
+            continue
+        via = f', through {" -> ".join(repr(sum_) for sum_ in through)}' if through else ''
+        errors.append(
+            f"Named expression '{name}': it reads {target!r}, the sum it adds to{via}, so the sum would define "
+            f'itself. A term is what this file puts in: write it in what this file declares.'
+        )
+    return terms
+
+
 def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]) -> Named | None:
     """Named expression *name* as the term it writes into a given expression of its file, or ``None``.
 
@@ -282,13 +310,25 @@ def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]
     if entry is None:
         return None
     assert isinstance(entry, Named), 'a term is a name, and a name resolves to the entry it names'
-    if any(isinstance(node, Variable) and node.name == target for node in walk(entry)):
-        errors.append(
-            f'{context}: it reads {target!r}, the sum it adds to, so the sum would define itself. A term is '
-            f'what this file puts in: write it in what this file declares.'
-        )
-        return None
     return entry
+
+
+def _loop(target: str, entry: Named, sums: Mapping[str, list[Named]]) -> list[str] | None:
+    """The sums *entry* reads *target* through, by the terms in *sums*, or ``None`` where it does not read it.
+
+    ``[]`` is a term that reads its own sum.
+    """
+    seen = {target}
+    stack: list[tuple[list[str], frozenset[str]]] = [([], variables_of(entry))]
+    while stack:
+        path, reads = stack.pop()
+        for read in sorted(reads):
+            if read == target:
+                return path
+            if read in sums and read not in seen:
+                seen.add(read)
+                stack.append(([*path, read], variables_of(*sums[read])))
+    return None
 
 
 def _frame_of(name: str, entry: Named, schema: Spec) -> tuple[str, ...]:

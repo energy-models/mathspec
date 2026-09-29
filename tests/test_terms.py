@@ -147,6 +147,18 @@ def test_a_contributor_reads_the_name_as_the_whole_sum():
             id='a-mistyped-target',
         ),
         pytest.param(
+            {
+                **DEMAND,
+                'given': {'expressions': {'injection': {'dims': BUS_FRAME}, 'withdrawal': {'dims': BUS_FRAME}}},
+                'expressions': {
+                    'demand_injection': {'expression': 'withdrawal - load', 'adds_to': 'injection'},
+                    'demand_withdrawal': {'expression': 'injection + load', 'adds_to': 'withdrawal'},
+                },
+            },
+            r"Named expression 'demand_injection': it reads 'injection', the sum it adds to, through 'withdrawal'",
+            id='two-terms-reading-each-other-s-sum',
+        ),
+        pytest.param(
             {**_demand(target='total'), 'expressions': {**_demand(target='total')['expressions'], 'total': '-load'}},
             r"it adds to 'total', which this file defines\. A body means what its file says, so a term fills only "
             r"a name read under 'given: expressions:': write the term into the body of 'total'",
@@ -182,6 +194,19 @@ def test_a_frame_with_no_body_names_where_a_sum_is_read():
     spec = {**BALANCE, 'given': {}, 'expressions': {'injection': {'dims': BUS_FRAME}}}
     with pytest.raises(LanguageError, match=r"this has neither.*read under 'given: expressions:'.*`adds_to:`"):
         to_spec(spec)
+
+
+def test_a_term_may_read_another_sum_its_file_adds_to():
+    """A read of another sum makes no loop until that sum's term reads back."""
+    spec = {
+        **DEMAND,
+        'given': {'expressions': {'injection': {'dims': BUS_FRAME}, 'withdrawal': {'dims': BUS_FRAME}}},
+        'expressions': {
+            'demand_injection': {'expression': 'withdrawal - load', 'adds_to': 'injection'},
+            'demand_withdrawal': {'expression': 'load', 'adds_to': 'withdrawal'},
+        },
+    }
+    assert to_spec(spec).program.expressions['demand_injection'].adds_to == 'injection'
 
 
 def test_a_term_may_be_quadratic():
