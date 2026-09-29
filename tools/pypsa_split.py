@@ -355,13 +355,17 @@ GIVEN_KINDS = {'parameters': ('dtype',), 'variables': ('domain',), 'expressions'
 
 
 def _term_block(block: str, hub: str) -> str:
-    """A term's source block with the hub it adds to, the one-line and the folded forms opened into a mapping to carry it."""
+    """A term's source block with the hub it adds to, every form the head line does not open reread as a mapping."""
     head, _, rest = block.partition('\n')
     name, _, inline = head.partition(':')
     if not (scalar := inline.strip()):
         return f'{head}\n{rest}\n    adds_to: {hub}'
-    body = f'{scalar}\n{rest}' if scalar[0] in '>|' else scalar
-    return f'{name}:\n    expression: {body}\n    adds_to: {hub}'
+    if scalar[0] in '>|':
+        return f'{name}:\n    expression: {scalar}\n{rest}\n    adds_to: {hub}'
+    entry = yaml.safe_load(block)[name.strip()]
+    fields = {**entry, 'adds_to': hub} if isinstance(entry, dict) else {'expression': entry, 'adds_to': hub}
+    dumped = yaml.safe_dump({name.strip(): fields}, default_flow_style=False, sort_keys=False, width=10**6)
+    return textwrap.indent(dumped, ' ' * (len(head) - len(head.lstrip()))).rstrip()
 
 
 def _given(model: Model, kind: str, given: set[Key], stated: Mapping[str, list[str]], homes: set[str]) -> str:

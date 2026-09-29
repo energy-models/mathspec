@@ -139,10 +139,17 @@ def test_every_fragment_and_the_composition_print(fmt):
         pytest.param('  Name: a + b', id='one-line'),
         pytest.param('  Name: >-\n      a\n      + b', id='folded'),
         pytest.param('  Name:\n    expression: a + b', id='mapping'),
+        pytest.param('  Name: {expression: a + b}', id='flow-mapping'),
+        pytest.param('  Name: a\n    + b', id='one-line-continued'),
     ],
 )
 def test_a_term_block_carries_its_body_in_every_source_form(block):
-    """A folded body follows a `>-` on the head line, which the splitter read as a one-line expression and dropped."""
+    """A body the head line does not hold whole was dropped or nested.
+
+    A folded body follows a `>-` on the head line, and a plain body may run on
+    to the next line; the splitter kept only the head line. A flow mapping was
+    nested under `expression:`.
+    """
     assert yaml.safe_load(_term_block(block, 'hub')) == {'Name': {'expression': 'a + b', 'adds_to': 'hub'}}
 
 
