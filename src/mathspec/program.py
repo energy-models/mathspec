@@ -591,7 +591,9 @@ class ParameterDeclaration:
 
     ``dtype`` is what the declaration claims the values are, and a consumer
     attaching data refuses a column that is not it — so the *declaration* is
-    what is read, rather than whatever the column happens to hold.
+    what is read, rather than whatever the column happens to hold. It
+    refuses a null or NaN value too: a coordinate with no value has no row,
+    and ``inf`` is a value.
     """
 
     dims: tuple[str, ...]
