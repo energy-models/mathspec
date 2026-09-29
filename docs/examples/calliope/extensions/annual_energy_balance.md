@@ -66,12 +66,12 @@ constraints:
     description: "`annual_energy_balance_per_tech_and_node` — a technology at a node puts out at most its annual limit"
     dims: [nodes, techs]
     where: annual_flow_max
-    expression: sum(sum(flow_out, over=carriers), over=timesteps) <= annual_flow_max
+    expression: sum(flow_out, over=[carriers, timesteps]) <= annual_flow_max
   annual_energy_balance_global_per_tech:
     description: "`annual_energy_balance_global_per_tech` — a technology puts out at most its annual limit over every node"
     dims: [techs]
     where: annual_flow_max
-    expression: sum(sum(sum(flow_out, over=nodes), over=carriers), over=timesteps) <= annual_flow_max
+    expression: sum(flow_out, over=[nodes, carriers, timesteps]) <= annual_flow_max
   annual_energy_balance_global_multi_tech:
     description: "`annual_energy_balance_global_multi_tech` — the group of technologies puts out at most its annual limit over every node"
     dims: []
@@ -85,12 +85,12 @@ constraints:
       one, which is where `source_use` is built
     dims: [techs]
     where: base_tech == 'supply' AND annual_source_max
-    expression: sum(sum(source_use, over=nodes), over=timesteps) <= annual_source_max
+    expression: sum(source_use, over=[nodes, timesteps]) <= annual_source_max
   annual_energy_balance_total_sink_availability:
     description: "`annual_energy_balance_total_sink_availability` — a demand technology takes in at most its annual limit"
     dims: [techs]
     where: base_tech == 'demand' AND annual_sink_max
-    expression: sum(sum(sum(flow_in, over=nodes), over=carriers), over=timesteps) <= annual_sink_max
+    expression: sum(flow_in, over=[nodes, carriers, timesteps]) <= annual_sink_max
 ```
 
 #### Sets
@@ -132,13 +132,13 @@ constraints:
 **`annual_energy_balance_per_tech_and_node`**
 
 ```math
-\sum_{t \in \mathcal{T}} \sum_{c \in \mathcal{C}} \mathit{flow\_out}_{n,i,c,t} \le \mathrm{annual\_flow\_max}_{i} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I} \,:\, \mathrm{annual\_flow\_max}_{i} \text{ is defined}
+\sum_{c \in \mathcal{C},\ t \in \mathcal{T}} \mathit{flow\_out}_{n,i,c,t} \le \mathrm{annual\_flow\_max}_{i} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I} \,:\, \mathrm{annual\_flow\_max}_{i} \text{ is defined}
 ```
 
 **`annual_energy_balance_global_per_tech`**
 
 ```math
-\sum_{t \in \mathcal{T}} \sum_{c \in \mathcal{C}} \sum_{n \in \mathcal{N}} \mathit{flow\_out}_{n,i,c,t} \le \mathrm{annual\_flow\_max}_{i} \qquad \forall\, i \in \mathcal{I} \,:\, \mathrm{annual\_flow\_max}_{i} \text{ is defined}
+\sum_{n \in \mathcal{N},\ c \in \mathcal{C},\ t \in \mathcal{T}} \mathit{flow\_out}_{n,i,c,t} \le \mathrm{annual\_flow\_max}_{i} \qquad \forall\, i \in \mathcal{I} \,:\, \mathrm{annual\_flow\_max}_{i} \text{ is defined}
 ```
 
 **`annual_energy_balance_global_multi_tech`**
@@ -150,13 +150,13 @@ constraints:
 **`annual_energy_balance_total_source_availability`**
 
 ```math
-\sum_{t \in \mathcal{T}} \sum_{n \in \mathcal{N}} \mathit{source\_use}_{n,i,t} \le \mathrm{annual\_source\_max}_{i} \qquad \forall\, i \in \mathcal{I} \,:\, \mathrm{base\_tech}_{i} = \text{'}\mathrm{supply}\text{'} \wedge \mathrm{annual\_source\_max}_{i} \text{ is defined}
+\sum_{n \in \mathcal{N},\ t \in \mathcal{T}} \mathit{source\_use}_{n,i,t} \le \mathrm{annual\_source\_max}_{i} \qquad \forall\, i \in \mathcal{I} \,:\, \mathrm{base\_tech}_{i} = \text{'}\mathrm{supply}\text{'} \wedge \mathrm{annual\_source\_max}_{i} \text{ is defined}
 ```
 
 **`annual_energy_balance_total_sink_availability`**
 
 ```math
-\sum_{t \in \mathcal{T}} \sum_{c \in \mathcal{C}} \sum_{n \in \mathcal{N}} \mathit{flow\_in}_{n,i,c,t} \le \mathrm{annual\_sink\_max}_{i} \qquad \forall\, i \in \mathcal{I} \,:\, \mathrm{base\_tech}_{i} = \text{'}\mathrm{demand}\text{'} \wedge \mathrm{annual\_sink\_max}_{i} \text{ is defined}
+\sum_{n \in \mathcal{N},\ c \in \mathcal{C},\ t \in \mathcal{T}} \mathit{flow\_in}_{n,i,c,t} \le \mathrm{annual\_sink\_max}_{i} \qquad \forall\, i \in \mathcal{I} \,:\, \mathrm{base\_tech}_{i} = \text{'}\mathrm{demand}\text{'} \wedge \mathrm{annual\_sink\_max}_{i} \text{ is defined}
 ```
 
 #### Definitions

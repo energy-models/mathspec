@@ -119,7 +119,7 @@ reads, and `merge` keeps what no file declares under `given:`.
 | [area](area.md) | 5 | 1 | 3 | 5 | `cost_investment` |
 | [balance](balance.md) | 0 | 0 | 1 | 2 |  |
 | [conversion](conversion.md) | 0 | 0 | 1 | 4 |  |
-| [cost](cost.md) | 5 | 0 | 0 | 4 | `system_cost` |
+| [cost](cost.md) | 4 | 0 | 0 | 4 | `system_cost` |
 | [demand](demand.md) | 4 | 0 | 3 | 5 |  |
 | [export](export.md) | 4 | 1 | 1 | 5 | `carrier_flow`, `cost_operation_variable` |
 | [feasibility](feasibility.md) | 0 | 2 | 0 | 6 | `carrier_flow`, `penalty` |

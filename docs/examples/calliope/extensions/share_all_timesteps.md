@@ -73,16 +73,16 @@ constraints:
     dims: [nodes, techs]
     where: demand_share_equals
     expression: >-
-      sum(sum(flow_out, over=timesteps), over=carriers)
-      == sum(sum(at(flow_in, by=demand_share_tech, over=demand, into=techs), over=timesteps), over=carriers)
+      sum(flow_out, over=[timesteps, carriers])
+      == sum(at(flow_in, by=demand_share_tech, over=demand, into=techs), over=[timesteps, carriers])
       * demand_share_equals
   supply_share_equals_per_tech:
     description: "`supply_share_equals_per_tech` — a technology puts out its share of a node's outflow of a carrier over the whole time"
     dims: [nodes, techs]
     where: supply_share_equals
     expression: >-
-      sum(sum(supply_share_flow_out, over=carriers), over=timesteps)
-      == sum(sum(supply_share_all_flow_out, over=carriers), over=timesteps) * supply_share_equals
+      sum(supply_share_flow_out, over=[carriers, timesteps])
+      == sum(supply_share_all_flow_out, over=[carriers, timesteps]) * supply_share_equals
 ```
 
 #### Sets
@@ -120,13 +120,13 @@ constraints:
 **`demand_share_equals_per_tech`**
 
 ```math
-\sum_{c \in \mathcal{C}} \sum_{t \in \mathcal{T}} \mathit{flow\_out}_{n,i,c,t} = \left( \sum_{c \in \mathcal{C}} \sum_{t \in \mathcal{T}} \mathit{flow\_in}_{n,\mathrm{demand\_share\_tech}(i),c,t} \right) \cdot \mathrm{demand\_share\_equals}_{n,i} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I} \,:\, \mathrm{demand\_share\_equals}_{n,i} \text{ is defined}
+\sum_{c \in \mathcal{C},\ t \in \mathcal{T}} \mathit{flow\_out}_{n,i,c,t} = \left( \sum_{c \in \mathcal{C},\ t \in \mathcal{T}} \mathit{flow\_in}_{n,\mathrm{demand\_share\_tech}(i),c,t} \right) \cdot \mathrm{demand\_share\_equals}_{n,i} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I} \,:\, \mathrm{demand\_share\_equals}_{n,i} \text{ is defined}
 ```
 
 **`supply_share_equals_per_tech`**
 
 ```math
-\sum_{t \in \mathcal{T}} \sum_{c \in \mathcal{C}} \mathit{supply\_share\_flow\_out}_{n,i,c,t} = \left( \sum_{t \in \mathcal{T}} \sum_{c \in \mathcal{C}} \mathit{supply\_share\_all\_flow\_out}_{n,i,c,t} \right) \cdot \mathrm{supply\_share\_equals}_{n,i} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I} \,:\, \mathrm{supply\_share\_equals}_{n,i} \text{ is defined}
+\sum_{c \in \mathcal{C},\ t \in \mathcal{T}} \mathit{supply\_share\_flow\_out}_{n,i,c,t} = \left( \sum_{c \in \mathcal{C},\ t \in \mathcal{T}} \mathit{supply\_share\_all\_flow\_out}_{n,i,c,t} \right) \cdot \mathrm{supply\_share\_equals}_{n,i} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I} \,:\, \mathrm{supply\_share\_equals}_{n,i} \text{ is defined}
 ```
 
 #### Definitions

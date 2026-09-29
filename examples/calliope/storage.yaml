@@ -40,11 +40,8 @@ parameters:
   storage_initial:
     description: "`storage_initial` — what a store holds at the start, as a share of its capacity; given only where set"
     dims: [nodes, techs]
-  storage_retention:
-    description: >-
-      `1 - storage_loss` — the share of what a store holds that it keeps
-      for an hour, data prep. mathspec refuses a sum as the base of `**`,
-      over parameters too
+  storage_loss:
+    description: "`storage_loss` — the share of what a store holds that it loses in an hour"
     dims: [nodes, techs, timesteps]
   cyclic_storage:
     description: >-
@@ -95,10 +92,10 @@ expressions:
       cluster_start:
         when: cluster_first_timestep AND NOT (position(timesteps) == 0 AND NOT cyclic_storage)
         expression: >-
-          storage_retention ** at(timestep_resolution, by=lookup_cluster_last_timestep, over=last, into=timesteps)
+          (1 - storage_loss) ** at(timestep_resolution, by=lookup_cluster_last_timestep, over=last, into=timesteps)
           * at(storage, by=lookup_cluster_last_timestep, over=last, into=timesteps)
     otherwise: >-
-      storage_retention ** shift(timestep_resolution, along=timesteps, offset=1, edge='wrap')
+      (1 - storage_loss) ** shift(timestep_resolution, along=timesteps, offset=1, edge='wrap')
       * shift(storage, along=timesteps, offset=1, edge='wrap')
   cost_investment_storage_cap:
     description: "`cost_investment_storage_cap` — the investment cost of storage capacity"
@@ -154,7 +151,7 @@ constraints:
       store and reads the last step; this builds that row at the last step
     dims: [nodes, techs, timesteps]
     where: position(timesteps) == -1 AND storage AND storage_initial AND cyclic_storage
-    expression: storage * storage_retention ** timestep_resolution == storage_initial * storage_cap
+    expression: storage * (1 - storage_loss) ** timestep_resolution == storage_initial * storage_cap
 
 assumptions:
   unbounded_storage_cap_cost:

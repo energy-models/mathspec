@@ -15,17 +15,19 @@ nothing, and the note says why.
 
 Parameters are not listed: each one Calliope declares is a parameter of the
 same name, in the file that reads it, with [the conventions](index.md#conventions)
-for defaults and dimensions. The four exceptions are rows below.
+for defaults and dimensions. The one exception is `storage_loss` in the
+inter-cluster variant, a row below.
 
 ## What mathspec is missing
 
 Each gap below is a place the port is not one block for one. None stops a
 block from being stated.
 
-1. **`**` and `/` over a sum of parameters.** mathspec refuses
-   `(1 - storage_loss) ** timestep_resolution` and Calliope's annuity factor,
-   whose base and divisor are sums, although no variable is in them. Data
-   prep supplies `storage_retention` and `cost_annuity_factor`.
+1. **Closed: a power or a quotient over a sum of parameters.** mathspec
+   refused `(1 - storage_loss) ** timestep_resolution` and Calliope's annuity
+   factor, whose base and divisor are sums.
+   [#757](https://github.com/energy-models/mathspec/pull/757) admits them, and
+   the port writes both as Calliope does.
 2. **A default that is not zero.** Calliope's `default:` is the value
    arithmetic reads and, at the same time, "not given" to a `where:`. A
    mathspec parameter has one reading of a missing row, `0`, so data prep
@@ -57,8 +59,10 @@ link_from)`, and a slice by a per-technology carrier, compare a lookup with
 7. **An empty sum that no file adds to.** An `empty: true` sum with no term is
    a column the spec reads and does not build, not zero. `penalty` has the body
    `0`, so a model with no feasibility file reads a zero penalty.
-8. **`sum(over=[a, b])`.** Calliope sums over a list of dimensions. mathspec
-   takes one dimension per `sum`, so the port nests them.
+8. **Closed: `sum(over=[a, b])`.** Calliope sums over a list of dimensions.
+   [#778](https://github.com/energy-models/mathspec/pull/778) admits the list,
+   and [#779](https://github.com/energy-models/mathspec/pull/779) admits it in
+   a macro, so the port writes each sum as one call.
 9. **A warning.** An assumption holds or the data is refused. Calliope's three
    checks at `errors: warn` are out.
 
@@ -79,7 +83,6 @@ integer ([#768](https://github.com/energy-models/mathspec/pull/768)).
 | lookup `lookup_cluster_last_timestep`                                                                                                  | done   | [storage](storage.md)                                                              | a relation from a time step onto a time step                                                                                                   |
 | lookups `sink_unit`, `source_unit`                                                                                                     | done   | [demand](demand.md), [supply](supply.md)                                           | `absolute`, the default, is what no row reads as                                                                                               |
 | lookups `latitude`, `longitude`                                                                                                        | out    |                                                                                    | read by no math; Calliope derives `distance` from them in data preparation                                                                     |
-| parameters `storage_loss`, `cost_interest_rate` with `lifetime`                                                                        | prep   | [storage](storage.md), [cost](cost.md)                                             | `storage_retention` and `cost_annuity_factor`, gap 1                                                                                           |
 | `flow_capacity_per_storage_capacity_min`, `_max`                                                                                       | done   | [storage](storage.md)                                                              |                                                                                                                                                |
 | `source_capacity_equals_flow_capacity`                                                                                                 | done   | [supply](supply.md)                                                                |                                                                                                                                                |
 | `force_zero_area_use`, `area_use_per_flow_capacity`                                                                                    | done   | [area](area.md)                                                                    |                                                                                                                                                |
@@ -110,7 +113,7 @@ integer ([#768](https://github.com/energy-models/mathspec/pull/768)).
 | `cost_operation_variable`                                                                                                              | split  | [cost](cost.md)                                                                    | a sum; flows, supply and export each add their cost. Calliope's two cases, supply or not, are one sum, since a supply technology has no inflow |
 | `cost_investment_flow_cap`, `_storage_cap`, `_source_cap`, `_area_use`                                                                 | done   | [flows](flows.md), [storage](storage.md), [supply](supply.md), [area](area.md)     | each is a term of `cost_investment`, and the flow capacity one through `flows_cost_investment`                                                 |
 | `cost_investment`                                                                                                                      | split  | [cost](cost.md)                                                                    | a sum each capacity adds to                                                                                                                    |
-| `cost_investment_annualised`                                                                                                           | prep   | [cost](cost.md)                                                                    | the annuity factor, gap 1                                                                                                                      |
+| `cost_investment_annualised`                                                                                                           | done   | [cost](cost.md)                                                                    | `$depreciation_rate` is a named expression with cases                                                                                          |
 | `cost_operation_fixed`                                                                                                                 | split  | [cost](cost.md)                                                                    | its body here, and `flows_cost_operation_fixed` added                                                                                          |
 | `cost`                                                                                                                                 | done   | [cost](cost.md)                                                                    |                                                                                                                                                |
 | postprocessed `capacity_factor`, `systemwide_capacity_factor`, `total_generation`, `systemwide_levelised_cost`, `total_levelised_cost` | done   | [reporting](reporting.md)                                                          | reported; the `where:` is the absence of what they read                                                                                        |
@@ -165,15 +168,15 @@ integer ([#768](https://github.com/energy-models/mathspec/pull/768)).
 
 ## `storage_inter_cluster.yaml`
 
-| Calliope                                                                                                    | status | here                                         | note                                                                                      |
-| ----------------------------------------------------------------------------------------------------------- | ------ | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| lookups `timestep_cluster`, `lookup_datestep_cluster`, `lookup_datestep_last_cluster_timestep`              | done   | [variant](variants/storage_inter_cluster.md) | relations                                                                                 |
-| `storage_max`, `cyclic_storage_needs_inter_cluster` off                                                     | done   | [variant](variants/storage_inter_cluster.md) | removals                                                                                  |
-| `$storage_previous_step` of `balance_supply_with_storage` and `balance_storage`                             | done   | [variant](variants/storage_inter_cluster.md) | one named expression, patched once                                                        |
-| `set_storage_initial`                                                                                       | split  | [variant](variants/storage_inter_cluster.md) | built at the last day, as in the base                                                     |
-| `storage_intra_max`, `storage_intra_min`, `storage_inter_max`, `storage_inter_min`, `balance_storage_inter` | done   | [variant](variants/storage_inter_cluster.md) | a slice by a lookup is `at` through the relation                                          |
-| variables                                                                                                   | done   | [variant](variants/storage_inter_cluster.md) |                                                                                           |
-| `storage_loss` over time steps                                                                              | prep   | [variant](variants/storage_inter_cluster.md) | `storage_retention ** 24` reads it per day, so the variant declares it without time steps |
+| Calliope                                                                                                    | status | here                                         | note                                                                                       |
+| ----------------------------------------------------------------------------------------------------------- | ------ | -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| lookups `timestep_cluster`, `lookup_datestep_cluster`, `lookup_datestep_last_cluster_timestep`              | done   | [variant](variants/storage_inter_cluster.md) | relations                                                                                  |
+| `storage_max`, `cyclic_storage_needs_inter_cluster` off                                                     | done   | [variant](variants/storage_inter_cluster.md) | removals                                                                                   |
+| `$storage_previous_step` of `balance_supply_with_storage` and `balance_storage`                             | done   | [variant](variants/storage_inter_cluster.md) | one named expression, patched once                                                         |
+| `set_storage_initial`                                                                                       | split  | [variant](variants/storage_inter_cluster.md) | built at the last day, as in the base                                                      |
+| `storage_intra_max`, `storage_intra_min`, `storage_inter_max`, `storage_inter_min`, `balance_storage_inter` | done   | [variant](variants/storage_inter_cluster.md) | a slice by a lookup is `at` through the relation                                           |
+| variables                                                                                                   | done   | [variant](variants/storage_inter_cluster.md) |                                                                                            |
+| `storage_loss` over time steps                                                                              | prep   | [variant](variants/storage_inter_cluster.md) | `(1 - storage_loss) ** 24` reads it per day, so the variant declares it without time steps |
 
 ## The examples
 

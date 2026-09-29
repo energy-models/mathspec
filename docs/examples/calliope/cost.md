@@ -39,12 +39,6 @@ parameters:
       `lifetime` — the years a technology lasts. Calliope's default is
       `.inf`, and data prep fills it
     dims: [nodes, techs]
-  cost_annuity_factor:
-    description: >-
-      the annuity factor `r (1 + r) ** lifetime / ((1 + r) ** lifetime - 1)`
-      of the interest rate `r`, data prep. mathspec refuses a sum as the
-      base of `**` and as a divisor, over parameters too
-    dims: [nodes, techs, costs]
 
 given:
   parameters:
@@ -91,7 +85,9 @@ expressions:
       no_interest:
         when: NOT cost_depreciation_rate AND (NOT cost_interest_rate OR cost_interest_rate == 0)
         expression: 1 / lifetime
-    otherwise: cost_annuity_factor
+    otherwise: >-
+      cost_interest_rate * (1 + cost_interest_rate) ** lifetime
+      / ((1 + cost_interest_rate) ** lifetime - 1)
   cost_investment_annualised:
     description: "`cost_investment_annualised` — the investment cost, as a year's share scaled to the modelled time"
     expression: annualisation_weight * depreciation_rate * cost_investment
@@ -100,7 +96,7 @@ expressions:
     expression: cost_investment_annualised + sum(cost_operation_variable, over=timesteps) + cost_operation_fixed
   cost_of_techs:
     description: "`sum(sum(cost, over=[nodes, techs]) * objective_cost_weights, over=costs)` of `min_cost_optimisation`"
-    expression: sum(sum(sum(cost, over=nodes), over=techs) * objective_cost_weights)
+    expression: sum(sum(cost, over=[nodes, techs]) * objective_cost_weights)
 ```
 
 #### Sets
@@ -120,7 +116,6 @@ expressions:
 | $`\mathrm{cost}^{\mathrm{depreciation,rate}}`$ | `cost_depreciation_rate` over $`\mathcal{N} \times \mathcal{I} \times \mathcal{K}`$ — `cost_depreciation_rate` — the share of the investment cost a year carries; given only where set, and derived from the lifetime and the interest rate elsewhere |
 | $`\mathrm{cost}^{\mathrm{interest,rate}}`$ | `cost_interest_rate` over $`\mathcal{N} \times \mathcal{I} \times \mathcal{K}`$ — `cost_interest_rate` — the interest rate an investment is annualised at |
 | $`\mathrm{lifetime}`$ | `lifetime` over $`\mathcal{N} \times \mathcal{I}`$ — `lifetime` — the years a technology lasts. Calliope's default is `.inf`, and data prep fills it |
-| $`\mathrm{cost}^{\mathrm{annuity,factor}}`$ | `cost_annuity_factor` over $`\mathcal{N} \times \mathcal{I} \times \mathcal{K}`$ — the annuity factor `r (1 + r) ** lifetime / ((1 + r) ** lifetime - 1)` of the interest rate `r`, data prep. mathspec refuses a sum as the base of `**` and as a divisor, over parameters too |
 
 #### Given
 
@@ -161,7 +156,7 @@ expressions:
 **`depreciation_rate`**
 
 ```math
-\mathrm{depreciation\_rate}_{n,i,k} = \begin{cases} \mathrm{cost}^{\mathrm{depreciation,rate}}_{n,i,k} & \text{if } \mathrm{cost}^{\mathrm{depreciation,rate}}_{n,i,k} \text{ is defined} \\ \frac{1}{\mathrm{lifetime}_{n,i}} & \text{if } \neg \left( \mathrm{cost}^{\mathrm{depreciation,rate}}_{n,i,k} \text{ is defined} \right) \wedge \left( \neg \left( \mathrm{cost}^{\mathrm{interest,rate}}_{n,i,k} \text{ is defined} \right) \vee \mathrm{cost}^{\mathrm{interest,rate}}_{n,i,k} = 0 \right) \\ \mathrm{cost}^{\mathrm{annuity,factor}}_{n,i,k} & \text{otherwise} \end{cases} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ k \in \mathcal{K}
+\mathrm{depreciation\_rate}_{n,i,k} = \begin{cases} \mathrm{cost}^{\mathrm{depreciation,rate}}_{n,i,k} & \text{if } \mathrm{cost}^{\mathrm{depreciation,rate}}_{n,i,k} \text{ is defined} \\ \frac{1}{\mathrm{lifetime}_{n,i}} & \text{if } \neg \left( \mathrm{cost}^{\mathrm{depreciation,rate}}_{n,i,k} \text{ is defined} \right) \wedge \left( \neg \left( \mathrm{cost}^{\mathrm{interest,rate}}_{n,i,k} \text{ is defined} \right) \vee \mathrm{cost}^{\mathrm{interest,rate}}_{n,i,k} = 0 \right) \\ \frac{\mathrm{cost}^{\mathrm{interest,rate}}_{n,i,k} \cdot \left( 1 + \mathrm{cost}^{\mathrm{interest,rate}}_{n,i,k} \right)^{\mathrm{lifetime}_{n,i}}}{\left( 1 + \mathrm{cost}^{\mathrm{interest,rate}}_{n,i,k} \right)^{\mathrm{lifetime}_{n,i}} - 1} & \text{otherwise} \end{cases} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ k \in \mathcal{K}
 ```
 
 **`cost_investment_annualised`**
@@ -179,7 +174,7 @@ expressions:
 **`cost_of_techs`**
 
 ```math
-\mathit{cost}^{\mathrm{of,techs}} = \sum_{k \in \mathcal{K}} \left( \sum_{i \in \mathcal{I}} \sum_{n \in \mathcal{N}} \mathit{cost}_{n,i,k} \right) \cdot \mathrm{objective\_cost\_weights}_{k}
+\mathit{cost}^{\mathrm{of,techs}} = \sum_{k \in \mathcal{K}} \left( \sum_{n \in \mathcal{N},\ i \in \mathcal{I}} \mathit{cost}_{n,i,k} \right) \cdot \mathrm{objective\_cost\_weights}_{k}
 ```
 
 **`cost_investment`**

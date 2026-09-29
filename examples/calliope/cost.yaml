@@ -35,12 +35,6 @@ parameters:
       `lifetime` — the years a technology lasts. Calliope's default is
       `.inf`, and data prep fills it
     dims: [nodes, techs]
-  cost_annuity_factor:
-    description: >-
-      the annuity factor `r (1 + r) ** lifetime / ((1 + r) ** lifetime - 1)`
-      of the interest rate `r`, data prep. mathspec refuses a sum as the
-      base of `**` and as a divisor, over parameters too
-    dims: [nodes, techs, costs]
 
 given:
   parameters:
@@ -87,7 +81,9 @@ expressions:
       no_interest:
         when: NOT cost_depreciation_rate AND (NOT cost_interest_rate OR cost_interest_rate == 0)
         expression: 1 / lifetime
-    otherwise: cost_annuity_factor
+    otherwise: >-
+      cost_interest_rate * (1 + cost_interest_rate) ** lifetime
+      / ((1 + cost_interest_rate) ** lifetime - 1)
   cost_investment_annualised:
     description: "`cost_investment_annualised` — the investment cost, as a year's share scaled to the modelled time"
     expression: annualisation_weight * depreciation_rate * cost_investment
@@ -96,4 +92,4 @@ expressions:
     expression: cost_investment_annualised + sum(cost_operation_variable, over=timesteps) + cost_operation_fixed
   cost_of_techs:
     description: "`sum(sum(cost, over=[nodes, techs]) * objective_cost_weights, over=costs)` of `min_cost_optimisation`"
-    expression: sum(sum(sum(cost, over=nodes), over=techs) * objective_cost_weights)
+    expression: sum(sum(cost, over=[nodes, techs]) * objective_cost_weights)

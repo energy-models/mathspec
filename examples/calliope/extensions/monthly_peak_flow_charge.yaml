@@ -51,7 +51,7 @@ variables:
 expressions:
   cost_month_peak_charge:
     description: "`sum(cost_month_peak * flow_peak_month, over=[carriers, months])` — the term Calliope writes into `cost_operation_fixed`, by restating it whole"
-    expression: sum(sum(cost_month_peak * flow_peak_month, over=carriers), over=months)
+    expression: sum(cost_month_peak * flow_peak_month, over=[carriers, months])
 
 given:
   parameters:

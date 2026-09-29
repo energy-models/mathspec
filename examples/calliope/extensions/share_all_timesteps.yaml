@@ -69,13 +69,13 @@ constraints:
     dims: [nodes, techs]
     where: demand_share_equals
     expression: >-
-      sum(sum(flow_out, over=timesteps), over=carriers)
-      == sum(sum(at(flow_in, by=demand_share_tech, over=demand, into=techs), over=timesteps), over=carriers)
+      sum(flow_out, over=[timesteps, carriers])
+      == sum(at(flow_in, by=demand_share_tech, over=demand, into=techs), over=[timesteps, carriers])
       * demand_share_equals
   supply_share_equals_per_tech:
     description: "`supply_share_equals_per_tech` — a technology puts out its share of a node's outflow of a carrier over the whole time"
     dims: [nodes, techs]
     where: supply_share_equals
     expression: >-
-      sum(sum(supply_share_flow_out, over=carriers), over=timesteps)
-      == sum(sum(supply_share_all_flow_out, over=carriers), over=timesteps) * supply_share_equals
+      sum(supply_share_flow_out, over=[carriers, timesteps])
+      == sum(supply_share_all_flow_out, over=[carriers, timesteps]) * supply_share_equals

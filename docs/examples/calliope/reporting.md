@@ -41,19 +41,19 @@ expressions:
   systemwide_capacity_factor:
     description: "`systemwide_capacity_factor` — the share of its flow capacity a technology puts out over every node and time step"
     expression: >-
-      sum(sum(flow_out * timestep_weights, over=nodes), over=timesteps)
+      sum(flow_out * timestep_weights, over=[nodes, timesteps])
       / (sum(flow_cap, over=nodes) * sum(timestep_resolution * timestep_weights, over=timesteps))
   total_generation:
     description: >-
       `total_generation` — outflow over every node and time step. Calliope
       weights only the export, as written here
-    expression: sum(sum(flow_out + flow_export * timestep_weights, over=nodes), over=timesteps)
+    expression: sum(flow_out + flow_export * timestep_weights, over=[nodes, timesteps])
   systemwide_levelised_cost:
     description: "`systemwide_levelised_cost` — a technology's cost per unit of what it generates, over every node"
     expression: sum(cost, over=nodes) / total_generation
   total_levelised_cost:
     description: "`total_levelised_cost` — the system's cost per unit of a carrier generated"
-    expression: sum(sum(cost, over=nodes), over=techs) / sum(total_generation, over=techs)
+    expression: sum(cost, over=[nodes, techs]) / sum(total_generation, over=techs)
 ```
 
 #### Sets
@@ -98,13 +98,13 @@ expressions:
 **`systemwide_capacity_factor`**
 
 ```math
-\mathit{systemwide\_capacity\_factor}_{i,c} = \frac{\sum_{t \in \mathcal{T}} \sum_{n \in \mathcal{N}} \mathit{flow\_out}_{n,i,c,t} \cdot \mathrm{timestep\_weights}_{t}}{\left( \sum_{n \in \mathcal{N}} \mathit{flow\_cap}_{n,i,c} \right) \cdot \left( \sum_{t \in \mathcal{T}} \mathrm{timestep\_resolution}_{t} \cdot \mathrm{timestep\_weights}_{t} \right)} \qquad \forall\, i \in \mathcal{I},\ c \in \mathcal{C}
+\mathit{systemwide\_capacity\_factor}_{i,c} = \frac{\sum_{n \in \mathcal{N},\ t \in \mathcal{T}} \mathit{flow\_out}_{n,i,c,t} \cdot \mathrm{timestep\_weights}_{t}}{\left( \sum_{n \in \mathcal{N}} \mathit{flow\_cap}_{n,i,c} \right) \cdot \left( \sum_{t \in \mathcal{T}} \mathrm{timestep\_resolution}_{t} \cdot \mathrm{timestep\_weights}_{t} \right)} \qquad \forall\, i \in \mathcal{I},\ c \in \mathcal{C}
 ```
 
 **`total_generation`**
 
 ```math
-\mathit{total\_generation}_{i,c} = \sum_{t \in \mathcal{T}} \sum_{n \in \mathcal{N}} \left( \mathit{flow\_out}_{n,i,c,t} + \mathit{flow\_export}_{n,i,c,t} \cdot \mathrm{timestep\_weights}_{t} \right) \qquad \forall\, i \in \mathcal{I},\ c \in \mathcal{C}
+\mathit{total\_generation}_{i,c} = \sum_{n \in \mathcal{N},\ t \in \mathcal{T}} \left( \mathit{flow\_out}_{n,i,c,t} + \mathit{flow\_export}_{n,i,c,t} \cdot \mathrm{timestep\_weights}_{t} \right) \qquad \forall\, i \in \mathcal{I},\ c \in \mathcal{C}
 ```
 
 **`systemwide_levelised_cost`**
@@ -116,6 +116,6 @@ expressions:
 **`total_levelised_cost`**
 
 ```math
-\mathit{total\_levelised\_cost}_{c,k} = \frac{\sum_{i \in \mathcal{I}} \sum_{n \in \mathcal{N}} \mathit{cost}_{n,i,k}}{\sum_{i \in \mathcal{I}} \mathit{total\_generation}_{i,c}} \qquad \forall\, c \in \mathcal{C},\ k \in \mathcal{K}
+\mathit{total\_levelised\_cost}_{c,k} = \frac{\sum_{n \in \mathcal{N},\ i \in \mathcal{I}} \mathit{cost}_{n,i,k}}{\sum_{i \in \mathcal{I}} \mathit{total\_generation}_{i,c}} \qquad \forall\, c \in \mathcal{C},\ k \in \mathcal{K}
 ```
 <!-- gallery:end -->

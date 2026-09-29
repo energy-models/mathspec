@@ -68,8 +68,8 @@ constraints:
     dims: [techs, timesteps]
     where: base_tech == 'transmission'
     expression: >-
-      sum(sum(flow_out_inc_eff, over=nodes), over=carriers)
-      == sum(sum(flow_in_inc_eff, over=nodes), over=carriers)
+      sum(flow_out_inc_eff, over=[nodes, carriers])
+      == sum(flow_in_inc_eff, over=[nodes, carriers])
   symmetric_transmission:
     description: "`symmetric_transmission` — a link has the same flow capacity at both ends"
     dims: [techs, carriers]
@@ -108,7 +108,7 @@ constraints:
 **`balance_transmission`**
 
 ```math
-\sum_{c \in \mathcal{C}} \sum_{n \in \mathcal{N}} \mathit{flow\_out\_inc\_eff}_{n,i,c,t} = \sum_{c \in \mathcal{C}} \sum_{n \in \mathcal{N}} \mathit{flow\_in\_inc\_eff}_{n,i,c,t} \qquad \forall\, i \in \mathcal{I},\ t \in \mathcal{T} \,:\, \mathrm{base\_tech}_{i} = \text{'}\mathrm{transmission}\text{'}
+\sum_{n \in \mathcal{N},\ c \in \mathcal{C}} \mathit{flow\_out\_inc\_eff}_{n,i,c,t} = \sum_{n \in \mathcal{N},\ c \in \mathcal{C}} \mathit{flow\_in\_inc\_eff}_{n,i,c,t} \qquad \forall\, i \in \mathcal{I},\ t \in \mathcal{T} \,:\, \mathrm{base\_tech}_{i} = \text{'}\mathrm{transmission}\text{'}
 ```
 
 **`symmetric_transmission`**

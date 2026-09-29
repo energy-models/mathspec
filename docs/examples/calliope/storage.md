@@ -44,11 +44,8 @@ parameters:
   storage_initial:
     description: "`storage_initial` — what a store holds at the start, as a share of its capacity; given only where set"
     dims: [nodes, techs]
-  storage_retention:
-    description: >-
-      `1 - storage_loss` — the share of what a store holds that it keeps
-      for an hour, data prep. mathspec refuses a sum as the base of `**`,
-      over parameters too
+  storage_loss:
+    description: "`storage_loss` — the share of what a store holds that it loses in an hour"
     dims: [nodes, techs, timesteps]
   cyclic_storage:
     description: >-
@@ -99,10 +96,10 @@ expressions:
       cluster_start:
         when: cluster_first_timestep AND NOT (position(timesteps) == 0 AND NOT cyclic_storage)
         expression: >-
-          storage_retention ** at(timestep_resolution, by=lookup_cluster_last_timestep, over=last, into=timesteps)
+          (1 - storage_loss) ** at(timestep_resolution, by=lookup_cluster_last_timestep, over=last, into=timesteps)
           * at(storage, by=lookup_cluster_last_timestep, over=last, into=timesteps)
     otherwise: >-
-      storage_retention ** shift(timestep_resolution, along=timesteps, offset=1, edge='wrap')
+      (1 - storage_loss) ** shift(timestep_resolution, along=timesteps, offset=1, edge='wrap')
       * shift(storage, along=timesteps, offset=1, edge='wrap')
   cost_investment_storage_cap:
     description: "`cost_investment_storage_cap` — the investment cost of storage capacity"
@@ -158,7 +155,7 @@ constraints:
       store and reads the last step; this builds that row at the last step
     dims: [nodes, techs, timesteps]
     where: position(timesteps) == -1 AND storage AND storage_initial AND cyclic_storage
-    expression: storage * storage_retention ** timestep_resolution == storage_initial * storage_cap
+    expression: storage * (1 - storage_loss) ** timestep_resolution == storage_initial * storage_cap
 
 assumptions:
   unbounded_storage_cap_cost:
@@ -193,7 +190,7 @@ assumptions:
 | $`\mathrm{storage}^{\mathrm{cap,max}}`$ | `storage_cap_max` over $`\mathcal{N} \times \mathcal{I}`$ — `storage_cap_max` — most storage capacity. Calliope's default is `.inf`, and data prep fills it |
 | $`\mathrm{storage}^{\mathrm{discharge,depth}}`$ | `storage_discharge_depth` over $`\mathcal{N} \times \mathcal{I} \times \mathcal{T}`$ — `storage_discharge_depth` — the least a store holds, as a share of its capacity |
 | $`\mathrm{storage}^{\mathrm{initial}}`$ | `storage_initial` over $`\mathcal{N} \times \mathcal{I}`$ — `storage_initial` — what a store holds at the start, as a share of its capacity; given only where set |
-| $`\mathrm{storage}^{\mathrm{retention}}`$ | `storage_retention` over $`\mathcal{N} \times \mathcal{I} \times \mathcal{T}`$ — `1 - storage_loss` — the share of what a store holds that it keeps for an hour, data prep. mathspec refuses a sum as the base of `**`, over parameters too |
+| $`\mathrm{storage}^{\mathrm{loss}}`$ | `storage_loss` over $`\mathcal{N} \times \mathcal{I} \times \mathcal{T}`$ — `storage_loss` — the share of what a store holds that it loses in an hour |
 | $`\mathrm{cyclic\_storage}`$ | `cyclic_storage` over $`\mathcal{N} \times \mathcal{I}`$ — `cyclic_storage` — whether a store ends where it starts. Calliope's default is true, and data prep fills it |
 | $`\mathrm{cluster\_first\_timestep}`$ | `cluster_first_timestep` over $`\mathcal{T}`$ — `cluster_first_timestep` — whether a time step is the first of its clustered day |
 | $`\mathrm{flow\_cap\_per\_storage\_cap\_min}`$ | `flow_cap_per_storage_cap_min` over $`\mathcal{N} \times \mathcal{I}`$ — `flow_cap_per_storage_cap_min` — least flow capacity per unit of storage capacity; given only where set |
@@ -269,7 +266,7 @@ $`\lvert \mathcal{T} \rvert`$ denotes the size of the set being counted along, a
 **`set_storage_initial`**
 
 ```math
-\mathit{storage}_{n,i,t} \cdot \mathrm{storage}^{\mathrm{retention}}_{n,i,t}^{\mathrm{timestep\_resolution}_{t}} = \mathrm{storage}^{\mathrm{initial}}_{n,i} \cdot \mathit{storage}^{\mathrm{cap}}_{n,i} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ t \in \mathcal{T} \,:\, \mathrm{pos}(t) = \lvert \mathcal{T} \rvert - 1 \wedge \mathit{storage}_{n,i,t} \text{ exists} \wedge \mathrm{storage}^{\mathrm{initial}}_{n,i} \text{ is defined} \wedge \mathrm{cyclic\_storage}_{n,i}
+\mathit{storage}_{n,i,t} \cdot \left( 1 - \mathrm{storage}^{\mathrm{loss}}_{n,i,t} \right)^{\mathrm{timestep\_resolution}_{t}} = \mathrm{storage}^{\mathrm{initial}}_{n,i} \cdot \mathit{storage}^{\mathrm{cap}}_{n,i} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ t \in \mathcal{T} \,:\, \mathrm{pos}(t) = \lvert \mathcal{T} \rvert - 1 \wedge \mathit{storage}_{n,i,t} \text{ exists} \wedge \mathrm{storage}^{\mathrm{initial}}_{n,i} \text{ is defined} \wedge \mathrm{cyclic\_storage}_{n,i}
 ```
 
 #### Definitions
@@ -277,7 +274,7 @@ $`\lvert \mathcal{T} \rvert`$ denotes the size of the set being counted along, a
 **`storage_previous_step`**
 
 ```math
-\mathit{storage}^{\mathrm{previous,step}}_{n,i,t} = \begin{cases} \mathrm{storage}^{\mathrm{initial}}_{n,i} \cdot \mathit{storage}^{\mathrm{cap}}_{n,i} & \text{if } \mathrm{pos}(t) = 0 \wedge \neg \mathrm{cyclic\_storage}_{n,i} \\ \mathrm{storage}^{\mathrm{retention}}_{n,i,t}^{\mathrm{timestep\_resolution}_{\mathrm{lookup\_cluster\_last\_timestep}(t)}} \cdot \mathit{storage}_{n,i,\mathrm{lookup\_cluster\_last\_timestep}(t)} & \text{if } \mathrm{cluster\_first\_timestep}_{t} \wedge \neg \left( \mathrm{pos}(t) = 0 \wedge \neg \mathrm{cyclic\_storage}_{n,i} \right) \\ \mathrm{storage}^{\mathrm{retention}}_{n,i,t}^{\mathrm{timestep\_resolution}_{t \ominus 1}} \cdot \mathit{storage}_{n,i,t \ominus 1} & \text{otherwise} \end{cases} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ t \in \mathcal{T}
+\mathit{storage}^{\mathrm{previous,step}}_{n,i,t} = \begin{cases} \mathrm{storage}^{\mathrm{initial}}_{n,i} \cdot \mathit{storage}^{\mathrm{cap}}_{n,i} & \text{if } \mathrm{pos}(t) = 0 \wedge \neg \mathrm{cyclic\_storage}_{n,i} \\ \left( 1 - \mathrm{storage}^{\mathrm{loss}}_{n,i,t} \right)^{\mathrm{timestep\_resolution}_{\mathrm{lookup\_cluster\_last\_timestep}(t)}} \cdot \mathit{storage}_{n,i,\mathrm{lookup\_cluster\_last\_timestep}(t)} & \text{if } \mathrm{cluster\_first\_timestep}_{t} \wedge \neg \left( \mathrm{pos}(t) = 0 \wedge \neg \mathrm{cyclic\_storage}_{n,i} \right) \\ \left( 1 - \mathrm{storage}^{\mathrm{loss}}_{n,i,t} \right)^{\mathrm{timestep\_resolution}_{t \ominus 1}} \cdot \mathit{storage}_{n,i,t \ominus 1} & \text{otherwise} \end{cases} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ t \in \mathcal{T}
 ```
 
 **`cost_investment_storage_cap`**

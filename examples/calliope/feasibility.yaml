@@ -38,7 +38,7 @@ expressions:
   feasibility_carrier_flow: unmet_demand + unused_supply
   unmet_demand_penalty:
     description: "`$unmet_demand` of `min_cost_optimisation` — what unmet demand and unused supply cost"
-    expression: sum(sum(sum(unmet_demand - unused_supply, over=carriers), over=nodes) * timestep_weights) * bigM
+    expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes]) * timestep_weights) * bigM
   unmet_sum:
     description: "`unmet_sum` — net unmet demand; reported"
     expression: unmet_demand + unused_supply

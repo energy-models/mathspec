@@ -29,11 +29,11 @@ relations:
     values: timesteps
 
 parameters:
-  storage_retention:
+  storage_loss:
     description: >-
-      `1 - storage_loss` — the share of what a store holds that it keeps for
-      an hour, data prep. Between days it is raised to 24, so it does not
-      vary over time steps here
+      `storage_loss` — the share of what a store holds that it loses in an
+      hour. Between days it is raised to 24, so it does not vary over time
+      steps here
     dims: [nodes, techs]
 
 variables:
@@ -84,7 +84,7 @@ expressions:
       initial:
         when: position(datesteps) == 0 AND NOT cyclic_storage
         expression: storage_initial
-    otherwise: storage_retention ** 24 * shift(storage_inter_cluster, along=datesteps, offset=1, edge='wrap')
+    otherwise: (1 - storage_loss) ** 24 * shift(storage_inter_cluster, along=datesteps, offset=1, edge='wrap')
   storage_intra:
     description: >-
       `$storage_intra` of `balance_storage_inter` — what the clustered day of
@@ -107,7 +107,7 @@ constraints:
       an initial fill carries it between days at the end, after a day's loss
     dims: [nodes, techs, datesteps]
     where: position(datesteps) == -1 AND storage_inter_cluster AND storage_initial AND cyclic_storage
-    expression: storage_inter_cluster * storage_retention ** 24 == storage_initial * storage_cap
+    expression: storage_inter_cluster * (1 - storage_loss) ** 24 == storage_initial * storage_cap
   storage_intra_max:
     description: "`storage_intra_max` — a store holds at most its most within its clustered day"
     dims: [nodes, techs, timesteps]
@@ -130,7 +130,7 @@ constraints:
     dims: [nodes, techs, datesteps]
     where: include_storage OR base_tech == 'storage'
     expression: >-
-      storage_inter_cluster * storage_retention ** 24
+      storage_inter_cluster * (1 - storage_loss) ** 24
       + at(storage_intra_cluster_min, by=lookup_datestep_cluster, over=clusters, into=datesteps) >= 0
   balance_storage_inter:
     description: >-

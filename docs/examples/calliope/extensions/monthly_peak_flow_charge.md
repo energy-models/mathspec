@@ -55,7 +55,7 @@ variables:
 expressions:
   cost_month_peak_charge:
     description: "`sum(cost_month_peak * flow_peak_month, over=[carriers, months])` — the term Calliope writes into `cost_operation_fixed`, by restating it whole"
-    expression: sum(sum(cost_month_peak * flow_peak_month, over=carriers), over=months)
+    expression: sum(cost_month_peak * flow_peak_month, over=[carriers, months])
 
 given:
   parameters:
@@ -128,7 +128,7 @@ Upright is what the data supplies — a parameter such as $`\mathrm{monthly\_pea
 **`cost_month_peak_charge`**
 
 ```math
-\mathit{cost\_month\_peak\_charge}_{n,i,k} = \sum_{m \in \mathcal{M}} \sum_{c \in \mathcal{C}} \mathrm{cost\_month\_peak}_{n,i,k} \cdot \mathit{flow\_peak\_month}_{n,i,c,m} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ k \in \mathcal{K}
+\mathit{cost\_month\_peak\_charge}_{n,i,k} = \sum_{c \in \mathcal{C},\ m \in \mathcal{M}} \mathrm{cost\_month\_peak}_{n,i,k} \cdot \mathit{flow\_peak\_month}_{n,i,c,m} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ k \in \mathcal{K}
 ```
 
 #### Variable domains

@@ -90,15 +90,15 @@ constraints:
     dims: [nodes, timesteps]
     where: count(count(carrier_out, over=carriers) >= 1 AND base_tech == 'transmission', over=techs) >= 1
     expression: >-
-      net_import_share * sum(sum(electricity_imports, over=techs), over=carriers)
-      <= sum(sum(electricity_balance, over=techs), over=carriers)
+      net_import_share * sum(electricity_imports, over=[techs, carriers])
+      <= sum(electricity_balance, over=[techs, carriers])
   net_annual_import_share_max:
     description: "`net_annual_import_share_max` — electricity imports at a node are at most their share of its electricity balance over the year"
     dims: [nodes]
     where: count(count(carrier_out, over=carriers) >= 1 AND base_tech == 'transmission', over=techs) >= 1
     expression: >-
-      net_import_share * sum(sum(sum(electricity_imports, over=techs), over=carriers), over=timesteps)
-      <= sum(sum(sum(electricity_balance, over=techs), over=carriers), over=timesteps)
+      net_import_share * sum(electricity_imports, over=[techs, carriers, timesteps])
+      <= sum(electricity_balance, over=[techs, carriers, timesteps])
   net_annual_import_share_max_node_group:
     description: "`net_annual_import_share_max_node_group` — heat imports at nodes `a` and `c` are at most their share of the group's heat balance over the year"
     dims: []
@@ -144,13 +144,13 @@ constraints:
 **`net_import_share_max`**
 
 ```math
-\mathrm{net\_import\_share} \cdot \left( \sum_{c \in \mathcal{C}} \sum_{i \in \mathcal{I}} \mathit{electricity\_imports}_{n,i,c,t} \right) \le \sum_{c \in \mathcal{C}} \sum_{i \in \mathcal{I}} \mathit{electricity\_balance}_{n,i,c,t} \qquad \forall\, n \in \mathcal{N},\ t \in \mathcal{T} \,:\, \lvert \{ i \in \mathcal{I} \,:\, \lvert \{ c \in \mathcal{C} \,:\, \mathrm{carrier\_out}_{n,i,c} \} \rvert \ge 1 \wedge \mathrm{base\_tech}_{i} = \text{'}\mathrm{transmission}\text{'} \} \rvert \ge 1
+\mathrm{net\_import\_share} \cdot \left( \sum_{i \in \mathcal{I},\ c \in \mathcal{C}} \mathit{electricity\_imports}_{n,i,c,t} \right) \le \sum_{i \in \mathcal{I},\ c \in \mathcal{C}} \mathit{electricity\_balance}_{n,i,c,t} \qquad \forall\, n \in \mathcal{N},\ t \in \mathcal{T} \,:\, \lvert \{ i \in \mathcal{I} \,:\, \lvert \{ c \in \mathcal{C} \,:\, \mathrm{carrier\_out}_{n,i,c} \} \rvert \ge 1 \wedge \mathrm{base\_tech}_{i} = \text{'}\mathrm{transmission}\text{'} \} \rvert \ge 1
 ```
 
 **`net_annual_import_share_max`**
 
 ```math
-\mathrm{net\_import\_share} \cdot \left( \sum_{t \in \mathcal{T}} \sum_{c \in \mathcal{C}} \sum_{i \in \mathcal{I}} \mathit{electricity\_imports}_{n,i,c,t} \right) \le \sum_{t \in \mathcal{T}} \sum_{c \in \mathcal{C}} \sum_{i \in \mathcal{I}} \mathit{electricity\_balance}_{n,i,c,t} \qquad \forall\, n \in \mathcal{N} \,:\, \lvert \{ i \in \mathcal{I} \,:\, \lvert \{ c \in \mathcal{C} \,:\, \mathrm{carrier\_out}_{n,i,c} \} \rvert \ge 1 \wedge \mathrm{base\_tech}_{i} = \text{'}\mathrm{transmission}\text{'} \} \rvert \ge 1
+\mathrm{net\_import\_share} \cdot \left( \sum_{i \in \mathcal{I},\ c \in \mathcal{C},\ t \in \mathcal{T}} \mathit{electricity\_imports}_{n,i,c,t} \right) \le \sum_{i \in \mathcal{I},\ c \in \mathcal{C},\ t \in \mathcal{T}} \mathit{electricity\_balance}_{n,i,c,t} \qquad \forall\, n \in \mathcal{N} \,:\, \lvert \{ i \in \mathcal{I} \,:\, \lvert \{ c \in \mathcal{C} \,:\, \mathrm{carrier\_out}_{n,i,c} \} \rvert \ge 1 \wedge \mathrm{base\_tech}_{i} = \text{'}\mathrm{transmission}\text{'} \} \rvert \ge 1
 ```
 
 **`net_annual_import_share_max_node_group`**

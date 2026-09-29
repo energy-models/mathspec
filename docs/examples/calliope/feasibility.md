@@ -42,7 +42,7 @@ expressions:
   feasibility_carrier_flow: unmet_demand + unused_supply
   unmet_demand_penalty:
     description: "`$unmet_demand` of `min_cost_optimisation` — what unmet demand and unused supply cost"
-    expression: sum(sum(sum(unmet_demand - unused_supply, over=carriers), over=nodes) * timestep_weights) * bigM
+    expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes]) * timestep_weights) * bigM
   unmet_sum:
     description: "`unmet_sum` — net unmet demand; reported"
     expression: unmet_demand + unused_supply
@@ -104,7 +104,7 @@ given:
 **`unmet_demand_penalty`**
 
 ```math
-\mathit{unmet\_demand\_penalty} = \left( \sum_{t \in \mathcal{T}} \left( \sum_{n \in \mathcal{N}} \sum_{c \in \mathcal{C}} \left( \mathit{unmet\_demand}_{n,c,t} - \mathit{unused\_supply}_{n,c,t} \right) \right) \cdot \mathrm{timestep\_weights}_{t} \right) \cdot \mathrm{bigM}
+\mathit{unmet\_demand\_penalty} = \left( \sum_{t \in \mathcal{T}} \left( \sum_{n \in \mathcal{N},\ c \in \mathcal{C}} \left( \mathit{unmet\_demand}_{n,c,t} - \mathit{unused\_supply}_{n,c,t} \right) \right) \cdot \mathrm{timestep\_weights}_{t} \right) \cdot \mathrm{bigM}
 ```
 
 **`unmet_sum`**

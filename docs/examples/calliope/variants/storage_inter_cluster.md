@@ -40,11 +40,11 @@ relations:
     values: timesteps
 
 parameters:
-  storage_retention:
+  storage_loss:
     description: >-
-      `1 - storage_loss` — the share of what a store holds that it keeps for
-      an hour, data prep. Between days it is raised to 24, so it does not
-      vary over time steps here
+      `storage_loss` — the share of what a store holds that it loses in an
+      hour. Between days it is raised to 24, so it does not vary over time
+      steps here
     dims: [nodes, techs]
 
 variables:
@@ -95,7 +95,7 @@ expressions:
       initial:
         when: position(datesteps) == 0 AND NOT cyclic_storage
         expression: storage_initial
-    otherwise: storage_retention ** 24 * shift(storage_inter_cluster, along=datesteps, offset=1, edge='wrap')
+    otherwise: (1 - storage_loss) ** 24 * shift(storage_inter_cluster, along=datesteps, offset=1, edge='wrap')
   storage_intra:
     description: >-
       `$storage_intra` of `balance_storage_inter` — what the clustered day of
@@ -118,7 +118,7 @@ constraints:
       an initial fill carries it between days at the end, after a day's loss
     dims: [nodes, techs, datesteps]
     where: position(datesteps) == -1 AND storage_inter_cluster AND storage_initial AND cyclic_storage
-    expression: storage_inter_cluster * storage_retention ** 24 == storage_initial * storage_cap
+    expression: storage_inter_cluster * (1 - storage_loss) ** 24 == storage_initial * storage_cap
   storage_intra_max:
     description: "`storage_intra_max` — a store holds at most its most within its clustered day"
     dims: [nodes, techs, timesteps]
@@ -141,7 +141,7 @@ constraints:
     dims: [nodes, techs, datesteps]
     where: include_storage OR base_tech == 'storage'
     expression: >-
-      storage_inter_cluster * storage_retention ** 24
+      storage_inter_cluster * (1 - storage_loss) ** 24
       + at(storage_intra_cluster_min, by=lookup_datestep_cluster, over=clusters, into=datesteps) >= 0
   balance_storage_inter:
     description: >-
@@ -183,13 +183,13 @@ assumptions:
 **`storage_previous_step`**
 
 ```math
-\mathit{storage}^{\mathrm{previous,step}}_{n,i,t} = \begin{cases} \mathrm{storage}^{\mathrm{initial}}_{n,i} \cdot \mathit{storage}^{\mathrm{cap}}_{n,i} & \text{if } \mathrm{pos}(t) = 0 \wedge \neg \mathrm{cyclic\_storage}_{n,i} \\ 0 & \text{if } \mathrm{lookup\_cluster\_last\_timestep}(t) \text{ is defined} \wedge \neg \left( \mathrm{pos}(t) = 0 \wedge \neg \mathrm{cyclic\_storage}_{n,i} \right) \\ \mathrm{storage}^{\mathrm{retention}}_{n,i}^{\mathrm{timestep\_resolution}_{t \ominus 1}} \cdot \mathit{storage}_{n,i,t \ominus 1} & \text{otherwise} \end{cases} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ t \in \mathcal{T}
+\mathit{storage}^{\mathrm{previous,step}}_{n,i,t} = \begin{cases} \mathrm{storage}^{\mathrm{initial}}_{n,i} \cdot \mathit{storage}^{\mathrm{cap}}_{n,i} & \text{if } \mathrm{pos}(t) = 0 \wedge \neg \mathrm{cyclic\_storage}_{n,i} \\ 0 & \text{if } \mathrm{lookup\_cluster\_last\_timestep}(t) \text{ is defined} \wedge \neg \left( \mathrm{pos}(t) = 0 \wedge \neg \mathrm{cyclic\_storage}_{n,i} \right) \\ \left( 1 - \mathrm{storage}^{\mathrm{loss}}_{n,i} \right)^{\mathrm{timestep\_resolution}_{t \ominus 1}} \cdot \mathit{storage}_{n,i,t \ominus 1} & \text{otherwise} \end{cases} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ t \in \mathcal{T}
 ```
 
 **`storage_inter_previous_step`**
 
 ```math
-\mathit{storage}^{\mathrm{inter,previous,step}}_{n,i,d} = \begin{cases} \mathrm{storage}^{\mathrm{initial}}_{n,i} & \text{if } \mathrm{pos}(d) = 0 \wedge \neg \mathrm{cyclic\_storage}_{n,i} \\ \mathrm{storage}^{\mathrm{retention}}_{n,i}^{24} \cdot \mathit{storage}^{\mathrm{inter,cluster}}_{n,i,d \ominus 1} & \text{otherwise} \end{cases} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ d \in \mathcal{D}
+\mathit{storage}^{\mathrm{inter,previous,step}}_{n,i,d} = \begin{cases} \mathrm{storage}^{\mathrm{initial}}_{n,i} & \text{if } \mathrm{pos}(d) = 0 \wedge \neg \mathrm{cyclic\_storage}_{n,i} \\ \left( 1 - \mathrm{storage}^{\mathrm{loss}}_{n,i} \right)^{24} \cdot \mathit{storage}^{\mathrm{inter,cluster}}_{n,i,d \ominus 1} & \text{otherwise} \end{cases} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ d \in \mathcal{D}
 ```
 
 **`storage_intra`**
@@ -201,7 +201,7 @@ assumptions:
 **`set_storage_initial`**
 
 ```math
-\mathit{storage}^{\mathrm{inter,cluster}}_{n,i,d} \cdot \mathrm{storage}^{\mathrm{retention}}_{n,i}^{24} = \mathrm{storage}^{\mathrm{initial}}_{n,i} \cdot \mathit{storage}^{\mathrm{cap}}_{n,i} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ d \in \mathcal{D} \,:\, \mathrm{pos}(d) = \lvert \mathcal{D} \rvert - 1 \wedge \mathit{storage}^{\mathrm{inter,cluster}}_{n,i,d} \text{ exists} \wedge \mathrm{storage}^{\mathrm{initial}}_{n,i} \text{ is defined} \wedge \mathrm{cyclic\_storage}_{n,i}
+\mathit{storage}^{\mathrm{inter,cluster}}_{n,i,d} \cdot \left( 1 - \mathrm{storage}^{\mathrm{loss}}_{n,i} \right)^{24} = \mathrm{storage}^{\mathrm{initial}}_{n,i} \cdot \mathit{storage}^{\mathrm{cap}}_{n,i} \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ d \in \mathcal{D} \,:\, \mathrm{pos}(d) = \lvert \mathcal{D} \rvert - 1 \wedge \mathit{storage}^{\mathrm{inter,cluster}}_{n,i,d} \text{ exists} \wedge \mathrm{storage}^{\mathrm{initial}}_{n,i} \text{ is defined} \wedge \mathrm{cyclic\_storage}_{n,i}
 ```
 
 **`storage_intra_max`**
@@ -225,7 +225,7 @@ assumptions:
 **`storage_inter_min`**
 
 ```math
-\mathit{storage}^{\mathrm{inter,cluster}}_{n,i,d} \cdot \mathrm{storage}^{\mathrm{retention}}_{n,i}^{24} + \mathit{storage}^{\mathrm{intra,cluster,min}}_{n,i,\mathrm{lookup\_datestep\_cluster}(d)} \ge 0 \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ d \in \mathcal{D} \,:\, \mathrm{include\_storage}_{n,i} \vee \mathrm{base\_tech}_{i} = \text{'}\mathrm{storage}\text{'}
+\mathit{storage}^{\mathrm{inter,cluster}}_{n,i,d} \cdot \left( 1 - \mathrm{storage}^{\mathrm{loss}}_{n,i} \right)^{24} + \mathit{storage}^{\mathrm{intra,cluster,min}}_{n,i,\mathrm{lookup\_datestep\_cluster}(d)} \ge 0 \qquad \forall\, n \in \mathcal{N},\ i \in \mathcal{I},\ d \in \mathcal{D} \,:\, \mathrm{include\_storage}_{n,i} \vee \mathrm{base\_tech}_{i} = \text{'}\mathrm{storage}\text{'}
 ```
 
 **`balance_storage_inter`**
