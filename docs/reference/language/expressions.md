@@ -243,7 +243,8 @@ objective:
 $$0 \le \mathit{rate}_{f} \le \mathrm{cap}_{f} \qquad \forall\thinspace f \in \mathcal{F} \thinspace : \thinspace \mathrm{has\_curve}_{\mathrm{converter\_of}(f)}$$
 
 The mask above is over `flow` alone. The rules are those of `at` in an
-expression: `by=`, `over=` and `into=` are all written, the read lands on the
+expression: `by=`, `over=` and `into=` are all written, each of `over=` and
+`into=` names one column or a list of them, `[a, …]`, the read lands on the
 relation's key, and the predicate carries every dimension the read consumes.
 
 ### The right-hand side of a comparison
