@@ -168,6 +168,33 @@ def test_a_given_declaration_may_say_less_than_the_introducer(reads):
     assert composed.variables['flow'].bounds.upper == 1000
 
 
+#: A unit count one file introduces as an integer column over an integer
+#: parameter, and another reads by its frame alone.
+UNITS = {
+    'dimensions': {'generator': {'dtype': 'str'}},
+    'parameters': {'units_max': {'dims': ['generator'], 'dtype': 'int'}},
+    'variables': {'units': {'dims': ['generator'], 'domain': 'integer', 'bounds': {'lower': 0, 'upper': 'units_max'}}},
+}
+READS_UNITS = {
+    'dimensions': {'generator': {'dtype': 'str'}},
+    'given': {'variables': {'units': {'dims': ['generator']}}, 'parameters': {'units_max': {'dims': ['generator']}}},
+    'constraints': {'at_least_one': {'dims': ['generator'], 'expression': 'units >= 1'}},
+}
+
+
+def test_a_reader_that_leaves_a_field_out_says_less_whatever_the_introducer_sets_it_to():
+    """The frame alone folded only where the introducer kept the default.
+
+    `merge` read each fragment back through `to_dict`, which writes every
+    default, so a reading with no `domain` claimed `continuous` and one with no
+    `dtype` claimed `float`, and both were refused against an integer
+    introducer as if they said something else.
+    """
+    composed = merge([UNITS, READS_UNITS])
+    assert composed.variables['units'].domain == 'integer', "the introducer's domain is the one that survives"
+    assert composed.parameters['units_max'].dtype == 'int', "the introducer's dtype is the one that survives"
+
+
 #: A fragment that reads `flow` over `port` alone, and loads so: it only
 #: declares what it reads.
 PORTS_ONLY = {
