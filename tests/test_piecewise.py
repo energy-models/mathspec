@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: math-spec Contributors
+# SPDX-FileCopyrightText: mathspec Contributors
 #
 # SPDX-License-Identifier: MIT
 
@@ -15,12 +15,12 @@ from typing import get_args
 
 import pytest
 
-from math_spec.errors import LanguageError, SchemaError
-from math_spec.model import Curvature
-from math_spec.piecewise import Emitted, assumptions_of, expand_piecewise
-from math_spec.program import Assumption, Variable, assumption_message
-from math_spec.validation import to_spec
-from tests.fixtures import DISPATCH_MODEL, expanded, override, raw_of, schema_of
+from mathspec.errors import LanguageError, SchemaError
+from mathspec.piecewise import Emitted, assumptions_of, expand_piecewise
+from mathspec.program import Assumption, Variable, assumption_message
+from mathspec.spec import Curvature
+from mathspec.validation import to_spec
+from tests.fixtures import DISPATCH_MODEL, expanded, raw_of, schema_of, varied
 
 #: Larger than a minimal probe on purpose: a curve that exercises adjacency
 #: binaries and links is not something a smaller one can stand in for.
@@ -59,12 +59,12 @@ objective:
   sense: minimize
   expression: sum(op_cost, over=snapshot)
 """
-GATED = override(
+GATED = varied(
     raw_of(NONCONVEX_YAML),
     **{'variables.u': {'dims': ['snapshot'], 'domain': 'binary'}, 'piecewise.cost_curve.activity': 'u'},
 )
 #: The convex curve stated as its segment lines, plus a binary the method cannot gate on.
-LP = override(
+LP = varied(
     raw_of(NONCONVEX_YAML),
     **{
         'piecewise.cost_curve.method': 'lp',
@@ -73,9 +73,9 @@ LP = override(
     },
 )
 #: The ``lp`` curve masked by one of its own values-parameters, so every check a block can carry is on it.
-LP_MASKED = override(LP, **{'piecewise.cost_curve.where': 'bp_x'})
+LP_MASKED = varied(LP, **{'piecewise.cost_curve.where': 'bp_x'})
 #: Two dims in the frame, so the emitted ``dims`` has an order to get wrong.
-TWO_DIM = override(
+TWO_DIM = varied(
     raw_of(NONCONVEX_YAML),
     **{
         'dimensions.generator': {'dtype': 'str'},
@@ -497,7 +497,7 @@ def test_a_gate_that_is_not_a_variable_is_refused(activity, match):
 
 
 #: ``lp`` bounded the other way: the same curve read as its lower envelope.
-LP_CONCAVE = override(
+LP_CONCAVE = varied(
     raw_of(NONCONVEX_YAML),
     **{
         'piecewise.cost_curve.method': 'lp',
@@ -505,13 +505,13 @@ LP_CONCAVE = override(
     },
 )
 #: Both links pinned, so nothing says which way the weights are pushed.
-CONVEX = override(raw_of(NONCONVEX_YAML), **{'piecewise.cost_curve.method': 'convex'})
+CONVEX = varied(raw_of(NONCONVEX_YAML), **{'piecewise.cost_curve.method': 'convex'})
 #: The hull bounded below, which is the same relaxation ``lp`` states as its segment lines.
-CONVEX_BOUNDED = override(
+CONVEX_BOUNDED = varied(
     CONVEX, **{'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']}}
 )
 #: The hull bounded above, so the binding side is the upper one.
-CONVEX_BOUNDED_BELOW = override(
+CONVEX_BOUNDED_BELOW = varied(
     CONVEX, **{'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '<=']}}
 )
 
@@ -572,7 +572,7 @@ def test_a_masked_lp_curve_sits_its_rows_on_predicates_rather_than_on_parameters
 def test_a_file_supplied_mask_is_what_the_contiguity_condition_reads():
     """A ``where:`` naming a parameter the file declared is bound like any other, and the mask check names it."""
     program = expanded(
-        override(LP, **{'parameters.reach': {'dims': ['bp'], 'dtype': 'bool'}, 'piecewise.cost_curve.where': 'reach'}),
+        varied(LP, **{'parameters.reach': {'dims': ['bp'], 'dtype': 'bool'}, 'piecewise.cost_curve.where': 'reach'}),
         'piecewise',
     ).program
 
@@ -640,7 +640,7 @@ def test_a_curves_conditions_cannot_collide_with_a_written_assumption():
     with pytest.raises(
         SchemaError, match="writes assumption 'cost_curve_increasing', which this file already declares"
     ):
-        expanded(override(LP, assumptions={'cost_curve_increasing': 'bp_x > 0'}), 'piecewise')
+        expanded(varied(LP, assumptions={'cost_curve_increasing': 'bp_x > 0'}), 'piecewise')
 
 
 @pytest.mark.parametrize(
@@ -653,7 +653,7 @@ def test_a_curves_conditions_cannot_collide_with_a_written_assumption():
 )
 def test_a_missing_breakpoint_names_a_rewrite_the_block_can_take(where, advice):
     """A block with a `where:` over `dims:` was told to declare `where:`, which it already had."""
-    model = override(
+    model = varied(
         WALKED,
         **{
             'parameters.curved': {'dims': ['generator'], 'dtype': 'bool'},
@@ -678,7 +678,7 @@ def test_every_check_has_a_sentence(suffix):
 
 
 #: A curve only some members have: the frame is two dims, and the mask names one of them.
-MASKED = override(
+MASKED = varied(
     TWO_DIM,
     **{
         'parameters.has_curve': {'dims': ['generator'], 'dtype': 'bool'},
@@ -686,8 +686,8 @@ MASKED = override(
     },
 )
 #: The same mask on the block that states its curve as segment lines, which emits no weights to inherit one.
-LP_WHERE = override(
-    override(LP, **{'parameters.has_curve': {'dims': ['bp'], 'dtype': 'bool'}}),
+LP_WHERE = varied(
+    varied(LP, **{'parameters.has_curve': {'dims': ['bp'], 'dtype': 'bool'}}),
     **{'parameters.has_curve.dims': ['snapshot'], 'piecewise.cost_curve.where': 'has_curve'},
 )
 
@@ -832,7 +832,7 @@ def test_a_model_written_out_and_read_back_asks_its_conditions_only_where_a_curv
     `count(...) == 1`, though it has no curve.
     """
     links = {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=' if method == 'lp' else '==']}
-    model = override(MASKED, **{'piecewise.cost_curve.where': where, 'piecewise.cost_curve.method': method})
+    model = varied(MASKED, **{'piecewise.cost_curve.where': where, 'piecewise.cost_curve.method': method})
     written = schema_of(model, **{'piecewise.cost_curve.links': links}).expand('piecewise')
     read_back = to_spec(raw_of(written.to_yaml())).program
 
@@ -922,7 +922,7 @@ def test_a_link_that_walks_nothing_stays_on_the_blocks_dims():
 
 def test_a_link_row_is_named_after_the_link_and_not_after_its_place():
     """Rows named by position renamed every constraint after the one a reordering moved."""
-    swapped = override(
+    swapped = varied(
         WALKED, **{'piecewise.coupling.links': dict(reversed(WALKED['piecewise']['coupling']['links'].items()))}
     )
     for model in (WALKED, swapped):
@@ -1048,7 +1048,7 @@ def test_a_walked_block_the_language_cannot_read_is_refused(patch, match):
 
 def test_a_link_that_only_gains_a_dimension_is_refused_and_names_the_walk():
     """A row finer than the curve is reached through a relation, which says which curve each fine row reads."""
-    model = override(
+    model = varied(
         WALKED,
         **{
             'dimensions.carrier': {'dtype': 'str'},
@@ -1075,7 +1075,7 @@ def test_a_link_named_after_a_row_the_block_writes_is_refused(link, match):
 
 
 #: A second curve whose name extends the first's, so a link of the first can spell one of its rows.
-BESIDE = override(
+BESIDE = varied(
     WALKED,
     **{
         'piecewise.coupling_b': {
@@ -1155,7 +1155,7 @@ def test_a_gate_over_fewer_dims_than_the_block_switches_each_curve_it_covers():
 
 
 #: fluxopt's system: only some generators run on a curve, and the rest have none at all.
-CURVED = override(
+CURVED = varied(
     WALKED,
     **{
         'parameters.curved': {'dims': ['generator'], 'dtype': 'bool'},
@@ -1233,7 +1233,7 @@ def test_a_mask_over_a_dim_the_walk_joins_on_reaches_the_walked_row_as_written()
 
 def test_a_mask_carrying_part_of_what_a_walk_reads_through_is_refused():
     """The relation is keyed by flow and snapshot, so the read joins on snapshot and needs the mask to carry it too."""
-    model = override(
+    model = varied(
         CURVED,
         **{
             'relations.generator_of': {'key': ['flow', 'snapshot'], 'values': 'generator'},
@@ -1343,7 +1343,7 @@ def test_links_that_disagree_on_their_dims_are_refused_rather_than_read_as_one_c
 )
 def test_a_link_spanning_a_dimension_its_row_does_not_is_refused_both_ways(patch, match):
     """A curve and the quantity on it vary together or the file says which — neither direction is guessed."""
-    model = override(
+    model = varied(
         WALKED,
         **{
             'dimensions.period': {'dtype': 'int'},
@@ -1378,7 +1378,7 @@ def test_a_period_the_curve_and_its_links_both_carry_loads():
 
 
 #: Three quantities on one curve, two of them bounded rather than pinned.
-THREE_WAY = override(
+THREE_WAY = varied(
     raw_of(NONCONVEX_YAML),
     **{
         'parameters.bp_z': {'dims': ['bp']},

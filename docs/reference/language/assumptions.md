@@ -1,11 +1,11 @@
 <!--
-SPDX-FileCopyrightText: math-spec contributors
+SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
 # Assumptions
 
-`assumptions:` states what the model expects of the data attached to it. The
+`assumptions:` states what the spec expects of the data attached to it. The
 language types each predicate and prints it in the
 [typeset document](../typeset.md). The consumer that attaches the numbers runs it.
 

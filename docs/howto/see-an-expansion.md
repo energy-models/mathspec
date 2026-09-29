@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: math-spec contributors
+SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
@@ -7,7 +7,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 A [`piecewise:`](../reference/language/piecewise.md) block and a `sos:` block
 each stand for plain variables and constraints. Write them out to review a
-formulation, to teach one, or to hand the model to an engine that has no
+formulation, to teach one, or to hand the spec to an engine that has no
 concept of a set.
 
 ## 1. Write the formulation out
@@ -18,7 +18,7 @@ prints the result as a file.
 === "Python"
 
     ```python
-    from math_spec import to_spec
+    from mathspec import to_spec
 
     spec = to_spec('before.yaml')
     print(spec.expand().to_yaml())
@@ -27,7 +27,7 @@ prints the result as a file.
 === "Command line"
 
     ```bash
-    python -m math_spec markdown before.yaml --expand
+    python -m mathspec markdown before.yaml --expand
     ```
 
 The command line prints the expansion as math rather than as YAML. Pass
@@ -429,7 +429,7 @@ the set out too.
 <!-- expansion:curve:end -->
 <!-- prettier-ignore-end -->
 
-[`Spec.expand()`](../reference/api.md#math_spec.Spec.expand) lists what
+[`Spec.expand()`](../reference/api.md#mathspec.Spec.expand) lists what
 the call accepts, and
 [writing a formulation out](../reference/language/piecewise.md#writing-a-formulation-out)
 says what each block emits.

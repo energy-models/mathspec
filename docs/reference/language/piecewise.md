@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: math-spec contributors
+SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
@@ -192,19 +192,19 @@ piecewise:
 
 `power` is per flow and the curve is per generator, so the `power` link builds
 one row for each flow of a generator. A sixth flow is a row in `generator_of`,
-not an edit to the model.
+not an edit to the spec.
 
 The row of a walked link is `dims:` with the dimension that `over:` consumes
 replaced by the one that `into:` produces: `[flow, snapshot]` above. The block
 writes `at(coupling_lam, by=generator_of, over=generator, into=flow)` into that
-row, so the weights stay on `dims:` and the model never names them.
+row, so the weights stay on `dims:` and the spec never names them.
 
 `by:`, `over:` and `into:` are written together. A walk states the relation, the
 columns it consumes and the columns it produces, and none is defaulted. Each of
 `over:` and `into:` names at least one column. A link whose row is finer than
 `dims:` is always a walk: a link that names only `into:` is refused.
 
-A walk is held to every rule of `at`, as the model loads, and a refusal names
+A walk is held to every rule of `at`, as the spec loads, and a refusal names
 the link. `into:` names key columns of the relation, and the read has one value
 at each coordinate it lands on. A key column that the walk does not name is
 joined on, so its dimension is one of `dims:`.
@@ -280,7 +280,7 @@ prints its bounded link as a function of the pinned one instead.
 
 `convex` and `lp` take exactly two links, so there a sign is one link's at
 most. Under `adjacency` and `sos2` each link is its own row against the shared
-weights, so the count is whatever the model needs.
+weights, so the count is whatever the spec needs.
 
 ### `method`
 
@@ -347,20 +347,20 @@ at `type: 2`:
 | the same name plus `_below`                        | `x >= lower * admitted`, where `lower` is not `0` |
 
 `upper` and `lower` are the member's own `bounds:`, a number or a parameter;
-a binary member's are `0` and `1`. A model is refused at load where a member
+a binary member's are `0` and `1`. A spec is refused at load where a member
 has no `bounds.lower`, or no `bounds.upper` and no `domain: binary`. A name the
 expansion writes that the file already declares is refused at load too.
 
 ## Writing a formulation out
 
 Writing a formulation out replaces the block with the variables and constraints
-it states. [`Spec.expand()`](../api.md#math_spec.Spec.expand) is the
+it states. [`Spec.expand()`](../api.md#mathspec.Spec.expand) is the
 call, and [see what a curve or a set expands to](../../howto/see-an-expansion.md)
-shows a model before and after.
+shows a spec before and after.
 
 - **Every name written out starts with the name of the block.** The weights of
   the curve `curve` are `curve_lam`.
-- **No formulation emits a parameter.** The same data attaches to a model and its
+- **No formulation emits a parameter.** The same data attaches to a spec and its
   expansion.
 - **The assumptions a `method:` implies become `assumptions:` entries** with
   the same names.

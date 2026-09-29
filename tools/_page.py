@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: math-spec Contributors
+# SPDX-FileCopyrightText: mathspec Contributors
 #
 # SPDX-License-Identifier: MIT
 
@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+import textwrap
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -42,6 +43,11 @@ def inlined(markdown: str) -> str:
     space, so the joined lines print the same math.
     """
     return FENCE.sub(lambda m: f'$`{" ".join(m[1].splitlines())}`$', markdown)
+
+
+def tab(title: str, body: str) -> str:
+    """One tab of a tabbed block: its title, and its body indented into it."""
+    return f'=== "{title}"\n\n{textwrap.indent(body, "    ")}'
 
 
 def without_header(path: Path) -> str:
