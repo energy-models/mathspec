@@ -94,6 +94,8 @@ def namespace() -> Namespace:
         ('sum(p * cost)', set()),
         ('sum(p, over=generator)', {'snapshot'}),
         ('sum(p * cost, over=generator)', {'snapshot'}),
+        pytest.param('sum(p, over=[snapshot, generator])', set(), id='a-list-sums-every-dim-it-names'),
+        pytest.param('sum(p, over=[generator])', {'snapshot'}, id='a-list-of-one-is-that-dim'),
         ('sum(p, by=gen_bus, over=generator, into=bus)', {'snapshot', 'bus'}),
         ("shift(p, along=snapshot, offset=1, edge='wrap')", {'snapshot', 'generator'}),
         ("shift(p, along=snapshot, offset=spinup, edge='wrap')", {'snapshot', 'generator'}),
@@ -254,6 +256,12 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
             DimensionError,
             r'sum\(over=bus\) but the expression has dims',
             id='sum-consuming-an-absent-dim-is-an-error-not-a-noop',
+        ),
+        pytest.param(
+            'sum(p, over=[generator, bus])',
+            DimensionError,
+            r'sum\(over=bus\) but the expression has dims',
+            id='and-so-is-one-absent-dim-in-a-list',
         ),
         pytest.param(
             'sum(sum(p))',

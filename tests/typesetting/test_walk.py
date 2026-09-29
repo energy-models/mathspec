@@ -259,6 +259,16 @@ def test_a_negation_under_a_plus_is_the_subtraction_it_means(name: FormatName, f
 
 
 @EVERY_FORMAT
+def test_a_sum_over_a_list_prints_as_the_bare_sum_over_the_same_dims(name: FormatName, fmt: Format):
+    """One sum over both sets, in the operand's index order, whatever order the list names them in."""
+
+    def printed(expression: str) -> str:
+        return typeset(varied(DISPATCH_MODEL, **{'objective.expression': expression}), name, legend=False)
+
+    assert printed('sum(p, over=[generator, snapshot])') == printed('sum(p)'), 'the list reorders or splits the sum'
+
+
+@EVERY_FORMAT
 def test_a_base_that_adds_is_bracketed_and_a_divisor_that_adds_is_not(name: FormatName, fmt: Format):
     """A superscript binds tighter than a plus, and a fraction's bar already groups its denominator."""
     model = varied(DISPATCH_MODEL, **{'objective.expression': 'sum(p * (1 + cost) ** 2 + p / (cost + p_max))'})
