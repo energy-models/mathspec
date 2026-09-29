@@ -160,7 +160,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     for section in SHARED_SECTIONS:
         if agreed := _agreed(read, section, _singular(section), 'give one of them a name of its own'):
             merged[section] = agreed
-    asked = {name: _mapping(sections.get('given')) for name, sections in read.items()}
+    asked = {name: spec.given.model_dump(exclude_unset=True) for name, spec in loaded.items()}
     readings = {
         kind: _agreed(asked, kind, label, 'read it over one frame', claims=_reading_claims)
         for kind, label in GIVEN_KINDS.items()

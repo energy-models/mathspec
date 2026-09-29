@@ -59,7 +59,9 @@ def unbounded_notes(program: Program) -> list[Advice]:
 
     Returns:
         One note per variable that is unbounded on the side its objective term
-        improves toward and named by no constraint.
+        improves toward and named by no constraint. A given column, which the
+        program reads and does not declare, has its bounds where it is built,
+        so it gets none.
     """
     if program.objective is None:
         return []
@@ -76,7 +78,7 @@ def unbounded_notes(program: Program) -> list[Advice]:
     minimize = program.objective.sense == 'minimize'
     notes: list[Advice] = []
     for vname, sign in signs.items():
-        if sign is None or vname in constrained or vname in program.given.variables:
+        if sign is None or vname in constrained or vname not in program.variables:
             continue
         side: BoundSide = 'lower' if minimize == (sign == '+') else 'upper'
         if _is_open(program.variables[vname], side):
