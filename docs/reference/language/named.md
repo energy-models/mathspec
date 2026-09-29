@@ -203,6 +203,8 @@ macros:
   its reference chain.
 - Every template is held at load to every rule a call site is, whether or not it
   is called. A formal is left for the call site to bind.
+- A formal may stand in a list, as in `sum(x, over=[d, snapshot])`. There the
+  call binds it to a name, or to a list of names that is spliced in.
 
 A composition of the [built-in operators](operators.md) belongs here. What
 the language will not express is in
