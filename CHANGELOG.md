@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(pypsa): a fixed modular committable unit gets only its per-module commitment rows, as in pypsa master ([#787](https://github.com/energy-models/mathspec/pull/787))
 - docs(pypsa): the pypsa references are recorded against pypsa master ([#786](https://github.com/energy-models/mathspec/pull/786))
 - fix(language): a where string names several columns in at's over= and into=, as an expression does ([#782](https://github.com/energy-models/mathspec/pull/782))
 - fix(language): a file whose terms read each other's sums is refused at load ([#780](https://github.com/energy-models/mathspec/pull/780))
