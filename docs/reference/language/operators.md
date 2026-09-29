@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: math-spec contributors
+SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
@@ -14,6 +14,7 @@ in a reported expression, are all of them. A composition of them goes in
 | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sum(array)`                                               | Every dimension that `array` carries collapses. The result is a scalar                                                                                            |
 | `sum(array, over=dim)`                                     | `dim` collapses. `array` must carry `dim`                                                                                                                         |
+| `sum(array, over=[a, …])`                                  | Each dimension in the list collapses. `array` must carry each one, and the list names each one once                                                               |
 | `sum(array, over=dim, by=relation[c])`                     | `dim` collapses, and the result is grouped by the relation's column `c`. The other key columns are joined on, so the array carries them and the result keeps them |
 | `sum(array, over=[dim, …], by=relation[c, …])`             | The same with several dimensions and several columns of one relation: joined on together, grouped by a product                                                    |
 | `at(array, by=relation[c])`                                | `array` read at the value of the relation's column `c`, once per key of the relation. The key arrives in the result                                               |
@@ -33,8 +34,9 @@ prints.
 
 ## `sum`
 
-`sum(x)` on a scalar is an error. A nodal balance is one `sum(by=)` per kind of
-component:
+`sum(x)` on a scalar is an error. `sum(x, over=[a, b])` is
+`sum(sum(x, over=a), over=b)`, and prints as one sum over both sets. A nodal
+balance is one `sum(by=)` per kind of component:
 
 ```yaml
 dimensions:
@@ -197,16 +199,17 @@ The sign travels in the values: `offset=-lead` is refused.
 
 ## Every operator as math
 
-Each row is generated from one model in
-[`examples/operators/`](https://github.com/energy-models/math-spec/tree/main/examples/operators),
-printed by the [typesetter](../typeset.md). The models themselves are on
-[One construct per model](../../examples/operators.md).
+Each row is generated from one spec in
+[`examples/operators/`](https://github.com/energy-models/mathspec/tree/main/examples/operators),
+printed by the [typesetter](../typeset.md). The specs themselves are on
+[One construct per spec](../../examples/operators.md).
 
 <!-- operator-math:begin -->
 | Operator | Renders as |
 |---|---|
 | `sum(array)` | $`\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \le \mathrm{budget}`$ |
 | `sum(array, over=dim)` | $`\sum_{g \in \mathcal{G}} p_{t,g} \le \mathrm{limit}_{t} \qquad \forall\, t \in \mathcal{T}`$ |
+| `sum(array, over=[a, …])` | $`\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g,c} \le \mathrm{limit}_{c} \qquad \forall\, c \in \mathcal{C}`$ |
 | `sum(array, over=dim, by=relation[c])` | $`\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{t,g} \le \mathrm{limit}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}`$ |
 | `sum(array, over=dim, by=relation[c]), joining on the rest of the key` | $`\sum_{g \in \mathcal{G} \,:\, \mathrm{zone\_of}(g,\ e) = z} p_{g,e} \ge \mathrm{demand}_{z,e} \qquad \forall\, z \in \mathcal{Z},\ e \in \mathcal{E}`$ |
 | `sum(array, over=[dim, …], by=relation[c, …])` | $`\sum_{g \in \mathcal{G},\ e \in \mathcal{E} \,:\, \mathrm{slot\_of.bus}(g,\ e) = b \wedge \mathrm{slot\_of.technology}(g,\ e) = t} p_{g,e} \le \mathrm{cap}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}`$ |

@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: math-spec contributors
+SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
@@ -28,8 +28,32 @@ expressions:
     description: CO2 released, the quantity a cap would bound
 ```
 
-It is a bare string, or a mapping with a `description:`. Its body decides its
-dimensions, and there is no `dims:`.
+It is a bare string, or a mapping with a `description:` and a `dims:`. The
+`dims:` are the **frame**, the dimensions the quantity is read over. Left out,
+the body decides the frame. Declared, the body may carry no dimension the
+frame does not name, which the loader checks, and it may carry fewer: the
+quantity is then constant along the rest, and a constraint over the whole frame
+reads it at every coordinate.
+
+```yaml
+expressions:
+  cap:
+    dims: [snapshot, generator]
+    expression: p_max
+    description: the nominal capacity, the same in every snapshot
+```
+
+An entry written `empty: true` over a `dims:` is an **empty sum**: a
+quantity this file declares and other files add terms to, through
+[`merge`](../../howto/compose.md#a-library-of-components). It has no
+`expression:`, `cases:` or `otherwise:`, and `dims:` is required. `empty`
+defaults to `false`, and a spec writes it only where it is `true`. An entry
+with a `dims:` and no body, and no `empty: true`, is refused. Alone, the file
+reads it as a column over the frame, the way it reads a
+[given expression](declarations.md#given-expressions), and its definition
+prints as `injection = ⋯`: the name is declared here, and the body is what
+the other files add. [A term a file adds](declarations.md#a-term-a-file-adds)
+is the other half.
 
 Where the objective or a constraint names it, the body is substituted there,
 and the [degree limit](expressions.md#where-a-product-of-two-variables-is-allowed)
@@ -68,13 +92,14 @@ Each case prints as one row of the definition, and `otherwise:` as the last:
 
 $$\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \cr \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \cr \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\thinspace t \in \mathcal{T},\enspace g \in \mathcal{G}$$
 
-A named expression carries **exactly one** of `expression:` and `cases:`.
+A named expression carries **exactly one** of `expression:` and `cases:`, or
+is an [empty sum](#expressions), `empty: true`.
 
-| Key         |                                                                                                   |
-| ----------- | ------------------------------------------------------------------------------------------------- |
-| `dims`      | required with `cases:`, and refused without. The **frame**: the dimensions every case ranges over |
-| `cases`     | a map of named cases, each with a `when:` mask and an `expression:`                               |
-| `otherwise` | required. The value at every coordinate the cases leave                                           |
+| Key         |                                                                              |
+| ----------- | ---------------------------------------------------------------------------- |
+| `dims`      | required with `cases:`. The **frame**: the dimensions every case ranges over |
+| `cases`     | a map of named cases, each with a `when:` mask and an `expression:`          |
+| `otherwise` | required. The value at every coordinate the cases leave                      |
 
 ### The rules that keep the cases apart
 
@@ -151,9 +176,18 @@ Constraint 'd': a dual exists only after a solve; the math cannot read one —
 keep the entry that carries it out of constraints, the objective, bounds and where.
 ```
 
-`dual(c)` is the rate at which the optimal objective improves as `c` is relaxed
-in the direction its comparator points, under the model's own `minimize` or
-`maximize`.
+`dual(c)` is the rate at which the optimal objective rises as the right side
+of `c` rises. Read `lhs <= rhs` as `lhs <= rhs + d`: the dual is the rate in `d`
+at `d = 0`. The rule is the same for `<=`, `>=` and `==`, and under `minimize`
+and `maximize`, so an equality has a dual with a sign too. Which side a term is
+written on decides the sign: `p <= cap` and `-p >= -cap` state one row, and their
+duals are opposite.
+
+| Under `minimize`, a binding row | Its dual                             |
+| ------------------------------- | ------------------------------------ |
+| `p <= cap`                      | at most 0                            |
+| `p >= load`                     | at least 0                           |
+| `sum(p, over=g) == load`        | the price of one more unit of `load` |
 
 A row that `c`'s `where:` deletes has no dual.
 
@@ -172,12 +206,14 @@ macros:
 
 - A template holds arithmetic, and no comparison.
 - An argument may itself use macros and named expressions.
-- Inside a template, the formal parameters shadow model names. A formal may not
-  collide with a declared dimension.
+- Inside a template, the formal parameters shadow the names the spec
+  declares. A formal may not collide with a declared dimension.
 - The number of arguments is checked at each call site. A cycle is reported with
   its reference chain.
 - Every template is held at load to every rule a call site is, whether or not it
   is called. A formal is left for the call site to bind.
+- A formal may stand in a list, as in `sum(x, over=[d, snapshot])`. There the
+  call binds it to a name, or to a list of names that is spliced in.
 
 A composition of the [built-in operators](operators.md) belongs here. What
 the language will not express is in

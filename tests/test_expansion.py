@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: math-spec Contributors
+# SPDX-FileCopyrightText: mathspec Contributors
 #
 # SPDX-License-Identifier: MIT
 
@@ -11,11 +11,11 @@ from functools import partial
 
 import pytest
 
-from math_spec import to_spec
-from math_spec.errors import LanguageError
-from math_spec.expansion import parse_and_expand
-from math_spec.program import Axis, Multiply, Named, Parameter, Sum, Translate, Variable
-from math_spec.resolution import Namespace
+from mathspec import to_spec
+from mathspec.errors import LanguageError
+from mathspec.expansion import parse_and_expand
+from mathspec.program import Axis, Multiply, Named, Parameter, Sum, Translate, Variable
+from mathspec.resolution import Namespace
 from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, comparison_of, expression_of, schema_of
 
 WEIGHTED_SUM = {
@@ -106,6 +106,20 @@ def _bodies(resolved):
             'sc',
             'p + 1',
             id='a-formal-shadows-a-named-expression-so-it-is-not-a-cycle',
+        ),
+        pytest.param(
+            {},
+            {'tot': {'args': ['x'], 'kwargs': ['d'], 'template': 'sum(x, over=[d, snapshot])'}},
+            'tot(p, d=generator)',
+            'sum(p, over=[generator, snapshot])',
+            id='a-formal-inside-a-list-takes-the-name-bound-to-it',
+        ),
+        pytest.param(
+            {},
+            {'tot': {'args': ['x'], 'kwargs': ['d'], 'template': 'sum(x, over=[d])'}},
+            'tot(p, d=[snapshot, generator])',
+            'sum(p, over=[snapshot, generator])',
+            id='a-list-bound-to-a-formal-inside-a-list-is-spliced-in',
         ),
         pytest.param(
             {f'e{i}': f'e{i + 1} + 1' for i in range(80)} | {'e80': 'p'},
@@ -363,6 +377,24 @@ def test_a_formal_stands_where_a_call_site_will_bind_it(formals, template):
     )
 
 
+@pytest.mark.parametrize(
+    ('call', 'match'),
+    [
+        pytest.param(
+            'tot(p, d=1)',
+            r"macro 'tot' writes its formal 'd' in the list \[d, snapshot\], and the call binds it to 1",
+            id='a-number',
+        ),
+        pytest.param('tot(p, d=snapshot)', "names 'snapshot' twice", id='a-name-the-list-already-holds'),
+    ],
+)
+def test_a_formal_inside_a_list_binds_a_name_or_a_list_of_names(call, match):
+    """A list holds names, so what the call binds there is a name, or a list spliced in, and the list is checked once bound."""
+    macros = {'tot': {'args': ['x'], 'kwargs': ['d'], 'template': 'sum(x, over=[d, snapshot])'}}
+    with pytest.raises(LanguageError, match=match):
+        expression_of(call, Namespace(schema(macros=macros)), 'expression')
+
+
 def test_a_call_binding_the_dimension_a_partition_steps_along_builds_it():
     """The call site is where the formal gets its kind, so the partition is built there."""
     template = 'shift(x, along=d, offset=1, within=lk[h])'
@@ -374,7 +406,7 @@ def test_a_call_binding_the_dimension_a_partition_steps_along_builds_it():
 
 def test_a_named_expression_is_resolved_once_however_many_uses(monkeypatch):
     """Every use parsed, expanded and resolved the entry again, and a cased one's arms with it."""
-    from math_spec import resolution
+    from mathspec import resolution
 
     resolved: list[str] = []
     named = resolution._named

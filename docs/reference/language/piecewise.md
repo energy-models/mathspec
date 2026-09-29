@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: math-spec contributors
+SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
@@ -158,20 +158,20 @@ at `type: 2`:
 | the same name plus `_below`                        | `x >= lower * admitted`, where `lower` is not `0` |
 
 `upper` and `lower` are the member's own `bounds:`, a number or a parameter;
-a binary member's are `0` and `1`. A model is refused at load where a member
+a binary member's are `0` and `1`. A spec is refused at load where a member
 has no `bounds.lower`, or no `bounds.upper` and no `domain: binary`. A name the
 expansion writes that the file already declares is refused at load too.
 
 ## Writing a formulation out
 
 Writing a formulation out replaces the block with the variables and constraints
-it states. [`Spec.expand()`](../api.md#math_spec.Spec.expand) is the
+it states. [`Spec.expand()`](../api.md#mathspec.Spec.expand) is the
 call, and [see what a curve or a set expands to](../../howto/see-an-expansion.md)
-shows a model before and after.
+shows a spec before and after.
 
 - **Every name written out starts with the name of the block.** The weights of
   the curve `curve` are `curve_lam`.
-- **No formulation emits a parameter.** The same data attaches to a model and its
+- **No formulation emits a parameter.** The same data attaches to a spec and its
   expansion.
 - **The assumptions a `method:` implies become `assumptions:` entries** with
   the same names.
