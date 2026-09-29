@@ -1180,6 +1180,52 @@ def test_a_block_mask_reaches_a_walked_link_through_its_relation():
     )
 
 
+#: fluxopt's investment cost curve (fluxopt/fluxopt#26): each effect of a sized flow is read off its curve.
+INVESTED = {
+    'dimensions': {name: {'dtype': 'str'} for name in ('cost_curve', 'effect', 'flow')} | {'bp': {'dtype': 'int'}},
+    'relations': {'cost_of': {'key': ['flow', 'effect'], 'values': 'cost_curve'}},
+    'parameters': {
+        'has_cost_curve': {'dims': ['cost_curve'], 'dtype': 'bool'},
+        'size_bp': {'dims': ['cost_curve', 'bp']},
+        'cost_bp': {'dims': ['flow', 'effect', 'bp']},
+    },
+    'variables': {'size': {'dims': ['cost_curve']}, 'invest': {'dims': ['flow', 'effect']}},
+    'piecewise': {
+        'invest_curve': {
+            'along': 'bp',
+            'dims': ['cost_curve'],
+            'where': 'has_cost_curve',
+            'links': {
+                'size': ['size', 'size_bp'],
+                'cost': {
+                    'expression': 'invest',
+                    'values': 'cost_bp',
+                    'by': 'cost_of',
+                    'over': 'cost_curve',
+                    'into': ['flow', 'effect'],
+                },
+            },
+        }
+    },
+    'objective': {'sense': 'minimize', 'expression': 'sum(invest)'},
+}
+
+
+def test_a_block_mask_reaches_a_walk_into_several_columns():
+    """The mask is read through the walk as `at(…, into=[flow, effect])`, which a where string could not parse (#781).
+
+    The block loaded without its `where:`, and with it the load failed on
+    the assertion that what a method assumes is stated in the language.
+    """
+    expanded = schema_of(INVESTED).expand()
+    read = 'at(has_cost_curve, by=cost_of, over=cost_curve, into=[flow, effect])'
+    assert expanded.constraints['invest_curve_cost'].where == read, (
+        'the cost row reads the mask at each flow and effect'
+    )
+    assert expanded.assumptions['invest_curve_cost_complete'].where == read, 'and so does its breakpoint check'
+    assert to_spec(expanded.to_yaml()).program == expanded.program, 'the rows it writes load again'
+
+
 def test_a_ragged_mask_reaches_a_walked_link_as_the_count_of_its_curves_breakpoints():
     """A walked row is over the curve's dims less the walk, so it takes what a row over dims: alone takes, read through."""
     expanded = expand_piecewise(
