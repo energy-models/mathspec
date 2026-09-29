@@ -157,7 +157,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     for section in SHARED_SECTIONS:
         if agreed := _agreed(read, section, _singular(section), 'give one of them a name of its own'):
             merged[section] = agreed
-    asked = {name: _readings(sections) for name, sections in read.items()}
+    asked = {name: _readings({'given': spec.given.model_dump(exclude_unset=True)}) for name, spec in loaded.items()}
     readings = {
         kind: _agreed(asked, kind, label, 'read it over one frame', claims=_reading_claims)
         for kind, label in GIVEN_KINDS.items()
@@ -246,7 +246,11 @@ def _reading_claims(block: object) -> object:
 
 
 def _readings(sections: Mapping[str, object]) -> dict[str, object]:
-    """The ``given:`` block of one fragment, each entry without its term: what the fragment reads, apart from what it adds."""
+    """The ``given:`` block of one fragment, each entry without its term: what the fragment reads, apart from what it adds.
+
+    ``merge`` hands it the fields the fragment wrote. A field left out says
+    less, and a default filled in would claim a value against the introducer.
+    """
     return {
         kind: {key: {f: v for f, v in _mapping(entry).items() if f != 'term'} for key, entry in _mapping(group).items()}
         for kind, group in _mapping(sections.get('given')).items()
