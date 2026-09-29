@@ -177,10 +177,17 @@ keep the entry that carries it out of constraints, the objective, bounds and whe
 ```
 
 `dual(c)` is the rate at which the optimal objective rises as the right side
-of `c` rises. For `lhs <= rhs`, read `lhs <= rhs + b`: the dual is the rate in
-`b` at `b = 0`. The same holds for `>=` and `==`, and under `minimize` and
-`maximize` alike. So under `minimize`, the dual of a binding `<=` row is at
-most zero, and the dual of a binding `>=` row is at least zero.
+of `c` rises. Read `lhs <= rhs` as `lhs <= rhs + d`: the dual is the rate in `d`
+at `d = 0`. The rule is the same for `<=`, `>=` and `==`, and under `minimize`
+and `maximize`, so an equality has a dual with a sign too. Which side a term is
+written on decides the sign: `p <= cap` and `-p >= -cap` state one row, and their
+duals are opposite.
+
+| Under `minimize`, a binding row | Its dual                             |
+| ------------------------------- | ------------------------------------ |
+| `p <= cap`                      | at most 0                            |
+| `p >= load`                     | at least 0                           |
+| `sum(p, over=g) == load`        | the price of one more unit of `load` |
 
 A row that `c`'s `where:` deletes has no dual.
 
