@@ -1,6 +1,7 @@
 <!--
+SPDX-FileCopyrightText: Calliope contributors
 SPDX-FileCopyrightText: mathspec contributors
-SPDX-License-Identifier: CC-BY-4.0
+SPDX-License-Identifier: CC-BY-4.0 AND Apache-2.0
 -->
 
 # Supply

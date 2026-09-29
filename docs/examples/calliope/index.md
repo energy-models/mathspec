@@ -12,6 +12,11 @@ is all of it, from Calliope `v0.7.0` (`src/calliope/math/` and
 [The port record](port.md) lists every Calliope block with how it is stated
 here, and what mathspec is missing where the port is not one block for one.
 
+The math is Calliope's, copyright Calliope contributors, under the
+[Apache License 2.0](https://github.com/calliope-project/calliope/blob/main/LICENSE).
+The files under `examples/calliope/` are changed from it and are under the same
+licence. [The port record](port.md) says what changed.
+
 Calliope composes its math by overriding: a mode or an example restates a
 base block whole to change it. Here, three kinds of file do that work, and
 [the PyPSA split](../pypsa/index.md) uses the first two.

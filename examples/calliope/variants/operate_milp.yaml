@@ -1,6 +1,10 @@
+# SPDX-FileCopyrightText: Calliope contributors
 # SPDX-FileCopyrightText: mathspec Contributors
 #
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
 
 parameters:
   purchased_units:
