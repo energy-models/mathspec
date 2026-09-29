@@ -243,7 +243,7 @@ class ExpressionResolver:
                 f'{self.context}: {node.name}({", ".join(f"{k}=" for k in roles)}) names a column of a relation, '
                 f'and no by= names the relation. Write {builtin.usage}'
             )
-        dims: dict[str, str | None] = {}
+        dims: dict[str, tuple[str, ...] | None] = {}
         amounts: dict[str, int | str | None] = {}
         edge: _Edge | None = None
         for key, value in node.kwargs.items():
@@ -251,14 +251,15 @@ class ExpressionResolver:
                 case 'edge':
                     edge = self._edge(value, node.name)
                 case 'dimension':
-                    dims[key] = self._dim_ref(value, node.name, key)
+                    dims[key] = self._dim_refs(value, node.name, key, several=key in builtin.dimension_or_role_kwargs)
                 case 'value':
                     amounts[key] = self._amount(value, node.name, key)
                 case 'relation' | 'role' | None:
                     pass
         read = None
         if 'by' in node.kwargs and builtin.kind_of('by') == 'relation':
-            read = self.relation_ref(node.kwargs['by'], node.name, 'by', roles, dims.get('along'))
+            along = dims.get('along')
+            read = self.relation_ref(node.kwargs['by'], node.name, 'by', roles, along[0] if along else None)
         unread = (
             shape_error is not None
             or unrelated
@@ -277,7 +278,7 @@ class ExpressionResolver:
         self,
         operator: str,
         operand: Expression,
-        dims: Mapping[str, str | None],
+        dims: Mapping[str, tuple[str, ...] | None],
         amounts: Mapping[str, int | str | None],
         edge: _Edge | None,
         read: Direction | Partition | None,
@@ -288,14 +289,15 @@ class ExpressionResolver:
                 assert isinstance(read, Direction), 'a sum reads its relation in a direction'
                 return GroupSum(operand, read)
             if (over := dims.get('over')) is not None:
-                return Sum(operand, (over,))
+                return Sum(operand, over)
             return self._bare_sum(operand)
         if operator == 'at':
             assert isinstance(read, Direction), 'at reads its relation in a direction'
             return Pullback(operand, read)
         assert read is None or isinstance(read, Partition), 'a translation reads its relation as a partition'
-        along = dims['along']
-        assert along is not None
+        named = dims['along']
+        assert named is not None, 'a translation names the dimension it steps along'
+        (along,) = named
         wrap, fill = edge if edge is not None else (False, None)
         if operator == 'shift':
             offset = amounts['offset']
@@ -420,6 +422,20 @@ class ExpressionResolver:
             )
             return None
         return False, literal.value
+
+    def _dim_refs(self, value: ArithmeticNode, operator: str, key: str, *, several: bool) -> tuple[str, ...] | None:
+        """An operator kwarg whose *value* names declared dimensions: one, or a list where *several* are allowed."""
+        if not (several and isinstance(value, NameListNode)):
+            found = self._dim_ref(value, operator, key)
+            return None if found is None else (found,)
+        if repeated := sorted({name for name in value.names if value.names.count(name) > 1}):
+            self.errors.append(
+                f'{self.context}: {operator}({key}={value}) names {", ".join(map(repr, repeated))} twice. '
+                f'Name each dimension once.'
+            )
+            return None
+        found = [self._dim_ref(NameNode(name), operator, key) for name in value.names]
+        return None if None in found else tuple(cast('list[str]', found))
 
     def _dim_ref(self, value: ArithmeticNode, operator: str, key: str) -> str | None:
         """An operator kwarg whose *value* must name a declared dimension."""

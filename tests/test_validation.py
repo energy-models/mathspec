@@ -301,6 +301,11 @@ class TestDimensionKwargs:
         [
             pytest.param('sum(p, over=snapshto) == load', ('silent no-op', 'sum(over=snapshto)'), id='sum-over-typo'),
             pytest.param(
+                'sum(p, over=[generator, snapshto]) == 1',
+                ('silent no-op', 'sum(over=snapshto)'),
+                id='sum-over-a-list-with-a-typo',
+            ),
+            pytest.param(
                 'sum(p, by=bus) == load',
                 ("'bus' is a dimension, and by= takes a relation",),
                 id='by-names-a-dimension',
@@ -342,6 +347,16 @@ class TestDimensionKwargs:
         ('expression', 'fragment'),
         [
             pytest.param('sum(p, over=1)', 'sum(over=...) must name a dimension', id='a-number-as-a-dimension'),
+            pytest.param(
+                'shift(p, along=[snapshot, generator], offset=1)',
+                'shift(along=...) must name a dimension',
+                id='a-list-where-one-dimension-steps',
+            ),
+            pytest.param(
+                'sum(p, over=[generator, snapshot, generator])',
+                "sum(over=[generator, snapshot, generator]) names 'generator' twice",
+                id='a-dimension-named-twice',
+            ),
             pytest.param("sum(p, by='lk', over=g, into=h)", 'sum(by=...) must name a relation', id='a-quoted-relation'),
             pytest.param(
                 'sum(p, by=lk, over=1, into=h)',

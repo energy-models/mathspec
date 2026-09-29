@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language): a sum names several dimensions in one over= list ([#778](https://github.com/energy-models/mathspec/pull/778))
 - feat(language): a divisor or a power over parameters may add, so a discount factor is written where it is used ([#757](https://github.com/energy-models/mathspec/pull/757))
 - docs(language): a reported quotient is absent where its divisor is zero, whether a solve or the data gave that zero ([#765](https://github.com/energy-models/mathspec/pull/765))
 - fix(language): a given declaration that leaves out its domain or dtype folds into an introducer that sets one ([#768](https://github.com/energy-models/mathspec/pull/768))
