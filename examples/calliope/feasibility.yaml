@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+variables:
+  unmet_demand:
+    description: >-
+      `unmet_demand` — a source of any carrier at any node, at a high price,
+      so a model that cannot meet its demand still solves. Calliope builds
+      it under `config.ensure_feasibility`; here it is this file
+    dims: [nodes, carriers, timesteps]
+    where: count(carrier_in, over=techs) >= 1 OR count(carrier_out, over=techs) >= 1
+    bounds: { lower: 0 }
+    absence: zero
+  unused_supply:
+    description: "`unused_supply` — a sink of any carrier at any node, at a high price, the counterpart of `unmet_demand`"
+    dims: [nodes, carriers, timesteps]
+    where: count(carrier_in, over=techs) >= 1 OR count(carrier_out, over=techs) >= 1
+    bounds: { upper: 0 }
+    absence: zero
+
+expressions:
+  feasibility_carrier_flow: unmet_demand + unused_supply
+  unmet_demand_penalty:
+    description: "`$unmet_demand` of `min_cost_optimisation` — what unmet demand and unused supply cost"
+    expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes]) * timestep_weights) * bigM
+  unmet_sum:
+    description: "`unmet_sum` — net unmet demand; reported"
+    expression: unmet_demand + unused_supply
+
+given:
+  parameters:
+    carrier_in: { dims: [nodes, techs, carriers], dtype: bool }
+    carrier_out: { dims: [nodes, techs, carriers], dtype: bool }
+    timestep_weights: { dims: [timesteps] }
+    bigM: { dims: [] }
+  expressions:
+    carrier_flow: { dims: [nodes, carriers, timesteps], term: feasibility_carrier_flow }
+    penalty: { dims: [], term: unmet_demand_penalty }

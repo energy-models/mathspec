@@ -1,0 +1,74 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+parameters:
+  heat_to_power_ratio:
+    description: "`heat_to_power_ratio` — the heat a combined heat and power plant puts out per unit of electricity. Calliope's default is 1, and data prep fills it"
+    dims: [nodes, techs]
+
+expressions:
+  urban_electricity_out:
+    description: "`flow_out[carriers=electricity]`"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      electricity:
+        when: carriers == electricity
+        expression: flow_out
+    otherwise: 0
+  urban_heat_out:
+    description: "`flow_out[carriers=heat]`"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      heat:
+        when: carriers == heat
+        expression: flow_out
+    otherwise: 0
+  urban_electricity_out_inc_eff:
+    description: "`flow_out_inc_eff[carriers=electricity]`"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      electricity:
+        when: carriers == electricity
+        expression: flow_out_inc_eff
+    otherwise: 0
+
+given:
+  parameters:
+    base_tech: { dims: [techs], dtype: str }
+    include_storage: { dims: [nodes, techs], dtype: bool }
+  variables:
+    flow_out: { dims: [nodes, techs, carriers, timesteps] }
+  expressions:
+    flow_out_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+    flow_in_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+
+constraints:
+  link_chp_outputs:
+    description: "`link_chp_outputs` — the technology `chp` puts out heat in a fixed ratio to its electricity"
+    dims: [nodes, techs, timesteps]
+    where: techs == chp
+    expression: sum(urban_electricity_out, over=carriers) * heat_to_power_ratio == sum(urban_heat_out, over=carriers)
+  balance_conversion_chp:
+    description: >-
+      `balance_conversion` for the technology `chp` — it puts out, before
+      losses, as much electricity as it takes in fuel after them. The patch
+      keeps the base row off it
+    dims: [nodes, techs, timesteps]
+    where: base_tech == 'conversion' AND NOT include_storage AND techs == chp
+    expression: sum(urban_electricity_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)

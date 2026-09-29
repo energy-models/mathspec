@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+parameters:
+  capacity_factor_min:
+    description: "`capacity_factor_min` — the least capacity factor a technology reaches over the whole time"
+    dims: [nodes, techs]
+  capacity_factor_max:
+    description: "`capacity_factor_max` — the most capacity factor a technology reaches over the whole time; given only where set"
+    dims: [nodes, techs]
+  uptime_limit:
+    description: "`uptime_limit` — the most time steps a technology runs in, weighted; given only where set"
+    dims: [nodes, techs]
+  downtime_periods:
+    description: "`downtime_periods` — whether a technology is down for maintenance in a time step"
+    dims: [nodes, techs, timesteps]
+    dtype: bool
+
+expressions:
+  total_time:
+    description: "`$total_time` — the hours the modelled time steps stand for"
+    expression: sum(timestep_resolution * timestep_weights, over=timesteps)
+
+given:
+  parameters:
+    carrier_out: { dims: [nodes, techs, carriers], dtype: bool }
+    timestep_resolution: { dims: [timesteps] }
+    timestep_weights: { dims: [timesteps] }
+  variables:
+    flow_out: { dims: [nodes, techs, carriers, timesteps] }
+    flow_cap: { dims: [nodes, techs, carriers] }
+    operating_units: { dims: [nodes, techs, timesteps] }
+
+constraints:
+  annual_capacity_factor_min:
+    description: "`annual_capacity_factor_min` — a technology's outflow over the whole time is at least its least capacity factor"
+    dims: [nodes, techs, carriers]
+    where: carrier_out AND capacity_factor_min
+    expression: sum(flow_out * timestep_weights, over=timesteps) >= flow_cap * capacity_factor_min * total_time
+  annual_capacity_factor_max:
+    description: "`annual_capacity_factor_max` — a technology's outflow over the whole time is at most its most capacity factor"
+    dims: [nodes, techs, carriers]
+    where: carrier_out AND capacity_factor_max
+    expression: sum(flow_out * timestep_weights, over=timesteps) <= flow_cap * capacity_factor_max * total_time
+  downtime_period:
+    description: "`downtime_period` — a technology puts out nothing in a time step it is down"
+    dims: [nodes, techs, timesteps]
+    where: downtime_periods
+    expression: sum(flow_out, over=carriers) == 0
+  downtime_period_decision:
+    description: >-
+      `downtime_period_decision` — a unit-bought technology runs in at most
+      its limit of time steps. Calliope's `where: operating_units` over a
+      technology reads as the technology running in whole units at all
+    dims: [nodes, techs]
+    where: count(operating_units, over=timesteps) >= 1 AND uptime_limit
+    expression: sum(operating_units * timestep_weights, over=timesteps) <= uptime_limit

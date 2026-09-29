@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  costs:
+    description: Calliope's `costs` — cost classes, such as monetary and CO2
+  breakpoints:
+    description: Calliope's `breakpoints` — the corners of a piecewise-linear curve, in order
+    dtype: int
+
+parameters:
+  piecewise_cost_investment_x:
+    description: "`piecewise_cost_investment_x` — the flow capacity at each breakpoint"
+    dims: [techs, breakpoints]
+  piecewise_cost_investment_y:
+    description: "`piecewise_cost_investment_y` — the investment cost at each breakpoint"
+    dims: [techs, costs, breakpoints]
+
+variables:
+  piecewise_cost_investment:
+    description: "`piecewise_cost_investment` — an investment cost that grows more slowly the more capacity is built"
+    dims: [nodes, techs, carriers, costs]
+    where: count(piecewise_cost_investment_x, over=breakpoints) >= 1 AND count(piecewise_cost_investment_y, over=breakpoints) >= 1
+    bounds: { lower: 0 }
+    absence: zero
+  piecewise_flow_cap:
+    description: >-
+      the flow capacity, where the technology has a cost curve. A
+      `piecewise:` block takes no `where:`, so its link rows would pin
+      `flow_cap` to the curve at every technology; a link over this copy is
+      built only where the copy is
+    dims: [nodes, techs, carriers, costs]
+    where: count(piecewise_cost_investment_x, over=breakpoints) >= 1 AND count(piecewise_cost_investment_y, over=breakpoints) >= 1
+
+constraints:
+  piecewise_flow_cap_is_flow_cap:
+    description: the copy of the flow capacity the curve reads is the flow capacity
+    dims: [nodes, techs, carriers, costs]
+    where: piecewise_flow_cap
+    expression: piecewise_flow_cap == flow_cap
+
+piecewise:
+  sos2_piecewise_costs:
+    description: "`sos2_piecewise_costs` — the investment cost lies on the curve through the breakpoints, stated as an SOS2 set"
+    over: breakpoints
+    method: sos2
+    points: piecewise_cost_investment_x
+    links:
+      - [piecewise_flow_cap, piecewise_cost_investment_x]
+      - [piecewise_cost_investment, piecewise_cost_investment_y]
+
+expressions:
+  cost_investment_piecewise:
+    description: "`sum(piecewise_cost_investment, over=carriers)` — the term Calliope writes into `cost_investment`"
+    expression: sum(piecewise_cost_investment, over=carriers)
+
+given:
+  variables:
+    flow_cap: { dims: [nodes, techs, carriers] }
+  expressions:
+    cost_investment: { dims: [nodes, techs, costs], term: cost_investment_piecewise }

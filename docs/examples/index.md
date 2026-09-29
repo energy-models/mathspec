@@ -21,5 +21,7 @@ Every spec is a file under `examples/` in the repository.
 The PyPSA parity pages, from [PyPSA in one file](pypsa.md) on, are a proof of
 concept. They sit in the Development section, and
 [PyPSA in 24 files](pypsa/index.md) is the same spec composed from fragments.
+[Calliope in fragments](calliope/index.md) is the second: all of Calliope's
+math, its base merged from fragments, and its modes laid over as patches.
 
 [Typeset the math](../reference/typeset.md) prints your own.

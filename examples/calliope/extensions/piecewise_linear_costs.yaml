@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  costs:
+    description: Calliope's `costs` — cost classes, such as monetary and CO2
+  pieces:
+    description: Calliope's `pieces` — the lines a piecewise curve is the upper envelope of
+    dtype: int
+
+parameters:
+  cost_flow_cap_piecewise_slopes:
+    description: "`cost_flow_cap_piecewise_slopes` — the slope of each line of a convex investment cost curve"
+    dims: [nodes, techs, costs, pieces]
+  cost_flow_cap_piecewise_intercept:
+    description: "`cost_flow_cap_piecewise_intercept` — the intercept of each line of a convex investment cost curve"
+    dims: [nodes, techs, costs, pieces]
+
+variables:
+  piecewise_cost_investment:
+    description: "`piecewise_cost_investment` — an investment cost that grows faster the more capacity is built"
+    dims: [nodes, techs, costs]
+    where: >-
+      count(cost_flow_cap_piecewise_slopes, over=pieces) >= 1
+      AND count(cost_flow_cap_piecewise_intercept, over=pieces) >= 1 AND purchased_units
+    bounds: { lower: 0 }
+    absence: zero
+
+given:
+  variables:
+    flow_cap: { dims: [nodes, techs, carriers] }
+    purchased_units: { dims: [nodes, techs] }
+  expressions:
+    cost_investment: { dims: [nodes, techs, costs], term: piecewise_cost_investment_term }
+
+expressions:
+  piecewise_cost_investment_term:
+    description: "`+ piecewise_cost_investment` — the term Calliope writes into `cost_investment`, by restating it whole"
+    expression: piecewise_cost_investment
+
+constraints:
+  piecewise_costs:
+    description: "`piecewise_costs` — the investment cost is at least every line of the curve, so at least the curve"
+    dims: [nodes, techs, costs, pieces]
+    where: piecewise_cost_investment
+    expression: >-
+      piecewise_cost_investment >= sum(cost_flow_cap_piecewise_slopes * flow_cap, over=carriers)
+      + cost_flow_cap_piecewise_intercept * purchased_units

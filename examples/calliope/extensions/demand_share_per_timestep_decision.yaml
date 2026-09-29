@@ -1,0 +1,100 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+relations:
+  decide_demand_share:
+    description: >-
+      `decide_demand_share` — the demand technology whose inflow a technology
+      meets a share of. Calliope reads it with `select_from_lookup_arrays`,
+      which is a read through the relation
+    key: techs
+    values: { demand: techs }
+  demand_share_carrier:
+    description: >-
+      `demand_share_carrier` — the carrier a share of demand is counted in.
+      Calliope slices `flow_out` by it, which is a test of the pair
+    key: [techs, carriers]
+
+parameters:
+  demand_share_relaxation:
+    description: "`demand_share_relaxation` — how far the share may stray from the one decided, as a fraction"
+    dims: [nodes, techs]
+  demand_share_limit:
+    description: "`demand_share_limit` — the share of demand the technologies meet together; given only where set"
+    dims: [nodes]
+
+variables:
+  demand_share_per_timestep_decision:
+    description: "`demand_share_per_timestep_decision` — the share of demand a technology meets, the same in every time step"
+    dims: [nodes, techs]
+    where: decide_demand_share
+    bounds: { lower: 0 }
+    absence: zero
+
+expressions:
+  demand_share_flow_out:
+    description: "`flow_out[carriers=$carrier]` — a technology's outflow of the carrier its share is counted in"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      share_carrier:
+        when: demand_share_carrier
+        expression: flow_out
+    otherwise: 0
+  demand_share_sink:
+    description: "`select_from_lookup_arrays(sink_use_equals, techs=decide_demand_share)` — the demand a technology meets a share of"
+    expression: at(sink_use_equals, by=decide_demand_share, over=demand, into=techs)
+
+given:
+  parameters:
+    sink_use_equals: { dims: [nodes, techs, timesteps] }
+  variables:
+    flow_out: { dims: [nodes, techs, carriers, timesteps] }
+
+constraints:
+  demand_share_per_timestep_decision_main_min:
+    description: "`demand_share_per_timestep_decision_main_min` — a technology puts out at least its decided share of demand, less the relaxation"
+    dims: [nodes, techs, timesteps]
+    where: demand_share_per_timestep_decision
+    expression: >-
+      sum(demand_share_flow_out, over=carriers)
+      >= (1 - demand_share_relaxation) * demand_share_sink * demand_share_per_timestep_decision
+  demand_share_per_timestep_decision_main_max:
+    description: "`demand_share_per_timestep_decision_main_max` — a technology puts out at most its decided share of demand, plus the relaxation"
+    dims: [nodes, techs, timesteps]
+    where: demand_share_per_timestep_decision
+    expression: >-
+      sum(demand_share_flow_out, over=carriers)
+      <= (1 + demand_share_relaxation) * demand_share_sink * demand_share_per_timestep_decision
+  demand_share_per_timestep_decision_sum:
+    description: >-
+      `demand_share_per_timestep_decision_sum` — the decided shares at a node
+      add up to the limit. Calliope's `where: demand_share_per_timestep_decision`
+      over a node reads as any technology there deciding a share. Calliope
+      builds the row in every time step, and it is the same in each; a row
+      repeated along a dimension it does not read is refused, so it is one
+      row per node
+    dims: [nodes]
+    where: count(demand_share_per_timestep_decision, over=techs) >= 1 AND demand_share_limit
+    expression: sum(demand_share_per_timestep_decision, over=techs) == demand_share_limit
+
+assumptions:
+  demand_share_is_fraction:
+    description: Calliope's `demand_share_is_fraction` — the demand share limit is a fraction
+    holds: demand_share_limit >= 0 AND demand_share_limit <= 1
+    where: demand_share_limit

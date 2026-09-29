@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+  pieces:
+    description: Calliope's `pieces` — the lines a piecewise curve is the upper envelope of
+    dtype: int
+
+parameters:
+  flow_eff_piecewise_slopes:
+    description: "`flow_eff_piecewise_slopes` — the slope of each line of a convex inflow curve"
+    dims: [nodes, techs, pieces]
+  flow_eff_piecewise_intercept:
+    description: "`flow_eff_piecewise_intercept` — the intercept of each line of a convex inflow curve"
+    dims: [nodes, techs, pieces]
+
+given:
+  variables:
+    flow_out: { dims: [nodes, techs, carriers, timesteps] }
+    flow_in: { dims: [nodes, techs, carriers, timesteps] }
+    available_flow_cap: { dims: [nodes, techs, carriers, timesteps] }
+
+constraints:
+  piecewise_efficiency:
+    description: >-
+      `piecewise_efficiency` — inflow is at least every line of the curve of
+      outflow, so at least the curve. Calliope's `where: available_flow_cap`
+      over a technology reads as the technology having it for some carrier
+    dims: [nodes, techs, timesteps, pieces]
+    where: flow_eff_piecewise_slopes AND flow_eff_piecewise_intercept AND count(available_flow_cap, over=carriers) >= 1
+    expression: >-
+      sum(flow_in, over=carriers) >= flow_eff_piecewise_slopes * sum(flow_out, over=carriers)
+      + flow_eff_piecewise_intercept * sum(available_flow_cap, over=carriers)

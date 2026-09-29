@@ -1,0 +1,39 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+given:
+  parameters:
+    base_tech: { dims: [techs], dtype: str }
+    carrier_out: { dims: [nodes, techs, carriers], dtype: bool }
+    source_eff: { dims: [nodes, techs, timesteps] }
+  variables:
+    storage: { dims: [nodes, techs, timesteps] }
+    source_use: { dims: [nodes, techs, timesteps] }
+  expressions:
+    storage_previous_step: { dims: [nodes, techs, timesteps] }
+    flow_out_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+
+constraints:
+  balance_supply_with_storage:
+    description: >-
+      `balance_supply_with_storage` — a supply technology with a store puts
+      in what it takes from its source and draws out what it puts out
+    dims: [nodes, techs, carriers, timesteps]
+    where: carrier_out AND storage AND base_tech == 'supply'
+    expression: storage == storage_previous_step + source_use * source_eff - flow_out_inc_eff

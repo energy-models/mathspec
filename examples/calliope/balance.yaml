@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+given:
+  parameters:
+    carrier_in:
+      description: whether a technology consumes a carrier at a node
+      dims: [nodes, techs, carriers]
+      dtype: bool
+    carrier_out:
+      description: whether a technology produces a carrier at a node
+      dims: [nodes, techs, carriers]
+      dtype: bool
+
+expressions:
+  carrier_flow:
+    description: >-
+      what every technology and every other file puts into a node's carrier,
+      less what it takes out
+    dims: [nodes, carriers, timesteps]
+    empty: true
+
+constraints:
+  system_balance:
+    description: >-
+      `system_balance` — at every node, in every time step, a carrier's
+      production equals its consumption. Built where a technology at the
+      node produces or consumes the carrier
+    dims: [nodes, carriers, timesteps]
+    where: count(carrier_in, over=techs) >= 1 OR count(carrier_out, over=techs) >= 1
+    expression: carrier_flow == 0

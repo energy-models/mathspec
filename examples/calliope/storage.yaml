@@ -1,0 +1,168 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+  costs:
+    description: Calliope's `costs` — cost classes, such as monetary and CO2
+
+relations:
+  lookup_cluster_last_timestep:
+    description: >-
+      `lookup_cluster_last_timestep` — the last time step of the cluster a
+      time step stands for, at the first time step of each clustered day
+    key: timesteps
+    values: { last: timesteps }
+
+parameters:
+  storage_cap_min:
+    description: "`storage_cap_min` — least storage capacity. Calliope's default is 0, and data prep fills it"
+    dims: [nodes, techs]
+  storage_cap_max:
+    description: "`storage_cap_max` — most storage capacity. Calliope's default is `.inf`, and data prep fills it"
+    dims: [nodes, techs]
+  storage_discharge_depth:
+    description: "`storage_discharge_depth` — the least a store holds, as a share of its capacity"
+    dims: [nodes, techs, timesteps]
+  storage_initial:
+    description: "`storage_initial` — what a store holds at the start, as a share of its capacity; given only where set"
+    dims: [nodes, techs]
+  storage_loss:
+    description: "`storage_loss` — the share of what a store holds that it loses in an hour"
+    dims: [nodes, techs, timesteps]
+  cyclic_storage:
+    description: >-
+      `cyclic_storage` — whether a store ends where it starts. Calliope's
+      default is true, and data prep fills it
+    dims: [nodes, techs]
+    dtype: bool
+  cluster_first_timestep:
+    description: "`cluster_first_timestep` — whether a time step is the first of its clustered day"
+    dims: [timesteps]
+    dtype: bool
+  flow_cap_per_storage_cap_min:
+    description: "`flow_cap_per_storage_cap_min` — least flow capacity per unit of storage capacity; given only where set"
+    dims: [nodes, techs]
+  flow_cap_per_storage_cap_max:
+    description: "`flow_cap_per_storage_cap_max` — most flow capacity per unit of storage capacity; given only where set"
+    dims: [nodes, techs]
+  cost_storage_cap:
+    description: "`cost_storage_cap` — the cost of one unit of storage capacity"
+    dims: [nodes, techs, costs]
+
+variables:
+  storage_cap:
+    description: "`storage_cap` — the most a technology can store"
+    dims: [nodes, techs]
+    where: include_storage OR base_tech == 'storage'
+    bounds: { lower: storage_cap_min, upper: storage_cap_max }
+    absence: zero
+  storage:
+    description: "`storage` — what a technology holds at the end of a time step"
+    dims: [nodes, techs, timesteps]
+    where: include_storage OR base_tech == 'storage'
+    bounds: { lower: 0 }
+    absence: zero
+
+expressions:
+  storage_previous_step:
+    description: >-
+      `$storage_previous_step` — what a store carries into a time step:
+      its initial fill at the first step of a store that is not cyclic, what
+      is left of the last step of its clustered day at the first step of a
+      cluster, and what is left of the step before everywhere else
+    dims: [nodes, techs, timesteps]
+    cases:
+      initial:
+        when: position(timesteps) == 0 AND NOT cyclic_storage
+        expression: storage_initial * storage_cap
+      cluster_start:
+        when: cluster_first_timestep AND NOT (position(timesteps) == 0 AND NOT cyclic_storage)
+        expression: >-
+          (1 - storage_loss) ** at(timestep_resolution, by=lookup_cluster_last_timestep, over=last, into=timesteps)
+          * at(storage, by=lookup_cluster_last_timestep, over=last, into=timesteps)
+    otherwise: >-
+      (1 - storage_loss) ** shift(timestep_resolution, along=timesteps, offset=1, edge='wrap')
+      * shift(storage, along=timesteps, offset=1, edge='wrap')
+  cost_investment_storage_cap:
+    description: "`cost_investment_storage_cap` — the investment cost of storage capacity"
+    expression: cost_storage_cap * storage_cap
+
+given:
+  parameters:
+    base_tech: { dims: [techs], dtype: str }
+    include_storage: { dims: [nodes, techs], dtype: bool }
+    timestep_resolution: { dims: [timesteps] }
+  variables:
+    flow_cap: { dims: [nodes, techs, carriers] }
+  expressions:
+    flow_out_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+    flow_in_inc_eff: { dims: [nodes, techs, carriers, timesteps] }
+    cost_investment: { dims: [nodes, techs, costs], term: cost_investment_storage_cap }
+
+constraints:
+  flow_capacity_per_storage_capacity_min:
+    description: "`flow_capacity_per_storage_capacity_min` — flow capacity is at least its least share of storage capacity"
+    dims: [nodes, techs, carriers]
+    where: flow_cap AND storage_cap AND flow_cap_per_storage_cap_min
+    expression: flow_cap >= storage_cap * flow_cap_per_storage_cap_min
+  flow_capacity_per_storage_capacity_max:
+    description: "`flow_capacity_per_storage_capacity_max` — flow capacity is at most its most share of storage capacity"
+    dims: [nodes, techs, carriers]
+    where: flow_cap AND storage_cap AND flow_cap_per_storage_cap_max
+    expression: flow_cap <= storage_cap * flow_cap_per_storage_cap_max
+  storage_max:
+    description: "`storage_max` — a store holds at most its capacity"
+    dims: [nodes, techs, timesteps]
+    where: storage
+    expression: storage <= storage_cap
+  storage_discharge_depth_limit:
+    description: "`storage_discharge_depth_limit` — a store holds at least its depth of discharge"
+    dims: [nodes, techs, timesteps]
+    where: storage AND storage_discharge_depth
+    expression: storage - storage_discharge_depth * storage_cap >= 0
+  balance_storage:
+    description: >-
+      `balance_storage` — what a store holds at the end of a time step is
+      what it carried in, less what it put out before losses, plus what it
+      took in after them
+    dims: [nodes, techs, timesteps]
+    where: (include_storage OR base_tech == 'storage') AND NOT (base_tech == 'supply' OR base_tech == 'demand')
+    expression: >-
+      storage == storage_previous_step
+      - sum(flow_out_inc_eff, over=carriers) + sum(flow_in_inc_eff, over=carriers)
+  set_storage_initial:
+    description: >-
+      `set_storage_initial` — a cyclic store with an initial fill holds it
+      at the end, after the last step's loss. Calliope builds one row per
+      store and reads the last step; this builds that row at the last step
+    dims: [nodes, techs, timesteps]
+    where: position(timesteps) == -1 AND storage AND storage_initial AND cyclic_storage
+    expression: storage * (1 - storage_loss) ** timestep_resolution == storage_initial * storage_cap
+
+assumptions:
+  unbounded_storage_cap_cost:
+    description: Calliope's `unbounded_storage_cap_cost` — a negative storage capacity cost needs a finite maximum
+    holds: NOT cost_storage_cap < 0 OR storage_cap_max
+  storage_initial_max:
+    description: Calliope's `storage_initial_max` — the initial fill is a share
+    holds: storage_initial >= 0 AND storage_initial <= 1
+    where: storage_initial
+  cyclic_storage_needs_inter_cluster:
+    description: >-
+      Calliope's `cyclic_storage_needs_inter_cluster` — a cyclic store under
+      clustering needs the inter-cluster patch
+    holds: NOT (cyclic_storage AND lookup_cluster_last_timestep)

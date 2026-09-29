@@ -1,0 +1,85 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+relations:
+  demand_share_tech:
+    description: >-
+      `demand_share_tech` — the demand technology whose inflow a technology
+      meets a share of. Calliope slices `flow_in` by it; a read through the
+      relation is that slice
+    key: techs
+    values: { demand: techs }
+  supply_share_carrier:
+    description: >-
+      `supply_share_carrier` — the carrier a technology's share of outflow is
+      counted in. Calliope slices `flow_out` by it, which is a test of the
+      pair
+    key: [techs, carriers]
+
+parameters:
+  demand_share_per_timestep_equals:
+    description: "`demand_share_per_timestep_equals` — the share of a demand technology's inflow a technology meets in each time step; given only where set"
+    dims: [nodes, techs, timesteps]
+  supply_share_per_timestep_equals:
+    description: "`supply_share_per_timestep_equals` — the share of a node's outflow of a carrier a technology puts out in each time step; given only where set"
+    dims: [nodes, techs, timesteps]
+
+expressions:
+  supply_share_timestep_flow_out:
+    description: "`flow_out[carriers=$carrier]` — a technology's outflow of its share carrier"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      share_carrier:
+        when: supply_share_carrier
+        expression: flow_out
+    otherwise: 0
+  supply_share_timestep_all_flow_out:
+    description: "`sum(flow_out[carriers=$carrier], over=techs)` — every technology's outflow of a technology's share carrier"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      share_carrier:
+        when: supply_share_carrier
+        expression: sum(flow_out, over=techs)
+    otherwise: 0
+
+given:
+  variables:
+    flow_out: { dims: [nodes, techs, carriers, timesteps] }
+    flow_in: { dims: [nodes, techs, carriers, timesteps] }
+
+constraints:
+  demand_share_per_timestep_equals_per_tech:
+    description: "`demand_share_per_timestep_equals_per_tech` — a technology puts out its share of a demand technology's inflow in each time step"
+    dims: [nodes, techs, timesteps]
+    where: demand_share_per_timestep_equals
+    expression: >-
+      sum(flow_out, over=carriers)
+      == sum(at(flow_in, by=demand_share_tech, over=demand, into=techs), over=carriers)
+      * demand_share_per_timestep_equals
+  supply_share_per_timestep_equals_per_tech:
+    description: >-
+      `supply_share_per_timestep_equals_per_tech` — a technology puts out its
+      share of a node's outflow of a carrier in each time step. Calliope's
+      row keeps the carrier dimension of the slice; the slice here is summed
+      over the one carrier it keeps
+    dims: [nodes, techs, timesteps]
+    where: supply_share_per_timestep_equals
+    expression: >-
+      sum(supply_share_timestep_flow_out, over=carriers)
+      == sum(supply_share_timestep_all_flow_out, over=carriers) * supply_share_per_timestep_equals

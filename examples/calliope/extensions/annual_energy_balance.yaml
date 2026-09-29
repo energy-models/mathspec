@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+parameters:
+  annual_flow_max:
+    description: "`annual_flow_max` — the most a technology puts out over the whole time; given only where set"
+    dims: [techs]
+  annual_flow_max_group:
+    description: >-
+      `annual_flow_max` as the group row reads it — the most the group puts
+      out over the whole time. Calliope reads one parameter at three shapes
+      and lets the data choose; a parameter here has one, so the group's
+      limit is a number of its own
+    dims: []
+  annual_source_max:
+    description: "`annual_source_max` — the most a technology takes from its source over the whole time; given only where set"
+    dims: [techs]
+  annual_sink_max:
+    description: "`annual_sink_max` — the most a technology puts into its sink over the whole time; given only where set"
+    dims: [techs]
+  flow_max_group:
+    description: "`flow_max_group` — whether a technology is in the group the group limit holds for"
+    dims: [techs]
+    dtype: bool
+
+expressions:
+  flow_out_of_group:
+    description: "`flow_out[techs=$techs]` — outflow of the technologies in the group"
+    dims: [nodes, techs, carriers, timesteps]
+    cases:
+      in_group:
+        when: flow_max_group
+        expression: flow_out
+    otherwise: 0
+
+given:
+  parameters:
+    base_tech: { dims: [techs], dtype: str }
+  variables:
+    flow_out: { dims: [nodes, techs, carriers, timesteps] }
+    flow_in: { dims: [nodes, techs, carriers, timesteps] }
+    source_use: { dims: [nodes, techs, timesteps] }
+
+constraints:
+  annual_energy_balance_per_tech_and_node:
+    description: "`annual_energy_balance_per_tech_and_node` — a technology at a node puts out at most its annual limit"
+    dims: [nodes, techs]
+    where: annual_flow_max
+    expression: sum(flow_out, over=[carriers, timesteps]) <= annual_flow_max
+  annual_energy_balance_global_per_tech:
+    description: "`annual_energy_balance_global_per_tech` — a technology puts out at most its annual limit over every node"
+    dims: [techs]
+    where: annual_flow_max
+    expression: sum(flow_out, over=[nodes, carriers, timesteps]) <= annual_flow_max
+  annual_energy_balance_global_multi_tech:
+    description: "`annual_energy_balance_global_multi_tech` — the group of technologies puts out at most its annual limit over every node"
+    dims: []
+    where: annual_flow_max_group
+    expression: sum(flow_out_of_group) <= annual_flow_max_group
+  annual_energy_balance_total_source_availability:
+    description: >-
+      `annual_energy_balance_total_source_availability` — a technology takes
+      at most its annual limit from its source. Calliope's `where:
+      source_use` over a technology reads as the technology being a supply
+      one, which is where `source_use` is built
+    dims: [techs]
+    where: base_tech == 'supply' AND annual_source_max
+    expression: sum(source_use, over=[nodes, timesteps]) <= annual_source_max
+  annual_energy_balance_total_sink_availability:
+    description: "`annual_energy_balance_total_sink_availability` — a demand technology takes in at most its annual limit"
+    dims: [techs]
+    where: base_tech == 'demand' AND annual_sink_max
+    expression: sum(flow_in, over=[nodes, carriers, timesteps]) <= annual_sink_max

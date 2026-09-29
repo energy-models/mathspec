@@ -1,0 +1,95 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  costs:
+    description: Calliope's `costs` — cost classes, such as monetary and CO2
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+
+parameters:
+  cost_om_annual_investment_fraction:
+    description: "`cost_om_annual_investment_fraction` — the annual cost of operation, as a share of the investment cost"
+    dims: [nodes, techs, costs]
+  cost_depreciation_rate:
+    description: >-
+      `cost_depreciation_rate` — the share of the investment cost a year
+      carries; given only where set, and derived from the lifetime and the
+      interest rate elsewhere
+    dims: [nodes, techs, costs]
+  cost_interest_rate:
+    description: "`cost_interest_rate` — the interest rate an investment is annualised at"
+    dims: [nodes, techs, costs]
+  lifetime:
+    description: >-
+      `lifetime` — the years a technology lasts. Calliope's default is
+      `.inf`, and data prep fills it
+    dims: [nodes, techs]
+
+given:
+  parameters:
+    timestep_resolution: { dims: [timesteps] }
+    timestep_weights: { dims: [timesteps] }
+    objective_cost_weights: { dims: [costs] }
+  expressions:
+    system_cost: { dims: [], term: cost_of_techs }
+
+expressions:
+  cost_investment:
+    description: >-
+      `cost_investment` — the investment cost of a technology: flow, storage
+      and source capacity, and area use. Each file that builds a capacity
+      adds its own cost
+    dims: [nodes, techs, costs]
+    empty: true
+  cost_operation_variable:
+    description: >-
+      `cost_operation_variable` — the operating cost of a technology in a
+      time step. Each file that builds a flow adds its own cost
+    dims: [nodes, techs, costs, timesteps]
+    empty: true
+  cost_operation_fixed:
+    description: >-
+      `cost_operation_fixed` — the fixed annual operating cost of a
+      technology: its share of the investment cost here, and what each file
+      adds per unit of capacity
+    dims: [nodes, techs, costs]
+    expression: annualisation_weight * cost_investment * cost_om_annual_investment_fraction
+  annualisation_weight:
+    description: "`$annualisation_weight` — the share of a year the modelled time steps stand for"
+    expression: sum(timestep_resolution * timestep_weights, over=timesteps) / 8760
+  depreciation_rate:
+    description: >-
+      `$depreciation_rate` of `cost_investment_annualised` — the share of the
+      investment cost a year carries: as given, one over the lifetime with
+      no interest, and the annuity factor with some
+    dims: [nodes, techs, costs]
+    cases:
+      given:
+        when: cost_depreciation_rate
+        expression: cost_depreciation_rate
+      no_interest:
+        when: NOT cost_depreciation_rate AND (NOT cost_interest_rate OR cost_interest_rate == 0)
+        expression: 1 / lifetime
+    otherwise: >-
+      cost_interest_rate * (1 + cost_interest_rate) ** lifetime
+      / ((1 + cost_interest_rate) ** lifetime - 1)
+  cost_investment_annualised:
+    description: "`cost_investment_annualised` — the investment cost, as a year's share scaled to the modelled time"
+    expression: annualisation_weight * depreciation_rate * cost_investment
+  cost:
+    description: "`cost` — the total cost of a technology: investment, variable and fixed operation"
+    expression: cost_investment_annualised + sum(cost_operation_variable, over=timesteps) + cost_operation_fixed
+  cost_of_techs:
+    description: "`sum(sum(cost, over=[nodes, techs]) * objective_cost_weights, over=costs)` of `min_cost_optimisation`"
+    expression: sum(sum(cost, over=[nodes, techs]) * objective_cost_weights)

@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+  costs:
+    description: Calliope's `costs` — cost classes, such as monetary and CO2
+
+parameters:
+  timestep_resolution:
+    description: >-
+      `timestep_resolution` — hours a time step lasts. Calliope's default is
+      1, and data prep fills it
+    dims: [timesteps]
+  timestep_weights:
+    description: >-
+      `timestep_weights` — how many times a time step counts, as after
+      clustering. Calliope's default is 1, and data prep fills it
+    dims: [timesteps]
+  objective_cost_weights:
+    description: >-
+      `objective_cost_weights` — what one unit of a cost class weighs in the
+      objective. Calliope's default is 1, and data prep fills it
+    dims: [costs]
+  bigM:
+    description: >-
+      `bigM` — a number larger than any decision can take. Calliope's
+      default is 1e6, and data prep fills it
+    dims: []
+
+expressions:
+  system_cost:
+    description: >-
+      the weighted cost of the system, over every cost class — Calliope's
+      `min_cost_optimisation` less its unmet-demand penalty. The cost file and
+      every file that prices something outside a technology add to it
+    dims: []
+    empty: true
+  penalty:
+    description: >-
+      what the objective adds to the system cost to keep a model feasible —
+      Calliope's `$unmet_demand` sub-expression. It is zero, and a file that
+      keeps a model feasible adds to it
+    dims: []
+    expression: "0"
+
+objective:
+  description: >-
+    `min_cost_optimisation` — the weighted cost of installing and operating
+    every technology, plus the penalty on unmet demand
+  sense: minimize
+  expression: system_cost + penalty

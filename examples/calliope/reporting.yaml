@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: Calliope contributors
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from the math of Calliope v0.7.0, https://github.com/calliope-project/calliope,
+# and changed to mathspec's language. docs/examples/calliope/port.md records each change.
+
+dimensions:
+  nodes:
+    description: Calliope's `nodes` — the places technologies stand at
+  techs:
+    description: Calliope's `techs` — technologies
+  carriers:
+    description: Calliope's `carriers` — energy and commodity carriers
+  timesteps:
+    description: Calliope's `timesteps` — time steps, in order
+    dtype: datetime
+  costs:
+    description: Calliope's `costs` — cost classes, such as monetary and CO2
+
+given:
+  parameters:
+    timestep_resolution: { dims: [timesteps] }
+    timestep_weights: { dims: [timesteps] }
+  variables:
+    flow_cap: { dims: [nodes, techs, carriers] }
+    flow_out: { dims: [nodes, techs, carriers, timesteps] }
+    flow_export: { dims: [nodes, techs, carriers, timesteps] }
+  expressions:
+    cost: { dims: [nodes, techs, costs] }
+
+expressions:
+  capacity_factor:
+    description: "`capacity_factor` — the share of its flow capacity a technology puts out in a time step"
+    expression: flow_out / (flow_cap * timestep_resolution)
+  systemwide_capacity_factor:
+    description: "`systemwide_capacity_factor` — the share of its flow capacity a technology puts out over every node and time step"
+    expression: >-
+      sum(flow_out * timestep_weights, over=[nodes, timesteps])
+      / (sum(flow_cap, over=nodes) * sum(timestep_resolution * timestep_weights, over=timesteps))
+  total_generation:
+    description: >-
+      `total_generation` — outflow over every node and time step. Calliope
+      weights only the export, as written here
+    expression: sum(flow_out + flow_export * timestep_weights, over=[nodes, timesteps])
+  systemwide_levelised_cost:
+    description: "`systemwide_levelised_cost` — a technology's cost per unit of what it generates, over every node"
+    expression: sum(cost, over=nodes) / total_generation
+  total_levelised_cost:
+    description: "`total_levelised_cost` — the system's cost per unit of a carrier generated"
+    expression: sum(cost, over=[nodes, techs]) / sum(total_generation, over=techs)
