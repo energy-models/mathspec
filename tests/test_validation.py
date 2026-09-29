@@ -2085,7 +2085,7 @@ class TestADeclarationIsNamed:
             'expressions': {'expression': 'c'},
             'macros': {'args': ['x'], 'template': 'x * 2'},
             'constraints': {'dims': ['g'], 'expression': 'p <= c'},
-            'piecewise': {'over': 'g', 'links': [['p', 'c'], ['q', 'c']], 'method': 'convex'},
+            'piecewise': {'along': 'g', 'dims': [], 'links': {'p': ['p', 'c'], 'q': ['q', 'c']}, 'method': 'convex'},
             'sos': {'variable': 'p', 'along': 'g', 'type': 1},
         }
         model = copy.deepcopy(SMALL_MODEL)
@@ -2208,7 +2208,11 @@ def test_each_declaration_is_resolved_once_however_many_readers(monkeypatch):
                 'parameters.bp_x': {'dims': ['generator', 'bp']},
                 'parameters.bp_y': {'dims': ['generator', 'bp']},
                 'variables.op_cost': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}},
-                'piecewise.curve': {'over': 'bp', 'links': [['p', 'bp_x'], ['op_cost', 'bp_y']]},
+                'piecewise.curve': {
+                    'along': 'bp',
+                    'dims': ['snapshot', 'generator'],
+                    'links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']},
+                },
             },
         )
     )
@@ -2221,8 +2225,8 @@ def test_each_declaration_is_resolved_once_however_many_readers(monkeypatch):
         ('resolve_expression', "Named expression 'headroom', case 'opening'"),
         ('resolve_expression', "Named expression 'headroom', otherwise"),
         ('resolve_expression', 'The objective'),
-        ('resolve_expression', "piecewise 'curve' link 0"),
-        ('resolve_expression', "piecewise 'curve' link 1"),
+        ('resolve_expression', "piecewise 'curve' link 'op_cost'"),
+        ('resolve_expression', "piecewise 'curve' link 'p'"),
         ('resolve_where_text', "Assumption 'curve_complete'"),
         ('resolve_where_text', "Assumption 'curve_complete', where"),
         ('resolve_where_text', "Constraint 'balance'"),
@@ -2230,6 +2234,7 @@ def test_each_declaration_is_resolved_once_however_many_readers(monkeypatch):
         ('resolve_where_text', "Named expression 'headroom', case 'opening'"),
         ('resolve_where_text', "Variable 'op_cost'"),
         ('resolve_where_text', "Variable 'p'"),
+        ('resolve_where_text', "piecewise 'curve' where"),
     ], 'every expression and where position once, under the context validation reads it in, and nothing after'
 
 
