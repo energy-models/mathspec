@@ -13,6 +13,9 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(language): a term names the sum it adds to with `adds_to:`, and no file marks a sum as open ([#763](https://github.com/energy-models/mathspec/pull/763))
+- fix(language): dual(c) is the rate at which the optimal objective rises with the right side of c, so an equality has a sign too ([#751](https://github.com/energy-models/mathspec/pull/751))
+- fix(language): a macro formal written inside a list takes the name the call binds to it ([#779](https://github.com/energy-models/mathspec/pull/779))
+- feat(language): a sum names several dimensions in one over= list ([#778](https://github.com/energy-models/mathspec/pull/778))
 - feat(language): a divisor or a power over parameters may add, so a discount factor is written where it is used ([#757](https://github.com/energy-models/mathspec/pull/757))
 - docs(language): a reported quotient is absent where its divisor is zero, whether a solve or the data gave that zero ([#765](https://github.com/energy-models/mathspec/pull/765))
 - fix(language): a given declaration that leaves out its domain or dtype folds into an introducer that sets one ([#768](https://github.com/energy-models/mathspec/pull/768))
