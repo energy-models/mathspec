@@ -39,9 +39,9 @@ from mathspec.program import (
     PiecewiseDeclaration,
     Program,
     SosDeclaration,
-    Variable,
     VariableDeclaration,
     VariableDefined,
+    variables_of,
     walk,
 )
 from mathspec.resolution import (
@@ -56,6 +56,8 @@ from mathspec.spec import empty_sums
 from mathspec.validation import emitted_name_errors, reference_errors
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from mathspec.program import Expression
     from mathspec.spec import AssumptionBlock, Spec
 
@@ -144,13 +146,17 @@ def lower(schema: Spec) -> Program:
         if term is None:
             continue
         assert isinstance(term, Named), 'a term is a name, and a name resolves to the entry it names'
-        if any(isinstance(node, Variable) and node.name == gname for node in walk(term)):
-            errors.append(
-                f"{context}: its term {gdef.term!r} reads '{gname}', the sum the term adds to, so the sum would "
-                f'define itself. A term is what this file puts in: write it in what this file declares.'
-            )
-            continue
         terms[gname] = term
+    for gname, through in [(g, _loop(g, terms)) for g in terms]:
+        if through is None:
+            continue
+        via = f', through {" -> ".join(repr(name) for name in through)}' if through else ''
+        errors.append(
+            f"Given expression '{gname}': its term {schema.given.expressions[gname].term!r} reads '{gname}', the "
+            f'sum the term adds to{via}, so the sum would define itself. A term is what this file puts in: write '
+            f'it in what this file declares.'
+        )
+        del terms[gname]
 
     variables = {}
     for vname, vdef in schema.variables.items():
@@ -278,6 +284,26 @@ def lower(schema: Spec) -> Program:
         raise SchemaError('\n'.join(errors))
     check_schema(schema, program)
     return program
+
+
+def _loop(target: str, terms: Mapping[str, Named]) -> list[str] | None:
+    """The sums *target*'s term reads *target* through, by this file's terms, or ``None`` where it does not read it.
+
+    Terms that read each other's sums in one file define each sum by itself
+    whatever the other files add, so the file decides it alone. ``[]`` is a
+    term that reads its own sum.
+    """
+    seen = {target}
+    stack: list[tuple[str, list[str]]] = [(target, [])]
+    while stack:
+        name, path = stack.pop()
+        for read in sorted(variables_of(terms[name])):
+            if read == target:
+                return path
+            if read in terms and read not in seen:
+                seen.add(read)
+                stack.append((read, [*path, read]))
+    return None
 
 
 def _frame_of(name: str, entry: Named, schema: Spec) -> tuple[str, ...]:
