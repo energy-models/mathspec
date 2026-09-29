@@ -1,8 +1,8 @@
-# SPDX-FileCopyrightText: math-spec Contributors
+# SPDX-FileCopyrightText: mathspec Contributors
 #
 # SPDX-License-Identifier: MIT
 
-"""The shell front — `python -m math_spec <verb> model.yaml`.
+"""The shell front — `python -m mathspec <verb> spec.yaml`.
 
 `main` takes its argv and `parser` hands back the verbs, so none of this needs a
 subprocess or a scrape of help text.
@@ -17,8 +17,8 @@ from pathlib import Path
 
 import pytest
 
-import math_spec.__main__ as front
-from math_spec.typesetting import FORMATS
+import mathspec.__main__ as front
+from mathspec.typesetting import FORMATS
 from tests.fixtures import EXAMPLES
 from tests.typesetting import golden
 
@@ -39,14 +39,16 @@ def _verbs() -> dict[str, argparse.ArgumentParser]:
     raise AssertionError('the front registered no subcommands at all')
 
 
-def test_the_verbs_are_check_and_the_formats_and_nothing_else():
+def test_the_verbs_are_the_two_readers_and_the_formats_and_nothing_else():
     """The one claim the module makes about itself, in both directions.
 
     The typeset verbs are built by looping over `FORMATS`, so a new format
     arrives with its verb already written and there is no second list to
     forget. A verb hand-added here, or a format quietly dropped, breaks this.
+    `check` reads a model and reports, `canonical` reads one and writes it back
+    in the form two files that mean the same thing share; neither renders.
     """
-    assert set(_verbs()) == set(FORMATS) | {'check'}
+    assert set(_verbs()) == set(FORMATS) | {'check', 'canonical'}
 
 
 UNUSED_DIMENSION = """
@@ -114,7 +116,7 @@ def test_check_puts_advice_on_stdout_and_a_refusal_on_stderr(tmp_path, capsys, y
 
 def test_the_shell_front_costs_no_dependency():
     """It is stdlib argparse over `typeset`, and that is a decision: an optional
-    extra would stop `python -m math_spec latex` working on a bare install."""
+    extra would stop `python -m mathspec latex` working on a bare install."""
     tree = ast.parse(Path(front.__file__).read_text())
     roots = set()
     for node in ast.walk(tree):
@@ -123,7 +125,7 @@ def test_the_shell_front_costs_no_dependency():
         elif isinstance(node, ast.ImportFrom) and node.module:
             roots.add(node.module.split('.')[0])
 
-    assert roots <= sys.stdlib_module_names | {'math_spec'}, f'the shell front grew a dependency: {roots}'
+    assert roots <= sys.stdlib_module_names | {'mathspec'}, f'the shell front grew a dependency: {roots}'
 
 
 @pytest.mark.parametrize('fmt', sorted(FORMATS))

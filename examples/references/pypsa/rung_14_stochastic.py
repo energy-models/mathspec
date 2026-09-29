@@ -1,14 +1,12 @@
-# SPDX-FileCopyrightText: math-spec Contributors
+# SPDX-FileCopyrightText: mathspec Contributors
 #
 # SPDX-License-Identifier: MIT
 
-"""Rung 14: two futures and a risk preference — capacity chosen once, dispatch per scenario, stated by `pypsa_stochastic.yaml`."""
+"""Rung 14: two futures and a risk preference — capacity chosen once, dispatch per scenario."""
 
 from __future__ import annotations
 
 import spine
-
-MODEL = 'pypsa_stochastic.yaml'
 
 
 def build():

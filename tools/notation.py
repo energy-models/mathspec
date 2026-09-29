@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: math-spec Contributors
+# SPDX-FileCopyrightText: mathspec Contributors
 #
 # SPDX-License-Identifier: MIT
 
@@ -7,7 +7,7 @@
     pixi run python -m tools.notation           # rewrite the page's block
     pixi run python -m tools.notation --check   # fail if it has drifted
 
-The source is ``tests/typesetting/golden/model.yaml``, the one model that
+The source is ``tests/typesetting/golden/model.yaml``, the one spec that
 carries every construct — ``tests/typesetting/test_golden.py`` holds it to the
 language, and this tool emits a row for every declaration in it. The fixture's
 own case-label comments become the captions; :data:`FAMILIES` gives each row
@@ -19,9 +19,9 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from math_spec.model import PIECEWISE_METHODS
-from math_spec.typesetting import to_markdown
-from math_spec.validation import to_spec
+from mathspec.spec import PIECEWISE_METHODS
+from mathspec.typesetting import to_markdown
+from mathspec.validation import to_spec
 from tools._page import ROOT, sidecar_for, splice, without_header
 from tools._page import main as page_main
 
@@ -30,14 +30,14 @@ if TYPE_CHECKING:
 PAGE = ROOT / 'docs' / 'reference' / 'notation.md'
 MODEL = ROOT / 'tests' / 'typesetting' / 'golden' / 'model.yaml'
 
-#: One model per ``method:``, because the four restrict the weights four
+#: One spec per ``method:``, because the four restrict the weights four
 #: different ways and a section showing one of them would be showing a quarter
 #: of the construct. ``tests/test_docs.py`` holds these keys to
-#: :data:`math_spec.model.PIECEWISE_METHODS`, so a method added to the
+#: :data:`mathspec.spec.PIECEWISE_METHODS`, so a method added to the
 #: language arrives here or the page stops claiming to be all of them.
 #:
-#: They come from real models rather than from the fixture because a caption
-#: saying what a method is for reads against a model that had a reason to
+#: They come from real specs rather than from the fixture because a caption
+#: saying what a method is for reads against a spec that had a reason to
 #: choose it.
 PIECEWISE = {
     'adjacency': ('Adjacency method', ROOT / 'examples' / 'ports' / 'transport_pwl.yaml'),
@@ -102,8 +102,12 @@ FAMILIES: dict[str, dict[str, str]] = {
     },
     'Named expressions': {
         'budgeted': 'Plain expression in a constraint',
+        'netted': 'Signed sum substituted into a plus',
         'starts': 'Cased expression in a constraint',
+        'under_rating': 'Expression with a declared frame in a constraint',
         'spend': 'Plain named expression',
+        'rating': 'Named expression with a declared frame',
+        'net': 'Plain expression that is a signed sum',
         'startup_cost': 'Expression defined by cases',
         'spend_cap': 'Data-only expression',
         'capped': 'Named expression in a condition',
@@ -195,7 +199,7 @@ def _described(line: str, lines: list[str]) -> bool:
     """Whether *line* belongs to a ``description:`` — prose, not notation.
 
     A row is a construct beside its math, and a paragraph arguing for the
-    modelling choice is neither. The models the curve rows come from are real
+    modelling choice is neither. The specs the curve rows come from are real
     ones and carry long ones; the fixture carries none.
     """
     start = next((i for i, text in enumerate(lines) if text.strip().startswith('description:')), None)
@@ -263,7 +267,7 @@ def equations(rendered: str) -> dict[str, str]:
 
 
 def legend(rendered: str) -> str:
-    """The tables and the translation notes, without the model's description.
+    """The tables and the translation notes, without the spec's description.
 
     The description is the fixture's own — a line of escaping torture, there so
     CI's LaTeX run proves the escapes right — and it says nothing about
@@ -296,7 +300,7 @@ def block() -> str:
     parts = [
         '### Legend',
         'A dimension, a relation and a parameter declare no equation; what they '
-        'print is the legend every model opens with.',
+        'print is the legend every spec opens with.',
         f'```yaml\n{preamble(MODEL.read_text())}\n```',
         legend(rendered),
     ]
@@ -320,7 +324,7 @@ def block() -> str:
             parts.append(
                 'A curve prints as the curve it states, over the frame the block builds one per coordinate of, '
                 'and its expansion prints the rows that curve stands for. One row per `method:`, each from the '
-                "model named under it, so the symbols in this section are that model's."
+                "spec named under it, so the symbols in this section are that spec's."
             )
             parts += _curves()
             continue
@@ -345,7 +349,7 @@ def block() -> str:
 def _curves() -> list[str]:
     """One row per ``method:``, each captioned with what that method restricts.
 
-    Both readings come from one model and one symbol table: the block as the
+    Both readings come from one spec and one symbol table: the block as the
     file states it, and the rows ``expand('piecewise')`` writes out — which for
     ``sos2`` keeps the set and for ``adjacency`` is the binaries that set states.
     """

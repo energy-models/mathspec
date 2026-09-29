@@ -1,23 +1,102 @@
 <!--
-SPDX-FileCopyrightText: math-spec contributors
+SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
 # Changelog
 
-Written by [release-please](https://github.com/googleapis/release-please) from
-the conventional-commit subjects that land on `main` — see RELEASING.md. Do not
-write an entry by hand; the next release lands above whatever you put at the
-top. A released entry is never rewritten, so one that is wrong is corrected in
-place.
+Each pull request adds its line under `## Upcoming version`. A release pull
+request renames that heading to the version and the day, such as
+`## 0.1.0 (2026-10-01)`, and edits the section into the release notes. Merging
+it releases that version ([RELEASING.md](https://github.com/energy-models/mathspec/blob/main/RELEASING.md)).
 
-New releases are inserted directly below this paragraph, so nothing may sit
-between it and the first `##` heading. The Keep a Changelog skeleton that used
-to live here — a hand-maintained `## Unreleased` block, and a comment
-documenting the heading format — is what broke 0.0.0-alpha.1: that comment
-contained a literal `## [X.Y.Z]` heading, release-please inserts above the first
-`##` it finds, and so the entire release landed inside the comment and rendered
-nowhere.
+## Upcoming version
+
+- feat(language): a call names the columns of a relation as relation[column], so it reads one table ([#664](https://github.com/energy-models/mathspec/pull/664))
+- feat(program): a sum through a relation is a sum over the axes its join opens ([#662](https://github.com/energy-models/mathspec/pull/662))
+- fix(language): a where string names several columns in at's over= and into=, as an expression does ([#782](https://github.com/energy-models/mathspec/pull/782))
+- fix(language): a file whose terms read each other's sums is refused at load ([#780](https://github.com/energy-models/mathspec/pull/780))
+- fix(language): dual(c) is the rate at which the optimal objective rises with the right side of c, so an equality has a sign too ([#751](https://github.com/energy-models/mathspec/pull/751))
+- fix(language): a macro formal written inside a list takes the name the call binds to it ([#779](https://github.com/energy-models/mathspec/pull/779))
+- feat(language): a sum names several dimensions in one over= list ([#778](https://github.com/energy-models/mathspec/pull/778))
+- feat(language): a divisor or a power over parameters may add, so a discount factor is written where it is used ([#757](https://github.com/energy-models/mathspec/pull/757))
+- docs(language): a reported quotient is absent where its divisor is zero, whether a solve or the data gave that zero ([#765](https://github.com/energy-models/mathspec/pull/765))
+- fix(language): a given declaration that leaves out its domain or dtype folds into an introducer that sets one ([#768](https://github.com/energy-models/mathspec/pull/768))
+- fix(advice): an objective that reads a given expression or an empty sum gets advice rather than a KeyError ([#767](https://github.com/energy-models/mathspec/pull/767))
+- fix(typeset): a term a file adds to a sum keeps its definition line when the expressions are inlined ([#766](https://github.com/energy-models/mathspec/pull/766))
+- fix(language): merge and override take a list of files, and its order is the order of the terms and of the patches ([#761](https://github.com/energy-models/mathspec/pull/761))
+- docs: the composition how-to builds a component library from terms each file adds to a sum ([#762](https://github.com/energy-models/mathspec/pull/762))
+- docs(pypsa): a single spec covers every pypsa model class and component ([#620](https://github.com/energy-models/mathspec/pull/620))
+- docs(pypsa): the pypsa spec is also 24 topic files that merge back to it, each component adding its share of a sum by name ([#736](https://github.com/energy-models/mathspec/pull/736))
+- fix(typeset): a substituted term that opens with a minus prints as a subtraction ([#759](https://github.com/energy-models/mathspec/pull/759))
+- docs: a file restates a shared dimension as its dtype alone, and `merge` carries the one description written for it ([#743](https://github.com/energy-models/mathspec/pull/743))
+- feat(language): a sum other files add terms to is declared as an expression with `empty: true` ([#742](https://github.com/energy-models/mathspec/pull/742))
+- docs(notation): the notation page shows a named expression whose declared frame is wider than its body ([#756](https://github.com/energy-models/mathspec/pull/756))
+- feat(language): a named expression may declare the frame it is read over ([#741](https://github.com/energy-models/mathspec/pull/741))
+- docs: code examples on the site are readable in light and dark mode, and a diagram shows what mathspec leaves to engines and other tools ([#730](https://github.com/energy-models/mathspec/pull/730))
+- docs: the site follows the reader's light or dark setting, and a page shows where it sits in the navigation ([#727](https://github.com/energy-models/mathspec/pull/727))
+- feat(language): a spec is composed from files that each state part of it, and patched with files that each change part of it ([#732](https://github.com/energy-models/mathspec/pull/732))
+- refactor(language): a term prints as the definition it is, and one rule folds every reading ([#738](https://github.com/energy-models/mathspec/pull/738))
+- feat(language): two files that state the same spec write one text, and `canonical --check` fails a file that is not in it ([#731](https://github.com/energy-models/mathspec/pull/731))
+- fix(language): a merged spec's descriptions do not depend on the order the fragments are passed in, and a reader's fills one its owner left out ([#739](https://github.com/energy-models/mathspec/pull/739))
+- docs(pypsa): an efficiency, a rate or a phase shift may change from snapshot to snapshot ([#717](https://github.com/energy-models/mathspec/pull/717))
+
+## 0.2.0 (2026-09-25)
+
+A file now states a **specification**, or **spec**. A **model** is a spec with
+data attached, which an engine builds and a solver takes. mathspec holds specs
+only. The API, the messages and the docs use the two words in these senses
+([glossary](https://mathspec.readthedocs.io/en/latest/reference/glossary/)).
+
+This release breaks three things:
+
+- The first parameter of `to_spec`, `advice`, `typeset`, `typeset_declaration`,
+  `to_latex`, `to_typst` and `to_markdown` is `spec`, not `model`. A call that
+  passes `model=` by keyword fails. A positional call works as before.
+- The module `mathspec.model` is now `mathspec.spec`. `from mathspec import Spec`
+  works as before.
+- Error and advice messages say "spec" where they said "model". A test that
+  matches the old text fails.
+
+The pull requests in this release:
+
+- feat!: what a file states is called a spec, the functions that read one take it as spec, and model means a spec with data ([#721](https://github.com/energy-models/mathspec/pull/721))
+- docs: the README and the docs home page say that spec is short for specification ([#724](https://github.com/energy-models/mathspec/pull/724))
+- fix(docs): the Python API pages link every name a docstring cites, and show advice as the function it is ([#720](https://github.com/energy-models/mathspec/pull/720))
+
+## 0.1.0 (2026-09-25)
+
+🎉 mathspec is officially on PyPI!
+
+```bash
+pip install mathspec
+```
+
+## 0.1.0rc1 (2026-09-25)
+
+The release candidate for 0.1.0, the first release on PyPI:
+`pip install mathspec==0.1.0rc1`. The package installs, imports and runs as
+`mathspec` since 0.0.0-alpha.127
+([#702](https://github.com/energy-models/mathspec/pull/702)). The
+`0.0.0-alpha.N` releases below were tags and GitHub releases only.
+
+- docs: a page says how the package version and the language version of a model file relate ([#711](https://github.com/energy-models/mathspec/pull/711))
+- docs: the installation page and the PyPI project page say `pip install mathspec`, and the README's links resolve on PyPI ([#707](https://github.com/energy-models/mathspec/pull/707))
+- docs: every link to the documentation points at mathspec.readthedocs.io ([#706](https://github.com/energy-models/mathspec/pull/706))
+
+## [0.0.0-alpha.127](https://github.com/energy-models/mathspec/compare/v0.0.0-alpha.126...v0.0.0-alpha.127) (2026-09-25)
+
+
+### Refactoring
+
+* the package installs, imports and runs as mathspec, rather than math-spec and math_spec ([#702](https://github.com/energy-models/mathspec/issues/702)) ([f9151af](https://github.com/energy-models/mathspec/commit/f9151af9d5977f8288fb64a12779b61597f12371))
+
+## [0.0.0-alpha.126](https://github.com/energy-models/mathspec/compare/v0.0.0-alpha.125...v0.0.0-alpha.126) (2026-09-25)
+
+
+### Documentation
+
+* the site is built by zensical, and its API reference is the public surface rather than every module ([#568](https://github.com/energy-models/mathspec/issues/568)) ([64eb268](https://github.com/energy-models/mathspec/commit/64eb26894dcd5444f1cd65c7035abe4f5ccec252))
 
 ## [0.0.0-alpha.125](https://github.com/energy-models/mathspec/compare/v0.0.0-alpha.124...v0.0.0-alpha.125) (2026-09-25)
 

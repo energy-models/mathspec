@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: math-spec contributors
+SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
@@ -10,10 +10,10 @@ This page shows every construct of the language beside the math that
 prints, or which construct printed a symbol.
 
 Each section shows the YAML of one construct, then its equation. Most fragments
-come from one test model,
-[`tests/typesetting/golden/model.yaml`](https://github.com/energy-models/math-spec/blob/main/tests/typesetting/golden/model.yaml),
-which holds every construct and is not a sensible model. The curves come from
-the example models that their section names. What each operator does is on
+come from one test spec,
+[`tests/typesetting/golden/model.yaml`](https://github.com/energy-models/mathspec/blob/main/tests/typesetting/golden/model.yaml),
+which holds every construct and is not a sensible spec. The curves come from
+the example specs that their section names. What each operator does is on
 [Operators](language/operators.md).
 
 The symbols are **derived** from the names in the file, so you see
@@ -24,7 +24,7 @@ nothing else.
 <!-- notation:begin -->
 ### Legend
 
-A dimension, a relation and a parameter declare no equation; what they print is the legend every model opens with.
+A dimension, a relation and a parameter declare no equation; what they print is the legend every spec opens with.
 
 ```yaml
 dimensions:
@@ -123,11 +123,13 @@ parameters:
 |---|---|
 | $`\mathrm{spend}^{\mathrm{cap}}`$ | `spend_cap` over $`\mathcal{G}`$ |
 | $`\mathit{spend}`$ | `spend` over $`\mathcal{T}`$ — what a snapshot's dispatch costs |
+| $`\mathrm{rating}`$ | `rating` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{lcoe}`$ | `lcoe` (scalar) |
+| $`\mathit{net}`$ | `net` over $`\mathcal{T}`$ — what a snapshot spills, less what it lacks |
 | $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{T} \times \mathcal{B}`$ |
 | $`\mathrm{startup\_cost}`$ | `startup_cost` over $`\mathcal{T} \times \mathcal{G}`$ — what starting a unit in this snapshot costs, which the horizon's edge changes |
 
-Upright is what the model is given — a parameter such as $`\mathrm{p}^{\mathrm{max}}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`p`$. An index is italic too, being what a quantifier chooses, and a set is script.
+Upright is what the data supplies — a parameter such as $`\mathrm{p}^{\mathrm{max}}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`p`$. An index is italic too, being what a quantifier chooses, and a set is script.
 
 $`t \ominus k`$ denotes cyclic translation: index $`t-k`$ taken modulo the size of the dimension (`roll`). Plain $`t-k`$ (`shift`) has no wraparound — terms translated past the edge are simply absent.
 
@@ -630,6 +632,21 @@ constraints:
 \mathit{spend}_{t} \le \mathrm{budget} \qquad \forall\, t \in \mathcal{T}
 ```
 
+#### Signed sum substituted into a plus
+
+names the signed sum on the right of a plus: inlined, its minus prints as a subtraction
+
+```yaml
+constraints:
+  netted:
+    dims: [snapshot, bus]
+    expression: sum(p, over=generator, by=gen_bus[bus]) + net == load
+```
+
+```math
+\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{t,g} + \mathit{net}_{t} = \mathrm{load}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+```
+
 #### Cased expression in a constraint
 
 names the cased expression: its symbol prints here, its block once below
@@ -645,6 +662,21 @@ constraints:
 p_{t,g} \le \mathrm{startup\_cost}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
+#### Expression with a declared frame in a constraint
+
+names the expression with a declared frame: the row reads it at every snapshot, though its body has no snapshot
+
+```yaml
+constraints:
+  under_rating:
+    dims: [snapshot, generator]
+    expression: p <= rating
+```
+
+```math
+p_{t,g} \le \mathrm{rating}_{g,t} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
 #### Plain named expression
 
 a plain named expression: its symbol prints where it is used, its body once as a definition
@@ -657,6 +689,35 @@ expressions:
 
 ```math
 \mathit{spend}_{t} = \sum_{g \in \mathcal{G}} p_{t,g} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
+```
+
+#### Named expression with a declared frame
+
+a frame wider than the body, in an order of its own: the value is the same at every snapshot
+
+```yaml
+expressions:
+  rating:
+    dims: [generator, snapshot]
+    expression: eta * p_max
+```
+
+```math
+\mathrm{rating}_{g,t} = \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+#### Plain expression that is a signed sum
+
+a plain expression that opens with a minus
+
+```yaml
+expressions:
+  net:
+    expression: -spill + slack
+```
+
+```math
+\mathit{net}_{t} = -\mathit{spill}_{t} + \mathit{slack}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
 #### Expression defined by cases
@@ -920,7 +981,7 @@ constraints:
 
 ### Piecewise curves
 
-A curve prints as the curve it states, over the frame the block builds one per coordinate of, and its expansion prints the rows that curve stands for. One row per `method:`, each from the model named under it, so the symbols in this section are that model's.
+A curve prints as the curve it states, over the frame the block builds one per coordinate of, and its expansion prints the rows that curve stands for. One row per `method:`, each from the spec named under it, so the symbols in this section are that spec's.
 
 #### Adjacency method
 

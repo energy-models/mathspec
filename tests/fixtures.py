@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: math-spec Contributors
+# SPDX-FileCopyrightText: mathspec Contributors
 #
 # SPDX-License-Identifier: MIT
 
@@ -10,16 +10,16 @@ import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from math_spec import Spec
-from math_spec._expression_parser import ComparisonNode
-from math_spec._yaml import parse_yaml, read_yaml
-from math_spec.errors import SchemaError
-from math_spec.expansion import parse_and_expand
-from math_spec.resolution import Namespace, mask_of, resolve_expression, resolve_where_text
-from math_spec.validation import to_spec
+from mathspec import Spec
+from mathspec._expression_parser import ComparisonNode
+from mathspec._yaml import parse_yaml, read_yaml
+from mathspec.errors import SchemaError
+from mathspec.expansion import parse_and_expand
+from mathspec.resolution import Namespace, mask_of, resolve_expression, resolve_where_text
+from mathspec.validation import to_spec
 
 if TYPE_CHECKING:
-    from math_spec.program import Expression, Mask
+    from mathspec.program import Expression, Mask
 
 EXAMPLES = Path(__file__).resolve().parent.parent / 'examples'
 
@@ -28,7 +28,7 @@ EXAMPLES = Path(__file__).resolve().parent.parent / 'examples'
 OPERATOR_PROBES = sorted((EXAMPLES / 'operators').glob('*.yaml'))
 
 #: The shape of ``examples/dispatch.yaml`` as a dict a test can vary with
-#: :func:`override`: no ``where:``, the constraint named ``balance``, and short
+#: :func:`varied`: no ``where:``, the constraint named ``balance``, and short
 #: names, so a test that prints it asserts on the math rather than on the
 #: example's own vocabulary.
 DISPATCH_MODEL: dict[str, Any] = {
@@ -59,11 +59,30 @@ SMALL_MODEL: dict[str, Any] = {
     'variables': {'p': {'dims': ['g']}, 'q': {'dims': ['g', 'h']}, 'r': {'dims': ['h']}},
 }
 
+#: The frame a bus balance runs over, and the balance itself: a fragment that
+#: reads `injection` under `given:` and defines none of the injections.
+BUS_DIMS: dict[str, Any] = {'snapshot': {'dtype': 'int'}, 'bus': {'dtype': 'str'}}
+BUS_FRAME = ['snapshot', 'bus']
+INJECTION = 'what the components put into a bus'
+BALANCE: dict[str, Any] = {
+    'dimensions': BUS_DIMS,
+    'given': {'expressions': {'injection': {'dims': BUS_FRAME, 'description': INJECTION}}},
+    'constraints': {'balance': {'dims': BUS_FRAME, 'expression': 'injection == 0'}},
+}
 
-def override(base: dict[str, Any], **patch: Any) -> dict[str, Any]:
+#: The network: it declares `injection` as an empty sum, for the component
+#: fragments to add their terms to, and balances it.
+NETWORK: dict[str, Any] = {
+    'dimensions': BUS_DIMS,
+    'expressions': {'injection': {'dims': BUS_FRAME, 'empty': True, 'description': INJECTION}},
+    'constraints': {'balance': {'dims': BUS_FRAME, 'expression': 'injection == 0'}},
+}
+
+
+def varied(base: dict[str, Any], **patch: Any) -> dict[str, Any]:
     """A deep copy of ``base`` with dotted paths replaced, missing parents created.
 
-    ``override(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0'})``.
+    ``varied(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0'})``.
     """
     raw = copy.deepcopy(base)
     for dotted, value in patch.items():
@@ -76,12 +95,12 @@ def override(base: dict[str, Any], **patch: Any) -> dict[str, Any]:
 
 
 def schema_of(source: str | Path | dict[str, Any], **patch: Any) -> Spec:
-    """A ``Spec`` from a YAML path, YAML text, or a raw dict, ``**patch`` applied by :func:`override`.
+    """A ``Spec`` from a YAML path, YAML text, or a raw dict, ``**patch`` applied by :func:`varied`.
 
     ``Path`` means a file, ``str`` means the YAML itself.
     """
     raw = raw_of(source)
-    return to_spec(override(raw, **patch) if patch else raw)
+    return to_spec(varied(raw, **patch) if patch else raw)
 
 
 def expanded(source: str | Path | dict[str, Any] | Spec, *kinds: Any, **patch: Any) -> Spec:
