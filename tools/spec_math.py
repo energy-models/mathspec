@@ -29,6 +29,7 @@ BEGIN, END = '<!-- operator-math:begin -->', '<!-- operator-math:end -->'
 OPERATORS = {
     'sum(array)': 'sum_all',
     'sum(array, over=dim)': 'sum',
+    'sum(array, over=[a, …])': 'sum_list',
     'sum(array, by=relation, over=a, into=b)': 'sum_by',
     'sum(array, by=relation, over=a, into=b), joining on the rest of the key': 'sum_by_columns',
     'sum(array, by=relation, over=[a, …], into=[b, …])': 'sum_by_column_lists',

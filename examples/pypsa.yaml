@@ -542,8 +542,8 @@ parameters:
   CVaR_omega:
     description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation; zero recovers the risk-neutral model
     dims: []
-  CVaR_inv_tail:
-    description: PyPSA's `1 / (1 - alpha)` — the tail's own probability, inverted in data prep because a divisor is one factor
+  CVaR_alpha:
+    description: PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability
     dims: []
   period_weight_objective:
     description: PyPSA's `investment_period_weightings.objective` — what a period's cost weighs
@@ -3852,7 +3852,7 @@ constraints:
     description: "`CVaR-def` — the tail's average is at least where it starts plus the expected excess over the tail's probability"
     dims: []
     where: CVaR_omega > 0
-    expression: CVaR_theta + CVaR_inv_tail * sum(scenario_weight * CVaR_a, over=scenario) <= CVaR
+    expression: CVaR_theta + 1 / (1 - CVaR_alpha) * sum(scenario_weight * CVaR_a, over=scenario) <= CVaR
 
 assumptions:
   Generator_maintenance_events_positive:
