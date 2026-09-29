@@ -36,6 +36,8 @@ The [grammar](expressions.md#where-strings) says what a `where:` may hold.
 Nothing else creates absence. **A missing parameter row is not absence.** It
 reads as the value that contributes nothing: `0` as a coefficient, and `false`
 in a `where`.
+A missing row is the only gap a parameter has: a null or NaN value is
+[refused](declarations.md#parameters) when the data is attached.
 
 Where no such value exists, loading is refused. There are four such positions:
 a divisor, a `bounds:` entry, the whole constant side of a comparison, and a
