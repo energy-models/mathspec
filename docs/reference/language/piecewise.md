@@ -26,7 +26,7 @@ piecewise:
       fuel: [fuel, fuel_bp]
       heat: [heat, heat_bp]
     method: adjacency # how the weights are restricted — below
-    activity: null # optional: a binary variable that the weights sum to
+    activity: null # optional: a binary variable that the weights sum to, or a walk to one
 
   # a link may be bounded by the curve instead of pinned to it
   fuel_cap:
@@ -45,14 +45,14 @@ piecewise:
 | _sign_               | `<=` or `>=`. It bounds the link by the curve instead of pinning it to it. Any number of links may carry one, as long as at least one link does not ([below](#signs)) |
 | _by_, _over_, _into_ | A relation walk from the curve's `dims:` to the link's row ([below](#a-link-that-walks-a-relation))                                                                   |
 
-| Key        |                                                                                          |                     |
-| ---------- | ---------------------------------------------------------------------------------------- | ------------------- |
-| `along`    | required. The dimension each curve runs along                                            |                     |
-| `dims`     | required. The dimensions the block builds one curve per coordinate of ([below](#dims))   |                     |
-| `links`    | required. Two or more links, or one that walks a relation                                |                     |
-| `where`    | which coordinates have a curve, and how far each runs ([below](#where))                  | default `null`      |
-| `method`   | `adjacency`, `sos2`, `convex` or `lp`: how the weights are restricted ([below](#method)) | default `adjacency` |
-| `activity` | a binary variable that gates the curve ([below](#activity))                              | default `null`      |
+| Key        |                                                                                               |                     |
+| ---------- | --------------------------------------------------------------------------------------------- | ------------------- |
+| `along`    | required. The dimension each curve runs along                                                 |                     |
+| `dims`     | required. The dimensions the block builds one curve per coordinate of ([below](#dims))        |                     |
+| `links`    | required. Two or more links, or one that walks a relation                                     |                     |
+| `where`    | which coordinates have a curve, and how far each runs ([below](#where))                       | default `null`      |
+| `method`   | `adjacency`, `sos2`, `convex` or `lp`: how the weights are restricted ([below](#method))      | default `adjacency` |
+| `activity` | a binary variable that gates the curve, on `dims:` or through a relation ([below](#activity)) | default `null`      |
 
 A block states one weight per breakpoint in `[0, 1]`, a row making the weights
 sum to 1, and a row per link tying its expression to the weighted breakpoints.
@@ -84,9 +84,10 @@ period read off a curve that has none, is said by adding that dimension to
 vary along it is the data's business: values that do not carry it give one curve
 shape and a per-period operating point.
 
-An [`activity:`](#activity) gate carries no dimension that `dims:` does not. A
-gate over fewer dimensions switches every curve it covers: a gate per generator
-switches that generator's curve in every snapshot.
+An [`activity:`](#activity) gate carries no dimension that `dims:` does not,
+or [walks a relation](#a-gate-that-walks-a-relation) onto them. A gate over
+fewer dimensions switches every curve it covers: a gate per generator switches
+that generator's curve in every snapshot.
 
 ### `where`
 
@@ -167,6 +168,52 @@ variables:
 Where the gate does not exist, the curve is ungated. To pin the curve off
 there instead, put `absence: zero` on the gate. To build no curve there at all,
 use [`where:`](#where).
+
+#### A gate that walks a relation
+
+A gate whose binary is over another dimension reads it through a
+[relation](relations.md#how-a-relation-is-used), as [`at`](operators.md#at)
+does. Write the gate as a mapping with `variable:`, `by:`, `over:` and `into:`.
+Here the on/off binary is per status entity, and each converter's curve reads
+the status of its entity:
+
+```yaml
+dimensions:
+  converter: { dtype: str }
+  status_entity: { dtype: str }
+  snapshot: { dtype: int }
+  bp: { dtype: int }
+relations:
+  pw_status_of: { key: converter, values: status_entity }
+parameters:
+  bp_p: { dims: [converter, bp] }
+  bp_fuel: { dims: [converter, bp] }
+variables:
+  running: { dims: [status_entity, snapshot], domain: binary }
+  p: { dims: [converter, snapshot] }
+  fuel: { dims: [converter, snapshot] }
+piecewise:
+  curve:
+    along: bp
+    dims: [converter, snapshot]
+    links:
+      p: [p, bp_p]
+      fuel: [fuel, bp_fuel]
+    method: sos2
+    activity: { variable: running, by: pw_status_of, over: status_entity, into: converter }
+objective:
+  sense: minimize
+  expression: sum(fuel)
+```
+
+The weights of each curve sum to
+`at(running, by=pw_status_of, over=status_entity, into=converter)`. A converter
+with no row in `pw_status_of` has no status, and its curve is ungated. Under
+`absence: zero` on the gate, a converter whose entity is off the gate's mask is
+pinned off, and only a missing row ungates a curve.
+
+The walk is held to the rules of `at`. The gate lands on dimensions of `dims:`,
+and a gate that lands on another dimension is refused.
 
 ### A link that walks a relation
 

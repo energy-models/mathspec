@@ -26,9 +26,24 @@ from mathspec._expression_parser import NAME
 from mathspec._expression_resolver import ExpressionResolver
 from mathspec.dimensions import dims_of, pulled_back_dims
 from mathspec.errors import DimensionError
-from mathspec.program import Link, PiecewiseDeclaration, PiecewiseMethod, VariableDeclaration, carries_variable
-from mathspec.resolution import resolve_expression_text
-from mathspec.spec import AssumptionBlock, Curvature, PiecewiseBlock, PiecewiseLink, Spec, VariableBlock
+from mathspec.program import (
+    Gate,
+    Link,
+    PiecewiseDeclaration,
+    PiecewiseMethod,
+    VariableDeclaration,
+    carries_variable,
+)
+from mathspec.resolution import mask_of, resolve_expression_text, resolve_where_text
+from mathspec.spec import (
+    AssumptionBlock,
+    Curvature,
+    PiecewiseActivity,
+    PiecewiseBlock,
+    PiecewiseLink,
+    Spec,
+    VariableBlock,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -391,6 +406,22 @@ def leaves_ungated(gate: VariableBlock | VariableDeclaration | None) -> bool:
     return gate is not None and gate.where is not None and gate.absence != 'zero'
 
 
+def gate_text(activity: PiecewiseActivity, gate: VariableBlock | VariableDeclaration) -> tuple[str, str | None]:
+    """The gate as a convexity row reads it, and the where a curve reads it under, or ``None`` where every curve does.
+
+    A gate on the block's own dims is ungated where it does not exist, as
+    [`leaves_ungated`][] says. A walked gate is also ungated where the
+    relation has no row, so it always has a where: the read itself, whose
+    existence is false where either is missing, or, under ``absence: zero``,
+    the relation alone, since the variable then reads 0 off its mask.
+    """
+    if not activity.walks:
+        return activity.variable, activity.variable if leaves_ungated(gate) else None
+    assert activity.by is not None
+    read = f'at({activity.variable}, by={activity.by}, over={_columns(_named(activity.over))}, into={_columns(_named(activity.into))})'
+    return read, activity.by if gate.absence == 'zero' else read
+
+
 # ---------------------------------------------------------------------------
 # the block as lowering types it
 # ---------------------------------------------------------------------------
@@ -435,6 +466,29 @@ def resolve_walks(name: str, pw: PiecewiseBlock, ns: Namespace, errors: list[str
     return None if failed else walks
 
 
+def resolve_gate(
+    name: str, pw: PiecewiseBlock, declared: VariableDeclaration, ns: Namespace, errors: list[str]
+) -> Gate | None:
+    """Block *name*'s gate typed, *declared* being its variable as lowered, or ``None`` once it failed.
+
+    A walked gate is read as ``at`` reads it, so the walk is held to every
+    rule that call is held to, and refused on the gate the file wrote. Each
+    refusal is appended to *errors*.
+    """
+    assert pw.activity is not None
+    context = f"piecewise '{name}' activity"
+    read_text, exists_text = gate_text(pw.activity, declared)
+    read = resolve_expression_text(read_text, ns, context, errors, ceiling=1)
+    if read is None:
+        return None
+    if exists_text is None:
+        return Gate(pw.activity.variable, read)
+    if not pw.activity.walks:
+        return Gate(pw.activity.variable, read, declared.where)
+    exists = mask_of(resolve_where_text(exists_text, ns, context, errors))
+    return None if exists is None else Gate(pw.activity.variable, read, exists)
+
+
 def lp_domain_refusal(name: str, pw: PiecewiseBlock, links: tuple[Expression, ...]) -> str | None:
     """The refusal for a ``method: lp`` curve whose x-link carries no variable, or ``None``.
 
@@ -462,8 +516,9 @@ def declaration_of(
     links: tuple[Expression, ...],
     walks: dict[str, Direction],
     where: Mask | None,
+    gate: Gate | None,
 ) -> PiecewiseDeclaration:
-    """Block *name* as the program carries it, with *links*, *walks* and *where* typed, every fit rule decided.
+    """Block *name* as the program carries it, with *links*, *walks*, *where* and *gate* typed, every fit rule decided.
 
     A walk reads the curve's weights at the block's own dims, so it consumes
     dims of ``dims:``, joins on dims of ``dims:``, and produces dims of its
@@ -472,16 +527,19 @@ def declaration_of(
     varies along it and the breakpoint dim and nothing else, and the
     ``where:`` tests ``dims:`` and the breakpoint dim alone. A walked row
     reads the where through its relation when the mask carries a dim the
-    walk consumes. Decided here, on the link the file wrote, rather than on
+    walk consumes. A walked gate lands inside ``dims:``. Decided here, on the link the file wrote, rather than on
     the emitted declarations, whose refusal would name ``<block>_lam`` — a
     variable the author never wrote.
 
     Raises:
         DimensionError: A walk that does not fit ``dims:``, a link that does
-            not fit its row, a where outside ``dims:``, or a mask carrying
-            part of what a walk reads through.
+            not fit its row, a where outside ``dims:``, a mask carrying
+            part of what a walk reads through, or a walked gate landing
+            outside ``dims:``.
     """
     ctx = f"piecewise '{name}'"
+    if gate is not None and pw.activity is not None and pw.activity.walks:
+        _gate_fits(ctx, pw, dims_of(gate.read, schema, f'{ctx} activity'))
     for key, walk in walks.items():
         _walk_fits(f"{ctx} link '{key}'", pw, walk)
     rows = {key: _row(schema, pw, walks.get(key)) for key in pw.links}
@@ -506,8 +564,19 @@ def declaration_of(
         for node, (key, link) in zip(links, pw.links.items(), strict=True)
     )
     return PiecewiseDeclaration(
-        pw.along, typed, pw.method, tuple(pw.dims), where, activity=pw.activity, description=pw.description
+        pw.along, typed, pw.method, tuple(pw.dims), where, activity=gate, description=pw.description
     )
+
+
+def _gate_fits(ctx: str, block: PiecewiseBlock, landed: frozenset[str]) -> None:
+    """A walked gate lands on dims of ``dims:``: it switches the curve of one coordinate of them."""
+    if stray := sorted(landed - set(block.dims)):
+        assert block.activity is not None
+        raise DimensionError(
+            f"{ctx}: activity '{block.activity.variable}' read through '{block.activity.by}' lands on {stray}, "
+            f'which dims {block.dims} does not carry. The gate switches the curve of one coordinate of dims:, '
+            f'so it is read onto them — walk into a dimension of dims:, or add {stray} to dims:.'
+        )
 
 
 def _walk_fits(ctx: str, block: PiecewiseBlock, walk: Direction) -> None:
@@ -784,9 +853,10 @@ class _Block:
         activity = self.pw.activity
         if activity is None:
             return (('', None, '1'),)
-        if not leaves_ungated(self.schema.variables[activity]):
-            return (('', None, f'({activity})'),)
-        return (('', activity, f'({activity})'), (_UNGATED, f'NOT {activity}', '1'))
+        read, exists = gate_text(activity, self.schema.variables[activity.variable])
+        if exists is None:
+            return (('', None, f'({read})'),)
+        return (('', exists, f'({read})'), (_UNGATED, f'NOT {_operand(exists)}', '1'))
 
     def _segment_lines(self) -> None:
         """The segment-line form: a row per segment, and the two domain rows.

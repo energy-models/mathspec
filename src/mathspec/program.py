@@ -58,6 +58,7 @@ __all__ = [
     'ExpressionComparison',
     'ExpressionDeclaration',
     'Footprint',
+    'Gate',
     'GivenDeclaration',
     'GivenTargets',
     'GroupSum',
@@ -755,6 +756,24 @@ class Link:
 
 
 @dataclass(frozen=True)
+class Gate:
+    """The binary a ``piecewise:`` block's weights sum to, as each curve reads it.
+
+    ``read`` is the gate at one curve: the variable on the block's own frame,
+    or the variable read through a relation, as ``at`` reads it. ``exists``
+    is where a curve reads it, and the curve is ungated elsewhere, its weights
+    summing to 1; it is ``None`` where every curve reads the gate. A masked
+    variable exists only on its mask, and a relation has no row at some
+    coordinates, so both leave curves ungated; ``absence: zero`` reads the
+    variable as 0 off its mask instead, which pins those curves off.
+    """
+
+    variable: str
+    read: Expression
+    exists: Mask | None = None
+
+
+@dataclass(frozen=True)
 class PiecewiseDeclaration:
     """A ``piecewise:`` block as the curve it states, which [`expand`][mathspec.spec.Spec.expand] writes out as rows.
 
@@ -784,7 +803,7 @@ class PiecewiseDeclaration:
     method: PiecewiseMethod
     frame: tuple[str, ...]
     where: Mask | None = None
-    activity: str | None = None
+    activity: Gate | None = None
     description: str | None = None
 
     @property

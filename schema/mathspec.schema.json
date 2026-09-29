@@ -588,6 +588,76 @@
       "title": "ParameterBlock",
       "type": "object"
     },
+    "PiecewiseActivity": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "description": "A piecewise block's gate: the binary the weights sum to, on the block's own dims or read through a relation.\n\nWritten in YAML as the variable's name, and serialised back to it. A gate\nthat names ``by:``, ``over:`` and ``into:`` is written as a mapping, and\nreads the binary through the relation as ``at`` reads it, so a unit's\non/off variable over its own dimension switches the curves it maps to. A\ncurve whose coordinate has no row in the relation is ungated.",
+          "properties": {
+            "by": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "By"
+            },
+            "into": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Into"
+            },
+            "over": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Over"
+            },
+            "variable": {
+              "title": "Variable",
+              "type": "string"
+            }
+          },
+          "required": [
+            "variable"
+          ],
+          "title": "PiecewiseActivity",
+          "type": "object"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
     "PiecewiseBlock": {
       "additionalProperties": false,
       "description": "Expressions tied to one breakpoint-indexed piecewise curve per coordinate of ``dims:``.\n\nMirrors ``linopy.Spec.add_piecewise_formulation``. ``links:`` maps a name\nto ``[expression, values_parameter]`` or ``[expression, values_parameter,\nsign]``: *expression* is any affine expression string over ``dims:``,\n*values_parameter* names a parameter carrying ``along`` and no dim the\nlink's row lacks, and *sign* bounds the link by the curve instead of\npinning it. The name is the\nlink's row in the expansion, ``<block>_<link>``.\n\n``dims:`` alone decides how many curves the block builds: one set of\nweights per coordinate of it. ``where:`` says which of those coordinates\nhave a curve, and how far each runs along ``along`` where it reads that\ndim too; ``activity:`` whether a curve that exists is switched on. A link\nthat walks a relation builds a row per fine coordinate, each reading the\none curve its coarse coordinate has, so how many expressions a curve ties\nis data.",
@@ -595,14 +665,13 @@
         "activity": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/PiecewiseActivity"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Activity"
+          "default": null
         },
         "along": {
           "title": "Along",

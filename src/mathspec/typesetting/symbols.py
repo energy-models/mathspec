@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, cast
 
 from mathspec._yaml import read_yaml
 from mathspec.errors import SchemaError, did_you_mean
-from mathspec.piecewise import Emitted, leaves_ungated
+from mathspec.piecewise import Emitted
 from mathspec.program import Dual, Variable, walk
 from mathspec.sos import Emitted as EmittedSet
 from mathspec.typesetting.format import NOTATIONS
@@ -301,7 +301,7 @@ def _emitted(program: Program) -> set[str]:
     curves = (
         Emitted.of(name, curve).written(
             curve.method,
-            ungated=leaves_ungated(program.variables[curve.activity] if curve.activity is not None else None),
+            ungated=curve.activity is not None and curve.activity.exists is not None,
         )
         for name, curve in program.piecewise.items()
     )
