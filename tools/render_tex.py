@@ -35,6 +35,16 @@ def models() -> list[Path]:
     return sorted(path for path in found if not excluded.intersection(path.parents))
 
 
+def document_name(model: Path) -> str:
+    """The file name *model* renders to: its path under the repository, one part to a hyphen.
+
+    Two specs in different folders may share a stem, and one document each is
+    what the gate compiles.
+    """
+    parts = model.relative_to(ROOT).with_suffix('').parts
+    return '-'.join(parts[1:] if parts[0] == 'examples' else parts) + '.tex'
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) != 1:
@@ -50,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     for model in found:
-        args = ['latex', str(model), '--standalone', '-o', str(out / f'{model.stem}.tex')]
+        args = ['latex', str(model), '--standalone', '-o', str(out / document_name(model))]
         if symbols := sidecar_for(model):
             args += ['--symbols', str(symbols)]
         render(args)
