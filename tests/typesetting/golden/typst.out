@@ -3,7 +3,7 @@
 
 every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 {net} \~ ^ \\ \*star\* \@ref \<label\>, and `a_name` in backticks set in code
 
-A mixed-integer quadratic program (MIQP) whose convexity the data decides: the objective squares 'p' with a coefficient whose sign the file does not state --- an assumptions: entry bounding 'cost' on one side of zero decides it.
+A nonconvex mixed-integer quadratic program (MIQP): the objective squares 'p' with a positive coefficient, and every quadratic term is a square like it, so the curvature is the wrong way whatever the data.
 
 == Sets
 / $cal(T)$: index $t$ --- `snapshot` (`int` coordinates) with $upright("season_of"): cal(T) arrow.r cal(S), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("rep_of"): cal(T) arrow.r cal(T)$
@@ -164,6 +164,7 @@ $ upright("p") & upright("p")^(upright("min"))_(g) <= p_(t,g) & <= upright("p")^
 $ upright("bounds_do_not_cross") & upright("p")^(upright("min"))_(g) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G) \
   upright("efficiency_is_a_fraction") & upright("eta")_(g) > 0 and upright("eta")_(g) <= 1 &  & forall g in cal(G) \
   upright("lead_times_are_short") & upright("lead")_(g) & <= 3 & forall g in cal(G) \
+  upright("costs_are_positive") & upright("cost")_(g) & > 0 & forall g in cal(G) \
   upright("zones_agree") & upright("zone_of")(b) & = upright("area_of")(b) & forall b in cal(B) \
   upright("budget_covers_the_peak") & sum_(g in cal(G)) upright("p")^(upright("max"))_(g) & >= upright("budget") \
   upright("ramps_are_gentle") & upright("load")_(t,b) - upright("load")_(t minus.square_(0) 1,b) & <= upright("budget") & forall t in cal(T), b in cal(B) colon upright("pos")(t) > 0 \

@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from mathspec.boundedness import unbounded_notes
+from mathspec.convexity import convexity_notes
 from mathspec.errors import Advice
 from mathspec.program import GroupSum, Program, Pullback, walk
 from mathspec.validation import to_spec
@@ -37,14 +38,15 @@ def advice(spec: str | Path | Mapping[str, object] | Spec | Program) -> tuple[Ad
     Returns:
         The never-an-axis advice in declaration order, then one note per
         declaration the program reads and does not build, then the
-        unboundedness advice; ``str()`` of each is its sentence.
+        unboundedness advice, then the convexity advice; ``str()`` of each
+        is its sentence.
 
     Raises:
         LanguageError: *spec* does not load; [`to_spec`][] says why.
         FileNotFoundError: A ``str`` with no newline that names no file.
     """
     program = spec if isinstance(spec, Program) else to_spec(spec).program
-    return tuple(_never_an_axis(program) + _given(program) + unbounded_notes(program))
+    return tuple(_never_an_axis(program) + _given(program) + unbounded_notes(program) + convexity_notes(program))
 
 
 def _given(program: Program) -> list[Advice]:

@@ -1293,6 +1293,19 @@ assumptions:
 \mathrm{lead}_{g} \le 3 \qquad \forall\, g \in \mathcal{G}
 ```
 
+#### Sign of a parameter
+
+a sign, which proves the maximized square of p nonconvex rather than leaving it to the data
+
+```yaml
+assumptions:
+  costs_are_positive: "cost > 0"
+```
+
+```math
+\mathrm{cost}_{g} > 0 \qquad \forall\, g \in \mathcal{G}
+```
+
 #### Two relations compared
 
 two maps into one set, compared row by row

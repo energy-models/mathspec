@@ -7,7 +7,7 @@
 
 \noindent every character a notation escapes, set as text: link\_to, 100\% \& \#1 costs \$5 \{net\} \textasciitilde{} \textasciicircum{} \textbackslash{} *star* @ref <label>, and \texttt{a\_name} in backticks set in code
 
-\noindent A mixed-integer quadratic program (MIQP) whose convexity the data decides: the objective squares 'p' with a coefficient whose sign the file does not state --- an assumptions: entry bounding 'cost' on one side of zero decides it.
+\noindent A nonconvex mixed-integer quadratic program (MIQP): the objective squares 'p' with a positive coefficient, and every quadratic term is a square like it, so the curvature is the wrong way whatever the data.
 
 \paragraph{Sets}
 \begin{description}
@@ -180,6 +180,7 @@
 \text{bounds\_do\_not\_cross} && \mathrm{p}^{\mathrm{min}}_{g} & \le \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G} \\
 \text{efficiency\_is\_a\_fraction} && \mathrm{eta}_{g} > 0 \wedge \mathrm{eta}_{g} \le 1 &  && \forall\, g \in \mathcal{G} \\
 \text{lead\_times\_are\_short} && \mathrm{lead}_{g} & \le 3 && \forall\, g \in \mathcal{G} \\
+\text{costs\_are\_positive} && \mathrm{cost}_{g} & > 0 && \forall\, g \in \mathcal{G} \\
 \text{zones\_agree} && \mathrm{zone\_of}(b) & = \mathrm{area\_of}(b) && \forall\, b \in \mathcal{B} \\
 \text{budget\_covers\_the\_peak} && \sum_{g \in \mathcal{G}} \mathrm{p}^{\mathrm{max}}_{g} & \ge \mathrm{budget} \\
 \text{ramps\_are\_gentle} && \mathrm{load}_{t,b} - \mathrm{load}_{t \boxminus_{0} 1,b} & \le \mathrm{budget} && \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{pos}(t) > 0 \\

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 #: Which pass an [`Advice`][] comes from. Closed, like the operator set: a
 #: consumer filtering on it can enumerate every value.
-AdviceKind = Literal['never-an-axis', 'given', 'unbounded']
+AdviceKind = Literal['never-an-axis', 'given', 'unbounded', 'convexity']
 
 
 @dataclass(frozen=True)

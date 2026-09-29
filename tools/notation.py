@@ -138,6 +138,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         'bounds_do_not_cross': 'Two parameters compared',
         'efficiency_is_a_fraction': 'Connective in an assumption',
         'lead_times_are_short': 'Parameter compared to a literal',
+        'costs_are_positive': 'Sign of a parameter',
         'zones_agree': 'Two relations compared',
         'budget_covers_the_peak': 'Reduction in an assumption',
         'ramps_are_gentle': 'Shift in an assumption',
