@@ -286,7 +286,8 @@ constraints:
 
 Each file loads alone. `adds_to:` names a `given: expressions:` entry of the
 same file, and a name the file does not read there is refused with the near
-miss. The term does not read the name it adds to, directly or through another
+miss. A name the same file defines is refused too, since its body means what
+the file says: write the term into that body instead. The term does not read the name it adds to, directly or through another
 name. It carries no dimension the entry does not state, and it is held to
 degree two, as what reads the sum is. All of this is checked at load. The
 typeset legend lists the entry under _Given_ and names the term, and the math

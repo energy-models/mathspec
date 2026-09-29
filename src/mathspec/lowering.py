@@ -264,6 +264,13 @@ def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]
     reads the sum admits.
     """
     context = f"Named expression '{name}'"
+    if target in schema.expressions:
+        errors.append(
+            f'{context}: it adds to {target!r}, which this file defines. A body means what its file says, so a '
+            f"term fills only a name read under 'given: expressions:': write the term into the body of "
+            f'{target!r}, or read {target!r} there and add its body as a term of its own.'
+        )
+        return None
     if target not in schema.given.expressions:
         errors.append(
             f"{context}: it adds to {target!r}, which this file does not read under 'given: expressions:'. "

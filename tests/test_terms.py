@@ -148,7 +148,8 @@ def test_a_contributor_reads_the_name_as_the_whole_sum():
         ),
         pytest.param(
             {**_demand(target='total'), 'expressions': {**_demand(target='total')['expressions'], 'total': '-load'}},
-            r"it adds to 'total', which this file does not read under 'given: expressions:'",
+            r"it adds to 'total', which this file defines\. A body means what its file says, so a term fills only "
+            r"a name read under 'given: expressions:': write the term into the body of 'total'",
             id='a-target-this-file-defines',
         ),
         pytest.param(
