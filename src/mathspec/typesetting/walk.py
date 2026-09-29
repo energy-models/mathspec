@@ -728,13 +728,19 @@ class Walk:
 
         Inlining leaves a name standing only where substitution cannot reach
         it — a ``cases`` block, an entry the objective and constraints never
-        read, which is a quantity reported back rather than solved for, and a
-        sum with no body yet.
+        read, which is a quantity reported back rather than solved for, a term
+        this file adds to a sum, which the math reads only as that sum's
+        symbol, and a sum with no body yet.
         """
         entries = self.program.expressions
         if not self.inline_expressions:
             return [*entries, *self._empty()]
-        standing = [name for name, entry in entries.items() if isinstance(entry.expression, Cases) or not entry.in_math]
+        terms = {block.term.name for block in self.program.given.expressions.values() if block.term is not None}
+        standing = [
+            name
+            for name, entry in entries.items()
+            if isinstance(entry.expression, Cases) or not entry.in_math or name in terms
+        ]
         return [*standing, *self._empty()]
 
     def definition(self, name: str) -> Line:
