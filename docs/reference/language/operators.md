@@ -16,7 +16,7 @@ in a reported expression, are all of them. A composition of them goes in
 | `sum(array, over=dim)`                             | `dim` collapses. `array` must carry `dim`                                                                                                                         |
 | `sum(array, over=[a, …])`                          | Each dimension in the list collapses. `array` must carry each one, and the list names each one once                                                               |
 | `sum(array, by=relation, over=a, into=b)`              | Column `a` collapses onto column `b`. The other key columns are joined on, so the array carries them and the result keeps them                                    |
-| `sum(array, by=relation, over=[a, …], into=[b, …])`    | The same with several columns on either side: consumed together, landed on a product                                                                              |
+| `sum(array, by=relation, over=[a, …], into=[b, …])`    | The same with several columns on either side: joined on together, grouped by a product                                                                             |
 | `at(array, by=relation, over=a, into=b)`               | Column `a` is replaced by column `b`, one value per coordinate. Either may be a list                                                                               |
 | `shift(array, along=dim, offset=n)`                 | The value `n` positions earlier along `dim`. The vacated edge is **absent**                                                                                        |
 | `shift(array, along=dim, offset=n, edge='wrap')`    | The value `n` positions earlier, counted cyclically, so nothing is vacated                                                                                        |
@@ -67,9 +67,9 @@ What a call through a relation reads and carries is on
 
 ## `at`
 
-`at` reads one coarse value once for each fine label that points at it
-([reads](relations.md#aggregates-and-reads)). One decision per bus, read by
-every line that touches the bus, is
+`at` joins the relation with no group-by, so it reads one coarse value once for
+each fine label that points at it ([joins](relations.md#joins-and-group-bys)).
+One decision per bus, read by every line that touches the bus, is
 `at(decision, by=line_bus, over=bus, into=line)`.
 
 ## `sum_back`
