@@ -195,6 +195,21 @@ def test_a_contributor_reads_the_name_as_the_whole_sum():
             id='a-term-reading-the-sum-through-its-name',
         ),
         pytest.param(
+            {
+                **DEMAND,
+                'given': {
+                    'expressions': {
+                        'injection': {'dims': BUS_FRAME, 'term': 'demand_injection'},
+                        'withdrawal': {'dims': BUS_FRAME, 'term': 'demand_withdrawal'},
+                    }
+                },
+                'expressions': {'demand_injection': 'withdrawal - load', 'demand_withdrawal': 'injection + load'},
+            },
+            r"Given expression 'injection': its term 'demand_injection' reads 'injection', the sum the term adds "
+            r"to, through 'withdrawal'",
+            id='two-terms-reading-each-other-s-sum',
+        ),
+        pytest.param(
             _demand(term='-load'),
             r"Given expression 'injection': its term '-load' is no expression this file declares",
             id='a-term-written-inline',
@@ -219,6 +234,21 @@ def test_a_contributor_reads_the_name_as_the_whole_sum():
 def test_what_a_term_may_not_be_is_refused_at_load(spec, message):
     with pytest.raises(LanguageError, match=message):
         to_spec(spec)
+
+
+def test_a_term_may_read_another_sum_its_file_adds_to():
+    """A read of another sum makes no loop until that sum's term reads back."""
+    spec = {
+        **DEMAND,
+        'given': {
+            'expressions': {
+                'injection': {'dims': BUS_FRAME, 'term': 'demand_injection'},
+                'withdrawal': {'dims': BUS_FRAME, 'term': 'demand_withdrawal'},
+            }
+        },
+        'expressions': {'demand_injection': 'withdrawal - load', 'demand_withdrawal': 'load'},
+    }
+    assert to_spec(spec).program.given.expressions['injection'].term is not None
 
 
 def test_a_term_may_be_quadratic():
