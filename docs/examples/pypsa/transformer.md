@@ -184,10 +184,10 @@ expressions:
     otherwise: 0
   Transformer_injection:
     expression: >-
-      -sum(Transformer_s, by=Transformer_bus0, over=transformer, into=bus)
-      + sum(Transformer_s, by=Transformer_bus1, over=transformer, into=bus)
-      - (0.5 * sum(Transformer_loss, by=Transformer_bus0, over=transformer, into=bus))
-      - (0.5 * sum(Transformer_loss, by=Transformer_bus1, over=transformer, into=bus))
+      -sum(Transformer_s, over=transformer, by=Transformer_bus0[bus])
+      + sum(Transformer_s, over=transformer, by=Transformer_bus1[bus])
+      - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus0[bus]))
+      - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus1[bus]))
   Transformer_angle_sum:
     expression: >-
       sum(Transformer_s * Transformer_cycle_weight, over=transformer)

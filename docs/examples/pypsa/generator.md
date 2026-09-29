@@ -199,13 +199,13 @@ expressions:
     expression: sum(Generator_p_nom_ext * Generator_tech_capacity_weight, over=generator)
   Generator_opex:
     expression: >-
-      sum(sum(((Generator_p * Generator_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=generator), over=snapshot)
-      + sum(sum((((Generator_p * Generator_p) * Generator_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=generator), over=snapshot)
+      sum(sum(((Generator_p * Generator_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
+      + sum(sum((((Generator_p * Generator_p) * Generator_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
   Generator_additions:
     expression: >-
-      sum(Generator_p_nom_ext * Generator_first_active, by=Generator_carrier, over=generator, into=carrier)
+      sum(Generator_p_nom_ext * Generator_first_active, over=generator, by=Generator_carrier[carrier])
   Generator_injection:
-    expression: sum(Generator_sign * Generator_p, by=Generator_bus, over=generator, into=bus)
+    expression: sum(Generator_sign * Generator_p, over=generator, by=Generator_bus[bus])
 
 constraints:
   Generator_fix_p_lower:

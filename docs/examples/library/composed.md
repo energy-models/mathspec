@@ -78,16 +78,16 @@ variables:
 constraints:
   Bus_nodal_balance:
     dims: [snapshot, bus]
-    expression: sum(Port_p, by=Port_bus, over=port, into=bus) == 0
+    expression: sum(Port_p, over=port, by=Port_bus[bus]) == 0
     description: '`Bus-nodal_balance` — what the ports on a bus put in nets to nothing'
   Generator_injection:
     dims: [snapshot, generator]
-    expression: at(Port_p, by=Generator_port, over=port, into=generator) == Generator_p
+    expression: at(Port_p, by=Generator_port[port]) == Generator_p
     description: 'what a generator produces is what its port injects. No PyPSA row stands for this: PyPSA
       writes the generator into the balance instead'
   Load_withdrawal:
     dims: [snapshot, load]
-    expression: at(Port_p, by=Load_port, over=port, into=load) == -Load_p_set
+    expression: at(Port_p, by=Load_port[port]) == -Load_p_set
     description: 'what a load takes is what its port withdraws. No PyPSA row stands for this: PyPSA writes
       the load into the balance instead'
 objective: {sense: minimize, expression: sum(Generator_p * Generator_marginal_cost)}

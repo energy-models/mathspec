@@ -40,7 +40,7 @@ constraints:
   Bus_nodal_balance:
     description: "`Bus-nodal_balance` — what the ports on a bus put in nets to nothing"
     dims: [snapshot, bus]
-    expression: sum(Port_p, by=Port_bus, over=port, into=bus) == 0
+    expression: sum(Port_p, over=port, by=Port_bus[bus]) == 0
 ```
 
 The coupling surface every component in this library is written against: one flow per port, and one balance per bus. A component is wired to a port, the port to a bus, and the balance names no component class. A flow is positive where the port injects into its bus.

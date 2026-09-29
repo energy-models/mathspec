@@ -170,7 +170,7 @@ expressions:
     expression: sum(Line_s_nom_ext * Line_tech_capacity_weight, over=line)
   Line_additions:
     expression: >-
-      sum(Line_s_nom_ext * Line_first_active, by=Line_carrier, over=line, into=carrier)
+      sum(Line_s_nom_ext * Line_first_active, over=line, by=Line_carrier[carrier])
   Line_s_monitored:
     description: >-
       the flow a line's post-contingency rows read — its flow where it stands,
@@ -182,10 +182,10 @@ expressions:
     otherwise: 0
   Line_injection:
     expression: >-
-      -sum(Line_s, by=Line_bus0, over=line, into=bus)
-      + sum(Line_s, by=Line_bus1, over=line, into=bus)
-      - (0.5 * sum(Line_loss, by=Line_bus0, over=line, into=bus))
-      - (0.5 * sum(Line_loss, by=Line_bus1, over=line, into=bus))
+      -sum(Line_s, over=line, by=Line_bus0[bus])
+      + sum(Line_s, over=line, by=Line_bus1[bus])
+      - (0.5 * sum(Line_loss, over=line, by=Line_bus0[bus]))
+      - (0.5 * sum(Line_loss, over=line, by=Line_bus1[bus]))
   Line_angle_sum: sum(Line_s * Line_cycle_weight, over=line)
 
 constraints:

@@ -31,7 +31,7 @@ constraints:
       what a generator produces is what its port injects. No PyPSA row stands
       for this: PyPSA writes the generator into the balance instead
     dims: [snapshot, generator]
-    expression: at(Port_p, by=Generator_port, over=port, into=generator) == Generator_p
+    expression: at(Port_p, by=Generator_port[port]) == Generator_p
 objective:
   sense: minimize
   expression: sum(Generator_p * Generator_marginal_cost)

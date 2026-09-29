@@ -39,7 +39,7 @@ FLEET = {
     'given': {'expressions': {'injection': {'dims': BUS_FRAME, 'term': 'generator_injection'}}},
     'expressions': {
         'generator_injection': {
-            'expression': 'sum(gen_p, by=gen_bus, over=generator, into=bus)',
+            'expression': 'sum(gen_p, over=generator, by=gen_bus[bus])',
             'description': 'what the generators put in',
         }
     },
@@ -60,7 +60,7 @@ STORAGE = {
     'relations': {'store_bus': {'key': 'store', 'values': 'bus'}},
     'variables': {'store_p': {'dims': ['snapshot', 'store']}},
     'given': {'expressions': {'injection': {'dims': BUS_FRAME, 'term': 'store_injection'}}},
-    'expressions': {'store_injection': 'sum(store_p, by=store_bus, over=store, into=bus)'},
+    'expressions': {'store_injection': 'sum(store_p, over=store, by=store_bus[bus])'},
 }
 
 #: A network that defines the injection with a body of its own, its slack, and reads it.

@@ -58,7 +58,7 @@ expressions:
     cases:
       active: { when: Load_active, expression: Load_sign * Load_p_set }
     otherwise: 0
-  Load_injection: sum(Load_demand, by=Load_bus, over=load, into=bus)
+  Load_injection: sum(Load_demand, over=load, by=Load_bus[bus])
 ```
 
 #### Sets

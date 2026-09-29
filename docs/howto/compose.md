@@ -54,7 +54,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    variables:
      Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
    expressions:
-     Generator_injection: sum(Generator_p, by=Generator_bus, over=generator, into=bus)
+     Generator_injection: sum(Generator_p, over=generator, by=Generator_bus[bus])
    given:
      expressions:
        Bus_injection: { dims: [snapshot, bus], term: Generator_injection }
@@ -73,7 +73,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    parameters:
      Load_p_set: { dims: [snapshot, load] }
    expressions:
-     Load_injection: -sum(Load_p_set, by=Load_bus, over=load, into=bus)
+     Load_injection: -sum(Load_p_set, over=load, by=Load_bus[bus])
    given:
      expressions:
        Bus_injection: { dims: [snapshot, bus], term: Load_injection }
@@ -117,7 +117,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
        dims: [snapshot, store]
        expression: Store_e == shift(Store_e, along=snapshot, offset=1, edge='wrap') - Store_p
    expressions:
-     Store_injection: sum(Store_p, by=Store_bus, over=store, into=bus)
+     Store_injection: sum(Store_p, over=store, by=Store_bus[bus])
    given:
      expressions:
        Bus_injection: { dims: [snapshot, bus], term: Store_injection }
