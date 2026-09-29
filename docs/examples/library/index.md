@@ -11,6 +11,12 @@ against the surface, and [`merge`](../../howto/compose.md) makes the spec.
 Every file here loads and prints on its own, so the unit you pick from is the
 unit you can read.
 
+The components couple through one flow variable per port, `Port_p`, so the
+solved flow at every port can be read back. Where no one reads that flow, a
+sum that each component adds a term to needs no variable of its own.
+[Compose a spec from several files](../../howto/compose.md#a-library-of-components)
+shows that way.
+
 The names are PyPSA's, spelled `Component_attribute` as
 [the PyPSA rungs](../pypsa.md) spell them, and the math prints in the symbols
 those pages use. The spec is cut to dispatch: one build, no availability
@@ -58,7 +64,7 @@ It edits `Generator_p`, which `generator.yaml` introduces, and names
 `to_spec` refuses it on its own. It is laid over the composition:
 
 ```python
-ms.override(ms.merge(fragments), {'commitment': 'variants/commitment.yaml'})
+ms.override(ms.merge(fragments), ['variants/commitment.yaml'])
 ```
 
 The [composed spec](composed.md) carries the patch and the math it makes, in a

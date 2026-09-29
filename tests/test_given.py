@@ -147,7 +147,7 @@ def test_an_expression_reads_a_given_column_as_it_reads_any_other():
 
 
 def test_merging_folds_the_given_declaration_into_the_one_that_introduces_it():
-    spec = merge({'surface': SURFACE, 'supply': SUPPLY})
+    spec = merge([SURFACE, SUPPLY])
     assert not spec.given, 'the expectation is spent once the column is in the composition'
     assert sorted(spec.variables) == ['flow', 'gen_p']
     assert spec.variables['flow'].bounds.lower == -1000, "the introducer's declaration is the one that survives"
@@ -164,8 +164,35 @@ def test_merging_folds_the_given_declaration_into_the_one_that_introduces_it():
 )
 def test_a_given_declaration_may_say_less_than_the_introducer(reads):
     """Bounds are the introducer's, so the reader states the frame and stops."""
-    composed = merge({'surface': SURFACE, 'supply': {**SUPPLY, 'given': {'variables': {'flow': reads}}}})
+    composed = merge([SURFACE, {**SUPPLY, 'given': {'variables': {'flow': reads}}}])
     assert composed.variables['flow'].bounds.upper == 1000
+
+
+#: A unit count one file introduces as an integer column over an integer
+#: parameter, and another reads by its frame alone.
+UNITS = {
+    'dimensions': {'generator': {'dtype': 'str'}},
+    'parameters': {'units_max': {'dims': ['generator'], 'dtype': 'int'}},
+    'variables': {'units': {'dims': ['generator'], 'domain': 'integer', 'bounds': {'lower': 0, 'upper': 'units_max'}}},
+}
+READS_UNITS = {
+    'dimensions': {'generator': {'dtype': 'str'}},
+    'given': {'variables': {'units': {'dims': ['generator']}}, 'parameters': {'units_max': {'dims': ['generator']}}},
+    'constraints': {'at_least_one': {'dims': ['generator'], 'expression': 'units >= 1'}},
+}
+
+
+def test_a_reader_that_leaves_a_field_out_says_less_whatever_the_introducer_sets_it_to():
+    """The frame alone folded only where the introducer kept the default.
+
+    `merge` read each fragment back through `to_dict`, which writes every
+    default, so a reading with no `domain` claimed `continuous` and one with no
+    `dtype` claimed `float`, and both were refused against an integer
+    introducer as if they said something else.
+    """
+    composed = merge([UNITS, READS_UNITS])
+    assert composed.variables['units'].domain == 'integer', "the introducer's domain is the one that survives"
+    assert composed.parameters['units_max'].dtype == 'int', "the introducer's dtype is the one that survives"
 
 
 #: A fragment that reads `flow` over `port` alone, and loads so: it only
@@ -188,14 +215,14 @@ PORTS_ONLY = {
 )
 def test_a_given_declaration_that_disagrees_with_the_introducer_is_refused(misread):
     with pytest.raises(LanguageError, match=r'says the same as the declaration it is folded into, or less') as raised:
-        merge({'surface': SURFACE, 'supply': misread})
+        merge([SURFACE, misread])
     message = str(raised.value)
-    assert "'supply'" in message and "'surface'" in message, 'both sides of a disagreement are named'
+    assert "'#2'" in message and "'#1'" in message, 'both sides of a disagreement are named'
 
 
 def test_two_fragments_must_read_one_column_the_same_way():
     with pytest.raises(LanguageError, match=r'say different things about the given variable'):
-        merge({'supply': SUPPLY, 'other': PORTS_ONLY})
+        merge([SUPPLY, PORTS_ONLY])
 
 
 @pytest.mark.parametrize(
@@ -215,13 +242,13 @@ def test_two_fragments_must_read_one_column_the_same_way():
 )
 def test_a_fragment_that_reads_what_it_builds_is_refused(given, says):
     """`to_spec` refuses such a file, so a composition refuses it too rather than folding the reading away."""
-    with pytest.raises(LanguageError, match=r"fragment 'supply' does not load on its own") as raised:
-        merge({'surface': SURFACE, 'supply': {**SUPPLY, 'given': given}})
+    with pytest.raises(LanguageError, match=r"fragment '#2' does not load on its own") as raised:
+        merge([SURFACE, {**SUPPLY, 'given': given}])
     assert says in str(raised.value), "the fragment's own refusal names the name it reads twice"
 
 
 def test_a_given_declaration_nothing_introduces_stays_for_a_consumer_to_bind():
-    composed = merge({'supply': SUPPLY, 'other': {'dimensions': {'snapshot': {'dtype': 'int'}}}})
+    composed = merge([SUPPLY, {'dimensions': {'snapshot': {'dtype': 'int'}}}])
     assert composed.given.variables['flow'].dims == ['snapshot', 'port'], 'a name nothing introduces is still read'
     assert sorted(composed.program.given.variables) == ['flow']
 
@@ -301,7 +328,7 @@ def test_merging_folds_a_row_family_into_the_file_that_builds_it():
         'variables': {'p': {'dims': ['snapshot', 'bus'], 'bounds': {'lower': 0}}},
         'constraints': {'balance': {'dims': ['snapshot', 'bus'], 'expression': 'p >= 0'}},
     }
-    composed = merge({'builder': builder, 'layer': LAYER})
+    composed = merge([builder, LAYER])
     assert not composed.given
     program = composed.program
     assert sorted(program.constraints) == ['balance', 'cap']
@@ -415,7 +442,7 @@ FLEET = {
 
 
 def test_merging_folds_a_given_parameter_into_the_declaration():
-    composed = merge({'fleet': FLEET, 'cost': PRICED})
+    composed = merge([FLEET, PRICED])
     assert not composed.given, 'every reading is spent once the fleet is in the composition'
     assert sorted(composed.parameters) == ['gen_cost', 'gen_on', 'gen_p_max', 'weight']
 
@@ -430,11 +457,11 @@ def test_merging_folds_a_given_parameter_into_the_declaration():
 def test_a_given_parameter_that_disagrees_with_the_declaration_is_refused(misread):
     cost = {**PRICED, 'given': {**PRICED['given'], 'parameters': {**PRICED['given']['parameters'], 'gen_on': misread}}}
     with pytest.raises(LanguageError, match=r"reads the given parameter 'gen_on' as"):
-        merge({'fleet': FLEET, 'cost': cost})
+        merge([FLEET, cost])
 
 
 def test_a_given_parameter_nothing_declares_stays_for_the_data_to_bind():
-    composed = merge({'cost': PRICED, 'other': {'dimensions': {'snapshot': {'dtype': 'int'}}}})
+    composed = merge([PRICED, {'dimensions': {'snapshot': {'dtype': 'int'}}}])
     assert sorted(composed.program.given.parameters) == ['gen_cost', 'gen_on']
 
 
@@ -495,7 +522,7 @@ def test_an_expression_both_defined_and_given_in_one_file_is_refused():
 
 
 def test_merging_folds_a_given_expression_into_its_definition():
-    composed = merge({'balance': BALANCE, 'injector': INJECTOR})
+    composed = merge([BALANCE, INJECTOR])
     assert not composed.given
     assert composed.constraints['balance'].expression == 'injection == 0'
     assert composed.program.expressions['injection'].in_math, 'the balance reads the definition once folded'
@@ -507,9 +534,9 @@ def test_a_definition_over_a_dimension_the_reader_does_not_state_is_refused():
     narrow = {**narrow, 'constraints': {'balance': {'dims': ['bus'], 'expression': 'injection == 0'}}}
     with pytest.raises(
         LanguageError,
-        match=r"'balance' reads the given expression 'injection' as .*'injector' introduces it over \['bus', 'snapshot'\]",
+        match=r"'#1' reads the given expression 'injection' as .*'#2' introduces it over \['bus', 'snapshot'\]",
     ):
-        merge({'balance': narrow, 'injector': INJECTOR})
+        merge([narrow, INJECTOR])
 
 
 #: An injector whose output does not vary by snapshot: its injection is over `bus` alone.
@@ -529,14 +556,14 @@ def test_a_definition_over_fewer_dimensions_merges_where_the_row_carries_the_res
         'parameters': {'demand': {'dims': ['snapshot', 'bus']}},
         'constraints': {'balance': {'dims': ['snapshot', 'bus'], 'expression': 'injection == demand'}},
     }
-    composed = merge({'balance': demand, 'injector': FLAT_INJECTOR})
+    composed = merge([demand, FLAT_INJECTOR])
     assert composed.program.expressions['injection'].dims == ('bus',)
 
 
 def test_the_composed_load_refuses_a_row_a_narrower_definition_repeats():
     """With nothing else carrying `snapshot`, the row would repeat per snapshot, which the composed spec refuses."""
     with pytest.raises(LanguageError, match='repeated across'):
-        merge({'balance': BALANCE, 'injector': FLAT_INJECTOR})
+        merge([BALANCE, FLAT_INJECTOR])
 
 
 def test_a_given_expression_a_sibling_introduces_as_a_variable_is_refused():
@@ -547,9 +574,9 @@ def test_a_given_expression_a_sibling_introduces_as_a_variable_is_refused():
     }
     with pytest.raises(
         LanguageError,
-        match=r"reads 'injection' as a given expression, where 'injector' introduces it under 'variables:'",
+        match=r"reads 'injection' as a given expression, where '#2' introduces it under 'variables:'",
     ):
-        merge({'balance': BALANCE, 'injector': as_column})
+        merge([BALANCE, as_column])
 
 
 def test_the_composed_model_holds_a_definition_to_the_rules_of_where_it_is_read():
@@ -564,7 +591,7 @@ def test_the_composed_model_holds_a_definition_to_the_rules_of_where_it_is_read(
     }
     assert to_spec(squares) and to_spec(squared), 'each file loads on its own'
     with pytest.raises(LanguageError, match='degree'):
-        merge({'balance': squares, 'injector': squared})
+        merge([squares, squared])
 
 
 def test_the_advice_names_a_given_expression():

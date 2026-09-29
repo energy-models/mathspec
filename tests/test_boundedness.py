@@ -119,6 +119,14 @@ def test_a_named_constant_coefficient_carries_its_sign(objective, side):
             {'objective.expression': '-sum(v, over=g)', 'variables.v.bounds': {'upper': 10}},
             id='bounded-on-the-improving-side-running-up',
         ),
+        pytest.param(
+            {'given': {'expressions': {'e': {'dims': ['g']}}}, 'objective.expression': 'sum(e, over=g)'},
+            id='a-given-expression-is-bounded-by-whoever-defines-it',
+        ),
+        pytest.param(
+            {'expressions.e': {'dims': ['g'], 'empty': True}, 'objective.expression': 'sum(e, over=g)'},
+            id='an-empty-sum-is-bounded-by-its-terms',
+        ),
     ],
 )
 def test_nothing_is_claimed_where_the_file_does_not_decide_it(patch):
