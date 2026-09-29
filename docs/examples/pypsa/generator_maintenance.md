@@ -231,6 +231,8 @@ assumptions:
       (`constraints.py:500-503`)
 ```
 
+A mixed-integer linear program (MILP).
+
 #### Sets
 
 | Symbol | Meaning |

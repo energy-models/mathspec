@@ -139,6 +139,8 @@ assumptions:
       more than one scenario
 ```
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

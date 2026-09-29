@@ -148,6 +148,8 @@ expressions:
       times the chosen build of the row's branches
 ```
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

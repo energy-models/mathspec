@@ -270,6 +270,8 @@ constraints:
     expression: Process_shut_down <= Process_n_mod
 ```
 
+A mixed-integer linear program (MILP).
+
 #### Sets
 
 | Symbol | Meaning |

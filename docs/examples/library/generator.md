@@ -63,6 +63,8 @@ objective:
 
 PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to what a dispatch spec needs: a fixed build, no availability profile, no ramp limits.
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

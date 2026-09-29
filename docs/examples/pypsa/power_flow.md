@@ -39,6 +39,8 @@ constraints:
     expression: Cycle_angle_sum == 0
 ```
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

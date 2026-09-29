@@ -61,6 +61,8 @@ expressions:
   Load_injection: sum(Load_demand, by=Load_bus, over=load, into=bus)
 ```
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

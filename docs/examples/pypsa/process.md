@@ -295,6 +295,8 @@ objective:
     sum(((scenario_weight * Process_p_nom_ext) * Process_capital_cost) * Process_capital_weight)
 ```
 
+A mixed-integer linear program (MILP).
+
 #### Sets
 
 | Symbol | Meaning |

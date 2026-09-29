@@ -280,6 +280,8 @@ objective:
     sum(((scenario_weight * Generator_p_nom_ext) * Generator_capital_cost) * Generator_capital_weight)
 ```
 
+A mixed-integer linear program (MILP).
+
 #### Sets
 
 | Symbol | Meaning |

@@ -44,6 +44,8 @@ constraints:
     expression: Bus_injection == 0
 ```
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

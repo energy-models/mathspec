@@ -365,6 +365,8 @@ objective:
     sum(((scenario_weight * Store_e_nom_ext) * Store_capital_cost) * Store_capital_weight)
 ```
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

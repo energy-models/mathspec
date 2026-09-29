@@ -270,6 +270,8 @@ constraints:
     expression: Generator_shut_down <= Generator_n_mod
 ```
 
+A mixed-integer linear program (MILP).
+
 #### Sets
 
 | Symbol | Meaning |

@@ -164,6 +164,8 @@ constraints:
     expression: Transformer_s_monitored + Transformer_BODF * Outage_s <= Transformer_s_max_pu * Transformer_s_nom_ext
 ```
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

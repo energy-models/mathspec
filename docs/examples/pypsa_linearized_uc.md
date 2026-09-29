@@ -322,6 +322,8 @@ def build():
 <!-- gallery:begin -->
 The relaxed class of a plain `n.optimize()`: `linearized_unit_commitment`, stated on rung 1's transport surface in a file of its own. The status, its starts and its stops are shares in \[0, 1\] rather than binaries — a domain is the spec's, not the data's — and four rows PyPSA adds only under the keyword tighten the relaxation where a unit's start and stop cost the same. The surface is generators, links and loads with a fixed build, in one scenario, every asset active in every snapshot, and only a generator committable. `examples/pypsa.yaml` stays the integer one, and states the rest: a committable link or process, an extendable build, scenarios and `active`.
 
+A mixed-integer linear program (MILP).
+
 #### Sets
 
 | Symbol | Meaning |

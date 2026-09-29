@@ -323,6 +323,8 @@ objective:
     sum(((scenario_weight * Link_p_nom_ext) * Link_capital_cost) * Link_capital_weight)
 ```
 
+A mixed-integer linear program (MILP).
+
 #### Sets
 
 | Symbol | Meaning |

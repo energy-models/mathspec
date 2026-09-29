@@ -28,9 +28,9 @@ from mathspec.program import (
 from mathspec.typesetting.format import Entry
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
-    from mathspec.program import Expression, Mask, Program, RelationDeclaration
+    from mathspec.program import Expression, Mask, ProblemKind, Program, RelationDeclaration
     from mathspec.typesetting.format import Format, OperatorName
     from mathspec.typesetting.symbols import Symbols
 
@@ -40,6 +40,16 @@ TranslationPolicy = Literal['plain', 'wrap', 'edge']
 
 #: The positional forms an equation can print, each of which the legend explains once.
 PositionForm = Literal['plain', 'grouped', 'from_end']
+
+#: Each problem kind, as a sentence names it.
+_KIND_NAMES: Mapping[ProblemKind, str] = {
+    'LP': 'linear program',
+    'MILP': 'mixed-integer linear program',
+    'QP': 'quadratic program',
+    'MIQP': 'mixed-integer quadratic program',
+    'QCP': 'quadratically constrained program',
+    'MIQCP': 'mixed-integer quadratically constrained program',
+}
 
 
 def policy_of(node: Translate | WindowSum) -> TranslationPolicy:
@@ -131,6 +141,20 @@ class Legend:
 
     def _op(self, name: OperatorName) -> str:
         return self.format.operators[name]
+
+    def class_note(self) -> str:
+        """The problem kind in words, and for a quadratic kind the convexity verdict with the first term behind it."""
+        verdict = self.program.problem_class
+        named = f'{_KIND_NAMES[verdict.kind]} ({verdict.kind})'
+        if verdict.convex is True:
+            return f'A convex {named}.' if 'Q' in verdict.kind else f'A {named}.'
+        reasons = verdict.nonconvex or verdict.undecided
+        opening = f'A nonconvex {named}' if verdict.convex is False else f'A {named} whose convexity the data decides'
+        (label, reason), *rest = reasons.items()
+        others = ', '.join(other for other, _ in rest)
+        text = f'{opening}: {"the " if label == "objective" else ""}{label} {reason}.'
+        sentence = self.format.escape(text + (f' The same holds for {others}.' if others else ''))
+        return sentence.replace('\N{EM DASH}', self.format.dash)
 
     def glossaries(self, noticed: Noticed, defined: Iterable[str]) -> list[tuple[str, list[Entry]]]:
         """The sets, parameters, variables, given declarations and definitions, each with its symbol, its dims and its description.

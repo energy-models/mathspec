@@ -52,6 +52,8 @@ call.
 
     Least-cost dispatch of a generator fleet against an hourly load.
 
+    A linear program (LP).
+
     #### Sets
 
     | Symbol | Meaning |
@@ -99,6 +101,8 @@ call.
 
     ```latex
     \noindent Least-cost dispatch of a generator fleet against an hourly load.
+
+    \noindent A linear program (LP).
 
     \paragraph{Sets}
     \begin{description}

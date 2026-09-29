@@ -45,6 +45,8 @@ constraints:
 
 The coupling surface every component in this library is written against: one flow per port, and one balance per bus. A component is wired to a port, the port to a bus, and the balance names no component class. A flow is positive where the port injects into its bus.
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

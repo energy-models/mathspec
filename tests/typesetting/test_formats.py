@@ -123,6 +123,50 @@ def test_the_model_description_opens_the_document(name: FormatName, fmt: Format,
     assert 'least-cost dispatch' not in typeset(DISPATCH_MODEL, name), 'a model without one prints no empty paragraph'
 
 
+@EVERY_FORMAT
+@pytest.mark.parametrize(
+    ('patch', 'sentence'),
+    [
+        pytest.param({}, 'A linear program (LP).', id='affine'),
+        pytest.param(
+            {'objective.expression': 'sum(cost * p * p)', 'assumptions': {'a': {'holds': 'cost >= 0'}}},
+            'A convex quadratic program (QP).',
+            id='convex',
+        ),
+        pytest.param(
+            {'objective.expression': 'sum(-1 * p * p)'},
+            'A nonconvex quadratic program (QP): the objective',
+            id='nonconvex',
+        ),
+        pytest.param(
+            {'objective.expression': 'sum(cost * p * p)'},
+            'A quadratic program (QP) whose convexity the data decides: the objective',
+            id='undecided',
+        ),
+    ],
+)
+def test_the_legend_opens_with_the_problem_class(name: FormatName, fmt: Format, patch: dict, sentence: str):
+    model = varied(DISPATCH_MODEL, description='least-cost dispatch', **patch)
+    out = typeset(model, name)
+    assert sentence in out
+    assert out.index('least-cost dispatch') < out.index(sentence), 'the description still opens the document'
+    assert out.index(sentence) < out.index(fmt.operators['minimize']), 'it comes before the math'
+    assert sentence not in typeset(model, name, legend=False), 'it is part of the legend'
+
+
+def test_the_class_sentence_names_every_declaration_behind_its_verdict():
+    model = varied(
+        DISPATCH_MODEL,
+        constraints={
+            'a': {'dims': ['snapshot', 'generator'], 'expression': 'p * p >= 1'},
+            'b': {'dims': ['snapshot', 'generator'], 'expression': 'p * p >= 2'},
+        },
+    )
+    out = to_markdown(model)
+    assert "constraint 'a' squares 'p'" in out, 'the first declaration is named with its term'
+    assert "The same holds for constraint 'b'." in out, 'the rest are named, without their terms'
+
+
 # ---------------------------------------------------------------------------
 # escaping — prose that each format would otherwise read as markup
 # ---------------------------------------------------------------------------
@@ -208,6 +252,10 @@ def test_a_backticked_name_in_a_description_sets_in_monospace(notation: str):
     [
         pytest.param(golden.MODEL, id='the-golden-model'),
         pytest.param(varied(DISPATCH_MODEL, description=SPECIALS), id='every-special'),
+        pytest.param(
+            varied(DISPATCH_MODEL, **{'objective.expression': 'sum(p_max * p * p)'}),
+            id='a-class-sentence-naming-an-underscored-parameter',
+        ),
     ],
 )
 def test_a_description_of_every_special_compiles(typst, tmp_path: Path, model):

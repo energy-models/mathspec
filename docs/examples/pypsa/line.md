@@ -264,6 +264,8 @@ objective:
     sum(((scenario_weight * Line_s_nom_ext) * Line_capital_cost) * Line_capital_weight)
 ```
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

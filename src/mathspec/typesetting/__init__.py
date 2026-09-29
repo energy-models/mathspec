@@ -125,7 +125,8 @@ def typeset(
             mapping. Names it does not carry are derived, and it must be
             written in *fmt*'s notation.
         standalone: Emit a compilable document rather than a fragment.
-        legend: Prepend the sets/parameters/variables table. The spec's own
+        legend: Prepend a sentence naming the problem class, then the
+            sets/parameters/variables table. The spec's own
             ``description:`` opens the document either way — it is what the
             file says it is, not a symbol table.
         numbered: Number the equations.
@@ -155,6 +156,7 @@ def typeset(
     blocks = [format_.note(format_.escape(program.description))] if program.description else []
     if legend:
         explained, noticed = Legend(program, walk.symbols, format_), notice(program)
+        blocks.append(format_.note(explained.class_note()))
         blocks += [
             format_.section(title, format_.glossary(entries))
             for title, entries in explained.glossaries(noticed, walk.defined())

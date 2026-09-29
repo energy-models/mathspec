@@ -59,6 +59,8 @@ objective:
     + CVaR_omega * CVaR
 ```
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

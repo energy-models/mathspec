@@ -95,6 +95,8 @@ objective: {sense: minimize, expression: sum(Generator_p * Generator_marginal_co
 
 === "As composed"
 
+    A linear program (LP).
+
     #### Sets
 
     | Symbol | Meaning |
@@ -181,6 +183,8 @@ objective: {sense: minimize, expression: sum(Generator_p * Generator_marginal_co
         dims: [snapshot, generator]
         expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * Generator_status
     ```
+
+    A mixed-integer linear program (MILP).
 
     #### Sets
 

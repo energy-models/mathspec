@@ -39,6 +39,8 @@ constraints:
 
 PyPSA's `Load`, wired to a port rather than straight to a bus. What it takes is data, so it decides nothing.
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

@@ -61,6 +61,8 @@ constraints:
       <= Carrier_max_growth
 ```
 
+A linear program (LP).
+
 #### Sets
 
 | Symbol | Meaning |

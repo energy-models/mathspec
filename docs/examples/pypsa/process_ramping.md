@@ -244,6 +244,8 @@ assumptions:
       spec does not state that row, so it refuses the data
 ```
 
+A quadratically constrained program (QCP) whose convexity the data decides: constraint 'Process\_p\_ramp\_limit\_up' multiplies 'Process\_p\_nom\_committed' by 'Process\_previous\_status', a cross term whose curvature the terms beside it decide with data. The same holds for constraint 'Process\_p\_ramp\_limit\_down'.
+
 #### Sets
 
 | Symbol | Meaning |

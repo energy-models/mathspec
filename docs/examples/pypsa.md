@@ -4890,6 +4890,8 @@ concatenation of the regime blocks, `p0`/`p1` derived from `Link-p`.
 <!-- gallery:begin -->
 A plain `n.optimize()`, and its multi-period and stochastic classes, in one file. Every second-stage quantity spans a `scenario` (a future dispatch is chosen in) and every asset stands in the investment `period`s its build year and lifetime span. A parameter spans `scenario` exactly when PyPSA reads it per scenario. Capacity is chosen once, before the future is known, and paid once per active period at its cost in expectation over the scenarios; operation is the expectation over the scenarios' weights, with a share priced at the tail through the CVaR rows, which stand only where that share is positive. A plain run feeds one scenario, one period, all-active masks and unit weights, and the model collapses to the standard one. A security-constrained run copies each branch flow limit once per outage in an `outage` set that a plain run leaves empty. Which snapshots an asset is active in, a scenario's weight, and the outage factors are data prep.
 
+A mixed-integer quadratically constrained program (MIQCP) whose convexity the data decides: the objective squares 'Generator\_p' with a coefficient whose sign the file does not state — an assumptions: entry bounding 'CVaR\_omega' on one side of zero decides it. The same holds for constraint 'CVaR\_excess'.
+
 #### Sets
 
 | Symbol | Meaning |
