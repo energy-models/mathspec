@@ -19,6 +19,7 @@ from mathspec.errors import LanguageError, SchemaError
 from mathspec.piecewise import Emitted, assumptions_of, expand_piecewise
 from mathspec.program import Assumption, Variable, assumption_message
 from mathspec.spec import Curvature
+from mathspec.typesetting import typeset_declaration
 from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, expanded, raw_of, schema_of, varied
 
@@ -1152,6 +1153,114 @@ def test_a_gate_over_fewer_dims_than_the_block_switches_each_curve_it_covers():
     )
     assert expanded.constraints['cost_curve_convexity'].expression == 'sum(cost_curve_lam, over=bp) == (u)'
     assert expanded.variables['cost_curve_lam'].dims == ['snapshot', 'generator', 'bp']
+
+
+#: fluxopt's unit commitment: the on/off binary is over the entities that carry a status, and the curve over converters.
+COMMITTED = {
+    'dimensions': {
+        'converter': {'dtype': 'str'},
+        'status_entity': {'dtype': 'str'},
+        'snapshot': {'dtype': 'int'},
+        'bp': {'dtype': 'int'},
+    },
+    'relations': {'pw_status_of': {'key': 'converter', 'values': 'status_entity'}},
+    'parameters': {'bp_p': {'dims': ['converter', 'bp']}, 'bp_fuel': {'dims': ['converter', 'bp']}},
+    'variables': {
+        'running': {'dims': ['status_entity', 'snapshot'], 'domain': 'binary'},
+        'p': {'dims': ['converter', 'snapshot']},
+        'fuel': {'dims': ['converter', 'snapshot']},
+    },
+    'piecewise': {
+        'curve': {
+            'along': 'bp',
+            'dims': ['converter', 'snapshot'],
+            'links': {'p': ['p', 'bp_p'], 'fuel': ['fuel', 'bp_fuel']},
+            'method': 'sos2',
+            'activity': {'variable': 'running', 'by': 'pw_status_of', 'over': 'status_entity', 'into': 'converter'},
+        }
+    },
+    'objective': {'sense': 'minimize', 'expression': 'sum(fuel)'},
+}
+
+#: The status binary as the curve of each converter reads it.
+RUNNING = 'at(running, by=pw_status_of, over=status_entity, into=converter)'
+
+
+def test_a_gate_read_through_a_relation_switches_the_curves_it_maps_to():
+    """The gate was a variable over `dims:` alone, so fluxopt declared a copy of `running` per converter.
+
+    The copy was a binary per gated curve and step, and a constraint whose
+    only job was to re-index it.
+    """
+    rows = expand_piecewise(schema_of(COMMITTED)).constraints
+    assert (rows['curve_convexity'].where, rows['curve_convexity'].expression) == (
+        RUNNING,
+        f'sum(curve_lam, over=bp) == ({RUNNING})',
+    ), 'a converter with a status sums its weights to that status'
+    assert (rows['curve_convexity_ungated'].where, rows['curve_convexity_ungated'].expression) == (
+        f'NOT ({RUNNING})',
+        'sum(curve_lam, over=bp) == 1',
+    ), 'a converter with no row in the relation is ungated'
+
+
+def test_a_gate_read_through_a_relation_reads_back_as_written():
+    spec = schema_of(COMMITTED)
+    assert to_spec(spec.to_yaml()) == spec, 'the mapping form round-trips'
+    written_out = spec.expand()
+    assert to_spec(written_out.to_yaml()).program == written_out.program, 'the rows it writes load again'
+
+
+def test_a_gate_read_through_a_relation_under_absence_zero_pins_off_where_the_relation_has_a_row():
+    """`absence: zero` reads the status as 0 off its mask, so there the curve is off; only a missing row ungates it."""
+    rows = expand_piecewise(
+        schema_of(
+            COMMITTED,
+            **{
+                'parameters.committable': {'dims': ['status_entity'], 'dtype': 'bool'},
+                'variables.running.where': 'committable',
+                'variables.running.absence': 'zero',
+            },
+        )
+    ).constraints
+    assert (rows['curve_convexity'].where, rows['curve_convexity_ungated'].where) == (
+        'pw_status_of',
+        'NOT pw_status_of',
+    ), 'the relation alone decides which curves read the gate'
+
+
+def test_a_gate_read_through_a_relation_prints_as_the_read():
+    printed = typeset_declaration(schema_of(COMMITTED), 'curve', 'latex')
+    assert r'\mathit{running}_{\mathrm{pw\_status\_of}(c),t}' in printed, 'the gate is read at each converter'
+    assert r'\text{otherwise}' in printed, 'and a converter the relation does not map is ungated'
+
+
+@pytest.mark.parametrize(
+    ('patch', 'match'),
+    [
+        pytest.param(
+            {
+                'dimensions.period': {'dtype': 'int'},
+                'variables.running.dims': ['status_entity', 'snapshot', 'period'],
+            },
+            r"activity 'running' read through 'pw_status_of' lands on \['period'\], which dims "
+            r"\['converter', 'snapshot'\] does not carry",
+            id='a-gate-landing-outside-dims',
+        ),
+        pytest.param(
+            {'piecewise.curve.activity': {'variable': 'running', 'by': 'pw_status_of'}},
+            r"a piecewise activity reads through a relation with by, over and into together — \['over', 'into'\]",
+            id='a-walk-missing-its-columns',
+        ),
+        pytest.param(
+            {'piecewise.curve.activity.by': 'bp_p'},
+            r"piecewise 'curve' activity: at\(by=bp_p\) does not name a relation",
+            id='a-walk-through-something-no-relation',
+        ),
+    ],
+)
+def test_a_gate_read_through_a_relation_is_held_to_the_rules_of_at(patch, match):
+    with pytest.raises(LanguageError, match=match):
+        schema_of(COMMITTED, **patch)
 
 
 #: fluxopt's system: only some generators run on a curve, and the rest have none at all.

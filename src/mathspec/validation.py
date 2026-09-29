@@ -344,8 +344,9 @@ def _piecewise_references(schema: Spec) -> Iterator[str]:
             yield f'{context}: dims repeats a dimension: {block.dims}'
         for key, link in block.links.items():
             yield from _piecewise_link_shape(schema, name, block, key, link)
-        if (activity := block.activity) is None:
+        if block.activity is None:
             continue
+        activity = block.activity.variable
         if activity not in schema.variables:
             yield (
                 f"{context}: activity '{activity}' is not a declared variable. A gate is a binary variable; "
@@ -353,11 +354,14 @@ def _piecewise_references(schema: Spec) -> Iterator[str]:
             )
         elif schema.variables[activity].domain != 'binary':
             yield f"{context}: activity variable '{activity}' must be binary"
+        elif block.activity.walks:
+            continue
         elif stray := [d for d in schema.variables[activity].dims if d not in block.dims]:
             yield (
                 f"{context}: activity '{activity}' carries {stray}, which dims {block.dims} does not. The gate "
                 f'switches the curve of one coordinate of dims:, and a gate varying along {stray} would need a '
-                f'curve per coordinate of it — add {stray} to dims:, or gate with a variable over dims:.'
+                f'curve per coordinate of it — add {stray} to dims:, gate with a variable over dims:, or read '
+                f'the gate onto dims: through a relation with by, over and into.'
             )
 
 

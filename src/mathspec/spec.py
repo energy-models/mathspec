@@ -625,7 +625,51 @@ class AssumptionBlock(_StrictBlock):
         return written
 
 
-class PiecewiseLink(_StrictBlock):
+class _Walk(_StrictBlock):
+    """The relation a piecewise link or gate is read through, as ``at`` reads an array, where it walks one.
+
+    ``by:``, ``over:`` and ``into:`` are written together or not at all: a
+    walk states the relation, the columns it consumes and the columns it
+    produces, and none is defaulted.
+    """
+
+    #: The relation the read walks, where it walks one.
+    by: str | None = None
+    #: The relation columns the walk consumes.
+    over: str | list[str] | None = None
+    #: The relation columns the walk produces, which index what the read lands on.
+    into: str | list[str] | None = None
+
+    @property
+    def walks(self) -> bool:
+        """Whether the read walks a relation, rather than standing on the block's own dims."""
+        return self.by is not None
+
+    @model_validator(mode='after')
+    def _check_walk(self) -> Self:
+        written = {'by': self.by, 'over': self.over, 'into': self.into}
+        if (missing := [k for k, v in written.items() if v is None]) and len(missing) < len(written):
+            msg = (
+                f'{self._label} reads through a relation with by, over and into together — {missing} '
+                f'{"is" if len(missing) == 1 else "are"} missing. A walk states the relation, the columns it '
+                f'consumes and the columns it produces, as at() does; none is defaulted.'
+            )
+            raise ValueError(msg)
+        if empty := [k for k in ('over', 'into') if written[k] == []]:
+            msg = (
+                f'{empty[0]}: [] names no column — a walk consumes at least one column of the relation and produces '
+                f'at least one. Name a column, or a list of them.'
+            )
+            raise ValueError(msg)
+        return self
+
+    def _walk_as_written(self) -> dict[str, str | list[str]]:
+        """``by``, ``over`` and ``into`` as the file wrote them, for a walk's mapping form."""
+        assert self.by is not None and self.over is not None and self.into is not None
+        return {'by': self.by, 'over': self.over, 'into': self.into}
+
+
+class PiecewiseLink(_Walk):
     """One link of a piecewise block: an expression tied to the curve through a values parameter.
 
     Written in YAML as ``[expression, values]`` or ``[expression, values,
@@ -646,35 +690,6 @@ class PiecewiseLink(_StrictBlock):
     expression: str
     values: str
     sign: ComparisonOperator = '=='
-    #: The relation the link reads the curve's weights through, where it walks one.
-    by: str | None = None
-    #: The relation columns the walk consumes, over the block's own dims.
-    over: str | list[str] | None = None
-    #: The relation columns the walk produces, which index the link's rows.
-    into: str | list[str] | None = None
-
-    @property
-    def walks(self) -> bool:
-        """Whether the link reads the curve's weights through a relation, rather than on the block's own dims."""
-        return self.by is not None
-
-    @model_validator(mode='after')
-    def _check_walk(self) -> PiecewiseLink:
-        written = {'by': self.by, 'over': self.over, 'into': self.into}
-        if (missing := [k for k, v in written.items() if v is None]) and len(missing) < len(written):
-            msg = (
-                f'a link reads the curve through a relation with by, over and into together — {missing} '
-                f'{"is" if len(missing) == 1 else "are"} missing. A walk states the relation, the columns it '
-                f'consumes and the columns it produces, as at() does; none is defaulted.'
-            )
-            raise ValueError(msg)
-        if empty := [k for k in ('over', 'into') if written[k] == []]:
-            msg = (
-                f'{empty[0]}: [] names no column — a walk consumes at least one column of the relation and produces '
-                f'at least one. Name a column, or a list of them.'
-            )
-            raise ValueError(msg)
-        return self
 
     @model_validator(mode='before')
     @classmethod
@@ -698,15 +713,46 @@ class PiecewiseLink(_StrictBlock):
         """The list form, or the mapping form a walk cannot be written in a list."""
         if not self.walks:
             return [self.expression, self.values] if self.sign == '==' else [self.expression, self.values, self.sign]
-        assert self.by is not None and self.over is not None and self.into is not None
         written: dict[str, str | list[str]] = {
             'expression': self.expression,
             'values': self.values,
-            'by': self.by,
-            'over': self.over,
-            'into': self.into,
+            **self._walk_as_written(),
         }
         return written if self.sign == '==' else {**written, 'sign': self.sign}
+
+
+class PiecewiseActivity(_Walk):
+    """A piecewise block's gate: the binary the weights sum to, on the block's own dims or read through a relation.
+
+    Written in YAML as the variable's name, and serialised back to it. A gate
+    that names ``by:``, ``over:`` and ``into:`` is written as a mapping, and
+    reads the binary through the relation as ``at`` reads it, so a unit's
+    on/off variable over its own dimension switches the curves it maps to. A
+    curve whose coordinate has no row in the relation is ungated.
+    """
+
+    _label: ClassVar[str] = 'a piecewise activity'
+
+    #: The binary variable the weights sum to.
+    variable: str
+
+    @model_validator(mode='before')
+    @classmethod
+    def _from_name(cls, data: object) -> object:
+        return {'variable': data} if isinstance(data, str) else data
+
+    @classmethod
+    @override
+    def __get_pydantic_json_schema__(cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler) -> dict[str, object]:
+        """The published schema admits the bare variable name a gate on the block's own dims is written as."""
+        return _also_written_as(core_schema, handler, {'type': 'string'})
+
+    @model_serializer
+    def _as_written(self) -> str | dict[str, str | list[str]]:
+        """The variable's name, or the mapping form a walk cannot be written in a name."""
+        if not self.walks:
+            return self.variable
+        return {'variable': self.variable, **self._walk_as_written()}
 
 
 #: How a ``piecewise:`` block restricts its interpolation weights, and what
@@ -790,7 +836,7 @@ class PiecewiseBlock(_StrictBlock):
     #: Which of [`PIECEWISE_METHODS`][] restricts the weights.
     method: PiecewiseMethod = 'adjacency'
     #: What the weights sum to — 1 where absent, or a binary that pins the formulation to 0 when it is 0.
-    activity: str | None = None
+    activity: PiecewiseActivity | None = None
     description: str | None = None
 
     @property
