@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(language): a reported quotient is absent where its divisor is zero, whether a solve or the data gave that zero ([#765](https://github.com/energy-models/mathspec/pull/765))
 - fix(language): a given declaration that leaves out its domain or dtype folds into an introducer that sets one ([#768](https://github.com/energy-models/mathspec/pull/768))
 - fix(advice): an objective that reads a given expression or an empty sum gets advice rather than a KeyError ([#767](https://github.com/energy-models/mathspec/pull/767))
 - fix(typeset): a term a file adds to a sum keeps its definition line when the expressions are inlined ([#766](https://github.com/energy-models/mathspec/pull/766))
