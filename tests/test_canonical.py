@@ -202,7 +202,8 @@ def _commitment_with_its_cases_reversed() -> dict[str, object]:
 
 def _piecewise_with_its_links_reversed() -> dict[str, object]:
     raw = raw_of(EXAMPLES / 'piecewise.yaml')
-    return varied(raw, **{'piecewise.cost_curve.links': raw['piecewise']['cost_curve']['links'][::-1]})
+    links = raw['piecewise']['cost_curve']['links']
+    return varied(raw, **{'piecewise.cost_curve.links': dict(reversed(links.items()))})
 
 
 @pytest.mark.parametrize(

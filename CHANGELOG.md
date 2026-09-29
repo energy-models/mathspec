@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language): a piecewise block states its dims and names its links, and its where reaches links that walk a relation ([#630](https://github.com/energy-models/mathspec/pull/630))
 - feat(language): a parameter value that is null or NaN is refused when the data is attached ([#788](https://github.com/energy-models/mathspec/pull/788))
 - fix(language): a where string names several columns in at's over= and into=, as an expression does ([#782](https://github.com/energy-models/mathspec/pull/782))
 - fix(language): a file whose terms read each other's sums is refused at load ([#780](https://github.com/energy-models/mathspec/pull/780))

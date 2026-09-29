@@ -50,6 +50,10 @@ BEGIN, END = '<!-- gallery:begin -->', '<!-- gallery:end -->'
 MODELS = {
     'dispatch.md': ROOT / 'examples' / 'dispatch.yaml',
     'commitment.md': ROOT / 'examples' / 'commitment.yaml',
+    'piecewise.md': ROOT / 'examples' / 'piecewise.yaml',
+    'piecewise_adjacency.md': ROOT / 'examples' / 'piecewise_adjacency.yaml',
+    'sos.md': ROOT / 'examples' / 'sos.yaml',
+    'piecewise_lp.md': ROOT / 'examples' / 'piecewise_lp.yaml',
     'library/surface.md': LIBRARY / 'surface.yaml',
     'library/generator.md': LIBRARY / 'generator.yaml',
     'library/load.md': LIBRARY / 'load.yaml',
@@ -86,8 +90,15 @@ RECORDED = json.loads((REFERENCES / 'references.json').read_text())
 
 
 def model_block(path: Path) -> str:
-    """One spec, then the whole document the typesetter prints from it."""
-    return f'```yaml\n{without_header(path)}\n```\n\n{to_markdown(path, numbered=False).strip()}'
+    """One spec, then the whole document the typesetter prints from it.
+
+    Under the spec's own symbol table where it has one, as
+    [`declared_block`][] is: a weight named after the block that declared it
+    is right in the file and unreadable in the equation that names it six
+    times.
+    """
+    page = to_markdown(path, symbols=sidecar_for(path), numbered=False)
+    return f'```yaml\n{without_header(path)}\n```\n\n{page.strip()}'
 
 
 def symbols_for(model: Spec, table_path: Path = LIBRARY_SYMBOLS) -> dict[str, Any]:
