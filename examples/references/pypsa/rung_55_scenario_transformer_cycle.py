@@ -4,7 +4,7 @@
 
 """Rung 55: a cycle of two transformers takes its Kirchhoff voltage row in every scenario.
 
-PyPSA 1.3.0 raises on a transformer in a cycle on a network with scenarios
+PyPSA raises on a transformer in a cycle on a network with scenarios
 (PyPSA/PyPSA#1942). The two futures are identical, so the oracle is the same
 network without scenarios.
 """

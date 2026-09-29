@@ -52,7 +52,7 @@ parameters:
   Store_first_active:
     description: >-
       one in the first period a store stands in, zero elsewhere, data prep.
-      PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a store
+      PyPSA takes `active.cumsum() == 1`, which also counts a store
       that has retired in every later period (`global_constraints.py:276`,
       PyPSA/PyPSA#1938)
     dims: [period, store]
@@ -383,7 +383,7 @@ objective:
 |---|---|
 | $`\mathrm{on}^{e}`$ | `Store_active` over $`\mathcal{T} \times \mathcal{V}`$ — whether a store stands in a snapshot's period — PyPSA's `active`, data prep |
 | $`\mathrm{W}^{e}`$ | `Store_capital_weight` over $`\mathcal{V}`$ — the sum of period weights a store stands in — PyPSA's `active * period_weighting`, summed, data prep |
-| $`\mathrm{new}^{e}`$ | `Store_first_active` over $`\mathcal{Y} \times \mathcal{V}`$ — one in the first period a store stands in, zero elsewhere, data prep. PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a store that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
+| $`\mathrm{new}^{e}`$ | `Store_first_active` over $`\mathcal{Y} \times \mathcal{V}`$ — one in the first period a store stands in, zero elsewhere, data prep. PyPSA takes `active.cumsum() == 1`, which also counts a store that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
 | $`\underline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_min` over $`\Xi \times \mathcal{V}`$ — least nominal capacity an extendable store may be built at |
 | $`\overline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_max` over $`\Xi \times \mathcal{V}`$ — most nominal capacity an extendable store may be built at |
 | $`\mathrm{c}^{\mathrm{cap},e}`$ | `Store_capital_cost` over $`\Xi \times \mathcal{V}`$ — cost of one unit of nominal capacity — PyPSA's `capital_cost`, periodized as an annuity in data prep |

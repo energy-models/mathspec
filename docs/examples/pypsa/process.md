@@ -139,7 +139,7 @@ parameters:
   Process_first_active:
     description: >-
       one in the first period a process stands in, zero elsewhere, data prep.
-      PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a process
+      PyPSA takes `active.cumsum() == 1`, which also counts a process
       that has retired in every later period (`global_constraints.py:276`,
       PyPSA/PyPSA#1938)
     dims: [period, process]
@@ -331,7 +331,7 @@ objective:
 | $`\mathrm{nonneg}^{z}`$ | `Process_p_min_pu_nonneg` over $`\mathcal{J}`$ — true where none of the process's own minimums-per-unit is negative — PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and scenario, data prep |
 | $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{T} \times \mathcal{J}`$ — whether a process stands in a snapshot's period — PyPSA's `active`, data prep |
 | $`\mathrm{W}^{z}`$ | `Process_capital_weight` over $`\mathcal{J}`$ — the sum of period weights a process stands in — PyPSA's `active * period_weighting`, summed, data prep |
-| $`\mathrm{new}^{z}`$ | `Process_first_active` over $`\mathcal{Y} \times \mathcal{J}`$ — one in the first period a process stands in, zero elsewhere, data prep. PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a process that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
+| $`\mathrm{new}^{z}`$ | `Process_first_active` over $`\mathcal{Y} \times \mathcal{J}`$ — one in the first period a process stands in, zero elsewhere, data prep. PyPSA takes `active.cumsum() == 1`, which also counts a process that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
 | $`\mathrm{m}^{z}`$ | `Process_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{J}`$ — one where the process is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
 #### Variables

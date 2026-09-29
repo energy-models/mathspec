@@ -45,7 +45,7 @@ parameters:
   StorageUnit_first_active:
     description: >-
       one in the first period a storage unit stands in, zero elsewhere, data prep.
-      PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a storage unit
+      PyPSA takes `active.cumsum() == 1`, which also counts a storage unit
       that has retired in every later period (`global_constraints.py:276`,
       PyPSA/PyPSA#1938)
     dims: [period, storage_unit]

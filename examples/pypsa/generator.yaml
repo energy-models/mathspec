@@ -86,7 +86,7 @@ parameters:
   Generator_first_active:
     description: >-
       one in the first period a generator stands in, zero elsewhere, data prep.
-      PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a generator
+      PyPSA takes `active.cumsum() == 1`, which also counts a generator
       that has retired in every later period (`global_constraints.py:276`,
       PyPSA/PyPSA#1938)
     dims: [period, generator]
