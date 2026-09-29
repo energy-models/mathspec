@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(program): a frame holds axes, and the axis a join opens names the relation column it stands for ([#665](https://github.com/energy-models/mathspec/pull/665))
 - feat(language): a call names the columns of a relation as relation[column], so it reads one table ([#664](https://github.com/energy-models/mathspec/pull/664))
 - feat(program): a sum through a relation is a sum over the axes its join opens ([#662](https://github.com/energy-models/mathspec/pull/662))
 - fix(language): a where string names several columns in at's over= and into=, as an expression does ([#782](https://github.com/energy-models/mathspec/pull/782))

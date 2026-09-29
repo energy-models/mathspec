@@ -19,9 +19,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 import mathspec.sos as sos
-from mathspec.dimensions import dims_of
+from mathspec.dimensions import dims_of, frame_of
 from mathspec.errors import DimensionError
-from mathspec.program import PiecewiseDeclaration, PiecewiseMethod, VariableDeclaration, carries_variable
+from mathspec.program import Axis, PiecewiseDeclaration, PiecewiseMethod, VariableDeclaration, carries_variable
 from mathspec.resolution import resolve_expression_text
 from mathspec.spec import AssumptionBlock, Curvature, PiecewiseBlock, Spec, VariableBlock
 
@@ -322,10 +322,10 @@ def curve_frame(schema: Spec, name: str, pw: PiecewiseBlock, links: Iterable[Exp
     context = f"piecewise '{name}'"
     carried = [(f'link {i} expression', dims_of(node, schema, f'{context} link {i}')) for i, node in enumerate(links)]
     if pw.activity is not None:
-        carried.append(('activity', frozenset(schema.variables[pw.activity].dims)))
+        carried.append(('activity', frame_of(schema.variables[pw.activity].dims)))
     frame: list[str] = []
     for what, found in carried:
-        for d in (d for d in schema.dimensions if d in found):
+        for d in (d for d in schema.dimensions if Axis(d) in found):
             if d == pw.over:
                 raise DimensionError(f"{context}: {what} already carries the breakpoint dim '{pw.over}'")
             if d not in frame:

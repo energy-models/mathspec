@@ -502,7 +502,7 @@ def _definer_frame(loaded: Mapping[str, Spec], key: str) -> frozenset[str]:
             frame |= set(spec.program.expressions[key].dims)
         given = spec.program.given.expressions.get(key)
         if given is not None and given.term is not None:
-            frame |= dims_of(given.term, spec, f"Given expression '{key}'")
+            frame |= {str(axis) for axis in dims_of(given.term, spec, f"Given expression '{key}'")}
     return frozenset(frame)
 
 
