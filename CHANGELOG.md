@@ -13,6 +13,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(language): a piecewise block states its dims and names its links, and its where reaches links that walk a relation ([#630](https://github.com/energy-models/mathspec/pull/630))
+- fix(language): a where string names several columns in at's over= and into=, as an expression does ([#782](https://github.com/energy-models/mathspec/pull/782))
 - fix(language): a file whose terms read each other's sums is refused at load ([#780](https://github.com/energy-models/mathspec/pull/780))
 - fix(language): dual(c) is the rate at which the optimal objective rises with the right side of c, so an equality has a sign too ([#751](https://github.com/energy-models/mathspec/pull/751))
 - fix(language): a macro formal written inside a list takes the name the call binds to it ([#779](https://github.com/energy-models/mathspec/pull/779))
