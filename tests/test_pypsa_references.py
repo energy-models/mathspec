@@ -156,6 +156,35 @@ def test_every_declared_row_is_built_by_some_reference():
     assert not unbuilt, f'no reference network builds these declared rows — extend a fixture: {sorted(unbuilt)}'
 
 
+def _admits(where: str, component: str, unit: dict[str, object]) -> bool:
+    """Whether a `where` over one component's own columns holds for a unit with those column values."""
+    text = re.sub(rf'\b{component}_(\w+)', lambda column: repr(unit[column.group(1)]), where)
+    return eval(re.sub(r'\bNOT\b', 'not', text, flags=re.IGNORECASE).replace(' AND ', ' and '))
+
+
+@pytest.mark.parametrize('component', ['Generator', 'Link', 'Process'])
+def test_a_fixed_modular_committable_unit_gets_only_its_per_module_commitment_rows(component: str):
+    """PyPSA/PyPSA#1901: the file built `com-p-*` and `maint-status-*` for rung 8's `array`, which PyPSA master does not.
+
+    Those rows scale `p_nom` by a status that counts modules, which held rungs
+    25 and 26 above PyPSA's objective.
+    """
+    unit = {'committable': True, 'p_nom_extendable': False, 'p_nom_mod': 5.0, 'maintainable': True, 'active': True}
+    families = ('com_p_', 'com_mod_p_', 'maint_status_', 'maint_modstatus_')
+    admitted = {
+        name.removeprefix(f'{component}_')
+        for name, block in BASE.constraints.items()
+        if name.removeprefix(f'{component}_').startswith(families) and _admits(block.where, component, unit)
+    }
+    assert admitted == {
+        'com_mod_p_lower',
+        'com_mod_p_upper',
+        'maint_modstatus_le_status',
+        'maint_modstatus_le_maint',
+        'maint_modstatus_lb',
+    }, 'a fixed modular committable unit gets the per-module rows and no whole-unit ones'
+
+
 def test_the_spine_weightings_are_generic():
     """At weighting 1.0 a missing hours factor builds the identical matrix and passes every gate."""
     sys.path.insert(0, str(REFERENCES))

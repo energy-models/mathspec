@@ -131,12 +131,12 @@ constraints:
   Generator_com_p_lower:
     description: "`Generator-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active
+    where: Generator_committable AND not Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
     expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
   Generator_com_p_upper:
     description: "`Generator-com-p-upper` — a committed unit outputs at most what is available; off, at most nothing"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active
+    where: Generator_committable AND not Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
     expression: Generator_p <= Generator_p_max_pu * Generator_p_nom * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
   Generator_com_transition_start_up:
     description: "`Generator-com-transition-start-up` — turning on is a start, counted against the state the unit carried into the snapshot"
