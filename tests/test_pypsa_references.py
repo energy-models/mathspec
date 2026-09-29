@@ -14,12 +14,17 @@ import importlib
 import math
 import re
 import sys
+from typing import TYPE_CHECKING
 
 import pytest
 
 from mathspec import to_spec
+from mathspec.exclusivity import Subject, _evaluate, _Grid, _subject_of
 from tools import gallery
 from tools.gallery import DECLARED, RECORDED, REFERENCES, _names_for, _stands_for
+
+if TYPE_CHECKING:
+    from mathspec.program import Mask
 
 RUNGS = sorted(path.stem for path in REFERENCES.glob('rung_*.py'))
 SCRIPT = REFERENCES / 'reference.py'
@@ -156,10 +161,10 @@ def test_every_declared_row_is_built_by_some_reference():
     assert not unbuilt, f'no reference network builds these declared rows — extend a fixture: {sorted(unbuilt)}'
 
 
-def _admits(where: str, component: str, unit: dict[str, object]) -> bool:
-    """Whether a `where` over one component's own columns holds for a unit with those column values."""
-    text = re.sub(rf'\b{component}_(\w+)', lambda column: repr(unit[column.group(1)]), where)
-    return eval(re.sub(r'\bNOT\b', 'not', text, flags=re.IGNORECASE).replace(' AND ', ' and '))
+def _admits(mask: Mask, component: str, unit: dict[str, bool | float]) -> bool:
+    """Whether a mask over one component's own parameters holds for a unit with those values, read by the exclusivity check."""
+    cell = {Subject('param', f'{component}_{name}'): value for name, value in unit.items()}
+    return _evaluate(mask.root, cell, _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}))
 
 
 @pytest.mark.parametrize('component', ['Generator', 'Link', 'Process'])
@@ -173,7 +178,7 @@ def test_a_fixed_modular_committable_unit_gets_only_its_per_module_commitment_ro
     families = ('com_p_', 'com_mod_p_', 'maint_status_', 'maint_modstatus_')
     admitted = {
         name.removeprefix(f'{component}_')
-        for name, block in BASE.constraints.items()
+        for name, block in BASE.program.constraints.items()
         if name.removeprefix(f'{component}_').startswith(families) and _admits(block.where, component, unit)
     }
     assert admitted == {
