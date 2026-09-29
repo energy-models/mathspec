@@ -69,6 +69,36 @@ objective: { sense: minimize, expression: sum(p) }
 
 $`\sum_{g \in \mathcal{G}} p_{t,g} \le \mathrm{limit}_{t} \qquad \forall\, t \in \mathcal{T}`$
 
+### `sum(array, over=[a, …])`
+
+`examples/operators/sum_list.yaml`
+
+```yaml
+description: Several dimensions at once — `sum(array, over=[a, b])` collapses each one it names.
+
+dimensions:
+  snapshot: { dtype: int }
+  generator: { dtype: str }
+  carrier: { dtype: str }
+
+parameters:
+  limit: { dims: [carrier] }
+
+variables:
+  p:
+    dims: [snapshot, generator, carrier]
+    bounds: { lower: 0 }
+
+constraints:
+  carrier_total:
+    dims: [carrier]
+    expression: sum(p, over=[snapshot, generator]) <= limit
+
+objective: { sense: minimize, expression: sum(p) }
+```
+
+$`\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g,c} \le \mathrm{limit}_{c} \qquad \forall\, c \in \mathcal{C}`$
+
 ### `sum(array, by=relation, over=a, into=b)`
 
 `examples/operators/sum_by.yaml`

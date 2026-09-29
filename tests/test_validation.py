@@ -301,6 +301,11 @@ class TestDimensionKwargs:
         [
             pytest.param('sum(p, over=snapshto) == load', ('silent no-op', 'sum(over=snapshto)'), id='sum-over-typo'),
             pytest.param(
+                'sum(p, over=[generator, snapshto]) == 1',
+                ('silent no-op', 'sum(over=snapshto)'),
+                id='sum-over-a-list-with-a-typo',
+            ),
+            pytest.param(
                 'sum(p, by=bus) == load',
                 ("'bus' is a dimension, and by= takes a relation",),
                 id='by-names-a-dimension',
@@ -342,6 +347,16 @@ class TestDimensionKwargs:
         ('expression', 'fragment'),
         [
             pytest.param('sum(p, over=1)', 'sum(over=...) must name a dimension', id='a-number-as-a-dimension'),
+            pytest.param(
+                'shift(p, along=[snapshot, generator], offset=1)',
+                'shift(along=...) must name a dimension',
+                id='a-list-where-one-dimension-steps',
+            ),
+            pytest.param(
+                'sum(p, over=[generator, snapshot, generator])',
+                "sum(over=[generator, snapshot, generator]) names 'generator' twice",
+                id='a-dimension-named-twice',
+            ),
             pytest.param("sum(p, by='lk', over=g, into=h)", 'sum(by=...) must name a relation', id='a-quoted-relation'),
             pytest.param(
                 'sum(p, by=lk, over=1, into=h)',
@@ -645,6 +660,8 @@ class TestAWhereSideIsReadInResolution:
         ('patch', 'where'),
         [
             pytest.param({}, 'c <= 0.5 * k', id='arithmetic-on-a-side'),
+            pytest.param({}, 'c / (k + 1) > 0', id='a-divisor-that-adds'),
+            pytest.param({}, '(1 + k) ** c > 1', id='a-base-that-adds'),
             pytest.param({}, 'c > k', id='two-parameters'),
             pytest.param({}, '2 < c', id='a-literal-on-the-left'),
             pytest.param({'macros.half': {'args': ['x'], 'template': 'x / 2'}}, 'c <= half(k)', id='a-macro'),
@@ -692,11 +709,6 @@ class TestAWhereSideIsReadInResolution:
                 {'variables.p.where': 'c > flag'},
                 ("'flag' is declared dtype: bool, and an expression is arithmetic",),
                 id='a-flag-against-a-parameter',
-            ),
-            pytest.param(
-                {'variables.p.where': 'c / (k + 1) > 0'},
-                ('a divisor must be a single Constant/Parameter factor',),
-                id='a-divisor-that-adds',
             ),
             pytest.param(
                 {'variables.p.where': 'shift(c, along=g, offset=1) <= k'},
