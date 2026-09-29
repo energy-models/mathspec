@@ -220,6 +220,13 @@ def with_children(node: ArithmeticNode, recurse: Callable[[ArithmeticNode], Arit
 # ---------------------------------------------------------------------------
 
 
+#: A bracketed list of names as a kwarg value, in an expression and in a where
+#: string alike.
+NAME_LIST = (pp.Suppress('[') + pp.DelimitedList(pp.Regex(NAME)) + pp.Suppress(']')).set_parse_action(
+    lambda t: NameListNode(tuple(str(x) for x in t))
+)
+
+
 def _build_grammar() -> tuple[pp.ParserElement, pp.ParserElement]:
     """The arithmetic grammar, and the expression grammar that puts one comparison over it.
 
@@ -235,10 +242,7 @@ def _build_grammar() -> tuple[pp.ParserElement, pp.ParserElement]:
     name = pp.Regex(NAME)
 
     quoted = (pp.QuotedString("'") | pp.QuotedString('"')).set_parse_action(lambda t: KeywordNode(str(t[0])))
-    name_list = (pp.Suppress('[') + pp.DelimitedList(name) + pp.Suppress(']')).set_parse_action(
-        lambda t: NameListNode(tuple(str(x) for x in t))
-    )
-    kwarg = (name + pp.Suppress('=') + (quoted | name_list | arith)).set_parse_action(lambda t: (t[0], t[1]))
+    kwarg = (name + pp.Suppress('=') + (quoted | NAME_LIST | arith)).set_parse_action(lambda t: (t[0], t[1]))
     pos_arg = arith
     arg_list = pp.Optional(pp.DelimitedList(kwarg | pos_arg))
     func_call = (name + pp.Suppress('(') + arg_list + pp.Suppress(')')).set_parse_action(_make_func_call)
