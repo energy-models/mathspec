@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: math-spec contributors
+SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
@@ -45,11 +45,29 @@ bound it:
 
 A [reported expression](named.md#reported-expressions) is not held to these.
 
-`/` needs a divisor that carries no variable and is a single factor.
+`/` needs a divisor that carries no variable. `**` needs a base and an exponent
+that carry no variable. Any arithmetic over numbers and parameters is allowed in
+those places, so a discount factor is written where it is used:
 
-`**` needs a base and an exponent that both carry no variable and neither of
-which adds. `growth ** period` is allowed, and `(1 + rate) ** period` is
-refused: declare the factor itself as a parameter. Write `x * x` for a square.
+```yaml
+dimensions:
+  period: { dtype: int }
+parameters:
+  rate: { dims: [] }
+  years: { dims: [period] }
+  price: { dims: [period] }
+variables:
+  build: { dims: [period], bounds: { lower: 0 } }
+constraints:
+  enough: { dims: [], expression: "sum(build, over=period) >= 1" }
+objective:
+  sense: minimize
+  expression: sum(build * price / (1 + rate) ** years, over=period)
+```
+
+`years` is a parameter over `period`. The exponent cannot be `period` itself,
+because an expression reads no [dimension](#name-resolution). Write `x * x` for
+a square.
 
 ## Name resolution
 
@@ -226,13 +244,13 @@ $$0 \le \mathit{rate}_{f} \le \mathrm{cap}_{f} \qquad \forall\thinspace f \in \m
 
 The column joined on, `converter`, leaves, and the column grouped by, `flow`,
 arrives. So the mask above is over `flow` alone. The rules are those of `at` in
-an expression: `by=`, `over=` and `into=` are all written, the read groups by
-the relation's key, and the predicate carries every dimension the read joins
-on.
+an expression: `by=`, `over=` and `into=` are all written, each of `over=` and
+`into=` names one column or a list of them, `[a, …]`, the read groups by the
+relation's key, and the predicate carries every dimension the read joins on.
 
 ### The right-hand side of a comparison
 
-A bare name on the right is read as a string label when the model does not
+A bare name on the right is read as a string label when the spec does not
 declare it. A declared name there is a load error.
 
 Quote a label that is not an identifier, such as `'combined-cycle'`. A quoted

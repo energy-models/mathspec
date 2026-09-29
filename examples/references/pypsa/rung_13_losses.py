@@ -1,14 +1,13 @@
-# SPDX-FileCopyrightText: math-spec Contributors
+# SPDX-FileCopyrightText: mathspec Contributors
 #
 # SPDX-License-Identifier: MIT
 
-"""Rung 13: transmission losses in tangent form — a loss per line, stated by `pypsa_losses.yaml`."""
+"""Rung 13: transmission losses in tangent form — a loss per line."""
 
 from __future__ import annotations
 
 import spine
 
-MODEL = 'pypsa_losses.yaml'
 OPTIMIZE = {'transmission_losses': {'mode': 'tangents', 'segments': 2}}
 
 

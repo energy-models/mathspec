@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: math-spec contributors
+SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
@@ -78,7 +78,7 @@ positions an index can take in it:
 and the indicator together, less the summed one, which is
 `(dims(x) − joined) ∪ grouped`. That is the rule in the [expressions
 reference](../reference/language/expressions.md#how-dimensions-combine), and
-`_join_dims` in `src/math_spec/dimensions.py` computes it. The three refusals
+`join_dims` in `src/mathspec/dimensions.py` computes it. The three refusals
 beside it are the three things the formula needs:
 
 - **The operand carries every column joined on**, or there is nothing to match.
@@ -117,7 +117,7 @@ $`\mathrm{zone\_cap} \circ f`$, which is a pullback.
 **That one term is the whole difference between `at` and `sum`**, and
 resolution decides it from the key alone. Where the columns a call groups by
 hold the whole key, every group is one row, and the group-by adds nothing.
-`_join` in `src/math_spec/resolution.py` names this `one_row_per_group`. A
+`_join` in `src/mathspec/_expression_resolver.py` names this `one_row_per_group`. A
 `sum` with one row per group adds up nothing and is refused toward `at`. An
 `at` with several rows per group would have several terms and is refused toward
 `sum`. The
