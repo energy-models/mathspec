@@ -23,6 +23,7 @@ import pyparsing as pp
 from mathspec._expression_parser import (
     ARITHMETIC,
     NAME,
+    NAME_LIST,
     ArithmeticNode,
     KeywordNode,
     NameNode,
@@ -154,7 +155,7 @@ def _build_where_grammar() -> pp.ParserElement:
     )
     comparator = pp.one_of(list(get_args(PredicateOperator)))
 
-    kwarg = (name + pp.Suppress('=') + (quoted | ARITHMETIC)).set_parse_action(lambda t: (t[0], t[1]))
+    kwarg = (name + pp.Suppress('=') + (quoted | NAME_LIST | ARITHMETIC)).set_parse_action(lambda t: (t[0], t[1]))
 
     def _call(head: pp.ParserElement) -> pp.ParserElement:
         """``<head>(<predicate>[, <kwarg>…])`` — the one shape whose operand is a predicate.

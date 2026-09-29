@@ -16,7 +16,7 @@ from mathspec._yaml import parse_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
 from mathspec.program import DimensionPosition
 from mathspec.resolution import Namespace
-from mathspec.typesetting import to_markdown
+from mathspec.typesetting import to_markdown, typeset_declaration
 from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, OPERATOR_PROBES, SMALL_MODEL, varied, where_of
 
@@ -811,6 +811,56 @@ class TestAPredicateIsAnOperand:
     def test_a_shape_the_language_admits(self, where):
         mask = where_of(where, Namespace(_schema()), 'probe')
         assert mask is not None, 'the predicate decides some rows, so it is a mask rather than nothing'
+
+    @pytest.mark.parametrize(
+        ('where', 'dims', 'reads'),
+        [
+            pytest.param(
+                'at(has_curve, by=cost_of, over=curve, into=[flow, effect])',
+                ['effect', 'flow'],
+                {'has_curve', 'cost_of'},
+                id='into-names-several-columns',
+            ),
+            pytest.param(
+                'at(has_cost, by=pair_of, over=[flow, effect], into=curve)',
+                ['curve'],
+                {'has_cost', 'pair_of'},
+                id='over-names-several-columns',
+            ),
+        ],
+    )
+    def test_a_read_names_several_columns_as_an_expression_does(self, where, dims, reads):
+        """The where grammar took one name after `into=` and `over=`, and the expression grammar a list (#781).
+
+        A piecewise block whose mask is read through a walk into `[flow, effect]`
+        writes this `where:`, and the load failed on its own assertion.
+        """
+        spec = to_spec(
+            {
+                'dimensions': {name: {'dtype': 'str'} for name in ('curve', 'effect', 'flow')},
+                'relations': {
+                    'cost_of': {'key': ['flow', 'effect'], 'values': 'curve'},
+                    'pair_of': {'key': 'curve', 'values': ['flow', 'effect']},
+                },
+                'parameters': {
+                    'has_curve': {'dims': ['curve'], 'dtype': 'bool'},
+                    'has_cost': {'dims': ['flow', 'effect'], 'dtype': 'bool'},
+                },
+                'variables': {'x': {'dims': dims}},
+                'constraints': {'k': {'dims': dims, 'where': where, 'expression': 'x >= 0'}},
+                'objective': {'sense': 'minimize', 'expression': 'sum(x)'},
+            }
+        )
+        mask = spec.program.constraints['k'].where
+        assert mask is not None
+        assert sorted(mask.dims) == dims, 'the read lands on the columns the other end names'
+        assert mask.names_read == reads, 'a consumer attaches the relation as well as the operand'
+        assert to_spec(spec.to_yaml()).program == spec.program, 'the where string reads back to the same mask'
+        for fmt in ('markdown', 'latex', 'typst'):
+            printed = typeset_declaration(spec, 'k', fmt).replace('\\_', '_')
+            assert all(name in printed for name in reads), (
+                f'{fmt} prints the operand and the relation it is read through'
+            )
 
     @pytest.mark.parametrize(
         ('where', 'fragments'),
