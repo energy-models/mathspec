@@ -349,6 +349,21 @@ def test_a_cased_term_is_added_like_any_other():
             r"fragment '#2' adds a term to 'injecton', and no other fragment reads it.*Did you mean 'injection'\?",
             id='a-misspelt-given-entry-the-same-file-reports',
         ),
+        pytest.param(
+            [
+                BALANCE,
+                {
+                    **CAPPED,
+                    'given': {'expressions': {'injecton': {'dims': BUS_FRAME}}},
+                    'expressions': {
+                        'generator_injection': {**FLEET['expressions']['generator_injection'], 'adds_to': 'injecton'}
+                    },
+                    'constraints': {'capped': {'dims': BUS_FRAME, 'expression': 'injecton <= 10'}},
+                },
+            ],
+            r"fragment '#2' adds a term to 'injecton', and no other fragment reads it.*Did you mean 'injection'\?",
+            id='a-misspelt-given-entry-the-same-file-caps',
+        ),
     ],
 )
 def test_terms_only_their_own_files_read_are_refused(fragments, message):
@@ -356,7 +371,9 @@ def test_terms_only_their_own_files_read_are_refused(fragments, message):
 
     A reported expression builds no row, so reading the name there is not
     the use in the math the refusal asks for: `_uses` counted it, and a
-    contributor that reported its misspelt sum passed the check.
+    contributor that reported its misspelt sum passed the check. A
+    contributor that capped its misspelt sum in its own math passed too,
+    since its use counted as a read though no other fragment read the name.
     """
     with pytest.raises(LanguageError, match=message):
         merge(fragments)
@@ -372,6 +389,32 @@ def test_terms_only_their_own_files_read_are_refused(fragments, message):
 )
 def test_a_fragment_that_reads_the_sum_for_more_than_adding_lets_the_terms_land(reader, contributor):
     assert merge([reader, contributor]).program.expressions['injection'].in_math
+
+
+def test_a_sum_a_sibling_declares_as_another_kind_names_that_kind():
+    """A term on a name a sibling declares as a variable was refused as a misspelling nothing else reads."""
+    network = {
+        'dimensions': BUS_DIMS,
+        'variables': {'injection': {'dims': BUS_FRAME}},
+        'constraints': {'balance': {'dims': BUS_FRAME, 'expression': 'injection == 0'}},
+    }
+    with pytest.raises(
+        LanguageError,
+        match=r"fragment '#1' declares 'injection' as a variable, and fragment '#2' adds a term to it\. "
+        r'A term fills only a name no fragment declares',
+    ):
+        merge([network, DEMAND])
+
+
+def test_readers_that_order_the_frame_apart_are_refused():
+    """The sum took its dims from the first reader, so the order of the list reached the canonical text."""
+    reversed_ = {**BALANCE, 'given': {'expressions': {'injection': {'dims': ['bus', 'snapshot']}}}}
+    with pytest.raises(
+        LanguageError,
+        match=r"fragments '#1' and '#2' read the sum 'injection' over \['bus', 'snapshot'\] and "
+        r"\['snapshot', 'bus'\]",
+    ):
+        merge([reversed_, FLEET])
 
 
 def test_the_composed_sum_is_read_over_the_readers_frame():
@@ -422,9 +465,27 @@ def test_a_term_over_fewer_dimensions_merges_where_another_carries_the_rest():
     assert composed.program.expressions['injection'].dims == ('snapshot', 'bus')
 
 
-def test_a_patch_changes_a_term_by_its_name_and_null_drops_what_it_adds_to():
-    doubled = override(DEMAND, [{'expressions': {'demand_injection': {'expression': '-2 * load'}}}])
+@pytest.mark.parametrize(
+    'body', [pytest.param({'expression': '-2 * load'}, id='a-mapping'), pytest.param('-2 * load', id='one-line')]
+)
+def test_a_patch_changes_a_term_s_body_and_keeps_what_it_adds_to(body):
+    """A one-line patch replaced the whole block, so the term lost its `adds_to:` and left the sum unannounced."""
+    doubled = override(DEMAND, [{'expressions': {'demand_injection': body}}])
     assert doubled.expressions['demand_injection'].expression == '-2 * load'
+    assert doubled.expressions['demand_injection'].adds_to == 'injection'
+
+
+def test_a_one_line_patch_replaces_a_cased_body():
+    cased = _demand(
+        body={'dims': BUS_FRAME, 'cases': {'peak': {'when': 'load > 5', 'expression': '-load'}}, 'otherwise': '0'}
+    )
+    laid = override(cased, [{'expressions': {'demand_injection': '-load'}}])
+    assert laid.expressions['demand_injection'].cases == {}, 'the one-line body replaces the cases and the default'
+    assert laid.expressions['demand_injection'].otherwise is None
+    assert laid.expressions['demand_injection'].adds_to == 'injection'
+
+
+def test_a_patch_drops_what_a_term_adds_to_with_null():
     reader = override(DEMAND, [{'expressions': {'demand_injection': {'adds_to': None}}}])
     assert reader.expressions['demand_injection'].adds_to is None, 'the entry is a plain named expression again'
 

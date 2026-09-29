@@ -295,11 +295,14 @@ prints the term under _Definitions_ as its own line.
 
 [`merge`](../../howto/compose.md#a-library-of-components) defines the name
 as every term by its name, in the order the files are given in, over the frame
-the readers state. It keeps each term as a named expression, without its
-`adds_to:`. A cased term is added like any other, by its name. The sum takes
+the readers state. Every reader writes the dims in one order, since no file
+defines the sum and so no file's order wins. It keeps each term as a named
+expression, without its `adds_to:`. A cased term is added like any other, by its name. The sum takes
 the first description a reader wrote.
 
 A name one file defines takes no term, so a body means what its file says. A
+name one file declares as a variable, a parameter or a constraint takes no
+term either. A
 file that has a part of its own, such as a slack, reads the name and adds that
 part as a term. A merged spec defines its sums, so it takes no further terms:
 merge every fragment in one list.
@@ -307,7 +310,8 @@ merge every fragment in one list.
 Some file has to read the name for more than adding to it: read it and add
 nothing, or use it in its math. Terms that only their own files read are
 refused, with the near miss, since that is what a misspelt `given:` entry
-looks like.
+looks like. A name one file alone reads is refused the same way, even where
+that file uses it in its math.
 
 ## `constraints`
 

@@ -217,7 +217,9 @@ Given variable 'Generator_p' collides with the variable of the same name. Names 
 
 1. **Write the base as a spec**, and each patch as the change it makes. A
    patch names only the fields it changes. A declaration a patch does not name
-   stays as the base wrote it. The base loads on its own, and `override` loads
+   stays as the base wrote it. A named expression the patch writes on one line
+   replaces the body, `expression:` or `cases:`, and keeps the other fields,
+   such as `adds_to:`. The base loads on its own, and `override` loads
    it first. A patch is not a spec, so it is laid over as written, and the
    patched spec is loaded after.
 
