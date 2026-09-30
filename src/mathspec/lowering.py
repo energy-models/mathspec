@@ -23,7 +23,6 @@ from mathspec.expansion import expand, parse_template
 from mathspec.piecewise import assumptions_of, curve_frame, lp_domain_refusal, resolve_links
 from mathspec.program import (
     Assumption,
-    Axis,
     BooleanLiteral,
     Constant,
     ConstraintDeclaration,
@@ -313,7 +312,7 @@ def _frame_of(name: str, entry: Named, schema: Spec) -> tuple[str, ...]:
     if declared is not None:
         return tuple(declared)
     carried = dims_of(entry.body, schema, f"Named expression '{name}'")
-    return tuple(d for d in schema.dimensions if Axis(d) in carried)
+    return tuple(d for d in schema.dimensions if d in carried)
 
 
 def _bound(value: float | str | None) -> Constant | Parameter | None:
