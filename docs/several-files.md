@@ -363,8 +363,9 @@ Merge the generators and the loads without the network:
 ms.merge(['generators.yaml', 'loads.yaml'])
 ```
 
-`merge` refuses it. A term adds to a name another file declares, and without
-the network no file declares `injection`:
+`merge` refuses it. A term adds to a sum that the rest of the spec reads, and
+without the network no file reads `injection` other than the two files that
+add to it:
 
 ```text
 fragments 'generators.yaml' and 'loads.yaml' add a term to 'injection', and no other fragment reads it: none reads it without adding to it, or uses it in its math. A term writes into a sum the rest of the spec reads: add the fragment that reads it, or fix the spelling under 'given:'.
