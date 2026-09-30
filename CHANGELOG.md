@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language): a construct that reads the order of a dimension needs the dimension declared ordered ([#793](https://github.com/energy-models/mathspec/pull/793))
 - feat(language): a parameter value that is null or NaN is refused when the data is attached ([#788](https://github.com/energy-models/mathspec/pull/788))
 - fix(language): a where string names several columns in at's over= and into=, as an expression does ([#782](https://github.com/energy-models/mathspec/pull/782))
 - fix(language): a file whose terms read each other's sums is refused at load ([#780](https://github.com/energy-models/mathspec/pull/780))
