@@ -273,11 +273,50 @@ def test_the_definer_keeps_its_description():
     )
 
 
-def test_a_sum_merged_in_two_steps_is_the_sum_merged_in_one():
-    """The terms join with a plain `+`, so no bracket marks which merge wrote which term."""
-    stepped = merge([merge([BALANCE, DEMAND, FLEET]), STORAGE])
-    assert stepped.expressions['injection'].expression == 'demand_injection + generator_injection + store_injection'
-    assert canonical_yaml(stepped) == canonical_yaml(merge([BALANCE, DEMAND, FLEET, STORAGE]))
+@pytest.mark.parametrize(
+    ('stepped', 'flat', 'body'),
+    [
+        pytest.param(
+            merge([merge([BALANCE, DEMAND, FLEET]), STORAGE]),
+            merge([BALANCE, DEMAND, FLEET, STORAGE]),
+            'demand_injection + generator_injection + store_injection',
+            id='the-last-file-later',
+        ),
+        pytest.param(
+            merge([merge([BALANCE]), DEMAND, FLEET, STORAGE]),
+            merge([BALANCE, DEMAND, FLEET, STORAGE]),
+            'demand_injection + generator_injection + store_injection',
+            id='the-reader-alone-first',
+        ),
+        pytest.param(
+            merge([merge([merge([BALANCE, FLEET]), DEMAND]), STORAGE]),
+            merge([BALANCE, FLEET, DEMAND, STORAGE]),
+            'generator_injection + demand_injection + store_injection',
+            id='three-steps',
+        ),
+        pytest.param(
+            merge([merge([SLACKED, FLEET]), STORAGE]),
+            merge([SLACKED, FLEET, STORAGE]),
+            'slack + generator_injection + store_injection',
+            id='a-body-a-file-defines',
+        ),
+    ],
+)
+def test_a_sum_merged_in_steps_is_the_sum_merged_in_one(stepped, flat, body):
+    """The terms join with a plain `+`, so no bracket marks which merge wrote which term.
+
+    The canonical form reads `(a + b) + c` as `a + b + c`, so only the
+    written body tells the plain join from a bracketed one.
+    """
+    assert stepped.expressions['injection'].expression == body
+    assert flat.expressions['injection'].expression == body
+    assert canonical_yaml(stepped) == canonical_yaml(flat)
+
+
+def test_a_step_where_no_other_file_reads_the_sum_is_refused():
+    """A merge closes every sum it has terms for, so the step that first closes one needs a reader."""
+    with pytest.raises(LanguageError, match=r"add a term to 'injection', and no other fragment reads it"):
+        merge([merge([FLEET, DEMAND]), BALANCE])
 
 
 def test_a_term_on_a_cased_definition_is_refused():

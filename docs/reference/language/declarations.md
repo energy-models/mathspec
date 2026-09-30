@@ -305,7 +305,9 @@ Where one file defines the name with one `expression:`, the merged body is
 that body followed by the terms. The file that defines `injection` as `slack`
 gives `slack + generation` once `fleet.yaml` is merged with it. The body keeps
 its `dims:` and its description. A merged spec defines its sums, so it takes
-further terms the same way in a later merge. A definition written as `cases:`
+further terms the same way in a later merge. A merge defines every sum it has
+terms for, so the step that first merges the terms of a sum also merges a file
+that reads it. A definition written as `cases:`
 takes no term. Name the cased body as its own expression, and define the sum as
 that name.
 
