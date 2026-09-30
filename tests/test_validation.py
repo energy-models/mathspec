@@ -16,12 +16,13 @@ from mathspec._yaml import parse_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
 from mathspec.program import DimensionPosition
 from mathspec.resolution import Namespace
-from mathspec.typesetting import to_markdown, typeset_declaration
+from mathspec.typesetting import FORMATS, to_markdown, typeset_declaration
 from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, OPERATOR_PROBES, SMALL_MODEL, varied, where_of
 
 if TYPE_CHECKING:
     from mathspec.spec import Spec
+    from mathspec.typesetting import FormatName
 
 
 def _schema(**patch) -> Spec:
@@ -774,16 +775,23 @@ class TestAWhereSideIsReadInResolution:
         assert 'cannot be told apart before the data arrives: it compares expressions' in message
         assert 'precompute the test as a boolean parameter' in message
 
-    def test_a_lone_case_comparing_expressions_is_refused_too(self):
-        """One case has no pair to be proved apart from, and it loaded: the pairwise
-        check never observed it. The rule is on the case, not on the pair — the
-        `otherwise` is its negation, and only the data decides where that falls."""
-        message = _refusal(
-            expressions={
-                'e': {'dims': ['g'], 'cases': {'wide': {'when': 'c > 2 * k', 'expression': 'c'}}, 'otherwise': 0}
-            }
+    @pytest.mark.parametrize('fmt', sorted(FORMATS))
+    def test_a_lone_case_comparing_expressions_loads(self, fmt: FormatName):
+        """A block of one case that compared expressions was refused as if it
+        could overlap its `otherwise`. The `otherwise` is built as the complement
+        of the cases, so one case overlaps nothing, and the same comparison
+        loaded inside `shift(..., offset=0)` (#794)."""
+        spec = to_spec(
+            varied(
+                SMALL_MODEL,
+                expressions={
+                    'e': {'dims': ['g'], 'cases': {'wide': {'when': 'c > 2 * k', 'expression': 'c'}}, 'otherwise': 0}
+                },
+            )
         )
-        assert "case 'wide' cannot be told apart before the data arrives: it compares expressions" in message
+        assert to_spec(spec.to_yaml()).program == spec.program, 'the when string reads back to the same mask'
+        printed = typeset_declaration(spec, 'e', fmt).replace('\\_', '_')
+        assert '> 2' in printed and 'otherwise' in printed, f'{fmt} prints the comparison and its otherwise'
 
 
 class TestAPredicateIsAnOperand:
