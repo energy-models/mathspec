@@ -43,10 +43,10 @@ expressions:
     description: the nominal capacity, the same in every snapshot
 ```
 
-An entry with `adds_to:` is a [term](declarations.md#terms): it names a
-[given expression](declarations.md#given-expressions) of its file, and
-[`merge`](../../howto/compose.md#a-library-of-components) adds the entry to
-that name by its own name.
+[`adds_to:`](declarations.md#terms) adds this expression as a term to the sum
+it names. The sum is a [given expression](declarations.md#given-expressions)
+of the same file, and [`merge`](../../howto/compose.md#a-library-of-components)
+adds the entry to it by its own name.
 
 Where the objective or a constraint names it, the body is substituted there,
 and the [degree limit](expressions.md#where-a-product-of-two-variables-is-allowed)

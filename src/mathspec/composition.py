@@ -29,9 +29,9 @@ What that means for each section:
   both named.
 * **The objectives are summed**, each term in parentheses, in the order the
   fragments are given in, and the senses have to agree.
-* **Terms add to a named expression.** A named expression with
-  ``adds_to:`` is a term of a ``given: expressions:`` entry of its own
-  fragment, and keeps its name in the composed spec. Where a fragment
+* **Terms add to a named expression.** ``adds_to:`` adds a named
+  expression as a term to the sum it names, a ``given: expressions:`` entry
+  of its own fragment. The term keeps its name in the composed spec. Where a fragment
   defines that name with one ``expression:``, the composed body is that
   body followed by every term, in the order the fragments are given in,
   so a composed spec takes more terms in a later merge. A definition

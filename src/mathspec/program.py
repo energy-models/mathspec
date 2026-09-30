@@ -716,7 +716,7 @@ class ExpressionDeclaration:
     dims: tuple[str, ...]
     in_math: bool
     description: str | None = None
-    #: The given expression this entry is a term of, or ``None``.
+    #: The sum this entry adds to as a term, or ``None``.
     adds_to: str | None = None
 
 

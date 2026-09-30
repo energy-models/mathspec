@@ -462,8 +462,9 @@ class ExpressionBlock(_StrictBlock):
     written as ``cases:`` over a declared ``dims:``, with an ``otherwise:``
     for the rest — see the language reference.
 
-    ``adds_to:`` names a ``given: expressions:`` entry of this file, and
-    makes this entry a term of it: a write, where the given entry is the read.
+    ``adds_to:`` adds this entry as a term to the sum it names, a
+    ``given: expressions:`` entry of this file: a write, where the given entry
+    is the read.
     [`merge`][mathspec.composition.merge] adds every term to that name by
     name, after the body a file defines where one does. The term is read over at most the
     frame the given entry states, and does not read the name it adds to.
@@ -479,7 +480,7 @@ class ExpressionBlock(_StrictBlock):
     cases: Annotated[dict[str, ExpressionCase], Field(min_length=1)] = {}
     #: The value wherever no case's ``when`` holds, printed as the last row.
     otherwise: Expression | None = None
-    #: The ``given: expressions:`` entry of this file this entry is a term of, or ``None``.
+    #: The sum this entry adds to as a term, a ``given: expressions:`` entry of this file, or ``None``.
     adds_to: str | None = None
     description: str | None = None
 

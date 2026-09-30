@@ -244,9 +244,9 @@ refused once folded.
 
 #### Terms
 
-A named expression with `adds_to:` is a **term**. It writes into a given
-expression of its own file: the given entry is the read, and `adds_to:` is
-the write. The term is an ordinary named expression, so it takes `cases:`, a
+`adds_to:` adds this expression as a **term** to the sum it names. The sum is
+a given expression of the same file: the given entry is the read, and
+`adds_to:` is the write. The term is an ordinary named expression, so it takes `cases:`, a
 description and every other field a named expression takes. The file reads
 the name as the whole sum, alone and composed, and the term is its part of
 it.
