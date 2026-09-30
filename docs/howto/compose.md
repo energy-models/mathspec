@@ -136,8 +136,9 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    ```
 
    `Bus_injection` is `Generator_injection + Load_injection + Store_injection`.
-   A merged spec defines `Bus_injection`, so it takes no further term: merge
-   every fragment in one list.
+   A merged spec takes a further term the same way, so
+   `ms.merge([ms.merge(['network.yaml', 'generator.yaml', 'load.yaml']), 'store.yaml'])`
+   gives the same sum.
 
 A library can also couple its components through a flow variable per port,
 which each component pins at its own port.
@@ -145,18 +146,18 @@ which each component pins at its own port.
 
 ## What a fragment may share
 
-| The entry                                         | What happens                                                                                                                                                                                                      |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                                   |
-| a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                                     |
-| any other declaration                             | one fragment declares it, and a second is refused                                                                                                                                                                 |
-| an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the declaration where the introducer wrote none                                                           |
-| a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                                        |
-| a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                                            |
-| an expression with `adds_to:`                     | it is a term of the given expression it names. The name becomes every term by its name, in the order of the list. A name one fragment defines takes no term, and terms that only their own files read are refused |
-| `objective`                                       | the terms are summed in the order of the list, each in parentheses, and the senses agree. The first description in the list is carried                                                                            |
-| `version`                                         | every fragment is written against the same one                                                                                                                                                                    |
-| `description` at the top of a fragment            | it is about the fragment and is not carried. Pass the composed spec's as `description=`                                                                                                                           |
+| The entry                                         | What happens                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                                                                                                                                 |
+| a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                                                                                                                                   |
+| any other declaration                             | one fragment declares it, and a second is refused                                                                                                                                                                                                                                                               |
+| an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the declaration where the introducer wrote none                                                                                                                                                         |
+| a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                                                                                                                                      |
+| a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                                                                                                                                          |
+| an expression with `adds_to:`                     | it is a term of the given expression it names. The name becomes its definition, where one fragment writes one, followed by every term by its name, in the order of the list. A definition written as `cases:` takes no term, and terms on a name no fragment defines that only their own files read are refused |
+| `objective`                                       | the terms are summed in the order of the list, each in parentheses, and the senses agree. The first description in the list is carried                                                                                                                                                                          |
+| `version`                                         | every fragment is written against the same one                                                                                                                                                                                                                                                                  |
+| `description` at the top of a fragment            | it is about the fragment and is not carried. Pass the composed spec's as `description=`                                                                                                                                                                                                                         |
 
 ## A name two fragments declare
 

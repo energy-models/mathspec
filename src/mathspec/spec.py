@@ -335,9 +335,10 @@ class GivenExpressionBlock(_StrictBlock):
     of every place this file reads it.
 
     A named expression of this file may add to the name with ``adds_to:``.
-    [`merge`][mathspec.composition.merge] then defines the name as every
-    term the files add, where no file defines it. The file itself reads the
-    name as the whole sum, alone and composed.
+    [`merge`][mathspec.composition.merge] then writes every term the files
+    add after the body a file defines, or as the whole body where no file
+    defines it. The file itself reads the name as the whole sum, alone and
+    composed.
     """
 
     _label: ClassVar[str] = 'a given expression declaration'
@@ -463,8 +464,8 @@ class ExpressionBlock(_StrictBlock):
 
     ``adds_to:`` names a ``given: expressions:`` entry of this file, and
     makes this entry a term of it: a write, where the given entry is the read.
-    [`merge`][mathspec.composition.merge] defines that name as every term
-    the files add to it, by name. The term is read over at most the
+    [`merge`][mathspec.composition.merge] adds every term to that name by
+    name, after the body a file defines where one does. The term is read over at most the
     frame the given entry states, and does not read the name it adds to.
     """
 

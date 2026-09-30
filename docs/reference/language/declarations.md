@@ -289,32 +289,43 @@ constraints:
 
 Each file loads alone. `adds_to:` names a `given: expressions:` entry of the
 same file, and a name the file does not read there is refused with the near
-miss. A name the same file defines is refused too, since its body means what
-the file says: write the term into that body instead. The term does not read the name it adds to, directly or through another
-name. It carries no dimension the entry does not state, and it is held to
+miss. A name the same file defines is refused too: write the term into that
+body instead. The term does not read the name it adds to, directly or through
+another name. It carries no dimension the entry does not state, and it is held to
 degree two, as what reads the sum is. All of this is checked at load. The
 typeset legend lists the entry under _Given_ and names the term, and the math
 prints the term under _Definitions_ as its own line.
 
-[`merge`](../../howto/compose.md#a-library-of-components) defines the name
-as every term by its name, in the order the files are given in, over the frame
-the readers state. Every reader writes the dims in one order, since no file
-defines the sum and so no file's order wins. It keeps each term as a named
-expression, without its `adds_to:`. A cased term is added like any other, by its name. The sum takes
-the first description a reader wrote.
+[`merge`](../../howto/compose.md#a-library-of-components) adds every term by
+its name, in the order the files are given in, and keeps each term as a named
+expression without its `adds_to:`. A cased term is added like any other, by its
+name.
 
-A name one file defines takes no term, so a body means what its file says. A
-name one file declares as a variable, a parameter or a constraint takes no
-term either. A
-file that has a part of its own, such as a slack, reads the name and adds that
-part as a term. A merged spec defines its sums, so it takes no further terms:
-merge every fragment in one list.
+Where one file defines the name with one `expression:`, the merged body is
+that body followed by the terms. The file that defines `injection` as `slack`
+gives `slack + generation` once `fleet.yaml` is merged with it. The body keeps
+its `dims:` and its description. A merged spec defines its sums, so it takes
+further terms the same way in a later merge. A definition written as `cases:`
+takes no term. Name the cased body as its own expression, and define the sum as
+that name.
 
-Some file has to read the name for more than adding to it: read it and add
-nothing, or use it in its math. Terms that only their own files read are
-refused, with the near miss, since that is what a misspelt `given:` entry
-looks like. A name one file alone reads is refused the same way, even where
-that file uses it in its math.
+Where no file defines the name, the merged spec defines it as its terms, over
+the frame the readers state. Every reader writes the dims in one order, since
+no file's order wins. The sum takes the first description a reader wrote. Some
+file has to read the name for more than adding to it: read it and add nothing,
+or use it in its math. Terms that only their own files read are refused, with
+the near miss, since that is what a misspelt `given:` entry looks like. A name
+one file alone reads is refused the same way, even where that file uses it in
+its math.
+
+A name one file declares as a variable, a parameter or a constraint takes no
+term. Two files that both define the name collide, as any two declarations do.
+A term that reads its own sum through a name another file defines is refused
+with both files named:
+
+```text
+fragment '#2' adds 't' to 'injection', and 't' reads 'injection' back through 'x' of '#1', so the sum would define itself. A term may not read what reads its sum: write 't' from something else, or define 'x' without 'injection'.
+```
 
 ## `constraints`
 

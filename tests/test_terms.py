@@ -7,9 +7,9 @@
 A balance reads what every component puts into a bus, and a component file
 says what it puts there: a named expression of its own, whose `adds_to:` names
 the `given: expressions:` entry of its file it writes into. The given entry is
-the read, and `adds_to:` the write. `merge` defines the name as every term by
-name, and keeps each term, so no file has to declare that the name is a sum. A
-name one fragment defines takes no term, so a body means what its file says.
+the read, and `adds_to:` the write. `merge` writes every term by name after
+the body a fragment defines, or as the whole body where none does, and keeps
+each term, so no file has to declare that the name is a sum.
 """
 
 from __future__ import annotations
@@ -160,7 +160,7 @@ def test_a_contributor_reads_the_name_as_the_whole_sum():
         ),
         pytest.param(
             {**_demand(target='total'), 'expressions': {**_demand(target='total')['expressions'], 'total': '-load'}},
-            r"it adds to 'total', which this file defines\. A body means what its file says, so a term fills only "
+            r"it adds to 'total', which this file defines\. A file writes its own body in one place, so a term fills only "
             r"a name read under 'given: expressions:': write the term into the body of 'total'",
             id='a-target-this-file-defines',
         ),
@@ -249,34 +249,110 @@ def test_the_order_the_fragments_are_given_in_reaches_no_canonical_text():
 
 
 @pytest.mark.parametrize(
-    'definer',
+    ('definer', 'body'),
     [
-        pytest.param(SLACKED, id='a-definition-a-file-writes'),
-        pytest.param(merge([BALANCE, DEMAND, FLEET]), id='a-sum-a-merge-wrote'),
+        pytest.param(SLACKED, 'slack + store_injection', id='a-definition-a-file-writes'),
         pytest.param(
-            {
-                **SLACKED,
-                'parameters': {'on': {'dims': BUS_FRAME, 'dtype': 'bool'}},
-                'expressions': {
-                    'injection': {
-                        'dims': BUS_FRAME,
-                        'cases': {'on': {'when': 'on', 'expression': 'slack'}},
-                        'otherwise': '0',
-                    }
-                },
-            },
-            id='a-cased-definition',
+            merge([BALANCE, DEMAND, FLEET]),
+            'demand_injection + generator_injection + store_injection',
+            id='a-sum-a-merge-wrote',
         ),
     ],
 )
-def test_a_term_on_a_name_a_fragment_defines_is_refused(definer):
-    """A body means what its file says, so no other file extends it, a composed one included.
+def test_a_term_follows_the_body_a_fragment_defines(definer, body):
+    """A term on a name a fragment defined was refused, so a merged spec took no further term."""
+    composed = merge([definer, STORAGE])
+    assert composed.expressions['injection'].expression == body
+    assert composed.expressions['store_injection'].adds_to is None
 
-    A term once landed on any definition, so a file's own body read one way
-    alone and another way once merged, with nothing in the file to say so.
-    """
-    with pytest.raises(LanguageError, match=r"'#1' defines 'injection', and fragment '#2' adds a term to it"):
-        merge([definer, STORAGE])
+
+def test_the_definer_keeps_its_description():
+    assert (
+        merge([SLACKED, STORAGE]).expressions['injection'].description
+        == SLACKED['expressions']['injection']['description']
+    )
+
+
+def test_a_sum_merged_in_two_steps_is_the_sum_merged_in_one():
+    """The terms join with a plain `+`, so no bracket marks which merge wrote which term."""
+    stepped = merge([merge([BALANCE, DEMAND, FLEET]), STORAGE])
+    assert stepped.expressions['injection'].expression == 'demand_injection + generator_injection + store_injection'
+    assert canonical_yaml(stepped) == canonical_yaml(merge([BALANCE, DEMAND, FLEET, STORAGE]))
+
+
+def test_a_term_on_a_cased_definition_is_refused():
+    cased = {
+        **SLACKED,
+        'parameters': {'on': {'dims': BUS_FRAME, 'dtype': 'bool'}},
+        'expressions': {
+            'injection': {'dims': BUS_FRAME, 'cases': {'on': {'when': 'on', 'expression': 'slack'}}, 'otherwise': '0'}
+        },
+    }
+    with pytest.raises(
+        LanguageError,
+        match=r"fragment '#1' defines 'injection' as `cases:`, and fragment '#2' adds a term to it\. "
+        r".*name the cased body as its own expression, and define 'injection' as that name\.",
+    ):
+        merge([cased, STORAGE])
+
+
+def test_a_reader_that_states_less_than_the_definer_is_refused():
+    narrow = {
+        **DEMAND,
+        'parameters': {'load': {'dims': ['bus']}},
+        'given': {'expressions': {'injection': {'dims': ['bus']}}},
+    }
+    with pytest.raises(
+        LanguageError, match=r"fragment '#2' reads the given expression 'injection'.*over \['bus', 'snapshot'\]"
+    ):
+        merge([SLACKED, narrow])
+
+
+#: A file that reads the injection and defines a name from it.
+DOUBLED = {**BALANCE, 'expressions': {'doubled': {'expression': 'injection * 2'}}}
+
+#: A term that reads what the injection reads.
+FEEDBACK = {
+    'dimensions': BUS_DIMS,
+    'given': {'expressions': {'injection': {'dims': BUS_FRAME}, 'doubled': {'dims': BUS_FRAME}}},
+    'expressions': {'feedback': {'expression': 'doubled', 'adds_to': 'injection'}},
+}
+
+
+def _adding(term: str, body: str, target: str, reads: str) -> dict[str, object]:
+    """A file whose *term* is *body* and adds to *target*, reading *target* and *reads*."""
+    return {
+        'dimensions': BUS_DIMS,
+        'given': {'expressions': {target: {'dims': BUS_FRAME}, reads: {'dims': BUS_FRAME}}},
+        'expressions': {term: {'expression': body, 'adds_to': target}},
+    }
+
+
+@pytest.mark.parametrize(
+    ('fragments', 'message'),
+    [
+        pytest.param(
+            [DOUBLED, FEEDBACK],
+            r"fragment '#2' adds 'feedback' to 'injection', and 'feedback' reads 'injection' back through "
+            r"'doubled' of '#1', so the sum would define itself\. .*define 'doubled' without 'injection'\.",
+            id='through-a-definition',
+        ),
+        pytest.param(
+            [
+                BALANCE,
+                _adding('outflow', 'withdrawal', 'injection', 'withdrawal'),
+                _adding('inflow', 'injection', 'withdrawal', 'injection'),
+            ],
+            r"fragment '#2' adds 'outflow' to 'injection', and 'outflow' reads 'injection' back through "
+            r"the sum 'withdrawal', 'inflow' of '#3'",
+            id='through-another-sum',
+        ),
+    ],
+)
+def test_a_term_that_reads_its_sum_through_another_fragment_is_refused(fragments, message):
+    """Each file loads alone, and the composed load named the loop but not the fragments that close it."""
+    with pytest.raises(LanguageError, match=message):
+        merge(fragments)
 
 
 def test_a_file_adds_its_own_part_as_a_term_of_what_it_reads():
@@ -401,7 +477,7 @@ def test_a_sum_a_sibling_declares_as_another_kind_names_that_kind():
     with pytest.raises(
         LanguageError,
         match=r"fragment '#1' declares 'injection' as a variable, and fragment '#2' adds a term to it\. "
-        r'A term fills only a name no fragment declares',
+        r'A term adds to a named expression',
     ):
         merge([network, DEMAND])
 
@@ -438,7 +514,7 @@ def test_two_definitions_collide_and_the_message_names_adds_to():
         merge([SLACKED, other])
     message = str(raised.value)
     assert "both declare the expression 'injection'" in message
-    assert "each reads it under 'given: expressions:' and adds its part with `adds_to:`" in message
+    assert "defined by one of them at most: each other reads it under 'given: expressions:'" in message
 
 
 def test_two_terms_of_one_name_collide():

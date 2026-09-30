@@ -294,8 +294,8 @@ def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]
     context = f"Named expression '{name}'"
     if target in schema.expressions:
         errors.append(
-            f'{context}: it adds to {target!r}, which this file defines. A body means what its file says, so a '
-            f"term fills only a name read under 'given: expressions:': write the term into the body of "
+            f'{context}: it adds to {target!r}, which this file defines. A file writes its own body in one '
+            f"place, so a term fills only a name read under 'given: expressions:': write the term into the body of "
             f'{target!r}, or read {target!r} there and add its body as a term of its own.'
         )
         return None
