@@ -28,13 +28,13 @@ A dimension, a relation and a parameter declare no equation; what they print is 
 
 ```yaml
 dimensions:
-  snapshot: { dtype: int }
-  generator: { dtype: str }
+  snapshot: { dtype: int, ordered: true }
+  generator: { dtype: str, ordered: true }
   bus: { dtype: str }
   zone: { dtype: str }
   season: { dtype: str }
   technology: { dtype: str }
-  bp: { dtype: int } # the breakpoints every curve below runs through
+  bp: { dtype: int, ordered: true } # the breakpoints every curve below runs through
 
 relations:
   gen_bus: { key: generator, values: bus }

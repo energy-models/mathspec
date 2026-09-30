@@ -7,7 +7,7 @@ description: >-
   number instead of being absent, so the row survives.
 
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
 
 variables:
   p:

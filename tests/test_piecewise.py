@@ -25,8 +25,8 @@ from tests.fixtures import DISPATCH_MODEL, expanded, raw_of, schema_of, varied
 #: binaries and links is not something a smaller one can stand in for.
 NONCONVEX_YAML = """
 dimensions:
-  snapshot: {dtype: int}
-  bp: {dtype: int}
+  snapshot: {dtype: int, ordered: true}
+  bp: {dtype: int, ordered: true}
 
 parameters:
   load: {dims: [snapshot]}

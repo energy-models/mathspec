@@ -448,7 +448,7 @@ def test_a_later_patch_is_laid_on_what_the_earlier_ones_make(patches, field, val
 def test_a_patch_adds_a_dimension_and_may_restate_one_it_shares():
     laid = override(
         DISPATCH_MODEL,
-        [{'dimensions': {'snapshot': {'dtype': 'int'}, 'investment_period': {'dtype': 'int'}}}],
+        [{'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'investment_period': {'dtype': 'int'}}}],
     )
     assert sorted(laid.dimensions) == ['generator', 'investment_period', 'snapshot'], (
         'the dimension the patch adds joins the two the base declares, and the restated one is not doubled'

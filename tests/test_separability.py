@@ -24,7 +24,12 @@ from mathspec.program import Reach
 FIXTURE = Path(__file__).resolve().parent / 'fixtures' / 'every_program_node.yaml'
 
 BASE: dict[str, Any] = {
-    'dimensions': {'h': {'dtype': 'int'}, 'u': {'dtype': 'str'}, 'zone': {'dtype': 'str'}, 'day': {'dtype': 'int'}},
+    'dimensions': {
+        'h': {'dtype': 'int', 'ordered': True},
+        'u': {'dtype': 'str', 'ordered': True},
+        'zone': {'dtype': 'str'},
+        'day': {'dtype': 'int'},
+    },
     'relations': {'zone_of': {'key': 'u', 'values': 'zone'}, 'day_of': {'key': 'h', 'values': 'day'}},
     'parameters': {
         'cost': {'dims': ['u']},

@@ -8,6 +8,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   link:
     description: controllable connections, each from one bus to the buses it delivers to
 

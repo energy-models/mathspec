@@ -13,13 +13,13 @@ description: >-
   $5 {net} ~ ^ \ *star* @ref <label>, and `a_name` in backticks set in code
 
 dimensions:
-  snapshot: { dtype: int }
-  generator: { dtype: str }
+  snapshot: { dtype: int, ordered: true }
+  generator: { dtype: str, ordered: true }
   bus: { dtype: str }
   zone: { dtype: str }
   season: { dtype: str }
   technology: { dtype: str }
-  bp: { dtype: int } # the breakpoints every curve below runs through
+  bp: { dtype: int, ordered: true } # the breakpoints every curve below runs through
 
 relations:
   gen_bus: { key: generator, values: bus }

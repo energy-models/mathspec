@@ -15,6 +15,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   line:
     description: passive branches, each between two buses, their flow set by impedance
   transformer:

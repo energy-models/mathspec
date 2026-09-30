@@ -37,7 +37,7 @@ a convexity row and one row per link:
 ```yaml title="curve.yaml"
 dimensions:
   generator: { dtype: str }
-  bp: { dtype: int }
+  bp: { dtype: int, ordered: true }
 parameters:
   bp_x: { dims: [generator, bp] }
   bp_y: { dims: [generator, bp] }

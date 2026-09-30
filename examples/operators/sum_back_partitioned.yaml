@@ -9,7 +9,7 @@ description: >-
 
 dimensions:
   unit: { dtype: str }
-  hour: { dtype: int }
+  hour: { dtype: int, ordered: true }
   day: { dtype: str }
 
 relations:

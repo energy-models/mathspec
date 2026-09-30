@@ -38,7 +38,7 @@ UNREACHED = varied(TARGET_ONLY, relations={})
 CURVED = varied(
     UNREACHED,
     objective={'sense': 'minimize', 'expression': 'sum(p)'},
-    dimensions={'g': {'dtype': 'str'}, 'h': {'dtype': 'str'}, 'bp': {'dtype': 'int'}},
+    dimensions={'g': {'dtype': 'str'}, 'h': {'dtype': 'str'}, 'bp': {'dtype': 'int', 'ordered': True}},
     parameters={'c': {'dims': ['g']}, 'bp_x': {'dims': ['bp']}, 'bp_y': {'dims': ['bp']}},
     variables={'p': {'dims': ['g']}, 'cost': {'dims': ['g']}},
     piecewise={'curve': {'over': 'bp', 'links': [['p', 'bp_x'], ['cost', 'bp_y']]}},
