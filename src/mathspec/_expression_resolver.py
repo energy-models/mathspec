@@ -312,7 +312,7 @@ class ExpressionResolver:
         except DimensionError as e:
             self.errors.append(str(e))
             return None
-        join = self.lookup(columns, frozenset(axis.dimension for axis in inner))
+        join = self.lookup(columns, inner)
         return None if join is None else Join(operand, join)
 
     def _translation(
@@ -357,7 +357,7 @@ class ExpressionResolver:
                 f'scalar. Drop the sum.'
             )
             return None
-        return Sum(operand, tuple(sorted(inner, key=str)))
+        return Sum(operand, tuple(Axis(d) for d in sorted(inner)))
 
     def _edge_fits(self, operand: Expression, offset: int | str, *, wrap: bool, fill: float | None) -> bool:
         """What a ``shift``'s ``edge=`` may say, and where saying nothing is an answer.
