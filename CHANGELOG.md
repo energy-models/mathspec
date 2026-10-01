@@ -17,6 +17,9 @@ composes **fragments**, each a spec that owns part of the math and reads what
 another file declares under `given:`. [`override`](https://mathspec.readthedocs.io/en/latest/howto/compose/#a-base-and-its-patches)
 lays **patches** over a base, each changing part of it. A named expression adds
 itself as a term to a sum with `adds_to:`, and one fragment sets the objective.
+**Every fragment typesets on its own**, in LaTeX, Typst and Markdown, and gets
+advice before any merge: what it reads from another file prints in its legend,
+so one component's math can be reviewed without the rest of the model.
 [PyPSA in 24 files](https://mathspec.readthedocs.io/en/latest/examples/pypsa/)
 is the PyPSA spec composed this way, and merges back to the one file.
 
