@@ -64,7 +64,7 @@ model may leave out.
 | [generator_maintenance](generator_maintenance.md) | 5 | 4 | 13 | 9 |  |
 | [generator_ramping](generator_ramping.md) | 5 | 0 | 6 | 14 |  |
 | [global_constraints](global_constraints.md) | 3 | 0 | 15 | 6 |  |
-| [line](line.md) | 18 | 3 | 11 | 8 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
+| [line](line.md) | 20 | 3 | 13 | 8 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
 | [link](link.md) | 23 | 3 | 9 | 14 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `Carrier_additions`, `Bus_injection` |
 | [link_commitment](link_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
 | [link_maintenance](link_maintenance.md) | 5 | 4 | 13 | 9 |  |
@@ -80,7 +80,7 @@ model may leave out.
 | [settings](settings.md) | 9 | 0 | 0 | 0 |  |
 | [storage_unit](storage_unit.md) | 34 | 5 | 20 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `Carrier_additions`, `Bus_injection` |
 | [store](store.md) | 27 | 3 | 10 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `Carrier_additions`, `Bus_injection` |
-| [transformer](transformer.md) | 19 | 4 | 11 | 4 | `Bus_injection`, `Cycle_angle_sum` |
+| [transformer](transformer.md) | 22 | 4 | 15 | 4 | `Bus_injection`, `Cycle_angle_sum` |
 <!-- gallery:end -->
 
 ## Leaving a file out

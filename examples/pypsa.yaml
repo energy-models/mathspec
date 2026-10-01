@@ -918,6 +918,19 @@ parameters:
   Line_s_set:
     description: a given flow schedule; a line without one has no row here
     dims: [scenario, snapshot, line]
+  Line_v_ang_max:
+    description: >-
+      the most the voltage angle difference across a line may be either way,
+      in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default.
+      A line whose carrier is not AC has no row either. The deprecated `v_ang_min` is
+      ignored, as PyPSA ignores it with a `DeprecationWarning`
+      (`constraints.py:1713-1720`)
+    dims: [scenario, line]
+  Line_x_pu_eff:
+    description: >-
+      the line's effective series reactance — PyPSA's `x_pu_eff`, `x` over
+      the square of its bus's nominal voltage, data prep
+    dims: [scenario, line]
   Line_cycle_weight:
     description: >-
       the line's series impedance, signed by its orientation in the cycle —
@@ -981,6 +994,18 @@ parameters:
   Transformer_s_set:
     description: a given flow schedule; a transformer without one has no row here
     dims: [scenario, snapshot, transformer]
+  Transformer_v_ang_max:
+    description: >-
+      the most the voltage angle difference across a transformer, its phase
+      shift included, may be either way, in degrees — PyPSA's `v_ang_max`;
+      infinite, and so no row, by default. The deprecated `v_ang_min` is
+      ignored, as a line's
+    dims: [scenario, transformer]
+  Transformer_x_pu_eff:
+    description: >-
+      the transformer's effective series reactance — PyPSA's `x_pu_eff`, `x`
+      over its `s_nom` times its tap ratio, data prep
+    dims: [scenario, transformer]
   Transformer_cycle_weight:
     description: >-
       the transformer's effective series reactance, `x` times its tap ratio,
@@ -1007,8 +1032,9 @@ parameters:
       whether a transformer's phase shift is a decision — PyPSA's
       `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a
       fixed shift carried by `phase_shift`. The shift parameters carry no
-      scenario: only a cycle row reads them, and PyPSA fails on a transformer in
-      a cycle on a network with scenarios (`constraints.py:1654`)
+      scenario: only a cycle row and an angle row read them, PyPSA fails on a
+      transformer in a cycle on a network with scenarios (`constraints.py:1654`),
+      and builds no angle row on one
     dims: [transformer]
     dtype: bool
   Transformer_phase_shift_min:
@@ -1022,6 +1048,12 @@ parameters:
       the most a varying transformer's phase shift may take, in degrees —
       PyPSA's `phase_shift_max`; equal to `phase_shift_min` for a fixed transformer
     dims: [transformer]
+  Transformer_phase_shift_fixed:
+    description: >-
+      a fixed transformer's phase shift at each snapshot, in degrees — PyPSA's
+      `phase_shift`, zero by default; a varying transformer's shift is a
+      decision instead
+    dims: [snapshot, transformer]
   Transformer_phase_shift_cycle_weight:
     description: >-
       the cycle sign for a varying transformer's phase shift, times π/180 so a
@@ -3327,6 +3359,21 @@ constraints:
     dims: [scenario, snapshot, line]
     where: Line_s_set AND Line_active
     expression: Line_s == Line_s_set
+  Line_v_ang_lower:
+    description: >-
+      `Line-v_ang-lower` — an AC line carries at least the flow at which the
+      voltage angle difference across it, `x_pu_eff` times the flow in
+      radians, is the negative of its limit
+    dims: [scenario, snapshot, line]
+    where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+    expression: Line_s >= -Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
+  Line_v_ang_upper:
+    description: >-
+      `Line-v_ang-upper` — an AC line carries at most the flow at which the
+      voltage angle difference across it reaches its limit
+    dims: [scenario, snapshot, line]
+    where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+    expression: Line_s <= Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
   Line_loss_upper:
     description: "`Line-loss_upper` — a line dissipates at most the loss at its rating"
     dims: [scenario, snapshot, line]
@@ -3388,6 +3435,38 @@ constraints:
     dims: [scenario, snapshot, transformer]
     where: Transformer_s_set AND Transformer_active
     expression: Transformer_s == Transformer_s_set
+  Transformer_v_ang_lower:
+    description: >-
+      `Transformer-v_ang-lower` — a transformer with a fixed shift carries at
+      least the flow at which the voltage angle difference across it,
+      `x_pu_eff` times the flow plus the shift, is the negative of its limit
+    dims: [scenario, snapshot, transformer]
+    where: Transformer_v_ang_max AND NOT Transformer_phase_shift_varying AND Transformer_active
+    expression: Transformer_s >= -(Transformer_v_ang_max + Transformer_phase_shift_fixed) * (3.141592653589793 / 180) / Transformer_x_pu_eff
+  Transformer_v_ang_upper:
+    description: >-
+      `Transformer-v_ang-upper` — a transformer with a fixed shift carries at
+      most the flow at which the voltage angle difference across it, the
+      shift included, reaches its limit
+    dims: [scenario, snapshot, transformer]
+    where: Transformer_v_ang_max AND NOT Transformer_phase_shift_varying AND Transformer_active
+    expression: Transformer_s <= (Transformer_v_ang_max - Transformer_phase_shift_fixed) * (3.141592653589793 / 180) / Transformer_x_pu_eff
+  Transformer_v_ang_var_lower:
+    description: >-
+      `Transformer-v_ang-var-lower` — for a transformer whose shift is a
+      decision, the flow plus the shift over `x_pu_eff` is at least the
+      negative of the limit over `x_pu_eff`
+    dims: [scenario, snapshot, transformer]
+    where: Transformer_v_ang_max AND Transformer_phase_shift_varying AND Transformer_active
+    expression: Transformer_s + Transformer_phase_shift * (3.141592653589793 / 180) / Transformer_x_pu_eff >= -Transformer_v_ang_max * (3.141592653589793 / 180) / Transformer_x_pu_eff
+  Transformer_v_ang_var_upper:
+    description: >-
+      `Transformer-v_ang-var-upper` — for a transformer whose shift is a
+      decision, the flow plus the shift over `x_pu_eff` is at most the limit
+      over `x_pu_eff`
+    dims: [scenario, snapshot, transformer]
+    where: Transformer_v_ang_max AND Transformer_phase_shift_varying AND Transformer_active
+    expression: Transformer_s + Transformer_phase_shift * (3.141592653589793 / 180) / Transformer_x_pu_eff <= Transformer_v_ang_max * (3.141592653589793 / 180) / Transformer_x_pu_eff
   Transformer_loss_upper:
     description: "`Transformer-loss_upper` — a transformer dissipates at most the loss at its rating"
     dims: [scenario, snapshot, transformer]
