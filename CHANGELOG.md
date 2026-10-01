@@ -12,7 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(language): a where predicate is named once under `masks:`, and another file reads it under `given: masks:` ([#PR](https://github.com/energy-models/mathspec/pull/PR))
+- feat(language): a where predicate is named once under `masks:`, and another file reads it under `given: masks:` ([#821](https://github.com/energy-models/mathspec/pull/821))
 
 ## 0.2.1 (2026-10-01)
 
