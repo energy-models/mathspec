@@ -2,13 +2,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The committed pages a generator writes, held to their generator."""
+"""The committed pages a generator writes, held to their generator, and the blocks the site renders into a page."""
 
 from __future__ import annotations
 
 import inspect
 import re
-from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -26,10 +25,6 @@ ROOT = Path(__file__).resolve().parent.parent
 #: tool rewrites it. Adding a generator means adding a row here, which
 #: `test_every_generator_is_asked` is what says out loud.
 GENERATED: list[tuple[str, Path, Callable[[str], str], str]] = [
-    *(
-        (f'gallery:{name}', gallery.PAGES / name, partial(gallery.rendered, name), 'gallery')
-        for name in gallery.pages()
-    ),
     ('notation', notation.PAGE, notation.rendered_page, 'notation'),
     ('operators', spec_math.PAGE, spec_math.rendered, 'spec_math'),
     ('home:index', home_math.PAGE, home_math.rendered_page, 'home_math'),
@@ -56,6 +51,28 @@ def test_every_generator_is_asked():
     assert detects_drift == {tool for *_, tool in GENERATED}, (
         'a tool that can detect a stale page has no row in GENERATED, or a row names a tool that cannot'
     )
+
+
+#: Every page under `docs/`, as the tree holds it.
+_SOURCES = {path: path.read_text() for path in sorted((ROOT / 'docs').rglob('*.md'))}
+
+
+@pytest.mark.parametrize('key', sorted(gallery.BLOCKS))
+def test_every_gallery_block_is_named_on_one_page_and_renders(key: str):
+    """The site renders a block only where a page names it, so a block on no page prints nowhere.
+
+    Rendering it here fails a spec that cannot print in the suite rather than only at `docs-build`.
+    """
+    pages = [
+        path.relative_to(ROOT).as_posix() for path, text in _SOURCES.items() if key in gallery.MARKER.findall(text)
+    ]
+    assert len(pages) == 1, f'{key} is named on {pages}; a block is named on exactly one page'
+    assert gallery.BLOCKS[key]().strip(), f'{key} renders an empty block'
+
+
+def test_a_marker_that_names_no_block_fails_the_build():
+    with pytest.raises(ValueError, match=r'<!-- gallery: examples/nothing.yaml --> names no block'):
+        gallery.expand('prose\n\n<!-- gallery: examples/nothing.yaml -->\n')
 
 
 def test_no_fold_in_the_readme_prints_its_math_as_a_code_block():
@@ -160,7 +177,7 @@ def _site_markdown():
 
 @pytest.mark.parametrize(
     'page',
-    sorted(p for p in (ROOT / 'docs').rglob('*.md') if _FENCED_MATH.search(p.read_text())),
+    [path for path, text in _SOURCES.items() if _FENCED_MATH.search(text) or gallery.MARKER.search(text)],
     ids=lambda p: p.stem,
 )
 def test_the_site_renders_the_math_the_page_prints_for_github(page: Path):
@@ -174,14 +191,15 @@ def test_the_site_renders_the_math_the_page_prints_for_github(page: Path):
     preceded the fence entry missed `docs/index.md`, whose math is indented
     inside a tab.
 
-    The renderer carries the extension, so this converts the page source
-    itself. It was the hook's output until the site moved to zensical, and
-    reading the source is what makes the extension's own registration part of
-    what the test asks about.
+    The renderer carries both extensions, so this converts the page source
+    itself and counts the spans in the page with its gallery blocks in. It was
+    the hook's output until the site moved to zensical, and reading the source
+    is what makes each extension's own registration part of what the test
+    asks about.
     """
-    source = page.read_text()
+    source = gallery.expand(_SOURCES[page])
     printed = len(_FENCED_MATH.findall(source)) + len(_INLINE_MATH.findall(source))
-    html = _site_markdown().convert(source)
+    html = _site_markdown().convert(_SOURCES[page])
     assert html.count('class="arithmatex"') >= printed, (
         f'{page.relative_to(ROOT)} prints {printed} math spans and the site renders '
         f'{html.count('class="arithmatex"')} — the rest reach the reader as literal text'

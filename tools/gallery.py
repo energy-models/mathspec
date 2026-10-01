@@ -2,13 +2,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The example gallery: each spec in `examples/`, beside the math it prints.
+"""The example gallery: each spec in `examples/`, beside the math it prints, as the site builds.
 
-    pixi run python -m tools.gallery           # rewrite the pages' blocks
-    pixi run python -m tools.gallery --check   # fail if one has drifted
-
-The prose above each block is the page's own. Only the fenced spec and the
-math below it are written from here.
+A page holds its own prose and a line ``<!-- gallery: examples/dispatch.yaml -->``
+for each block. `tools.mdx_gallery` replaces that line with the spec verbatim
+and the math the typesetter prints from it when the site builds, so the tree
+never holds the output and a page cannot drift from its spec.
 """
 
 from __future__ import annotations
@@ -24,18 +23,16 @@ import yaml
 from mathspec import merge, override, to_spec, typeset_declaration
 from mathspec.program import Add, Constant, Named
 from mathspec.typesetting import to_markdown
-from tools._page import ROOT, sidecar_for, splice, tab, without_header
-from tools._page import main as page_main
+from tools._page import ROOT, sidecar_for, tab, without_header
 from tools.notation import equations
 from tools.spec_math import OPERATORS, PROBES, _section, rendered_probe
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
     from pathlib import Path
 
     from mathspec.spec import Spec
 
-PAGES = ROOT / 'docs' / 'examples'
 LIBRARY = ROOT / 'examples' / 'library'
 PYPSA = ROOT / 'examples' / 'pypsa'
 #: How `examples/library/` prints: one table for every fragment, the spec
@@ -44,40 +41,24 @@ PYPSA = ROOT / 'examples' / 'pypsa'
 #: PyPSA split prints in the one file's table, cut the same way.
 LIBRARY_SYMBOLS = ROOT / 'examples' / 'symbols' / 'library.yaml'
 PYPSA_SYMBOLS = ROOT / 'examples' / 'symbols' / 'pypsa.yaml'
-BEGIN, END = '<!-- gallery:begin -->', '<!-- gallery:end -->'
 
-#: Page -> the spec it shows. One spec per page, because a gallery of
-#: fragments is what the reference pages already are.
-MODELS = {
-    'dispatch.md': ROOT / 'examples' / 'dispatch.yaml',
-    'commitment.md': ROOT / 'examples' / 'commitment.yaml',
-    'library/surface.md': LIBRARY / 'surface.yaml',
-    'library/generator.md': LIBRARY / 'generator.yaml',
-    'library/load.md': LIBRARY / 'load.yaml',
-    **{f'pypsa/{path.stem}.md': path for path in sorted(PYPSA.glob('*.yaml'))},
-}
+#: The specs that print whole, each in its own symbol table.
+MODELS = (ROOT / 'examples' / 'dispatch.yaml', ROOT / 'examples' / 'commitment.yaml')
 
-#: The index of the PyPSA split: its two tables are read off the fragments.
-SPLIT_INDEX = 'pypsa/index.md'
+#: The library fragments, each printed in the notation of the whole library.
+FRAGMENTS = tuple(LIBRARY / name for name in ('surface.yaml', 'generator.yaml', 'load.yaml'))
 
-#: Page -> the fragments whose composition it shows, and the patches laid over
-#: it. The spec is what `merge` returns, which no file in the tree holds, so
-#: the page carries it as YAML beside the math it prints. A patch has no math
-#: of its own, so each one prints as the spec it lands on, in a tab of its own.
-COMPOSED = {
-    'library/composed.md': (
-        [LIBRARY / name for name in ('surface.yaml', 'generator.yaml', 'load.yaml')],
-        {path.stem: path for path in sorted((LIBRARY / 'variants').glob('*.yaml'))},
-    ),
-}
+#: The fragments whose composition `examples/library` names, and the patches
+#: laid over it. The spec is what `merge` returns, which no file in the tree
+#: holds, so the block carries it as YAML beside the math it prints. A patch
+#: has no math of its own, so each one prints as the spec it lands on, in a
+#: tab of its own.
+COMPOSED = (list(FRAGMENTS), {path.stem: path for path in sorted((LIBRARY / 'variants').glob('*.yaml'))})
 
-#: Page -> the spec it shows one declaration at a time — its YAML, then the
-#: equation it renders, headed by the name the other side gives it, read from
-#: the declaration's own description.
-DECLARED = {
-    'pypsa.md': ROOT / 'examples' / 'pypsa.yaml',
-    'pypsa_linearized_uc.md': ROOT / 'examples' / 'pypsa_linearized_uc.yaml',
-}
+#: The specs shown one declaration at a time: its YAML, then the equation it
+#: renders, headed by the name the other side gives it, read from the
+#: declaration's own description.
+DECLARED = (ROOT / 'examples' / 'pypsa.yaml', ROOT / 'examples' / 'pypsa_linearized_uc.yaml')
 
 #: One PyPSA reference network per rung, run out of band with the versions
 #: each script pins; `references.json` beside them holds what each solve
@@ -357,49 +338,41 @@ def spine_block() -> str:
     )
 
 
-def with_references(text: str) -> str:
-    """Every reference block whose marker pair is on this page; a stem on no page at all is the test's business."""
-    blocks = {
-        'spine': spine_block,
-        **{stem: partial(reference_block, stem) for stem in sorted(RECORDED)},
+def _blocks() -> dict[str, Callable[[], str]]:
+    """Every block a page can name, under the path of the file or folder it is printed from."""
+    blocks: dict[str, Callable[[], str]] = {
+        **{path: partial(model_block, path) for path in MODELS},
+        **{path: partial(fragment_block, path, LIBRARY_SYMBOLS) for path in FRAGMENTS},
+        **{path: partial(fragment_block, path, PYPSA_SYMBOLS) for path in sorted(PYPSA.glob('*.yaml'))},
+        **{path: partial(declared_block, path) for path in DECLARED},
+        LIBRARY: partial(composed_block, *COMPOSED),
+        PROBES: probe_block,
+        PYPSA: split_index_block,
+        REFERENCES / 'spine.py': spine_block,
+        **{REFERENCES / f'{stem}.py': partial(reference_block, stem) for stem in sorted(RECORDED)},
     }
-    for key, block in blocks.items():
-        begin, end = f'<!-- reference:{key}:begin -->', f'<!-- reference:{key}:end -->'
-        if begin in text and end in text:
-            text = splice(text, begin, end, block())
-    return text
+    return {path.relative_to(ROOT).as_posix(): block for path, block in blocks.items()}
 
 
-def block(page: str) -> str:
-    if page == 'operators.md':
-        return probe_block()
-    if page in DECLARED:
-        return declared_block(DECLARED[page])
-    if page in COMPOSED:
-        return composed_block(*COMPOSED[page])
-    if page == SPLIT_INDEX:
-        return split_index_block()
-    if MODELS[page].parent == LIBRARY:
-        return fragment_block(MODELS[page], LIBRARY_SYMBOLS)
-    if MODELS[page].parent == PYPSA:
-        return fragment_block(MODELS[page], PYPSA_SYMBOLS)
-    return model_block(MODELS[page])
+#: Marker key -> the block it expands to.
+BLOCKS = _blocks()
+
+#: A line that is only ``<!-- gallery: <path> -->``, the path relative to the repository root.
+MARKER = re.compile(r'^<!-- gallery: (?P<key>\S+) -->$', re.MULTILINE)
 
 
-def rendered(page: str, text: str) -> str:
-    text = splice(text, BEGIN, END, block(page))
-    if page in DECLARED:
-        text = with_references(text)
-    return text
+def expand(markdown: str) -> str:
+    """*markdown* with every gallery marker replaced by the block it names.
 
+    Raises:
+        ValueError: A marker names a path no block is printed from.
+    """
 
-def pages() -> list[str]:
-    return [*MODELS, *COMPOSED, *DECLARED, 'operators.md', SPLIT_INDEX]
+    def block(match: re.Match[str]) -> str:
+        key = match['key']
+        if key not in BLOCKS:
+            msg = f'<!-- gallery: {key} --> names no block; the gallery prints from {sorted(BLOCKS)}'
+            raise ValueError(msg)
+        return BLOCKS[key]()
 
-
-def main(argv: list[str] | None = None) -> int:
-    return page_main(argv, {PAGES / page: partial(rendered, page) for page in pages()}, 'gallery')
-
-
-if __name__ == '__main__':
-    raise SystemExit(main())
+    return MARKER.sub(block, markdown)

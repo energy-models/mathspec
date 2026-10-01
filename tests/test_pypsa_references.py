@@ -18,16 +18,13 @@ import sys
 import pytest
 
 from mathspec import to_spec
-from tools import gallery
-from tools.gallery import DECLARED, RECORDED, REFERENCES, _names_for, _stands_for
+from tools.gallery import DECLARED, RECORDED, REFERENCES, _names_for, _stands_for, reference_block
 
 RUNGS = sorted(path.stem for path in REFERENCES.glob('rung_*.py'))
 SCRIPT = REFERENCES / 'reference.py'
-PAGE_TEXTS = [(gallery.PAGES / page).read_text() for page in DECLARED]
-
-SPECS = {page: to_spec(path) for page, path in DECLARED.items()}
+SPECS = {path.stem: to_spec(path) for path in DECLARED}
 MODELS = list(SPECS.values())
-BASE = SPECS['pypsa.md']
+BASE = SPECS['pypsa']
 ROWS_DECLARED = {
     n for m in MODELS for name, block in m.constraints.items() for n in _names_for(name, block.description)
 }
@@ -44,14 +41,6 @@ RECORDED_ROWS: set[str] = set().union(*(record['rows'] for record in BUILT))
 RECORDED_COLUMNS: set[str] = set().union(*(record['columns'] for record in BUILT))
 GC_RECORDED: dict[str, dict] = {label: gc for record in BUILT for label, gc in record['global_constraints'].items()}
 DIVERGED = {stem: record for stem, record in RECORDED.items() if 'diverges' in record}
-
-
-@pytest.mark.parametrize('key', ['spine', *RUNGS])
-def test_every_reference_block_has_its_marker_pair_on_exactly_one_declared_page(key: str):
-    carrying = sum(f'<!-- reference:{key}:begin -->' in text for text in PAGE_TEXTS)
-    assert carrying == 1, (
-        'a reference block shows on one declared page — the generator skips a page without the marker pair'
-    )
 
 
 @pytest.mark.parametrize('rung', RUNGS)
@@ -106,9 +95,7 @@ def test_a_divergence_names_its_issue_and_what_pypsa_gives_instead(stem: str):
     diverges = recorded['diverges']
     module = (REFERENCES / f'{stem}.py').read_text()
     assert f'ISSUE = {diverges["issue"]}' in module, 'the record names the issue its rung script names'
-    assert any(f'PyPSA/PyPSA#{diverges["issue"]}' in text for text in PAGE_TEXTS), (
-        'the page links the issue a rung records'
-    )
+    assert f'PyPSA/PyPSA#{diverges["issue"]}' in reference_block(stem), 'the page links the issue a rung records'
     assert 'raises' in diverges or not math.isclose(diverges['objective'], recorded['objective'], rel_tol=1e-9), (
         'a divergence records what PyPSA gives instead of the intended objective: an exception or another objective'
     )
@@ -129,10 +116,10 @@ def _stated(name: str, row: str) -> bool:
     return re.fullmatch(re.sub(r'\\\{[a-z]\\\}', '.+', re.escape(name)), row) is not None
 
 
-@pytest.mark.parametrize('page', [page for page in DECLARED if page != 'pypsa.md'])
-def test_a_file_of_its_own_shares_its_declarations_with_the_base(page: str):
+@pytest.mark.parametrize('stem', [stem for stem in SPECS if stem != 'pypsa'])
+def test_a_file_of_its_own_shares_its_declarations_with_the_base(stem: str):
     """A keyword file restates the base surface; a shared name keeps its PyPSA name and its dtype, or it has drifted."""
-    own = SPECS[page]
+    own = SPECS[stem]
     drifted = []
     for section in ('parameters', 'relations', 'variables', 'constraints'):
         theirs, ours = getattr(BASE, section), getattr(own, section)
@@ -141,7 +128,7 @@ def test_a_file_of_its_own_shares_its_declarations_with_the_base(page: str):
                 drifted.append(f'{section}.{name}: description')
             if section == 'parameters' and theirs[name].dtype != ours[name].dtype:
                 drifted.append(f'{section}.{name}: dtype')
-    assert not drifted, f'{page} drifted from pypsa.yaml on {sorted(drifted)}'
+    assert not drifted, f'{stem} drifted from pypsa.yaml on {sorted(drifted)}'
 
 
 def test_pypsa_builds_no_row_the_files_do_not_declare():

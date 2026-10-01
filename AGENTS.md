@@ -52,7 +52,9 @@ To learn what the project _is_, read [docs/](docs/index.md), and
 - **Never edit a generated file by hand.** Regenerate it and read the diff.
   Generated files are the schema, the golden typesetter output, and the pages
   in the `GENERATED` table of `tests/test_docs.py`, which include the README
-  and `docs/index.md`. A new generator lands with a row in that table.
+  and `docs/index.md`. A new generator lands with a row in that table. An
+  example page stores only its prose and a `<!-- gallery: <path> -->` line;
+  `tools/gallery.py` prints the block there when the site builds.
 
   ```bash
   pixi run python -m tools.schema              # schema/mathspec.schema.json

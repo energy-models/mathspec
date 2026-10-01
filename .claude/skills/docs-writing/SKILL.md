@@ -67,7 +67,7 @@ not need, in three groups:
 - **Contributing** is for someone who changes mathspec itself.
 - **Proofs of concept** holds the notation page, which renders the typesetting
   test spec, and the PyPSA pages. The PyPSA pages stay in `docs/examples/`,
-  where `tools/gallery.py` writes them.
+  where `tools/gallery.py` renders them.
 
 A page in Development keeps the folder of its kind.
 
@@ -88,14 +88,15 @@ Each kind has one job, and one thing it must not do:
 **An example page is reference in its own form.** It answers "can the language
 say my model, and what does the file mean?", and its shape is a witness rather
 than a table: a paragraph of the page's own, then the file verbatim and the
-math the typesetter prints from it. The block is written by `tools/gallery.py`
-between `<!-- gallery:begin -->` and `<!-- gallery:end -->`; the paragraph is
-the only prose on the page, and it says what the spec is and the one or two
+math the typesetter prints from it. The page names the spec in a line such as
+`<!-- gallery: examples/dispatch.yaml -->`, and `tools/gallery.py` prints the
+block there when the site builds; the paragraph is the only prose on the page, and it says what the spec is and the one or two
 things worth reading for, which the `description:` line in the file does not.
-The PyPSA pages, in the Development section, add a generated block per rung,
-holding the reference script and what PyPSA solved it to. Every example is a
-file under `examples/`, loaded by the suite and compiled by the LaTeX gate,
-and `tests/test_docs.py` holds each block to its generator byte for byte. The catalogue in
+The PyPSA pages, in the Development section, add a block per rung, named by
+its reference script, holding the script and what PyPSA solved it to. Every
+example is a file under `examples/`, loaded by the suite and compiled by the
+LaTeX gate, and `tests/test_docs.py` renders each block and holds it to one
+page. The catalogue in
 `docs/examples/index.md` is hand-written: one bullet per page in the Examples
 section, saying why a reader would open it.
 
@@ -141,9 +142,10 @@ The obvious rule gets one sentence.
 - **Show the input and its result side by side.** YAML next to the maths it
   renders, a call next to its output. Never in a later subsection.
 - **Every generated block is checked; a hand-written fence is not.** The
-  spec on an example page, the notation page, the operator table and the
-  home spec come from a generator, and `tests/test_docs.py` holds them to
-  it. `reading.md` is run by `tests/test_reading_page.py`, which checks every
+  spec on an example page is printed from its file when the site builds,
+  and `tests/test_docs.py` renders it. The notation page, the operator table
+  and the home spec come from a generator, and `tests/test_docs.py` holds
+  them to it. `reading.md` is run by `tests/test_reading_page.py`, which checks every
   `expression  # value` line. The `NAME` production on the expressions page
   is compared to the parser's. A YAML fence anywhere else is read by nothing,
   so load it before committing: write it to a file and run
@@ -329,7 +331,8 @@ PY
   is a consumer's page. Here a consumer is named only for what the file
   guarantees it.
 - **Generated content.** The spec and its math on every example page and the
-  rung blocks on the PyPSA pages (`tools/gallery.py`), the table on
+  rung blocks on the PyPSA pages are printed by `tools/gallery.py` when the
+  site builds, and the tree holds only the marker. The table on
   `docs/reference/notation.md` (`tools/notation.py`), the operator table on
   `docs/reference/language/operators.md` (`tools/spec_math.py`), and the home
   spec on `docs/index.md` and in the README (`tools/home_math.py`) are
@@ -356,7 +359,9 @@ PY
   or the card falls out of its list and `tests/test_docs.py` says so.
 - **A generated block lands with its plumbing**: the page in
   `.prettierignore`, with a comment naming the tool, and the tool in
-  `tests/test_docs.py`'s `GENERATED` table.
+  `tests/test_docs.py`'s `GENERATED` table. A gallery block needs neither:
+  it lands as a key in `_blocks()` in `tools/gallery.py` and a marker line
+  on one page.
 - **A diagram carries alt text**, and no rule is stated in colour alone.
 - **Tables for what varies along one axis** — accepted keys, the operators,
   the formats. Prose for what has an order or a reason.

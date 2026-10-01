@@ -82,7 +82,7 @@ nav:
   # renderer, a checker), whoever changes mathspec itself, and the proofs of
   # concept: the notation page, which renders the typesetting test spec, and
   # the PyPSA pages. The PyPSA pages stay in `docs/examples/`, where
-  # `tools/gallery.py` writes them.
+  # `tools/gallery.py` renders them.
   - Development:
       - Building on mathspec:
           - Reading a spec and its program: reference/reading.md
@@ -222,6 +222,10 @@ markdown_extensions:
   # `docs/changelog.md` is the whole of CHANGELOG.md.
   - pymdownx.snippets:
       check_paths: true
+  # Every `<!-- gallery: <path> -->` line on an example page, replaced by the
+  # spec at that path and the math it prints. The tree holds only the prose,
+  # so a page cannot drift from its spec, and GitHub shows the prose alone.
+  - tools.mdx_gallery
   # The other half of the math, beside the `arithmatex` entry above: the
   # verbatim `$`…`$` pair the typesetter prints for GitHub, rewritten into the
   # `$…$` arithmatex reads. It is a preprocessor rather than a hook because
@@ -263,6 +267,7 @@ plugins:
           paths: [src]
 watch:
   - src/mathspec
+  - examples
   - README.md
   - CHANGELOG.md
 extra_css:

@@ -4,8 +4,8 @@
 
 """The component library under `examples/library/`, held to what its pages claim.
 
-The gallery test holds each page to its generator, so the math on a page cannot
-drift from the file above it. What is left for here is what no page states: that
+The site renders the math on each page from the file the page names, so it
+cannot drift from that file. What is left for here is what no page states: that
 every fragment stands alone, that the composition is one spec, and that the
 variant patch, the one file in the library that is not a spec, applies to what
 the fragments make.
@@ -104,6 +104,6 @@ def test_the_variant_needs_the_fragment_it_patches():
 
 def test_every_variant_in_the_library_is_typeset_on_the_composed_page():
     """A patch prints only as the spec it lands on, so one with no tab is a patch nothing prints."""
-    page = (gallery.PAGES / 'library' / 'composed.md').read_text()
+    page = gallery.composed_block(*gallery.COMPOSED)
     missing = [path.name for path in (LIBRARY / 'variants').glob('*.yaml') if f'=== "With {path.stem}"' not in page]
     assert not missing, f'the composed page gives {missing} no tab, so what they print is on no page'
