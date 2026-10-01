@@ -202,6 +202,7 @@ given:
     transmission_expansion_cost: { dims: [scenario, global_constraint] }
     tech_capacity_expansion: { dims: [global_constraint] }
     scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
     Carrier_additions: { dims: [period, carrier] }
     Bus_injection: { dims: [scenario, snapshot, bus] }
 
@@ -249,6 +250,9 @@ expressions:
       sum(sum(((Link_p * Link_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=link), over=snapshot)
       + sum(sum((((Link_p * Link_p) * Link_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=link), over=snapshot)
     adds_to: scenario_opex
+  Link_capex:
+    expression: sum(scenario_weight * Link_p_nom_ext * Link_capital_cost * Link_capital_weight)
+    adds_to: total_cost
   Link_additions:
     expression: >-
       sum(Link_p_nom_ext * Link_first_active, by=Link_carrier, over=link, into=carrier)
@@ -315,8 +319,3 @@ assumptions:
       refuses quadratic costs under any risk preference
       (`optimize.py:467-474`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Link_p_nom_ext) * Link_capital_cost) * Link_capital_weight)

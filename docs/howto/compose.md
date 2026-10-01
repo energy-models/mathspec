@@ -18,7 +18,9 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
 1. **Write the network as a spec.** It balances the injection at a bus, and
    reads the injection under
    [`given`](../reference/language/declarations.md#given): what the components
-   put in is theirs to say. Nothing in it names a component class.
+   put in is theirs to say. It sets the objective on `total_cost`, which it
+   reads the same way: what each component costs is the component's to say.
+   Nothing in it names a component class.
 
    ```yaml title="network.yaml"
    dimensions:
@@ -29,17 +31,24 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
        Bus_injection:
          dims: [snapshot, bus]
          description: what the components put into a bus
+       total_cost:
+         dims: []
+         description: what running the system costs
    constraints:
      Bus_balance:
        dims: [snapshot, bus]
        expression: Bus_injection == 0
+   objective:
+     sense: minimize
+     expression: total_cost
    ```
 
 2. **Write each component file against the network.** It declares its own
    dimension and its own math. It reads `Bus_injection` too, and says what it
    puts into a bus as a named expression, a
    [term](../reference/language/declarations.md#terms) whose `adds_to:` names
-   `Bus_injection`.
+   `Bus_injection`. A component that costs something adds its cost to
+   `total_cost` the same way.
 
    ```yaml title="generator.yaml"
    dimensions:
@@ -56,13 +65,14 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    given:
      expressions:
        Bus_injection: { dims: [snapshot, bus] }
+       total_cost: { dims: [] }
    expressions:
      Generator_injection:
        expression: sum(Generator_p, by=Generator_bus, over=generator, into=bus)
        adds_to: Bus_injection
-   objective:
-     sense: minimize
-     expression: sum(Generator_p * Generator_marginal_cost)
+     Generator_cost:
+       expression: sum(Generator_p * Generator_marginal_cost)
+       adds_to: total_cost
    ```
 
    ```yaml title="load.yaml"
@@ -83,7 +93,9 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
        adds_to: Bus_injection
    ```
 
-   Each file loads on its own and prints as math on its own.
+   Each file loads on its own and prints as math on its own. Only the
+   network sets an objective, so `generator.yaml` on its own is a feasibility
+   problem.
 
 3. **Merge the files you need.** Give them as a list. A refusal names a file
    by its path as the list gives it, and a mapping or a loaded spec by its
@@ -97,9 +109,11 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
 
    `spec` defines `Bus_injection` as `Generator_injection + Load_injection`,
    and keeps each term as a named expression. Nothing is left under `given:`,
-   so `spec` is fully defined. The objectives of the fragments are summed,
-   each term in parentheses, in the order of the list. The order changes no
+   so `spec` is fully defined. The objective is the network's, and
+   `total_cost` is `Generator_cost`. The order of the list changes no
    meaning: [`canonical`](compare.md) writes the same text for every order.
+   A second file that sets an objective is refused: one fragment sets it,
+   and each other one adds its part to the sum it reads.
 
 4. **Add a component without touching the network.** A new file adds its own
    term, and `network.yaml` stays as it is.
@@ -155,10 +169,18 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
        dims: [snapshot, bus]
        expression: Bus_slack
        description: what the components put into a bus
+   given:
+     expressions:
+       total_cost:
+         dims: []
+         description: what running the system costs
    constraints:
      Bus_balance:
        dims: [snapshot, bus]
        expression: Bus_injection == 0
+   objective:
+     sense: minimize
+     expression: total_cost
    ```
 
    ```python
@@ -184,7 +206,7 @@ which each component pins at its own port.
 | a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                          |
 | a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                              |
 | an expression with `adds_to:`                     | the sum it names is the body one fragment defines, if any, followed by every term by its name, in the order of the list. [Terms](../reference/language/declarations.md#terms) gives what is refused |
-| `objective`                                       | the terms are summed in the order of the list, each in parentheses, and the senses agree. The first description in the list is carried                                                              |
+| `objective`                                       | one fragment sets it, and a second is refused. Several fragments contribute to it as terms of a sum the objective reads                                                                             |
 | `version`                                         | every fragment is written against the same one                                                                                                                                                      |
 | `description` at the top of a fragment            | it is about the fragment and is not carried. Pass the composed spec's as `description=`                                                                                                             |
 

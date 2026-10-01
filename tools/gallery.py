@@ -157,7 +157,8 @@ def split_index(specs: Mapping[str, Spec]) -> str:
     for hub, by_fragment in sorted(terms.items(), key=lambda item: -len(item[1])):
         reader, dims = readers[hub]
         cells = ', '.join(f'[`{term}`]({fragment}.md)' for fragment, term in sorted(by_fragment))
-        sums.append(f'| `{hub}` | `{", ".join(dims)}` | [{reader}]({reader}.md) | {cells} |')
+        over = f'`{", ".join(dims)}`' if dims else 'scalar'
+        sums.append(f'| `{hub}` | {over} | [{reader}]({reader}.md) | {cells} |')
     files = [
         '| Fragment | Parameters | Variables | Constraints | Reads | Adds to |',
         '| --- | --- | --- | --- | --- | --- |',

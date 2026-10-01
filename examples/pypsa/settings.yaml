@@ -107,6 +107,12 @@ given:
         snapshot's hours and its period, before the scenario's own weight; a
         start and a stop cost what they cost, unweighted, as PyPSA adds them
         (`optimize.py:414-429`)
+    total_cost:
+      dims: []
+      description: >-
+        what the system costs — capacity once per active period at its expected
+        cost over the scenarios, operation in expectation over the scenarios,
+        and a share of it at the tail
     Carrier_additions:
       dims: [period, carrier]
       description: >-
@@ -135,3 +141,7 @@ expressions:
         when: GlobalConstraint_counts_snapshot AND NOT shift(GlobalConstraint_counts_snapshot, along=snapshot, offset=-1)
         expression: 1
     otherwise: 0
+
+objective:
+  sense: minimize
+  expression: total_cost
