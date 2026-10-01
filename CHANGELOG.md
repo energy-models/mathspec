@@ -13,6 +13,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - docs(pypsa): the pypsa references are recorded against pypsa master ([#786](https://github.com/energy-models/mathspec/pull/786))
+- fix(language): a where that reads a given expression names it as a given expression, not as a variable ([#809](https://github.com/energy-models/mathspec/pull/809))
 - feat(language): merge refuses a second objective, and a composed objective reads a sum that each file adds its part to ([#763](https://github.com/energy-models/mathspec/pull/763))
 - docs: the composition how-to shows a sum that one file defines and other files add terms to ([#800](https://github.com/energy-models/mathspec/pull/800))
 - feat(language): a term names the sum it adds to with `adds_to:`, and no file marks a sum as open ([#763](https://github.com/energy-models/mathspec/pull/763))
