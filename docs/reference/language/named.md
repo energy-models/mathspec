@@ -113,8 +113,11 @@ A named expression carries **exactly one** of `expression:` and `cases:`.
   against `position(snapshot) == -1` pick the same row on an axis with one
   member. Count from one end only.
 
-- **A `when:` may not compare expressions**, such as `c > 2 * k`, even in a
-  block with one case. Precompute the test as a boolean parameter.
+- **In a block of two or more cases, a `when:` may not compare expressions**,
+  such as `c > 2 * k`. Nothing proves such a case apart from the others before
+  the data arrives. Precompute the test as a boolean parameter. A block with one
+  case may compare expressions: its `otherwise:` claims only what the case
+  leaves.
 
 - **Each `when:` and each value sits inside the frame.** A narrower case
   broadcasts as a parameter with fewer dimensions does.
