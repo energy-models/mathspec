@@ -4873,7 +4873,7 @@ The rung builds a committable peaker that the load needs in the third and
 fourth snapshots. A start costs `100` in the second snapshot and `900` in the
 third, and a stop is free only in the last snapshot. PyPSA solves to `6850.0`:
 the unit starts one snapshot early at minimum output and stops in the last
-snapshot. Each series binds (#620).
+snapshot. Each series binds (#807).
 
 | cost changed | objective |
 | --- | --- |
