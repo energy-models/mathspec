@@ -68,7 +68,15 @@ parameters:
     description: cost of one snapshot spent on
     dims: [scenario, snapshot, generator]
   Generator_big_m:
-    description: a bound safely above any feasible output — the build cap at full availability, data prep
+    description: >-
+      the bound a committed extendable generator's big-M rows release it by — the
+      build cap `p_nom_max` times the highest `p_max_pu`, where the cap is
+      finite and positive. Elsewhere it is `committable_big_m` times the
+      highest `p_max_pu`, and where that keyword is not given, ten times the
+      largest of the peak total load and the component's largest finite
+      `p_nom` and `p_nom_max`, or 1e6 where there is none of them
+      (`components.py:1050-1121`). Below the output a solve wants, it caps that
+      output; data prep
     dims: [scenario, generator]
 
 variables:
@@ -122,8 +130,18 @@ given:
 expressions:
   Generator_previous_status:
     description: >-
-      the commitment state a generator carries into a snapshot — the state it
-      brought into the horizon at the first, the previous snapshot's after that
+      the commitment state a generator carries into a snapshot — off at the
+      first snapshot it stands in past the first of the horizon, as PyPSA
+      reads a status it did not build (`constraints.py:297`), and the state
+      carried over otherwise
+    dims: [scenario, snapshot, generator]
+    cases:
+      opening_late: { when: "position(snapshot) > 0 AND NOT shift(Generator_active, along=snapshot, offset=1)", expression: 0 }
+    otherwise: Generator_status_carried_over
+  Generator_status_carried_over:
+    description: >-
+      the state a generator carries over into a snapshot — the state it brought
+      into the horizon at the first, the previous snapshot's after that
     dims: [scenario, snapshot, generator]
     cases:
       opening: { when: "position(snapshot) == 0", expression: Generator_status_initial }
@@ -293,7 +311,7 @@ constraints:
 | $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{G}`$ — cost of one start |
 | $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{G}`$ — cost of one stop |
 | $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$ — a bound safely above any feasible output — the build cap at full availability, data prep |
+| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$ — the bound a committed extendable generator's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the output a solve wants, it caps that output; data prep |
 
 #### Variables
 
@@ -329,7 +347,8 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
+| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:297`), and the state carried over otherwise |
+| $`\overleftarrow{u}^{\circ}`$ | `Generator_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the state a generator carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Generator\_commitment\_opex}`$ | `Generator_commitment_opex` over $`\Xi`$ |
 
 $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own order — the order `shift` steps along, not the order labels sort in — counted from $`0`$. The index itself stays the coordinate, so $`t`$ compares against labels and $`\mathrm{pos}(t)`$ against positions.
@@ -461,7 +480,13 @@ u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \
 **`Generator_previous_status`**
 
 ```math
-\overleftarrow{u}_{\xi,t,g} = \begin{cases} \mathrm{u}^{0}_{\xi,g} & \text{if } \mathrm{pos}(t) = 0 \\ u_{\xi,t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+\overleftarrow{u}_{\xi,t,g} = \begin{cases} 0 & \text{if } \mathrm{pos}(t) > 0 \wedge \neg \mathrm{on}_{t - 1,g} \\ \overleftarrow{u}^{\circ}_{\xi,t,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+**`Generator_status_carried_over`**
+
+```math
+\overleftarrow{u}^{\circ}_{\xi,t,g} = \begin{cases} \mathrm{u}^{0}_{\xi,g} & \text{if } \mathrm{pos}(t) = 0 \\ u_{\xi,t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 **`Generator_commitment_opex`**
