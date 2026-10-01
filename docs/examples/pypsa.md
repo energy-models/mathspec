@@ -4873,7 +4873,7 @@ The rung feeds an east bus over a modular line and a modular transformer, with
 a modular storage unit and store on it. Beside them stand a modular extendable
 generator, link and process with `active = False`, for which PyPSA builds no
 `n_mod`. PyPSA solves to `13927.0`. Each module binds: with that component's
-module size set to zero, PyPSA solves to these objectives (#NNN).
+module size set to zero, PyPSA solves to these objectives (#815).
 
 | module size set to zero | objective |
 | --- | --- |
