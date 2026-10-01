@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(examples): the GEMS basic models library is written as one spec ([#805](https://github.com/energy-models/mathspec/pull/805))
 - fix(language): a cases block with one case may compare expressions in its when: ([#795](https://github.com/energy-models/mathspec/pull/795))
 - feat(language): a parameter value that is null or NaN is refused when the data is attached ([#788](https://github.com/energy-models/mathspec/pull/788))
 - fix(language): a where string names several columns in at's over= and into=, as an expression does ([#782](https://github.com/energy-models/mathspec/pull/782))
