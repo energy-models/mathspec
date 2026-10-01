@@ -74,6 +74,7 @@ class Namespace:
         '_named',
         'bodies',
         'constraints',
+        'defaults',
         'dimensions',
         'dtypes',
         'leaf_dims',
@@ -104,6 +105,11 @@ class Namespace:
         self.dtypes: dict[str, DeclaredDtype] = {
             **{p: pd.dtype for p, pd in parameters.items()},
             **{d: dd.dtype for d, dd in schema.dimensions.items()},
+        }
+        #: parameter name -> its declared ``default:``, for the parameters that
+        #: have one; what a where comparison reads where the data has no row.
+        self.defaults: dict[str, bool | float] = {
+            p: pd.default for p, pd in schema.parameters.items() if pd.default is not None
         }
         #: relation name -> its columns and key, as declared.
         self.relations: dict[str, RelationDeclaration] = {
@@ -458,7 +464,7 @@ def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) 
     fallback = resolve_expression_text(block.otherwise, ns, case_context(name, None), errors, ceiling=None)
     if len(errors) > found or fallback is None:
         return None
-    errors.extend(f'{context}: {problem}' for problem in overlapping(masks, ns.dtypes))
+    errors.extend(f'{context}: {problem}' for problem in overlapping(masks, ns.dtypes, ns.defaults))
     if len(errors) > found:
         return None
     left_over = Region(remainder(region.when for region in regions), fallback)

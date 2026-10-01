@@ -34,15 +34,18 @@ The [grammar](expressions.md#where-strings) says what a `where:` may hold.
 | a label a relation does not map               | that label's group membership ([relations](relations.md#the-data-contract)) |
 
 Nothing else creates absence. **A missing parameter row is not absence.** It
-reads as the value that contributes nothing: `0` as a coefficient, and `false`
-in a `where`.
+reads as the parameter's [`default:`](declarations.md#a-default) where it
+declares one. Otherwise it reads as the value that contributes nothing: `0` as
+a coefficient, and `false` in a `where`.
 A missing row is the only gap a parameter has: a null or NaN value is
 [refused](declarations.md#parameters) when the data is attached.
 
 Where no such value exists, loading is refused. There are four such positions:
 a divisor, a `bounds:` entry, the whole constant side of a comparison, and a
-[`piecewise:`](piecewise.md) breakpoint. For a bound only where the data has
-one, supply the bound in the data, where `inf` is a value, or mask the variable.
+[`piecewise:`](piecewise.md) breakpoint. A parameter with a `default:` has a
+value in the first three. For a bound only where the data has one, declare
+`default: .inf`, supply the bound in the data, where `inf` is a value, or mask
+the variable.
 
 ## How absence travels
 

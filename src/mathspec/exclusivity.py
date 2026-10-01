@@ -62,7 +62,11 @@ class Undecidable(Exception):  # noqa: N818
     """A pair this procedure will not reason about. Carries the rewrite."""
 
 
-def overlapping(cases: Mapping[str, Predicate], dtypes: Mapping[str, DeclaredDtype]) -> Iterator[str]:
+def overlapping(
+    cases: Mapping[str, Predicate],
+    dtypes: Mapping[str, DeclaredDtype],
+    defaults: Mapping[str, bool | float],
+) -> Iterator[str]:
     """One refusal per pair of cases that could both claim a coordinate.
 
     Args:
@@ -70,6 +74,7 @@ def overlapping(cases: Mapping[str, Predicate], dtypes: Mapping[str, DeclaredDty
             block's ``otherwise`` is not among them: it claims what the rest
             leave, so it overlaps nothing by construction.
         dtypes: The declared dtype of every name a mask compares against.
+        defaults: The declared ``default:`` of every parameter that has one.
 
     Yields:
         A sentence per pair, naming both cases and either a coordinate they
@@ -78,7 +83,7 @@ def overlapping(cases: Mapping[str, Predicate], dtypes: Mapping[str, DeclaredDty
     """
     for (first, left), (second, right) in itertools.combinations(cases.items(), 2):
         try:
-            witness = _witness(left, right, dtypes)
+            witness = _witness(left, right, dtypes, defaults)
         except Undecidable as exc:
             yield (
                 f"cases '{first}' and '{second}' cannot be told apart before the data arrives: {exc}. "
@@ -95,10 +100,15 @@ def overlapping(cases: Mapping[str, Predicate], dtypes: Mapping[str, DeclaredDty
             )
 
 
-def _witness(first: Predicate, second: Predicate, dtypes: Mapping[str, DeclaredDtype]) -> str | None:
+def _witness(
+    first: Predicate,
+    second: Predicate,
+    dtypes: Mapping[str, DeclaredDtype],
+    defaults: Mapping[str, bool | float],
+) -> str | None:
     """A coordinate both masks claim, rendered — ``None`` where no cell holds both."""
     masks = (Mask(first), Mask(second))
-    grid = _Grid.of(masks, dtypes)
+    grid = _Grid.of(masks, dtypes, defaults)
     if grid.size > CELL_BUDGET:
         msg = (
             f'{grid.size} regions to check exceeds the budget of {CELL_BUDGET} — '
@@ -171,9 +181,12 @@ class _Grid:
 
     domains: dict[Subject, list[Cell]]
     subjects: dict[int, Subject]
+    defaults: Mapping[str, bool | float]
 
     @classmethod
-    def of(cls, masks: Iterable[Mask], dtypes: Mapping[str, DeclaredDtype]) -> _Grid:
+    def of(
+        cls, masks: Iterable[Mask], dtypes: Mapping[str, DeclaredDtype], defaults: Mapping[str, bool | float]
+    ) -> _Grid:
         values: dict[Subject, set[_Literal]] = {}
         subjects: dict[int, Subject] = {}
         for mask in masks:
@@ -181,7 +194,7 @@ class _Grid:
                 subject = _subject_of(node)
                 subjects[id(node)] = subject
                 _observe(node, subject, values.setdefault(subject, set()), dtypes)
-        return cls({s: _cells_for(s, seen, dtypes) for s, seen in values.items()}, subjects)
+        return cls({s: _cells_for(s, seen, dtypes) for s, seen in values.items()}, subjects, defaults)
 
     @property
     def size(self) -> int:
@@ -492,7 +505,7 @@ def _evaluate(node: Predicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
 
 def _atom(node: TypedPredicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
     subject = grid.subjects[id(node)]
-    value = cell[subject]
+    value = _read(node, cell[subject], grid)
     match node:
         case ParameterDefined() | RelationDefined():
             if isinstance(value, bool):
@@ -521,6 +534,20 @@ def _atom(node: TypedPredicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             return _compare(value, op, literal)
         case _:
             assert_never(node)
+
+
+def _read(node: TypedPredicate, value: Cell, grid: _Grid) -> Cell:
+    """What *node* reads in a cell where its parameter has no row: the ``default:``, in a comparison.
+
+    A bare name keeps the null. A numeric one asks whether the data has a row.
+    A ``bool`` one reads its default there, and the cell holding that value is
+    already in the grid, so the null cell adds no witness either way.
+    """
+    if value is Special.NULL and isinstance(node, ParameterComparison):
+        default = grid.defaults.get(node.name)
+        if default is not None:
+            return default
+    return value
 
 
 def _compare(value: Cell, op: PredicateOperator, literal: _Literal) -> bool:

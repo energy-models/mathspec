@@ -9,6 +9,7 @@ The split, and each module's role in it, are in ``README.md`` beside this file.
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Literal, Protocol, get_args
@@ -258,6 +259,20 @@ class Format(Protocol):
         ...
 
     def document(self, blocks: list[str], *, standalone: bool) -> str: ...
+
+
+def number(value: float, fmt: Format) -> str:
+    """*value* as math: an integer without its point, an infinity as its sign, a large or small value in powers of ten."""
+    if math.isinf(value):
+        infinity = fmt.operators['infinity']
+        return infinity if value > 0 else f'{fmt.operators["minus"]}{infinity}'
+    if value == int(value):
+        return str(int(value))
+    mantissa, _, exponent = repr(value).partition('e')
+    if not exponent:
+        return mantissa
+    power = fmt.superscript('10', str(int(exponent)))
+    return power if mantissa == '1' else f'{mantissa} {fmt.operators["times"]} {power}'
 
 
 def aligned_rows(lines: list[Line], fmt: Format, *, gap: str) -> list[str]:

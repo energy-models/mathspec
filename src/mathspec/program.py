@@ -598,6 +598,10 @@ class ParameterDeclaration:
 
     dims: tuple[str, ...]
     dtype: ParameterDtype = 'float'
+    #: What a missing row reads as wherever a value is read, or ``None`` for
+    #: the value that contributes nothing. A bare numeric name in a ``where``
+    #: still asks whether the data has a row.
+    default: bool | float | None = None
     description: str | None = None
 
 

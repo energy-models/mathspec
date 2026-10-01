@@ -22,6 +22,7 @@ from pydantic import (
     ValidationError,
     ValidationInfo,
     ValidatorFunctionWrapHandler,
+    WithJsonSchema,
     field_validator,
     model_serializer,
     model_validator,
@@ -96,6 +97,12 @@ Curvature = Literal['convex', 'concave', 'either']
 #: The parameter dtypes that stand where a number belongs — a coefficient, a
 #: term, a divisor, a bound. A label selects and a flag masks; neither is one.
 NUMERIC_DTYPES: frozenset[ParameterDtype] = frozenset({'float', 'int'})
+
+#: What ``default:`` is written as. The validator takes ``inf`` and ``-inf`` as
+#: the numbers they name, which an editor would otherwise flag as strings.
+_DEFAULT_SCHEMA: dict[str, object] = {
+    'anyOf': [{'type': 'boolean'}, {'type': 'number'}, {'enum': ['inf', '-inf']}, {'type': 'null'}],
+}
 
 #: Every formulation, in the order [`Spec.expand`][] writes them out: a curve
 #: emits a set, and no set emits a curve.
@@ -207,13 +214,48 @@ class DimensionBlock(_StrictBlock):
 
 
 class ParameterBlock(_StrictBlock):
-    """A declared parameter with dims and dtype."""
+    """A declared parameter with dims and dtype, and the value a missing row reads as."""
 
     _label: ClassVar[str] = 'a parameter declaration'
 
     dims: list[str]
     dtype: ParameterDtype = 'float'
+    default: Annotated[bool | int | float | None, WithJsonSchema(_DEFAULT_SCHEMA)] = None
     description: str | None = None
+
+    @field_validator('default', mode='before')
+    @classmethod
+    def _a_value(cls, v: object) -> object:
+        """``inf`` is a string to YAML and a number to the expression grammar, so it is taken as the number."""
+        if v in ('inf', '-inf'):
+            return float(cast('str', v))
+        if isinstance(v, str):
+            msg = f'default is the string {v!r}, and a default is a number, true or false. Remove the quotes.'
+            raise ValueError(msg)
+        if isinstance(v, float) and math.isnan(v):
+            msg = 'default is nan, and a parameter has no nan value. Write a number, or leave the key out.'
+            raise ValueError(msg)
+        return v
+
+    @model_validator(mode='after')
+    def _default_fits_the_dtype(self) -> ParameterBlock:
+        """A default is a value of the column, so it has the column's dtype."""
+        v = self.default
+        if v is None:
+            return self
+        if self.dtype == 'str':
+            msg = f'default: {v!r} on a str parameter. A label has no default: leave the key out.'
+            raise ValueError(msg)
+        if self.dtype == 'bool' and not isinstance(v, bool):
+            msg = f'default: {v!r} on a bool parameter, which takes true or false.'
+            raise ValueError(msg)
+        if self.dtype != 'bool' and isinstance(v, bool):
+            msg = f'default: {str(v).lower()} on a {self.dtype} parameter, which takes a number. Write 1 or 0.'
+            raise ValueError(msg)
+        if self.dtype == 'int' and isinstance(v, float):
+            msg = f'default: {v} on an int parameter, which takes an integer. Write one, or declare dtype: float.'
+            raise ValueError(msg)
+        return self
 
 
 class BoundsBlock(_StrictBlock):

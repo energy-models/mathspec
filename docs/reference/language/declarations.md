@@ -27,6 +27,7 @@ parameters:
 | ------------- | -------------------------------------------------------------- | --------------- |
 | `dims`        | required. The dimensions it is indexed by. `[]` means a scalar |                 |
 | `dtype`       | `float`, `int`, `bool`, `str`                                  | default `float` |
+| `default`     | the value a missing row reads as ([a default](#a-default))     | default `null`  |
 | `description` | free text                                                      | default `null`  |
 
 The column has to match the `dtype`:
@@ -46,6 +47,41 @@ parameter is a mask: each selects rows in a
 [`where`](expressions.md#where-strings), and writing either as a coefficient,
 a term or a divisor is a load error. A `0` or `1` that is meant to be
 multiplied by is declared `dtype: int`.
+
+### A default
+
+`default:` is the value a missing row reads as.
+
+```yaml
+dimensions:
+  generator: { dtype: str }
+parameters:
+  efficiency: { dims: [generator], default: 1 }
+  p_nom_max: { dims: [generator], default: .inf }
+  active: { dims: [generator], dtype: bool, default: true }
+```
+
+Where the data has no row, every position that reads a value reads the
+default: a coefficient, a term, a divisor, a bound, and a comparison in a
+`where`. A bare numeric name in a `where` still asks whether the data has a
+row, so `where: p_nom_max` selects the rows the data gives. A bare `bool` name
+reads its value, so `where: active` reads the default. A
+[curve](assumptions.md#what-a-curve-assumes) still needs a row at each
+breakpoint.
+
+| `dtype` | `default:` takes                                        |
+| ------- | ------------------------------------------------------- |
+| `float` | a number. `.inf`, `inf`, `-.inf` and `-inf` are numbers |
+| `int`   | an integer                                              |
+| `bool`  | `true` or `false`                                       |
+| `str`   | nothing. A label has no default                         |
+
+A NaN and a quoted number are refused. `default: null` is no default. Without
+a default, a missing row reads as the value that contributes nothing
+([absence](absence.md#what-creates-absence)).
+
+A `given:` parameter has no `default:`. The file that declares the parameter
+owns it. The typeset legend prints the default beside the parameter.
 
 ## `variables`
 

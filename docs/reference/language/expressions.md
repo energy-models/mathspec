@@ -147,7 +147,7 @@ QUOTED     ::= "'" chars "'" | '"' chars '"'
 | `name` (bare)                                 | variable                   | The variable exists at this coordinate                                                                                                                                                                 |
 | `name` (bare)                                 | relation                   | A row exists, read at the relation's key. A relation may be [partial](relations.md#the-data-contract), and this selects the labels that do map                                                         |
 | `name` (bare)                                 | dimension                  | A load error. It would be true everywhere                                                                                                                                                              |
-| `name OP value`                               | parameter                  | Element-wise, and a null compares false                                                                                                                                                                |
+| `name OP value`                               | parameter                  | Element-wise. A missing row with no `default:` compares false                                                                                                                                          |
 | `name OP value`                               | dimension                  | A filter on the frame's own coordinate column                                                                                                                                                          |
 | `name OP value`, `name.col OP value`          | relation                   | A filter on a value column, read at the relation's key. Name the column where the key determines several                                                                                               |
 | `name OP name`, `name.a OP name.b`            | two relation columns       | Legal where both relations are keyed over the same dimensions and both columns are over one dimension. `ends.bus0 != ends.bus1` excludes a self-loop                                                   |
@@ -161,6 +161,10 @@ QUOTED     ::= "'" chars "'" | '"' chars '"'
 | `True` / `False`                              | —                          | `True` is the same as no `where`; `False` gives a declaration with no rows                                                                                                                             |
 
 A bare name that is not declared is a load error.
+
+A missing row reads the parameter's [`default:`](declarations.md#a-default) in
+a comparison and in a bare `bool` name. A bare numeric name still asks whether
+the data has a row, and a default is not a row.
 
 ### Counting what a predicate admits
 

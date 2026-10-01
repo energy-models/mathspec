@@ -56,7 +56,7 @@ from mathspec.program import (
     VariableDefined,
     WindowSum,
 )
-from mathspec.typesetting.format import Line, OperatorName
+from mathspec.typesetting.format import Line, OperatorName, number
 from mathspec.typesetting.legend import TranslationPolicy, policy_of
 
 if TYPE_CHECKING:
@@ -305,15 +305,7 @@ class Walk:
         return _Context(self, bound=tuple(frame))
 
     def _number(self, value: float) -> str:
-        if value == float('inf'):
-            return self._op('infinity')
-        if value == int(value):
-            return str(int(value))
-        mantissa, _, exponent = repr(value).partition('e')
-        if not exponent:
-            return mantissa
-        power = self.format.superscript('10', str(int(exponent)))
-        return power if mantissa == '1' else f'{mantissa} {self._op("times")} {power}'
+        return number(value, self.format)
 
     # -- arithmetic --------------------------------------------------------
 

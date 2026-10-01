@@ -2289,3 +2289,57 @@ def test_an_infinite_bound_is_refused_with_the_null_that_opens_a_side(side, valu
     message = _refusal(DISPATCH_MODEL, **{f'variables.p.bounds.{side}': value})
     assert f'bounds.{side} is {value}, and a bound is finite' in message
     assert f'{side}: null' in message, 'the refusal names the spelling of an open side'
+
+
+@pytest.mark.parametrize(
+    ('dtype', 'written', 'read'),
+    [
+        pytest.param('float', 1, 1, id='a-number'),
+        pytest.param('float', float('inf'), float('inf'), id='yaml-dot-inf'),
+        pytest.param('float', 'inf', float('inf'), id='the-expression-spelling-of-inf'),
+        pytest.param('float', '-inf', float('-inf'), id='the-expression-spelling-of-minus-inf'),
+        pytest.param('int', 2, 2, id='an-integer'),
+        pytest.param('bool', True, True, id='a-flag'),
+        pytest.param('float', None, None, id='null-is-no-default'),
+    ],
+)
+def test_a_default_is_a_value_of_the_column(dtype, written, read):
+    spec = to_spec(varied(SMALL_MODEL, **{'parameters.c': {'dims': ['g'], 'dtype': dtype, 'default': written}}))
+    assert spec.program.parameters['c'].default == read
+
+
+def test_inf_and_dot_inf_load_as_one_number():
+    """YAML reads `inf` as a string and `.inf` as a number; the expression grammar takes both."""
+    read = [
+        to_spec(parse_yaml(f'dimensions: {{g: {{}}}}\nparameters: {{c: {{dims: [g], default: {spelling}}}}}'))
+        .program.parameters['c']
+        .default
+        for spelling in ('inf', '.inf')
+    ]
+    assert read == [float('inf'), float('inf')]
+
+
+@pytest.mark.parametrize(
+    ('dtype', 'written', 'fragment'),
+    [
+        pytest.param('float', '1', "default is the string '1'", id='a-quoted-number'),
+        pytest.param('float', float('nan'), 'default is nan', id='nan'),
+        pytest.param(
+            'float', True, 'default: true on a float parameter, which takes a number', id='a-flag-on-a-number'
+        ),
+        pytest.param('int', 1.5, 'default: 1.5 on an int parameter, which takes an integer', id='a-fraction-on-an-int'),
+        pytest.param('int', float('inf'), 'default: inf on an int parameter', id='an-infinity-on-an-int'),
+        pytest.param('bool', 1, 'default: 1 on a bool parameter, which takes true or false', id='a-number-on-a-flag'),
+        pytest.param('str', 'a', "default is the string 'a'", id='a-label'),
+        pytest.param('str', 1, 'A label has no default', id='a-number-on-a-label'),
+    ],
+)
+def test_a_default_that_is_not_a_value_of_the_column_is_refused(dtype, written, fragment):
+    message = _refusal(**{'parameters.c': {'dims': ['g'], 'dtype': dtype, 'default': written}})
+    assert fragment in message
+
+
+def test_a_given_parameter_takes_no_default():
+    """The file that declares the parameter owns its default, as it owns a variable's bounds."""
+    message = _refusal(**{'given.parameters.d': {'dims': ['g'], 'default': 1}})
+    assert "unknown key 'default' in a given parameter declaration" in message

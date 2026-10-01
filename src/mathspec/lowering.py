@@ -234,7 +234,7 @@ def lower(schema: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: ParameterDeclaration(tuple(pdef.dims), pdef.dtype, pdef.description)
+            name: ParameterDeclaration(tuple(pdef.dims), pdef.dtype, pdef.default, pdef.description)
             for name, pdef in schema.parameters.items()
         },
         variables=variables,
@@ -261,7 +261,7 @@ def lower(schema: Spec) -> Program:
         },
         given=GivenTargets(
             parameters={
-                name: ParameterDeclaration(tuple(g.dims), g.dtype, g.description)
+                name: ParameterDeclaration(tuple(g.dims), g.dtype, description=g.description)
                 for name, g in schema.given.parameters.items()
             },
             variables={

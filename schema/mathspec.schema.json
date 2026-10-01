@@ -549,8 +549,29 @@
     },
     "ParameterBlock": {
       "additionalProperties": false,
-      "description": "A declared parameter with dims and dtype.",
+      "description": "A declared parameter with dims and dtype, and the value a missing row reads as.",
       "properties": {
+        "default": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "enum": [
+                "inf",
+                "-inf"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        },
         "description": {
           "anyOf": [
             {

@@ -119,6 +119,13 @@ written = assumption_message('cost_is_never_negative', program.assumptions['cost
 written  # "assumption 'cost_is_never_negative' does not hold for the data attached to 'bp_y' — a negative cost is a gain the objective would chase"
 ```
 
+`program.parameters[name].default` is the value a missing row of that
+parameter reads as, or `None`. Every position that reads a value reads it: an
+expression, a bound, and a comparison in a mask. A `ParameterDefined` on a
+numeric parameter asks whether the data has a row, so the default does not
+answer it. A `ParameterDefined` on a `bool` parameter reads the value, and so
+reads the default.
+
 ## Nodes and masks
 
 The node classes live in `mathspec.program`, for `isinstance` tests and field

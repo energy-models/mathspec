@@ -6,12 +6,14 @@
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
 import pytest
 
 from mathspec.errors import SchemaError
 from mathspec.typesetting import SymbolTable, to_latex, to_markdown, to_typst, typeset
+from mathspec.typesetting.format import number
 from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, varied
 from tests.typesetting.fixtures import EVERY_FORMAT, TYPST_SYMBOLS
@@ -93,6 +95,30 @@ def test_a_named_expression_has_a_legend_row_exactly_while_its_symbol_prints(nam
     """
     assert 'what a snapshot costs' in typeset(DESCRIBED, name)
     assert 'what a snapshot costs' not in typeset(DESCRIBED, name, inline_expressions=True)
+
+
+DEFAULTED = varied(
+    DISPATCH_MODEL,
+    **{
+        'parameters.p_max.default': 'inf',
+        'parameters.cost.default': 1,
+        'parameters.floor': {'dims': [], 'default': '-inf'},
+        'parameters.online': {'dims': ['generator'], 'dtype': 'bool', 'default': True},
+    },
+)
+
+
+@EVERY_FORMAT
+def test_the_legend_prints_what_a_missing_row_reads_as(name: FormatName, fmt: Format):
+    out = typeset(DEFAULTED, name)
+    for shown in (
+        fmt.math(number(math.inf, fmt)),
+        fmt.math(number(-math.inf, fmt)),
+        fmt.math('1'),
+        fmt.mono('true'),
+    ):
+        assert f'{shown} where the data has no row' in out
+    assert out.count('where the data has no row') == 4, '`load` declares no default, so its row names none'
 
 
 #: The dispatch model with a curve on it, so one model has two readings and one

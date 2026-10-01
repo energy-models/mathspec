@@ -22,6 +22,7 @@ from mathspec.exclusivity import CELL_BUDGET, Special, Subject, _evaluate, _Grid
 from mathspec.program import And, Mask, Not, Or
 from mathspec.resolution import Namespace, resolve_where
 from mathspec.validation import to_spec
+from tests.fixtures import varied
 
 if TYPE_CHECKING:
     from mathspec.program import Predicate
@@ -57,7 +58,13 @@ def schema() -> Spec:
 def refusals(schema: Spec, cases: dict[str, str]) -> list[str]:
     """Resolve each case's `when` against *schema*, then decide every pair."""
     namespace = Namespace(schema)
-    return list(overlapping({name: _mask(when, namespace, name) for name, when in cases.items()}, namespace.dtypes))
+    return list(
+        overlapping(
+            {name: _mask(when, namespace, name) for name, when in cases.items()},
+            namespace.dtypes,
+            namespace.defaults,
+        )
+    )
 
 
 def _mask(text: str, namespace: Namespace, name: str) -> Predicate:
@@ -311,11 +318,29 @@ class TestSoundness:
         proved = 0
         for _ in range(2000):
             first, second = self._random_mask(rng, atoms), self._random_mask(rng, atoms)
-            if list(overlapping({'a': first, 'b': second}, dtypes)):
+            if list(overlapping({'a': first, 'b': second}, dtypes, {})):
                 continue
             proved += 1
-            cells = _Grid.of([Mask(first), Mask(second)], dtypes)
+            cells = _Grid.of([Mask(first), Mask(second)], dtypes, {})
             for point in grid:
                 both = _evaluate(first, point, cells) and _evaluate(second, point, cells)
                 assert not both, f'both cases claim {point} — the cells hid a witness'
         assert proved > 150, f'only {proved} pairs proved apart; the fuzz is not exercising the check'
+
+
+class TestADefault:
+    CASES: ClassVar[dict[str, str]] = {'lossless': 'efficiency == 1', 'not_given': 'not efficiency'}
+
+    def test_a_missing_row_compares_as_the_default(self):
+        """Both cases claim a storage with no `efficiency` row: it is not given, and it reads 1.
+
+        The prover read a missing row as false in every comparison, so it proved
+        the two apart, and a coordinate the data leaves out had two values.
+        """
+        schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'default': 1}}))
+        [refusal] = refusals(schema, self.CASES)
+        assert 'efficiency is absent' in refusal, 'the witness is the missing row'
+
+    def test_without_a_default_a_missing_row_compares_false(self):
+        schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage']}}))
+        assert refusals(schema, self.CASES) == [], 'a missing row with no default is in neither case'
