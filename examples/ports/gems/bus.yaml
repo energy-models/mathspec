@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: >-
+  GEMS `bus`. What the connected ports put in is spilled, or is short of the
+  demand. The bus reads the sum of its `balance_port` and names no model
+  that connects to it.
+dimensions:
+  time: { dtype: int, description: "time steps of the horizon, counted from 0" }
+  scenario: { dtype: int, description: scenarios of the data }
+  bus: { description: "`bus` components: nodes where flows balance" }
+parameters:
+  Bus_spillage_cost: { dims: [bus], description: cost of one unit of spillage }
+  Bus_unsupplied_energy_cost: { dims: [bus], description: cost of one unit of unsupplied energy }
+variables:
+  Bus_spillage: { dims: [time, scenario, bus], bounds: { lower: 0 }, description: injection that the bus cannot use }
+  Bus_unsupplied_energy: { dims: [time, scenario, bus], bounds: { lower: 0 }, description: demand that the bus cannot meet }
+given:
+  expressions:
+    Bus_balance_port_flow:
+      dims: [time, scenario, bus]
+      description: "`sum_connections(balance_port.flow)`: what the connected ports put into a bus"
+    total_cost: { dims: [scenario] }
+expressions:
+  Bus_objective:
+    description: "`bus.objective`"
+    expression: sum(Bus_spillage_cost * Bus_spillage + Bus_unsupplied_energy_cost * Bus_unsupplied_energy, over=[time, bus])
+    adds_to: total_cost
+constraints:
+  Bus_balance:
+    dims: [time, scenario, bus]
+    description: "`bus.balance`"
+    expression: Bus_balance_port_flow == Bus_spillage - Bus_unsupplied_energy

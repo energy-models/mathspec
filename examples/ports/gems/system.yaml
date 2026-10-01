@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: >-
+  What a GEMS interpreter supplies around the library: the time and scenario
+  axes, and an objective that averages over the scenarios what each model
+  adds to `total_cost`. Nothing here names a model.
+dimensions:
+  scenario: { dtype: int, description: scenarios of the data }
+parameters:
+  Scenario_weight:
+    dims: [scenario]
+    description: >-
+      what a scenario weighs in the objective. GEMS takes the average, so each
+      weight is one over the number of scenarios
+given:
+  expressions:
+    total_cost:
+      dims: [scenario]
+      description: the objective contributions of every model, in one scenario
+objective:
+  sense: minimize
+  expression: sum(total_cost * Scenario_weight, over=scenario)
