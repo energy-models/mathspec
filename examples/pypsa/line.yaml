@@ -13,7 +13,11 @@ dimensions:
   line:
     description: passive branches, each between two buses, their flow set by impedance
   cycle:
-    description: independent cycles of the passive network graph — the cycle basis, data prep
+    description: >-
+      independent cycles of the passive network graph — the cycle basis, data
+      prep. Each period has its own basis, of the branches that stand in it;
+      a label is a position in that period's basis, so one label names a
+      different cycle in another period
   segment:
     description: >-
       the cuts a passive branch's loss curve is held above — PyPSA's tangents,
@@ -29,6 +33,10 @@ dimensions:
     description: energy carriers, what a growth limit is set per
 
 relations:
+  snapshot_period:
+    description: the investment period a snapshot falls in
+    key: snapshot
+    values: period
   Line_carrier:
     description: the carrier a line carries
     key: line
@@ -87,7 +95,7 @@ parameters:
       the line's series impedance, signed by its orientation in the cycle —
       the cycle basis, data prep; a line in no cycle has no row. PyPSA builds
       the cycle basis from the first scenario only (`networks.py:1354-1361`)
-    dims: [line, cycle]
+    dims: [period, line, cycle]
   Line_loss_max:
     description: the loss at a line's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep
     dims: [scenario, snapshot, line]
@@ -196,7 +204,7 @@ expressions:
       - (0.5 * sum(Line_loss, by=Line_bus1, over=line, into=bus))
     adds_to: Bus_injection
   Line_angle_sum:
-    expression: sum(Line_s * Line_cycle_weight, over=line)
+    expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period, over=period, into=snapshot), over=line)
     adds_to: Cycle_angle_sum
 
 constraints:
