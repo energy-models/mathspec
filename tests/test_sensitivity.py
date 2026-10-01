@@ -17,7 +17,7 @@ import pytest
 
 from mathspec import LanguageError, SchemaError
 from tests.fixtures import schema_of, varied
-from tests.test_fixing import MONOLITH
+from tests.test_fixing import MASKED, MONOLITH
 
 SUBPROBLEM = schema_of(MONOLITH).fix('cap').to_dict()
 
@@ -121,3 +121,20 @@ def test_what_the_derivation_cannot_carry_is_refused(name, patch, says):
 def test_an_entry_of_that_name_is_refused():
     with pytest.raises(LanguageError, match="'cap_sensitivity' is already an expression"):
         _written(SUBPROBLEM, 'cap', expressions={'cap_sensitivity': 'sum(avail)'})
+
+
+@pytest.mark.xfail(
+    raises=LanguageError,
+    strict=True,
+    reason='#790: a parameter cannot be absent outside a mask, so the rate there is missing where it is 2',
+)
+def test_the_rate_of_a_fixed_masked_variable():
+    """`cap` exists only where `flag`. Fixed, `within` takes `where: flag`, and
+    `2.0 + dual(within)` is missing outside it, where the objective still reads
+    `cap` at rate 2. Once `fix` can make `cap` absent outside `flag`, the
+    missing rate is right there and the refusal goes."""
+    spec = schema_of(MASKED).fix('cap').sensitivity('cap')
+    assert spec.to_dict()['parameters']['cap'].get('absence') == 'undefined', (
+        'the parameter is absent where the variable was'
+    )
+    assert spec.expressions['cap_sensitivity'].expression == '2.0 + dual(within)'
