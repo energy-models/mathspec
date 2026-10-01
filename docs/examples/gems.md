@@ -5,8 +5,8 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # GEMS basic models
 
-This spec is the `basic_models_library` of
-[GEMS](https://github.com/AntaresSimulatorTeam/GEMS) (RTE's component modelling
+This spec is the `basic_models_library` 1.0.0 of
+[GEMS v0.4.0](https://github.com/AntaresSimulatorTeam/GEMS/releases/tag/v0.4.0) (RTE's component modelling
 language), written as one file. In GEMS, a component exposes ports, and a
 system file connects ports. Here each kind of connection is a
 [relation](../reference/language/relations.md), and `sum_connections` is a
@@ -22,8 +22,8 @@ scenarios that GEMS applies to an objective term.
 <!-- gallery:begin -->
 ```yaml
 description: >-
-  GEMS `basic_models_library` 1.0.0, the nine models of RTE's reference library
-  in one spec. A GEMS model is a dimension and a component is one of its
+  The `basic_models_library` 1.0.0 of GEMS v0.4.0, the nine models of RTE's
+  reference library in one spec. A GEMS model is a dimension and a component is one of its
   labels. A connection is a row of a relation, and `sum_connections` is a
   `sum` through that relation. The time and scenario axes, implicit in GEMS,
   are dimensions here.
@@ -243,7 +243,7 @@ objective:
       + sum(Energy_limit_soft_slack * Energy_limit_soft_slack_penalty, over=[time, energy_limit_soft]))
 ```
 
-GEMS `basic_models_library` 1.0.0, the nine models of RTE's reference library in one spec. A GEMS model is a dimension and a component is one of its labels. A connection is a row of a relation, and `sum_connections` is a `sum` through that relation. The time and scenario axes, implicit in GEMS, are dimensions here.
+The `basic_models_library` 1.0.0 of GEMS v0.4.0, the nine models of RTE's reference library in one spec. A GEMS model is a dimension and a component is one of its labels. A connection is a row of a relation, and `sum_connections` is a `sum` through that relation. The time and scenario axes, implicit in GEMS, are dimensions here.
 
 #### Sets
 

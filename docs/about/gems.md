@@ -16,16 +16,24 @@ library declares models. A system file declares components and connects
 their ports. Two interpreters, Antares Simulator and GemsPy, read both files
 and solve the problem. A mathspec file states a spec, and an engine builds the
 model and solves it. [GEMS basic models](../examples/gems.md) writes a whole
-GEMS library as one spec. The excerpts come from GEMS at commit
-[`897a69c`](https://github.com/AntaresSimulatorTeam/GEMS/tree/897a69c4f9b879599a12cc2d28485d4db742222b),
-language version 0.4.0.
+GEMS library as one spec.
+
+The comparison uses GEMS
+[v0.4.0](https://github.com/AntaresSimulatorTeam/GEMS/releases/tag/v0.4.0),
+released on 21 August 2026, and GemsPy
+[v0.1.3](https://github.com/AntaresSimulatorTeam/GemsPy/tree/v0.1.3), the
+GemsPy release that GEMS v0.4.0 names as compatible. The run
+configuration excerpt under [Boundaries](#boundaries) is the one exception.
+GEMS documents that file after v0.4.0, at commit
+[`897a69c`](https://github.com/AntaresSimulatorTeam/GEMS/blob/897a69c4f9b879599a12cc2d28485d4db742222b/doc/user-guide/input-files/optimization-configuration.md),
+and GemsPy v0.1.3 already reads it.
 
 ## Dimensions
 
 A spec declares its own [dimensions](../reference/language/dimensions.md). A
 GEMS quantity has two possible axes, time and scenario. A parameter or a
 variable sets two flags to say which axes it carries. The GEMS
-[roadmap](https://github.com/AntaresSimulatorTeam/GEMS/blob/897a69c4f9b879599a12cc2d28485d4db742222b/doc/home/roadmap.md)
+[roadmap](https://github.com/AntaresSimulatorTeam/GEMS/blob/v0.4.0/doc/home/roadmap.md)
 lists custom sets and dimensions as work in progress, for multi-horizon
 investment studies first. The spec below states that case. A
 [relation](../reference/language/relations.md) places each time step in an
@@ -36,7 +44,7 @@ investment period, and each time step reads the capacity of its period.
 === "GEMS"
 
     ```yaml
-    # libraries/basic_models_library.yml, lines 106-117
+    # GEMS v0.4.0, libraries/basic_models_library.yml, lines 106-117
     - id: p_min
       scenario-dependent: true
       time-dependent: true
@@ -141,14 +149,14 @@ GEMS library.
 === "GEMS"
 
     ```yaml
-    # libraries/basic_models_library.yml, lines 184-188
+    # GEMS v0.4.0, libraries/basic_models_library.yml, lines 184-188
     constraints:
       - id: initial_level_constraint
         expression: level[0] = initial_level * reservoir_capacity
       - id: Level equation
         expression: level[t+1] = level + efficiency_injection * p_injection - efficiency_withdrawal * p_withdrawal
 
-    # doc/user-guide/input-files/optimization-configuration.md, lines 374-379
+    # GEMS 897a69c, after v0.4.0, doc/user-guide/input-files/optimization-configuration.md, lines 374-379
     models:
       - id: antares_legacy_models.short_term_storage
         out-of-bounds-processing:
@@ -310,7 +318,7 @@ Every **Math** tab on this page is printed from the spec beside it, by the
 [typesetter](../reference/typeset.md). The typesetter prints LaTeX, Typst and
 Markdown, so a paper shows the equations that the solver gets. GemsPy has
 no printer, and the GEMS documentation writes the math of its
-[quick-start model](https://github.com/AntaresSimulatorTeam/GEMS/blob/897a69c4f9b879599a12cc2d28485d4db742222b/doc/getting-started/quick-start/adequacy-math-model.md)
+[quick-start model](https://github.com/AntaresSimulatorTeam/GEMS/blob/v0.4.0/doc/getting-started/quick-start/adequacy-math-model.md)
 by hand.
 
 ## Ports and connections
@@ -326,7 +334,7 @@ and [`sum`](../reference/language/operators.md#sum) with `by=`, `over=` and
 === "GEMS"
 
     ```yaml
-    # libraries/basic_models_library.yml, lines 21-52
+    # GEMS v0.4.0, libraries/basic_models_library.yml, lines 21-52
     - id: bus
       parameters:
         - id: spillage_cost

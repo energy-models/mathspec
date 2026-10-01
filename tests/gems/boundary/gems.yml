@@ -1,11 +1,11 @@
-# libraries/basic_models_library.yml, lines 184-188
+# GEMS v0.4.0, libraries/basic_models_library.yml, lines 184-188
 constraints:
   - id: initial_level_constraint
     expression: level[0] = initial_level * reservoir_capacity
   - id: Level equation
     expression: level[t+1] = level + efficiency_injection * p_injection - efficiency_withdrawal * p_withdrawal
 
-# doc/user-guide/input-files/optimization-configuration.md, lines 374-379
+# GEMS 897a69c, after v0.4.0, doc/user-guide/input-files/optimization-configuration.md, lines 374-379
 models:
   - id: antares_legacy_models.short_term_storage
     out-of-bounds-processing:

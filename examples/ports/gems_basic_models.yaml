@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  GEMS `basic_models_library` 1.0.0, the nine models of RTE's reference library
-  in one spec. A GEMS model is a dimension and a component is one of its
+  The `basic_models_library` 1.0.0 of GEMS v0.4.0, the nine models of RTE's
+  reference library in one spec. A GEMS model is a dimension and a component is one of its
   labels. A connection is a row of a relation, and `sum_connections` is a
   `sum` through that relation. The time and scenario axes, implicit in GEMS,
   are dimensions here.

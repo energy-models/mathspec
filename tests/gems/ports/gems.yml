@@ -1,4 +1,4 @@
-# libraries/basic_models_library.yml, lines 21-52
+# GEMS v0.4.0, libraries/basic_models_library.yml, lines 21-52
 - id: bus
   parameters:
     - id: spillage_cost
