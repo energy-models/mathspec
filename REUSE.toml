@@ -53,6 +53,19 @@ path = ["tests/expand/**/*.yaml"]
 SPDX-FileCopyrightText = "mathspec Contributors"
 SPDX-License-Identifier = "MIT"
 
+# The GEMS comparison cases are printed verbatim on its docs page, so an
+# in-file header would render there too. Each `gems.yml` is an excerpt of a
+# GEMS file, under the licence GEMS carries.
+[[annotations]]
+path = ["tests/gems/**/mathspec.yaml"]
+SPDX-FileCopyrightText = "mathspec Contributors"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ["tests/gems/**/gems.yml"]
+SPDX-FileCopyrightText = "RTE (https://www.rte-france.com)"
+SPDX-License-Identifier = "MPL-2.0"
+
 [[annotations]]
 path = ["pixi.lock"]
 SPDX-FileCopyrightText = "mathspec contributors"

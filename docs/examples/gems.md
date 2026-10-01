@@ -17,6 +17,7 @@ through a setting in its run configuration, and this file states the wrap with
 `edge='wrap'`. The objective uses `expec`, a
 [macro](../reference/language/named.md#macros), for the average over
 scenarios that GEMS applies to an objective term.
+[mathspec and GEMS](../about/gems.md) compares the two languages.
 
 <!-- gallery:begin -->
 ```yaml
