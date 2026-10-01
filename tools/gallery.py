@@ -54,7 +54,6 @@ MODELS = {
     'library/surface.md': LIBRARY / 'surface.yaml',
     'library/generator.md': LIBRARY / 'generator.yaml',
     'library/load.md': LIBRARY / 'load.yaml',
-    'gems.md': ROOT / 'examples' / 'ports' / 'gems_basic_models.yaml',
     **{f'pypsa/{path.stem}.md': path for path in sorted(PYPSA.glob('*.yaml'))},
 }
 

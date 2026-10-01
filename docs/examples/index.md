@@ -21,7 +21,5 @@ Every spec is a file under `examples/` in the repository.
 The PyPSA parity pages, from [PyPSA in one file](pypsa.md) on, are a proof of
 concept. They sit in the Development section, and
 [PyPSA in 24 files](pypsa/index.md) is the same spec composed from fragments.
-[GEMS basic models](gems.md) is a proof of concept too. It writes the
-reference library of another component language as one spec.
 
 [Typeset the math](../reference/typeset.md) prints your own.

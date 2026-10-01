@@ -81,9 +81,9 @@ nav:
   # Everything a spec writer does not need, grouped by reader: whoever
   # writes a tool against `Spec` and `Program` (an engine such as specsolve, a
   # renderer, a checker), whoever changes mathspec itself, and the proofs of
-  # concept: the notation page, which renders the typesetting test spec, the
-  # GEMS port and the PyPSA pages. The GEMS and PyPSA pages stay in
-  # `docs/examples/`, where `tools/gallery.py` writes them.
+  # concept: the notation page, which renders the typesetting test spec, and
+  # the PyPSA pages. The PyPSA pages stay in `docs/examples/`, where
+  # `tools/gallery.py` writes them.
   - Development:
       - Building on mathspec:
           - Reading a spec and its program: reference/reading.md
@@ -94,7 +94,6 @@ nav:
           - What counts as public API: about/what-counts-as-public-api.md
       - Proofs of concept:
           - Every construct, as math: reference/notation.md
-          - GEMS basic models: examples/gems.md
           - PyPSA in one file: examples/pypsa.md
           - PyPSA, the relaxed commitment: examples/pypsa_linearized_uc.md
           - PyPSA in 24 files:

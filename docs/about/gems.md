@@ -15,8 +15,8 @@ modelling language of RTE, the French transmission system operator. A GEMS
 library declares models. A system file declares components and connects
 their ports. Two interpreters, Antares Simulator and GemsPy, read both files
 and solve the problem. A mathspec file states a spec, and an engine builds the
-model and solves it. [GEMS basic models](../examples/gems.md) writes a whole
-GEMS library as one spec.
+model and solves it. [`gems_basic_models.yaml`](https://github.com/energy-models/mathspec/blob/main/examples/ports/gems_basic_models.yaml)
+writes a whole GEMS library as one spec.
 
 The comparison uses GEMS
 [v0.4.0](https://github.com/AntaresSimulatorTeam/GEMS/releases/tag/v0.4.0),
