@@ -15,9 +15,8 @@ modelling language of RTE, the French transmission system operator. A GEMS
 library declares models. A system file declares components and connects
 their ports. Two interpreters, Antares Simulator and GemsPy, read both files
 and solve the problem. A mathspec file states a spec, and an engine builds the
-model and solves it.
-[`examples/ports/gems/`](https://github.com/energy-models/mathspec/tree/main/examples/ports/gems)
-writes a whole GEMS library as one file for each GEMS model.
+model and solves it. [GEMS in ten files](../examples/gems/index.md) writes a
+whole GEMS library as one file for each GEMS model.
 
 The comparison uses GEMS
 [v0.4.0](https://github.com/AntaresSimulatorTeam/GEMS/releases/tag/v0.4.0),
@@ -329,8 +328,8 @@ from one component to another, and `sum_connections` adds what all the
 connections of a port bring. A relation holds the same connections as data,
 and [`sum`](../reference/language/operators.md#sum) with `by=`, `over=` and
 `into=` adds over them. The spec below is the GEMS bus and load. In
-`examples/ports/gems/`, each GEMS model is a file of its own. There a port is a
-given expression, and each connected file adds a
+[GEMS in ten files](../examples/gems/index.md), each GEMS model is a file of
+its own. There a port is a given expression, and each connected file adds a
 [term](../reference/language/declarations.md#terms) to it with `adds_to:`. So
 the bus file names no model that connects to it, as in GEMS.
 

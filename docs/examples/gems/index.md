@@ -20,6 +20,7 @@ that sends through the port adds a
 [term](../../reference/language/declarations.md#terms) to that sum with
 `adds_to:`, through a relation that holds its connections. `merge` of the
 files you use is the system, and [the composed spec](composed.md) shows it.
+[mathspec and GEMS](../../about/gems.md) compares the two languages.
 
 <!-- gallery:begin -->
 ### The sums
