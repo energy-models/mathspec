@@ -13,6 +13,8 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - docs(pypsa): the pypsa references are recorded against pypsa master ([#786](https://github.com/energy-models/mathspec/pull/786))
+- fix(language): a cases block with one case may compare expressions in its when: ([#795](https://github.com/energy-models/mathspec/pull/795))
+- feat(language): a parameter value that is null or NaN is refused when the data is attached ([#788](https://github.com/energy-models/mathspec/pull/788))
 - fix(language): a where string names several columns in at's over= and into=, as an expression does ([#782](https://github.com/energy-models/mathspec/pull/782))
 - fix(language): a file whose terms read each other's sums is refused at load ([#780](https://github.com/energy-models/mathspec/pull/780))
 - fix(language): dual(c) is the rate at which the optimal objective rises with the right side of c, so an equality has a sign too ([#751](https://github.com/energy-models/mathspec/pull/751))
@@ -46,7 +48,9 @@ A file now states a **specification**, or **spec**. A **model** is a spec with
 data attached, which an engine builds and a solver takes. mathspec holds specs
 only. The API, the messages and the docs use the two words in these senses
 ([glossary](https://mathspec.readthedocs.io/en/latest/reference/glossary/)).
+
 This release breaks three things:
+
 - The first parameter of `to_spec`, `advice`, `typeset`, `typeset_declaration`,
   `to_latex`, `to_typst` and `to_markdown` is `spec`, not `model`. A call that
   passes `model=` by keyword fails. A positional call works as before.
@@ -54,25 +58,35 @@ This release breaks three things:
   works as before.
 - Error and advice messages say "spec" where they said "model". A test that
   matches the old text fails.
+
 The pull requests in this release:
+
 - feat!: what a file states is called a spec, the functions that read one take it as spec, and model means a spec with data ([#721](https://github.com/energy-models/mathspec/pull/721))
 - docs: the README and the docs home page say that spec is short for specification ([#724](https://github.com/energy-models/mathspec/pull/724))
 - fix(docs): the Python API pages link every name a docstring cites, and show advice as the function it is ([#720](https://github.com/energy-models/mathspec/pull/720))
+
 ## 0.1.0 (2026-09-25)
+
 🎉 mathspec is officially on PyPI!
+
 ```bash
 pip install mathspec
 ```
+
 ## 0.1.0rc1 (2026-09-25)
+
 The release candidate for 0.1.0, the first release on PyPI:
 `pip install mathspec==0.1.0rc1`. The package installs, imports and runs as
 `mathspec` since 0.0.0-alpha.127
 ([#702](https://github.com/energy-models/mathspec/pull/702)). The
 `0.0.0-alpha.N` releases below were tags and GitHub releases only.
+
 - docs: a page says how the package version and the language version of a model file relate ([#711](https://github.com/energy-models/mathspec/pull/711))
 - docs: the installation page and the PyPI project page say `pip install mathspec`, and the README's links resolve on PyPI ([#707](https://github.com/energy-models/mathspec/pull/707))
 - docs: every link to the documentation points at mathspec.readthedocs.io ([#706](https://github.com/energy-models/mathspec/pull/706))
+
 ## [0.0.0-alpha.127](https://github.com/energy-models/mathspec/compare/v0.0.0-alpha.126...v0.0.0-alpha.127) (2026-09-25)
+
 
 ### Refactoring
 
@@ -80,14 +94,19 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.126](https://github.com/energy-models/mathspec/compare/v0.0.0-alpha.125...v0.0.0-alpha.126) (2026-09-25)
 
+
 ### Documentation
+
 * the site is built by zensical, and its API reference is the public surface rather than every module ([#568](https://github.com/energy-models/mathspec/issues/568)) ([64eb268](https://github.com/energy-models/mathspec/commit/64eb26894dcd5444f1cd65c7035abe4f5ccec252))
+
 ## [0.0.0-alpha.125](https://github.com/energy-models/mathspec/compare/v0.0.0-alpha.124...v0.0.0-alpha.125) (2026-09-25)
+
 
 ### Bug Fixes
 
 * **language:** an unknown operator's refusal points at the limits page instead of an escape key that does not exist ([#676](https://github.com/energy-models/mathspec/issues/676)) ([5e4ef2b](https://github.com/energy-models/mathspec/commit/5e4ef2b8e6f397f71f9b09ab55685d6c02fe3a83))
 * **language:** messages and docs say data is attached rather than bound, so a bound is only a variable's limit ([#694](https://github.com/energy-models/mathspec/issues/694)) ([cc8ba08](https://github.com/energy-models/mathspec/commit/cc8ba089ed50f746aae39d914ba3b7a8e700a267))
+
 
 ### Documentation
 
@@ -103,7 +122,9 @@ The release candidate for 0.1.0, the first release on PyPI:
 * the readme drops the internals diagram and the repeated formats, and is a third shorter ([#699](https://github.com/energy-models/mathspec/issues/699)) ([234245b](https://github.com/energy-models/mathspec/commit/234245b82427d046eb79e15955dc6ad34e578114))
 * what spec.expand() returns is documented on the model writer's python api page, and reading.md keeps only which program an engine reads ([#696](https://github.com/energy-models/mathspec/issues/696)) ([a9caeae](https://github.com/energy-models/mathspec/commit/a9caeae7cbc07e18cdf5685e2234f31980afd746))
 * what spec.expand() returns is stated once, as a different model that binds the same data ([#677](https://github.com/energy-models/mathspec/issues/677)) ([413550e](https://github.com/energy-models/mathspec/commit/413550e884fc1a31639c5518bf3f869edee18548))
+
 ## [0.0.0-alpha.124](https://github.com/energy-models/mathspec/compare/v0.0.0-alpha.123...v0.0.0-alpha.124) (2026-09-24)
+
 
 ### Features
 
@@ -111,9 +132,13 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.123](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.122...v0.0.0-alpha.123) (2026-09-24)
 
+
 ### Documentation
+
 * the engine these pages point at is called specsolve ([#673](https://github.com/energy-models/math-spec/issues/673)) ([647e351](https://github.com/energy-models/math-spec/commit/647e351066dc63750a63e43c0e15469daaf1f81a))
+
 ## [0.0.0-alpha.122](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.121...v0.0.0-alpha.122) (2026-09-24)
+
 
 ### Refactoring
 
@@ -121,12 +146,17 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.121](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.120...v0.0.0-alpha.121) (2026-09-24)
 
+
 ### Features
+
 * **language:** a model's program is an attribute of the model, and the one door to both states is to_spec ([#656](https://github.com/energy-models/math-spec/issues/656)) ([91f0640](https://github.com/energy-models/math-spec/commit/91f064019c580fa1342ee1c4f2307829b32db3c5))
 * **language:** nothing writes a formulation out unasked ([#661](https://github.com/energy-models/math-spec/issues/661)) ([b5241fd](https://github.com/energy-models/math-spec/commit/b5241fde3b04727f689e4b36142be5192462703f))
 
+
 ### Bug Fixes
+
 * **language:** a name a curve writes is refused at load whatever declares it, and advice reads a named coefficient's sign ([#666](https://github.com/energy-models/math-spec/issues/666)) ([c1574ab](https://github.com/energy-models/math-spec/commit/c1574ab811e50bebcc6f69ae5d27a5a28828621d))
+
 
 ### Refactoring
 
@@ -136,9 +166,13 @@ The release candidate for 0.1.0, the first release on PyPI:
 * **program:** a program carries the trees the typesetter prints, and every curve is written out before a model becomes one ([#649](https://github.com/energy-models/math-spec/issues/649)) ([762394d](https://github.com/energy-models/math-spec/commit/762394d01521323de919b8ae7cbc3598a28ea875))
 * **program:** a program mirrors the file, descriptions and curves included, and the typesetter reads it alone ([#650](https://github.com/energy-models/math-spec/issues/650)) ([bfd628e](https://github.com/energy-models/math-spec/commit/bfd628e88e132639ce6569d5e0c9e3c8f0a05793))
 
+
 ### Documentation
+
 * a page explains why a loaded model is a spec and a program, and which tool reads which ([#668](https://github.com/energy-models/math-spec/issues/668)) ([dc0d731](https://github.com/energy-models/math-spec/commit/dc0d731569355b823067bd58335449f081b017b8))
+
 ## [0.0.0-alpha.120](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.119...v0.0.0-alpha.120) (2026-09-23)
+
 
 ### Features
 
@@ -146,15 +180,21 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.119](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.118...v0.0.0-alpha.119) (2026-09-23)
 
+
 ### Bug Fixes
+
 * **language:** a long chain of named expressions loads, a typo beside a formal is refused, and a fault in an entry hides no other ([#643](https://github.com/energy-models/math-spec/issues/643)) ([1e010ca](https://github.com/energy-models/math-spec/commit/1e010ca0f29994bd4b31099885d2696e3f7e979f))
 * **language:** a macro template nothing calls is held to every rule a call site is ([#628](https://github.com/energy-models/math-spec/issues/628)) ([ffab0ff](https://github.com/energy-models/math-spec/commit/ffab0ffe2dbc1cf9a4711954c6ae3c5372f4b8b8))
 
+
 ### Refactoring
+
 * **language:** an expression resolves straight into the program's own nodes ([#638](https://github.com/energy-models/math-spec/issues/638)) ([b3cee88](https://github.com/energy-models/math-spec/commit/b3cee8879dd38306fa86f0db93211ea88b437477))
 * **language:** each named expression is resolved once, and every use reads that node ([#632](https://github.com/energy-models/math-spec/issues/632)) ([ceecf69](https://github.com/energy-models/math-spec/commit/ceecf694316a3af17cbb570b28c5c40585b6cc25))
 * **program:** a comparison of expressions is one node before and after lowering ([#631](https://github.com/energy-models/math-spec/issues/631)) ([f723602](https://github.com/energy-models/math-spec/commit/f7236025a70ce0958512b326e3ae789b56eed986))
+
 ## [0.0.0-alpha.118](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.117...v0.0.0-alpha.118) (2026-09-23)
+
 
 ### Features
 
@@ -162,9 +202,13 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.117](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.116...v0.0.0-alpha.117) (2026-09-22)
 
+
 ### Documentation
+
 * **limits:** a where cannot test a relation against its target dimension, and composition is a limit on the file ([#624](https://github.com/energy-models/math-spec/issues/624)) ([216208b](https://github.com/energy-models/math-spec/commit/216208b7dd548c99309ae409e34d264eb1b70421))
+
 ## [0.0.0-alpha.116](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.115...v0.0.0-alpha.116) (2026-09-22)
+
 
 ### Features
 
@@ -172,9 +216,13 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.115](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.114...v0.0.0-alpha.115) (2026-09-22)
 
+
 ### Bug Fixes
+
 * **typeset:** a set prints under the name its sos: block declares ([#615](https://github.com/energy-models/math-spec/issues/615)) ([f2c91e8](https://github.com/energy-models/math-spec/commit/f2c91e80f8de9df641ebe32ae6ac7c2982e75e5b))
+
 ## [0.0.0-alpha.114](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.113...v0.0.0-alpha.114) (2026-09-22)
+
 
 ### Documentation
 
@@ -182,9 +230,13 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.113](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.112...v0.0.0-alpha.113) (2026-09-22)
 
+
 ### Bug Fixes
+
 * **language:** a gap in points: is explained by the rows its method writes ([#612](https://github.com/energy-models/math-spec/issues/612)) ([e903272](https://github.com/energy-models/math-spec/commit/e903272606f6741050b319477ea85db76c6f0540))
+
 ## [0.0.0-alpha.112](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.111...v0.0.0-alpha.112) (2026-09-22)
+
 
 ### Bug Fixes
 
@@ -192,7 +244,9 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.111](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.110...v0.0.0-alpha.111) (2026-09-22)
 
+
 ### Features
+
 * **language:** a model declares what it assumes of its data ([#589](https://github.com/energy-models/math-spec/issues/589)) ([e1454cf](https://github.com/energy-models/math-spec/commit/e1454cf6fac8ef1b05b80532fcc0fe6a8a4e5372))
 * **language:** a model writes its formulations out on request, and states what each assumes of its data ([#602](https://github.com/energy-models/math-spec/issues/602)) ([1e00c23](https://github.com/energy-models/math-spec/commit/1e00c23e227489d14790d85de5337b8edd584b10))
 * **language:** a where counts the coordinates a predicate admits ([#592](https://github.com/energy-models/math-spec/issues/592)) ([5cc55d3](https://github.com/energy-models/math-spec/commit/5cc55d3c145a9139672029aa257ed4935da0d79f))
@@ -200,9 +254,13 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.110](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.109...v0.0.0-alpha.110) (2026-09-21)
 
+
 ### Documentation
+
 * **language:** the relations page states what decides a sum from a read ([#597](https://github.com/energy-models/math-spec/issues/597)) ([3f6b632](https://github.com/energy-models/math-spec/commit/3f6b6325ee6a89dbaec55482a6f0e126cadb664c))
+
 ## [0.0.0-alpha.109](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.108...v0.0.0-alpha.109) (2026-09-21)
+
 
 ### Bug Fixes
 
@@ -210,23 +268,33 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.108](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.107...v0.0.0-alpha.108) (2026-09-20)
 
+
 ### Refactoring
+
 * **program:** a program names its nodes by the naming rule and its groups as the file does ([#585](https://github.com/energy-models/math-spec/issues/585)) ([3848821](https://github.com/energy-models/math-spec/commit/38488217d8f1fc23990c9bb4d933ccec1b1e0a42))
+
 ## [0.0.0-alpha.107](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.106...v0.0.0-alpha.107) (2026-09-20)
+
 
 ### Bug Fixes
 
 * **language:** at refuses a read that consumes a column over the dimension it joins on, as sum does ([#562](https://github.com/energy-models/math-spec/issues/562)) ([c10c181](https://github.com/energy-models/math-spec/commit/c10c18164526efb774a881a5411a4df24f83ae7e))
 
+
 ### Refactoring
+
 * **language:** a partition is its own class rather than a direction with nothing consumed or produced ([#559](https://github.com/energy-models/math-spec/issues/559)) ([6af0075](https://github.com/energy-models/math-spec/commit/6af0075729eb5132eb54234444572bb9df89c2c5))
 * **language:** a relation is read in a direction rather than walked ([#494](https://github.com/energy-models/math-spec/issues/494)) ([bbc4344](https://github.com/energy-models/math-spec/commit/bbc43447bd4bf0f20978dbdd9fd212f26d5e866a))
 
 ## [0.0.0-alpha.106](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.105...v0.0.0-alpha.106) (2026-09-19)
 
+
 ### Refactoring
+
 * no signature says Any, and a symbol table section that is not a mapping is refused ([#572](https://github.com/energy-models/math-spec/issues/572)) ([394599b](https://github.com/energy-models/math-spec/commit/394599b9e44adf0ee851074f59f498014b2b7d19))
+
 ## [0.0.0-alpha.105](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.104...v0.0.0-alpha.105) (2026-09-18)
+
 
 ### Documentation
 
@@ -234,9 +302,13 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.104](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.103...v0.0.0-alpha.104) (2026-09-18)
 
+
 ### Bug Fixes
+
 * **language:** a sum refused for walking to the key names an at() the language accepts ([#558](https://github.com/energy-models/math-spec/issues/558)) ([352fc7e](https://github.com/energy-models/math-spec/commit/352fc7e28cb15d17b30865fc1535d56b9a1cefbb))
+
 ## [0.0.0-alpha.103](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.102...v0.0.0-alpha.103) (2026-09-18)
+
 
 ### Documentation
 
@@ -244,13 +316,17 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.102](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.101...v0.0.0-alpha.102) (2026-09-18)
 
+
 ### Documentation
+
 * a rule states what is accepted and stops, rather than naming what it is not ([#552](https://github.com/energy-models/math-spec/issues/552)) ([1019b57](https://github.com/energy-models/math-spec/commit/1019b572a7be7695587b0a1a20bb32b1dbdc3781))
 * every page says what a model author needs and drops rationale, history and internals ([#551](https://github.com/energy-models/math-spec/issues/551)) ([ba6ad9a](https://github.com/energy-models/math-spec/commit/ba6ad9a8815d65da909dea3021162c17802ab9c5))
 
 ## [0.0.0-alpha.101](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.100...v0.0.0-alpha.101) (2026-09-18)
 
+
 ### Documentation
+
 * **language:** deciding what a column of data is declared as is a how-to, and the dimensions page keeps the axis ([#544](https://github.com/energy-models/math-spec/issues/544)) ([3540c5c](https://github.com/energy-models/math-spec/commit/3540c5c468f9421206aaea587e7b3daa41bacf48))
 * **language:** named expressions, cases and macros get a page, and the reported page folds into it ([#545](https://github.com/energy-models/math-spec/issues/545)) ([4e49fc7](https://github.com/energy-models/math-spec/commit/4e49fc7ca33e7c6ff703a5dc0ec054e5ec0b7ecb))
 * **language:** relations get a page of their own, and the operators page stops restating how a call reads one ([#543](https://github.com/energy-models/math-spec/issues/543)) ([7e9a572](https://github.com/energy-models/math-spec/commit/7e9a572798f73359be7731e84585fb9d90ea7c74))
@@ -262,9 +338,13 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.100](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.99...v0.0.0-alpha.100) (2026-09-18)
 
+
 ### Features
+
 * **language:** a partition names the value columns it groups by, so a relation may gain one without changing the call ([#540](https://github.com/energy-models/math-spec/issues/540)) ([0da7f50](https://github.com/energy-models/math-spec/commit/0da7f502732618f3e4766afc712ad8306e8f0f70)), closes [#538](https://github.com/energy-models/math-spec/issues/538)
+
 ## [0.0.0-alpha.99](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.98...v0.0.0-alpha.99) (2026-09-18)
+
 
 ### Features
 
@@ -274,14 +354,19 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.98](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.97...v0.0.0-alpha.98) (2026-09-18)
 
+
 ### Documentation
+
 * **program:** linking rows and columns say when they are the whole border ([#527](https://github.com/energy-models/math-spec/issues/527)) ([7972ad0](https://github.com/energy-models/math-spec/commit/7972ad06ca68049b31faaf52480f0de4e92d7886))
+
 ## [0.0.0-alpha.97](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.96...v0.0.0-alpha.97) (2026-09-18)
+
 
 ### Features
 
 * **program:** a walk that says which regions each node stands under ([#482](https://github.com/energy-models/math-spec/issues/482)) ([3f37cbe](https://github.com/energy-models/math-spec/commit/3f37cbeff7122733d3e5ff77d82bc980f4025c0d)), closes [#473](https://github.com/energy-models/math-spec/issues/473)
 * **program:** every axis names its linking rows and linking columns ([#525](https://github.com/energy-models/math-spec/issues/525)) ([588142f](https://github.com/energy-models/math-spec/commit/588142f2dd5ef196078c83cf94ad07818409ff08))
+
 
 ### Bug Fixes
 
@@ -289,15 +374,21 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.96](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.95...v0.0.0-alpha.96) (2026-09-17)
 
+
 ### Bug Fixes
+
 * **language:** an unknown keyword in an uncalled macro is refused by its signature ([#462](https://github.com/energy-models/math-spec/issues/462)) ([a1659da](https://github.com/energy-models/math-spec/commit/a1659daf8a6f2a9137dd9110f9d49d2003f2bd9f))
 * **language:** an unknown keyword on an operator is refused once, by its signature ([#458](https://github.com/energy-models/math-spec/issues/458)) ([aa3e052](https://github.com/energy-models/math-spec/commit/aa3e05254844dc03bc8b655489ff371a18b1dfff))
 
 ## [0.0.0-alpha.95](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.94...v0.0.0-alpha.95) (2026-09-16)
 
+
 ### Features
+
 * **language:** a relation declares key columns and value columns ([#501](https://github.com/energy-models/math-spec/issues/501)) ([4069792](https://github.com/energy-models/math-spec/commit/4069792247b9410aad02502b71bf0548c2679be2))
+
 ## [0.0.0-alpha.94](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.93...v0.0.0-alpha.94) (2026-09-16)
+
 
 ### Documentation
 
@@ -305,9 +396,13 @@ The release candidate for 0.1.0, the first release on PyPI:
 
 ## [0.0.0-alpha.93](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.92...v0.0.0-alpha.93) (2026-09-16)
 
+
 ### Documentation
+
 * **language:** a walk through a relation is stated once, in the three verbs the loader uses ([#490](https://github.com/energy-models/math-spec/issues/490)) ([ebc9b16](https://github.com/energy-models/math-spec/commit/ebc9b16b607d75dd40e72d62fdd9bf8487055fc7))
+
 ## [0.0.0-alpha.92](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.91...v0.0.0-alpha.92) (2026-09-16)
+
 
 ### Features
 
@@ -319,8 +414,11 @@ Corrected: this release carries no change. [#474](https://github.com/energy-mode
 was merged and then reverted by [#481](https://github.com/energy-models/math-spec/pull/481), both
 before the tag was cut, and `revert` had no section in `changelog-sections`, so release-please kept
 the feature and dropped the revert. The line it published was:
+
 > * **program:** a walk that says which regions each node stands under ([#474](https://github.com/energy-models/math-spec/issues/474)) ([3986c6b](https://github.com/energy-models/math-spec/commit/3986c6bbe25261ec3720fbadf0005a6990fa5c16))
+
 ## [0.0.0-alpha.90](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.89...v0.0.0-alpha.90) (2026-09-15)
+
 
 ### Documentation
 
@@ -328,9 +426,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.89](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.88...v0.0.0-alpha.89) (2026-09-15)
 
+
 ### Features
+
 * **language:** a relation between dimensions, walked in the direction each call names ([#437](https://github.com/energy-models/math-spec/issues/437)) ([3284926](https://github.com/energy-models/math-spec/commit/3284926ebe0d82da28cfd533448c68bbc2ba8fe4))
+
 ## [0.0.0-alpha.88](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.87...v0.0.0-alpha.88) (2026-09-15)
+
 
 ### Documentation
 
@@ -338,9 +440,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.87](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.86...v0.0.0-alpha.87) (2026-09-14)
 
+
 ### Features
+
 * **language:** a variable, a constraint and a cased expression declare their shape as dims, as a parameter does ([#429](https://github.com/energy-models/math-spec/issues/429)) ([d8dfdb0](https://github.com/energy-models/math-spec/commit/d8dfdb01fcffdf2190a73875f73ed266635dc15a))
+
 ## [0.0.0-alpha.86](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.85...v0.0.0-alpha.86) (2026-09-11)
+
 
 ### Bug Fixes
 
@@ -348,9 +454,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.85](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.84...v0.0.0-alpha.85) (2026-09-10)
 
+
 ### Documentation
+
 * the pages read in plain English, arranged by what each is for ([#442](https://github.com/energy-models/math-spec/issues/442)) ([8dc4b60](https://github.com/energy-models/math-spec/commit/8dc4b602edaff106aa671f11346f8a07c813d3ce))
+
 ## [0.0.0-alpha.84](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.83...v0.0.0-alpha.84) (2026-09-10)
+
 
 ### Bug Fixes
 
@@ -358,8 +468,11 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.83](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.82...v0.0.0-alpha.83) (2026-09-09)
 
+
 ### Features
+
 * **language:** a lookup always maps into a declared dimension ([#422](https://github.com/energy-models/math-spec/issues/422)) ([533665c](https://github.com/energy-models/math-spec/commit/533665cb15e5f03f37f261f276b1a2e920db5de7))
+
 
 ### Refactoring
 
@@ -367,12 +480,17 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.82](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.81...v0.0.0-alpha.82) (2026-09-09)
 
+
 ### Features
+
 * **program:** a where predicate's operands are walked with where_children, as an expression's are with children ([#416](https://github.com/energy-models/math-spec/issues/416)) ([b653537](https://github.com/energy-models/math-spec/commit/b653537970f33ca01bcc56b524dc7cf8e3e70d4c))
 * **typesetting:** a backticked name in a description sets in monospace in every format ([#421](https://github.com/energy-models/math-spec/issues/421)) ([a2dcee7](https://github.com/energy-models/math-spec/commit/a2dcee759adc5cbe7db884a09cfca45849325400))
 
+
 ### Bug Fixes
+
 * **typesetting:** a Markdown description sets as text rather than as markup ([#420](https://github.com/energy-models/math-spec/issues/420)) ([a793961](https://github.com/energy-models/math-spec/commit/a7939613393aa4dbd2df926d934a99786562e7ce))
+
 
 ### Performance
 
@@ -380,9 +498,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.81](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.80...v0.0.0-alpha.81) (2026-09-09)
 
+
 ### Documentation
+
 * the reading page says what a spec writes back out ([#414](https://github.com/energy-models/math-spec/issues/414)) ([3f4e5e0](https://github.com/energy-models/math-spec/commit/3f4e5e05a4f965d407e390d69667c073cf1d780d))
+
 ## [0.0.0-alpha.80](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.79...v0.0.0-alpha.80) (2026-09-09)
+
 
 ### Documentation
 
@@ -390,9 +512,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.79](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.78...v0.0.0-alpha.79) (2026-09-09)
 
+
 ### Bug Fixes
+
 * **program:** two groups of a program merge with | as they did before the seal ([#410](https://github.com/energy-models/math-spec/issues/410)) ([e053e00](https://github.com/energy-models/math-spec/commit/e053e00dda028f3c5a957b5fe73c42b9feb782ff))
+
 ## [0.0.0-alpha.78](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.77...v0.0.0-alpha.78) (2026-09-09)
+
 
 ### Bug Fixes
 
@@ -400,9 +526,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.77](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.76...v0.0.0-alpha.77) (2026-09-09)
 
+
 ### Features
+
 * a model loads from its YAML text as well as from a file ([#406](https://github.com/energy-models/math-spec/issues/406)) ([e88a0ef](https://github.com/energy-models/math-spec/commit/e88a0ef7037375ef3da0351f5d156986b89a190f))
+
 ## [0.0.0-alpha.76](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.75...v0.0.0-alpha.76) (2026-09-08)
+
 
 ### Bug Fixes
 
@@ -410,9 +540,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.75](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.74...v0.0.0-alpha.75) (2026-09-08)
 
+
 ### Features
+
 * **language:** an expression the math never reads may be nonlinear and may call dual() ([#395](https://github.com/energy-models/math-spec/issues/395)) ([18020f4](https://github.com/energy-models/math-spec/commit/18020f44b6b7095cac41ff2486cd05be959b409b))
+
 ## [0.0.0-alpha.74](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.73...v0.0.0-alpha.74) (2026-09-08)
+
 
 ### Features
 
@@ -420,9 +554,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.73](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.72...v0.0.0-alpha.73) (2026-09-02)
 
+
 ### Documentation
+
 * **about:** the test a function has to pass to be part of this package's surface ([#246](https://github.com/energy-models/math-spec/issues/246)) ([cc1414a](https://github.com/energy-models/math-spec/commit/cc1414a6d2df94d8b97d8ef5382ab48862671204))
+
 ## [0.0.0-alpha.72](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.71...v0.0.0-alpha.72) (2026-09-02)
+
 
 ### Features
 
@@ -430,9 +568,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.71](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.70...v0.0.0-alpha.71) (2026-09-02)
 
+
 ### Bug Fixes
+
 * an expression too deep to walk is refused rather than crashing ([#359](https://github.com/energy-models/math-spec/issues/359)) ([d6cee25](https://github.com/energy-models/math-spec/commit/d6cee25b37294993a6733723f256d28a140f63f2))
+
 ## [0.0.0-alpha.70](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.69...v0.0.0-alpha.70) (2026-09-02)
+
 
 ### Documentation
 
@@ -440,8 +582,11 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.69](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.68...v0.0.0-alpha.69) (2026-09-02)
 
+
 ### Bug Fixes
+
 * the docstrings no longer point a consumer at the package-private expression tree ([#351](https://github.com/energy-models/math-spec/issues/351)) ([15b1985](https://github.com/energy-models/math-spec/commit/15b1985e7660eadec0d5d6bfe1850fbb7b20733e))
+
 
 ### Refactoring
 
@@ -449,9 +594,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.68](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.67...v0.0.0-alpha.68) (2026-09-02)
 
+
 ### Documentation
+
 * **language:** the rules binding obeys belong to the language, not to whichever engine reads the data ([#242](https://github.com/energy-models/math-spec/issues/242)) ([c05da6a](https://github.com/energy-models/math-spec/commit/c05da6a69d46ca0f595cfab4bd9e8eec827dfeb0))
+
 ## [0.0.0-alpha.67](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.66...v0.0.0-alpha.67) (2026-09-02)
+
 
 ### Refactoring
 
@@ -461,7 +610,9 @@ the feature and dropped the revert. The line it published was:
 * **piecewise:** one block expands itself, holding its names, frame and mask once ([#367](https://github.com/energy-models/math-spec/issues/367)) ([537eadf](https://github.com/energy-models/math-spec/commit/537eadf76f52615c83235e0dfbbdd2af5fa70588))
 * resolution is one method per node kind, and each operator's dim rule is one function ([#368](https://github.com/energy-models/math-spec/issues/368)) ([c7c2833](https://github.com/energy-models/math-spec/commit/c7c283347869fbd45e0ff851d0112bfcbc09f98c))
 * **typesetting:** the legend reads what the equations returned rather than state left on the walk ([#366](https://github.com/energy-models/math-spec/issues/366)) ([db96a54](https://github.com/energy-models/math-spec/commit/db96a54d55996a9e4cc89a3f837303149475211b))
+
 ## [0.0.0-alpha.66](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.65...v0.0.0-alpha.66) (2026-09-01)
+
 
 ### Performance
 
@@ -469,15 +620,21 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.65](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.64...v0.0.0-alpha.65) (2026-09-01)
 
+
 ### Refactoring
+
 * **language:** a translation policy and a bound's side name the values they can be, rather than being a string ([#354](https://github.com/energy-models/math-spec/issues/354)) ([d212157](https://github.com/energy-models/math-spec/commit/d2121572496bf7e624cfa5e38c348cfbed4b71ad))
 * **typesetting:** a format spells the operators the language names, rather than any string a walk happens to ask for ([#352](https://github.com/energy-models/math-spec/issues/352)) ([12b4041](https://github.com/energy-models/math-spec/commit/12b404126dbe00e28ad16b4736dbe90dfda833d0))
 
 ## [0.0.0-alpha.64](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.63...v0.0.0-alpha.64) (2026-09-01)
 
+
 ### Features
+
 * **parser:** a refused where string names the rewrite for pandas and C connective habits ([#346](https://github.com/energy-models/math-spec/issues/346)) ([3dbd9b2](https://github.com/energy-models/math-spec/commit/3dbd9b261dd82fc5cd52924ecdd03b18ddd88c14))
+
 ## [0.0.0-alpha.63](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.62...v0.0.0-alpha.63) (2026-09-01)
+
 
 ### Refactoring
 
@@ -485,9 +642,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.62](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.61...v0.0.0-alpha.62) (2026-09-01)
 
+
 ### Bug Fixes
+
 * **language:** a declaration named what no expression could write is refused, rather than loading unreferenceable ([#340](https://github.com/energy-models/math-spec/issues/340)) ([b865bc1](https://github.com/energy-models/math-spec/commit/b865bc15fde7e5a7714cdf809f5f0b9e6e6f44e5))
+
 ## [0.0.0-alpha.61](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.60...v0.0.0-alpha.61) (2026-09-01)
+
 
 ### Performance
 
@@ -495,9 +656,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.60](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.59...v0.0.0-alpha.60) (2026-09-01)
 
+
 ### Bug Fixes
+
 * **language:** the language reference states which case arms are refused, and the refusal says what actually breaks ([#336](https://github.com/energy-models/math-spec/issues/336)) ([01920d1](https://github.com/energy-models/math-spec/commit/01920d1be4f6dbd6965f6f0e7e683543384cc744))
+
 ## [0.0.0-alpha.59](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.58...v0.0.0-alpha.59) (2026-09-01)
+
 
 ### Bug Fixes
 
@@ -505,9 +670,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.58](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.57...v0.0.0-alpha.58) (2026-09-01)
 
+
 ### Features
+
 * **program:** a resolved where is a first-class Mask whose leaves carry their dims, and the where grammar is package-private ([#327](https://github.com/energy-models/math-spec/issues/327)) ([53cc352](https://github.com/energy-models/math-spec/commit/53cc3522e917a5849ce3150585c2c9e05a8ea162))
+
 ## [0.0.0-alpha.57](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.56...v0.0.0-alpha.57) (2026-09-01)
+
 
 ### Bug Fixes
 
@@ -515,9 +684,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.56](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.55...v0.0.0-alpha.56) (2026-09-01)
 
+
 ### Features
+
 * **program:** the conjuncts of a where mask are the program's to give, not each consumer's to re-derive ([#313](https://github.com/energy-models/math-spec/issues/313)) ([db63d3c](https://github.com/energy-models/math-spec/commit/db63d3ca90079e4031a9339ea7749c0567b31be9))
+
 ## [0.0.0-alpha.55](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.54...v0.0.0-alpha.55) (2026-08-31)
+
 
 ### Documentation
 
@@ -525,9 +698,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.54](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.53...v0.0.0-alpha.54) (2026-08-31)
 
+
 ### Documentation
+
 * drop the effects row from the PyPSA-1.3.0 parity table, a feature that release does not have ([#305](https://github.com/energy-models/math-spec/issues/305)) ([92e5ed8](https://github.com/energy-models/math-spec/commit/92e5ed84c14c59e8068a7814722950f936e2925a))
+
 ## [0.0.0-alpha.53](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.52...v0.0.0-alpha.53) (2026-08-31)
+
 
 ### Documentation
 
@@ -535,9 +712,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.52](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.51...v0.0.0-alpha.52) (2026-08-31)
 
+
 ### Documentation
+
 * **examples:** the PyPSA file states a constraint once where PyPSA builds one row set, rather than a block per regime ([#257](https://github.com/energy-models/math-spec/issues/257)) ([#292](https://github.com/energy-models/math-spec/issues/292)) ([c35e637](https://github.com/energy-models/math-spec/commit/c35e637c8632e361d1d9565824e0497d3199bc16))
+
 ## [0.0.0-alpha.51](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.50...v0.0.0-alpha.51) (2026-08-31)
+
 
 ### Features
 
@@ -545,17 +726,25 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.50](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.49...v0.0.0-alpha.50) (2026-08-31)
 
+
 ### Documentation
+
 * **language:** a label space may group a position, though not a reduction or a walk ([#281](https://github.com/energy-models/math-spec/issues/281)) ([00be0cb](https://github.com/energy-models/math-spec/commit/00be0cb9bca7bc3f73860a50fe703d6eefff3be6))
+
 ## [0.0.0-alpha.49](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.48...v0.0.0-alpha.49) (2026-08-31)
+
 
 ### Features
 
 * **examples:** a link delivers to as many buses as its data declares, not two ([#273](https://github.com/energy-models/math-spec/issues/273)) ([0ece0d8](https://github.com/energy-models/math-spec/commit/0ece0d86794a86664e2596428df25e319eb6b56e))
 
+
 ### Bug Fixes
+
 * **examples:** a committable modular unit that is not extendable gets the rows PyPSA builds for it ([#271](https://github.com/energy-models/math-spec/issues/271)) ([5af0ac8](https://github.com/energy-models/math-spec/commit/5af0ac8cb15271c4b6982e4397604fe3dfb5cb10))
+
 ## [0.0.0-alpha.48](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.47...v0.0.0-alpha.48) (2026-08-31)
+
 
 ### Features
 
@@ -563,9 +752,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.47](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.46...v0.0.0-alpha.47) (2026-08-28)
 
+
 ### Documentation
+
 * the README's example of reading a loaded model runs as written ([#240](https://github.com/energy-models/math-spec/issues/240)) ([304a233](https://github.com/energy-models/math-spec/commit/304a233d408979aa54b7fa2b0a6b5f12469e8afd))
+
 ## [0.0.0-alpha.46](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.45...v0.0.0-alpha.46) (2026-08-28)
+
 
 ### Features
 
@@ -573,9 +766,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.45](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.44...v0.0.0-alpha.45) (2026-08-28)
 
+
 ### Bug Fixes
+
 * **language:** a negative edge fill prints, the sign of a literal amount being folded once at resolution ([#234](https://github.com/energy-models/math-spec/issues/234)) ([d9303db](https://github.com/energy-models/math-spec/commit/d9303dbd1e824f674331b7e9403dd5799444dd15))
+
 ## [0.0.0-alpha.44](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.43...v0.0.0-alpha.44) (2026-08-28)
+
 
 ### Bug Fixes
 
@@ -583,15 +780,21 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.43](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.42...v0.0.0-alpha.43) (2026-08-28)
 
+
 ### Features
+
 * **program:** a parameter says which piecewise block derived it, and a label space keeps its dtype ([#227](https://github.com/energy-models/math-spec/issues/227)) ([515dbd5](https://github.com/energy-models/math-spec/commit/515dbd5054dae8ae61fd8818be4d204e1d98950b))
 * **program:** a piecewise block is kept as facts — its breakpoints, its mask, and what it assumes of the data ([#228](https://github.com/energy-models/math-spec/issues/228)) ([2fdbd6f](https://github.com/energy-models/math-spec/commit/2fdbd6f5760975132f0dc9db605b11f4d2cc7103))
 
 ## [0.0.0-alpha.42](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.41...v0.0.0-alpha.42) (2026-08-28)
 
+
 ### Bug Fixes
+
 * **language:** a negative sum_back width is refused at load rather than asserting in lowering ([#223](https://github.com/energy-models/math-spec/issues/223)) ([62e52eb](https://github.com/energy-models/math-spec/commit/62e52eb6c7071f16e360055c5d11870e8a2ba1a0)), closes [#222](https://github.com/energy-models/math-spec/issues/222)
+
 ## [0.0.0-alpha.41](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.40...v0.0.0-alpha.41) (2026-08-28)
+
 
 ### Bug Fixes
 
@@ -599,9 +802,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.40](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.39...v0.0.0-alpha.40) (2026-08-28)
 
+
 ### Refactoring
+
 * **program:** the declaration vocabularies have one home, so a program cannot spell one differently from the file ([#219](https://github.com/energy-models/math-spec/issues/219)) ([f7596d7](https://github.com/energy-models/math-spec/commit/f7596d7bcf7ff61aff5a94807b34bf5516b29085)), closes [#209](https://github.com/energy-models/math-spec/issues/209)
+
 ## [0.0.0-alpha.39](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.38...v0.0.0-alpha.39) (2026-08-28)
+
 
 ### Bug Fixes
 
@@ -609,8 +816,11 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.38](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.37...v0.0.0-alpha.38) (2026-08-28)
 
+
 ### Features
+
 * **program:** a program says which of the language's constructs it uses ([#207](https://github.com/energy-models/math-spec/issues/207)) ([4e55a15](https://github.com/energy-models/math-spec/commit/4e55a15df57bef28364049ff16d449312d06aebd))
+
 
 ### Bug Fixes
 
@@ -618,6 +828,7 @@ the feature and dropped the revert. The line it published was:
 * **program:** a where mask cannot be rewritten under another consumer ([#197](https://github.com/energy-models/math-spec/issues/197)) ([ce406b0](https://github.com/energy-models/math-spec/commit/ce406b045567ff82732f818e2a905bf7d302852b))
 * **program:** an unknown dimension is refused rather than answered empty ([#199](https://github.com/energy-models/math-spec/issues/199)) ([96fdccf](https://github.com/energy-models/math-spec/commit/96fdccf105bf2ffc37d8cda078f3560e56bff9ec))
 * **program:** every expression node answers fan_in ([#202](https://github.com/energy-models/math-spec/issues/202)) ([f5cc67d](https://github.com/energy-models/math-spec/commit/f5cc67d9320ab254771e2d5527bf41641a6ca648))
+
 
 ### Refactoring
 
@@ -629,13 +840,19 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.37](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.36...v0.0.0-alpha.37) (2026-08-28)
 
+
 ### Features
+
 * a model is checked from the shell, advice included, with no consumer installed ([#192](https://github.com/energy-models/math-spec/issues/192)) ([941126c](https://github.com/energy-models/math-spec/commit/941126cd95af7decb0d37538e93c4f7c4ad54935))
 * advice carries which pass said it and which declaration it is about, so a consumer can filter rather than parse ([#195](https://github.com/energy-models/math-spec/issues/195)) ([89408f6](https://github.com/energy-models/math-spec/commit/89408f6fae500df661bda66cc2f0ef100b691636))
 
+
 ### Refactoring
+
 * one call returns every note the language can give without data ([#191](https://github.com/energy-models/math-spec/issues/191)) ([2face7a](https://github.com/energy-models/math-spec/commit/2face7a39092e5f2fc1ddb705efee8a7d34dd343))
+
 ## [0.0.0-alpha.36](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.35...v0.0.0-alpha.36) (2026-08-28)
+
 
 ### Refactoring
 
@@ -643,9 +860,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.35](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.34...v0.0.0-alpha.35) (2026-08-28)
 
+
 ### Documentation
+
 * the style guide's front-door example is the function it quotes ([#187](https://github.com/energy-models/math-spec/issues/187)) ([5dbed70](https://github.com/energy-models/math-spec/commit/5dbed70024c1e59633ffcee0f4f6295abc69fd8c))
+
 ## [0.0.0-alpha.34](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.33...v0.0.0-alpha.34) (2026-08-28)
+
 
 ### Refactoring
 
@@ -653,9 +874,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.33](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.32...v0.0.0-alpha.33) (2026-08-28)
 
+
 ### Features
+
 * the notes a check prints are reachable, so a consumer surfaces them rather than re-deriving them ([#184](https://github.com/energy-models/math-spec/issues/184)) ([19ef814](https://github.com/energy-models/math-spec/commit/19ef81411b619ae187f7763338202e1e06401cf0))
+
 ## [0.0.0-alpha.32](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.31...v0.0.0-alpha.32) (2026-08-28)
+
 
 ### Features
 
@@ -663,9 +888,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.31](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.30...v0.0.0-alpha.31) (2026-08-28)
 
+
 ### Documentation
+
 * **agents:** the cheap gates run here, and CI is reported rather than watched ([#175](https://github.com/energy-models/math-spec/issues/175)) ([78e3d80](https://github.com/energy-models/math-spec/commit/78e3d80e0705238296a90e9eed3ecf182f737e2c))
+
 ## [0.0.0-alpha.30](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.29...v0.0.0-alpha.30) (2026-08-28)
+
 
 ### Documentation
 
@@ -673,9 +902,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.29](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.28...v0.0.0-alpha.29) (2026-08-27)
 
+
 ### Features
+
 * **language:** dimension members and lookup maps come from the data, rather than from the file ([#169](https://github.com/energy-models/math-spec/issues/169)) ([f3c4e5f](https://github.com/energy-models/math-spec/commit/f3c4e5fa492ece1ae0af1ac27e7b0a36266a287a))
+
 ## [0.0.0-alpha.28](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.27...v0.0.0-alpha.28) (2026-08-27)
+
 
 ### Bug Fixes
 
@@ -683,9 +916,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.27](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.26...v0.0.0-alpha.27) (2026-08-27)
 
+
 ### Bug Fixes
+
 * the linearized rung states its three caps as rows and starts one unit cold, so every block it declares is built ([#162](https://github.com/energy-models/math-spec/issues/162)) ([cb4863f](https://github.com/energy-models/math-spec/commit/cb4863f35f71a97c44703390335121200273a4f6))
+
 ## [0.0.0-alpha.26](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.25...v0.0.0-alpha.26) (2026-08-27)
+
 
 ### Features
 
@@ -693,13 +930,17 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.25](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.24...v0.0.0-alpha.25) (2026-08-27)
 
+
 ### Features
+
 * rung 11 — PyPSA's ac-dc-meshed example, whole ([#151](https://github.com/energy-models/math-spec/issues/151)) ([a133044](https://github.com/energy-models/math-spec/commit/a1330441ba7926aeedc086afa48f2efa8971fa10))
 * rung 12 — linearized unit commitment, a file of its own ([#152](https://github.com/energy-models/math-spec/issues/152)) ([69b926e](https://github.com/energy-models/math-spec/commit/69b926e64b2431ad723b92e614b4c43523525253))
 * rung 13 — transmission losses in tangent form, a file of its own ([#153](https://github.com/energy-models/math-spec/issues/153)) ([379ce23](https://github.com/energy-models/math-spec/commit/379ce2316b2146ca064bcc3bac0d3ea0bd995011))
 * rung 14 — two-stage stochastic with CVaR, a file of its own ([#154](https://github.com/energy-models/math-spec/issues/154)) ([41b427d](https://github.com/energy-models/math-spec/commit/41b427daa7525f7fd6368488e005e0a42983f3fd))
 * rung 15 — investment periods with a growth limit, a file of its own ([#155](https://github.com/energy-models/math-spec/issues/155)) ([285aac3](https://github.com/energy-models/math-spec/commit/285aac35bda2ee69a2872a6b20618f5827c3d19f))
+
 ## [0.0.0-alpha.24](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.23...v0.0.0-alpha.24) (2026-08-26)
+
 
 ### Features
 
@@ -707,9 +948,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.23](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.22...v0.0.0-alpha.23) (2026-08-26)
 
+
 ### Bug Fixes
+
 * **docs:** the homepage feature cards render as cards rather than as loose rules and paragraphs ([#145](https://github.com/energy-models/math-spec/issues/145)) ([b88e5dc](https://github.com/energy-models/math-spec/commit/b88e5dc8883f0bc6bc0f5809c688139055715f57))
+
 ## [0.0.0-alpha.22](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.21...v0.0.0-alpha.22) (2026-08-26)
+
 
 ### Features
 
@@ -717,9 +962,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.21](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.20...v0.0.0-alpha.21) (2026-08-26)
 
+
 ### Documentation
+
 * **language:** the absence page is half the length and shows each rule on a model ([#127](https://github.com/energy-models/math-spec/issues/127)) ([147788a](https://github.com/energy-models/math-spec/commit/147788af0d8f912ed3442e56392b3ef3e994a7ed))
+
 ## [0.0.0-alpha.20](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.19...v0.0.0-alpha.20) (2026-08-26)
+
 
 ### Documentation
 
@@ -727,9 +976,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.19](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.18...v0.0.0-alpha.19) (2026-08-26)
 
+
 ### Bug Fixes
+
 * **typeset:** a string value in a where clause prints as a quoted label ([#114](https://github.com/energy-models/math-spec/issues/114)) ([9be22c1](https://github.com/energy-models/math-spec/commit/9be22c1f979c8d887e91cef302b2b63570fcbae0))
+
 ## [0.0.0-alpha.18](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.17...v0.0.0-alpha.18) (2026-08-26)
+
 
 ### Refactoring
 
@@ -737,7 +990,9 @@ the feature and dropped the revert. The line it published was:
 * **schema:** one wording for an undeclared dimension, and the front door validates once ([#105](https://github.com/energy-models/math-spec/issues/105)) ([69e42db](https://github.com/energy-models/math-spec/commit/69e42db6f453b9caff349ddf109ee77aed3617fa))
 * the stack's own additions say less and repeat nothing ([#102](https://github.com/energy-models/math-spec/issues/102)) ([119e588](https://github.com/energy-models/math-spec/commit/119e5884a576264c38c8455c625908ee09d057c9))
 * **typeset:** Markdown is LaTeX's math with its own document layer, and a step merges itself ([#107](https://github.com/energy-models/math-spec/issues/107)) ([1ca9178](https://github.com/energy-models/math-spec/commit/1ca9178b82f629bd39170e884b82265c7935b8de))
+
 ## [0.0.0-alpha.17](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.16...v0.0.0-alpha.17) (2026-08-25)
+
 
 ### Bug Fixes
 
@@ -747,9 +1002,13 @@ the feature and dropped the revert. The line it published was:
 * **schema:** two literal bounds that cross are refused at load ([#97](https://github.com/energy-models/math-spec/issues/97)) ([30589ba](https://github.com/energy-models/math-spec/commit/30589ba4bf61e640c8f3778e34d5bd768e807e2c))
 * **typeset:** a sum under its own dimension takes a fresh index, and prose escapes its markup ([#92](https://github.com/energy-models/math-spec/issues/92)) ([20c7076](https://github.com/energy-models/math-spec/commit/20c7076511c5a3ef74dc06fe0d11888f292f1b2d))
 
+
 ### Refactoring
+
 * the tree describes this package, not the project it was cut from ([#94](https://github.com/energy-models/math-spec/issues/94)) ([9673f9a](https://github.com/energy-models/math-spec/commit/9673f9aef6bc7902439d7842c83a3fd95c29895e))
+
 ## [0.0.0-alpha.16](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.15...v0.0.0-alpha.16) (2026-08-25)
+
 
 ### Refactoring
 
@@ -757,9 +1016,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.15](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.14...v0.0.0-alpha.15) (2026-08-25)
 
+
 ### Documentation
+
 * the title rules are written for the changelog reader ([#79](https://github.com/energy-models/math-spec/issues/79)) ([fdb52e4](https://github.com/energy-models/math-spec/commit/fdb52e49dcd69be775e4be3e1860f4339a6283af))
+
 ## [0.0.0-alpha.14](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.13...v0.0.0-alpha.14) (2026-08-25)
+
 
 ### Documentation
 
@@ -767,9 +1030,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.13](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.12...v0.0.0-alpha.13) (2026-08-25)
 
+
 ### Bug Fixes
+
 * refuse a str or bool parameter where arithmetic wants a number ([#71](https://github.com/energy-models/math-spec/issues/71)) ([9b320fd](https://github.com/energy-models/math-spec/commit/9b320fd385d6300df3dadb14be4c9317a9241da0))
+
 ## [0.0.0-alpha.12](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.11...v0.0.0-alpha.12) (2026-08-25)
+
 
 ### Documentation
 
@@ -777,25 +1044,35 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.11](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.10...v0.0.0-alpha.11) (2026-08-25)
 
+
 ### Bug Fixes
+
 * enforce the two rules a named offset or width was always said to obey ([#61](https://github.com/energy-models/math-spec/issues/61)) ([5bd92dc](https://github.com/energy-models/math-spec/commit/5bd92dc47630d1fb8572d18e80060446c257727c)), closes [#58](https://github.com/energy-models/math-spec/issues/58)
 * let sum_back stop at each group's edge, as its checks already assumed ([#65](https://github.com/energy-models/math-spec/issues/65)) ([cb58e88](https://github.com/energy-models/math-spec/commit/cb58e885221484f41804b33d47b1004874565ae4))
 * refuse a negated named amount, and one read where there is no coordinate ([#63](https://github.com/energy-models/math-spec/issues/63)) ([15d9c25](https://github.com/energy-models/math-spec/commit/15d9c252e2126278f2547c9df399edf85bd44df3)), closes [#62](https://github.com/energy-models/math-spec/issues/62)
+
 ## [0.0.0-alpha.10](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.9...v0.0.0-alpha.10) (2026-08-24)
+
 
 ### Features
 
 * pin the eight names that keep this package and its consumer in step ([#51](https://github.com/energy-models/math-spec/issues/51)) ([15a354b](https://github.com/energy-models/math-spec/commit/15a354b1173f105d85113db6abc2f4e5ac28a6e3))
 
+
 ### Refactoring
+
 * name the groups a pass asks about, and spell each operator once ([#52](https://github.com/energy-models/math-spec/issues/52)) ([e35c46c](https://github.com/energy-models/math-spec/commit/e35c46c128a29a620c9ed562684cf1dd43a08274))
 * the package is `typesetting`, the function stays `typeset` ([#54](https://github.com/energy-models/math-spec/issues/54)) ([a1d9599](https://github.com/energy-models/math-spec/commit/a1d95994333b25ac03f75f47eb2b376a03af6593))
 
 ## [0.0.0-alpha.9](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.8...v0.0.0-alpha.9) (2026-08-23)
 
+
 ### Features
+
 * position(dim) replaces index(dim, i), converting on the left ([#31](https://github.com/energy-models/math-spec/issues/31)) ([8f78ac5](https://github.com/energy-models/math-spec/commit/8f78ac54f5ff6a790cff4d4b730bb2abd27bef7c))
+
 ## [0.0.0-alpha.8](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.7...v0.0.0-alpha.8) (2026-08-23)
+
 
 ### Features
 
@@ -803,9 +1080,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.7](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.6...v0.0.0-alpha.7) (2026-08-23)
 
+
 ### Bug Fixes
+
 * the notation page is generated again, and something says so ([#41](https://github.com/energy-models/math-spec/issues/41)) ([3dad75e](https://github.com/energy-models/math-spec/commit/3dad75e136a91025c1d24cf1cdb13c4894c85c15))
+
 ## [0.0.0-alpha.6](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.5...v0.0.0-alpha.6) (2026-08-23)
+
 
 ### Documentation
 
@@ -813,9 +1094,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.5](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.4...v0.0.0-alpha.5) (2026-08-22)
 
+
 ### Bug Fixes
+
 * to_markdown printed TeX's em-dash ligature, not an em dash ([#34](https://github.com/energy-models/math-spec/issues/34)) ([226407a](https://github.com/energy-models/math-spec/commit/226407a9e0e08575041b32d388288ee456d231d3))
+
 ## [0.0.0-alpha.4](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.3...v0.0.0-alpha.4) (2026-08-21)
+
 
 ### Refactoring
 
@@ -823,9 +1108,13 @@ the feature and dropped the revert. The line it published was:
 
 ## [0.0.0-alpha.3](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.2...v0.0.0-alpha.3) (2026-08-21)
 
+
 ### Bug Fixes
+
 * stop prettier rewriting what release-please generates ([#27](https://github.com/energy-models/math-spec/issues/27)) ([7486555](https://github.com/energy-models/math-spec/commit/7486555f199f105d1cb6d29a141bbbd3cfedead2))
+
 ## [0.0.0-alpha.2](https://github.com/energy-models/math-spec/compare/v0.0.0-alpha.1...v0.0.0-alpha.2) (2026-08-21)
+
 
 ### Bug Fixes
 

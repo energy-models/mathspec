@@ -38,6 +38,9 @@ The column has to match the `dtype`:
 | `bool`   | a boolean column                  | `1` and `0` are not booleans. Cast the column |
 | `str`    | a string column                   |                                               |
 
+**A null or NaN value is refused** when the data is attached. A coordinate
+with no value has no row. `inf` and `-inf` are values.
+
 Only `float` and `int` are values. A `str` parameter is a label and a `bool`
 parameter is a mask: each selects rows in a
 [`where`](expressions.md#where-strings), and writing either as a coefficient,

@@ -4,7 +4,6 @@
 
 name: Feature Request
 description: Suggest an idea for mathspec.
-labels: [enhancement]
 body:
   - type: markdown
     attributes:
