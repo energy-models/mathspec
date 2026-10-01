@@ -38,6 +38,24 @@ if TYPE_CHECKING:
 PAGES = ROOT / 'docs' / 'examples'
 LIBRARY = ROOT / 'examples' / 'library'
 PYPSA = ROOT / 'examples' / 'pypsa'
+GEMS = ROOT / 'examples' / 'ports' / 'gems'
+#: The GEMS port in the order a GEMS library lists its models, after the
+#: system the interpreter supplies around them.
+GEMS_FRAGMENTS = [
+    GEMS / f'{name}.yaml'
+    for name in (
+        'system',
+        'bus',
+        'load',
+        'link',
+        'renewable',
+        'generator',
+        'storage',
+        'emission_constraint',
+        'energy_limitation_hard_constraint_max',
+        'energy_limitation_soft_constraint_max',
+    )
+]
 #: How `examples/library/` prints: one table for every fragment, the spec
 #: they compose and each variant laid over it. `symbols_for` cuts it to what
 #: one spec declares, because a table naming anything else is refused. The
@@ -55,20 +73,27 @@ MODELS = {
     'library/generator.md': LIBRARY / 'generator.yaml',
     'library/load.md': LIBRARY / 'load.yaml',
     **{f'pypsa/{path.stem}.md': path for path in sorted(PYPSA.glob('*.yaml'))},
+    **{f'gems/{path.stem}.md': path for path in GEMS_FRAGMENTS},
 }
 
-#: The index of the PyPSA split: its two tables are read off the fragments.
-SPLIT_INDEX = 'pypsa/index.md'
+#: Page -> the fragments its index tables are read off.
+SPLIT_INDEXES = {
+    'pypsa/index.md': sorted(PYPSA.glob('*.yaml')),
+    'gems/index.md': GEMS_FRAGMENTS,
+}
 
-#: Page -> the fragments whose composition it shows, and the patches laid over
-#: it. The spec is what `merge` returns, which no file in the tree holds, so
-#: the page carries it as YAML beside the math it prints. A patch has no math
-#: of its own, so each one prints as the spec it lands on, in a tab of its own.
+#: Page -> the fragments whose composition it shows, the patches laid over it,
+#: and the symbol table it prints in, if any. The spec is what `merge` returns,
+#: which no file in the tree holds, so the page carries it as YAML beside the
+#: math it prints. A patch has no math of its own, so each one prints as the
+#: spec it lands on, in a tab of its own.
 COMPOSED = {
     'library/composed.md': (
         [LIBRARY / name for name in ('surface.yaml', 'generator.yaml', 'load.yaml')],
         {path.stem: path for path in sorted((LIBRARY / 'variants').glob('*.yaml'))},
+        LIBRARY_SYMBOLS,
     ),
+    'gems/composed.md': (GEMS_FRAGMENTS, {}, None),
 }
 
 #: Page -> the spec it shows one declaration at a time — its YAML, then the
@@ -119,14 +144,14 @@ def fragment_block(path: Path, table_path: Path) -> str:
     return f'```yaml\n{without_header(path)}\n```\n\n{printed.strip()}'
 
 
-def split_index_block() -> str:
-    """The PyPSA split's two tables: each sum with the fragment that reads it and the terms, and each fragment.
+def split_index_block(fragments: list[Path]) -> str:
+    """A split's two tables: each sum with the fragment that reads it and the terms, and each fragment.
 
     Both are read off the fragments, so the index cannot name a term or a
     reader the files no longer have. The reader is the fragment that reads
     the sum with its description and adds nothing to it.
     """
-    return split_index({path.stem: to_spec(path) for path in sorted(PYPSA.glob('*.yaml'))})
+    return split_index({path.stem: to_spec(path) for path in fragments})
 
 
 def split_index(specs: Mapping[str, Spec]) -> str:
@@ -175,7 +200,12 @@ def split_index(specs: Mapping[str, Spec]) -> str:
     return '### The sums\n\n' + '\n'.join(sums) + '\n\n### The fragments\n\n' + '\n'.join(files)
 
 
-def composed_block(fragments: list[Path], patches: dict[str, Path]) -> str:
+def _symbols(model: Spec, table_path: Path | None) -> dict[str, Any] | None:
+    """The table at *table_path* cut to *model*, or none for a composition that prints in plain names."""
+    return symbols_for(model, table_path) if table_path is not None else None
+
+
+def composed_block(fragments: list[Path], patches: dict[str, Path], table_path: Path | None) -> str:
     """The spec `merge` returns for *fragments* as YAML, then its document as composed and under each patch.
 
     The composed YAML is generated rather than committed, so the page cannot
@@ -184,14 +214,14 @@ def composed_block(fragments: list[Path], patches: dict[str, Path]) -> str:
     document of the spec it is laid over.
     """
     model = merge(fragments)
-    tabs = [tab('As composed', to_markdown(model, symbols=symbols_for(model), numbered=False).strip())]
+    tabs = [tab('As composed', to_markdown(model, symbols=_symbols(model, table_path), numbered=False).strip())]
     for name, path in patches.items():
         patched = override(model, [path])
         tabs.append(
             tab(
                 f'With {name}',
                 f'```yaml title="variants/{path.name}"\n{without_header(path)}\n```\n\n'
-                f'{to_markdown(patched, symbols=symbols_for(patched), numbered=False).strip()}',
+                f'{to_markdown(patched, symbols=_symbols(patched, table_path), numbered=False).strip()}',
             )
         )
     dumped = yaml.safe_dump(
@@ -377,8 +407,8 @@ def block(page: str) -> str:
         return declared_block(DECLARED[page])
     if page in COMPOSED:
         return composed_block(*COMPOSED[page])
-    if page == SPLIT_INDEX:
-        return split_index_block()
+    if page in SPLIT_INDEXES:
+        return split_index_block(SPLIT_INDEXES[page])
     if MODELS[page].parent == LIBRARY:
         return fragment_block(MODELS[page], LIBRARY_SYMBOLS)
     if MODELS[page].parent == PYPSA:
@@ -394,7 +424,7 @@ def rendered(page: str, text: str) -> str:
 
 
 def pages() -> list[str]:
-    return [*MODELS, *COMPOSED, *DECLARED, 'operators.md', SPLIT_INDEX]
+    return [*MODELS, *COMPOSED, *DECLARED, 'operators.md', *SPLIT_INDEXES]
 
 
 def main(argv: list[str] | None = None) -> int:
