@@ -20,11 +20,11 @@
 
 \paragraph{Parameters}
 \begin{description}
-\item[{$\mathrm{p}^{\mathrm{max}}$}] \texttt{p\_max} over $\mathcal{G}$
+\item[{$\mathrm{p}^{\mathrm{max}}$}] \texttt{p\_max} over $\mathcal{G}$, $\infty$ where the data has no row
 \item[{$\mathrm{p}^{\mathrm{min}}$}] \texttt{p\_min} over $\mathcal{G}$
 \item[{$\mathrm{cost}$}] \texttt{cost} over $\mathcal{G}$
 \item[{$\mathrm{load}$}] \texttt{load} over $\mathcal{T} \times \mathcal{B}$
-\item[{$\mathrm{is\_flexible}$}] \texttt{is\_flexible} over $\mathcal{G}$
+\item[{$\mathrm{is\_flexible}$}] \texttt{is\_flexible} over $\mathcal{G}$, \texttt{false} where the data has no row
 \item[{$\mathrm{zone\_cap}$}] \texttt{zone\_cap} over $\mathcal{Z}$
 \item[{$\mathrm{tech\_cap}$}] \texttt{tech\_cap} over $\mathcal{B} \times \mathcal{E}$
 \item[{$\mathrm{min\_up}$}] \texttt{min\_up} over $\mathcal{G}$
