@@ -33,3 +33,20 @@ between the two. The data does.
 A pinned variable is still a variable: `size * on` is `variable * variable`,
 and `size` cannot stand in another variable's `bounds:`. Where a bound has to
 come from it, ship the column as a parameter too.
+
+## Fix it in the spec instead
+
+Where a driver decides the quantity and the model it solves must not, call
+[`spec.fix`](../reference/api.md#mathspec.Spec.fix). A Benders subproblem, a
+myopic step and a rolling window each do this:
+
+```python
+subproblem = spec.fix('size')
+```
+
+`size` becomes a parameter under the same name, so every expression goes on
+reading it. Its bounds become the assumption `size_within_bounds`. A
+constraint that named only `size` becomes an assumption too, because it now
+compares numbers. Where `size` has a `where:` and `absence: undefined`, each
+row that reads it outside a sum has to stand under that mask: `fix` adds the
+mask to a constraint's `where:`, or refuses and names the reader.
