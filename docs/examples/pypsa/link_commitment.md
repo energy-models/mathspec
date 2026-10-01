@@ -117,7 +117,7 @@ given:
     Link_maintenance_status: { dims: [scenario, snapshot, link] }
     Link_p_nom_ext: { dims: [link] }
   expressions:
-    scenario_opex: { dims: [scenario], term: Link_commitment_opex }
+    scenario_opex: { dims: [scenario] }
 
 expressions:
   Link_previous_status:
@@ -133,6 +133,7 @@ expressions:
       sum(sum(((Link_status * Link_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=link), over=snapshot)
       + sum(sum(Link_start_up * Link_start_up_cost, over=link), over=snapshot)
       + sum(sum(Link_shut_down * Link_shut_down_cost, over=link), over=snapshot)
+    adds_to: scenario_opex
 
 constraints:
   Link_com_p_lower:
