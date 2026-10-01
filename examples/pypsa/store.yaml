@@ -175,12 +175,13 @@ given:
     GlobalConstraint_counts_snapshot: { dims: [scenario, global_constraint, snapshot], dtype: bool }
   expressions:
     GlobalConstraint_snapshot_closes: { dims: [scenario, global_constraint, snapshot] }
-    primary_energy: { dims: [scenario, global_constraint], term: Store_primary_energy }
-    operational_limit: { dims: [scenario, global_constraint], term: Store_operational_limit }
-    tech_capacity_expansion: { dims: [global_constraint], term: Store_tech_capacity_expansion }
-    scenario_opex: { dims: [scenario], term: Store_opex }
-    Carrier_additions: { dims: [period, carrier], term: Store_additions }
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Store_injection }
+    primary_energy: { dims: [scenario, global_constraint] }
+    operational_limit: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Store_energy_carried_in:
@@ -231,20 +232,30 @@ expressions:
   Store_primary_energy:
     expression: >-
       -sum(sum((Store_e * Store_closing_weight) * Store_primary_energy_weight, over=snapshot), over=store)
+    adds_to: primary_energy
   Store_operational_limit:
     expression: >-
       -sum(sum((Store_e * Store_closing_weight) * Store_operational_limit_weight, over=snapshot), over=store)
+    adds_to: operational_limit
   Store_tech_capacity_expansion:
     expression: sum(Store_e_nom_ext * Store_tech_capacity_weight, over=store)
+    adds_to: tech_capacity_expansion
   Store_opex:
     expression: >-
       sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
       + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
       + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
+    adds_to: scenario_opex
+  Store_capex:
+    expression: sum(scenario_weight * Store_e_nom_ext * Store_capital_cost * Store_capital_weight)
+    adds_to: total_cost
   Store_additions:
     expression: >-
       sum(Store_e_nom_ext * Store_first_active, by=Store_carrier, over=store, into=carrier)
-  Store_injection: sum(Store_sign * Store_p, by=Store_bus, over=store, into=bus)
+    adds_to: Carrier_additions
+  Store_injection:
+    expression: sum(Store_sign * Store_p, by=Store_bus, over=store, into=bus)
+    adds_to: Bus_injection
 
 constraints:
   Store_fix_e_lower:
@@ -351,8 +362,3 @@ assumptions:
       refuses quadratic costs under any risk preference
       (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Store_e_nom_ext) * Store_capital_cost) * Store_capital_weight)

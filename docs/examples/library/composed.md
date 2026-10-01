@@ -20,9 +20,9 @@ fragment holds it, and nothing in the repository commits it. `Port_p` is one
 declaration here. Each component fragment read it under `given:`, and merging
 folded those readings into the surface's own declaration.
 
-The objective is the generator's, carried as it was written, since no other
-fragment prices anything. A second priced fragment would add its term to this
-one, each term in parentheses.
+The objective is the surface's, and it reads `total_cost`. The generator is
+the one fragment that costs something, so `Generator_cost` is the one term of
+that sum. A second priced fragment would add its own term to `total_cost`.
 
 The math under the file has a tab per formulation. **As composed** is the spec
 above. **With commitment** lays `variants/commitment.yaml` over it with
@@ -90,7 +90,13 @@ constraints:
     expression: at(Port_p, by=Load_port, over=port, into=load) == -Load_p_set
     description: 'what a load takes is what its port withdraws. No PyPSA row stands for this: PyPSA writes
       the load into the balance instead'
-objective: {sense: minimize, expression: sum(Generator_p * Generator_marginal_cost)}
+objective: {sense: minimize, expression: total_cost}
+expressions:
+  Generator_cost: sum(Generator_p * Generator_marginal_cost)
+  total_cost:
+    dims: []
+    expression: Generator_cost
+    description: what running the system costs
 ```
 
 === "As composed"
@@ -120,10 +126,17 @@ objective: {sense: minimize, expression: sum(Generator_p * Generator_marginal_co
     | $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — what a port puts into its bus in a snapshot, negative for a withdrawal |
     | $`p`$ | `Generator_p` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-p` — what a generator produces in a snapshot |
 
+    #### Definitions
+
+    | Symbol | Meaning |
+    |---|---|
+    | $`\mathit{Generator\_cost}`$ | `Generator_cost` (scalar) |
+    | $`\mathit{total\_cost}`$ | `total_cost` (scalar) — what running the system costs |
+
     #### Objective
 
     ```math
-    \min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+    \min \mathit{total\_cost}
     ```
 
     #### Subject to
@@ -144,6 +157,20 @@ objective: {sense: minimize, expression: sum(Generator_p * Generator_marginal_co
 
     ```math
     f_{t,\mathrm{Load\_port}(d)} = -\mathrm{load}_{t,d} \qquad \forall\, t \in \mathcal{T},\ d \in \mathcal{D}
+    ```
+
+    #### Definitions
+
+    **`Generator_cost`**
+
+    ```math
+    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+    ```
+
+    **`total_cost`**
+
+    ```math
+    \mathit{total\_cost} = \mathit{Generator\_cost}
     ```
 
     #### Variable domains
@@ -209,10 +236,17 @@ objective: {sense: minimize, expression: sum(Generator_p * Generator_marginal_co
     | $`p`$ | `Generator_p` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-p` — what a generator produces in a snapshot |
     | $`u`$ | `Generator_status` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-status` — whether a unit is on in a snapshot |
 
+    #### Definitions
+
+    | Symbol | Meaning |
+    |---|---|
+    | $`\mathit{Generator\_cost}`$ | `Generator_cost` (scalar) |
+    | $`\mathit{total\_cost}`$ | `total_cost` (scalar) — what running the system costs |
+
     #### Objective
 
     ```math
-    \min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+    \min \mathit{total\_cost}
     ```
 
     #### Subject to
@@ -245,6 +279,20 @@ objective: {sense: minimize, expression: sum(Generator_p * Generator_marginal_co
 
     ```math
     p_{t,g} \ge \underline{\mathrm{p}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    ```
+
+    #### Definitions
+
+    **`Generator_cost`**
+
+    ```math
+    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+    ```
+
+    **`total_cost`**
+
+    ```math
+    \mathit{total\_cost} = \mathit{Generator\_cost}
     ```
 
     #### Variable domains
