@@ -12,7 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- refactor(program): the node a use of a named expression stands as is `NamedExpression`, beside `NamedMask`, and `Named` is gone ([#PR](https://github.com/energy-models/mathspec/pull/PR))
+- refactor(program): the node a use of a named expression stands as is `NamedExpression`, beside `NamedMask`, and `Named` is gone ([#822](https://github.com/energy-models/mathspec/pull/822))
 - feat(language): a where predicate is named once under `masks:`, and another file reads it under `given: masks:` ([#821](https://github.com/energy-models/mathspec/pull/821))
 
 ## 0.2.1 (2026-10-01)
