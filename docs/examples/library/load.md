@@ -15,17 +15,17 @@ withdrawal is a negative injection.
 <!-- gallery:begin -->
 ```yaml
 description: PyPSA's `Load`, wired to a port rather than straight to a bus. What it takes is data, so it decides nothing.
+given:
+  variables:
+    Port_p:
+      dims: [snapshot, port]
+      description: the surface introduces this flow, and this file pins it at its own ports
 dimensions:
   snapshot: { dtype: datetime, description: dispatch periods }
   port: { dtype: str, description: "the connections components make, one label per connection" }
   load: { dtype: str, description: "demands, each on one port" }
 relations:
   Load_port: { key: load, values: port }
-given:
-  variables:
-    Port_p:
-      dims: [snapshot, port]
-      description: the surface introduces this flow, and this file pins it at its own ports
 parameters:
   Load_p_set: { dims: [snapshot, load], description: "`Load-p_set` — what a load takes in a snapshot" }
 constraints:

@@ -23,9 +23,6 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    Nothing in it names a component class.
 
    ```yaml title="network.yaml"
-   dimensions:
-     snapshot: { dtype: int }
-     bus: { dtype: str }
    given:
      expressions:
        Bus_injection:
@@ -34,6 +31,9 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
        total_cost:
          dims: []
          description: what running the system costs
+   dimensions:
+     snapshot: { dtype: int }
+     bus: { dtype: str }
    constraints:
      Bus_balance:
        dims: [snapshot, bus]
@@ -51,6 +51,10 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    `total_cost` the same way.
 
    ```yaml title="generator.yaml"
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus] }
+       total_cost: { dims: [] }
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
@@ -62,10 +66,6 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      Generator_marginal_cost: { dims: [generator] }
    variables:
      Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
-   given:
-     expressions:
-       Bus_injection: { dims: [snapshot, bus] }
-       total_cost: { dims: [] }
    expressions:
      Generator_injection:
        expression: sum(Generator_p, by=Generator_bus, over=generator, into=bus)
@@ -76,6 +76,9 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    ```
 
    ```yaml title="load.yaml"
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus] }
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
@@ -84,9 +87,6 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      Load_bus: { key: load, values: bus }
    parameters:
      Load_p_set: { dims: [snapshot, load] }
-   given:
-     expressions:
-       Bus_injection: { dims: [snapshot, bus] }
    expressions:
      Load_injection:
        expression: -sum(Load_p_set, by=Load_bus, over=load, into=bus)
@@ -119,6 +119,9 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    term, and `network.yaml` stays as it is.
 
    ```yaml title="store.yaml"
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus] }
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
@@ -134,9 +137,6 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      Store_energy_balance:
        dims: [snapshot, store]
        expression: Store_e == shift(Store_e, along=snapshot, offset=1, edge='wrap') - Store_p
-   given:
-     expressions:
-       Bus_injection: { dims: [snapshot, bus] }
    expressions:
      Store_injection:
        expression: sum(Store_p, by=Store_bus, over=store, into=bus)
@@ -159,6 +159,11 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    follows it. The component files stay as they are.
 
    ```yaml title="network_slack.yaml"
+   given:
+     expressions:
+       total_cost:
+         dims: []
+         description: what running the system costs
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
@@ -169,11 +174,6 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
        dims: [snapshot, bus]
        expression: Bus_slack
        description: what the components put into a bus
-   given:
-     expressions:
-       total_cost:
-         dims: []
-         description: what running the system costs
    constraints:
      Bus_balance:
        dims: [snapshot, bus]
@@ -231,12 +231,12 @@ that introduces the column. The reader may say less, such as the frame with no
 reads `Generator_p` as binary:
 
 ```yaml title="emissions.yaml"
-dimensions:
-  snapshot: { dtype: int }
-  generator: { dtype: str }
 given:
   variables:
     Generator_p: { dims: [snapshot, generator], domain: binary }
+dimensions:
+  snapshot: { dtype: int }
+  generator: { dtype: str }
 parameters:
   Generator_co2: { dims: [generator] }
   co2_cap: { dims: [] }

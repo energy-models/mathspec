@@ -9,6 +9,25 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Generator
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
+    Generator_committable: { dims: [generator], dtype: bool }
+    Generator_status_initial: { dims: [scenario, generator], dtype: int }
+    Generator_p_nom_mod: { dims: [generator] }
+    Generator_big_m: { dims: [scenario, generator] }
+    Generator_active: { dims: [snapshot, generator], dtype: bool }
+  variables:
+    Generator_p: { dims: [scenario, snapshot, generator] }
+    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_start_up: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_shut_down: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_p_nom_ext: { dims: [generator] }
+  expressions:
+    Generator_previous_status: { dims: [scenario, snapshot, generator] }
+    Generator_p_nom_effective: { dims: [scenario, generator] }
+    Generator_p_nom_committed: { dims: [scenario, generator] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -46,25 +65,6 @@ parameters:
       only where the unit came in running; no value means it is unknown, so
       the unit carries no ramp row at the first snapshot
     dims: [scenario, generator]
-
-given:
-  parameters:
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
-    Generator_committable: { dims: [generator], dtype: bool }
-    Generator_status_initial: { dims: [scenario, generator], dtype: int }
-    Generator_p_nom_mod: { dims: [generator] }
-    Generator_big_m: { dims: [scenario, generator] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
-  variables:
-    Generator_p: { dims: [scenario, snapshot, generator] }
-    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_start_up: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_shut_down: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_p_nom_ext: { dims: [generator] }
-  expressions:
-    Generator_previous_status: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom_effective: { dims: [scenario, generator] }
-    Generator_p_nom_committed: { dims: [scenario, generator] }
 
 expressions:
   Generator_previous_p:

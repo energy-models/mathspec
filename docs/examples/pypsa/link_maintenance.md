@@ -9,6 +9,19 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Link`, th
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    Link_p_nom_extendable: { dims: [link], dtype: bool }
+    Link_committable: { dims: [link], dtype: bool }
+    Link_p_nom_mod: { dims: [link] }
+    Link_active: { dims: [snapshot, link], dtype: bool }
+    snapshot_weightings_generators: { dims: [snapshot] }
+    Link_p_nom_min: { dims: [scenario, link] }
+    Link_p_nom_max: { dims: [scenario, link] }
+  variables:
+    Link_status: { dims: [scenario, snapshot, link], domain: integer }
+    Link_p_nom_ext: { dims: [link] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -99,19 +112,6 @@ variables:
     absence: zero
     bounds:
       lower: 0
-
-given:
-  parameters:
-    Link_p_nom_extendable: { dims: [link], dtype: bool }
-    Link_committable: { dims: [link], dtype: bool }
-    Link_p_nom_mod: { dims: [link] }
-    Link_active: { dims: [snapshot, link], dtype: bool }
-    snapshot_weightings_generators: { dims: [snapshot] }
-    Link_p_nom_min: { dims: [scenario, link] }
-    Link_p_nom_max: { dims: [scenario, link] }
-  variables:
-    Link_status: { dims: [scenario, snapshot, link], domain: integer }
-    Link_p_nom_ext: { dims: [link] }
 
 constraints:
   Link_maint_event_count:

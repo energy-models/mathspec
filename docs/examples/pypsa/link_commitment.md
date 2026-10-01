@@ -9,6 +9,28 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Link`, th
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    Link_p_nom: { dims: [scenario, link] }
+    Link_p_nom_extendable: { dims: [link], dtype: bool }
+    Link_p_min_pu: { dims: [scenario, snapshot, link] }
+    Link_p_max_pu: { dims: [scenario, snapshot, link] }
+    Link_p_nom_mod: { dims: [link] }
+    Link_modules_installed: { dims: [scenario, link] }
+    Link_p_min_pu_nonneg: { dims: [link], dtype: bool }
+    Link_maintenance_pu: { dims: [scenario, link] }
+    period_weight_objective: { dims: [period] }
+    Link_active: { dims: [snapshot, link], dtype: bool }
+  variables:
+    Link_p: { dims: [scenario, snapshot, link] }
+    Link_n_mod: { dims: [link], domain: integer }
+    Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
+    Link_maintenance_status: { dims: [scenario, snapshot, link] }
+    Link_p_nom_ext: { dims: [link] }
+  expressions:
+    scenario_opex: { dims: [scenario] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -96,28 +118,6 @@ variables:
     domain: integer
     bounds:
       lower: 0
-
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    Link_p_nom: { dims: [scenario, link] }
-    Link_p_nom_extendable: { dims: [link], dtype: bool }
-    Link_p_min_pu: { dims: [scenario, snapshot, link] }
-    Link_p_max_pu: { dims: [scenario, snapshot, link] }
-    Link_p_nom_mod: { dims: [link] }
-    Link_modules_installed: { dims: [scenario, link] }
-    Link_p_min_pu_nonneg: { dims: [link], dtype: bool }
-    Link_maintenance_pu: { dims: [scenario, link] }
-    period_weight_objective: { dims: [period] }
-    Link_active: { dims: [snapshot, link], dtype: bool }
-  variables:
-    Link_p: { dims: [scenario, snapshot, link] }
-    Link_n_mod: { dims: [link], domain: integer }
-    Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
-    Link_maintenance_status: { dims: [scenario, snapshot, link] }
-    Link_p_nom_ext: { dims: [link] }
-  expressions:
-    scenario_opex: { dims: [scenario] }
 
 expressions:
   Link_previous_status:

@@ -9,6 +9,14 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: Kirchhoff's voltag
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  expressions:
+    Cycle_angle_sum:
+      dims: [scenario, snapshot, cycle]
+      description: >-
+        the voltage angle differences around a cycle: every branch flow times
+        its cycle weight, and every transformer phase shift
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -17,14 +25,6 @@ dimensions:
     dtype: datetime
   cycle:
     description: independent cycles of the passive network graph — the cycle basis, data prep
-
-given:
-  expressions:
-    Cycle_angle_sum:
-      dims: [scenario, snapshot, cycle]
-      description: >-
-        the voltage angle differences around a cycle: every branch flow times
-        its cycle weight, and every transformer phase shift
 
 constraints:
   Kirchhoff_Voltage_Law:
