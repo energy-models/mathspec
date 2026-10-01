@@ -127,7 +127,7 @@ node's operands, and `where_children()` walks a predicate's. `walk()` yields
 every node under an expression, parents first. `walk_regions()` yields each node
 with the `cases:` regions it stands inside, outermost first.
 
-A `Named` stands where an `expressions:` entry is used. Its `body` is the
+A `NamedExpression` stands where an `expressions:` entry is used. Its `body` is the
 entry's expression, the same object that `program.expressions[name].expression`
 holds, and its value is the body's value. `children()` steps into the body, so
 a walk reads through it.

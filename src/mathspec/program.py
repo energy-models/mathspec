@@ -65,7 +65,7 @@ __all__ = [
     'Mask',
     'MaskDeclaration',
     'Multiply',
-    'Named',
+    'NamedExpression',
     'NamedMask',
     'Negate',
     'Not',
@@ -363,7 +363,7 @@ class Cases:
 
 
 @dataclass(frozen=True)
-class Named:
+class NamedExpression:
     """A use of an ``expressions:`` entry, standing where its name was written, with the entry's body under it.
 
     Its value is its body's: a consumer building rows steps through it, as
@@ -403,13 +403,13 @@ Expression = (
     | Translate
     | WindowSum
     | Cases
-    | Named
+    | NamedExpression
 )
 
 
 def children(expression: Expression) -> tuple[Expression, ...]:
     """The sub-expressions of *expression* — what every walk recurses through."""
-    if isinstance(expression, Named):
+    if isinstance(expression, NamedExpression):
         return (expression.body,)
     if isinstance(expression, Negate):
         return (expression.operand,)
@@ -961,7 +961,7 @@ class Program:
     #: each and refuses with [`assumption_message`][].
     assumptions: Mapping[str, Assumption] = Sealed({})
     #: Declared ``expressions:``, each saying whether the math reads it. None
-    #: builds a row of its own — one the math reads stands as a [`Named`][]
+    #: builds a row of its own — one the math reads stands as a [`NamedExpression`][]
     #: where it is read — but all are lowered with the program, so a file whose
     #: named expression is outside the language is refused by every verb that
     #: reads the file rather than only by the one that reads the expression.
@@ -1337,7 +1337,7 @@ class NamedMask:
     Its truth is its body's: a consumer steps through it, as
     [`where_children`][] does. It is kept as a node rather than written in so
     the typesetter can print the symbol where the name stood and define it
-    once, as [`Named`][] does for an expression.
+    once, as [`NamedExpression`][] does for an expression.
     """
 
     name: str
