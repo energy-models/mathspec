@@ -69,7 +69,7 @@ parameters:
       share of the flow that arrives at an output port, PyPSA's `efficiency`,
       `efficiency2`, … read long — negative where that port consumes rather
       than delivers. Read at the snapshot the flow arrives, so a delayed port
-      delivers at its arrival snapshot's efficiency (`constraints.py:1522`)
+      delivers at its arrival snapshot's efficiency (`constraints.py:1528`)
     dims: [scenario, snapshot, link_output]
   Link_output_delay:
     description: >-
@@ -78,7 +78,7 @@ parameters:
       the file states as whole snapshots; zero for a port that delivers at once.
       Each scenario takes its own. PyPSA groups the ports by delay over
       all scenarios and shifts each group in every one, so a delay that differs
-      by scenario delivers the flow twice (`constraints.py:1269-1276`,
+      by scenario delivers the flow twice (`constraints.py:1275-1282`,
       PyPSA/PyPSA#1941)
     dims: [scenario, link_output]
     dtype: int
@@ -307,7 +307,7 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
 
 objective:

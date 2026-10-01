@@ -12,7 +12,7 @@ the multi-period investment class over a `period` axis (rung 15). A plain run
 feeds one scenario and one all-active period, so every extra axis collapses and
 the standard model returns. The index below lists every row PyPSA emits (PyPSA
 master at `02bdcbba`, `pypsa/optimization/`) and links each to its block in the
-file. Line numbers are still PyPSA `1.3.0`.
+file.
 
 Three rules shape the file. Bounds are the explicit rows PyPSA writes, so
 their duals are row duals. Regimes are data columns and `where:` masks. Names
@@ -1180,7 +1180,7 @@ pair per cut: `{'mode': 'tangents', 'segments': K}` takes `K` tangents at
 secants between consecutive breakpoints `p_k, p_k+1`, slope `r (p_k + p_k+1)`
 and offset `-r p_k p_k+1`, the breakpoints placed from `p_0 = 0` by a step
 `max(k / (k - 1), 1 + 2 (rtol + sqrt(rtol + rtol**2)))` until the rating is
-covered (`constraints.py:2545`). The mode therefore only decides how data prep
+covered (`constraints.py:2661-2666`). The mode therefore only decides how data prep
 fills `Line_loss_slope` and `Line_loss_offset` over the `segment` axis, and the
 breakpoint loop is data prep with them. The loss variable, its cap and the cut
 rows exist only where `transmission_losses` is on. A plain run leaves the flag
@@ -1309,21 +1309,21 @@ future is known. The operating cost is the expectation over the scenarios'
 weights. A risk preference adds the CVaR (conditional value at risk) rows: an
 excess per scenario and the tail's average, blended into the objective at
 `omega`. PyPSA builds neither row without a risk preference
-(`optimize.py:458`). The file builds them only where `omega` is positive, so a
+(`optimize.py:461`). The file builds them only where `omega` is positive, so a
 plain run, and a risk preference with `omega = 0`, has none.
 
 A parameter spans `scenario` exactly when PyPSA reads it per scenario. PyPSA
 reads component data through `c.da`, one value per scenario
-(`components/array.py:332-395`), so almost every parameter spans one. It
+(`components/array.py:332-386`), so almost every parameter spans one. It
 refuses a difference in the attributes that fix the network's shape, such as
 `bus`, `carrier`, `lifetime`, `active`, `committable` or `p_nom_extendable`
 (`consistency.py:1174-1195`), and these parameters and what data prep derives
 from them span none. Some other parameters span none either. PyPSA reduces
 `maintainable` to a union over the scenarios, `(p_min_pu >= 0).all()` over
 them, and a carrier's growth limits to their least value
-(`components.py:1016-1019`, `constraints.py:397-401`,
+(`components.py:1016-1019`, `constraints.py:400-404`,
 `global_constraints.py:226-230`). It builds the cycle basis from the first
-scenario (`networks.py:1354-1361`). A link's delay and a transformer's phase
+scenario (`networks.py:1356-1363`). A link's delay and a transformer's phase
 shift span none, because PyPSA mishandles them over scenarios (rung
 41). A branch's `BODF` spans none, because PyPSA refuses a
 security-constrained run over scenarios. This rung's wind `p_max_pu` differs by scenario, and the file states it over
@@ -2603,7 +2603,7 @@ def build():
 and does not stand in every period. PyPSA opens such a storage at the first
 snapshot it stands in: on its initial level where it is not cyclic, and on the
 level of the last snapshot it stands in where it is cyclic
-(`constraints.py:2095-2097`, `2270-2273`). It reads the previous level through
+(`constraints.py:2204-2206`, `2379-2382`). It reads the previous level through
 a forward fill over the snapshots the storage does not stand in. Because a
 build year and a lifetime make those snapshots one run at each end of the
 horizon, the file states the same rows with two data-prep parameters. The
@@ -2695,13 +2695,13 @@ A `Generator`, `Link` or `Process` with `maintainable=True` is taken off for
 `maintenance_events` events (default 1) within the horizon. Each event covers
 the snapshot it starts in and the snapshots after it, until their
 `generators` weightings reach `maintenance_duration` hours
-(`constraints.py:767-800`). While it is in maintenance, the component loses the
+(`constraints.py:773-806`). While it is in maintenance, the component loses the
 share `maintenance_pu` (default 1) of its build from both of its bounds
-(`constraints.py:135-145`, `221-234`). The status `maintenance` is continuous in
+(`constraints.py:138-148`, `224-237`). The status `maintenance` is continuous in
 [0, 1], and the binary starts make it whole (`variables.py:202-259`). An
 extendable build multiplies a variable by a variable. PyPSA writes that product
 as `maintenance_capacity` and holds it with four McCormick rows against
-`p_nom_min` and `p_nom_max` (`constraints.py:810-845`), so PyPSA refuses an
+`p_nom_min` and `p_nom_max` (`constraints.py:816-851`), so PyPSA refuses an
 extendable maintainable build with an infinite `p_nom_max`.
 
 The window of an event depends on the weightings, so its width varies along
@@ -2827,11 +2827,11 @@ def build():
 A committable build scales its bounds by the status, so maintenance takes its
 share off the status. PyPSA writes the product of the status and `maintenance`
 as `maintenance_status`, with three McCormick rows, so a unit in maintenance
-can also be off (`variables.py:301-338`, `constraints.py:425-458`). A modular
+can also be off (`variables.py:301-338`, `constraints.py:428-461`). A modular
 committable build uses the same product, bounded by the module count
-`p_nom_max / p_nom_mod` (`constraints.py:498-533`). An extendable committable
+`p_nom_max / p_nom_mod` (`constraints.py:501-536`). An extendable committable
 build that is not modular uses `maintenance_capacity` in its big-M rows
-instead (`constraints.py:363-373`). `-com-ext-p-upper-bigM` does not change.
+instead (`constraints.py:366-376`). `-com-ext-p-upper-bigM` does not change.
 Ramps, the up and down times and the storage rows do not read maintenance.
 
 With the same network and no `maintainable`, PyPSA solves to `5370.0`.
@@ -3075,7 +3075,7 @@ PyPSA's `marginal_cost_quadratic` on the three other components that carry it
 (`variables.csv:22`, `:30`, `:33`): a process pays on its internal power `p`, a
 storage unit on `p_dispatch` only, and a store on its net `p`, so charging
 costs as much as delivering. Each term is the square times the cost, weighted
-as the linear term is (`optimize.py:317-334`). A plain run feeds zero, so the
+as the linear term is (`optimize.py:318-335`). A plain run feeds zero, so the
 terms vanish.
 
 The rung puts a quadratic cost on a process, a storage unit, with a cost that
@@ -3135,7 +3135,7 @@ def build():
 
 PyPSA pins a store's power delivered to `p_set`, and a storage unit's dispatch
 and charging to `p_dispatch_set` and `p_store_set`, each on its own
-(`optimize.py:846`, `:851`; `constraints.py:1961-2019`). A row stands only
+(`optimize.py:849`, `:854`; `constraints.py:2070-2128`). A row stands only
 where a value is given and the storage is active. A plain run gives no value,
 so no row stands.
 
@@ -3195,7 +3195,7 @@ def build():
 
 `n.optimize(multi_investment_periods=True)` with delayed ports. PyPSA applies
 a link's or a process's `delay` in each investment period on its own
-(`constraints.py:1324-1332`; `multiports.py:212-219`). A `cyclic_delay` port
+(`constraints.py:1330-1338`; `multiports.py:212-219`). A `cyclic_delay` port
 wraps from the end of its own period. A port that is not cyclic loses the flow
 still in transit at the first snapshots of every period. PyPSA measures the
 delay in `generators` weighting per period and rounds it down to a snapshot
@@ -3470,7 +3470,7 @@ def build():
 `n.set_scenarios(...)` with a gas unit's `marginal_cost` and a link's
 `efficiency` set per scenario. PyPSA reads both through `c.da`, one value per
 scenario, into the objective and into `Bus-nodal_balance`
-(`components/array.py:332-395`). The file states `Generator_marginal_cost` and
+(`components/array.py:332-386`). The file states `Generator_marginal_cost` and
 `Link_efficiency` over `scenario`, as it states every parameter PyPSA reads per
 scenario. A plain run feeds one scenario, and the rows collapse to the standard
 ones.
@@ -3540,9 +3540,9 @@ def build():
 `p_nom_max` differ between the scenarios. The build is chosen once, but PyPSA
 reads its bounds per scenario and writes `Generator-ext-p_nom-lower` and
 `-upper` once per scenario, so the tightest cap binds
-(`constraints.py:885-895`). It prices the build at each scenario's capital
-cost and weights the terms by the scenario weights (`optimize.py:405-412`,
-`:448-454`), so the build pays its capital cost in expectation. The file states
+(`constraints.py:891-901`). It prices the build at each scenario's capital
+cost and weights the terms by the scenario weights (`optimize.py:406-413`,
+`:451-457`), so the build pays its capital cost in expectation. The file states
 `Generator_p_nom_max` and `Generator_capital_cost` over `scenario`, the bound
 rows over `scenario`, and the capital terms of the objective under
 `scenario_weight`. A plain run feeds one scenario of weight one, and the rows
@@ -3604,8 +3604,8 @@ def build():
 `n.optimize()` with a generator, a load, a storage unit and a store whose
 `sign` is not PyPSA's default. PyPSA multiplies each of their terms in
 `Bus-nodal_balance` by that `sign`: a generator's `p`, a storage unit's
-`p_dispatch` and `p_store`, a store's `p` (`constraints.py:1428-1429`), and a
-load's `p_set` on the constant side (`constraints.py:1538`). It reads `sign`
+`p_dispatch` and `p_store`, a store's `p` (`constraints.py:1434-1435`), and a
+load's `p_set` on the constant side (`constraints.py:1544`). It reads `sign`
 nowhere else in the model. The default is `1` for a generator, a storage unit
 and a store, and `-1` for a load. PyPSA refuses a `sign` that differs by
 scenario (`consistency.py:1187`), so the file states `Generator_sign`,
@@ -3664,9 +3664,9 @@ def build():
 and `ramp_limit_down` change over time. PyPSA declares both `static or series`
 for all three components, and `ramp_limit_start_up` and `ramp_limit_shut_down`
 static. The row between two snapshots reads the limit at the later snapshot
-(`constraints.py:1040-1041`, `1109-1110`, `1139-1140`). The "no limit" test is
-made per snapshot (`constraints.py:1046-1047`), and a missing value reads as
-the full build there (`constraints.py:1052-1055`). So the file states
+(`constraints.py:1046-1047`, `1115-1116`, `1145-1146`). The "no limit" test is
+made per snapshot (`constraints.py:1052-1053`), and a missing value reads as
+the full build there (`constraints.py:1058-1061`). So the file states
 `{c}_ramp_limit_up` and `{c}_ramp_limit_down` over `snapshot`, and
 `{c}_ramp_up_rate` and `{c}_ramp_down_rate` with them. A snapshot without a
 value has no row in the table, so the `where:` drops the row there unless a
@@ -3746,16 +3746,16 @@ def build():
 `n.optimize()` with units that carry `p_init`, the output they brought into the
 horizon. PyPSA reads `p_init` only where a unit came in running
 (`up_time_before > 0`), and reads zero where it came in off
-(`constraints.py:1091-1092`). It builds the ramp rows at the first snapshot
-where that value exists (`constraints.py:1094`), so a unit that came in running
+(`constraints.py:1097-1098`). It builds the ramp rows at the first snapshot
+where that value exists (`constraints.py:1100`), so a unit that came in running
 without `p_init` has none there, as before. It carries the value into the first
-snapshot's rows with the status the unit came in with (`constraints.py:1101-1106`).
+snapshot's rows with the status the unit came in with (`constraints.py:1107-1112`).
 This is the same for a Generator, a Link and a Process. It holds for a fixed,
 an extendable and a committable build, and for the big-M rows of a committable
-extendable build (`constraints.py:937-946`). PyPSA reads `p_init` per scenario.
+extendable build (`constraints.py:943-952`). PyPSA reads `p_init` per scenario.
 Under `multi_investment_periods` it reads it only at the horizon's first
 snapshot, because no ramp row stands at a later period start
-(`constraints.py:1097-1099`). The file states `{c}_p_init`, and the output
+(`constraints.py:1103-1105`). The file states `{c}_p_init`, and the output
 carried in at the first snapshot is `{c}_status_initial * {c}_p_init`. The
 first-snapshot `where:` reads `{c}_status_initial == 0 OR {c}_p_init`. A
 plain run feeds no `p_init`, and the rows collapse to the standard ones.
@@ -3857,10 +3857,10 @@ def build():
 `n.optimize(multi_investment_periods=True)` with a committable unit that starts
 and stops. PyPSA adds `start_up_cost * start_up` and
 `shut_down_cost * shut_down` to the objective without the snapshot's objective
-weight and without the period's weight (`optimize.py:414-429`). It weights every
-other operating term by both (`optimize.py:262-264`). Over scenarios, it weights
+weight and without the period's weight (`optimize.py:415-432`). It weights every
+other operating term by both (`optimize.py:263-265`). Over scenarios, it weights
 the start and stop costs by the scenario's weight, as every operating term
-(`optimize.py:448-452`). The file states the two terms in `scenario_opex`
+(`optimize.py:451-455`). The file states the two terms in `scenario_opex`
 without a weight, so the scenario weight is the only one they carry.
 
 The rung builds a committable peaker that starts once and stops once in each of
@@ -3983,7 +3983,7 @@ def build():
 ### Rung 50 — a load that is not active
 
 `n.optimize()` with a load whose `active` is false. PyPSA masks the load side
-of `Bus-nodal_balance` by `active` (`constraints.py:1537-1538`), so an inactive
+of `Bus-nodal_balance` by `active` (`constraints.py:1543-1544`), so an inactive
 load draws nothing. A load has no build year and no lifetime, so its `active` is
 the static flag alone, in every snapshot and every period
 (`descriptors.py:135-136`). PyPSA refuses an `active` that differs by scenario
@@ -4332,7 +4332,7 @@ each future shifts a port's flow by its own delay. The shifted flow already
 spans `scenario`, so the offset may too. PyPSA groups the ports by
 delay over all scenarios and shifts each group in every scenario, so a port
 whose delay differs by scenario delivers its flow once per group
-(`constraints.py:1269-1276`,
+(`constraints.py:1275-1282`,
 [PyPSA/PyPSA#1941](https://github.com/PyPSA/PyPSA/issues/1941)). A plain run
 feeds one scenario, and the rows collapse to the standard ones.
 
@@ -4431,7 +4431,7 @@ def oracle():
 `n.set_scenarios(...)` with two transformers in parallel, a cycle. The file
 builds the Kirchhoff voltage row in every scenario. PyPSA raises
 `KeyError`: it selects the transformers of a cycle by name from a table indexed
-by scenario and name (`constraints.py:1654`,
+by scenario and name (`constraints.py:1660`,
 [PyPSA/PyPSA#1942](https://github.com/PyPSA/PyPSA/issues/1942)).
 
 The rung adds two transformers of reactance `0.1` and `0.2`, each rated `30`,
@@ -4578,7 +4578,7 @@ def oracle():
 `n.set_scenarios(...)` with `p_nom_set` on an extendable unit. The file builds
 `Generator-p_nom_set` in every scenario. PyPSA raises `TypeError`: it
 renames the scenario-and-name index of the set build with one name
-(`constraints.py:1708`,
+(`constraints.py:1817`,
 [PyPSA/PyPSA#1942](https://github.com/PyPSA/PyPSA/issues/1942)). The same holds
 for every `*_nom_set`.
 
@@ -4653,7 +4653,7 @@ def oracle():
 `n.set_scenarios(...)` with a committable unit. The file builds the status
 rows in every scenario. PyPSA raises `KeyError`: it selects the status
 by snapshot and name where the first dimension is the scenario
-(`constraints.py:1872`,
+(`constraints.py:1981`,
 [PyPSA/PyPSA#1913](https://github.com/PyPSA/PyPSA/issues/1913)).
 
 The rung adds a cheap committable unit to the spine that cannot run below `40`
@@ -4735,11 +4735,11 @@ unit's `efficiency_store` and `efficiency_dispatch`, a generator's
 `efficiency` and a transformer's `phase_shift` all `static or series`, and
 reads each per snapshot. The balance reads a port's coefficient at the
 snapshot the flow arrives: it shifts the flow first and multiplies it by the
-coefficient after (`constraints.py:1518-1522`). The energy balance of a storage
-unit reads both efficiencies per snapshot (`constraints.py:2081-2082`). A
+coefficient after (`constraints.py:1524-1528`). The energy balance of a storage
+unit reads both efficiencies per snapshot (`constraints.py:2190-2191`). A
 `primary_energy` row divides a generator's output by its efficiency at the
 same snapshot (`global_constraints.py:418-423`). A fixed phase shift enters the
-cycle sum per snapshot (`constraints.py:1657-1663`). So the file states
+cycle sum per snapshot (`constraints.py:1663-1669`). So the file states
 `Link_efficiency`, `Process_rate`, `StorageUnit_efficiency_store`,
 `StorageUnit_efficiency_dispatch`, `Generator_primary_energy_weight` and
 `Transformer_phase_shift_weight` over `snapshot`. `Link_output_arrival` and
@@ -4862,25 +4862,25 @@ def build():
 Where PyPSA refuses to build, parity means refusing too. None is a language
 gap. The maintenance checks are assumptions of the file, which the consumer
 that binds the data runs. Each other one is a data check not made yet, and
-where it should live — language, data prep, or harness — is one open question. Line numbers are PyPSA
-`1.3.0`. The records above are from PyPSA master at `02bdcbba`.
+where it should live — language, data prep, or harness — is one open question. Line numbers and the
+records above are from PyPSA master at `02bdcbba`.
 
 | PyPSA raises                                 | on                                                | here                    | note |
 | -------------------------------------------- | ------------------------------------------------- | ----------------------- | ---- |
-| `ValueError`, `optimize.py:467-474`          | a nonzero `marginal_cost_quadratic` on any Generator, Link, Process, StorageUnit or Store under a risk preference | assumed where `omega > 0`: [`Generator_marginal_cost_quadratic_without_risk_preference`](#generator_marginal_cost_quadratic_without_risk_preference), and the `Link`, `Process`, `StorageUnit` and `Store` ones. The file cannot tell no risk preference from `omega = 0`, which PyPSA also refuses | |
-| `ValueError`, `constraints.py:1850`          | fixed modular `p_nom` not a multiple of `p_nom_mod` | a fractional module cap | X1   |
-| `ValueError`, `constraints.py:1557`          | load on a bus with nothing attached               | row not built, unserved | X2   |
-| `ValueError`, `optimize.py:436`              | no component carries a cost                       | feasibility problem     | X3   |
+| `ValueError`, `optimize.py:470-477`          | a nonzero `marginal_cost_quadratic` on any Generator, Link, Process, StorageUnit or Store under a risk preference | assumed where `omega > 0`: [`Generator_marginal_cost_quadratic_without_risk_preference`](#generator_marginal_cost_quadratic_without_risk_preference), and the `Link`, `Process`, `StorageUnit` and `Store` ones. The file cannot tell no risk preference from `omega = 0`, which PyPSA also refuses | |
+| `ValueError`, `constraints.py:1959`          | fixed modular `p_nom` not a multiple of `p_nom_mod` | a fractional module cap | X1   |
+| `ValueError`, `constraints.py:1563`          | load on a bus with nothing attached               | row not built, unserved | X2   |
+| `ValueError`, `optimize.py:439`              | no component carries a cost                       | feasibility problem     | X3   |
 | `NotImplementedError`, `global_constraints.py:457`, `:509`, `:656`, `:704` | storage that carries its level across periods in a `primary_energy` or `operational_limit` row, with period `years` `!= 1` | assumed: [`StorageUnit_primary_energy_carried_over_has_unit_years`](#storageunit_primary_energy_carried_over_has_unit_years), [`StorageUnit_operational_limit_carried_over_has_unit_years`](#storageunit_operational_limit_carried_over_has_unit_years), and the `Store` ones | |
 | `KeyError`, `global_constraints.py:474`, `:526` | a `primary_energy` row for one period over storage that reopens per period | assumed: [`StorageUnit_primary_energy_per_period_closes_over_the_horizon`](#storageunit_primary_energy_per_period_closes_over_the_horizon), and the `Store` one | |
 | `UnboundLocalError`, `global_constraints.py:375`, `:602` | a `primary_energy` or `operational_limit` row that names an `investment_period` without `multi_investment_periods` | data prep, at `GlobalConstraint_counts_snapshot` | |
-| `ValueError`, `constraints.py:2411`, `:2518` | an extendable lossy branch with `s_nom_max = inf`, either mode | data prep, at `Line_loss_max` and `Transformer_loss_max` | X4   |
-| `RuntimeError`, `constraints.py:2561`        | the secant loop passing `max_segments`            | data prep, at the `segment` axis | X4   |
+| `ValueError`, `constraints.py:2522`, `:2629` | an extendable lossy branch with `s_nom_max = inf`, either mode | data prep, at `Line_loss_max` and `Transformer_loss_max` | X4   |
+| `RuntimeError`, `constraints.py:2669`        | the secant loop passing `max_segments`            | data prep, at the `segment` axis | X4   |
 | `ValueError`, `abstract.py:427`, `:445`      | a security-constrained run over scenarios         | rows per scenario, not refused: a PyPSA bug, [PyPSA/PyPSA#1942](https://github.com/PyPSA/PyPSA/issues/1942), rung 56 | |
 | `NotImplementedError`, `global_constraints.py:66-68` | a `tech_capacity_expansion_limit` row on a network with scenarios | assumed where there is more than one scenario: [`GlobalConstraint_tech_capacity_expansion_limit_without_scenarios`](#globalconstraint_tech_capacity_expansion_limit_without_scenarios). The file cannot tell one scenario from none, which PyPSA also refuses | |
 | `ConsistencyError`, `consistency.py:1506-1560` | a maintainable component whose `maintenance_duration` or `maintenance_events` is not positive, whose events do not fit the weighted horizon, or that is extendable with `p_nom_max = inf` | assumed: [`Generator_maintenance_events_positive`](#generator_maintenance_events_positive), [`-duration_positive`](#generator_maintenance_duration_positive), [`-duration_fits_the_horizon`](#generator_maintenance_duration_fits_the_horizon), [`-events_fit_the_horizon`](#generator_maintenance_events_fit_the_horizon), [`-build_cap_is_finite`](#generator_maintenance_build_cap_is_finite), and the `Link` and `Process` ones | |
-| nothing; HiGHS refuses the model, `constraints.py:500-503` | a fixed modular committable maintainable build, whose module count `p_nom_max / p_nom_mod` is infinite | assumed: [`Generator_maintenance_module_count_is_finite`](#generator_maintenance_module_count_is_finite), and the `Link` and `Process` ones | |
-| nothing; PyPSA builds the row, `constraints.py:1091-1094`, `1110-1112` | a ramp-limited Generator, Link or Process that is not committable, with `up_time_before = 0` | assumed: [`Generator_came_in_running_unless_committable`](#generator_came_in_running_unless_committable), and the `Link` and `Process` ones. PyPSA caps the unit at zero in the first snapshot, or at its start-up ramp where another unit of the component is committable with a fixed build, and documents `up_time_before` as read only for a committable unit | |
+| nothing; HiGHS refuses the model, `constraints.py:503-506` | a fixed modular committable maintainable build, whose module count `p_nom_max / p_nom_mod` is infinite | assumed: [`Generator_maintenance_module_count_is_finite`](#generator_maintenance_module_count_is_finite), and the `Link` and `Process` ones | |
+| nothing; PyPSA builds the row, `constraints.py:1097-1100`, `1116-1118` | a ramp-limited Generator, Link or Process that is not committable, with `up_time_before = 0` | assumed: [`Generator_came_in_running_unless_committable`](#generator_came_in_running_unless_committable), and the `Link` and `Process` ones. PyPSA caps the unit at zero in the first snapshot, or at its start-up ramp where another unit of the component is committable with a fixed build, and documents `up_time_before` as read only for a committable unit | |
 
 Duals and solutions are read back by the harness on the specsolve side:
 `marginal_price` is the balance dual over `w_objective`, `mu_upper` the
@@ -4956,8 +4956,8 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$ — whether the nominal power is a decision |
 | $`\underline{\mathrm{f}}`$ | `Link_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — least flow, per unit of nominal power — negative for a link that carries both ways |
 | $`\overline{\mathrm{f}}`$ | `Link_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — most flow, per unit of nominal power |
-| $`\eta`$ | `Link_efficiency` over $`\Xi \times \mathcal{T} \times \mathcal{O}`$ — share of the flow that arrives at an output port, PyPSA's `efficiency`, `efficiency2`, … read long — negative where that port consumes rather than delivers. Read at the snapshot the flow arrives, so a delayed port delivers at its arrival snapshot's efficiency (`constraints.py:1522`) |
-| $`\mathrm{d}^{f}`$ | `Link_output_delay` over $`\Xi \times \mathcal{O}`$ — snapshots a port's delivery lags its link's flow — PyPSA's `delay`, `delay2`, … read long, in `snapshot_weightings.generators` units, which the file states as whole snapshots; zero for a port that delivers at once. Each scenario takes its own. PyPSA groups the ports by delay over all scenarios and shifts each group in every one, so a delay that differs by scenario delivers the flow twice (`constraints.py:1269-1276`, PyPSA/PyPSA\#1941) |
+| $`\eta`$ | `Link_efficiency` over $`\Xi \times \mathcal{T} \times \mathcal{O}`$ — share of the flow that arrives at an output port, PyPSA's `efficiency`, `efficiency2`, … read long — negative where that port consumes rather than delivers. Read at the snapshot the flow arrives, so a delayed port delivers at its arrival snapshot's efficiency (`constraints.py:1528`) |
+| $`\mathrm{d}^{f}`$ | `Link_output_delay` over $`\Xi \times \mathcal{O}`$ — snapshots a port's delivery lags its link's flow — PyPSA's `delay`, `delay2`, … read long, in `snapshot_weightings.generators` units, which the file states as whole snapshots; zero for a port that delivers at once. Each scenario takes its own. PyPSA groups the ports by delay over all scenarios and shifts each group in every one, so a delay that differs by scenario delivers the flow twice (`constraints.py:1275-1282`, PyPSA/PyPSA\#1941) |
 | $`\mathrm{cyc}^{f}`$ | `Link_output_cyclic_delay` over $`\Xi \times \mathcal{O}`$ — whether a delayed port's flow wraps from the end of its investment period — PyPSA's `cyclic_delay`, `cyclic_delay2`, …; where it does not, the flow still in transit at each period's first snapshots is lost. Each scenario takes its own, as the delay |
 | $`\mathrm{c}^{f}`$ | `Link_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one unit of flow |
 | $`\mathrm{c}^{f,(2)}`$ | `Link_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of the square of one unit of flow |
@@ -4986,7 +4986,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{ext}^{z}`$ | `Process_p_nom_extendable` over $`\mathcal{J}`$ — whether the nominal internal power is a decision |
 | $`\underline{\mathrm{z}}`$ | `Process_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — least internal power, per unit of nominal power — negative for a process that runs both ways |
 | $`\overline{\mathrm{z}}`$ | `Process_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — most internal power, per unit of nominal power |
-| $`\alpha`$ | `Process_rate` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — the energy a port draws or delivers per unit of internal power, PyPSA's `rate0`, `rate1`, … read long — negative where the port withdraws, positive where it injects; a link is a process whose `bus0` rate is minus one and whose output rates are its efficiencies. Read at the snapshot the transfer arrives, so a delayed port transfers at its arrival snapshot's rate (`constraints.py:1522`) |
+| $`\alpha`$ | `Process_rate` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — the energy a port draws or delivers per unit of internal power, PyPSA's `rate0`, `rate1`, … read long — negative where the port withdraws, positive where it injects; a link is a process whose `bus0` rate is minus one and whose output rates are its efficiencies. Read at the snapshot the transfer arrives, so a delayed port transfers at its arrival snapshot's rate (`constraints.py:1528`) |
 | $`\mathrm{d}^{z}`$ | `Process_output_delay` over $`\Xi \times \mathcal{R}`$ — snapshots a port's transfer lags its process's internal power — PyPSA's `delay0`, `delay1`, … read long, in `snapshot_weightings.generators` units, which the file states as whole snapshots; zero for a port that transfers at once. Each scenario takes its own, as a link's |
 | $`\mathrm{cyc}^{z}`$ | `Process_output_cyclic_delay` over $`\Xi \times \mathcal{R}`$ — whether a delayed port's transfer wraps from the end of its investment period — PyPSA's `cyclic_delay0`, `cyclic_delay1`, …; where it does not, the energy still in transit at each period's first snapshots is lost. Each scenario takes its own, as the delay |
 | $`\mathrm{c}^{z}`$ | `Process_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one unit of internal power |
@@ -5120,7 +5120,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\Xi \times \mathcal{K}`$ — cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
 | $`\mathrm{s}^{\mathrm{nom,set}}`$ | `Line_s_nom_set` over $`\Xi \times \mathcal{K}`$ — a given nominal apparent power for an extendable line; one without a value has no row here |
 | $`\mathrm{s}^{\mathrm{set}}`$ | `Line_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — a given flow schedule; a line without one has no row here |
-| $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{K} \times \mathcal{C}`$ — the line's series impedance, signed by its orientation in the cycle — the cycle basis, data prep; a line in no cycle has no row. PyPSA builds the cycle basis from the first scenario only (`networks.py:1354-1361`) |
+| $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{K} \times \mathcal{C}`$ — the line's series impedance, signed by its orientation in the cycle — the cycle basis, data prep; a line in no cycle has no row. PyPSA builds the cycle basis from the first scenario only (`networks.py:1356-1363`) |
 | $`\beta`$ | `Line_BODF` over $`\mathcal{K} \times \mathcal{K}^{\mathrm{out}}`$ — the share of an outaged branch's flow a line takes on when that branch goes out — PyPSA's `BODF`, from the sub-network's PTDF, data prep; a row only where the line and the outage share a sub-network, -1 at the outaged line itself |
 | $`\mathrm{lossy}`$ | `transmission_losses` (scalar) — whether the network dissipates transmission losses — PyPSA's `transmission_losses` read as a flag; its mode, tangents or secants, only decides how data prep fills the `segment` axis, the rows are the same; false with no segments is a lossless run. A security-constrained run over a network with passive branches builds no loss: PyPSA does not hand the keyword to `create_model` (`abstract.py:437-441`) but to the solver (`:491`), so data prep feeds false there |
 | $`\overline{\ell}`$ | `Line_loss_max` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the loss at a line's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep |
@@ -5137,7 +5137,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{x}^{\sigma}`$ | `Transformer_cycle_weight` over $`\mathcal{M} \times \mathcal{C}`$ — the transformer's effective series reactance, `x` times its tap ratio, signed by its orientation in the cycle — PyPSA's `x_pu_eff`, the cycle basis, data prep; a transformer in no cycle has no row. From the first scenario only, as a line's |
 | $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{M} \times \mathcal{K}^{\mathrm{out}}`$ — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's; a row only where the transformer and the outage share a sub-network |
 | $`\vartheta`$ | `Transformer_phase_shift_weight` over $`\mathcal{T} \times \mathcal{M} \times \mathcal{C}`$ — a fixed transformer's phase shift in radians at each snapshot, signed by its orientation in the cycle — a constant added to the cycle sum, data prep; zero for a varying transformer, whose shift is a decision instead, so the constant and the variable term never both count a shift. A transformer with no shift or in no cycle has no row |
-| $`\mathrm{Transformer\_phase\_shift\_varying}`$ | `Transformer_phase_shift_varying` over $`\mathcal{M}`$ — whether a transformer's phase shift is a decision — PyPSA's `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a fixed shift carried by `phase_shift`. The shift parameters carry no scenario: only a cycle row reads them, and PyPSA fails on a transformer in a cycle on a network with scenarios (`constraints.py:1654`) |
+| $`\mathrm{Transformer\_phase\_shift\_varying}`$ | `Transformer_phase_shift_varying` over $`\mathcal{M}`$ — whether a transformer's phase shift is a decision — PyPSA's `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a fixed shift carried by `phase_shift`. The shift parameters carry no scenario: only a cycle row reads them, and PyPSA fails on a transformer in a cycle on a network with scenarios (`constraints.py:1660`) |
 | $`\mathrm{Transformer\_phase\_shift\_min}`$ | `Transformer_phase_shift_min` over $`\mathcal{M}`$ — the least a varying transformer's phase shift may take, in degrees — PyPSA's `phase_shift_min`; where it is below `phase_shift_max` the shift is a decision, otherwise the transformer keeps its fixed `phase_shift` |
 | $`\mathrm{Transformer\_phase\_shift\_max}`$ | `Transformer_phase_shift_max` over $`\mathcal{M}`$ — the most a varying transformer's phase shift may take, in degrees — PyPSA's `phase_shift_max`; equal to `phase_shift_min` for a fixed transformer |
 | $`\mathrm{Transformer\_phase\_shift\_cycle\_weight}`$ | `Transformer_phase_shift_cycle_weight` over $`\mathcal{M} \times \mathcal{C}`$ — the cycle sign for a varying transformer's phase shift, times π/180 so a shift in degrees enters the cycle sum in radians — data prep; zero for a fixed transformer or one in no cycle |
@@ -5289,7 +5289,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathit{Process\_commitment\_opex}`$ | `Process_commitment_opex` over $`\Xi`$ |
 | $`\mathit{StorageUnit\_opex}`$ | `StorageUnit_opex` over $`\Xi`$ |
 | $`\mathit{Store\_opex}`$ | `Store_opex` over $`\Xi`$ |
-| $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$ — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:414-429`) |
+| $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$ — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:415-432`) |
 | $`\mathit{Generator\_additions}`$ | `Generator_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Line\_additions}`$ | `Line_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Link\_additions}`$ | `Link_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
@@ -5298,7 +5298,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathit{Store\_additions}`$ | `Store_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$ — what a carrier adds in a period — every extendable component of that carrier, counting each build in the first period it stands in. Like PyPSA, it sums only the components that carry a carrier attribute, so a transformer, which has none, counts in no carrier |
 | $`\mathrm{r}^{+}`$ | `Carrier_relative_growth` over $`\mathcal{I}`$ — the share of the previous period's additions a carrier's growth limit reads — PyPSA's `max_relative_growth` clipped at zero, so a negative share adds nothing and never tightens the limit |
-| $`\check{\mathrm{load}}`$ | `Load_demand` over $`\Xi \times \mathcal{T} \times \mathcal{D}`$ — what a load draws from its bus's balance — its demand times its sign where it is active, nothing where it is not, since PyPSA drops an inactive load from the balance (`constraints.py:1537-1538`) |
+| $`\check{\mathrm{load}}`$ | `Load_demand` over $`\Xi \times \mathcal{T} \times \mathcal{D}`$ — what a load draws from its bus's balance — its demand times its sign where it is active, nothing where it is not, since PyPSA drops an inactive load from the balance (`constraints.py:1543-1544`) |
 | $`\check{s}`$ | `Line_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the flow a line's post-contingency rows read — its flow where it stands, nothing where it does not, since PyPSA builds those rows for every branch of the sub-network in every snapshot |
 | $`\check{\sigma}`$ | `Transformer_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — the flow a transformer's post-contingency rows read, as a line's |
 | $`\hat{s}`$ | `Outage_s` over $`\Xi \times \mathcal{T} \times \mathcal{K}^{\mathrm{out}}`$ — the flow an outage takes off its branch — the outaged line's or transformer's flow before it goes out |
@@ -9296,7 +9296,7 @@ Bus_nodal_balance:
     carrying its flow, meets the load there, less half of every incident
     line's and transformer's loss — PyPSA dissipates a branch's loss half at
     either end. Each generator, storage unit, store and load term enters
-    with its component's `sign` (`constraints.py:1428-1429`, `:1538`), and
+    with its component's `sign` (`constraints.py:1434-1435`, `:1544`), and
     an inactive load not at all. A bus nothing is attached to has no row; PyPSA refuses one that
     carries load, and this file does not yet.
   dims: [scenario, snapshot, bus]
@@ -10520,7 +10520,7 @@ scenario_opex:
     what a future costs to run — every operating term, weighted by the
     snapshot's hours and its period, before the scenario's own weight; a
     start and a stop cost what they cost, unweighted, as PyPSA adds them
-    (`optimize.py:414-429`)
+    (`optimize.py:415-432`)
 ```
 
 ```math
@@ -10647,7 +10647,7 @@ Load_demand:
   description: >-
     what a load draws from its bus's balance — its demand times its sign
     where it is active, nothing where it is not, since PyPSA drops an
-    inactive load from the balance (`constraints.py:1537-1538`)
+    inactive load from the balance (`constraints.py:1543-1544`)
   dims: [scenario, snapshot, load]
   cases:
     active: { when: Load_active, expression: Load_sign * Load_p_set }
@@ -11247,7 +11247,7 @@ Generator_maintenance_module_count_is_finite:
     the `maint-modstatus` rows bound the modules on in maintenance by
     `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
     coefficient. PyPSA does not check it, and HiGHS refuses the model
-    (`constraints.py:500-503`)
+    (`constraints.py:503-506`)
 ```
 
 ```math
@@ -11342,7 +11342,7 @@ Link_maintenance_module_count_is_finite:
     the `maint-modstatus` rows bound the modules on in maintenance by
     `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
     coefficient. PyPSA does not check it, and HiGHS refuses the model
-    (`constraints.py:500-503`)
+    (`constraints.py:503-506`)
 ```
 
 ```math
@@ -11437,7 +11437,7 @@ Process_maintenance_module_count_is_finite:
     the `maint-modstatus` rows bound the modules on in maintenance by
     `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
     coefficient. PyPSA does not check it, and HiGHS refuses the model
-    (`constraints.py:500-503`)
+    (`constraints.py:503-506`)
 ```
 
 ```math
@@ -11643,7 +11643,7 @@ Generator_marginal_cost_quadratic_without_risk_preference:
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:467-474`). The spec cannot tell no risk preference from
+    (`optimize.py:470-477`). The spec cannot tell no risk preference from
     one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -11660,7 +11660,7 @@ Link_marginal_cost_quadratic_without_risk_preference:
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:467-474`). The spec cannot tell no risk preference from
+    (`optimize.py:470-477`). The spec cannot tell no risk preference from
     one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -11677,7 +11677,7 @@ Process_marginal_cost_quadratic_without_risk_preference:
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:467-474`). The spec cannot tell no risk preference from
+    (`optimize.py:470-477`). The spec cannot tell no risk preference from
     one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -11694,7 +11694,7 @@ StorageUnit_marginal_cost_quadratic_without_risk_preference:
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:467-474`). The spec cannot tell no risk preference from
+    (`optimize.py:470-477`). The spec cannot tell no risk preference from
     one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -11711,7 +11711,7 @@ Store_marginal_cost_quadratic_without_risk_preference:
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:467-474`). The spec cannot tell no risk preference from
+    (`optimize.py:470-477`). The spec cannot tell no risk preference from
     one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -11748,7 +11748,7 @@ Generator_came_in_running_unless_committable:
     ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
     with nothing carried in, and caps the unit there at zero, or at its
     start-up ramp where another unit of the component is committable with a
-    fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+    fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
     the attribute as read only for a committable unit and does not check
     it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
     spec does not state that row, so it refuses the data
@@ -11769,7 +11769,7 @@ Link_came_in_running_unless_committable:
     ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
     with nothing carried in, and caps the link there at zero, or at its
     start-up ramp where another link of the component is committable with a
-    fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+    fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
     the attribute as read only for a committable link and does not check
     it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
     spec does not state that row, so it refuses the data
@@ -11790,7 +11790,7 @@ Process_came_in_running_unless_committable:
     ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
     with nothing carried in, and caps the process there at zero, or at its
     start-up ramp where another process of the component is committable with a
-    fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+    fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
     the attribute as read only for a committable process and does not check
     it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
     spec does not state that row, so it refuses the data

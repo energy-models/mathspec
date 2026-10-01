@@ -103,7 +103,7 @@ expressions:
       what a future costs to run — every operating term, weighted by the
       snapshot's hours and its period, before the scenario's own weight; a
       start and a stop cost what they cost, unweighted, as PyPSA adds them
-      (`optimize.py:414-429`)
+      (`optimize.py:415-432`)
   Carrier_additions:
     dims: [period, carrier]
     empty: true
@@ -178,7 +178,7 @@ expressions:
 |---|---|
 | $`\mathit{w}^{\mathrm{gc}}`$ | `GlobalConstraint_energy_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — what one unit of power at a snapshot counts for in a row — the generator weighting times the years of the snapshot's period, where the row counts the snapshot, and nothing where it does not |
 | $`\mathit{last}`$ | `GlobalConstraint_snapshot_closes` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — one at the last snapshot a row counts, and zero elsewhere |
-| $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$ — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:414-429`) |
+| $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$ — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:415-432`) |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$ — what a carrier adds in a period — every extendable component of that carrier, counting each build in the first period it stands in. Like PyPSA, it sums only the components that carry a carrier attribute, so a transformer, which has none, counts in no carrier |
 | $`\mathit{primary\_energy}`$ | `primary_energy` over $`\Xi \times \mathcal{G}`$ — what a `primary_energy` row totals — weighted generator energy over the snapshots it counts, less the charge left in weighted storage at the close; the initial charge it is compared against is folded into the row's constant |
 | $`\mathit{operational\_limit}`$ | `operational_limit` over $`\Xi \times \mathcal{G}`$ — what an `operational_limit` row totals — the weighted energy its generators deliver over the snapshots it counts, plus what its non-cyclic storage draws down; the initial charge it draws from is folded into the row's constant |

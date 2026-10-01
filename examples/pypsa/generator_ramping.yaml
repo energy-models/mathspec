@@ -231,7 +231,7 @@ assumptions:
       ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
       with nothing carried in, and caps the unit there at zero, or at its
       start-up ramp where another unit of the component is committable with a
-      fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+      fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
       the attribute as read only for a committable unit and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data
