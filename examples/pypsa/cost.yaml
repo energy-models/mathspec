@@ -30,6 +30,12 @@ given:
     CVaR_omega: { dims: [] }
   expressions:
     scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+
+expressions:
+  risk_weighted_opex:
+    expression: (1 - CVaR_omega) * sum(scenario_weight * scenario_opex, over=scenario) + CVaR_omega * CVaR
+    adds_to: total_cost
 
 constraints:
   CVaR_excess:
@@ -42,11 +48,3 @@ constraints:
     dims: []
     where: CVaR_omega > 0
     expression: CVaR_theta + 1 / (1 - CVaR_alpha) * sum(scenario_weight * CVaR_a, over=scenario) <= CVaR
-
-objective:
-  sense: minimize
-  description: >-
-    capacity once per active period at its expected cost over the scenarios, operation in expectation over the scenarios, and a share of it at the tail
-  expression: >-
-    (1 - CVaR_omega) * sum(scenario_weight * scenario_opex, over=scenario)
-    + CVaR_omega * CVaR

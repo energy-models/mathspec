@@ -51,7 +51,6 @@ from mathspec.program import (
     WindowSum,
     children,
 )
-from mathspec.spec import empty_sums
 
 if TYPE_CHECKING:
     from mathspec.program import Program
@@ -71,7 +70,7 @@ def dims_of(node: Expression, schema: Spec, context: str) -> frozenset[str]:
         return frozenset({**schema.parameters, **schema.given.parameters}[node.name].dims)
 
     if isinstance(node, Variable):
-        columns = {**schema.variables, **schema.given.variables, **schema.given.expressions, **empty_sums(schema)}
+        columns = {**schema.variables, **schema.given.variables, **schema.given.expressions}
         return frozenset(columns[node.name].dims or ())
 
     if isinstance(node, Dual):
@@ -297,14 +296,15 @@ def check_schema(schema: Spec, program: Program) -> None:
                 _check_where_dims(region.when, frame, context)
             _check_value_dims(region.value, schema, frame, context)
 
-    for gname, given in program.given.expressions.items():
-        if given.term is None:
+    for ename, entry in program.expressions.items():
+        if entry.adds_to is None:
             continue
-        context = f"Given expression '{gname}'"
-        if extra := sorted(dims_of(given.term, schema, context) - set(given.dims)):
+        stated = program.given.expressions[entry.adds_to].dims
+        if extra := [d for d in entry.dims if d not in stated]:
             raise DimensionError(
-                f'{context}: its term carries {extra}, which its dims {list(given.dims)} do not. A term is read '
-                f"over the frame the entry states: add {extra} to the entry's dims, or leave them out of the term."
+                f"Named expression '{ename}': it adds to {entry.adds_to!r} over {extra}, which the given entry's "
+                f'dims {list(stated)} do not name. A term is read over the frame the given entry states: add '
+                f'{extra} to those dims, or leave them out of the term.'
             )
 
     for cname, constraint in program.constraints.items():

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Lines
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Line`. It adds a term to `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum`. It reads `scenario_weight`, `transmission_losses` under [`given`](../../reference/language/declarations.md#given).
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Line`. It adds a term to `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum`. It reads `scenario_weight`, `transmission_losses` under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -174,23 +174,31 @@ given:
     scenario_weight: { dims: [scenario] }
     transmission_losses: { dims: [], dtype: bool }
   expressions:
-    transmission_volume_expansion: { dims: [scenario, global_constraint], term: Line_transmission_volume_expansion }
-    transmission_expansion_cost: { dims: [scenario, global_constraint], term: Line_transmission_expansion_cost }
-    tech_capacity_expansion: { dims: [global_constraint], term: Line_tech_capacity_expansion }
-    Carrier_additions: { dims: [period, carrier], term: Line_additions }
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Line_injection }
-    Cycle_angle_sum: { dims: [scenario, snapshot, cycle], term: Line_angle_sum }
+    transmission_volume_expansion: { dims: [scenario, global_constraint] }
+    transmission_expansion_cost: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
 
 expressions:
   Line_transmission_volume_expansion:
     expression: sum(Line_s_nom_ext * Line_volume_weight, over=line)
+    adds_to: transmission_volume_expansion
   Line_transmission_expansion_cost:
     expression: sum(Line_s_nom_ext * Line_expansion_cost_weight, over=line)
+    adds_to: transmission_expansion_cost
   Line_tech_capacity_expansion:
     expression: sum(Line_s_nom_ext * Line_tech_capacity_weight, over=line)
+    adds_to: tech_capacity_expansion
+  Line_capex:
+    expression: sum(scenario_weight * Line_s_nom_ext * Line_capital_cost * Line_capital_weight)
+    adds_to: total_cost
   Line_additions:
     expression: >-
       sum(Line_s_nom_ext * Line_first_active, by=Line_carrier, over=line, into=carrier)
+    adds_to: Carrier_additions
   Line_s_monitored:
     description: >-
       the flow a line's post-contingency rows read — its flow where it stands,
@@ -206,7 +214,10 @@ expressions:
       + sum(Line_s, by=Line_bus1, over=line, into=bus)
       - (0.5 * sum(Line_loss, by=Line_bus0, over=line, into=bus))
       - (0.5 * sum(Line_loss, by=Line_bus1, over=line, into=bus))
-  Line_angle_sum: sum(Line_s * Line_cycle_weight, over=line)
+    adds_to: Bus_injection
+  Line_angle_sum:
+    expression: sum(Line_s * Line_cycle_weight, over=line)
+    adds_to: Cycle_angle_sum
 
 constraints:
   Line_fix_s_lower:
@@ -285,11 +296,6 @@ constraints:
     dims: [scenario, snapshot, line, segment]
     where: transmission_losses AND Line_active
     expression: Line_loss - Line_loss_slope * Line_s >= Line_loss_offset
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Line_s_nom_ext) * Line_capital_cost) * Line_capital_weight)
 ```
 
 #### Sets
@@ -348,6 +354,7 @@ objective:
 | $`\mathit{transmission\_volume\_expansion}`$ | `transmission_volume_expansion` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Line_transmission_volume_expansion` to |
 | $`\mathit{transmission\_expansion\_cost}`$ | `transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Line_transmission_expansion_cost` to |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression this file adds `Line_tech_capacity_expansion` to |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Line_capex` to |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression this file adds `Line_additions` to |
 | $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Line_injection` to |
 | $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$, an expression this file adds `Line_angle_sum` to |
@@ -359,16 +366,11 @@ objective:
 | $`\mathit{Line\_transmission\_volume\_expansion}`$ | `Line_transmission_volume_expansion` over $`\Xi \times \mathcal{G}`$ |
 | $`\mathit{Line\_transmission\_expansion\_cost}`$ | `Line_transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$ |
 | $`\mathit{Line\_tech\_capacity\_expansion}`$ | `Line_tech_capacity_expansion` over $`\mathcal{G}`$ |
+| $`\mathit{Line\_capex}`$ | `Line_capex` (scalar) |
 | $`\mathit{Line\_additions}`$ | `Line_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\check{s}`$ | `Line_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the flow a line's post-contingency rows read — its flow where it stands, nothing where it does not, since PyPSA builds those rows for every branch of the sub-network in every snapshot |
 | $`\mathit{Line\_injection}`$ | `Line_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 | $`\mathit{Line\_angle\_sum}`$ | `Line_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ |
-
-#### Objective
-
-```math
-\min \sum_{\xi \in \Xi,\ k \in \mathcal{K}} \pi_{\xi} \cdot S_{k} \cdot \mathrm{c}^{\mathrm{cap},s}_{\xi,k} \cdot \mathrm{W}^{s}_{k}
-```
 
 #### Subject to
 
@@ -468,6 +470,12 @@ s_{\xi,t,k} \le \frac{\overline{\delta}_{\xi,k} \cdot \frac{3.141592653589793}{1
 
 ```math
 \mathit{Line\_tech\_capacity\_expansion}_{g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{m}^{l}_{g,k} \qquad \forall\, g \in \mathcal{G}
+```
+
+**`Line_capex`**
+
+```math
+\mathit{Line\_capex} = \sum_{\xi \in \Xi,\ k \in \mathcal{K}} \pi_{\xi} \cdot S_{k} \cdot \mathrm{c}^{\mathrm{cap},s}_{\xi,k} \cdot \mathrm{W}^{s}_{k}
 ```
 
 **`Line_additions`**
