@@ -26,7 +26,7 @@ profile, no ramp limits.
 
 ```text
 examples/library/
-  surface.yaml               one flow per port, one balance per bus
+  surface.yaml               one flow per port, one balance per bus, the objective
   generator.yaml             PyPSA's Generator
   load.yaml                  PyPSA's Load
   variants/
@@ -35,8 +35,8 @@ examples/library/
 
 | Page                               | What it shows                                                  |
 | ---------------------------------- | -------------------------------------------------------------- |
-| [The coupling surface](surface.md) | the surface, and the sign convention                           |
-| [Generators](generator.md)         | a file that reads `Port_p` and prices its output               |
+| [The coupling surface](surface.md) | the surface, the sign convention and the objective             |
+| [Generators](generator.md)         | a file that reads `Port_p` and adds its cost to `total_cost`   |
 | [Loads](load.md)                   | a file with no variable of its own                             |
 | [The composed spec](composed.md)   | what `merge` returns, and the math it prints with each variant |
 

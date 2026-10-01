@@ -160,12 +160,13 @@ given:
     Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
   expressions:
     GlobalConstraint_energy_weight: { dims: [scenario, global_constraint, snapshot] }
-    primary_energy: { dims: [scenario, global_constraint], term: Generator_primary_energy }
-    operational_limit: { dims: [scenario, global_constraint], term: Generator_operational_limit }
-    tech_capacity_expansion: { dims: [global_constraint], term: Generator_tech_capacity_expansion }
-    scenario_opex: { dims: [scenario], term: Generator_opex }
-    Carrier_additions: { dims: [period, carrier], term: Generator_additions }
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Generator_injection }
+    primary_energy: { dims: [scenario, global_constraint] }
+    operational_limit: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Generator_p_nom_effective:
@@ -185,20 +186,29 @@ expressions:
   Generator_primary_energy:
     expression: >-
       sum(sum((Generator_p * GlobalConstraint_energy_weight) * Generator_primary_energy_weight, over=snapshot), over=generator)
+    adds_to: primary_energy
   Generator_operational_limit:
     expression: >-
       sum(sum((Generator_p * GlobalConstraint_energy_weight) * Generator_operational_limit_weight, over=snapshot), over=generator)
+    adds_to: operational_limit
   Generator_tech_capacity_expansion:
     expression: sum(Generator_p_nom_ext * Generator_tech_capacity_weight, over=generator)
+    adds_to: tech_capacity_expansion
   Generator_opex:
     expression: >-
       sum(sum(((Generator_p * Generator_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=generator), over=snapshot)
       + sum(sum((((Generator_p * Generator_p) * Generator_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=generator), over=snapshot)
+    adds_to: scenario_opex
+  Generator_capex:
+    expression: sum(scenario_weight * Generator_p_nom_ext * Generator_capital_cost * Generator_capital_weight)
+    adds_to: total_cost
   Generator_additions:
     expression: >-
       sum(Generator_p_nom_ext * Generator_first_active, by=Generator_carrier, over=generator, into=carrier)
+    adds_to: Carrier_additions
   Generator_injection:
     expression: sum(Generator_sign * Generator_p, by=Generator_bus, over=generator, into=bus)
+    adds_to: Bus_injection
 
 constraints:
   Generator_fix_p_lower:
@@ -266,8 +276,3 @@ assumptions:
       refuses quadratic costs under any risk preference
       (`optimize.py:467-474`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Generator_p_nom_ext) * Generator_capital_cost) * Generator_capital_weight)
