@@ -75,10 +75,14 @@ changes.
     pixi run python -m tools.home_math   # docs/index.md and README.md, from examples/dispatch.yaml
     pixi run python -m tools.notation    # docs/reference/notation.md, from tests/typesetting/golden/model.yaml
     pixi run python -m tools.spec_math   # the operator table on docs/reference/language/operators.md
-    pixi run python -m tools.gallery     # the example pages, from examples/
     ```
 
     Each tool takes `--check` to report drift without writing.
+
+    The example pages hold no generated block. A line such as
+    `<!-- gallery: examples/dispatch.yaml -->` names the spec, and
+    `tools/gallery.py` prints it and its math when the site builds. Run
+    `pixi run docs-serve` to read the result.
 
 ??? question "I want to add a new page"
 
