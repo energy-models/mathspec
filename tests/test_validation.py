@@ -758,6 +758,25 @@ class TestAWhereSideIsReadInResolution:
         for fragment in fragments:
             assert fragment in message
 
+    @pytest.mark.parametrize(
+        'where',
+        [
+            pytest.param('e > 0', id='on-the-left'),
+            pytest.param('c > e', id='on-the-right'),
+            pytest.param('c > 2 * e', id='inside-arithmetic'),
+        ],
+    )
+    def test_a_given_expression_in_a_where_is_named_as_one(self, where):
+        """The refusal called a given expression a variable (#803).
+
+        A given expression is read as a column, so the resolver files it with
+        the variables, and the message named the wrong kind of thing.
+        """
+        message = _refusal(**{'given.expressions.e': {'dims': ['g']}, 'variables.p.where': where})
+        assert "given expression 'e'" in message, 'the refusal names the kind the file declares'
+        assert "variable 'e'" not in message and 'names a variable' not in message, 'and no other kind'
+        assert 'may hold a variable' in message, 'it says why a given expression cannot mask'
+
     def test_a_case_comparing_expressions_is_refused_as_undecidable(self):
         """Two cases split by arithmetic cannot be proved apart without the numbers, and the rewrite is named."""
         message = _refusal(

@@ -17,9 +17,9 @@ by its path as the list gives it, and anything else by its place in the list,
 such as ``'#2'``.
 
 [`merge`][] writes nothing a fragment did not write, except a ``+``. It
-joins two fragments' text in two places, the objective and a named expression
-that terms add to; every other block is copied as written, refused where two
-fragments own it, or held identical where it is a dimension or a relation.
+joins fragments' text in one place, a named expression that terms add to;
+every other block is copied as written, refused where two fragments own it,
+or held identical where it is a dimension or a relation.
 What that means for each section:
 
 * **A dimension or a relation every fragment may declare**, and the ones that
@@ -27,18 +27,22 @@ What that means for each section:
   descriptions of one dimension agree, and the first one given is carried.
 * **Every other declaration is owned.** A name two fragments declare is refused,
   both named.
-* **The objectives are summed**, each term in parentheses, in the order the
-  fragments are given in, and the senses have to agree.
-* **A term is added to the expression it names.** A ``given: expressions:``
-  entry with a ``term:`` names the expression its fragment adds to the name.
-  The name is an ``expressions:`` block of one other fragment: a sum written
-  ``empty: true``, or a definition. The composed spec writes its body as
-  that body, if it has one, plus every term by its name, in the order the
-  fragments are given in, and keeps each term as the named expression its
-  fragment declares. A definition written as ``cases:`` is refused, since it is summed
-  as written. A later merge adds to the composed body the same way. A term
-  that names no ``expressions:`` block of any fragment is refused: merge
-  fills or extends what a file declared, and never invents a name.
+* **One fragment sets the objective.** A second one is refused, both named.
+  Where several files contribute to it, the objective reads a sum, and each
+  file adds its part to that sum with ``adds_to:``.
+* **Terms add to a named expression.** ``adds_to:`` adds a named
+  expression as a term to the sum it names, a ``given: expressions:`` entry
+  of its own fragment. The term keeps its name in the composed spec. Where a fragment
+  defines that name with one ``expression:``, the composed body is that
+  body followed by every term, in the order the fragments are given in,
+  so a composed spec takes more terms in a later merge. A definition
+  written as ``cases:`` takes no term. Where no fragment defines the
+  name, the composed spec defines it as its terms, over the frame the
+  readers state in one order. Some fragment then has to read the name for
+  more than adding to it: read it without adding to it, or use it in its
+  math. A name only its terms read, or only one fragment reads, is what a
+  misspelt ``given:`` entry looks like, so it is refused. A term that
+  reads its own sum through another fragment is refused, both named.
 * **A given declaration is folded** into the declaration that introduces the
   name, once the reader is checked to say the same as the introducer or less.
   A given expression's body may carry no dimension its reader does not state,
@@ -91,13 +95,15 @@ from typing import TYPE_CHECKING, cast, get_args, get_origin
 from pydantic import BaseModel, ValidationError
 
 from mathspec._yaml import read_spec
-from mathspec.dimensions import dims_of
 from mathspec.errors import LanguageError, did_you_mean, schema_error
+from mathspec.program import variables_of
 from mathspec.spec import GivenBlock, Spec
 from mathspec.validation import to_spec
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
+
+    from mathspec.program import Program
 
 SHARED_SECTIONS = ('dimensions', 'relations')
 
@@ -129,8 +135,8 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
 
     Args:
         fragments: Each fragment as a YAML path, YAML text, a mapping, or a
-            loaded [`Spec`][mathspec.spec.Spec]. A sum and the objective write
-            their terms in the order of the list.
+            loaded [`Spec`][mathspec.spec.Spec]. A sum writes its terms in
+            the order of the list.
         description: What the composed spec is. A fragment's own
             ``description`` is about the fragment, and is not carried.
 
@@ -143,9 +149,14 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
             declare one name; two fragments say different things about one
             dimension, relation or given declaration; a fragment reads a name as
             something other than what its sibling introduces, as another kind
-            of thing, or over fewer dimensions than its body carries; two fragments are
-            written against different language versions; their objectives run
-            opposite ways; or the composed spec does not load.
+            of thing, or over fewer dimensions than its body carries; a fragment
+            adds a term to a variable, a parameter, a constraint or a
+            definition written as ``cases:``; a term reads its own sum through
+            another fragment; a name no fragment defines is read by nothing
+            but the fragments that add a term to it, or by one fragment alone;
+            the readers of such a name write its dims in different orders; two
+            fragments are written against different language versions; two
+            fragments set the objective; or the composed spec does not load.
         FileNotFoundError: A ``str`` with no newline that names no file.
         TypeError: *fragments* is one path rather than a list.
     """
@@ -157,7 +168,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     for section in SHARED_SECTIONS:
         if agreed := _agreed(read, section, _singular(section), 'give one of them a name of its own'):
             merged[section] = agreed
-    asked = {name: _readings({'given': spec.given.model_dump(exclude_unset=True)}) for name, spec in loaded.items()}
+    asked = {name: spec.given.model_dump(exclude_unset=True) for name, spec in loaded.items()}
     readings = {
         kind: _agreed(asked, kind, label, 'read it over one frame', claims=_reading_claims)
         for kind, label in GIVEN_KINDS.items()
@@ -165,11 +176,12 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     for section in OWNED_SECTIONS:
         if claimed := _claimed(read, section):
             merged[section] = claimed
-    if summed := _summed(read, loaded, _mapping(merged.get('expressions')), readings['expressions']):
-        merged['expressions'] = {**_mapping(merged.get('expressions')), **summed}
+    summed = _summed(loaded, merged, readings['expressions'], read)
+    if expressions := {**_mapping(merged.get('expressions')), **summed}:
+        merged['expressions'] = {key: _without(block, 'adds_to') for key, block in expressions.items()}
     if given := _folded(read, merged, loaded, readings):
         merged['given'] = given
-    if (objective := _summed_objective(read)) is not None:
+    if (objective := _one_objective(read)) is not None:
         merged['objective'] = objective
     return to_spec(merged)
 
@@ -245,18 +257,6 @@ def _reading_claims(block: object) -> object:
     return {**claims, 'dims': frozenset(cast('list[str]', claims.get('dims', [])))}
 
 
-def _readings(sections: Mapping[str, object]) -> dict[str, object]:
-    """The ``given:`` block of one fragment, each entry without its term: what the fragment reads, apart from what it adds.
-
-    ``merge`` hands it the fields the fragment wrote. A field left out says
-    less, and a default filled in would claim a value against the introducer.
-    """
-    return {
-        kind: {key: {f: v for f, v in _mapping(entry).items() if f != 'term'} for key, entry in _mapping(group).items()}
-        for kind, group in _mapping(sections.get('given')).items()
-    }
-
-
 def _agreed(
     read: Mapping[str, dict[str, object]],
     section: str,
@@ -303,8 +303,8 @@ def _claimed(read: Mapping[str, dict[str, object]], section: str) -> dict[str, o
                         f"name each fragment's term apart, such as after its component."
                     )
                 hint = (
-                    " If one fragment adds to the other's definition, write what it adds as `term:` under "
-                    '`given: expressions:`.'
+                    ' A sum several fragments add to is defined by one of them at most: each other reads it '
+                    "under 'given: expressions:' and adds its part with `adds_to:`."
                     if section == 'expressions'
                     else ''
                 )
@@ -319,106 +319,195 @@ def _claimed(read: Mapping[str, dict[str, object]], section: str) -> dict[str, o
 
 
 def _adds(sections: Mapping[str, object], key: str) -> str | None:
-    """The name one fragment adds *key* to as a term, or ``None`` where it adds no term by that name."""
-    given = _mapping(_mapping(sections.get('given')).get('expressions'))
-    return next((target for target, entry in given.items() if _mapping(entry).get('term') == key), None)
+    """The name one fragment's expression *key* adds to as a term, or ``None`` where it is no term."""
+    return cast('str | None', _as_mapping(_mapping(sections.get('expressions')).get(key)).get('adds_to'))
 
 
 def _terms(read: Mapping[str, dict[str, object]], key: str) -> list[tuple[str, str]]:
     """Every term the fragments add to *key*, with the fragment that adds it, in the order they are given in."""
-    found = []
-    for name, sections in read.items():
-        entry = _mapping(_mapping(_mapping(sections.get('given')).get('expressions')).get(key))
-        if entry.get('term') is not None:
-            found.append((name, cast('str', entry['term'])))
-    return found
+    return [
+        (name, term)
+        for name, sections in read.items()
+        for term in _mapping(sections.get('expressions'))
+        if _adds(sections, term) == key
+    ]
 
 
 def _summed(
-    read: Mapping[str, dict[str, object]],
     loaded: Mapping[str, Spec],
-    defined: Mapping[str, object],
+    merged: Mapping[str, object],
     readings: Mapping[str, object],
+    read: Mapping[str, dict[str, object]],
 ) -> dict[str, object]:
-    """Every name a fragment adds a term to, its body written as the owner's body plus the terms.
+    """Every name a fragment adds a term to, its body the definer's followed by every term by name.
 
-    The owner's body comes first where it has one, in parentheses where it is
-    more than a name, then every term by its name in the order the fragments
-    are given in; one body alone is carried as written. An empty sum keeps its frame,
-    so the composed load holds the terms to it. A definition written as
-    ``cases:`` is refused, since it is summed as written and a set of cases is
-    no one body. The block keeps the owner's description, or takes the first
-    a reader wrote.
+    The terms join with a plain ``+``, the loosest operator there is, so a
+    sum composed in two merges reads as the one composed in one. Where no
+    fragment defines the name, the terms are the body, over the frame the
+    readers state; the composed load holds the terms to it either way.
     """
     summed: dict[str, object] = {}
+    defined = _mapping(merged.get('expressions'))
     for key, reading in readings.items():
-        entry = _mapping(reading)
         terms = _terms(read, key)
         if not terms:
             continue
-        _landed(read, defined, key, [name for name, _ in terms])
-        bodies = [term for _, term in terms]
-        base = _as_mapping(defined[key])
-        if base.get('cases'):
-            raise LanguageError(
-                f"fragment '{_author_of(read, 'expressions', key)}' defines {key!r} as `cases:`, and fragment "
-                f"'{terms[0][0]}' adds a term to it. The definition is summed as written, and a set of cases is no "
-                f'one body: name the cased body as its own expression, and define {key!r} as that name.'
-            )
-        block: dict[str, object] = {}
-        if base.get('dims'):
-            block['dims'] = base['dims']
-        if base.get('expression') is not None:
-            bodies.insert(0, cast('str', base['expression']))
-        if base.get('description'):
-            block['description'] = base['description']
-        block['expression'] = bodies[0] if len(bodies) == 1 else ' + '.join(_summand(body) for body in bodies)
-        if 'description' not in block and entry.get('description'):
-            block['description'] = entry['description']
+        contributors = [name for name, _ in terms]
+        _undeclared(read, merged, key, contributors[0])
+        names = [term for _, term in terms]
+        if key in defined:
+            base = _as_mapping(defined[key])
+            summed[key] = {**base, 'expression': ' + '.join([cast('str', base['expression']), *names])}
+            continue
+        _read_elsewhere(loaded, key, contributors)
+        block: dict[str, object] = {'dims': _frame(read, key), 'expression': ' + '.join(names)}
+        if said := _mapping(reading).get('description'):
+            block['description'] = said
         summed[key] = block
+    _acyclic(loaded, {key: _terms(read, key) for key in summed})
     return summed
 
 
-def _landed(
-    read: Mapping[str, dict[str, object]],
-    defined: Mapping[str, object],
-    key: str,
-    contributors: list[str],
-) -> None:
-    """Refuse terms that name no ``expressions:`` block of any fragment.
-
-    A term adds to a name another file declares: a sum written ``empty:
-    true``, or a definition. Terms alone would define a name nothing
-    declared, which is what a mistyped name looks like, so the refusal names
-    the near miss among the names a term could land on, which a term is not.
-    """
-    if key in defined:
+def _undeclared(read: Mapping[str, dict[str, object]], merged: Mapping[str, object], key: str, adder: str) -> None:
+    """Refuse a term on a name a fragment declares as something a term cannot follow, naming what declares it."""
+    section = next((section for section in OWNED_SECTIONS if key in _mapping(merged.get(section))), None)
+    if section is None:
         return
-    known = {name for sections in read.values() for name in _mapping(sections.get('expressions'))} - {key}
-    terms = {
-        _mapping(entry).get('term')
-        for sections in read.values()
-        for entry in _mapping(_mapping(sections.get('given')).get('expressions')).values()
-    }
-    known -= terms
-    spelled = ', '.join(f"'{name}'" for name in contributors[:-1])
-    who = f"fragments {spelled} and '{contributors[-1]}' add" if spelled else f"fragment '{contributors[0]}' adds"
-    near = f' {hint}' if (hint := did_you_mean(key, known, listing=False)) else ''
+    author = _author_of(read, section, key)
+    if section == 'expressions':
+        if not _as_mapping(_mapping(merged['expressions'])[key]).get('cases'):
+            return
+        raise LanguageError(
+            f"fragment '{author}' defines {key!r} as `cases:`, and fragment '{adder}' adds a term to it. A term "
+            f'follows one body, and a set of cases is no one body: name the cased body as its own expression, '
+            f'and define {key!r} as that name.'
+        )
     raise LanguageError(
-        f'{who} a term to {key!r}, which no fragment declares. A term adds to a name another file declares '
-        f"under 'expressions:': declare it there, as `empty: true` over a `dims:` where the files add "
-        f'every term, or fix the spelling.{near}'
+        f"fragment '{author}' declares {key!r} as a {_singular(section)}, and fragment '{adder}' adds a term to "
+        f'it. A term adds to a named expression: give the sum a name of its own, or read the '
+        f"{_singular(section)} under 'given: {section}:' and add no term to it."
     )
 
 
-def _summand(body: str) -> str:
-    """*body* as one operand of a sum: a term is a name and needs no brackets, and a definition may."""
-    return body if body.isidentifier() else f'({body})'
+def _acyclic(loaded: Mapping[str, Spec], terms: Mapping[str, list[tuple[str, str]]]) -> None:
+    """Refuse a term that reads its own sum through a name another fragment defines.
+
+    Each fragment refuses a term that reads its sum through its own names at
+    load. A loop across fragments shows only once they compose, where the
+    composed load would name the loop and no fragment, so it is refused here
+    with the fragments that close it.
+    """
+    reads: dict[str, frozenset[str]] = {}
+    owner: dict[str, str] = {}
+    for name, spec in loaded.items():
+        for key, expression in spec.program.expressions.items():
+            reads[key] = variables_of(expression.expression)
+            owner.setdefault(key, name)
+    for key, added in terms.items():
+        reads[key] = reads.get(key, frozenset()) | {term for _, term in added}
+    for key, added in terms.items():
+        for adder, term in added:
+            if (path := _path(reads, term, key)) is None:
+                continue
+            through = ', '.join(
+                f"{step!r} of '{owner[step]}'" if step in owner else f'the sum {step!r}' for step in path[1:-1]
+            )
+            raise LanguageError(
+                f"fragment '{adder}' adds {term!r} to {key!r}, and {term!r} reads {key!r} back through "
+                f'{through}, so the sum would define itself. A term may not read what reads its sum: write '
+                f'{term!r} from something else, or define {path[-2]!r} without {key!r}.'
+            )
+
+
+def _path(reads: Mapping[str, frozenset[str]], start: str, goal: str) -> list[str] | None:
+    """The names from *start* to *goal* along what each name reads, both ends included, or ``None``."""
+    trail = {start: [start]}
+    frontier = [start]
+    while frontier:
+        name = frontier.pop()
+        for step in sorted(reads.get(name, ())):
+            if step == goal:
+                return [*trail[name], goal]
+            if step not in trail:
+                trail[step] = [*trail[name], step]
+                frontier.append(step)
+    return None
+
+
+def _frame(read: Mapping[str, dict[str, object]], key: str) -> list[str]:
+    """The dims every fragment reads the sum *key* over, in the order they all write.
+
+    No fragment defines the sum, so no fragment's order is the one to take:
+    the first reader's would make the order of the list reach the canonical
+    text, which keeps a declaration's dims as written.
+    """
+    frames = [
+        (name, cast('list[str]', entry['dims']))
+        for name, sections in read.items()
+        if (entry := _mapping(_mapping(_mapping(sections.get('given')).get('expressions')).get(key)))
+    ]
+    (first, dims), *rest = frames
+    for name, other in rest:
+        if other != dims:
+            raise LanguageError(
+                f"fragments '{first}' and '{name}' read the sum {key!r} over {dims} and {other}. No fragment "
+                f'defines the sum, so its frame is the order its readers write: write the dims in one order '
+                f'in every file.'
+            )
+    return dims
+
+
+def _read_elsewhere(loaded: Mapping[str, Spec], key: str, contributors: list[str]) -> None:
+    """Refuse terms that write into a name nothing but the terms reads.
+
+    A fragment reads the name for more than adding to it where it reads it
+    under ``given:`` and adds nothing, or uses it in its math. A name only
+    its terms read, or only one fragment reads, is what a misspelt ``given:``
+    entry looks like, since the file that uses the sum reads it under the
+    right spelling, so the refusal names the near miss among the names the
+    fragments read.
+    """
+    readers = {name: spec for name, spec in loaded.items() if key in spec.program.given.expressions}
+    if len(readers) > 1 and any(name not in contributors or _uses(spec.program, key) for name, spec in readers.items()):
+        return
+    known = {
+        n
+        for spec in loaded.values()
+        for n in (*spec.program.given.expressions, *(n for n, e in spec.program.expressions.items() if not e.adds_to))
+    }
+    spelled = ', '.join(f"'{name}'" for name in contributors[:-1])
+    who = f"fragments {spelled} and '{contributors[-1]}' add" if spelled else f"fragment '{contributors[0]}' adds"
+    near = f' {hint}' if (hint := did_you_mean(key, known - {key}, listing=False)) else ''
+    raise LanguageError(
+        f'{who} a term to {key!r}, and no other fragment reads it: none reads it without adding to it, or '
+        f'uses it in its math. A term writes into a sum the rest of the spec reads: add the fragment that '
+        f"reads it, or fix the spelling under 'given:'.{near}"
+    )
+
+
+def _uses(program: Program, key: str) -> bool:
+    """Whether *program*'s math reads the given expression *key*, which it reads as a column.
+
+    A reported expression builds no row, so a read there is not a read in the
+    math, and a fragment whose only use of the name is to report it is still
+    one that may have misspelt it.
+    """
+    trees = [
+        *program.roots,
+        *(e.expression for e in program.expressions.values() if e.in_math),
+        *(link.expression for curve in program.piecewise.values() for link in curve.links),
+    ]
+    return key in variables_of(*trees)
 
 
 def _as_mapping(block: object) -> dict[str, object]:
     """A named expression as ``to_dict`` wrote it, the one-line form read as its mapping."""
     return cast('dict[str, object]', block) if isinstance(block, dict) else {'expression': block}
+
+
+def _without(block: object, field: str) -> object:
+    """*block* with *field* dropped, where it is a mapping that has it."""
+    return {f: v for f, v in block.items() if f != field} if isinstance(block, dict) else block
 
 
 def _folded(
@@ -454,7 +543,7 @@ def _folded(
 
 def _reader_of(read: Mapping[str, dict[str, object]], kind: str, key: str) -> str:
     """The first fragment reading *key* under ``given: {kind}:``."""
-    return next(name for name, sections in read.items() if key in _mapping(_readings(sections).get(kind)))
+    return next(name for name, sections in read.items() if key in _mapping(_mapping(sections.get('given')).get(kind)))
 
 
 def _fits(
@@ -492,7 +581,7 @@ def _fits(
 
 
 def _definer_frame(loaded: Mapping[str, Spec], key: str) -> frozenset[str]:
-    """The frame of the composed body of *key*: the frame its owner declares, else its body's with every term's."""
+    """The frame of the composed body of *key*: the frame its definer declares, else its body's with every term's."""
     frame: set[str] = set()
     for spec in loaded.values():
         declared = spec.expressions[key].dims if key in spec.expressions else None
@@ -500,9 +589,7 @@ def _definer_frame(loaded: Mapping[str, Spec], key: str) -> frozenset[str]:
             return frozenset(declared)
         if key in spec.program.expressions:
             frame |= set(spec.program.expressions[key].dims)
-        given = spec.program.given.expressions.get(key)
-        if given is not None and given.term is not None:
-            frame |= dims_of(given.term, spec, f"Given expression '{key}'")
+        frame |= {d for e in spec.program.expressions.values() if e.adds_to == key for d in e.dims}
     return frozenset(frame)
 
 
@@ -522,33 +609,22 @@ def _same_kind(read: Mapping[str, dict[str, object]], merged: Mapping[str, objec
             )
 
 
-def _summed_objective(read: Mapping[str, dict[str, object]]) -> dict[str, object] | None:
-    """Every fragment's objective summed, each term in parentheses, or ``None`` where none declares one.
+def _one_objective(read: Mapping[str, dict[str, object]]) -> object | None:
+    """The objective the one fragment that sets it wrote, or ``None`` where none sets one.
 
-    The terms are summed in the order the fragments are given in, and the
-    first description given is carried, as a shared dimension's is. The
-    senses have to agree: a sum has
-    one sense, and negating the odd one out would be this function deciding what
-    a spec means.
+    A composed spec has one objective, so a second is a collision like a name
+    two fragments declare. Several files add to it through a sum that the
+    fragment setting the objective reads.
     """
-    declared = {name: _mapping(sections['objective']) for name, sections in read.items() if sections.get('objective')}
-    if not declared:
-        return None
-    senses = {name: objective.get('sense', 'minimize') for name, objective in declared.items()}
-    if len(set(senses.values())) > 1:
-        spelled = ', '.join(f"'{name}' {sense}s" for name, sense in senses.items())
+    declared = [name for name, sections in read.items() if sections.get('objective')]
+    if len(declared) > 1:
+        first, second, *_ = declared
         raise LanguageError(
-            f'the fragments disagree about which way the objective runs: {spelled}. A composed spec has '
-            f'one objective and one sense, so write every fragment against the same one: negate the terms '
-            f'of the odd one out rather than its sense.'
+            f"fragments '{first}' and '{second}' both set the objective. A composed spec has one objective, "
+            f"and one fragment sets it: read a sum under 'given: expressions:' in that fragment, and add "
+            f'each part to it with `adds_to:`.'
         )
-    ordered = list(declared.values())
-    terms = [objective['expression'] for objective in ordered]
-    joined = terms[0] if len(terms) == 1 else ' + '.join(f'({term})' for term in terms)
-    summed: dict[str, object] = {'sense': next(iter(senses.values())), 'expression': joined}
-    if description := next((o['description'] for o in ordered if o.get('description')), None):
-        summed['description'] = description
-    return summed
+    return read[declared[0]]['objective'] if declared else None
 
 
 def override(base: Source, patches: Sequence[Source]) -> Spec:
@@ -664,6 +740,10 @@ def _lay_over(base: dict[str, object], patch: dict[str, object], name: str) -> d
             laid[key] = _shared(_mapping(laid.get(key)), _section(value, key, name), key, name)
         elif key in OWNED_SECTIONS:
             block = _section(value, key, name)
+            if key == 'expressions':
+                block = {
+                    entry: _body(over) if entry in _mapping(laid.get(key)) else over for entry, over in block.items()
+                }
             laid[key] = _owned(_mapping(laid.get(key)), block, _singular(key), _entry_class(Spec, key), name)
         elif key == 'objective':
             laid = _objective(laid, value, name)
@@ -672,6 +752,16 @@ def _lay_over(base: dict[str, object], patch: dict[str, object], name: str) -> d
         else:
             laid[key] = value
     return laid
+
+
+def _body(over: object) -> object:
+    """A patch's edit to a named expression, the one-line form read as a new body that keeps the entry's other fields.
+
+    The one-line form writes a body and nothing else, so laid over an entry
+    it replaces the body, whether an ``expression:`` or ``cases:``, and keeps
+    what the entry says beside it, such as what a term ``adds_to:``.
+    """
+    return {'expression': over, 'cases': None, 'otherwise': None} if isinstance(over, str) else over
 
 
 def _section(value: object, where: str, name: str) -> dict[str, object]:

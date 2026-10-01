@@ -107,7 +107,9 @@ def test_the_extra_axes_and_rows_are_declared():
 
 
 def test_omega_blends_expectation_and_tail_in_the_objective():
-    expr = ALL.objective.expression
+    assert ALL.objective.expression == 'total_cost', 'the objective reads the system cost'
+    assert 'risk_weighted_opex' in ALL.expressions['total_cost'].expression, 'the system cost carries opex at risk'
+    expr = ALL.expressions['risk_weighted_opex'].expression
     assert all(term in expr for term in ('CVaR_omega', 'scenario_weight', 'scenario_opex', 'CVaR')), (
         'the objective prices expected opex by scenario weight and blends the tail by omega'
     )
