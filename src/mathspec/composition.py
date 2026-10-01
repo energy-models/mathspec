@@ -17,9 +17,9 @@ by its path as the list gives it, and anything else by its place in the list,
 such as ``'#2'``.
 
 [`merge`][] writes nothing a fragment did not write, except a ``+``. It
-joins two fragments' text in two places, the objective and a named expression
-that terms add to; every other block is copied as written, refused where two
-fragments own it, or held identical where it is a dimension or a relation.
+joins fragments' text in one place, a named expression that terms add to;
+every other block is copied as written, refused where two fragments own it,
+or held identical where it is a dimension or a relation.
 What that means for each section:
 
 * **A dimension or a relation every fragment may declare**, and the ones that
@@ -27,8 +27,9 @@ What that means for each section:
   descriptions of one dimension agree, and the first one given is carried.
 * **Every other declaration is owned.** A name two fragments declare is refused,
   both named.
-* **The objectives are summed**, each term in parentheses, in the order the
-  fragments are given in, and the senses have to agree.
+* **One fragment sets the objective.** A second one is refused, both named.
+  Where several files contribute to it, the objective reads a sum, and each
+  file adds its part to that sum with ``adds_to:``.
 * **Terms add to a named expression.** ``adds_to:`` adds a named
   expression as a term to the sum it names, a ``given: expressions:`` entry
   of its own fragment. The term keeps its name in the composed spec. Where a fragment
@@ -134,8 +135,8 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
 
     Args:
         fragments: Each fragment as a YAML path, YAML text, a mapping, or a
-            loaded [`Spec`][mathspec.spec.Spec]. A sum and the objective write
-            their terms in the order of the list.
+            loaded [`Spec`][mathspec.spec.Spec]. A sum writes its terms in
+            the order of the list.
         description: What the composed spec is. A fragment's own
             ``description`` is about the fragment, and is not carried.
 
@@ -154,8 +155,8 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
             another fragment; a name no fragment defines is read by nothing
             but the fragments that add a term to it, or by one fragment alone;
             the readers of such a name write its dims in different orders; two
-            fragments are written against different language versions; their
-            objectives run opposite ways; or the composed spec does not load.
+            fragments are written against different language versions; two
+            fragments set the objective; or the composed spec does not load.
         FileNotFoundError: A ``str`` with no newline that names no file.
         TypeError: *fragments* is one path rather than a list.
     """
@@ -180,7 +181,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
         merged['expressions'] = {key: _without(block, 'adds_to') for key, block in expressions.items()}
     if given := _folded(read, merged, loaded, readings):
         merged['given'] = given
-    if (objective := _summed_objective(read)) is not None:
+    if (objective := _one_objective(read)) is not None:
         merged['objective'] = objective
     return to_spec(merged)
 
@@ -608,33 +609,22 @@ def _same_kind(read: Mapping[str, dict[str, object]], merged: Mapping[str, objec
             )
 
 
-def _summed_objective(read: Mapping[str, dict[str, object]]) -> dict[str, object] | None:
-    """Every fragment's objective summed, each term in parentheses, or ``None`` where none declares one.
+def _one_objective(read: Mapping[str, dict[str, object]]) -> object | None:
+    """The objective the one fragment that sets it wrote, or ``None`` where none sets one.
 
-    The terms are summed in the order the fragments are given in, and the
-    first description given is carried, as a shared dimension's is. The
-    senses have to agree: a sum has
-    one sense, and negating the odd one out would be this function deciding what
-    a spec means.
+    A composed spec has one objective, so a second is a collision like a name
+    two fragments declare. Several files add to it through a sum that the
+    fragment setting the objective reads.
     """
-    declared = {name: _mapping(sections['objective']) for name, sections in read.items() if sections.get('objective')}
-    if not declared:
-        return None
-    senses = {name: objective.get('sense', 'minimize') for name, objective in declared.items()}
-    if len(set(senses.values())) > 1:
-        spelled = ', '.join(f"'{name}' {sense}s" for name, sense in senses.items())
+    declared = [name for name, sections in read.items() if sections.get('objective')]
+    if len(declared) > 1:
+        first, second, *_ = declared
         raise LanguageError(
-            f'the fragments disagree about which way the objective runs: {spelled}. A composed spec has '
-            f'one objective and one sense, so write every fragment against the same one: negate the terms '
-            f'of the odd one out rather than its sense.'
+            f"fragments '{first}' and '{second}' both set the objective. A composed spec has one objective, "
+            f"and one fragment sets it: read a sum under 'given: expressions:' in that fragment, and add "
+            f'each part to it with `adds_to:`.'
         )
-    ordered = list(declared.values())
-    terms = [objective['expression'] for objective in ordered]
-    joined = terms[0] if len(terms) == 1 else ' + '.join(f'({term})' for term in terms)
-    summed: dict[str, object] = {'sense': next(iter(senses.values())), 'expression': joined}
-    if description := next((o['description'] for o in ordered if o.get('description')), None):
-        summed['description'] = description
-    return summed
+    return read[declared[0]]['objective'] if declared else None
 
 
 def override(base: Source, patches: Sequence[Source]) -> Spec:

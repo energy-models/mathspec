@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Settings
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the weightings, the risk preference and the flags every topic reads. It reads the seven totals whose readers may be left out, `scenario_opex`, `Carrier_additions` and the five global-constraint sums, under `given:`, so the terms the components add to them always have a reader.
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the weightings, the risk preference and the flags every topic reads. It reads the eight totals whose readers may be left out, `total_cost`, `scenario_opex`, `Carrier_additions` and the five global-constraint sums, under `given:`, so the terms the components add to them always have a reader. It sets the objective, which reads `total_cost`.
 
 <!-- gallery:begin -->
 ```yaml
@@ -114,6 +114,12 @@ given:
         snapshot's hours and its period, before the scenario's own weight; a
         start and a stop cost what they cost, unweighted, as PyPSA adds them
         (`optimize.py:414-429`)
+    total_cost:
+      dims: []
+      description: >-
+        what the system costs — capacity once per active period at its expected
+        cost over the scenarios, operation in expectation over the scenarios,
+        and a share of it at the tail
     Carrier_additions:
       dims: [period, carrier]
       description: >-
@@ -142,6 +148,10 @@ expressions:
         when: GlobalConstraint_counts_snapshot AND NOT shift(GlobalConstraint_counts_snapshot, along=snapshot, offset=-1)
         expression: 1
     otherwise: 0
+
+objective:
+  sense: minimize
+  expression: total_cost
 ```
 
 #### Sets
@@ -178,6 +188,7 @@ expressions:
 | $`\mathit{transmission\_expansion\_cost}`$ | `transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$, an expression another file defines — what a `transmission_expansion_cost_limit` row totals — capital cost times the chosen build of the row's branches |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression another file defines — what a `tech_capacity_expansion_limit` row totals — the chosen build of the row's carrier-and-bus set |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression another file defines — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:414-429`) |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression another file defines — what the system costs — capacity once per active period at its expected cost over the scenarios, operation in expectation over the scenarios, and a share of it at the tail |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression another file defines — what a carrier adds in a period — every extendable component of that carrier, counting each build in the first period it stands in. Like PyPSA, it sums only the components that carry a carrier attribute, so a transformer, which has none, counts in no carrier |
 
 #### Definitions
@@ -186,6 +197,12 @@ expressions:
 |---|---|
 | $`\mathit{w}^{\mathrm{gc}}`$ | `GlobalConstraint_energy_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — what one unit of power at a snapshot counts for in a row — the generator weighting times the years of the snapshot's period, where the row counts the snapshot, and nothing where it does not |
 | $`\mathit{last}`$ | `GlobalConstraint_snapshot_closes` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — one at the last snapshot a row counts, and zero elsewhere |
+
+#### Objective
+
+```math
+\min \mathit{total\_cost}
+```
 
 #### Definitions
 

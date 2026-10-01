@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Stores
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Store`. It adds a term to `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `Carrier_additions`, `Bus_injection`. It reads `CVaR_omega`, `GlobalConstraint_counts_snapshot`, `GlobalConstraint_snapshot_closes`, `period_weight_objective`, `period_weight_years`, `scenario_weight` and 2 more under [`given`](../../reference/language/declarations.md#given).
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Store`. It adds a term to `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection`. It reads `CVaR_omega`, `GlobalConstraint_counts_snapshot`, `GlobalConstraint_snapshot_closes`, `period_weight_objective`, `period_weight_years`, `scenario_weight` and 2 more under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -186,6 +186,7 @@ given:
     operational_limit: { dims: [scenario, global_constraint] }
     tech_capacity_expansion: { dims: [global_constraint] }
     scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
     Carrier_additions: { dims: [period, carrier] }
     Bus_injection: { dims: [scenario, snapshot, bus] }
 
@@ -252,6 +253,9 @@ expressions:
       + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
       + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
     adds_to: scenario_opex
+  Store_capex:
+    expression: sum(scenario_weight * Store_e_nom_ext * Store_capital_cost * Store_capital_weight)
+    adds_to: total_cost
   Store_additions:
     expression: >-
       sum(Store_e_nom_ext * Store_first_active, by=Store_carrier, over=store, into=carrier)
@@ -365,11 +369,6 @@ assumptions:
       refuses quadratic costs under any risk preference
       (`optimize.py:467-474`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Store_e_nom_ext) * Store_capital_cost) * Store_capital_weight)
 ```
 
 #### Sets
@@ -440,6 +439,7 @@ objective:
 | $`\mathit{operational\_limit}`$ | `operational_limit` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Store_operational_limit` to |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression this file adds `Store_tech_capacity_expansion` to |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Store_opex` to |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Store_capex` to |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression this file adds `Store_additions` to |
 | $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Store_injection` to |
 
@@ -453,6 +453,7 @@ objective:
 | $`\mathit{Store\_operational\_limit}`$ | `Store_operational_limit` over $`\Xi \times \mathcal{G}`$ |
 | $`\mathit{Store\_tech\_capacity\_expansion}`$ | `Store_tech_capacity_expansion` over $`\mathcal{G}`$ |
 | $`\mathit{Store\_opex}`$ | `Store_opex` over $`\Xi`$ |
+| $`\mathit{Store\_capex}`$ | `Store_capex` (scalar) |
 | $`\mathit{Store\_additions}`$ | `Store_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Store\_injection}`$ | `Store_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 
@@ -465,12 +466,6 @@ $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own ord
 $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ counts within the group a relation puts $`t`$ in: the subscript names the map, $`\mathcal{T}_{\mathrm{relation}(t)}`$ is the group it lands in, and that group has a first position of its own.
 
 $`\lvert \mathcal{T} \rvert`$ denotes the size of the set being counted along, and a position counted from the end prints against it — $`\lvert \mathcal{T} \rvert - 1`$ is the last position, one less than the size because the first is $`0`$.
-
-#### Objective
-
-```math
-\min \sum_{\xi \in \Xi,\ v \in \mathcal{V}} \pi_{\xi} \cdot E_{v} \cdot \mathrm{c}^{\mathrm{cap},e}_{\xi,v} \cdot \mathrm{W}^{e}_{v}
-```
 
 #### Subject to
 
@@ -570,6 +565,12 @@ q_{\xi,t,v} = \mathrm{q}^{\mathrm{set}}_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\
 
 ```math
 \mathit{Store\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot \mathrm{c}^{q}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot q_{\xi,t,v} \cdot \mathrm{c}^{q,(2)}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} e_{\xi,t,v} \cdot \mathrm{c}^{e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+```
+
+**`Store_capex`**
+
+```math
+\mathit{Store\_capex} = \sum_{\xi \in \Xi,\ v \in \mathcal{V}} \pi_{\xi} \cdot E_{v} \cdot \mathrm{c}^{\mathrm{cap},e}_{\xi,v} \cdot \mathrm{W}^{e}_{v}
 ```
 
 **`Store_additions`**

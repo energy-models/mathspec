@@ -14,7 +14,9 @@ other files. Do [your first spec](first-spec.md) first.
 Make a file `network.yaml`. It balances every bus, and it reads the injection
 at a bus under [`given:`](reference/language/declarations.md#given): what the
 components put in is theirs to say, in
-[a term](reference/language/declarations.md#terms) each.
+[a term](reference/language/declarations.md#terms) each. It also sets the
+objective, and the objective reads the total cost the same way: what each
+component costs is a term of its own.
 
 ```yaml title="network.yaml"
 description: Every bus is balanced in every snapshot.
@@ -28,11 +30,18 @@ given:
     injection:
       dims: [snapshot, bus]
       description: what the components put into a bus, less what they take out
+    total_cost:
+      dims: []
+      description: what running the system costs
 
 constraints:
   balance:
     dims: [snapshot, bus]
     expression: injection == 0
+
+objective:
+  sense: minimize
+  expression: total_cost
 ```
 
 Check the file:
@@ -41,10 +50,11 @@ Check the file:
 python -m mathspec check network.yaml
 ```
 
-The check accepts it, and notes the name it reads and does not define:
+The check accepts it, and notes each name it reads and does not define:
 
 ```text
 expression 'injection' is read here and declared elsewhere: the model this one is layered onto provides it. A consumer checks that it does, on the same frame, and refuses the program where it does not. A fragment is composed instead: merge() folds this declaration into the one a sibling introduces, or writes it from the terms siblings add.
+expression 'total_cost' is read here and declared elsewhere: the model this one is layered onto provides it. A consumer checks that it does, on the same frame, and refuses the program where it does not. A fragment is composed instead: merge() folds this declaration into the one a sibling introduces, or writes it from the terms siblings add.
 ```
 
 ## The generators
@@ -52,7 +62,8 @@ expression 'injection' is read here and declared elsewhere: the model this one i
 Make a file `generators.yaml`. It says what the fleet puts into a bus as a
 named expression, `generation`. It reads the injection too, and
 [`adds_to:`](reference/language/declarations.md#terms) on `generation` names
-the injection as what the expression adds to. The two dimensions it shares
+the injection as what the expression adds to. What the fleet costs is a term
+of the total cost in the same way, `generation_cost`. The two dimensions it shares
 with the network it restates as a dtype and nothing else: a description is not
 a claim, and `merge` carries the network's.
 
@@ -80,16 +91,17 @@ variables:
 given:
   expressions:
     injection: { dims: [snapshot, bus] }
+    total_cost: { dims: [] }
 
 expressions:
   generation:
     description: what the fleet puts into a bus
     expression: sum(dispatch, by=gen_bus, over=generator, into=bus)
     adds_to: injection
-
-objective:
-  sense: minimize
-  expression: sum(dispatch * cost)
+  generation_cost:
+    description: what running the fleet costs
+    expression: sum(dispatch * cost)
+    adds_to: total_cost
 ```
 
 Check the file:
@@ -98,10 +110,11 @@ Check the file:
 python -m mathspec check generators.yaml
 ```
 
-The check accepts it, and notes the term:
+The check accepts it, and notes each term:
 
 ```text
 expression 'injection' is read here, and this file adds a term to it: merge() sums the term with what the other files write under the name. Until then, the program reads it and does not build it.
+expression 'total_cost' is read here, and this file adds a term to it: merge() sums the term with what the other files write under the name. Until then, the program reads it and does not build it.
 ```
 
 Print the math of the file on its own:
@@ -112,18 +125,13 @@ import mathspec as ms
 print(ms.to_markdown('generators.yaml', legend=False))
 ```
 
-The term prints as its own definition, and the legend, left out here, says
-what it adds to:
+Each term prints as its own definition, and the legend, left out here, says
+what it adds to. The file sets no objective, so on its own it is a
+feasibility problem:
 
 !!! example "Rendered output"
 
     A generator fleet, each unit on one bus.
-
-    #### Objective
-
-    ```math
-    \min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g}
-    ```
 
     #### Definitions
 
@@ -131,6 +139,12 @@ what it adds to:
 
     ```math
     \mathit{generation}_{t,b} = \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} \mathit{dispatch}_{t,g} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+    ```
+
+    **`generation_cost`**
+
+    ```math
+    \mathit{generation}^{\mathrm{cost}} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g}
     ```
 
     #### Variable domains
@@ -209,7 +223,7 @@ print(ms.to_markdown(spec, legend=False))
     #### Objective
 
     ```math
-    \min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g}
+    \min \mathit{total\_cost}
     ```
 
     #### Subject to
@@ -228,6 +242,12 @@ print(ms.to_markdown(spec, legend=False))
     \mathit{generation}_{t,b} = \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} \mathit{dispatch}_{t,g} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
     ```
 
+    **`generation_cost`**
+
+    ```math
+    \mathit{generation}^{\mathrm{cost}} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g}
+    ```
+
     **`consumption`**
 
     ```math
@@ -238,6 +258,12 @@ print(ms.to_markdown(spec, legend=False))
 
     ```math
     \mathit{injection}_{t,b} = \mathit{generation}_{t,b} + \mathrm{consumption}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+    ```
+
+    **`total_cost`**
+
+    ```math
+    \mathit{total\_cost} = \mathit{generation}^{\mathrm{cost}}
     ```
 
     #### Variable domains
@@ -251,7 +277,7 @@ print(ms.to_markdown(spec, legend=False))
 ## Add a component
 
 Make a file `imports.yaml`. It adds a term, `purchase`, to the injection and a
-term to the objective:
+term, `import_cost`, to the total cost:
 
 ```yaml title="imports.yaml"
 description: Power bought from outside the network, at a price.
@@ -273,16 +299,17 @@ variables:
 given:
   expressions:
     injection: { dims: [snapshot, bus] }
+    total_cost: { dims: [] }
 
 expressions:
   purchase:
     description: what the imports put into a bus
     expression: imported
     adds_to: injection
-
-objective:
-  sense: minimize
-  expression: sum(imported * import_price)
+  import_cost:
+    description: what the imports cost
+    expression: sum(imported * import_price)
+    adds_to: total_cost
 ```
 
 Merge the four files:
@@ -290,16 +317,20 @@ Merge the four files:
 ```python
 spec = ms.merge(['network.yaml', 'generators.yaml', 'loads.yaml', 'imports.yaml'])
 print(spec.expressions['injection'].expression)
-print(spec.objective.expression)
+print(spec.expressions['total_cost'].expression)
 ```
 
-The injection has a third term at the end, and the objective sums the two
-objectives. `network.yaml` did not change:
+The injection has a third term at the end, and the total cost a second one.
+`network.yaml` did not change:
 
 ```text
 generation + consumption + purchase
-(sum(dispatch * cost)) + (sum(imported * import_price))
+generation_cost + import_cost
 ```
+
+Only `network.yaml` sets the objective. A second file that sets one is
+refused: `merge` does not join two objectives, and a part of the cost is a
+term of `total_cost`.
 
 ## Read what another file declares
 

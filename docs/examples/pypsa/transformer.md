@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Transformers
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Transformer`. It adds a term to `Bus_injection`, `Cycle_angle_sum`. It reads `scenario_weight`, `transmission_losses` under [`given`](../../reference/language/declarations.md#given).
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Transformer`. It adds a term to `total_cost`, `Bus_injection`, `Cycle_angle_sum`. It reads `scenario_weight`, `transmission_losses` under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -172,10 +172,14 @@ given:
     scenario_weight: { dims: [scenario] }
     transmission_losses: { dims: [], dtype: bool }
   expressions:
+    total_cost: { dims: [] }
     Bus_injection: { dims: [scenario, snapshot, bus] }
     Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
 
 expressions:
+  Transformer_capex:
+    expression: sum(scenario_weight * Transformer_s_nom_ext * Transformer_capital_cost * Transformer_capital_weight)
+    adds_to: total_cost
   Transformer_s_monitored:
     description: the flow a transformer's post-contingency rows read, as a line's
     dims: [scenario, snapshot, transformer]
@@ -257,11 +261,6 @@ constraints:
     dims: [scenario, snapshot, transformer, segment]
     where: transmission_losses AND Transformer_active
     expression: Transformer_loss - Transformer_loss_slope * Transformer_s >= Transformer_loss_offset
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Transformer_s_nom_ext) * Transformer_capital_cost) * Transformer_capital_weight)
 ```
 
 #### Sets
@@ -314,6 +313,7 @@ objective:
 |---|---|
 | $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
 | $`\mathrm{lossy}`$ | `transmission_losses` (scalar), data another file declares |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Transformer_capex` to |
 | $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Transformer_injection` to |
 | $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$, an expression this file adds `Transformer_angle_sum` to |
 
@@ -321,17 +321,12 @@ objective:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathit{Transformer\_capex}`$ | `Transformer_capex` (scalar) |
 | $`\check{\sigma}`$ | `Transformer_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — the flow a transformer's post-contingency rows read, as a line's |
 | $`\mathit{Transformer\_injection}`$ | `Transformer_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 | $`\mathit{Transformer\_angle\_sum}`$ | `Transformer_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ |
 
 Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\_phase\_shift\_varying}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{Transformer\_phase\_shift}`$. An index is italic too, being what a quantifier chooses, and a set is script.
-
-#### Objective
-
-```math
-\min \sum_{\xi \in \Xi,\ m \in \mathcal{M}} \pi_{\xi} \cdot \Sigma_{m} \cdot \mathrm{c}^{\mathrm{cap},\sigma}_{\xi,m} \cdot \mathrm{W}^{\sigma}_{m}
-```
 
 #### Subject to
 
@@ -402,6 +397,12 @@ Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\
 ```
 
 #### Definitions
+
+**`Transformer_capex`**
+
+```math
+\mathit{Transformer\_capex} = \sum_{\xi \in \Xi,\ m \in \mathcal{M}} \pi_{\xi} \cdot \Sigma_{m} \cdot \mathrm{c}^{\mathrm{cap},\sigma}_{\xi,m} \cdot \mathrm{W}^{\sigma}_{m}
+```
 
 **`Transformer_s_monitored`**
 

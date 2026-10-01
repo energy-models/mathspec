@@ -399,3 +399,7 @@ state different objectives.
 
 There is one objective block. To pursue several goals, weight them into one
 expression.
+
+A spec composed from several files also has one objective, and one file sets
+it. [`merge`](../../howto/compose.md) refuses a second one. Each other file adds its part
+to a sum that the objective reads, with [`adds_to:`](#terms).

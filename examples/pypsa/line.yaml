@@ -157,6 +157,7 @@ given:
     transmission_volume_expansion: { dims: [scenario, global_constraint] }
     transmission_expansion_cost: { dims: [scenario, global_constraint] }
     tech_capacity_expansion: { dims: [global_constraint] }
+    total_cost: { dims: [] }
     Carrier_additions: { dims: [period, carrier] }
     Bus_injection: { dims: [scenario, snapshot, bus] }
     Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
@@ -171,6 +172,9 @@ expressions:
   Line_tech_capacity_expansion:
     expression: sum(Line_s_nom_ext * Line_tech_capacity_weight, over=line)
     adds_to: tech_capacity_expansion
+  Line_capex:
+    expression: sum(scenario_weight * Line_s_nom_ext * Line_capital_cost * Line_capital_weight)
+    adds_to: total_cost
   Line_additions:
     expression: >-
       sum(Line_s_nom_ext * Line_first_active, by=Line_carrier, over=line, into=carrier)
@@ -257,8 +261,3 @@ constraints:
     dims: [scenario, snapshot, line, segment]
     where: transmission_losses AND Line_active
     expression: Line_loss - Line_loss_slope * Line_s >= Line_loss_offset
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Line_s_nom_ext) * Line_capital_cost) * Line_capital_weight)

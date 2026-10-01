@@ -12,12 +12,13 @@ Run from the repository root::
 The one file writes each hub, a row or a named expression that every component
 adds its share to, as the sum of named terms: `Bus_injection` is
 `Generator_injection + … + Transformer_injection`, and `Bus_nodal_balance`
-reads `Bus_injection == 0`. A fragment owns the declarations of its topic, its
-terms among them, and reads what another topic declares under `given:`; each
-term names the hub it adds to with `adds_to:`, and the fragment reads that hub
-under `given:`. One fragment reads each hub without adding to it, with its
-description, so the terms always have a reader, and a new component is one
-new fragment.
+reads `Bus_injection == 0`. The objective reads the hub `total_cost`. A
+fragment owns the declarations of its topic, its terms among them, and reads
+what another topic declares under `given:`; each term names the hub it adds to
+with `adds_to:`, and the fragment reads that hub under `given:`. One fragment
+reads each hub without adding to it, with its description, so the terms always
+have a reader, and a new component is one new fragment. The reader of
+`total_cost` also sets the objective.
 
 `merge` then writes each hub as the file does, so `check` is one comparison:
 the merged fragments and the one file have one canonical form.
@@ -38,14 +39,11 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 from mathspec import merge, to_spec
-from mathspec._expression_parser import BinaryOperatorNode, NumberNode, UnaryOperatorNode, operand, parse_expression
 from mathspec.canonical import canonical_yaml
 from mathspec.errors import LanguageError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
-
-    from mathspec._expression_parser import ArithmeticNode
+    from collections.abc import Mapping
 
 SOURCE = Path('examples/pypsa.yaml')
 SECTIONS = ('dimensions', 'relations', 'parameters', 'variables', 'expressions', 'constraints', 'assumptions')
@@ -100,6 +98,7 @@ HUBS = (
     'tech_capacity_expansion',
     'transmission_volume_expansion',
     'transmission_expansion_cost',
+    'total_cost',
 )
 
 #: The fragment that reads a hub without adding to it, and carries its
@@ -113,7 +112,6 @@ TOPIC_PREFIX = {topic: prefix for prefix, topic in PREFIX_TOPIC.items() if prefi
 }
 
 Key = tuple[str, str]
-Term = tuple[str, 'ArithmeticNode']
 
 
 #: The components with unit commitment, whose declarations are cut by feature.
@@ -176,18 +174,6 @@ def _names_in(value: object, known: Mapping[str, str]) -> set[str]:
     if isinstance(value, list):
         return set().union(*(_names_in(v, known) for v in value))
     return set()
-
-
-def _signed_terms(node: ArithmeticNode, sign: str = '+') -> Iterator[Term]:
-    """*node* as a flat sum, each term with the sign it is written under, a minus carried into a bracket."""
-    flip = {'+': '-', '-': '+'}
-    if isinstance(node, BinaryOperatorNode) and node.op in ('+', '-'):
-        yield from _signed_terms(node.left, sign)
-        yield from _signed_terms(node.right, sign if node.op == '+' else flip[sign])
-    elif isinstance(node, UnaryOperatorNode) and node.op == '-':
-        yield from _signed_terms(node.operand, flip[sign])
-    elif not (isinstance(node, NumberNode) and node.value == 0):
-        yield sign, node
 
 
 def _entry(block: object) -> dict[str, Any]:
@@ -258,17 +244,14 @@ def fragments(model: Model) -> dict[str, str]:
     for by_topic in model.shares.values():
         for name, term in by_topic.items():
             owned[name].add(('expressions', term))
-    terms = _objective_terms(model)
     homes = {model.home(hub) for hub in HUBS}
 
     written = {}
-    for name in sorted({*owned, *terms, *homes}):
+    for name in sorted({*owned, *homes}):
         mine = owned[name]
         adds = {hub: by_topic[name] for hub, by_topic in model.shares.items() if name in by_topic}
         homes_here = {hub for hub in HUBS if model.home(hub) == name}
-        read = set().union(
-            *(model.names_in(model.data[s][n]) for s, n in mine), *map(model.names_in, terms[name]), homes_here, adds
-        )
+        read = set().union(*(model.names_in(model.data[s][n]) for s, n in mine), homes_here, adds)
         given = {model.key(n) for n in read if model.key(n)[0] not in FRAME and model.key(n) not in mine}
         stated = {
             **{n: model.data[s][n]['dims'] for s, n in given if s in ('parameters', 'variables')},
@@ -277,21 +260,8 @@ def fragments(model: Model) -> dict[str, str]:
         frame_reads = read | set().union(*(model.names_in(dims) for dims in stated.values()))
         frame = {model.key(n) for n in frame_reads if model.key(n)[0] in FRAME}
         frame |= {model.key(n) for key in list(frame) for n in model.names_in(model.data[key[0]][key[1]])}
-        written[name] = _fragment(model, mine | frame, given, stated, terms[name], adds, homes_here)
+        written[name] = _fragment(model, mine | frame, given, stated, adds, homes_here)
     return written
-
-
-def _objective_terms(model: Model) -> dict[str, list[str]]:
-    """The objective's terms by topic, the operating cost and its tail with the risk rows."""
-    terms: dict[str, list[str]] = collections.defaultdict(list)
-    for sign, node in _signed_terms(parse_expression(model.data['objective']['expression'])):
-        names = model.names_in(str(node))
-        if 'CVaR_omega' in names:
-            owner = 'cost'
-        else:
-            owner = topic(next(n for n in sorted(names) if model.kind[n] == 'variables'))
-        terms[owner].append(str(node) if sign == '+' else f'-{operand(node)}')
-    return terms
 
 
 def _dumped(name: str, block: Mapping[str, object], indent: str = '  ') -> str:
@@ -318,14 +288,14 @@ def _fragment(
     included: set[Key],
     given: set[Key],
     stated: Mapping[str, list[str]],
-    terms: list[str],
     adds: Mapping[str, str],
     homes: set[str],
 ) -> str:
     """One fragment as YAML text, its sections and declarations in the order of the source file.
 
     A term carries the hub it adds to as ``adds_to:``. A hub the fragment is
-    home to is read under ``given:`` with its description.
+    home to is read under ``given:`` with its description, and the home of the
+    hub the objective reads writes the objective.
     """
     parts = [HEADER]
     hubs = {term: hub for hub, term in adds.items()}
@@ -341,11 +311,9 @@ def _fragment(
             parts.append(f'{section}:\n' + '\n'.join(blocks) + '\n')
         if section == 'variables' and given:
             parts.append('given:\n' + ''.join(_given(model, kind, given, stated, homes) for kind in GIVEN_KINDS))
-    if terms:
-        objective = model.data['objective']
-        said = f'  description: >-\n    {objective["description"]}\n' if 'CVaR_omega' in ''.join(terms) else ''
-        joined = '\n    + '.join(terms)
-        parts.append(f'objective:\n  sense: minimize\n{said}  expression: >-\n    {joined}\n')
+    objective = model.data['objective']
+    if objective['expression'] in homes:
+        parts.append(_dumped('objective', objective, indent='') + '\n')
     return '\n'.join(parts)
 
 
