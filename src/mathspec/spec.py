@@ -829,12 +829,12 @@ class Spec(_StrictBlock):
     #: What the file as a whole is, in the same plain prose a declaration's
     #: ``description:`` takes. The typeset document opens with it.
     description: str | None = None
+    #: What this file reads and does not build ([`GivenBlock`][]). Empty in a file that stands alone.
+    given: GivenBlock = GivenBlock()
     dimensions: dict[str, DimensionBlock] = {}
     relations: dict[str, RelationBlock] = {}
     parameters: dict[str, ParameterBlock] = {}
     variables: dict[str, VariableBlock] = {}
-    #: What this file reads and does not build ([`GivenBlock`][]). Empty in a file that stands alone.
-    given: GivenBlock = GivenBlock()
     constraints: dict[str, ConstraintBlock] = {}
     objective: ObjectiveBlock | None = None
     expressions: dict[str, ExpressionBlock] = {}
