@@ -20,16 +20,13 @@ itself as a term to a sum with `adds_to:`, and one fragment sets the objective.
 [PyPSA in 24 files](https://mathspec.readthedocs.io/en/latest/examples/pypsa/)
 is the PyPSA spec composed this way, and merges back to the one file.
 
-This release breaks two things:
-
-- A parameter value that is null or NaN is refused when the data is attached.
-  A coordinate with no value has no row: drop the row from the data. `inf` and
-  `-inf` stay values.
-- `dual(c)` is the rate at which the optimal objective rises with the right
-  side of `c`, for every comparator and under either sense. An equality now has
-  a sign, and the dual of a binding `<=` row under `minimize` is no longer
-  non-negative. A result that reads a dual under the old sign reads it the
-  other way.
+Nothing a 0.2.0 file or call does stops working. Two rules of the language
+are now stated exactly. A consumer that attaches data refuses a null or NaN
+parameter value: a coordinate with no value has no row, and `inf` and `-inf`
+are values ([#788](https://github.com/energy-models/mathspec/pull/788)). And
+`dual(c)` is the rate at which the optimal objective rises with the right side
+of `c`, for every comparator and under either sense, which is what engines
+return ([#751](https://github.com/energy-models/mathspec/pull/751)).
 
 The pull requests in this release:
 
