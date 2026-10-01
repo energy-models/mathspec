@@ -117,7 +117,7 @@ given:
     Process_maintenance_status: { dims: [scenario, snapshot, process] }
     Process_p_nom_ext: { dims: [process] }
   expressions:
-    scenario_opex: { dims: [scenario], term: Process_commitment_opex }
+    scenario_opex: { dims: [scenario] }
 
 expressions:
   Process_previous_status:
@@ -133,6 +133,7 @@ expressions:
       sum(sum(((Process_status * Process_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=process), over=snapshot)
       + sum(sum(Process_start_up * Process_start_up_cost, over=process), over=snapshot)
       + sum(sum(Process_shut_down * Process_shut_down_cost, over=process), over=snapshot)
+    adds_to: scenario_opex
 
 constraints:
   Process_com_p_lower:

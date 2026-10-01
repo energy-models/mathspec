@@ -59,9 +59,9 @@ def unbounded_notes(program: Program) -> list[Advice]:
 
     Returns:
         One note per variable that is unbounded on the side its objective term
-        improves toward and named by no constraint. A column the program reads
-        and does not declare, a given one or an empty sum, has its bounds
-        where it is built, so it gets none.
+        improves toward and named by no constraint. A given column, which the
+        program reads and does not declare, has its bounds where it is built,
+        so it gets none.
     """
     if program.objective is None:
         return []
