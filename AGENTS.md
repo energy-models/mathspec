@@ -43,7 +43,8 @@ To learn what the project _is_, read [docs/](docs/index.md), and
   deprecation cycle, `legacy_` path, or hand-written message for the old
   spelling. A test asserting the old behaviour is not a blocker; say in the PR
   where its coverage moved. A release that breaks a file or an import raises
-  the minor version, and its notes name the break.
+  the minor version, and its notes name the break. Every other release raises
+  the patch version, features included.
 - **Every `feat`, `fix`, `perf`, `refactor`, `docs` or `revert` PR adds its
   title under `## Upcoming version` in `CHANGELOG.md`**, with a link to the PR.
   The label `no changelog` opts one out; only the user sets it.
