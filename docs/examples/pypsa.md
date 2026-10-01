@@ -4880,7 +4880,7 @@ The rung joins `a` and `c` over `ab66` and `bc66`, a path in 2020. The line
 basis over all branches would hold the 2020 snapshots to the triangle's row
 with `ca66` absent. That row and the balance at `b` force the flow on `ab66`
 and `bc66` to zero, and PyPSA solves the network without those two lines in
-2020 to `43900.0` (#000).
+2020 to `43900.0` (#814).
 
 The run outages `ca66`. Its copies in 2020 monitor `ab66`, `bc66` and `ca66`.
 At `ca66` itself the monitored and the outaged flow are both absent, and
