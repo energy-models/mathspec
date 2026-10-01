@@ -52,11 +52,10 @@ from mathspec.resolution import (
     resolve_expression_text,
     resolve_where_text,
 )
-from mathspec.spec import empty_sums
 from mathspec.validation import emitted_name_errors, reference_errors
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Mapping
 
     from mathspec.program import Expression
     from mathspec.spec import AssumptionBlock, Spec
@@ -121,42 +120,13 @@ def lower(schema: Spec) -> Program:
         resolve_expression(body_ast, ns, context, errors, formals=formals)
 
     entries: dict[str, Named] = {}
-    empty = empty_sums(schema)
     for ename in schema.expressions:
-        if ename in empty:
-            continue
         node, refusals = ns.named_entry(ename)
         errors.extend(refusals)
         if node is not None:
             entries[ename] = node
 
-    terms: dict[str, Named] = {}
-    for gname, gdef in schema.given.expressions.items():
-        if gdef.term is None:
-            continue
-        context = f"Given expression '{gname}'"
-        if gdef.term not in schema.expressions:
-            errors.append(
-                f'{context}: its term {gdef.term!r} is no expression this file declares. A term is a named '
-                f"expression: declare it under 'expressions:', and write its name here. "
-                f'{did_you_mean(gdef.term, schema.expressions)}'
-            )
-            continue
-        term = resolve_expression_text(gdef.term, ns, context, errors, ceiling=2)
-        if term is None:
-            continue
-        assert isinstance(term, Named), 'a term is a name, and a name resolves to the entry it names'
-        terms[gname] = term
-    for gname, through in [(g, _loop(g, terms)) for g in terms]:
-        if through is None:
-            continue
-        via = f', through {" -> ".join(repr(name) for name in through)}' if through else ''
-        errors.append(
-            f"Given expression '{gname}': its term {schema.given.expressions[gname].term!r} reads '{gname}', the "
-            f'sum the term adds to{via}, so the sum would define itself. A term is what this file puts in: write '
-            f'it in what this file declares.'
-        )
-        del terms[gname]
+    terms = _terms(entries, schema, ns, errors)
 
     variables = {}
     for vname, vdef in schema.variables.items():
@@ -212,7 +182,7 @@ def lower(schema: Spec) -> Program:
     if objective is not None:
         roots.append(objective.expression)
     roots.extend(link for links in curves.values() for link in links)
-    roots.extend(terms.values())
+    roots.extend(terms)
     in_math = frozenset(node.name for node in walk(*roots) if isinstance(node, Named))
 
     piecewise = {}
@@ -256,6 +226,7 @@ def lower(schema: Spec) -> Program:
                 _frame_of(name, entry, schema),
                 in_math=name in in_math,
                 description=schema.expressions[name].description,
+                adds_to=schema.expressions[name].adds_to,
             )
             for name, entry in entries.items()
         },
@@ -271,11 +242,7 @@ def lower(schema: Spec) -> Program:
                 name: GivenDeclaration(tuple(g.dims), g.description) for name, g in schema.given.constraints.items()
             },
             expressions={
-                **{
-                    name: GivenDeclaration(tuple(g.dims), g.description, term=terms.get(name))
-                    for name, g in schema.given.expressions.items()
-                },
-                **{name: GivenDeclaration(tuple(e.dims or ()), e.description, empty=True) for name, e in empty.items()},
+                name: GivenDeclaration(tuple(g.dims), g.description) for name, g in schema.given.expressions.items()
             },
         ),
         description=schema.description,
@@ -286,23 +253,81 @@ def lower(schema: Spec) -> Program:
     return program
 
 
-def _loop(target: str, terms: Mapping[str, Named]) -> list[str] | None:
-    """The sums *target*'s term reads *target* through, by this file's terms, or ``None`` where it does not read it.
+def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str]) -> list[Named]:
+    """Every entry with ``adds_to:`` that loads as a term, with a refusal in *errors* for each other.
 
-    Terms that read each other's sums in one file define each sum by itself
-    whatever the other files add, so the file decides it alone. ``[]`` is a
-    term that reads its own sum.
+    A term that reads its own sum, directly or through the sums the file's
+    other terms add to, defines that sum by itself whatever the other files
+    add, so the one file decides it.
+    """
+    resolved = {
+        name: (target, entry)
+        for name in entries
+        if (target := schema.expressions[name].adds_to) is not None
+        and (entry := _term(name, target, schema, ns, errors)) is not None
+    }
+    sums: dict[str, list[Named]] = {}
+    for target, entry in resolved.values():
+        sums.setdefault(target, []).append(entry)
+    terms = []
+    for name, (target, entry) in resolved.items():
+        through = _loop(target, entry, sums)
+        if through is None:
+            terms.append(entry)
+            continue
+        via = f', through {" -> ".join(repr(sum_) for sum_ in through)}' if through else ''
+        errors.append(
+            f"Named expression '{name}': it reads {target!r}, the sum it adds to{via}, so the sum would define "
+            f'itself. A term is what this file puts in: write it in what this file declares.'
+        )
+    return terms
+
+
+def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]) -> Named | None:
+    """Named expression *name* as the term it writes into a given expression of its file, or ``None``.
+
+    The given entry is what makes a misspelt target a refusal in the file that
+    wrote it: a term lands only on a name its own file reads. The term is
+    resolved as a use of its name, so it is held to the degree the math that
+    reads the sum admits.
+    """
+    context = f"Named expression '{name}'"
+    if target in schema.expressions:
+        errors.append(
+            f'{context}: it adds to {target!r}, which this file defines. A file writes its own body in one '
+            f"place, so a term fills only a name read under 'given: expressions:': write the term into the body of "
+            f'{target!r}, or read {target!r} there and add its body as a term of its own.'
+        )
+        return None
+    if target not in schema.given.expressions:
+        errors.append(
+            f"{context}: it adds to {target!r}, which this file does not read under 'given: expressions:'. "
+            f'A term writes into a name this file reads: declare the name there over its frame, or fix '
+            f'the spelling. {did_you_mean(target, schema.given.expressions)}'
+        )
+        return None
+    entry = resolve_expression_text(name, ns, context, errors, ceiling=2)
+    if entry is None:
+        return None
+    assert isinstance(entry, Named), 'a term is a name, and a name resolves to the entry it names'
+    return entry
+
+
+def _loop(target: str, entry: Named, sums: Mapping[str, list[Named]]) -> list[str] | None:
+    """The sums *entry* reads *target* through, by the terms in *sums*, or ``None`` where it does not read it.
+
+    ``[]`` is a term that reads its own sum.
     """
     seen = {target}
-    stack: list[tuple[str, list[str]]] = [(target, [])]
+    stack: list[tuple[list[str], frozenset[str]]] = [([], variables_of(entry))]
     while stack:
-        name, path = stack.pop()
-        for read in sorted(variables_of(terms[name])):
+        path, reads = stack.pop()
+        for read in sorted(reads):
             if read == target:
                 return path
-            if read in terms and read not in seen:
+            if read in sums and read not in seen:
                 seen.add(read)
-                stack.append((read, [*path, read]))
+                stack.append(([*path, read], variables_of(*sums[read])))
     return None
 
 

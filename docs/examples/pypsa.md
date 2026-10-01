@@ -5290,6 +5290,15 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathit{StorageUnit\_opex}`$ | `StorageUnit_opex` over $`\Xi`$ |
 | $`\mathit{Store\_opex}`$ | `Store_opex` over $`\Xi`$ |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$ — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:414-429`) |
+| $`\mathit{Generator\_capex}`$ | `Generator_capex` (scalar) |
+| $`\mathit{Link\_capex}`$ | `Link_capex` (scalar) |
+| $`\mathit{StorageUnit\_capex}`$ | `StorageUnit_capex` (scalar) |
+| $`\mathit{Store\_capex}`$ | `Store_capex` (scalar) |
+| $`\mathit{Line\_capex}`$ | `Line_capex` (scalar) |
+| $`\mathit{Process\_capex}`$ | `Process_capex` (scalar) |
+| $`\mathit{Transformer\_capex}`$ | `Transformer_capex` (scalar) |
+| $`\mathit{risk\_weighted\_opex}`$ | `risk_weighted_opex` (scalar) |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar) — what the system costs — capacity once per active period at its expected cost over the scenarios, operation in expectation over the scenarios, and a share of it at the tail |
 | $`\mathit{Generator\_additions}`$ | `Generator_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Line\_additions}`$ | `Line_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Link\_additions}`$ | `Link_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
@@ -5334,23 +5343,11 @@ $`\lvert \mathcal{T} \rvert`$ denotes the size of the set being counted along, a
 ```yaml
 objective:
   sense: minimize
-  description: >-
-    capacity once per active period at its expected cost over the scenarios, operation in
-    expectation over the scenarios, and a share of it at the tail
-  expression: >-
-    sum(scenario_weight * Generator_p_nom_ext * Generator_capital_cost * Generator_capital_weight)
-    + sum(scenario_weight * Link_p_nom_ext * Link_capital_cost * Link_capital_weight)
-    + sum(scenario_weight * StorageUnit_p_nom_ext * StorageUnit_capital_cost * StorageUnit_capital_weight)
-    + sum(scenario_weight * Store_e_nom_ext * Store_capital_cost * Store_capital_weight)
-    + sum(scenario_weight * Line_s_nom_ext * Line_capital_cost * Line_capital_weight)
-    + sum(scenario_weight * Process_p_nom_ext * Process_capital_cost * Process_capital_weight)
-    + sum(scenario_weight * Transformer_s_nom_ext * Transformer_capital_cost * Transformer_capital_weight)
-    + (1 - CVaR_omega) * sum(scenario_weight * scenario_opex, over=scenario)
-    + CVaR_omega * CVaR
+  expression: total_cost
 ```
 
 ```math
-\min \sum_{\xi \in \Xi,\ g \in \mathcal{G}} \pi_{\xi} \cdot P_{g} \cdot \mathrm{c}^{\mathrm{cap}}_{\xi,g} \cdot \mathrm{W}_{g} + \sum_{\xi \in \Xi,\ l \in \mathcal{L}} \pi_{\xi} \cdot F_{l} \cdot \mathrm{c}^{\mathrm{cap},f}_{\xi,l} \cdot \mathrm{W}^{f}_{l} + \sum_{\xi \in \Xi,\ s \in \mathcal{S}} \pi_{\xi} \cdot H_{s} \cdot \mathrm{c}^{\mathrm{cap},h}_{\xi,s} \cdot \mathrm{W}^{h}_{s} + \sum_{\xi \in \Xi,\ v \in \mathcal{V}} \pi_{\xi} \cdot E_{v} \cdot \mathrm{c}^{\mathrm{cap},e}_{\xi,v} \cdot \mathrm{W}^{e}_{v} + \sum_{\xi \in \Xi,\ k \in \mathcal{K}} \pi_{\xi} \cdot S_{k} \cdot \mathrm{c}^{\mathrm{cap},s}_{\xi,k} \cdot \mathrm{W}^{s}_{k} + \sum_{\xi \in \Xi,\ j \in \mathcal{J}} \pi_{\xi} \cdot Z_{j} \cdot \mathrm{c}^{\mathrm{cap},z}_{\xi,j} \cdot \mathrm{W}^{z}_{j} + \sum_{\xi \in \Xi,\ m \in \mathcal{M}} \pi_{\xi} \cdot \Sigma_{m} \cdot \mathrm{c}^{\mathrm{cap},\sigma}_{\xi,m} \cdot \mathrm{W}^{\sigma}_{m} + \left( 1 - \omega \right) \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi} \right) + \omega \cdot CVaR
+\min \mathit{total\_cost}
 ```
 
 ### `Generator-fix-p-lower`
@@ -10525,6 +10522,118 @@ scenario_opex:
 
 ```math
 \mathit{scenario\_opex}_{\xi} = \mathit{Generator\_opex}_{\xi} + \mathit{Generator\_commitment\_opex}_{\xi} + \mathit{Link\_opex}_{\xi} + \mathit{Link\_commitment\_opex}_{\xi} + \mathit{Process\_opex}_{\xi} + \mathit{Process\_commitment\_opex}_{\xi} + \mathit{StorageUnit\_opex}_{\xi} + \mathit{Store\_opex}_{\xi} \qquad \forall\, \xi \in \Xi
+```
+
+### `Generator_capex`
+
+```yaml
+Generator_capex:
+  expression: sum(scenario_weight * Generator_p_nom_ext * Generator_capital_cost * Generator_capital_weight)
+```
+
+```math
+\mathit{Generator\_capex} = \sum_{\xi \in \Xi,\ g \in \mathcal{G}} \pi_{\xi} \cdot P_{g} \cdot \mathrm{c}^{\mathrm{cap}}_{\xi,g} \cdot \mathrm{W}_{g}
+```
+
+### `Link_capex`
+
+```yaml
+Link_capex:
+  expression: sum(scenario_weight * Link_p_nom_ext * Link_capital_cost * Link_capital_weight)
+```
+
+```math
+\mathit{Link\_capex} = \sum_{\xi \in \Xi,\ l \in \mathcal{L}} \pi_{\xi} \cdot F_{l} \cdot \mathrm{c}^{\mathrm{cap},f}_{\xi,l} \cdot \mathrm{W}^{f}_{l}
+```
+
+### `StorageUnit_capex`
+
+```yaml
+StorageUnit_capex:
+  expression: sum(scenario_weight * StorageUnit_p_nom_ext * StorageUnit_capital_cost * StorageUnit_capital_weight)
+```
+
+```math
+\mathit{StorageUnit\_capex} = \sum_{\xi \in \Xi,\ s \in \mathcal{S}} \pi_{\xi} \cdot H_{s} \cdot \mathrm{c}^{\mathrm{cap},h}_{\xi,s} \cdot \mathrm{W}^{h}_{s}
+```
+
+### `Store_capex`
+
+```yaml
+Store_capex:
+  expression: sum(scenario_weight * Store_e_nom_ext * Store_capital_cost * Store_capital_weight)
+```
+
+```math
+\mathit{Store\_capex} = \sum_{\xi \in \Xi,\ v \in \mathcal{V}} \pi_{\xi} \cdot E_{v} \cdot \mathrm{c}^{\mathrm{cap},e}_{\xi,v} \cdot \mathrm{W}^{e}_{v}
+```
+
+### `Line_capex`
+
+```yaml
+Line_capex:
+  expression: sum(scenario_weight * Line_s_nom_ext * Line_capital_cost * Line_capital_weight)
+```
+
+```math
+\mathit{Line\_capex} = \sum_{\xi \in \Xi,\ k \in \mathcal{K}} \pi_{\xi} \cdot S_{k} \cdot \mathrm{c}^{\mathrm{cap},s}_{\xi,k} \cdot \mathrm{W}^{s}_{k}
+```
+
+### `Process_capex`
+
+```yaml
+Process_capex:
+  expression: sum(scenario_weight * Process_p_nom_ext * Process_capital_cost * Process_capital_weight)
+```
+
+```math
+\mathit{Process\_capex} = \sum_{\xi \in \Xi,\ j \in \mathcal{J}} \pi_{\xi} \cdot Z_{j} \cdot \mathrm{c}^{\mathrm{cap},z}_{\xi,j} \cdot \mathrm{W}^{z}_{j}
+```
+
+### `Transformer_capex`
+
+```yaml
+Transformer_capex:
+  expression: sum(scenario_weight * Transformer_s_nom_ext * Transformer_capital_cost * Transformer_capital_weight)
+```
+
+```math
+\mathit{Transformer\_capex} = \sum_{\xi \in \Xi,\ m \in \mathcal{M}} \pi_{\xi} \cdot \Sigma_{m} \cdot \mathrm{c}^{\mathrm{cap},\sigma}_{\xi,m} \cdot \mathrm{W}^{\sigma}_{m}
+```
+
+### `risk_weighted_opex`
+
+```yaml
+risk_weighted_opex:
+  expression: (1 - CVaR_omega) * sum(scenario_weight * scenario_opex, over=scenario) + CVaR_omega * CVaR
+```
+
+```math
+\mathit{risk\_weighted\_opex} = \left( 1 - \omega \right) \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi} \right) + \omega \cdot CVaR
+```
+
+### `total_cost`
+
+```yaml
+total_cost:
+  dims: []
+  expression: >-
+    Generator_capex
+    + Link_capex
+    + StorageUnit_capex
+    + Store_capex
+    + Line_capex
+    + Process_capex
+    + Transformer_capex
+    + risk_weighted_opex
+  description: >-
+    what the system costs — capacity once per active period at its
+    expected cost over the scenarios, operation in expectation over the
+    scenarios, and a share of it at the tail
+```
+
+```math
+\mathit{total\_cost} = \mathit{Generator\_capex} + \mathit{Link\_capex} + \mathit{StorageUnit\_capex} + \mathit{Store\_capex} + \mathit{Line\_capex} + \mathit{Process\_capex} + \mathit{Transformer\_capex} + \mathit{risk\_weighted\_opex}
 ```
 
 ### `Generator_additions`
