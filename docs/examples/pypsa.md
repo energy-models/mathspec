@@ -211,7 +211,7 @@ def build():
 | [`{c}-ext-p_nom-lower/upper`](#generator-ext-p_nom-lower) | done |                                        |
 | [`{c}-p_nom_set`](#generator-p_nom_set) | done |                                                      |
 | [`Generator-e_sum_min/max`](#generator-e_sum_min) | done |                                            |
-| [capital cost](#objective)       | done   | `periodized_cost` is an annuity, data prep  |
+| [capital cost](#objective)       | done   | `periodized_cost` is an annuity: a named expression for a generator, data prep for the other components |
 
 <!-- reference:rung_03_expansion:begin -->
 > ✔ `pypsa 1.3.0` solves this rung's network at objective `7633.908502024292`, 184 rows.
@@ -424,7 +424,7 @@ each type is three blocks by sense.
 
 | PyPSA type                            | status      | note                                              |
 | ------------------------------------- | ----------- | ------------------------------------------------- |
-| [`primary_energy`](#primary_energy)   | split       | a block per sense — sense as data is beyond #70; carrier weights are prep; one period in rung 35; per scenario in rung 40 |
+| [`primary_energy`](#primary_energy)   | split       | a block per sense — sense as data is beyond #70; carrier weights are prep, except a generator's, which reads the carriers table; one period in rung 35; per scenario in rung 40 |
 | [`primary_energy`](#primary_energy) with a generator efficiency per snapshot | done | rung 60 |
 | [`operational_limit`](#operational_limit) | split   | a block per sense; one period in rung 35; per scenario in rung 40 |
 | [`transmission_volume_expansion_limit`](#transmission_volume_expansion_limit) | split | a block per sense; membership from PyPSA's carrier string is prep; per scenario in rung 40 |
@@ -685,10 +685,10 @@ def build():
 | --------------------------------------------- | ------ | ---------------------------------------------------------- |
 | [`{c}-n_mod`, `{c}-p_nom_modularity`](#generator-p_nom_modularity) | done |                                       |
 | [`{c}-*-p_nom-variable-upper`](#generator-status-p_nom-variable-upper) | done | a modular unit is on only where a module is built |
-| [`{c}-*-p-fixed-upper`, modular](#generator-status-p-fixed-upper) | done | the cap is the build's whole count of modules, `p_nom / p_nom_mod` in data prep, see X1; rung 8's `array` fixes one (#123) |
+| [`{c}-*-p-fixed-upper`, modular](#generator-status-p-fixed-upper) | done | the cap is the build's whole count of modules, `p_nom / p_nom_mod`, a named expression for a generator and data prep for a link or a process, see X1; rung 8's `array` fixes one (#123) |
 | [`{c}-com-mod-p-lower/upper`](#generator-com-mod-p-lower) | done | one module's share, times the status — a fixed build too, beside its ordinary `com-p-*` rows |
 | [`{c}-com-ext-p-*` (big-M)](#generator-com-ext-p-upper-cap) | done | a cap row beside a big-M row; `M` is the build cap at full availability, data prep |
-| [`{c}-com-ext-p-lower-nonneg`](#generator-com-ext-p-lower-nonneg) | done | `(p_min_pu >= 0).all()` is prep        |
+| [`{c}-com-ext-p-lower-nonneg`](#generator-com-ext-p-lower-nonneg) | done | `(p_min_pu >= 0).all()` is a `count()` in a generator's `where:`, and prep for a link or a process |
 | [`{c}-p-ramp_limit_*-bigM`](#generator-p-ramp_limit_up-run-bigm) | done | run and start rows up, run and shut rows down; the output carried in is a cased quantity, so each is one block. A modular build takes the ordinary rows against one module instead, rung 27 |
 
 <!-- reference:rung_08_modular_big_m:begin -->
@@ -1380,13 +1380,16 @@ def build():
 `n.optimize(multi_investment_periods=True)`. A snapshot belongs to an
 investment period. An asset stands in the periods its build year and lifetime
 span. Capacity is paid once per period the asset stands in, and each period
-carries a weight. A carrier may grow only so much per period. Which snapshots
-an asset is active in is data prep, because a `where` reaches only the frame's
-own dimensions.
+carries a weight. A carrier may grow only so much per period. A generator
+states the periods it stands in from its `active`, `build_year` and
+`lifetime`, against `period_year`, a copy of the period labels. Each `where:`
+writes that test out, because a fragment under `examples/pypsa/` cannot read a
+named expression of a sibling in a `where:`. Which snapshots another asset is
+active in is data prep.
 
 | PyPSA | status | note |
 | --- | --- | --- |
-| [`Generator-p`](#variable-domains) | done | where the generator stands in the snapshot's period — `active`, data prep |
+| [`Generator-p`](#variable-domains) | done | where the generator stands in the snapshot's period — `active`, `build_year` and `lifetime`, written out in the `where:` |
 | [`Generator-fix-p-*`, `-ext-p-*`, `-ext-p_nom-*`](#generator-fix-p-lower) | done | rungs 1 and 3, masked by `active` |
 | [`Carrier-growth_limit`](#carrier-growth_limit) | done | every extendable component of the carrier, counted in the first period a build stands in; `edge=0` at the first period |
 | [`Carrier-growth_limit`](#carrier-growth_limit) with a negative `max_relative_growth` | done | rung 39 |
@@ -4888,13 +4891,13 @@ concatenation of the regime blocks, `p0`/`p1` derived from `Link-p`.
 ## The file
 
 <!-- gallery:begin -->
-A plain `n.optimize()`, and its multi-period and stochastic classes, in one file. Every second-stage quantity spans a `scenario` (a future dispatch is chosen in) and every asset stands in the investment `period`s its build year and lifetime span. A parameter spans `scenario` exactly when PyPSA reads it per scenario. Capacity is chosen once, before the future is known, and paid once per active period at its cost in expectation over the scenarios; operation is the expectation over the scenarios' weights, with a share priced at the tail through the CVaR rows, which stand only where that share is positive. A plain run feeds one scenario, one period, all-active masks and unit weights, and the model collapses to the standard one. A security-constrained run copies each branch flow limit once per outage in an `outage` set that a plain run leaves empty. Which snapshots an asset is active in, a scenario's weight, and the outage factors are data prep.
+A plain `n.optimize()`, and its multi-period and stochastic classes, in one file. Every second-stage quantity spans a `scenario` (a future dispatch is chosen in) and every asset stands in the investment `period`s its build year and lifetime span. A parameter spans `scenario` exactly when PyPSA reads it per scenario. Capacity is chosen once, before the future is known, and paid once per active period at its cost in expectation over the scenarios; operation is the expectation over the scenarios' weights, with a share priced at the tail through the CVaR rows, which stand only where that share is positive. A plain run feeds one scenario, one period, all-active masks and unit weights, and the model collapses to the standard one. A security-constrained run copies each branch flow limit once per outage in an `outage` set that a plain run leaves empty. A generator states the periods it stands in from its own `active`, `build_year` and `lifetime`. Which snapshots another asset is active in, a scenario's weight, and the outage factors are data prep.
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T},\ \mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T},\ \mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$ — the futures dispatch is chosen in, each with a weight |
+| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{GlobalConstraint\_attribute}: \Xi \times \mathcal{I} \to \mathcal{Q},\ \mathrm{GlobalConstraint\_carrier}: \Xi \times \mathcal{I} \to \mathcal{I},\ \mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T},\ \mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T},\ \mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$ — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y},\ \mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T},\ \mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T},\ \mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$ — dispatch periods |
 | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Generator\_bus}: \mathcal{G} \to \mathcal{N},\ \mathrm{Link\_bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{Link\_output\_bus}: \mathcal{O} \to \mathcal{N},\ \mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N},\ \mathrm{Load\_bus}: \mathcal{D} \to \mathcal{N},\ \mathrm{StorageUnit\_bus}: \mathcal{S} \to \mathcal{N},\ \mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N},\ \mathrm{Store\_bus}: \mathcal{V} \to \mathcal{N},\ \mathrm{Transformer\_bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{Transformer\_bus1}: \mathcal{M} \to \mathcal{N}`$ — network nodes |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_carrier}: \mathcal{G} \to \mathcal{I},\ \mathrm{Generator\_bus}: \mathcal{G} \to \mathcal{N},\ \mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$ — generating units, each on one bus |
@@ -4910,43 +4913,43 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep |
 | $`\mathcal{K}^{\mathrm{out}}`$ | index $`\kappa`$ — `outage` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K},\ \mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$ — the passive branches a security-constrained run takes out one at a time — PyPSA's `branch_outages`, each a line or a transformer; none on a plain run |
 | $`\mathcal{B}`$ | index $`b`$ — `segment` — the cuts a passive branch's loss curve is held above — PyPSA's tangents, as many as its `segments` count, or its secants, as many as its tolerance loop places; none in a lossless run |
-| $`\mathcal{I}`$ | index $`i`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
+| $`\mathcal{I}`$ | index $`i`$ — `global_constraint` with $`\mathrm{GlobalConstraint\_attribute}: \Xi \times \mathcal{I} \to \mathcal{Q},\ \mathrm{GlobalConstraint\_carrier}: \Xi \times \mathcal{I} \to \mathcal{I}`$ — PyPSA's `GlobalConstraint` rows, one label per declared limit |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
-| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Generator\_carrier}: \mathcal{G} \to \mathcal{I},\ \mathrm{Link\_carrier}: \mathcal{L} \to \mathcal{I},\ \mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{StorageUnit\_carrier}: \mathcal{S} \to \mathcal{I},\ \mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I},\ \mathrm{Store\_carrier}: \mathcal{V} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
+| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Generator\_carrier}: \mathcal{G} \to \mathcal{I},\ \mathrm{GlobalConstraint\_carrier}: \Xi \times \mathcal{I} \to \mathcal{I},\ \mathrm{Link\_carrier}: \mathcal{L} \to \mathcal{I},\ \mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{StorageUnit\_carrier}: \mathcal{S} \to \mathcal{I},\ \mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I},\ \mathrm{Store\_carrier}: \mathcal{V} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
+| $`\mathcal{Q}`$ | index $`q`$ — `carrier_attribute` with $`\mathrm{GlobalConstraint\_attribute}: \Xi \times \mathcal{I} \to \mathcal{Q}`$ — the numeric columns of PyPSA's carriers table, such as `co2_emissions` |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.objective` — hours a snapshot stands for in the cost |
-| $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\Xi \times \mathcal{G}`$ — nominal power |
-| $`\mathrm{ext}`$ | `Generator_p_nom_extendable` over $`\mathcal{G}`$ — whether the nominal power is a decision |
-| $`\underline{\mathrm{p}}`$ | `Generator_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — least output, per unit of nominal power |
-| $`\overline{\mathrm{p}}`$ | `Generator_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — most output, per unit of nominal power — an availability profile |
-| $`\mathrm{c}`$ | `Generator_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one unit of output |
-| $`\mathrm{c}^{(2)}`$ | `Generator_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of the square of one unit of output |
+| $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\Xi \times \mathcal{G}`$ — nominal power — PyPSA's `p_nom`, in MW |
+| $`\mathrm{ext}`$ | `Generator_p_nom_extendable` over $`\mathcal{G}`$ — whether the nominal power is a decision — PyPSA's `p_nom_extendable` |
+| $`\underline{\mathrm{p}}`$ | `Generator_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — least output, per unit of nominal power — PyPSA's `p_min_pu` |
+| $`\overline{\mathrm{p}}`$ | `Generator_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — most output, per unit of nominal power — an availability profile, PyPSA's `p_max_pu` |
+| $`\mathrm{c}`$ | `Generator_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one unit of output — PyPSA's `marginal_cost`, in currency/MWh |
+| $`\mathrm{c}^{(2)}`$ | `Generator_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of the square of one unit of output — PyPSA's `marginal_cost_quadratic`, in currency/MWh per MW of output |
 | $`\mathrm{sgn}`$ | `Generator_sign` over $`\mathcal{G}`$ — the sign output enters its bus's balance with — PyPSA's `sign`, `1` unless given, `-1` for a unit that draws power. PyPSA refuses one that differs by scenario (`consistency.py:1187`) |
-| $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$ — whether output is gated by an on/off status decision |
+| $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$ — whether output is gated by an on/off status decision — PyPSA's `committable` |
 | $`\mathrm{ru}`$ | `Generator_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — most a generator may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
 | $`\mathrm{rd}`$ | `Generator_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — most a generator may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
 | $`\mathrm{ru}^{\mathrm{up}}`$ | `Generator_ramp_limit_start_up` over $`\Xi \times \mathcal{G}`$ — most output in the snapshot a unit starts, per unit of nominal power |
 | $`\mathrm{rd}^{\mathrm{dn}}`$ | `Generator_ramp_limit_shut_down` over $`\Xi \times \mathcal{G}`$ — most output in the snapshot before a unit stops, per unit of nominal power |
-| $`\mathrm{UT}`$ | `Generator_min_up_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays on once started |
-| $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays off once stopped |
-| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$ — one where the unit was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
-| $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\Xi \times \mathcal{G}`$ — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot |
+| $`\mathrm{UT}`$ | `Generator_min_up_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays on once started — PyPSA's `min_up_time`, in snapshots |
+| $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays off once stopped — PyPSA's `min_down_time`, in snapshots |
+| $`\mathrm{UT}^{0}`$ | `Generator_up_time_before` over $`\Xi \times \mathcal{G}`$ — snapshots a unit was on before the first snapshot — PyPSA's `up_time_before`, in snapshots |
+| $`\mathrm{DT}^{0}`$ | `Generator_down_time_before` over $`\Xi \times \mathcal{G}`$ — snapshots a unit was off before the first snapshot — PyPSA's `down_time_before`, in snapshots |
+| $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\Xi \times \mathcal{G}`$ — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot; in MW |
 | $`\mathrm{hold}`$ | `Generator_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true while the up time a unit brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
 | $`\mathrm{rest}`$ | `Generator_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true while the down time a unit brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
-| $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{G}`$ — cost of one start |
-| $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{G}`$ — cost of one stop |
-| $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
-| $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$ — the module size a build comes in whole numbers of; no value means the build is continuous |
-| $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\Xi \times \mathcal{G}`$ — how many whole modules a committable build has in place: `Generator_p_nom / Generator_p_nom_mod` where a fixed build is modular, one where it is not, data prep. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
+| $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{G}`$ — cost of one start — PyPSA's `start_up_cost`, in currency |
+| $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{G}`$ — cost of one stop — PyPSA's `shut_down_cost`, in currency |
+| $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on — PyPSA's `stand_by_cost`, in currency/h |
+| $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$ — the module size a build comes in whole numbers of; no value means the build is continuous — PyPSA's `p_nom_mod`, in MW |
 | $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$ — a bound safely above any feasible output — the build cap at full availability, data prep |
-| $`\mathrm{nonneg}`$ | `Generator_p_min_pu_nonneg` over $`\mathcal{G}`$ — true where none of the generator's own minimums-per-unit is negative — PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and scenario, data prep |
 | $`\mathrm{mnt}`$ | `Generator_maintainable` over $`\mathcal{G}`$ — whether a generator must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
-| $`\gamma`$ | `Generator_maintenance_pu` over $`\Xi \times \mathcal{G}`$ — the share of the build a maintenance event takes off |
-| $`\mathrm{n}^{\mathrm{mnt}}`$ | `Generator_maintenance_events` over $`\Xi \times \mathcal{G}`$ — how many maintenance events the horizon holds |
+| $`\gamma`$ | `Generator_maintenance_pu` over $`\Xi \times \mathcal{G}`$ — the share of the build a maintenance event takes off — PyPSA's `maintenance_pu`, per unit |
+| $`\mathrm{n}^{\mathrm{mnt}}`$ | `Generator_maintenance_events` over $`\Xi \times \mathcal{G}`$ — how many maintenance events the horizon holds — PyPSA's `maintenance_events` |
 | $`\tau^{\mathrm{mnt}}`$ | `Generator_maintenance_duration` over $`\Xi \times \mathcal{G}`$ — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the generator is not maintainable. No row reads it: data prep turns it into `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the assumptions hold it to the horizon |
 | $`\mathrm{blk}`$ | `Generator_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the generator does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 | $`\mathrm{ru}^{f}`$ | `Link_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — most a link may raise its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
@@ -5026,21 +5029,20 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\alpha`$ | `CVaR_alpha` (scalar) — PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.objective` — what a period's cost weighs |
 | $`\mathrm{w}^{\mathrm{yr}}`$ | `period_weight_years` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.years` — what a period's energy weighs in a `primary_energy` or `operational_limit` row; PyPSA reads it only under `multi_investment_periods`, so data prep feeds one otherwise |
-| $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{T} \times \mathcal{G}`$ — whether a generator stands in a snapshot's period — PyPSA's `active`, from build year and lifetime, data prep |
+| $`\mathrm{multi}`$ | `multi_investment_periods` (scalar) — whether the run is PyPSA's `optimize(multi_investment_periods=True)`; without it PyPSA reads no build year and no lifetime |
+| $`\mathrm{yr}`$ | `period_year` over $`\mathcal{Y}`$ — the year an investment period stands for — a copy of the `period` labels, because a dimension label is not a value an expression can read |
 | $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{T} \times \mathcal{L}`$ — whether a link stands in a snapshot's period — PyPSA's `active`, data prep |
 | $`\mathrm{on}^{h}`$ | `StorageUnit_active` over $`\mathcal{T} \times \mathcal{S}`$ — whether a storage unit stands in a snapshot's period — PyPSA's `active`, data prep |
 | $`\mathrm{on}^{e}`$ | `Store_active` over $`\mathcal{T} \times \mathcal{V}`$ — whether a store stands in a snapshot's period — PyPSA's `active`, data prep |
 | $`\mathrm{on}^{s}`$ | `Line_active` over $`\mathcal{T} \times \mathcal{K}`$ — whether a line stands in a snapshot's period — PyPSA's `active`, data prep |
 | $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{T} \times \mathcal{J}`$ — whether a process stands in a snapshot's period — PyPSA's `active`, data prep |
 | $`\mathrm{on}^{\sigma}`$ | `Transformer_active` over $`\mathcal{T} \times \mathcal{M}`$ — whether a transformer stands in a snapshot's period — PyPSA's `active`, data prep |
-| $`\mathrm{W}`$ | `Generator_capital_weight` over $`\mathcal{G}`$ — the sum of period weights a generator stands in — PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{W}^{f}`$ | `Link_capital_weight` over $`\mathcal{L}`$ — the sum of period weights a link stands in — PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{W}^{h}`$ | `StorageUnit_capital_weight` over $`\mathcal{S}`$ — the sum of period weights a storage unit stands in — PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{W}^{e}`$ | `Store_capital_weight` over $`\mathcal{V}`$ — the sum of period weights a store stands in — PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{W}^{s}`$ | `Line_capital_weight` over $`\mathcal{K}`$ — the sum of period weights a line stands in — PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{W}^{z}`$ | `Process_capital_weight` over $`\mathcal{J}`$ — the sum of period weights a process stands in — PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{W}^{\sigma}`$ | `Transformer_capital_weight` over $`\mathcal{M}`$ — the sum of period weights a transformer stands in — PyPSA's `active * period_weighting`, summed, data prep |
-| $`\mathrm{new}`$ | `Generator_first_active` over $`\mathcal{Y} \times \mathcal{G}`$ — one in the first period a generator stands in, zero elsewhere, data prep. PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a generator that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
 | $`\mathrm{new}^{f}`$ | `Link_first_active` over $`\mathcal{Y} \times \mathcal{L}`$ — one in the first period a link stands in, zero elsewhere, data prep. PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a link that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
 | $`\mathrm{new}^{h}`$ | `StorageUnit_first_active` over $`\mathcal{Y} \times \mathcal{S}`$ — one in the first period a storage unit stands in, zero elsewhere, data prep. PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a storage unit that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
 | $`\mathrm{new}^{e}`$ | `Store_first_active` over $`\mathcal{Y} \times \mathcal{V}`$ — one in the first period a store stands in, zero elsewhere, data prep. PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a store that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
@@ -5048,16 +5050,28 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{new}^{z}`$ | `Process_first_active` over $`\mathcal{Y} \times \mathcal{J}`$ — one in the first period a process stands in, zero elsewhere, data prep. PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a process that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
 | $`\overline{\Delta}`$ | `Carrier_max_growth` over $`\mathcal{I}`$ — most capacity of a carrier that may be added in a period; no value means no limit. The least over the scenarios, as PyPSA takes it (`global_constraints.py:226-230`), data prep. PyPSA reads it only under `multi_investment_periods` (`global_constraints.py:219-220`), so data prep feeds no value otherwise |
 | $`\mathrm{r}`$ | `Carrier_max_relative_growth` over $`\mathcal{I}`$ — share of the previous period's additions that may be added on top — the least over the scenarios, as PyPSA takes it, data prep |
-| $`\mathrm{p}^{\mathrm{set}}`$ | `Generator_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — a given output schedule; a generator without one has no row here |
+| $`\mathrm{e}`$ | `Carrier_attribute_value` over $`\Xi \times \mathcal{I} \times \mathcal{Q}`$ — a carrier's value in one column of PyPSA's carriers table, such as its `co2_emissions` in t/MWh of primary energy — the table read long, one row per carrier and column |
+| $`\mathrm{p}^{\mathrm{set}}`$ | `Generator_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — a given output schedule; a generator without one has no row here — PyPSA's `p_set`, in MW |
 | $`\mathrm{f}^{\mathrm{set}}`$ | `Link_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — a given flow schedule; a link without one has no row here |
 | $`\mathrm{w}^{\mathrm{sto}}`$ | `snapshot_weightings_stores` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.stores` — hours a snapshot stands for in a storage balance |
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.generators` — hours a snapshot stands for in an energy total |
-| $`\underline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_min` over $`\Xi \times \mathcal{G}`$ — least nominal power an extendable generator may be built at |
-| $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\Xi \times \mathcal{G}`$ — most nominal power an extendable generator may be built at |
-| $`\mathrm{c}^{\mathrm{cap}}`$ | `Generator_capital_cost` over $`\Xi \times \mathcal{G}`$ — cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
-| $`\mathrm{p}^{\mathrm{nom,set}}`$ | `Generator_p_nom_set` over $`\Xi \times \mathcal{G}`$ — a given nominal power for an extendable generator; one without a value has no row here |
-| $`\underline{\mathrm{E}}`$ | `Generator_e_sum_min` over $`\Xi \times \mathcal{G}`$ — least energy over the horizon; minus infinity where no floor is meant |
-| $`\overline{\mathrm{E}}`$ | `Generator_e_sum_max` over $`\Xi \times \mathcal{G}`$ — most energy over the horizon — a fuel or emission budget in energy terms; infinity where no cap is meant |
+| $`\underline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_min` over $`\Xi \times \mathcal{G}`$ — least nominal power an extendable generator may be built at — PyPSA's `p_nom_min`, in MW |
+| $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\Xi \times \mathcal{G}`$ — most nominal power an extendable generator may be built at — PyPSA's `p_nom_max`, in MW |
+| $`\mathrm{c}^{\mathrm{cap}}`$ | `Generator_capital_cost` over $`\Xi \times \mathcal{G}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `capital_cost`, read where no `overnight_cost` is given, in currency/MW |
+| $`\mathrm{p}^{\mathrm{nom,set}}`$ | `Generator_p_nom_set` over $`\Xi \times \mathcal{G}`$ — a given nominal power for an extendable generator; one without a value has no row here — PyPSA's `p_nom_set`, in MW |
+| $`\underline{\mathrm{E}}`$ | `Generator_e_sum_min` over $`\Xi \times \mathcal{G}`$ — least energy over the horizon; minus infinity where no floor is meant — PyPSA's `e_sum_min`, in MWh |
+| $`\overline{\mathrm{E}}`$ | `Generator_e_sum_max` over $`\Xi \times \mathcal{G}`$ — most energy over the horizon — a fuel or emission budget in energy terms; infinity where no cap is meant; PyPSA's `e_sum_max`, in MWh |
+| $`\mathrm{c}^{\mathrm{ovn}}`$ | `Generator_overnight_cost` over $`\Xi \times \mathcal{G}`$ — the upfront cost of one unit of nominal power — PyPSA's `overnight_cost`, annuitized over the lifetime; no value means the generator takes `capital_cost` instead, in currency/MW |
+| $`\delta`$ | `Generator_discount_rate` over $`\Xi \times \mathcal{G}`$ — the rate an overnight cost is annuitized at — PyPSA's `discount_rate`, per unit |
+| $`\mathrm{c}^{\mathrm{fom}}`$ | `Generator_fom_cost` over $`\Xi \times \mathcal{G}`$ — fixed operation and maintenance cost of one unit of nominal power for the modelled horizon — PyPSA's `fom_cost`, added to either cost, in currency/MW |
+| $`\eta^{g}`$ | `Generator_efficiency` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — output per unit of primary energy at a snapshot — PyPSA's `efficiency`, per unit; a `primary_energy` row divides by it |
+| $`\mathrm{act}`$ | `Generator_active` over $`\mathcal{G}`$ — whether the generator takes part in the optimization at all — PyPSA's `active`. PyPSA refuses one that differs by scenario (`consistency.py:1195`) |
+| $`\mathrm{by}`$ | `Generator_build_year` over $`\mathcal{G}`$ — the year a generator is built — PyPSA's `build_year`, in years. PyPSA refuses one that differs by scenario (`consistency.py:1193`) |
+| $`\mathrm{L}`$ | `Generator_lifetime` over $`\mathcal{G}`$ — how long a generator stands once built — PyPSA's `lifetime`, in years; infinity for no end. PyPSA refuses one that differs by scenario (`consistency.py:1194`) |
+| $`\mathrm{q}^{\mathrm{set}}`$ | `Generator_q_set` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — reactive power set point — PyPSA's `q_set`, in MVar. The power flow reads it, and no row here does |
+| $`\mathrm{ctl}`$ | `Generator_control` over $`\Xi \times \mathcal{G}`$ — the power-flow control strategy — PyPSA's `control`, `PQ`, `PV` or `Slack`. The power flow reads it, and no row here does |
+| $`\mathrm{kind}`$ | `Generator_type` over $`\mathcal{G}`$ — a type label — PyPSA's `type`, a placeholder PyPSA does not implement. No row reads it. PyPSA refuses one that differs by scenario (`consistency.py:1179`) |
+| $`\mathrm{wt}`$ | `Generator_weight` over $`\mathcal{G}`$ — a generator's weight in network clustering — PyPSA's `weight`. The clustering reads it, and no row here does. PyPSA refuses one that differs by scenario (`consistency.py:1189`) |
 | $`\underline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_min` over $`\Xi \times \mathcal{L}`$ — least nominal power an extendable link may be built at |
 | $`\overline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_max` over $`\Xi \times \mathcal{L}`$ — most nominal power an extendable link may be built at |
 | $`\mathrm{c}^{\mathrm{cap},f}`$ | `Link_capital_cost` over $`\Xi \times \mathcal{L}`$ — cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
@@ -5147,10 +5161,8 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{sense}`$ | `GlobalConstraint_sense` over $`\Xi \times \mathcal{I}`$ — which way the row binds in each scenario — `<=`, `>=` or `==`; PyPSA reads a row's sense per scenario (`global_constraints.py:556`, `:748`, `:860`) |
 | $`\mathrm{K}`$ | `GlobalConstraint_constant` over $`\Xi \times \mathcal{I}`$ — the constant the total is held against; what a variable cannot carry — an initial charge, times its period's years for each counted period where the storage reopens per period, or a non-extendable build — is folded in here by data prep. PyPSA reads it per scenario (`global_constraints.py:557`, `:749`, `:861`) |
 | $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\Xi \times \mathcal{I} \times \mathcal{T}`$ — whether a row counts a snapshot in a scenario — PyPSA's `investment_period`: every snapshot where the row names none, and only that period's where it names one, data prep. A row that names a period the run does not model has no label here, as PyPSA skips it (`global_constraints.py:377`); PyPSA reads the column only under `multi_investment_periods`, and fails on a row that names a period without it (`global_constraints.py:375`) |
-| $`\mathrm{a}`$ | `Generator_primary_energy_weight` over $`\Xi \times \mathcal{I} \times \mathcal{T} \times \mathcal{G}`$ — the constrained attribute per unit of energy at the bus — the carrier's `co2_emissions` over the generator's efficiency at the snapshot, data prep; a generator of an unweighted carrier has no row |
 | $`\mathrm{a}^{h}`$ | `StorageUnit_primary_energy_weight` over $`\Xi \times \mathcal{I} \times \mathcal{S}`$ — the constrained attribute per unit of charge depleted — data prep; an unweighted unit has no row |
 | $`\mathrm{a}^{e}`$ | `Store_primary_energy_weight` over $`\Xi \times \mathcal{I} \times \mathcal{V}`$ — the constrained attribute per unit of energy depleted — data prep; an unweighted store has no row |
-| $`\mathrm{b}`$ | `Generator_operational_limit_weight` over $`\Xi \times \mathcal{I} \times \mathcal{G}`$ — one where the generator is in the row's set — data prep; one outside it has no row |
 | $`\mathrm{b}^{h}`$ | `StorageUnit_operational_limit_weight` over $`\Xi \times \mathcal{I} \times \mathcal{S}`$ — one where the storage unit is in the row's set — data prep; one outside it has no row |
 | $`\mathrm{b}^{e}`$ | `Store_operational_limit_weight` over $`\Xi \times \mathcal{I} \times \mathcal{V}`$ — one where the store is in the row's set — data prep; one outside it has no row |
 | $`\mathrm{len}`$ | `Line_volume_weight` over $`\Xi \times \mathcal{I} \times \mathcal{K}`$ — the line's length where its carrier is in the row's set, the first scenario's length as PyPSA reads it (`global_constraints.py:835-836`) — data prep; a line outside it, or one that does not stand in the row's `investment_period`, has no row |
@@ -5221,6 +5233,15 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{n}^{\mathrm{yr}}`$ | `nyears` over $`\mathcal{Y}`$ — the years a period's snapshots stand for — PyPSA's `n.nyears`, the objective weightings of the period summed, over 8760 hours |
+| $`\mathrm{on}`$ | `Generator_active_period` over $`\mathcal{Y} \times \mathcal{G}`$ — one in each period a generator stands in, zero elsewhere — PyPSA's `get_active_assets(period)`: `active`, and under `multi_investment_periods` also `build_year <= period < build_year + lifetime` |
+| $`\mathrm{W}`$ | `Generator_capital_weight` over $`\mathcal{Y} \times \mathcal{G}`$ — what a period weighs a generator's capital cost by — the period's objective weight where the generator stands in it, zero elsewhere; PyPSA's `active * period_weighting` |
+| $`\mathrm{new}`$ | `Generator_first_active` over $`\mathcal{Y} \times \mathcal{G}`$ — one in the first period a generator stands in, zero elsewhere. PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a generator that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
+| $`\mathrm{A}`$ | `Generator_annuity` over $`\Xi \times \mathcal{G}`$ — the share of an overnight cost paid per year — PyPSA's `annuity`, `r / (1 - (1 + r) ** -lifetime)`, and `1 / lifetime` at a rate of zero |
+| $`\widetilde{\mathrm{c}}^{\mathrm{cap}}`$ | `Generator_periodized_cost` over $`\Xi \times \mathcal{Y} \times \mathcal{G}`$ — cost of one unit of nominal power for a period — PyPSA's `periodized_cost`: the overnight cost annuitized over the period's years where one is given, `capital_cost` otherwise, plus `fom_cost` |
+| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$ — one where the unit was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0` |
+| $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\Xi \times \mathcal{G}`$ — how many whole modules a committable build has in place: `Generator_p_nom / Generator_p_nom_mod` where a fixed build is modular, one where it is not. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
+| $`\mathrm{a}`$ | `Generator_primary_energy_weight` over $`\Xi \times \mathcal{I} \times \mathcal{T} \times \mathcal{G}`$ — the constrained attribute per unit of energy at the bus — the carrier's value in the row's `carrier_attribute` column over the generator's efficiency at the snapshot; a generator of a carrier with no value has no row |
 | $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\overleftarrow{p}`$ | `Generator_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the output a generator carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
 | $`\widetilde{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_effective` over $`\Xi \times \mathcal{G}`$ — the build a generator's limits are taken against — the chosen one where it is extendable, the given one otherwise |
@@ -5337,7 +5358,7 @@ objective:
     capacity once per active period at its expected cost over the scenarios, operation in
     expectation over the scenarios, and a share of it at the tail
   expression: >-
-    sum(scenario_weight * Generator_p_nom_ext * Generator_capital_cost * Generator_capital_weight)
+    sum(scenario_weight * Generator_p_nom_ext * Generator_periodized_cost * Generator_capital_weight)
     + sum(scenario_weight * Link_p_nom_ext * Link_capital_cost * Link_capital_weight)
     + sum(scenario_weight * StorageUnit_p_nom_ext * StorageUnit_capital_cost * StorageUnit_capital_weight)
     + sum(scenario_weight * Store_e_nom_ext * Store_capital_cost * Store_capital_weight)
@@ -5349,7 +5370,7 @@ objective:
 ```
 
 ```math
-\min \sum_{\xi \in \Xi,\ g \in \mathcal{G}} \pi_{\xi} \cdot P_{g} \cdot \mathrm{c}^{\mathrm{cap}}_{\xi,g} \cdot \mathrm{W}_{g} + \sum_{\xi \in \Xi,\ l \in \mathcal{L}} \pi_{\xi} \cdot F_{l} \cdot \mathrm{c}^{\mathrm{cap},f}_{\xi,l} \cdot \mathrm{W}^{f}_{l} + \sum_{\xi \in \Xi,\ s \in \mathcal{S}} \pi_{\xi} \cdot H_{s} \cdot \mathrm{c}^{\mathrm{cap},h}_{\xi,s} \cdot \mathrm{W}^{h}_{s} + \sum_{\xi \in \Xi,\ v \in \mathcal{V}} \pi_{\xi} \cdot E_{v} \cdot \mathrm{c}^{\mathrm{cap},e}_{\xi,v} \cdot \mathrm{W}^{e}_{v} + \sum_{\xi \in \Xi,\ k \in \mathcal{K}} \pi_{\xi} \cdot S_{k} \cdot \mathrm{c}^{\mathrm{cap},s}_{\xi,k} \cdot \mathrm{W}^{s}_{k} + \sum_{\xi \in \Xi,\ j \in \mathcal{J}} \pi_{\xi} \cdot Z_{j} \cdot \mathrm{c}^{\mathrm{cap},z}_{\xi,j} \cdot \mathrm{W}^{z}_{j} + \sum_{\xi \in \Xi,\ m \in \mathcal{M}} \pi_{\xi} \cdot \Sigma_{m} \cdot \mathrm{c}^{\mathrm{cap},\sigma}_{\xi,m} \cdot \mathrm{W}^{\sigma}_{m} + \left( 1 - \omega \right) \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi} \right) + \omega \cdot CVaR
+\min \sum_{\xi \in \Xi,\ g \in \mathcal{G},\ y \in \mathcal{Y}} \pi_{\xi} \cdot P_{g} \cdot \widetilde{\mathrm{c}}^{\mathrm{cap}}_{\xi,y,g} \cdot \mathrm{W}_{y,g} + \sum_{\xi \in \Xi,\ l \in \mathcal{L}} \pi_{\xi} \cdot F_{l} \cdot \mathrm{c}^{\mathrm{cap},f}_{\xi,l} \cdot \mathrm{W}^{f}_{l} + \sum_{\xi \in \Xi,\ s \in \mathcal{S}} \pi_{\xi} \cdot H_{s} \cdot \mathrm{c}^{\mathrm{cap},h}_{\xi,s} \cdot \mathrm{W}^{h}_{s} + \sum_{\xi \in \Xi,\ v \in \mathcal{V}} \pi_{\xi} \cdot E_{v} \cdot \mathrm{c}^{\mathrm{cap},e}_{\xi,v} \cdot \mathrm{W}^{e}_{v} + \sum_{\xi \in \Xi,\ k \in \mathcal{K}} \pi_{\xi} \cdot S_{k} \cdot \mathrm{c}^{\mathrm{cap},s}_{\xi,k} \cdot \mathrm{W}^{s}_{k} + \sum_{\xi \in \Xi,\ j \in \mathcal{J}} \pi_{\xi} \cdot Z_{j} \cdot \mathrm{c}^{\mathrm{cap},z}_{\xi,j} \cdot \mathrm{W}^{z}_{j} + \sum_{\xi \in \Xi,\ m \in \mathcal{M}} \pi_{\xi} \cdot \Sigma_{m} \cdot \mathrm{c}^{\mathrm{cap},\sigma}_{\xi,m} \cdot \mathrm{W}^{\sigma}_{m} + \left( 1 - \omega \right) \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi} \right) + \omega \cdot CVaR
 ```
 
 ### `Generator-fix-p-lower`
@@ -5360,12 +5381,12 @@ objective:
 Generator_fix_p_lower:
   description: "`Generator-fix-p-lower` — a fixed generator outputs at least its minimum"
   dims: [scenario, snapshot, generator]
-  where: not Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+  where: not Generator_p_nom_extendable AND not Generator_committable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * (1 - Generator_maintenance_pu * Generator_maintenance)
 ```
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-fix-p-upper`
@@ -5376,12 +5397,12 @@ p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}
 Generator_fix_p_upper:
   description: "`Generator-fix-p-upper` — a fixed generator outputs at most what is available"
   dims: [scenario, snapshot, generator]
-  where: not Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+  where: not Generator_p_nom_extendable AND not Generator_committable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p <= Generator_p_max_pu * Generator_p_nom * (1 - Generator_maintenance_pu * Generator_maintenance)
 ```
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Link-fix-p-lower`
@@ -5424,12 +5445,12 @@ f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_
 Generator_ext_p_lower:
   description: "`Generator-ext-p-lower` — an extendable generator outputs at least its minimum of the chosen build"
   dims: [scenario, snapshot, generator]
-  where: Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+  where: Generator_p_nom_extendable AND not Generator_committable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p >= Generator_p_min_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
 ```
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-ext-p-upper`
@@ -5440,12 +5461,12 @@ p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\x
 Generator_ext_p_upper:
   description: "`Generator-ext-p-upper` — an extendable generator outputs at most what is available of the chosen build"
   dims: [scenario, snapshot, generator]
-  where: Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+  where: Generator_p_nom_extendable AND not Generator_committable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p <= Generator_p_max_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
 ```
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-ext-p_nom-lower`
@@ -5826,12 +5847,12 @@ StorageUnit_fix_state_of_charge_upper:
 Generator_com_p_lower:
   description: "`Generator-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing"
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active
+  where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
 ```
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-com-p-upper`
@@ -5842,12 +5863,12 @@ p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}
 Generator_com_p_upper:
   description: "`Generator-com-p-upper` — a committed unit outputs at most what is available; off, at most nothing"
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active
+  where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p <= Generator_p_max_pu * Generator_p_nom * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
 ```
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-com-transition-start-up`
@@ -5858,12 +5879,12 @@ p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_
 Generator_com_transition_start_up:
   description: "`Generator-com-transition-start-up` — turning on is a start, counted against the state the unit carried into the snapshot"
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_active
+  where: Generator_committable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_start_up >= Generator_status - Generator_previous_status
 ```
 
 ```math
-\mathit{up}_{\xi,t,g} \ge u_{\xi,t,g} - \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+\mathit{up}_{\xi,t,g} \ge u_{\xi,t,g} - \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-com-transition-shut-down`
@@ -5874,12 +5895,12 @@ Generator_com_transition_start_up:
 Generator_com_transition_shut_down:
   description: "`Generator-com-transition-shut-down` — turning off is a stop, counted against the state the unit carried into the snapshot"
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_active
+  where: Generator_committable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_shut_down >= Generator_previous_status - Generator_status
 ```
 
 ```math
-\mathit{dn}_{\xi,t,g} \ge \overleftarrow{u}_{\xi,t,g} - u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+\mathit{dn}_{\xi,t,g} \ge \overleftarrow{u}_{\xi,t,g} - u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-com-up-time`
@@ -5893,12 +5914,12 @@ Generator_com_up_time:
     is still on. The first snapshot's share of the window is the brought-in
     up time's, which the must-stay-up mask carries
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_min_up_time > 0 AND position(snapshot) > 0 AND Generator_active
+  where: Generator_committable AND Generator_min_up_time > 0 AND position(snapshot) > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: sum_back(Generator_start_up, along=snapshot, window=Generator_min_up_time) <= Generator_status
 ```
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}} \mathit{up}_{\xi,t',g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{UT}_{\xi,g} > 0 \wedge \mathrm{pos}(t) > 0 \wedge \mathrm{on}_{t,g}
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}} \mathit{up}_{\xi,t',g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{UT}_{\xi,g} > 0 \wedge \mathrm{pos}(t) > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-com-down-time`
@@ -5912,12 +5933,12 @@ Generator_com_down_time:
     time is still off. The first snapshot's share of the window is the
     brought-in down time's, which the must-stay-down mask carries
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_min_down_time > 0 AND position(snapshot) > 0 AND Generator_active
+  where: Generator_committable AND Generator_min_down_time > 0 AND position(snapshot) > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: sum_back(Generator_shut_down, along=snapshot, window=Generator_min_down_time) <= 1 - Generator_status
 ```
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}} \mathit{dn}_{\xi,t',g} \le 1 - u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{DT}_{\xi,g} > 0 \wedge \mathrm{pos}(t) > 0 \wedge \mathrm{on}_{t,g}
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}} \mathit{dn}_{\xi,t',g} \le 1 - u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{DT}_{\xi,g} > 0 \wedge \mathrm{pos}(t) > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-com-status-min_up_time_must_stay_up`
@@ -5928,12 +5949,12 @@ Generator_com_down_time:
 Generator_com_status_must_stay_up:
   description: "`Generator-com-status-min_up_time_must_stay_up` — a unit still serving the up time it brought in stays on"
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_must_stay_up AND Generator_active
+  where: Generator_committable AND Generator_must_stay_up AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_status == 1
 ```
 
 ```math
-u_{\xi,t,g} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{hold}_{\xi,t,g} \wedge \mathrm{on}_{t,g}
+u_{\xi,t,g} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{hold}_{\xi,t,g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-com-status-min_down_time_must_stay_up`
@@ -5946,12 +5967,12 @@ Generator_com_status_must_stay_down:
     `Generator-com-status-min_down_time_must_stay_up` — a unit still serving
     the down time it brought in stays off; PyPSA names the row `_must_stay_up`
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_must_stay_down AND Generator_active
+  where: Generator_committable AND Generator_must_stay_down AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_status == 0
 ```
 
 ```math
-u_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{rest}_{\xi,t,g} \wedge \mathrm{on}_{t,g}
+u_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{rest}_{\xi,t,g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-p-ramp_limit_up-run-bigM`
@@ -5968,8 +5989,8 @@ Generator_p_ramp_limit_up_run_big_m:
   where: >-
     Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-    AND Generator_active
+    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+    AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: >-
     Generator_p - Generator_previous_p <=
     Generator_ramp_up_rate * Generator_p_nom_ext
@@ -5977,7 +5998,7 @@ Generator_p_ramp_limit_up_run_big_m:
 ```
 
 ```math
-p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \neg \left( \mathrm{UT}^{0}_{\xi,g} > 0 \right) \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-p-ramp_limit_up-start-bigM`
@@ -5994,8 +6015,8 @@ Generator_p_ramp_limit_up_start_big_m:
   where: >-
     Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-    AND Generator_active
+    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+    AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: >-
     Generator_p - Generator_previous_p <=
     Generator_start_up_rate * Generator_p_nom_ext
@@ -6003,7 +6024,7 @@ Generator_p_ramp_limit_up_start_big_m:
 ```
 
 ```math
-p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{up}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{up}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \neg \left( \mathrm{UT}^{0}_{\xi,g} > 0 \right) \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-p-ramp_limit_down-run-bigM`
@@ -6020,8 +6041,8 @@ Generator_p_ramp_limit_down_run_big_m:
   where: >-
     Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-    AND Generator_active
+    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+    AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: >-
     Generator_previous_p - Generator_p <=
     Generator_ramp_down_rate * Generator_p_nom_ext
@@ -6029,7 +6050,7 @@ Generator_p_ramp_limit_down_run_big_m:
 ```
 
 ```math
-\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{on}_{t,g}
+\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \neg \left( \mathrm{UT}^{0}_{\xi,g} > 0 \right) \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-p-ramp_limit_down-shut-bigM`
@@ -6046,8 +6067,8 @@ Generator_p_ramp_limit_down_shut_big_m:
   where: >-
     Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-    AND Generator_active
+    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+    AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: >-
     Generator_previous_p - Generator_p <=
     Generator_shut_down_rate * Generator_p_nom_ext
@@ -6055,7 +6076,7 @@ Generator_p_ramp_limit_down_shut_big_m:
 ```
 
 ```math
-\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{dn}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{on}_{t,g}
+\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{dn}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \neg \left( \mathrm{UT}^{0}_{\xi,g} > 0 \right) \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-p_nom_modularity`
@@ -6084,12 +6105,12 @@ Generator_com_ext_p_upper_cap:
     `Generator-com-ext-p-upper-cap` — a committed extendable unit outputs
     at most what is available of the chosen build, whatever its status
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+  where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p <= Generator_p_max_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
 ```
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-com-ext-p-upper-bigM`
@@ -6100,12 +6121,12 @@ p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi
 Generator_com_ext_p_upper_big_m:
   description: "`Generator-com-ext-p-upper-bigM` — off, a unit outputs nothing; on, the big M is no bound"
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+  where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p <= Generator_big_m * Generator_status
 ```
 
 ```math
-p_{\xi,t,g} \le \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \le \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-com-ext-p-lower`
@@ -6118,7 +6139,7 @@ Generator_com_ext_p_lower:
     `Generator-com-ext-p-lower` — a committed extendable unit outputs at
     least its minimum of the chosen build; off, the big M releases the row
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+  where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: >-
     Generator_p >=
     Generator_p_min_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
@@ -6126,7 +6147,7 @@ Generator_com_ext_p_lower:
 ```
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) + \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} - \mathrm{M}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) + \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} - \mathrm{M}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-com-ext-p-lower-nonneg`
@@ -6142,12 +6163,12 @@ Generator_com_ext_p_lower_nonneg:
   dims: [scenario, snapshot, generator]
   where: >-
     Generator_committable AND Generator_p_nom_extendable
-    AND Generator_p_min_pu_nonneg AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    AND count(count(Generator_p_min_pu < 0, over=snapshot) > 0, over=scenario) == 0 AND NOT (Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p >= 0
 ```
 
 ```math
-p_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \mathrm{nonneg}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \underline{\mathrm{p}}_{\xi',t',g} < 0 \} \rvert > 0 \} \rvert = 0 \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-com-mod-p-lower`
@@ -6160,12 +6181,12 @@ Generator_com_mod_p_lower:
     `Generator-com-mod-p-lower` — a committed modular unit outputs at least
     its minimum of one module, whether the build is fixed or a decision
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+  where: Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p >= Generator_p_min_pu * Generator_p_nom_mod * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
 ```
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-com-mod-p-upper`
@@ -6178,12 +6199,12 @@ Generator_com_mod_p_upper:
     `Generator-com-mod-p-upper` — a committed modular unit outputs at most
     one module's share, whether the build is fixed or a decision
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+  where: Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p <= Generator_p_max_pu * Generator_p_nom_mod * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
 ```
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-status-p-fixed-upper`
@@ -6197,12 +6218,12 @@ Generator_status_p_fixed_upper:
     place, an explicit row as PyPSA writes it: one where the build is not
     modular, and the fixed build's whole count of modules where it is
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active
+  where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_status <= Generator_modules_installed
 ```
 
 ```math
-u_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+u_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-start_up-p-fixed-upper`
@@ -6216,12 +6237,12 @@ Generator_start_up_p_fixed_upper:
     place, an explicit row as PyPSA writes it: one where the build is not
     modular, and the fixed build's whole count of modules where it is
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active
+  where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_start_up <= Generator_modules_installed
 ```
 
 ```math
-\mathit{up}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mathit{up}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-shut_down-p-fixed-upper`
@@ -6235,12 +6256,12 @@ Generator_shut_down_p_fixed_upper:
     place, an explicit row as PyPSA writes it: one where the build is not
     modular, and the fixed build's whole count of modules where it is
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active
+  where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_shut_down <= Generator_modules_installed
 ```
 
 ```math
-\mathit{dn}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mathit{dn}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-status-p_nom-variable-upper`
@@ -6251,12 +6272,12 @@ Generator_shut_down_p_fixed_upper:
 Generator_status_p_nom_variable_upper:
   description: "`Generator-status-p_nom-variable-upper` — a modular unit is on only where a module is built"
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active
+  where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_status <= Generator_n_mod
 ```
 
 ```math
-u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-start_up-p_nom-variable-upper`
@@ -6267,12 +6288,12 @@ u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \
 Generator_start_up_p_nom_variable_upper:
   description: "`Generator-start_up-p_nom-variable-upper` — a modular unit starts only where a module is built"
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active
+  where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_start_up <= Generator_n_mod
 ```
 
 ```math
-\mathit{up}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+\mathit{up}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-shut_down-p_nom-variable-upper`
@@ -6283,12 +6304,12 @@ Generator_start_up_p_nom_variable_upper:
 Generator_shut_down_p_nom_variable_upper:
   description: "`Generator-shut_down-p_nom-variable-upper` — a modular unit stops only where a module is built"
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active
+  where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_shut_down <= Generator_n_mod
 ```
 
 ```math
-\mathit{dn}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+\mathit{dn}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-maint-event-count`
@@ -6318,12 +6339,12 @@ Generator_maint_window:
     started covers the snapshot; two events do not overlap, since the
     maintenance status is at most one
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_active
+  where: Generator_maintainable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_maintenance == sum(Generator_maintenance_start, by=Generator_maintenance_cover, over=start, into=covered)
 ```
 
 ```math
-\mu_{\xi,t,g} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ g,\ t',\ t \right) \in \mathrm{Generator\_maintenance\_cover}} \mu^{\mathrm{up}}_{\xi,t',g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g}
+\mu_{\xi,t,g} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ g,\ t',\ t \right) \in \mathrm{Generator\_maintenance\_cover}} \mu^{\mathrm{up}}_{\xi,t',g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-maint-start-horizon`
@@ -6334,12 +6355,12 @@ Generator_maint_window:
 Generator_maint_start_horizon:
   description: "`Generator-maint-start-horizon` — no event starts where it could not run its whole duration"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_active AND Generator_maintenance_start_blocked
+  where: Generator_maintainable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime)) AND Generator_maintenance_start_blocked
   expression: Generator_maintenance_start == 0
 ```
 
 ```math
-\mu^{\mathrm{up}}_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g} \wedge \mathrm{blk}_{\xi,t,g}
+\mu^{\mathrm{up}}_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right) \wedge \mathrm{blk}_{\xi,t,g}
 ```
 
 ### `Generator-maintcap_upper`
@@ -6352,12 +6373,12 @@ Generator_maintcap_upper:
     `Generator-maintcap_upper` — the build taken off is at most the chosen build in
     maintenance, and at most the build less its floor out of it
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+  where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_maintenance_capacity <= Generator_p_nom_ext - Generator_p_nom_min * (1 - Generator_maintenance)
 ```
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \le P_{g} - \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{nom}}_{\xi,t,g} \le P_{g} - \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-maintcap_upper_nommax`
@@ -6368,12 +6389,12 @@ Generator_maintcap_upper:
 Generator_maintcap_upper_nommax:
   description: "`Generator-maintcap_upper_nommax` — out of maintenance, no build is taken off"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+  where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_maintenance_capacity <= Generator_p_nom_max * Generator_maintenance
 ```
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{nom}}_{\xi,t,g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-maintcap_lower_nommax`
@@ -6384,12 +6405,12 @@ Generator_maintcap_upper_nommax:
 Generator_maintcap_lower_nommax:
   description: "`Generator-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+  where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_maintenance_capacity >= Generator_p_nom_ext - Generator_p_nom_max * (1 - Generator_maintenance)
 ```
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \ge P_{g} - \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{nom}}_{\xi,t,g} \ge P_{g} - \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-maintcap_lower_nommin`
@@ -6400,12 +6421,12 @@ Generator_maintcap_lower_nommax:
 Generator_maintcap_lower_nommin:
   description: "`Generator-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND Generator_p_nom_min > 0
+  where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime)) AND Generator_p_nom_min > 0
   expression: Generator_maintenance_capacity >= Generator_p_nom_min * Generator_maintenance
 ```
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g} \wedge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} > 0
+\mu^{\mathrm{nom}}_{\xi,t,g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right) \wedge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} > 0
 ```
 
 ### `Generator-maint-status-le-status`
@@ -6416,12 +6437,12 @@ Generator_maintcap_lower_nommin:
 Generator_maint_status_le_status:
   description: "`Generator-maint-status-le-status` — the status in maintenance is at most the status"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+  where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_maintenance_status <= Generator_status
 ```
 
 ```math
-\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-maint-status-le-maint`
@@ -6432,12 +6453,12 @@ Generator_maint_status_le_status:
 Generator_maint_status_le_maint:
   description: "`Generator-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+  where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_maintenance_status <= Generator_maintenance
 ```
 
 ```math
-\mu^{u}_{\xi,t,g} \le \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \le \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-maint-status-lb`
@@ -6448,12 +6469,12 @@ Generator_maint_status_le_maint:
 Generator_maint_status_lb:
   description: "`Generator-maint-status-lb` — on and in maintenance, the status in maintenance is one"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+  where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_maintenance_status >= Generator_status + Generator_maintenance - 1
 ```
 
 ```math
-\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} + \mu_{\xi,t,g} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} + \mu_{\xi,t,g} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-maint-modstatus-le-status`
@@ -6464,12 +6485,12 @@ Generator_maint_status_lb:
 Generator_maint_modstatus_le_status:
   description: "`Generator-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+  where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_maintenance_status <= Generator_status
 ```
 
 ```math
-\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-maint-modstatus-le-maint`
@@ -6482,12 +6503,12 @@ Generator_maint_modstatus_le_maint:
     `Generator-maint-modstatus-le-maint` — out of maintenance, no module is on in
     maintenance; in it, at most the modules the build cap holds
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+  where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_maintenance_status <= Generator_p_nom_max / Generator_p_nom_mod * Generator_maintenance
 ```
 
 ```math
-\mu^{u}_{\xi,t,g} \le \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \le \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-maint-modstatus-lb`
@@ -6498,12 +6519,12 @@ Generator_maint_modstatus_le_maint:
 Generator_maint_modstatus_lb:
   description: "`Generator-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+  where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_maintenance_status >= Generator_status - Generator_p_nom_max / Generator_p_nom_mod * (1 - Generator_maintenance)
 ```
 
 ```math
-\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} - \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} - \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Link-com-p-lower`
@@ -8457,13 +8478,13 @@ Generator_p_ramp_limit_up:
   where: >-
     (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
     AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-    AND Generator_active
+    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+    AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p - Generator_previous_p <= Generator_ramp_up_allowance
 ```
 
 ```math
-p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \Delta^{+}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \Delta^{+}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \neg \left( \mathrm{UT}^{0}_{\xi,g} > 0 \right) \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Generator-p-ramp_limit_down`
@@ -8483,13 +8504,13 @@ Generator_p_ramp_limit_down:
   where: >-
     (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
     AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-    AND Generator_active
+    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+    AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_previous_p - Generator_p <= Generator_ramp_down_allowance
 ```
 
 ```math
-\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \Delta^{-}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{on}_{t,g}
+\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \Delta^{-}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \neg \left( \mathrm{UT}^{0}_{\xi,g} > 0 \right) \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Link-p-ramp_limit_up`
@@ -8905,12 +8926,12 @@ e_{\xi,t,v} = \overleftarrow{e}_{\xi,t,v} - q_{\xi,t,v} \cdot \mathrm{w}^{\mathr
 Generator_p_set:
   description: "`Generator-p_set` — output pinned to the given schedule, wherever one is given"
   dims: [scenario, snapshot, generator]
-  where: Generator_p_set AND Generator_active
+  where: Generator_p_set AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
   expression: Generator_p == Generator_p_set
 ```
 
 ```math
-p_{\xi,t,g} = \mathrm{p}^{\mathrm{set}}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{p}^{\mathrm{set}}_{\xi,t,g} \text{ is defined} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} = \mathrm{p}^{\mathrm{set}}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{p}^{\mathrm{set}}_{\xi,t,g} \text{ is defined} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 ### `Link-p_set`
@@ -9359,6 +9380,171 @@ CVaR_def:
 
 ```math
 \theta + \frac{1}{1 - \alpha} \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot a_{\xi} \right) \le CVaR \qquad \text{where } \omega > 0
+```
+
+### `nyears`
+
+```yaml
+nyears:
+  description: >-
+    the years a period's snapshots stand for — PyPSA's `n.nyears`, the
+    objective weightings of the period summed, over 8760 hours
+  dims: [period]
+  expression: sum(snapshot_weightings_objective, by=snapshot_period, over=snapshot, into=period) / 8760
+```
+
+```math
+\mathrm{n}^{\mathrm{yr}}_{y} = \frac{\sum_{t \in \mathcal{T} \,:\, \mathrm{snapshot\_period}(t) = y} \mathrm{w}_{t}}{8760} \qquad \forall\, y \in \mathcal{Y}
+```
+
+### `Generator_active_period`
+
+```yaml
+Generator_active_period:
+  description: >-
+    one in each period a generator stands in, zero elsewhere — PyPSA's
+    `get_active_assets(period)`: `active`, and under
+    `multi_investment_periods` also `build_year <= period < build_year +
+    lifetime`
+  dims: [period, generator]
+  cases:
+    stands:
+      when: >-
+        Generator_active AND (NOT multi_investment_periods
+        OR (Generator_build_year <= period_year AND period_year < Generator_build_year + Generator_lifetime))
+      expression: 1
+  otherwise: 0
+```
+
+```math
+\mathrm{on}_{y,g} = \begin{cases} 1 & \text{if } \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{y} \wedge \mathrm{yr}_{y} < \mathrm{by}_{g} + \mathrm{L}_{g} \right) \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, y \in \mathcal{Y},\ g \in \mathcal{G}
+```
+
+### `Generator_capital_weight`
+
+```yaml
+Generator_capital_weight:
+  description: >-
+    what a period weighs a generator's capital cost by — the period's
+    objective weight where the generator stands in it, zero elsewhere;
+    PyPSA's `active * period_weighting`
+  dims: [period, generator]
+  expression: Generator_active_period * period_weight_objective
+```
+
+```math
+\mathrm{W}_{y,g} = \mathrm{on}_{y,g} \cdot \mathrm{w}^{y}_{y} \qquad \forall\, y \in \mathcal{Y},\ g \in \mathcal{G}
+```
+
+### `Generator_first_active`
+
+```yaml
+Generator_first_active:
+  description: >-
+    one in the first period a generator stands in, zero elsewhere.
+    PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a generator
+    that has retired in every later period (`global_constraints.py:276`,
+    PyPSA/PyPSA#1938)
+  dims: [period, generator]
+  cases:
+    opens:
+      when: Generator_active_period == 1 AND NOT shift(Generator_active_period == 1, along=period, offset=1)
+      expression: 1
+  otherwise: 0
+```
+
+```math
+\mathrm{new}_{y,g} = \begin{cases} 1 & \text{if } \mathrm{on}_{y,g} = 1 \wedge \neg \left( \mathrm{on}_{y - 1,g} = 1 \right) \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, y \in \mathcal{Y},\ g \in \mathcal{G}
+```
+
+### `Generator_annuity`
+
+```yaml
+Generator_annuity:
+  description: >-
+    the share of an overnight cost paid per year — PyPSA's `annuity`, `r / (1
+    - (1 + r) ** -lifetime)`, and `1 / lifetime` at a rate of zero
+  dims: [scenario, generator]
+  cases:
+    no_discount: { when: Generator_discount_rate == 0, expression: 1 / Generator_lifetime }
+  otherwise: Generator_discount_rate / (1 - (1 + Generator_discount_rate) ** (-Generator_lifetime))
+```
+
+```math
+\mathrm{A}_{\xi,g} = \begin{cases} \frac{1}{\mathrm{L}_{g}} & \text{if } \delta_{\xi,g} = 0 \\ \frac{\delta_{\xi,g}}{1 - \left( 1 + \delta_{\xi,g} \right)^{-\mathrm{L}_{g}}} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+```
+
+### `Generator_periodized_cost`
+
+```yaml
+Generator_periodized_cost:
+  description: >-
+    cost of one unit of nominal power for a period — PyPSA's
+    `periodized_cost`: the overnight cost annuitized over the period's
+    years where one is given, `capital_cost` otherwise, plus `fom_cost`
+  dims: [scenario, period, generator]
+  cases:
+    overnight:
+      when: Generator_overnight_cost
+      expression: Generator_overnight_cost * Generator_annuity * nyears + Generator_fom_cost
+  otherwise: Generator_capital_cost + Generator_fom_cost
+```
+
+```math
+\widetilde{\mathrm{c}}^{\mathrm{cap}}_{\xi,y,g} = \begin{cases} \mathrm{c}^{\mathrm{ovn}}_{\xi,g} \cdot \mathrm{A}_{\xi,g} \cdot \mathrm{n}^{\mathrm{yr}}_{y} + \mathrm{c}^{\mathrm{fom}}_{\xi,g} & \text{if } \mathrm{c}^{\mathrm{ovn}}_{\xi,g} \text{ is defined} \\ \mathrm{c}^{\mathrm{cap}}_{\xi,g} + \mathrm{c}^{\mathrm{fom}}_{\xi,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ y \in \mathcal{Y},\ g \in \mathcal{G}
+```
+
+### `Generator_status_initial`
+
+```yaml
+Generator_status_initial:
+  description: one where the unit was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`
+  dims: [scenario, generator]
+  cases:
+    was_on: { when: Generator_up_time_before > 0, expression: 1 }
+  otherwise: 0
+```
+
+```math
+\mathrm{u}^{0}_{\xi,g} = \begin{cases} 1 & \text{if } \mathrm{UT}^{0}_{\xi,g} > 0 \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+```
+
+### `Generator_modules_installed`
+
+```yaml
+Generator_modules_installed:
+  description: >-
+    how many whole modules a committable build has in place: `Generator_p_nom
+    / Generator_p_nom_mod` where a fixed build is modular, one where it is
+    not. PyPSA refuses a fixed modular build whose nominal power
+    is not a whole number of modules
+  dims: [scenario, generator]
+  cases:
+    modular: { when: Generator_p_nom_mod > 0, expression: Generator_p_nom / Generator_p_nom_mod }
+  otherwise: 1
+```
+
+```math
+\mathrm{N}^{\mathrm{fix}}_{\xi,g} = \begin{cases} \frac{\mathrm{p}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} & \text{if } \mathrm{p}^{\mathrm{mod}}_{g} > 0 \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+```
+
+### `Generator_primary_energy_weight`
+
+```yaml
+Generator_primary_energy_weight:
+  description: >-
+    the constrained attribute per unit of energy at the bus — the
+    carrier's value in the row's `carrier_attribute` column over the
+    generator's efficiency at the snapshot; a generator of a carrier with no
+    value has no row
+  dims: [scenario, global_constraint, snapshot, generator]
+  expression: >-
+    at(at(Carrier_attribute_value, by=GlobalConstraint_attribute, over=carrier_attribute, into=global_constraint), by=Generator_carrier, over=carrier, into=generator)
+    / Generator_efficiency
+```
+
+```math
+\mathrm{a}_{\xi,i,t,g} = \frac{\mathrm{e}_{\xi,\mathrm{Generator\_carrier}(g),\mathrm{GlobalConstraint\_attribute}(\xi,\ i)}}{\eta^{g}_{\xi,t,g}} \qquad \forall\, \xi \in \Xi,\ i \in \mathcal{I},\ t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 ### `Generator_previous_status`
@@ -10179,11 +10365,11 @@ primary_energy:
 ```yaml
 Generator_operational_limit:
   expression: >-
-    sum(sum((Generator_p * GlobalConstraint_energy_weight) * Generator_operational_limit_weight, over=snapshot), over=generator)
+    sum(at(sum(Generator_p, by=Generator_carrier, over=generator, into=carrier), by=GlobalConstraint_carrier, over=carrier, into=global_constraint) * GlobalConstraint_energy_weight, over=snapshot)
 ```
 
 ```math
-\mathit{Generator\_operational\_limit}_{\xi,i} = \sum_{g \in \mathcal{G}} \sum_{t \in \mathcal{T}} p_{\xi,t,g} \cdot \mathit{w}^{\mathrm{gc}}_{\xi,i,t} \cdot \mathrm{b}_{\xi,i,g} \qquad \forall\, \xi \in \Xi,\ i \in \mathcal{I}
+\mathit{Generator\_operational\_limit}_{\xi,i} = \sum_{t \in \mathcal{T}} \left( \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_carrier}(g) = \mathrm{GlobalConstraint\_carrier}(\xi,\ i)} p_{\xi,t,g} \right) \cdot \mathit{w}^{\mathrm{gc}}_{\xi,i,t} \qquad \forall\, \xi \in \Xi,\ i \in \mathcal{I}
 ```
 
 ### `StorageUnit_operational_limit`
@@ -10873,7 +11059,7 @@ Cycle_angle_sum:
 **`Generator_p`**
 
 ```math
-p_{\xi,t,g} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}_{t,g}
+p_{\xi,t,g} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Link_p`**
@@ -10933,43 +11119,43 @@ N_{g} \ge 0, N_{g} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G} \,:\, \math
 **`Generator_status`**
 
 ```math
-u_{\xi,t,g} \ge 0, u_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+u_{\xi,t,g} \ge 0, u_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_start_up`**
 
 ```math
-\mathit{up}_{\xi,t,g} \ge 0, \mathit{up}_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+\mathit{up}_{\xi,t,g} \ge 0, \mathit{up}_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_shut_down`**
 
 ```math
-\mathit{dn}_{\xi,t,g} \ge 0, \mathit{dn}_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+\mathit{dn}_{\xi,t,g} \ge 0, \mathit{dn}_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maintenance`**
 
 ```math
-0 \le \mu_{\xi,t,g} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g}
+0 \le \mu_{\xi,t,g} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maintenance_start`**
 
 ```math
-\mu^{\mathrm{up}}_{\xi,t,g} \in \{0, 1\} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{up}}_{\xi,t,g} \in \{0, 1\} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maintenance_capacity`**
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{nom}}_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maintenance_status`**
 
 ```math
-\mu^{u}_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Link_n_mod`**
@@ -11740,7 +11926,7 @@ GlobalConstraint_tech_capacity_expansion_limit_without_scenarios:
 
 ```yaml
 Generator_came_in_running_unless_committable:
-  holds: "Generator_status_initial == 1"
+  holds: "Generator_up_time_before > 0"
   where: "NOT Generator_committable AND (Generator_ramp_limit_up OR Generator_ramp_limit_down)"
   description: >-
     PyPSA reads `up_time_before` of a unit that is not committable in its
@@ -11754,7 +11940,7 @@ Generator_came_in_running_unless_committable:
 ```
 
 ```math
-\mathrm{u}^{0}_{\xi,g} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{com}_{g} \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}_{\xi,t,g} \text{ is defined} \right)
+\mathrm{UT}^{0}_{\xi,g} > 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{com}_{g} \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}_{\xi,t,g} \text{ is defined} \right)
 ```
 
 ### `Link_came_in_running_unless_committable`

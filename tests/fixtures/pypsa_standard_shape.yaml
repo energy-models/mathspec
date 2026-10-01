@@ -468,11 +468,14 @@ constraints:
     - snapshot
     - transformer
 expressions:
+  - Generator_modules_installed
   - Generator_p_nom_effective
   - Generator_previous_p
   - Generator_previous_status
+  - Generator_primary_energy_weight
   - Generator_ramp_down_allowance
   - Generator_ramp_up_allowance
+  - Generator_status_initial
   - Link_output_arrival
   - Link_p_nom_effective
   - Link_previous_p
@@ -513,24 +516,17 @@ parameters:
     - generator
   Generator_min_up_time:
     - generator
-  Generator_modules_installed:
-    - generator
   Generator_must_stay_down:
     - snapshot
     - generator
   Generator_must_stay_up:
     - snapshot
     - generator
-  Generator_operational_limit_weight:
-    - global_constraint
-    - generator
   Generator_p_max_pu:
     - snapshot
     - generator
   Generator_p_min_pu:
     - snapshot
-    - generator
-  Generator_p_min_pu_nonneg:
     - generator
   Generator_p_nom:
     - generator
@@ -545,10 +541,6 @@ parameters:
   Generator_p_nom_set:
     - generator
   Generator_p_set:
-    - snapshot
-    - generator
-  Generator_primary_energy_weight:
-    - global_constraint
     - snapshot
     - generator
   Generator_ramp_limit_down:
@@ -567,8 +559,6 @@ parameters:
     - snapshot
     - generator
   Generator_start_up_cost:
-    - generator
-  Generator_status_initial:
     - generator
   Generator_tech_capacity_weight:
     - global_constraint

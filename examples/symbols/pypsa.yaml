@@ -23,6 +23,7 @@ dimensions:
   scenario: { index: '\xi', set: '\Xi' }
   period: { index: y, set: '\mathcal{Y}' }
   carrier: { index: i, set: '\mathcal{I}' }
+  carrier_attribute: { index: q, set: '\mathcal{Q}' }
 names:
   snapshot_weightings_objective: '\mathrm{w}'
   Generator_p: p
@@ -44,6 +45,8 @@ names:
   Generator_min_up_time: '\mathrm{UT}'
   Generator_min_down_time: '\mathrm{DT}'
   Generator_status_initial: '\mathrm{u}^{0}'
+  Generator_up_time_before: '\mathrm{UT}^{0}'
+  Generator_down_time_before: '\mathrm{DT}^{0}'
   Generator_p_init: '\mathrm{p}^{0}'
   Generator_previous_status: '\overleftarrow{u}'
   Generator_previous_p: '\overleftarrow{p}'
@@ -63,7 +66,6 @@ names:
   Generator_n_mod: "N"
   Generator_modules_installed: '\mathrm{N}^{\mathrm{fix}}'
   Generator_big_m: '\mathrm{M}'
-  Generator_p_min_pu_nonneg: '\mathrm{nonneg}'
   Link_ramp_limit_up: '\mathrm{ru}^{f}'
   Link_ramp_limit_down: '\mathrm{rd}^{f}'
   Link_p: f
@@ -117,6 +119,16 @@ names:
   Generator_p_nom_min: '\underline{\mathrm{p}}^{\mathrm{nom}}'
   Generator_p_nom_max: '\overline{\mathrm{p}}^{\mathrm{nom}}'
   Generator_capital_cost: '\mathrm{c}^{\mathrm{cap}}'
+  Generator_overnight_cost: '\mathrm{c}^{\mathrm{ovn}}'
+  Generator_discount_rate: '\delta'
+  Generator_fom_cost: '\mathrm{c}^{\mathrm{fom}}'
+  Generator_annuity: '\mathrm{A}'
+  Generator_periodized_cost: '\widetilde{\mathrm{c}}^{\mathrm{cap}}'
+  Generator_efficiency: '\eta^{g}'
+  Generator_q_set: '\mathrm{q}^{\mathrm{set}}'
+  Generator_control: '\mathrm{ctl}'
+  Generator_type: '\mathrm{kind}'
+  Generator_weight: '\mathrm{wt}'
   Generator_p_nom_set: '\mathrm{p}^{\mathrm{nom,set}}'
   Generator_e_sum_min: '\underline{\mathrm{E}}'
   Generator_e_sum_max: '\overline{\mathrm{E}}'
@@ -233,9 +245,9 @@ names:
   Store_closing_weight: '\mathit{w}^{e}'
   GlobalConstraint_snapshot_closes: '\mathit{last}'
   Generator_primary_energy_weight: '\mathrm{a}'
+  Carrier_attribute_value: '\mathrm{e}'
   StorageUnit_primary_energy_weight: '\mathrm{a}^{h}'
   Store_primary_energy_weight: '\mathrm{a}^{e}'
-  Generator_operational_limit_weight: '\mathrm{b}'
   StorageUnit_operational_limit_weight: '\mathrm{b}^{h}'
   Store_operational_limit_weight: '\mathrm{b}^{e}'
   Line_volume_weight: '\mathrm{len}'
@@ -305,7 +317,13 @@ names:
   CVaR: "CVaR"
   period_weight_objective: '\mathrm{w}^{y}'
   period_weight_years: '\mathrm{w}^{\mathrm{yr}}'
-  Generator_active: '\mathrm{on}'
+  multi_investment_periods: '\mathrm{multi}'
+  period_year: '\mathrm{yr}'
+  nyears: '\mathrm{n}^{\mathrm{yr}}'
+  Generator_active: '\mathrm{act}'
+  Generator_build_year: '\mathrm{by}'
+  Generator_lifetime: '\mathrm{L}'
+  Generator_active_period: '\mathrm{on}'
   Link_active: '\mathrm{on}^{f}'
   StorageUnit_active: '\mathrm{on}^{h}'
   Store_active: '\mathrm{on}^{e}'

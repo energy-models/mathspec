@@ -22,19 +22,25 @@ relations:
 
 parameters:
   Generator_committable:
-    description: whether output is gated by an on/off status decision
+    description: whether output is gated by an on/off status decision — PyPSA's `committable`
     dims: [generator]
     dtype: bool
   Generator_min_up_time:
-    description: least snapshots a unit stays on once started
+    description: least snapshots a unit stays on once started — PyPSA's `min_up_time`, in snapshots
     dims: [scenario, generator]
     dtype: int
   Generator_min_down_time:
-    description: least snapshots a unit stays off once stopped
+    description: >-
+      least snapshots a unit stays off once stopped — PyPSA's `min_down_time`,
+      in snapshots
     dims: [scenario, generator]
     dtype: int
-  Generator_status_initial:
-    description: one where the unit was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep
+  Generator_up_time_before:
+    description: snapshots a unit was on before the first snapshot — PyPSA's `up_time_before`, in snapshots
+    dims: [scenario, generator]
+    dtype: int
+  Generator_down_time_before:
+    description: snapshots a unit was off before the first snapshot — PyPSA's `down_time_before`, in snapshots
     dims: [scenario, generator]
     dtype: int
   Generator_must_stay_up:
@@ -52,13 +58,13 @@ parameters:
     dims: [scenario, snapshot, generator]
     dtype: bool
   Generator_start_up_cost:
-    description: cost of one start
+    description: cost of one start — PyPSA's `start_up_cost`, in currency
     dims: [scenario, generator]
   Generator_shut_down_cost:
-    description: cost of one stop
+    description: cost of one stop — PyPSA's `shut_down_cost`, in currency
     dims: [scenario, generator]
   Generator_stand_by_cost:
-    description: cost of one snapshot spent on
+    description: cost of one snapshot spent on — PyPSA's `stand_by_cost`, in currency/h
     dims: [scenario, snapshot, generator]
   Generator_big_m:
     description: a bound safely above any feasible output — the build cap at full availability, data prep
@@ -71,21 +77,21 @@ variables:
       the rows below cap at one, or at the module count where the build is
       modular
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_active
+    where: Generator_committable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     domain: integer
     bounds:
       lower: 0
   Generator_start_up:
     description: "`Generator-start_up` — how much of a committable unit turns on this snapshot, capped as the status is"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_active
+    where: Generator_committable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     domain: integer
     bounds:
       lower: 0
   Generator_shut_down:
     description: "`Generator-shut_down` — how much of a committable unit turns off this snapshot, capped as the status is"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_active
+    where: Generator_committable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     domain: integer
     bounds:
       lower: 0
@@ -98,11 +104,13 @@ given:
     Generator_p_min_pu: { dims: [scenario, snapshot, generator] }
     Generator_p_max_pu: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_mod: { dims: [generator] }
-    Generator_modules_installed: { dims: [scenario, generator] }
-    Generator_p_min_pu_nonneg: { dims: [generator], dtype: bool }
     Generator_maintenance_pu: { dims: [scenario, generator] }
     period_weight_objective: { dims: [period] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
+    multi_investment_periods: { dims: [], dtype: bool }
+    period_year: { dims: [period], dtype: int }
+    Generator_active: { dims: [generator], dtype: bool }
+    Generator_build_year: { dims: [generator], dtype: int }
+    Generator_lifetime: { dims: [generator] }
   variables:
     Generator_p: { dims: [scenario, snapshot, generator] }
     Generator_n_mod: { dims: [generator], domain: integer }
@@ -110,9 +118,16 @@ given:
     Generator_maintenance_status: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_ext: { dims: [generator] }
   expressions:
+    Generator_modules_installed: { dims: [scenario, generator] }
     scenario_opex: { dims: [scenario], term: Generator_commitment_opex }
 
 expressions:
+  Generator_status_initial:
+    description: one where the unit was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`
+    dims: [scenario, generator]
+    cases:
+      was_on: { when: Generator_up_time_before > 0, expression: 1 }
+    otherwise: 0
   Generator_previous_status:
     description: >-
       the commitment state a generator carries into a snapshot — the state it
@@ -131,22 +146,22 @@ constraints:
   Generator_com_p_lower:
     description: "`Generator-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active
+    where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
   Generator_com_p_upper:
     description: "`Generator-com-p-upper` — a committed unit outputs at most what is available; off, at most nothing"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active
+    where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_p <= Generator_p_max_pu * Generator_p_nom * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
   Generator_com_transition_start_up:
     description: "`Generator-com-transition-start-up` — turning on is a start, counted against the state the unit carried into the snapshot"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_active
+    where: Generator_committable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_start_up >= Generator_status - Generator_previous_status
   Generator_com_transition_shut_down:
     description: "`Generator-com-transition-shut-down` — turning off is a stop, counted against the state the unit carried into the snapshot"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_active
+    where: Generator_committable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_shut_down >= Generator_previous_status - Generator_status
   Generator_com_up_time:
     description: >-
@@ -154,7 +169,7 @@ constraints:
       is still on. The first snapshot's share of the window is the brought-in
       up time's, which the must-stay-up mask carries
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_min_up_time > 0 AND position(snapshot) > 0 AND Generator_active
+    where: Generator_committable AND Generator_min_up_time > 0 AND position(snapshot) > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: sum_back(Generator_start_up, along=snapshot, window=Generator_min_up_time) <= Generator_status
   Generator_com_down_time:
     description: >-
@@ -162,38 +177,38 @@ constraints:
       time is still off. The first snapshot's share of the window is the
       brought-in down time's, which the must-stay-down mask carries
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_min_down_time > 0 AND position(snapshot) > 0 AND Generator_active
+    where: Generator_committable AND Generator_min_down_time > 0 AND position(snapshot) > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: sum_back(Generator_shut_down, along=snapshot, window=Generator_min_down_time) <= 1 - Generator_status
   Generator_com_status_must_stay_up:
     description: "`Generator-com-status-min_up_time_must_stay_up` — a unit still serving the up time it brought in stays on"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_must_stay_up AND Generator_active
+    where: Generator_committable AND Generator_must_stay_up AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_status == 1
   Generator_com_status_must_stay_down:
     description: >-
       `Generator-com-status-min_down_time_must_stay_up` — a unit still serving
       the down time it brought in stays off; PyPSA names the row `_must_stay_up`
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_must_stay_down AND Generator_active
+    where: Generator_committable AND Generator_must_stay_down AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_status == 0
   Generator_com_ext_p_upper_cap:
     description: >-
       `Generator-com-ext-p-upper-cap` — a committed extendable unit outputs
       at most what is available of the chosen build, whatever its status
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_p <= Generator_p_max_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
   Generator_com_ext_p_upper_big_m:
     description: "`Generator-com-ext-p-upper-bigM` — off, a unit outputs nothing; on, the big M is no bound"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_p <= Generator_big_m * Generator_status
   Generator_com_ext_p_lower:
     description: >-
       `Generator-com-ext-p-lower` — a committed extendable unit outputs at
       least its minimum of the chosen build; off, the big M releases the row
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: >-
       Generator_p >=
       Generator_p_min_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
@@ -206,21 +221,21 @@ constraints:
     dims: [scenario, snapshot, generator]
     where: >-
       Generator_committable AND Generator_p_nom_extendable
-      AND Generator_p_min_pu_nonneg AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+      AND count(count(Generator_p_min_pu < 0, over=snapshot) > 0, over=scenario) == 0 AND NOT (Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_p >= 0
   Generator_com_mod_p_lower:
     description: >-
       `Generator-com-mod-p-lower` — a committed modular unit outputs at least
       its minimum of one module, whether the build is fixed or a decision
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_p >= Generator_p_min_pu * Generator_p_nom_mod * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
   Generator_com_mod_p_upper:
     description: >-
       `Generator-com-mod-p-upper` — a committed modular unit outputs at most
       one module's share, whether the build is fixed or a decision
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_p <= Generator_p_max_pu * Generator_p_nom_mod * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
   Generator_status_p_fixed_upper:
     description: >-
@@ -228,7 +243,7 @@ constraints:
       place, an explicit row as PyPSA writes it: one where the build is not
       modular, and the fixed build's whole count of modules where it is
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_status <= Generator_modules_installed
   Generator_start_up_p_fixed_upper:
     description: >-
@@ -236,7 +251,7 @@ constraints:
       place, an explicit row as PyPSA writes it: one where the build is not
       modular, and the fixed build's whole count of modules where it is
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_start_up <= Generator_modules_installed
   Generator_shut_down_p_fixed_upper:
     description: >-
@@ -244,20 +259,20 @@ constraints:
       place, an explicit row as PyPSA writes it: one where the build is not
       modular, and the fixed build's whole count of modules where it is
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_shut_down <= Generator_modules_installed
   Generator_status_p_nom_variable_upper:
     description: "`Generator-status-p_nom-variable-upper` — a modular unit is on only where a module is built"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_status <= Generator_n_mod
   Generator_start_up_p_nom_variable_upper:
     description: "`Generator-start_up-p_nom-variable-upper` — a modular unit starts only where a module is built"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_start_up <= Generator_n_mod
   Generator_shut_down_p_nom_variable_upper:
     description: "`Generator-shut_down-p_nom-variable-upper` — a modular unit stops only where a module is built"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_shut_down <= Generator_n_mod
