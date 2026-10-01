@@ -10,40 +10,71 @@ request renames that heading to the version and the day, such as
 `## 0.1.0 (2026-10-01)`, and edits the section into the release notes. Merging
 it releases that version ([RELEASING.md](https://github.com/energy-models/mathspec/blob/main/RELEASING.md)).
 
-## Upcoming version
+## 0.2.1 (2026-10-01)
 
-- fix(language): a where that reads a given expression names it as a given expression, not as a variable ([#809](https://github.com/energy-models/mathspec/pull/809))
+A spec can now be written as several files. [`merge`](https://mathspec.readthedocs.io/en/latest/howto/compose/)
+composes **fragments**, each a spec that owns part of the math and reads what
+another file declares under `given:`. [`override`](https://mathspec.readthedocs.io/en/latest/howto/compose/#a-base-and-its-patches)
+lays **patches** over a base, each changing part of it. A named expression adds
+itself as a term to a sum with `adds_to:`, and one fragment sets the objective.
+**Every fragment typesets on its own**, in LaTeX, Typst and Markdown, and gets
+advice before any merge: what it reads from another file prints in its legend,
+so one component's math can be reviewed without the rest of the model.
+[PyPSA in 24 files](https://mathspec.readthedocs.io/en/latest/examples/pypsa/)
+is the PyPSA spec composed this way, and merges back to the one file.
+
+Nothing a 0.2.0 file or call does stops working. Two rules of the language
+are now stated exactly. A consumer that attaches data refuses a null or NaN
+parameter value: a coordinate with no value has no row, and `inf` and `-inf`
+are values ([#788](https://github.com/energy-models/mathspec/pull/788)). And
+`dual(c)` is the rate at which the optimal objective rises with the right side
+of `c`, for every comparator and under either sense, which is what engines
+return ([#751](https://github.com/energy-models/mathspec/pull/751)).
+
+The pull requests in this release:
+
+### Composition
+
+- feat(language): a spec is composed from files that each state part of it, and patched with files that each change part of it ([#732](https://github.com/energy-models/mathspec/pull/732))
+- feat(language): a term names the sum it adds to with `adds_to:`, a `given: expressions:` entry of its own file, and a sum another file defines takes terms too ([#763](https://github.com/energy-models/mathspec/pull/763))
 - feat(language): merge refuses a second objective, and a composed objective reads a sum that each file adds its part to ([#763](https://github.com/energy-models/mathspec/pull/763))
-- docs: the composition how-to shows a sum that one file defines and other files add terms to ([#800](https://github.com/energy-models/mathspec/pull/800))
-- feat(language): a term names the sum it adds to with `adds_to:`, and no file marks a sum as open ([#763](https://github.com/energy-models/mathspec/pull/763))
-- fix(language): a cases block with one case may compare expressions in its when: ([#795](https://github.com/energy-models/mathspec/pull/795))
-- feat(language): a parameter value that is null or NaN is refused when the data is attached ([#788](https://github.com/energy-models/mathspec/pull/788))
-- fix(language): a where string names several columns in at's over= and into=, as an expression does ([#782](https://github.com/energy-models/mathspec/pull/782))
+- fix(language): merge and override take a list of files, and its order is the order of the terms and of the patches ([#761](https://github.com/energy-models/mathspec/pull/761))
+- fix(language): a merged spec's descriptions do not depend on the order the fragments are passed in, and a reader's fills one its owner left out ([#739](https://github.com/energy-models/mathspec/pull/739))
+- fix(language): a given declaration that leaves out its domain or dtype folds into an introducer that sets one ([#768](https://github.com/energy-models/mathspec/pull/768))
 - fix(language): a file whose terms read each other's sums is refused at load ([#780](https://github.com/energy-models/mathspec/pull/780))
-- fix(language): dual(c) is the rate at which the optimal objective rises with the right side of c, so an equality has a sign too ([#751](https://github.com/energy-models/mathspec/pull/751))
-- fix(language): a macro formal written inside a list takes the name the call binds to it ([#779](https://github.com/energy-models/mathspec/pull/779))
+- fix(language): a where that reads a given expression names it as a given expression, not as a variable ([#809](https://github.com/energy-models/mathspec/pull/809))
+- refactor(language): a term prints as the definition it is, and one rule folds every reading ([#738](https://github.com/energy-models/mathspec/pull/738))
+- fix(typeset): a term a file adds to a sum keeps its definition line when the expressions are inlined ([#766](https://github.com/energy-models/mathspec/pull/766))
+
+### Language
+
+- feat(language): two files that state the same spec write one text, and `canonical --check` fails a file that is not in it ([#731](https://github.com/energy-models/mathspec/pull/731))
+- feat(language): a named expression may declare the frame it is read over ([#741](https://github.com/energy-models/mathspec/pull/741))
 - feat(language): a sum names several dimensions in one over= list ([#778](https://github.com/energy-models/mathspec/pull/778))
 - feat(language): a divisor or a power over parameters may add, so a discount factor is written where it is used ([#757](https://github.com/energy-models/mathspec/pull/757))
-- docs(language): a reported quotient is absent where its divisor is zero, whether a solve or the data gave that zero ([#765](https://github.com/energy-models/mathspec/pull/765))
-- fix(language): a given declaration that leaves out its domain or dtype folds into an introducer that sets one ([#768](https://github.com/energy-models/mathspec/pull/768))
+- feat(language): a parameter value that is null or NaN is refused when the data is attached ([#788](https://github.com/energy-models/mathspec/pull/788))
+- fix(language): dual(c) is the rate at which the optimal objective rises with the right side of c, so an equality has a sign too ([#751](https://github.com/energy-models/mathspec/pull/751))
+- fix(language): a cases block with one case may compare expressions in its when: ([#795](https://github.com/energy-models/mathspec/pull/795))
+- fix(language): a where string names several columns in at's over= and into=, as an expression does ([#782](https://github.com/energy-models/mathspec/pull/782))
+- fix(language): a macro formal written inside a list takes the name the call binds to it ([#779](https://github.com/energy-models/mathspec/pull/779))
+
+### Typesetting and advice
+
+- fix(typeset): a substituted term that opens with a minus prints as a subtraction ([#759](https://github.com/energy-models/mathspec/pull/759))
 - fix(advice): an objective that reads a given expression or an empty sum gets advice rather than a KeyError ([#767](https://github.com/energy-models/mathspec/pull/767))
-- fix(typeset): a term a file adds to a sum keeps its definition line when the expressions are inlined ([#766](https://github.com/energy-models/mathspec/pull/766))
-- fix(language): merge and override take a list of files, and its order is the order of the terms and of the patches ([#761](https://github.com/energy-models/mathspec/pull/761))
-- docs: the composition how-to builds a component library from terms each file adds to a sum ([#762](https://github.com/energy-models/mathspec/pull/762))
+
+### Documentation
+
 - docs(pypsa): a single spec covers every pypsa model class and component ([#620](https://github.com/energy-models/mathspec/pull/620))
 - docs(pypsa): the pypsa spec is also 24 topic files that merge back to it, each component adding its share of a sum by name ([#736](https://github.com/energy-models/mathspec/pull/736))
-- fix(typeset): a substituted term that opens with a minus prints as a subtraction ([#759](https://github.com/energy-models/mathspec/pull/759))
+- docs(pypsa): an efficiency, a rate or a phase shift may change from snapshot to snapshot ([#717](https://github.com/energy-models/mathspec/pull/717))
+- docs: the composition how-to builds a component library from terms each file adds to a sum ([#762](https://github.com/energy-models/mathspec/pull/762))
+- docs: the composition how-to shows a sum that one file defines and other files add terms to ([#800](https://github.com/energy-models/mathspec/pull/800))
 - docs: a file restates a shared dimension as its dtype alone, and `merge` carries the one description written for it ([#743](https://github.com/energy-models/mathspec/pull/743))
-- feat(language): a sum other files add terms to is declared as an expression with `empty: true` ([#742](https://github.com/energy-models/mathspec/pull/742))
+- docs(language): a reported quotient is absent where its divisor is zero, whether a solve or the data gave that zero ([#765](https://github.com/energy-models/mathspec/pull/765))
 - docs(notation): the notation page shows a named expression whose declared frame is wider than its body ([#756](https://github.com/energy-models/mathspec/pull/756))
-- feat(language): a named expression may declare the frame it is read over ([#741](https://github.com/energy-models/mathspec/pull/741))
 - docs: code examples on the site are readable in light and dark mode, and a diagram shows what mathspec leaves to engines and other tools ([#730](https://github.com/energy-models/mathspec/pull/730))
 - docs: the site follows the reader's light or dark setting, and a page shows where it sits in the navigation ([#727](https://github.com/energy-models/mathspec/pull/727))
-- feat(language): a spec is composed from files that each state part of it, and patched with files that each change part of it ([#732](https://github.com/energy-models/mathspec/pull/732))
-- refactor(language): a term prints as the definition it is, and one rule folds every reading ([#738](https://github.com/energy-models/mathspec/pull/738))
-- feat(language): two files that state the same spec write one text, and `canonical --check` fails a file that is not in it ([#731](https://github.com/energy-models/mathspec/pull/731))
-- fix(language): a merged spec's descriptions do not depend on the order the fragments are passed in, and a reader's fills one its owner left out ([#739](https://github.com/energy-models/mathspec/pull/739))
-- docs(pypsa): an efficiency, a rate or a phase shift may change from snapshot to snapshot ([#717](https://github.com/energy-models/mathspec/pull/717))
 
 ## 0.2.0 (2026-09-25)
 
