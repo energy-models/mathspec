@@ -41,9 +41,10 @@ SURFACE = frozenset(
 
 #: What `Spec` promises beyond the sections a file declares: the two ways back
 #: out, the verb that writes a formulation out, the verb that turns a decision
-#: into a supplied number, and the program the file means.
+#: into a supplied number, the verb that reports how the optimum moves with a
+#: number, and the program the file means.
 #: A `model_`-prefixed name is pydantic's, not a contract this project keeps.
-SPEC_SURFACE = frozenset({'to_dict', 'to_yaml', 'expand', 'fix', 'program'})
+SPEC_SURFACE = frozenset({'to_dict', 'to_yaml', 'expand', 'fix', 'sensitivity', 'program'})
 
 #: The modules whose `__all__` a consumer imports from.
 MODULES = [

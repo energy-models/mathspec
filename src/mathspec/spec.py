@@ -1137,6 +1137,44 @@ class Spec(_StrictBlock):
 
         return fix(self, names)
 
+    def sensitivity(self, *names: str) -> Spec:
+        """This spec reporting how fast the optimal objective moves with each named parameter.
+
+        Each name gets a reported expression, ``<name>_sensitivity``, over the
+        parameter's dims: the objective's own rate in it, plus each row that
+        reads it, its dual times how far the parameter raises the row's right
+        side against its left. ``dual(c)`` is the rate the optimal objective
+        rises with the right side of ``c``, so the entry is the rise of the
+        optimal objective per unit of the parameter, under either sense and
+        for every comparator. Of a variable [`fix`][mathspec.spec.Spec.fix]
+        made a parameter, it is
+        the slope of a Benders cut; of a load, the price of serving one more
+        unit.
+
+        It holds where the solve has duals and they are unique: a linear
+        program, or a mixed-integer one's relaxation, away from degeneracy. A
+        ``where:`` or an assumption reading the parameter is a step the rate
+        does not see.
+
+        Args:
+            names: The parameters to differentiate by.
+
+        Returns:
+            A new spec with one reported expression per name.
+
+        Raises:
+            SchemaError: A name that is not a parameter this spec declares,
+                such as a given parameter.
+            LanguageError: No objective; nothing reads the parameter; a bound
+                reads it, whose price is a reduced cost; a row with a
+                ``where:`` reads it pointwise; it is read through an operator
+                other than arithmetic and ``sum(over=)``; or the spec already
+                declares ``<name>_sensitivity``.
+        """
+        from mathspec.sensitivity import sensitivity
+
+        return sensitivity(self, names)
+
     @model_validator(mode='after')
     def _names_are_names(self) -> Spec:
         """Every declaration is keyed by something an expression could write.
