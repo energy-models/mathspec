@@ -14,21 +14,9 @@ from __future__ import annotations
 import pytest
 
 from mathspec import merge, to_markdown, to_spec
-from tests.fixtures import EXAMPLES
+from tools.gallery import GEMS, GEMS_FRAGMENTS
 
-GEMS = EXAMPLES / 'ports' / 'gems'
-MODELS = (
-    'bus',
-    'load',
-    'link',
-    'renewable',
-    'generator',
-    'storage',
-    'emission_constraint',
-    'energy_limitation_hard_constraint_max',
-    'energy_limitation_soft_constraint_max',
-)
-FRAGMENTS = {name: GEMS / f'{name}.yaml' for name in ('system', *MODELS)}
+FRAGMENTS = {path.stem: path for path in GEMS_FRAGMENTS}
 
 
 def test_every_file_is_a_fragment_of_the_library():
@@ -49,7 +37,7 @@ def test_the_bus_names_no_model_that_connects_to_it():
 
 
 def test_the_library_composes_into_one_spec():
-    spec = merge(list(FRAGMENTS.values()))
+    spec = merge(GEMS_FRAGMENTS)
     assert not spec.given, 'each port read is folded into the sum the connected models write'
     assert spec.expressions['Bus_balance_port_flow'].expression == (
         'Load_balance_port_flow + Link_out_port_flow + Link_in_port_flow'

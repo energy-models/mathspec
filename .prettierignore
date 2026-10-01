@@ -25,6 +25,7 @@ docs/examples/library/generator.md
 docs/examples/library/load.md
 docs/examples/library/composed.md
 docs/examples/pypsa/*.md
+docs/examples/gems/*.md
 
 # The PyPSA reference scripts write this file; prettier would reformat what
 # they stamp, and the two would fight over it exactly as above.
