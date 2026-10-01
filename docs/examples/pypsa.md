@@ -212,7 +212,7 @@ def build():
 | [`{c}-ext-p_nom-lower/upper`](#generator-ext-p_nom-lower) | done |                                        |
 | [`{c}-p_nom_set`](#generator-p_nom_set) | done |                                                      |
 | [`Generator-e_sum_min/max`](#generator-e_sum_min) | done |                                            |
-| [capital cost](#objective)       | done   | `periodized_cost` is an annuity, data prep  |
+| [capital cost](#objective)       | done   | `periodized_cost`, data prep: `capital_cost`, or the annuity of `overnight_cost`, plus `fom_cost` |
 
 <!-- reference:rung_03_expansion:begin -->
 > ✔ `pypsa 1.3.0.post1.dev23+g02bdcbbaf` solves this rung's network at objective `7633.908502024292`, 184 rows.
@@ -429,7 +429,7 @@ each type is three blocks by sense.
 | [`primary_energy`](#primary_energy) with a generator efficiency per snapshot | done | rung 60 |
 | [`operational_limit`](#operational_limit) | split   | a block per sense; one period in rung 35; per scenario in rung 40 |
 | [`transmission_volume_expansion_limit`](#transmission_volume_expansion_limit) | split | a block per sense; membership from PyPSA's carrier string is prep; per scenario in rung 40 |
-| [`transmission_expansion_cost_limit`](#transmission_expansion_cost_limit) | split | a block per sense                     |
+| [`transmission_expansion_cost_limit`](#transmission_expansion_cost_limit) | split | a block per sense; the cost is the `capital_cost` property, without `fom_cost` |
 | [`tech_capacity_expansion_limit`](#tech_capacity_expansion_limit) | split | a block per sense                             |
 | `Bus-nom_min/max_{carrier}`           | out         | deprecated in PyPSA                               |
 | [`Carrier-growth_limit`](#carrier-growth_limit) | done | generators in rung 15, every extendable component in rung 21, below |
@@ -4881,10 +4881,63 @@ where it should live — language, data prep, or harness — is one open questio
 | `ConsistencyError`, `consistency.py:1506-1560` | a maintainable component whose `maintenance_duration` or `maintenance_events` is not positive, whose events do not fit the weighted horizon, or that is extendable with `p_nom_max = inf` | assumed: [`Generator_maintenance_events_positive`](#generator_maintenance_events_positive), [`-duration_positive`](#generator_maintenance_duration_positive), [`-duration_fits_the_horizon`](#generator_maintenance_duration_fits_the_horizon), [`-events_fit_the_horizon`](#generator_maintenance_events_fit_the_horizon), [`-build_cap_is_finite`](#generator_maintenance_build_cap_is_finite), and the `Link` and `Process` ones | |
 | nothing; HiGHS refuses the model, `constraints.py:500-503` | a fixed modular committable maintainable build, whose module count `p_nom_max / p_nom_mod` is infinite | assumed: [`Generator_maintenance_module_count_is_finite`](#generator_maintenance_module_count_is_finite), and the `Link` and `Process` ones | |
 | nothing; PyPSA builds the row, `constraints.py:1091-1094`, `1110-1112` | a ramp-limited Generator, Link or Process that is not committable, with `up_time_before = 0` | assumed: [`Generator_came_in_running_unless_committable`](#generator_came_in_running_unless_committable), and the `Link` and `Process` ones. PyPSA caps the unit at zero in the first snapshot, or at its start-up ramp where another unit of the component is committable with a fixed build, and documents `up_time_before` as read only for a committable unit | |
+| `KeyError`, `constraints.py:1819-1820` | a `*_nom_set` on a unit that is not extendable, or that has `active = False` | no row: [`Generator-p_nom_set`](#generator-p_nom_set) and the others stand only where the build is extendable, and data prep feeds an inactive unit as fixed (see [Data prep](#data-prep)) | |
+| `KeyError`, `constraints.py:2772`, `:2781` | `e_sum_min` or `e_sum_max` on a generator with `active = False` | the row stands with no variable: [`Generator-e_sum_min`](#generator-e_sum_min) reads `0 >= e_sum_min`, which fails where the floor is positive | |
+| `ValueError`, `constraints.py:1558-1563` | a loaded bus where every unit and branch has retired in some snapshot | the row stands with no variable: [`Bus-nodal_balance`](#bus-nodal_balance) asks the load alone to be zero, and no solution meets it | |
+| `ValueError`, `components/descriptors.py:141-144` | a `transmission_volume_expansion_limit`, `transmission_expansion_cost_limit` or `tech_capacity_expansion_limit` row that names an `investment_period` outside `n.investment_periods` | data prep, at `Line_volume_weight`, `Line_expansion_cost_weight`, `Line_tech_capacity_weight` and the other components' ones | |
+| a warning; `ConsistencyError` under `strict`, `consistency.py:231-283` | a transformer with `phase_shift_min > phase_shift_max`, or a decided phase shift with an infinite bound | built, as PyPSA: the first keeps its fixed `phase_shift`, the second leaves [`Transformer-phase_shift`](#variable-domains) unbounded on that side | |
+| nothing; PyPSA builds the row, `constraints.py:1146-1148`, `:1153-1158` | a ramp-limited Generator, Link or Process that is not committable, may run below zero, came in off and has `ramp_limit_shut_down` without `ramp_limit_down`, where another unit of the component is committable with a fixed build | not refused: [`Link-p-ramp_limit_down`](#link-p-ramp_limit_down) and the others give `p >= -p_nom` at the first snapshot, where PyPSA gives `p >= (ramp_limit_shut_down - 1) * p_nom`. [`Generator_came_in_running_unless_committable`](#generator_came_in_running_unless_committable) and its siblings read only `ramp_limit_up` and `ramp_limit_down` | |
+| nothing; PyPSA reads `0 * inf` as `0`, `constraints.py:120-125` | a fixed build of `inf` where its least or most per-unit output is zero | not handled: [`Generator-fix-p-lower`](#generator-fix-p-lower) and the other fixed bounds multiply as written, and `0 * inf` has no value | |
 
 Duals and solutions are read back by the harness on the specsolve side:
 `marginal_price` is the balance dual over `w_objective`, `mu_upper` the
 concatenation of the regime blocks, `p0`/`p1` derived from `Link-p`.
+
+## Data prep
+
+Data prep turns a PyPSA network into the data the file reads. It does what
+PyPSA does before it builds a row, and these steps are not visible in the
+file.
+
+- **A typed branch takes its impedance from its type.** A line with a `type`
+  takes `r` and `x` from the type, its `length` and `num_parallel`. A
+  transformer with a `type` also takes `s_nom`, `phase_shift` and
+  `tap_ratio` from it (`network/power_flow.py:441-564`). Data prep applies
+  the types before it derives any parameter from `r`, `x` or `s_nom`.
+- **A Line, a Link or a Store with no carrier takes the carrier of its
+  bus.** PyPSA fills a blank `carrier` on a Line or a Link from `bus0`, and
+  on a Store from `bus` (`network/power_flow.py:780-782`, `:831-837`). A
+  growth limit and a global constraint read the filled carrier.
+- **A cycle weight is `x_pu_eff` on an AC sub-network and `r_pu_eff` on a DC
+  one.** PyPSA weighs each branch in
+  [`Kirchhoff-Voltage-Law`](#kirchhoff-voltage-law) by the carrier of its
+  sub-network (`networks.py:1360-1365`). `Line_cycle_weight` takes the same
+  value.
+- **A branch, a Link and a Process count at their `bus0` in a
+  `tech_capacity_expansion_limit` row with a bus.** A one-port component
+  counts at its `bus` (`global_constraints.py:93`). Data prep sets
+  `Line_tech_capacity_weight` and the others' ones from that bus.
+- **A plain run weighs every period by one.** PyPSA reads
+  `investment_period_weightings` only under `multi_investment_periods`
+  (`optimize.py:205-207`, `:264-266`). Data prep feeds one to
+  `period_weight_objective` and `period_weight_years` otherwise.
+- **Only storage that is not cyclic counts in a `primary_energy` row.**
+  PyPSA reads `cyclic_state_of_charge` and `e_cyclic` alone. A unit that
+  cycles per period with `cyclic_state_of_charge = False` still counts
+  (`global_constraints.py:436`, `:490`). Data prep gives such a unit a value
+  in `StorageUnit_primary_energy_weight`, and a Store in
+  `Store_primary_energy_weight`. An `operational_limit` row also skips
+  storage with `active = False` (`:636`, `:687`).
+- **A unit with `active = False` has no capacity variable in PyPSA.** PyPSA
+  builds `{c}-p_nom` only for extendable units that are active
+  (`variables.py:354-360`). Data prep feeds `Generator_p_nom_extendable` and
+  the others false for an inactive unit, so the file builds no capacity
+  variable for it either.
+- **A global constraint with nothing to count has no row in PyPSA.** PyPSA
+  skips a row whose set is empty (`global_constraints.py:98-99`, `:538-539`,
+  `:730-731`, `:844-845`, `:939-940`). The file builds that row as `0`
+  against its constant, which fails where the constant is on the wrong side
+  of zero. Data prep drops the label from `global_constraint`.
 
 ## The file
 
@@ -4996,7 +5049,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{z}^{\mathrm{set}}`$ | `Process_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — a given internal power schedule; a process without one has no row here |
 | $`\underline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_min` over $`\Xi \times \mathcal{J}`$ — least nominal power an extendable process may be built at |
 | $`\overline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_max` over $`\Xi \times \mathcal{J}`$ — most nominal power an extendable process may be built at |
-| $`\mathrm{c}^{\mathrm{cap},z}`$ | `Process_capital_cost` over $`\Xi \times \mathcal{J}`$ — cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
+| $`\mathrm{c}^{\mathrm{cap},z}`$ | `Process_capital_cost` over $`\Xi \times \mathcal{J}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{z}^{\mathrm{nom,set}}`$ | `Process_p_nom_set` over $`\Xi \times \mathcal{J}`$ — a given nominal power for an extendable process; one without a value has no row here |
 | $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$ — whether internal power is gated by an on/off status decision |
 | $`\mathrm{ru}^{z,\mathrm{up}}`$ | `Process_ramp_limit_start_up` over $`\Xi \times \mathcal{J}`$ — most internal power in the snapshot a process starts, per unit of nominal power |
@@ -5025,7 +5078,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\pi`$ | `scenario_weight` over $`\Xi`$ — PyPSA's `scenario_weightings.weight` — the probability of a future |
 | $`\omega`$ | `CVaR_omega` (scalar) — PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation; zero recovers the risk-neutral model |
 | $`\alpha`$ | `CVaR_alpha` (scalar) — PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability |
-| $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.objective` — what a period's cost weighs |
+| $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.objective` — what a period's cost weighs; PyPSA reads it only under `multi_investment_periods`, so data prep feeds one otherwise, whatever the column holds (`optimize.py:205-207`, `:264-266`) |
 | $`\mathrm{w}^{\mathrm{yr}}`$ | `period_weight_years` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.years` — what a period's energy weighs in a `primary_energy` or `operational_limit` row; PyPSA reads it only under `multi_investment_periods`, so data prep feeds one otherwise |
 | $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{T} \times \mathcal{G}`$ — whether a generator stands in a snapshot's period — PyPSA's `active`, from build year and lifetime, data prep |
 | $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{T} \times \mathcal{L}`$ — whether a link stands in a snapshot's period — PyPSA's `active`, data prep |
@@ -5055,21 +5108,21 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.generators` — hours a snapshot stands for in an energy total |
 | $`\underline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_min` over $`\Xi \times \mathcal{G}`$ — least nominal power an extendable generator may be built at |
 | $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\Xi \times \mathcal{G}`$ — most nominal power an extendable generator may be built at |
-| $`\mathrm{c}^{\mathrm{cap}}`$ | `Generator_capital_cost` over $`\Xi \times \mathcal{G}`$ — cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
+| $`\mathrm{c}^{\mathrm{cap}}`$ | `Generator_capital_cost` over $`\Xi \times \mathcal{G}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{p}^{\mathrm{nom,set}}`$ | `Generator_p_nom_set` over $`\Xi \times \mathcal{G}`$ — a given nominal power for an extendable generator; one without a value has no row here |
 | $`\underline{\mathrm{E}}`$ | `Generator_e_sum_min` over $`\Xi \times \mathcal{G}`$ — least energy over the horizon; minus infinity where no floor is meant |
 | $`\overline{\mathrm{E}}`$ | `Generator_e_sum_max` over $`\Xi \times \mathcal{G}`$ — most energy over the horizon — a fuel or emission budget in energy terms; infinity where no cap is meant |
 | $`\underline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_min` over $`\Xi \times \mathcal{L}`$ — least nominal power an extendable link may be built at |
 | $`\overline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_max` over $`\Xi \times \mathcal{L}`$ — most nominal power an extendable link may be built at |
-| $`\mathrm{c}^{\mathrm{cap},f}`$ | `Link_capital_cost` over $`\Xi \times \mathcal{L}`$ — cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
+| $`\mathrm{c}^{\mathrm{cap},f}`$ | `Link_capital_cost` over $`\Xi \times \mathcal{L}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{f}^{\mathrm{nom,set}}`$ | `Link_p_nom_set` over $`\Xi \times \mathcal{L}`$ — a given nominal power for an extendable link; one without a value has no row here |
 | $`\underline{\mathrm{h}}^{\mathrm{nom}}`$ | `StorageUnit_p_nom_min` over $`\Xi \times \mathcal{S}`$ — least nominal power an extendable storage unit may be built at |
 | $`\overline{\mathrm{h}}^{\mathrm{nom}}`$ | `StorageUnit_p_nom_max` over $`\Xi \times \mathcal{S}`$ — most nominal power an extendable storage unit may be built at |
-| $`\mathrm{c}^{\mathrm{cap},h}`$ | `StorageUnit_capital_cost` over $`\Xi \times \mathcal{S}`$ — cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
+| $`\mathrm{c}^{\mathrm{cap},h}`$ | `StorageUnit_capital_cost` over $`\Xi \times \mathcal{S}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{h}^{\mathrm{nom,set}}`$ | `StorageUnit_p_nom_set` over $`\Xi \times \mathcal{S}`$ — a given nominal power for an extendable storage unit; one without a value has no row here |
 | $`\underline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_min` over $`\Xi \times \mathcal{V}`$ — least nominal capacity an extendable store may be built at |
 | $`\overline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_max` over $`\Xi \times \mathcal{V}`$ — most nominal capacity an extendable store may be built at |
-| $`\mathrm{c}^{\mathrm{cap},e}`$ | `Store_capital_cost` over $`\Xi \times \mathcal{V}`$ — cost of one unit of nominal capacity — PyPSA's `capital_cost`, periodized as an annuity in data prep |
+| $`\mathrm{c}^{\mathrm{cap},e}`$ | `Store_capital_cost` over $`\Xi \times \mathcal{V}`$ — cost of one unit of nominal capacity for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{e}^{\mathrm{nom,set}}`$ | `Store_e_nom_set` over $`\Xi \times \mathcal{V}`$ — a given nominal capacity for an extendable store; one without a value has no row here |
 | $`\mathrm{h}^{\mathrm{nom}}`$ | `StorageUnit_p_nom` over $`\Xi \times \mathcal{S}`$ — nominal power |
 | $`\mathrm{ext}^{h}`$ | `StorageUnit_p_nom_extendable` over $`\mathcal{S}`$ — whether the nominal power is a decision |
@@ -5117,7 +5170,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\overline{\mathrm{s}}`$ | `Line_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — most flow either way, per unit of nominal apparent power |
 | $`\underline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_min` over $`\Xi \times \mathcal{K}`$ — least nominal apparent power an extendable line may be built at |
 | $`\overline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_max` over $`\Xi \times \mathcal{K}`$ — most nominal apparent power an extendable line may be built at |
-| $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\Xi \times \mathcal{K}`$ — cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
+| $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\Xi \times \mathcal{K}`$ — cost of one unit of nominal apparent power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{s}^{\mathrm{nom,set}}`$ | `Line_s_nom_set` over $`\Xi \times \mathcal{K}`$ — a given nominal apparent power for an extendable line; one without a value has no row here |
 | $`\mathrm{s}^{\mathrm{set}}`$ | `Line_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — a given flow schedule; a line without one has no row here |
 | $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{K} \times \mathcal{C}`$ — the line's series impedance, signed by its orientation in the cycle — the cycle basis, data prep; a line in no cycle has no row. PyPSA builds the cycle basis from the first scenario only (`networks.py:1354-1361`) |
@@ -5131,7 +5184,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\overline{\sigma}`$ | `Transformer_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — most flow either way, per unit of nominal apparent power |
 | $`\underline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_min` over $`\Xi \times \mathcal{M}`$ — least nominal apparent power an extendable transformer may be built at |
 | $`\overline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_max` over $`\Xi \times \mathcal{M}`$ — most nominal apparent power an extendable transformer may be built at |
-| $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
+| $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\sigma^{\mathrm{nom,set}}`$ | `Transformer_s_nom_set` over $`\Xi \times \mathcal{M}`$ — a given nominal apparent power for an extendable transformer; one without a value has no row here |
 | $`\sigma^{\mathrm{set}}`$ | `Transformer_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — a given flow schedule; a transformer without one has no row here |
 | $`\mathrm{x}^{\sigma}`$ | `Transformer_cycle_weight` over $`\mathcal{M} \times \mathcal{C}`$ — the transformer's effective series reactance, `x` times its tap ratio, signed by its orientation in the cycle — PyPSA's `x_pu_eff`, the cycle basis, data prep; a transformer in no cycle has no row. From the first scenario only, as a line's |
@@ -5156,8 +5209,8 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{b}^{e}`$ | `Store_operational_limit_weight` over $`\Xi \times \mathcal{I} \times \mathcal{V}`$ — one where the store is in the row's set — data prep; one outside it has no row |
 | $`\mathrm{len}`$ | `Line_volume_weight` over $`\Xi \times \mathcal{I} \times \mathcal{K}`$ — the line's length where its carrier is in the row's set, the first scenario's length as PyPSA reads it (`global_constraints.py:835-836`) — data prep; a line outside it, or one that does not stand in the row's `investment_period`, has no row |
 | $`\mathrm{len}^{f}`$ | `Link_volume_weight` over $`\Xi \times \mathcal{I} \times \mathcal{L}`$ — the link's length where its carrier is in the row's set, the first scenario's length as PyPSA reads it (`global_constraints.py:835-836`) — data prep; a link outside it, or one that does not stand in the row's `investment_period`, has no row |
-| $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\Xi \times \mathcal{I} \times \mathcal{K}`$ — the line's capital cost where its carrier is in the row's set, times the objective weights of the periods it stands in where the row names no `investment_period` under `multi_investment_periods` — data prep; a line outside the set, or one that does not stand in the row's period, has no row |
-| $`\mathrm{cc}^{f}`$ | `Link_expansion_cost_weight` over $`\Xi \times \mathcal{I} \times \mathcal{L}`$ — the link's capital cost where its carrier is in the row's set, times the objective weights of the periods it stands in where the row names no `investment_period` under `multi_investment_periods` — data prep; a link outside the set, or one that does not stand in the row's period, has no row |
+| $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\Xi \times \mathcal{I} \times \mathcal{K}`$ — the line's capital cost where its carrier is in the row's set, times the objective weights of the periods it stands in where the row names no `investment_period` under `multi_investment_periods` — data prep; a line outside the set, or one that does not stand in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Line_capital_cost` without `fom_cost` (`components.py:1151-1169`, `global_constraints.py:935`) |
+| $`\mathrm{cc}^{f}`$ | `Link_expansion_cost_weight` over $`\Xi \times \mathcal{I} \times \mathcal{L}`$ — the link's capital cost where its carrier is in the row's set, times the objective weights of the periods it stands in where the row names no `investment_period` under `multi_investment_periods` — data prep; a link outside the set, or one that does not stand in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Link_capital_cost` without `fom_cost` (`components.py:1151-1169`, `global_constraints.py:935`) |
 | $`\mathrm{m}`$ | `Generator_tech_capacity_weight` over $`\mathcal{I} \times \mathcal{G}`$ — one where the generator is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 | $`\mathrm{m}^{f}`$ | `Link_tech_capacity_weight` over $`\mathcal{I} \times \mathcal{L}`$ — one where the link is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 | $`\mathrm{m}^{l}`$ | `Line_tech_capacity_weight` over $`\mathcal{I} \times \mathcal{K}`$ — one where the line is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |

@@ -416,7 +416,12 @@ parameters:
     description: most nominal power an extendable process may be built at
     dims: [scenario, process]
   Process_capital_cost:
-    description: cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal power for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, process]
   Process_p_nom_set:
     description: a given nominal power for an extendable process; one without a value has no row here
@@ -546,7 +551,11 @@ parameters:
     description: PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability
     dims: []
   period_weight_objective:
-    description: PyPSA's `investment_period_weightings.objective` — what a period's cost weighs
+    description: >-
+      PyPSA's `investment_period_weightings.objective` — what a period's cost
+      weighs; PyPSA reads it only under `multi_investment_periods`, so data
+      prep feeds one otherwise, whatever the column holds
+      (`optimize.py:205-207`, `:264-266`)
     dims: [period]
   period_weight_years:
     description: >-
@@ -677,7 +686,12 @@ parameters:
     description: most nominal power an extendable generator may be built at
     dims: [scenario, generator]
   Generator_capital_cost:
-    description: cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal power for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, generator]
   Generator_p_nom_set:
     description: a given nominal power for an extendable generator; one without a value has no row here
@@ -695,7 +709,12 @@ parameters:
     description: most nominal power an extendable link may be built at
     dims: [scenario, link]
   Link_capital_cost:
-    description: cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal power for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, link]
   Link_p_nom_set:
     description: a given nominal power for an extendable link; one without a value has no row here
@@ -707,7 +726,12 @@ parameters:
     description: most nominal power an extendable storage unit may be built at
     dims: [scenario, storage_unit]
   StorageUnit_capital_cost:
-    description: cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal power for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, storage_unit]
   StorageUnit_p_nom_set:
     description: a given nominal power for an extendable storage unit; one without a value has no row here
@@ -719,7 +743,12 @@ parameters:
     description: most nominal capacity an extendable store may be built at
     dims: [scenario, store]
   Store_capital_cost:
-    description: cost of one unit of nominal capacity — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal capacity for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, store]
   Store_e_nom_set:
     description: a given nominal capacity for an extendable store; one without a value has no row here
@@ -910,7 +939,12 @@ parameters:
     description: most nominal apparent power an extendable line may be built at
     dims: [scenario, line]
   Line_capital_cost:
-    description: cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal apparent power for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, line]
   Line_s_nom_set:
     description: a given nominal apparent power for an extendable line; one without a value has no row here
@@ -973,7 +1007,12 @@ parameters:
     description: most nominal apparent power an extendable transformer may be built at
     dims: [scenario, transformer]
   Transformer_capital_cost:
-    description: cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal apparent power for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, transformer]
   Transformer_s_nom_set:
     description: a given nominal apparent power for an extendable transformer; one without a value has no row here
@@ -1121,7 +1160,9 @@ parameters:
       the objective weights of the periods it stands in where the row names
       no `investment_period` under `multi_investment_periods` — data prep; a
       line outside the set, or one that does not stand in the row's period,
-      has no row
+      has no row. The capital cost is PyPSA's `capital_cost` property, which is
+      `Line_capital_cost` without `fom_cost` (`components.py:1151-1169`,
+      `global_constraints.py:935`)
     dims: [scenario, global_constraint, line]
   Link_expansion_cost_weight:
     description: >-
@@ -1129,7 +1170,9 @@ parameters:
       the objective weights of the periods it stands in where the row names
       no `investment_period` under `multi_investment_periods` — data prep; a
       link outside the set, or one that does not stand in the row's period,
-      has no row
+      has no row. The capital cost is PyPSA's `capital_cost` property, which is
+      `Link_capital_cost` without `fom_cost` (`components.py:1151-1169`,
+      `global_constraints.py:935`)
     dims: [scenario, global_constraint, link]
   Generator_tech_capacity_weight:
     description: >-

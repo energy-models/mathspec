@@ -81,7 +81,12 @@ parameters:
     description: most nominal apparent power an extendable line may be built at
     dims: [scenario, line]
   Line_capital_cost:
-    description: cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal apparent power for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, line]
   Line_s_nom_set:
     description: a given nominal apparent power for an extendable line; one without a value has no row here
@@ -123,7 +128,9 @@ parameters:
       the objective weights of the periods it stands in where the row names
       no `investment_period` under `multi_investment_periods` — data prep; a
       line outside the set, or one that does not stand in the row's period,
-      has no row
+      has no row. The capital cost is PyPSA's `capital_cost` property, which is
+      `Line_capital_cost` without `fom_cost` (`components.py:1151-1169`,
+      `global_constraints.py:935`)
     dims: [scenario, global_constraint, line]
   Line_tech_capacity_weight:
     description: >-
@@ -296,7 +303,7 @@ constraints:
 | $`\overline{\mathrm{s}}`$ | `Line_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — most flow either way, per unit of nominal apparent power |
 | $`\underline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_min` over $`\Xi \times \mathcal{K}`$ — least nominal apparent power an extendable line may be built at |
 | $`\overline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_max` over $`\Xi \times \mathcal{K}`$ — most nominal apparent power an extendable line may be built at |
-| $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\Xi \times \mathcal{K}`$ — cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
+| $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\Xi \times \mathcal{K}`$ — cost of one unit of nominal apparent power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{s}^{\mathrm{nom,set}}`$ | `Line_s_nom_set` over $`\Xi \times \mathcal{K}`$ — a given nominal apparent power for an extendable line; one without a value has no row here |
 | $`\mathrm{s}^{\mathrm{set}}`$ | `Line_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — a given flow schedule; a line without one has no row here |
 | $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{K} \times \mathcal{C}`$ — the line's series impedance, signed by its orientation in the cycle — the cycle basis, data prep; a line in no cycle has no row. PyPSA builds the cycle basis from the first scenario only (`networks.py:1354-1361`) |
@@ -304,7 +311,7 @@ constraints:
 | $`\mathrm{a}`$ | `Line_loss_slope` over $`\Xi \times \mathcal{T} \times \mathcal{K} \times \mathcal{E}`$ — the slope of a cut to the loss curve — a tangent's `2 * r_pu_eff * p_k` at its segment's flow, a secant's `r_pu_eff * (p_k + p_k+1)` between consecutive breakpoints, data prep |
 | $`\mathrm{b}`$ | `Line_loss_offset` over $`\Xi \times \mathcal{T} \times \mathcal{K} \times \mathcal{E}`$ — where that cut meets the loss axis — a tangent's `loss_k - slope_k * p_k`, a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep |
 | $`\mathrm{len}`$ | `Line_volume_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$ — the line's length where its carrier is in the row's set, the first scenario's length as PyPSA reads it (`global_constraints.py:835-836`) — data prep; a line outside it, or one that does not stand in the row's `investment_period`, has no row |
-| $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$ — the line's capital cost where its carrier is in the row's set, times the objective weights of the periods it stands in where the row names no `investment_period` under `multi_investment_periods` — data prep; a line outside the set, or one that does not stand in the row's period, has no row |
+| $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$ — the line's capital cost where its carrier is in the row's set, times the objective weights of the periods it stands in where the row names no `investment_period` under `multi_investment_periods` — data prep; a line outside the set, or one that does not stand in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Line_capital_cost` without `fom_cost` (`components.py:1151-1169`, `global_constraints.py:935`) |
 | $`\mathrm{m}^{l}`$ | `Line_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{K}`$ — one where the line is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
 #### Variables

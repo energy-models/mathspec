@@ -33,7 +33,11 @@ parameters:
     description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation; zero recovers the risk-neutral model
     dims: []
   period_weight_objective:
-    description: PyPSA's `investment_period_weightings.objective` — what a period's cost weighs
+    description: >-
+      PyPSA's `investment_period_weightings.objective` — what a period's cost
+      weighs; PyPSA reads it only under `multi_investment_periods`, so data
+      prep feeds one otherwise, whatever the column holds
+      (`optimize.py:205-207`, `:264-266`)
     dims: [period]
   period_weight_years:
     description: >-
