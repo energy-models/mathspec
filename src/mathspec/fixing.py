@@ -41,40 +41,20 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from mathspec.program import Expression, Mask, Program, VariableDeclaration
-    from mathspec.spec import Spec
+    from mathspec.spec import BoundsBlock, Spec
 
 
 def fix(spec: Spec, names: tuple[str, ...]) -> Spec:
     """*spec* with each of *names* a parameter rather than a variable; see [`Spec.fix`][mathspec.spec.Spec.fix]."""
     _refuse_names(spec, names)
-    raw = spec.to_dict()
-    refusals: list[str] = []
-    for name in names:
-        refusals += _fix_one(raw, spec, name)
-    if refusals:
+    checked = {name: _check(spec, name) for name in names}
+    if refusals := [line for found, _ in checked.values() for line in found]:
         raise LanguageError('\n'.join(refusals))
-    _settled_rows_to_assumptions(raw, spec, frozenset(names))
+    raw = spec.to_dict()
+    for name, (_, guarded_by) in checked.items():
+        _rewrite(raw, spec, name, guarded_by)
+    _settled_rows_to_assumptions(raw, spec.program, frozenset(names))
     return to_spec(raw)
-
-
-def _settled_rows_to_assumptions(raw: dict[str, object], spec: Spec, fixed: frozenset[str]) -> None:
-    """Move every constraint that named only fixed variables into ``assumptions:``, under its own name.
-
-    Such a row decided the fixed variables — a capacity's floor, a cap on
-    what is built — and with them supplied it compares numbers, which the
-    language refuses as a row and states as an assumption the consumer checks.
-    """
-    for name, row in spec.program.constraints.items():
-        if variables_of(row.lhs, row.rhs) <= fixed:
-            written = section(raw, 'constraints').pop(name)
-            assert isinstance(written, dict), 'a validated spec carries each constraint as a mapping'
-            declared = spec.constraints[name]
-            section(raw, 'assumptions')[name] = {
-                'holds': declared.expression,
-                **({'where': written['where']} if written.get('where') else {}),
-                'description': declared.description
-                or f"constraint '{name}' decided what is now supplied, so the supplied numbers must meet it",
-            }
 
 
 def _refuse_names(spec: Spec, names: tuple[str, ...]) -> None:
@@ -88,8 +68,8 @@ def _refuse_names(spec: Spec, names: tuple[str, ...]) -> None:
     """
     variables = spec.program.variables
     lines = [
-        f"fix: '{name}' is a given variable, which another file declares. Fix it on the spec that merge "
-        f'composes, where it is declared.'
+        f"fix: '{name}' is a given variable, which another file declares. Fix it on the merged spec, "
+        f'where a fragment declares it.'
         if name in spec.given.variables
         else f"fix: '{name}' is not a variable of this spec. " + did_you_mean(name, variables, label='Variables')
         for name in dict.fromkeys(names)
@@ -104,8 +84,12 @@ def _refuse_names(spec: Spec, names: tuple[str, ...]) -> None:
         raise SchemaError('\n'.join(lines))
 
 
-def _fix_one(raw: dict[str, object], spec: Spec, name: str) -> list[str]:
-    """Rewrite variable *name* in *raw* as a parameter, returning a refusal for each reader that forbids it."""
+def _check(spec: Spec, name: str) -> tuple[list[str], list[str]]:
+    """The refusals for variable *name*, and the constraints its mask is added to.
+
+    Every name is checked before the first one is rewritten, so a refused
+    call changes nothing.
+    """
     program = spec.program
     variable, declared = program.variables[name], spec.variables[name]
     refusals = [
@@ -119,46 +103,77 @@ def _fix_one(raw: dict[str, object], spec: Spec, name: str) -> list[str]:
         for curve_name, curve in program.piecewise.items()
         if name in variables_of(*(link.expression for link in curve.links)) or curve.activity == name
     ]
+    assumption = f'{name}_within_bounds'
+    if assumption in spec.assumptions and _held(name, declared.domain, declared.bounds):
+        refusals.append(f"fix: the bounds of '{name}' become '{assumption}', which the spec already declares.")
     guarded_by: list[str] = []
     if variable.where is not None and variable.absence == 'undefined':
         found, guarded_by = _unguarded_reads(program, name, variable)
         refusals += found
-    if refusals:
-        return refusals
+    return refusals, guarded_by
 
+
+def _rewrite(raw: dict[str, object], spec: Spec, name: str, guarded_by: list[str]) -> None:
+    """Rewrite variable *name* in *raw* as a parameter, its mask added to each row in *guarded_by*.
+
+    A row's ``where:`` is read from *raw*, where an earlier name may already
+    have added its own mask.
+    """
+    declared = spec.variables[name]
     del section(raw, 'variables')[name]
     section(raw, 'parameters')[name] = {
         'dims': list(declared.dims),
-        'dtype': 'float' if variable.domain == 'continuous' else 'int',
+        'dtype': 'float' if declared.domain == 'continuous' else 'int',
         **({'description': declared.description} if declared.description else {}),
     }
     mask = declared.where
     constraints = section(raw, 'constraints')
     for constraint in guarded_by:
-        written = spec.constraints[constraint].where
         row = constraints[constraint]
         assert isinstance(row, dict), 'a validated spec carries each constraint as a mapping'
+        written = row.get('where')
         row['where'] = f'({written}) AND ({mask})' if written else mask
-    if holds := _held(name, variable.domain, declared.bounds.lower, declared.bounds.upper):
-        assumption = f'{name}_within_bounds'
-        if assumption in spec.assumptions:
-            return [f"fix: the bounds of '{name}' become assumption '{assumption}', which the spec already declares."]
-        section(raw, 'assumptions')[assumption] = {
+    if holds := _held(name, declared.domain, declared.bounds):
+        section(raw, 'assumptions')[f'{name}_within_bounds'] = {
             'holds': holds,
             **({'where': mask} if mask else {}),
             'description': f"'{name}' was a decision held to these bounds, so a number supplied for it is held to them too",
         }
-    return []
 
 
-def _held(name: str, domain: str, lower: float | str | None, upper: float | str | None) -> str:
-    """The bounds and domain of a variable, as the predicate its supplied numbers must meet."""
-    sides = [f'{name} >= 0', f'{name} <= 1'] if domain == 'binary' else []
-    if lower is not None:
-        sides.append(f'{name} >= {lower}')
-    if upper is not None:
-        sides.append(f'{name} <= {upper}')
-    return ' AND '.join(sides)
+def _settled_rows_to_assumptions(raw: dict[str, object], program: Program, fixed: frozenset[str]) -> None:
+    """Move every constraint that named only fixed variables into ``assumptions:``, under its own name.
+
+    Such a row decided the fixed variables — a capacity's floor, a cap on
+    what is built — and with them supplied it compares numbers, which the
+    language refuses as a row and states as an assumption the consumer checks.
+    """
+    for name, row in program.constraints.items():
+        if variables_of(row.lhs, row.rhs) <= fixed:
+            written = section(raw, 'constraints').pop(name)
+            assert isinstance(written, dict), 'a validated spec carries each constraint as a mapping'
+            section(raw, 'assumptions')[name] = {
+                'holds': written['expression'],
+                **({'where': written['where']} if written.get('where') else {}),
+                'description': written.get('description')
+                or f"constraint '{name}' decided what is now supplied, so the supplied numbers must meet it",
+            }
+
+
+def _held(name: str, domain: str, bounds: BoundsBlock) -> str:
+    """The bounds and domain of a variable, as the predicate its supplied numbers must meet.
+
+    A binary's ``0`` and ``1`` stand in for a bound it leaves out or states
+    as the same number, so each side is written once.
+    """
+    implied = {'>=': 0, '<=': 1} if domain == 'binary' else {}
+    sides = [*implied.items()]
+    sides += [
+        (op, bound)
+        for op, bound in (('>=', bounds.lower), ('<=', bounds.upper))
+        if bound not in (None, implied.get(op))
+    ]
+    return ' AND '.join(f'{name} {op} {bound}' for op, bound in sides)
 
 
 def _unguarded_reads(program: Program, name: str, variable: VariableDeclaration) -> tuple[list[str], list[str]]:
@@ -190,10 +205,16 @@ def _unguarded_reads(program: Program, name: str, variable: VariableDeclaration)
                 if constraint not in guarded_by:
                     guarded_by.append(constraint)
                 continue
-            where = 'through a shift or a relation' if moved else 'in a case' if regions else 'there'
+            where = (
+                'through a shift or a relation'
+                if moved
+                else 'in a case'
+                if regions
+                else 'over a frame without its dims'
+            )
             refusals.append(
-                f"fix: {label} reads '{name}' outside a sum, {where}, where no mask keeps the rows "
-                f"'{name}' is absent from. As a parameter it would read 0 there and the rows would stand. "
+                f"fix: {label} reads '{name}' outside a sum, {where}. No mask there keeps out the rows where "
+                f"'{name}' is absent, so as a parameter it would read 0 and those rows would stand. "
                 f"Guard the read with the variable's own where:, or declare absence: zero if it is zero there."
             )
             break

@@ -13,7 +13,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(language): `missing:` says what a missing row means, and a table is complete unless the file says otherwise ([#810](https://github.com/energy-models/mathspec/pull/810))
-- feat(spec): spec.fix turns a decided variable into a supplied number, so a subproblem is a call on the whole model ([#824](https://github.com/energy-models/mathspec/pull/824))
+- feat(spec): a decided variable becomes a supplied number in one call, so a subproblem is not a second file ([#824](https://github.com/energy-models/mathspec/pull/824))
 
 ## 0.2.1 (2026-10-01)
 

@@ -82,11 +82,21 @@ def test_fixing_a_binary_makes_the_program_continuous():
         pytest.param(
             {'variables.cap.domain': 'binary', 'variables.cap.bounds': {}}, 'cap >= 0 AND cap <= 1', id='a-binary'
         ),
+        pytest.param(
+            {'variables.cap.domain': 'binary', 'variables.cap.bounds': {'lower': 0, 'upper': 1}},
+            'cap >= 0 AND cap <= 1',
+            id='a-binary-whose-bounds-restate-its-domain',
+        ),
     ],
 )
 def test_the_bounds_become_an_assumption_on_the_supplied_numbers(patch, holds):
     written = _fixed(BASE, 'cap', **patch).to_dict()['assumptions']['cap_within_bounds']
     assert written['holds'] == holds
+
+
+def test_an_assumption_the_bounds_would_overwrite_is_refused():
+    with pytest.raises(LanguageError, match="the bounds of 'cap' become 'cap_within_bounds', which the spec already"):
+        _fixed(BASE, 'cap', assumptions={'cap_within_bounds': {'holds': 'cap_max >= 0'}})
 
 
 def test_an_unbounded_variable_assumes_nothing():
@@ -112,6 +122,22 @@ def test_fixing_one_at_a_time_is_fixing_them_together():
         },
     )
     assert spec.fix('cap').fix('spare').to_dict() == spec.fix('cap', 'spare').to_dict()
+
+
+def test_two_masks_added_to_one_row_are_both_kept():
+    """Fixed in one call, the second variable's mask replaced the first one's,
+    so the rows where only the first was absent stood again with it read as 0."""
+    spec = schema_of(
+        MASKED,
+        **{
+            'parameters.flag2': {'dims': ['g'], 'dtype': 'bool'},
+            'variables.spare': {'dims': ['g'], 'bounds': {'lower': 0}, 'where': 'flag2'},
+            'constraints.within.expression': 'p <= cap + spare',
+        },
+    )
+    together = spec.fix('cap', 'spare').to_dict()
+    assert together['constraints']['within']['where'] == '(flag) AND (flag2)'
+    assert together == spec.fix('cap').fix('spare').to_dict()
 
 
 # ---------------------------------------------------------------------------

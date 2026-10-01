@@ -1107,7 +1107,9 @@ class Spec(_StrictBlock):
         ``integer`` variable becomes an ``int`` parameter, and a continuous one
         a ``float``. Its bounds, and a binary's ``0`` and ``1``, become the
         assumption ``<name>_within_bounds``, under the variable's own
-        ``where:``, which the consumer attaching the numbers checks.
+        ``where:``, which the consumer attaching the numbers checks. A
+        constraint that named only fixed variables compares numbers now, so it
+        becomes an assumption under its own name.
 
         A masked variable with ``absence: undefined`` does not exist outside
         its mask, and a row reading it there is not built; a parameter reads
@@ -1131,8 +1133,9 @@ class Spec(_StrictBlock):
             LanguageError: A variable a set or a curve still names, whose
                 fix [`expand`][mathspec.spec.Spec.expand] has to come
                 first; a read the variable's mask cannot be carried to,
-                named with the reader; or a spec the rewrite leaves outside
-                the language, such as a row that no longer names a variable.
+                named with the reader; an assumption ``<name>_within_bounds``
+                the spec already declares; or a spec the rewrite leaves
+                outside the language.
         """
         from mathspec.fixing import fix
 
