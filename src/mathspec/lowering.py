@@ -32,6 +32,7 @@ from mathspec.program import (
     GivenTargets,
     Link,
     Mask,
+    MaskDeclaration,
     Named,
     ObjectiveDeclaration,
     Parameter,
@@ -51,6 +52,7 @@ from mathspec.resolution import (
     resolve_expression,
     resolve_expression_text,
     resolve_where_text,
+    self_existence,
 )
 from mathspec.validation import emitted_name_errors, reference_errors
 
@@ -128,9 +130,20 @@ def lower(schema: Spec) -> Program:
 
     terms = _terms(entries, schema, ns, errors)
 
+    masks: dict[str, MaskDeclaration] = {}
+    for mname, mdef in schema.masks.items():
+        named_mask, refusals = ns.mask_entry(mname)
+        errors.extend(refusals)
+        if named_mask is not None:
+            body = Mask(named_mask.body)
+            frame = tuple(mdef.dims) if mdef.dims is not None else tuple(d for d in schema.dimensions if d in body.dims)
+            masks[mname] = MaskDeclaration(body, frame, mdef.description)
+
     variables = {}
     for vname, vdef in schema.variables.items():
         where = resolve_where_text(vdef.where, ns, f"Variable '{vname}'", errors, self_variable=vname)
+        if where is not None and (refusal := self_existence(where, vname, f"Variable '{vname}'")) is not None:
+            errors.append(refusal)
         if vdef.domain == 'binary':
             lower_bound, upper_bound = Constant(0.0), Constant(1.0)
         else:
@@ -230,6 +243,7 @@ def lower(schema: Spec) -> Program:
             )
             for name, entry in entries.items()
         },
+        masks=masks,
         given=GivenTargets(
             parameters={
                 name: ParameterDeclaration(tuple(g.dims), g.dtype, g.description)
@@ -244,6 +258,7 @@ def lower(schema: Spec) -> Program:
             expressions={
                 name: GivenDeclaration(tuple(g.dims), g.description) for name, g in schema.given.expressions.items()
             },
+            masks={name: GivenDeclaration(tuple(g.dims), g.description) for name, g in schema.given.masks.items()},
         ),
         description=schema.description,
     )

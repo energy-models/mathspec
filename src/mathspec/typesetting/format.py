@@ -32,6 +32,7 @@ OperatorName = Literal[
     'plus',
     'minus',
     'equal',
+    'iff',
     'le',
     'ge',
     'lt',
@@ -66,7 +67,8 @@ OperatorName = Literal[
 
 #: Every operator a walk can emit, by the name the walk uses for it, with its
 #: LaTeX spelling first and its Typst spelling second — one row per operator,
-#: so no format can be missing one. ``such_that`` is the colon in
+#: so no format can be missing one. ``iff`` is the ⟺ a mask is defined
+#: with, since a predicate is not a value to equate. ``such_that`` is the colon in
 #: "∀ t ∈ T : condition", ``times`` sits between sets in the legend,
 #: ``maps_to`` is the → in a coordinate map, ``curve`` and ``hull`` are the two
 #: sets a ``piecewise:`` block states its links lie on, and the three
@@ -78,6 +80,7 @@ OPERATOR_SPELLINGS: dict[OperatorName, tuple[str, str]] = {
     'plus': ('+', '+'),
     'minus': ('-', '-'),
     'equal': ('=', '='),
+    'iff': (r'\iff', 'arrow.l.r.double.long'),
     'le': (r'\le', '<='),
     'ge': (r'\ge', '>='),
     'lt': ('<', '<'),

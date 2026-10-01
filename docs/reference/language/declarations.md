@@ -89,8 +89,8 @@ A pinned variable is still a variable.
 
 `given:` holds what this file reads and does not build: data under
 `parameters:`, columns under `variables:`, named expressions under
-`expressions:`, and row families under `constraints:`. It takes those four keys
-and no other. A file with a `given:` block loads and prints on its own.
+`expressions:`, masks under `masks:`, and row families under `constraints:`. It
+takes those five keys and no other. A file with a `given:` block loads and prints on its own.
 
 ### `given: parameters`
 
@@ -230,7 +230,8 @@ constraints:
 There is no body. A [term](#terms) of this file may add to the name. This
 file reads the name as it reads a given variable: a quantity over the frame, of
 degree one. A `where` does not read it, because a mask is built before any
-variable exists. A name declared under both `expressions:` and
+variable exists. A predicate another file defines is read as a
+[given mask](#given-masks) instead. A name declared under both `expressions:` and
 `given: expressions:` is refused. The typeset legend lists a given expression
 under _Given_.
 
@@ -333,6 +334,46 @@ like any other.
   ```text
   fragment '#2' adds 't' to 'injection', and 't' reads 'injection' back through 'x' of '#1', so the sum would define itself. A term may not read what reads its sum: write 't' from something else, or define 'x' without 'injection'.
   ```
+
+### `given: masks`
+
+A given mask is a [mask](named.md#masks) this file reads and another file
+defines.
+
+```yaml
+dimensions:
+  period: { dtype: int }
+  generator: { dtype: str }
+given:
+  variables:
+    p: { dims: [period, generator] }
+  masks:
+    stands:
+      dims: [period, generator]
+      description: the generator stands in this period
+parameters:
+  ramp: { dims: [generator] }
+constraints:
+  ramp_up:
+    dims: [period, generator]
+    where: stands AND shift(stands, along=period, offset=1)
+    expression: p - shift(p, along=period, offset=1) <= ramp
+```
+
+| Field         |                                             |                |
+| ------------- | ------------------------------------------- | -------------- |
+| `dims`        | required. The dimensions the mask runs over |                |
+| `description` | free text                                   | default `null` |
+
+There is no predicate. A `where` reads the name as data over the frame, true
+or false at each coordinate. A `where` may read a given mask where it may not
+read a given expression, since a mask reads nothing a solve decides. In
+arithmetic the name is refused, as a mask is. The typeset legend lists a given
+mask under _Given_.
+
+[`merge`](../../howto/compose.md#a-library-of-components) folds a given mask
+into the mask another fragment defines. The `dims` are an upper bound: the
+definer's frame may name no dimension they leave out.
 
 ## `constraints`
 

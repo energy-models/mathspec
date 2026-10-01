@@ -57,6 +57,9 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
   `cases:` block, a [reported entry](language/named.md#reported-expressions)
   and a [term](language/declarations.md#terms) keep their definition line
   under either `inline_expressions` setting.
+- A [mask](language/named.md#masks) prints its upright symbol where it is
+  read and its predicate once, under a **Masks** heading, with ⟺. It prints
+  by symbol under either `inline_expressions` setting.
 - Wherever the math moves an index, which every `shift` does, the document
   prints a line saying what that notation means.
 - A file that does not load does not print.

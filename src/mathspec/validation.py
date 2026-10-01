@@ -108,6 +108,8 @@ def _flat_namespace(schema: Spec) -> list[tuple[str, Iterable[str]]]:
         ('given variable', schema.given.variables),
         ('named expression', schema.expressions),
         ('given expression', schema.given.expressions),
+        ('mask', schema.masks),
+        ('given mask', schema.given.masks),
         ('macro', schema.macros),
     ]
 
@@ -155,8 +157,10 @@ def _frame_dimensions(schema: Spec) -> Iterator[str]:
         *(('Given variable', name, g.dims) for name, g in schema.given.variables.items()),
         *(('Given expression', name, g.dims) for name, g in schema.given.expressions.items()),
         *(('Given constraint', name, g.dims) for name, g in schema.given.constraints.items()),
+        *(('Given mask', name, g.dims) for name, g in schema.given.masks.items()),
         *(('Constraint', name, c.dims) for name, c in schema.constraints.items()),
         *(('Named expression', name, e.dims or []) for name, e in schema.expressions.items()),
+        *(('Mask', name, m.dims or []) for name, m in schema.masks.items()),
     ]
     for kind, name, dims in frames:
         yield from (undeclared_dimension(kind, name, d) for d in dims if d not in schema.dimensions)
