@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(pypsa): the pypsa line references point at pypsa master ([#806](https://github.com/energy-models/mathspec/pull/806))
 - docs(pypsa): a fixed modular committable unit gets only its per-module commitment rows, as in pypsa master ([#787](https://github.com/energy-models/mathspec/pull/787))
 - docs(pypsa): the pypsa references are recorded against pypsa master ([#786](https://github.com/energy-models/mathspec/pull/786))
 - fix(language): a cases block with one case may compare expressions in its when: ([#795](https://github.com/energy-models/mathspec/pull/795))
