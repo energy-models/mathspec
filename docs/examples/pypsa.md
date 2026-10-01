@@ -4883,7 +4883,7 @@ PyPSA solves to `9245.0`. The three units start once each, at the first
 snapshot of 2030. With their start-up rows dropped there, which is what the
 file read before, PyPSA solves to `9035.0`, the three start-up costs less. The
 uncapped unit builds `70`, below its M of `3000`. With `committable_big_m=50`,
-PyPSA solves to `11745.0`, and the unit builds `50` (#PRNUM).
+PyPSA solves to `11745.0`, and the unit builds `50` (#817).
 
 | PyPSA | status | note |
 | --- | --- | --- |
