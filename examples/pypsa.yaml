@@ -150,11 +150,11 @@ parameters:
     dims: [scenario, snapshot, generator]
     dtype: bool
   Generator_start_up_cost:
-    description: cost of one start
-    dims: [scenario, generator]
+    description: cost of one start in this snapshot
+    dims: [scenario, snapshot, generator]
   Generator_shut_down_cost:
-    description: cost of one stop
-    dims: [scenario, generator]
+    description: cost of one stop in this snapshot
+    dims: [scenario, snapshot, generator]
   Generator_stand_by_cost:
     description: cost of one snapshot spent on
     dims: [scenario, snapshot, generator]
@@ -300,11 +300,11 @@ parameters:
     dims: [scenario, snapshot, link]
     dtype: bool
   Link_start_up_cost:
-    description: cost of one start
-    dims: [scenario, link]
+    description: cost of one start in this snapshot
+    dims: [scenario, snapshot, link]
   Link_shut_down_cost:
-    description: cost of one stop
-    dims: [scenario, link]
+    description: cost of one stop in this snapshot
+    dims: [scenario, snapshot, link]
   Link_stand_by_cost:
     description: cost of one snapshot spent on
     dims: [scenario, snapshot, link]
@@ -464,11 +464,11 @@ parameters:
     dims: [scenario, snapshot, process]
     dtype: bool
   Process_start_up_cost:
-    description: cost of one start
-    dims: [scenario, process]
+    description: cost of one start in this snapshot
+    dims: [scenario, snapshot, process]
   Process_shut_down_cost:
-    description: cost of one stop
-    dims: [scenario, process]
+    description: cost of one stop in this snapshot
+    dims: [scenario, snapshot, process]
   Process_stand_by_cost:
     description: cost of one snapshot spent on
     dims: [scenario, snapshot, process]
