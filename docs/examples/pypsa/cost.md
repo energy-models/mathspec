@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The cost
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the objective: the expected operating cost and its tail, weighted by scenario. It reads `CVaR_omega`, `scenario_opex`, `scenario_weight` under [`given`](../../reference/language/declarations.md#given).
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the expected operating cost and its tail, weighted by scenario. It adds a term to `total_cost`. It reads `CVaR_omega`, `scenario_opex`, `scenario_weight` under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -37,6 +37,12 @@ given:
     CVaR_omega: { dims: [] }
   expressions:
     scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+
+expressions:
+  risk_weighted_opex:
+    expression: (1 - CVaR_omega) * sum(scenario_weight * scenario_opex, over=scenario) + CVaR_omega * CVaR
+    adds_to: total_cost
 
 constraints:
   CVaR_excess:
@@ -49,14 +55,6 @@ constraints:
     dims: []
     where: CVaR_omega > 0
     expression: CVaR_theta + 1 / (1 - CVaR_alpha) * sum(scenario_weight * CVaR_a, over=scenario) <= CVaR
-
-objective:
-  sense: minimize
-  description: >-
-    capacity once per active period at its expected cost over the scenarios, operation in expectation over the scenarios, and a share of it at the tail
-  expression: >-
-    (1 - CVaR_omega) * sum(scenario_weight * scenario_opex, over=scenario)
-    + CVaR_omega * CVaR
 ```
 
 #### Sets
@@ -86,12 +84,13 @@ objective:
 | $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
 | $`\omega`$ | `CVaR_omega` (scalar), data another file declares |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression another file defines |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `risk_weighted_opex` to |
 
-#### Objective
+#### Definitions
 
-```math
-\min \left( 1 - \omega \right) \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi} \right) + \omega \cdot CVaR
-```
+| Symbol | Meaning |
+|---|---|
+| $`\mathit{risk\_weighted\_opex}`$ | `risk_weighted_opex` (scalar) |
 
 #### Subject to
 
@@ -105,6 +104,14 @@ a_{\xi} - \mathit{scenario\_opex}_{\xi} + \theta \ge 0 \qquad \forall\, \xi \in 
 
 ```math
 \theta + \frac{1}{1 - \alpha} \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot a_{\xi} \right) \le CVaR \qquad \text{where } \omega > 0
+```
+
+#### Definitions
+
+**`risk_weighted_opex`**
+
+```math
+\mathit{risk\_weighted\_opex} = \left( 1 - \omega \right) \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi} \right) + \omega \cdot CVaR
 ```
 
 #### Variable domains

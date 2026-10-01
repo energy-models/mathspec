@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Power flow
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: Kirchhoff's voltage law around each cycle. It declares `Cycle_angle_sum` as an empty sum, `empty: true`, which the lines and transformers add to.
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: Kirchhoff's voltage law around each cycle. It reads `Cycle_angle_sum` under `given:` and adds nothing to it, and the lines and transformers add their terms to it.
 
 <!-- gallery:begin -->
 ```yaml
@@ -18,13 +18,13 @@ dimensions:
   cycle:
     description: independent cycles of the passive network graph — the cycle basis, data prep
 
-expressions:
-  Cycle_angle_sum:
-    dims: [scenario, snapshot, cycle]
-    empty: true
-    description: >-
-      the voltage angle differences around a cycle: every branch flow times
-      its cycle weight, and every transformer phase shift
+given:
+  expressions:
+    Cycle_angle_sum:
+      dims: [scenario, snapshot, cycle]
+      description: >-
+        the voltage angle differences around a cycle: every branch flow times
+        its cycle weight, and every transformer phase shift
 
 constraints:
   Kirchhoff_Voltage_Law:
@@ -47,11 +47,11 @@ constraints:
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 | $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep |
 
-#### Definitions
+#### Given
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ — the voltage angle differences around a cycle: every branch flow times its cycle weight, and every transformer phase shift |
+| $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$, an expression another file defines — the voltage angle differences around a cycle: every branch flow times its cycle weight, and every transformer phase shift |
 
 #### Subject to
 
@@ -59,13 +59,5 @@ constraints:
 
 ```math
 \mathit{Cycle\_angle\_sum}_{\xi,t,c} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
-```
-
-#### Definitions
-
-**`Cycle_angle_sum`**
-
-```math
-\mathit{Cycle\_angle\_sum}_{\xi,t,c} = \cdots \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
 ```
 <!-- gallery:end -->

@@ -110,7 +110,7 @@ given:
     Generator_maintenance_status: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_ext: { dims: [generator] }
   expressions:
-    scenario_opex: { dims: [scenario], term: Generator_commitment_opex }
+    scenario_opex: { dims: [scenario] }
 
 expressions:
   Generator_previous_status:
@@ -126,6 +126,7 @@ expressions:
       sum(sum(((Generator_status * Generator_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=generator), over=snapshot)
       + sum(sum(Generator_start_up * Generator_start_up_cost, over=generator), over=snapshot)
       + sum(sum(Generator_shut_down * Generator_shut_down_cost, over=generator), over=snapshot)
+    adds_to: scenario_opex
 
 constraints:
   Generator_com_p_lower:
