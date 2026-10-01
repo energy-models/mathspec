@@ -14,6 +14,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 - feat(language): `missing:` says what a missing row means, and a table is complete unless the file says otherwise ([#810](https://github.com/energy-models/mathspec/pull/810))
 - feat(spec): a decided variable becomes a supplied number in one call, so a subproblem is not a second file ([#824](https://github.com/energy-models/mathspec/pull/824))
+- feat(spec): a spec reports how its optimum moves with a parameter, which for a fixed decision is a Benders cut ([#826](https://github.com/energy-models/mathspec/pull/826))
 
 ## 0.2.1 (2026-10-01)
 
