@@ -10,7 +10,7 @@ request renames that heading to the version and the day, such as
 `## 0.1.0 (2026-10-01)`, and edits the section into the release notes. Merging
 it releases that version ([RELEASING.md](https://github.com/energy-models/mathspec/blob/main/RELEASING.md)).
 
-## 0.3.0 (2026-10-01)
+## 0.2.1 (2026-10-01)
 
 A spec can now be written as several files. [`merge`](https://mathspec.readthedocs.io/en/latest/howto/compose/)
 composes **fragments**, each a spec that owns part of the math and reads what
