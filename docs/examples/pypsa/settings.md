@@ -22,6 +22,8 @@ dimensions:
     dtype: int
   carrier:
     description: energy carriers, what a growth limit is set per
+  carrier_attribute:
+    description: the numeric columns of PyPSA's carriers table, such as `co2_emissions`
 
 relations:
   snapshot_period:
@@ -48,6 +50,24 @@ parameters:
       weighs in a `primary_energy` or `operational_limit` row; PyPSA reads it
       only under `multi_investment_periods`, so data prep feeds one otherwise
     dims: [period]
+  multi_investment_periods:
+    description: >-
+      whether the run is PyPSA's `optimize(multi_investment_periods=True)`;
+      without it PyPSA reads no build year and no lifetime
+    dims: []
+    dtype: bool
+  period_year:
+    description: >-
+      the year an investment period stands for — a copy of the `period`
+      labels, because a dimension label is not a value an expression can read
+    dims: [period]
+    dtype: int
+  Carrier_attribute_value:
+    description: >-
+      a carrier's value in one column of PyPSA's carriers table, such as its
+      `co2_emissions` in t/MWh of primary energy — the table read long, one
+      row per carrier and column
+    dims: [scenario, carrier, carrier_attribute]
   snapshot_weightings_stores:
     description: PyPSA's `snapshot_weightings.stores` — hours a snapshot stands for in a storage balance
     dims: [snapshot]
@@ -77,6 +97,12 @@ parameters:
     dtype: bool
 
 expressions:
+  nyears:
+    description: >-
+      the years a period's snapshots stand for — PyPSA's `n.nyears`, the
+      objective weightings of the period summed, over 8760 hours
+    dims: [period]
+    expression: sum(snapshot_weightings_objective, by=snapshot_period, over=snapshot, into=period) / 8760
   GlobalConstraint_energy_weight:
     description: >-
       what one unit of power at a snapshot counts for in a row — the
@@ -157,6 +183,7 @@ expressions:
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
 | $`\mathcal{I}`$ | index $`i`$ — `carrier` — energy carriers, what a growth limit is set per |
+| $`\mathcal{Q}`$ | index $`q`$ — `carrier_attribute` — the numeric columns of PyPSA's carriers table, such as `co2_emissions` |
 
 #### Parameters
 
@@ -167,6 +194,9 @@ expressions:
 | $`\omega`$ | `CVaR_omega` (scalar) — PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation; zero recovers the risk-neutral model |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.objective` — what a period's cost weighs |
 | $`\mathrm{w}^{\mathrm{yr}}`$ | `period_weight_years` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.years` — what a period's energy weighs in a `primary_energy` or `operational_limit` row; PyPSA reads it only under `multi_investment_periods`, so data prep feeds one otherwise |
+| $`\mathrm{multi}`$ | `multi_investment_periods` (scalar) — whether the run is PyPSA's `optimize(multi_investment_periods=True)`; without it PyPSA reads no build year and no lifetime |
+| $`\mathrm{yr}`$ | `period_year` over $`\mathcal{Y}`$ — the year an investment period stands for — a copy of the `period` labels, because a dimension label is not a value an expression can read |
+| $`\mathrm{e}`$ | `Carrier_attribute_value` over $`\Xi \times \mathcal{I} \times \mathcal{Q}`$ — a carrier's value in one column of PyPSA's carriers table, such as its `co2_emissions` in t/MWh of primary energy — the table read long, one row per carrier and column |
 | $`\mathrm{w}^{\mathrm{sto}}`$ | `snapshot_weightings_stores` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.stores` — hours a snapshot stands for in a storage balance |
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.generators` — hours a snapshot stands for in an energy total |
 | $`\mathrm{lossy}`$ | `transmission_losses` (scalar) — whether the network dissipates transmission losses — PyPSA's `transmission_losses` read as a flag; its mode, tangents or secants, only decides how data prep fills the `segment` axis, the rows are the same; false with no segments is a lossless run. A security-constrained run over a network with passive branches builds no loss: PyPSA does not hand the keyword to `create_model` (`abstract.py:437-441`) but to the solver (`:491`), so data prep feeds false there |
@@ -176,6 +206,7 @@ expressions:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{n}^{\mathrm{yr}}`$ | `nyears` over $`\mathcal{Y}`$ — the years a period's snapshots stand for — PyPSA's `n.nyears`, the objective weightings of the period summed, over 8760 hours |
 | $`\mathit{w}^{\mathrm{gc}}`$ | `GlobalConstraint_energy_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — what one unit of power at a snapshot counts for in a row — the generator weighting times the years of the snapshot's period, where the row counts the snapshot, and nothing where it does not |
 | $`\mathit{last}`$ | `GlobalConstraint_snapshot_closes` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — one at the last snapshot a row counts, and zero elsewhere |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$ — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:414-429`) |
@@ -187,6 +218,12 @@ expressions:
 | $`\mathit{transmission\_expansion\_cost}`$ | `transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$ — what a `transmission_expansion_cost_limit` row totals — capital cost times the chosen build of the row's branches |
 
 #### Definitions
+
+**`nyears`**
+
+```math
+\mathrm{n}^{\mathrm{yr}}_{y} = \frac{\sum_{t \in \mathcal{T} \,:\, \mathrm{snapshot\_period}(t) = y} \mathrm{w}_{t}}{8760} \qquad \forall\, y \in \mathcal{Y}
+```
 
 **`GlobalConstraint_energy_weight`**
 

@@ -15,6 +15,8 @@ dimensions:
     dtype: int
   carrier:
     description: energy carriers, what a growth limit is set per
+  carrier_attribute:
+    description: the numeric columns of PyPSA's carriers table, such as `co2_emissions`
 
 relations:
   snapshot_period:
@@ -41,6 +43,24 @@ parameters:
       weighs in a `primary_energy` or `operational_limit` row; PyPSA reads it
       only under `multi_investment_periods`, so data prep feeds one otherwise
     dims: [period]
+  multi_investment_periods:
+    description: >-
+      whether the run is PyPSA's `optimize(multi_investment_periods=True)`;
+      without it PyPSA reads no build year and no lifetime
+    dims: []
+    dtype: bool
+  period_year:
+    description: >-
+      the year an investment period stands for — a copy of the `period`
+      labels, because a dimension label is not a value an expression can read
+    dims: [period]
+    dtype: int
+  Carrier_attribute_value:
+    description: >-
+      a carrier's value in one column of PyPSA's carriers table, such as its
+      `co2_emissions` in t/MWh of primary energy — the table read long, one
+      row per carrier and column
+    dims: [scenario, carrier, carrier_attribute]
   snapshot_weightings_stores:
     description: PyPSA's `snapshot_weightings.stores` — hours a snapshot stands for in a storage balance
     dims: [snapshot]
@@ -70,6 +90,12 @@ parameters:
     dtype: bool
 
 expressions:
+  nyears:
+    description: >-
+      the years a period's snapshots stand for — PyPSA's `n.nyears`, the
+      objective weightings of the period summed, over 8760 hours
+    dims: [period]
+    expression: sum(snapshot_weightings_objective, by=snapshot_period, over=snapshot, into=period) / 8760
   GlobalConstraint_energy_weight:
     description: >-
       what one unit of power at a snapshot counts for in a row — the

@@ -17,8 +17,15 @@ dimensions:
     dtype: datetime
   generator:
     description: generating units, each on one bus
+  period:
+    description: investment periods — PyPSA's `investment_periods`
+    dtype: int
 
 relations:
+  snapshot_period:
+    description: the investment period a snapshot falls in
+    key: snapshot
+    values: period
   Generator_maintenance_cover:
     description: >-
       the snapshots a maintenance event covers, by the snapshot it starts in —
@@ -36,10 +43,12 @@ parameters:
     dims: [generator]
     dtype: bool
   Generator_maintenance_pu:
-    description: the share of the build a maintenance event takes off
+    description: >-
+      the share of the build a maintenance event takes off — PyPSA's
+      `maintenance_pu`, per unit
     dims: [scenario, generator]
   Generator_maintenance_events:
-    description: how many maintenance events the horizon holds
+    description: how many maintenance events the horizon holds — PyPSA's `maintenance_events`
     dims: [scenario, generator]
     dtype: int
   Generator_maintenance_duration:
@@ -65,7 +74,7 @@ variables:
       `Generator-maintenance` — whether a maintainable generator is in maintenance:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_active
+    where: Generator_maintainable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     absence: zero
     bounds:
       lower: 0
@@ -73,7 +82,7 @@ variables:
   Generator_maintenance_start:
     description: "`Generator-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_active
+    where: Generator_maintainable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     absence: zero
     domain: binary
   Generator_maintenance_capacity:
@@ -83,7 +92,7 @@ variables:
     dims: [scenario, snapshot, generator]
     where: >-
       Generator_maintainable AND Generator_p_nom_extendable
-      AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+      AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     absence: zero
     bounds:
       lower: 0
@@ -95,7 +104,7 @@ variables:
     dims: [scenario, snapshot, generator]
     where: >-
       Generator_maintainable AND Generator_committable
-      AND NOT (Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)) AND Generator_active
+      AND NOT (Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     absence: zero
     bounds:
       lower: 0
@@ -105,10 +114,14 @@ given:
     Generator_p_nom_extendable: { dims: [generator], dtype: bool }
     Generator_committable: { dims: [generator], dtype: bool }
     Generator_p_nom_mod: { dims: [generator] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
+    multi_investment_periods: { dims: [], dtype: bool }
+    period_year: { dims: [period], dtype: int }
     snapshot_weightings_generators: { dims: [snapshot] }
     Generator_p_nom_min: { dims: [scenario, generator] }
     Generator_p_nom_max: { dims: [scenario, generator] }
+    Generator_active: { dims: [generator], dtype: bool }
+    Generator_build_year: { dims: [generator], dtype: int }
+    Generator_lifetime: { dims: [generator] }
   variables:
     Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
     Generator_p_nom_ext: { dims: [generator] }
@@ -125,66 +138,66 @@ constraints:
       started covers the snapshot; two events do not overlap, since the
       maintenance status is at most one
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_active
+    where: Generator_maintainable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance == sum(Generator_maintenance_start, by=Generator_maintenance_cover, over=start, into=covered)
   Generator_maint_start_horizon:
     description: "`Generator-maint-start-horizon` — no event starts where it could not run its whole duration"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_active AND Generator_maintenance_start_blocked
+    where: Generator_maintainable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime)) AND Generator_maintenance_start_blocked
     expression: Generator_maintenance_start == 0
   Generator_maintcap_upper:
     description: >-
       `Generator-maintcap_upper` — the build taken off is at most the chosen build in
       maintenance, and at most the build less its floor out of it
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_capacity <= Generator_p_nom_ext - Generator_p_nom_min * (1 - Generator_maintenance)
   Generator_maintcap_upper_nommax:
     description: "`Generator-maintcap_upper_nommax` — out of maintenance, no build is taken off"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_capacity <= Generator_p_nom_max * Generator_maintenance
   Generator_maintcap_lower_nommax:
     description: "`Generator-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_capacity >= Generator_p_nom_ext - Generator_p_nom_max * (1 - Generator_maintenance)
   Generator_maintcap_lower_nommin:
     description: "`Generator-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND Generator_p_nom_min > 0
+    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime)) AND Generator_p_nom_min > 0
     expression: Generator_maintenance_capacity >= Generator_p_nom_min * Generator_maintenance
   Generator_maint_status_le_status:
     description: "`Generator-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_status <= Generator_status
   Generator_maint_status_le_maint:
     description: "`Generator-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_status <= Generator_maintenance
   Generator_maint_status_lb:
     description: "`Generator-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_status >= Generator_status + Generator_maintenance - 1
   Generator_maint_modstatus_le_status:
     description: "`Generator-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_status <= Generator_status
   Generator_maint_modstatus_le_maint:
     description: >-
       `Generator-maint-modstatus-le-maint` — out of maintenance, no module is on in
       maintenance; in it, at most the modules the build cap holds
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_status <= Generator_p_nom_max / Generator_p_nom_mod * Generator_maintenance
   Generator_maint_modstatus_lb:
     description: "`Generator-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_status >= Generator_status - Generator_p_nom_max / Generator_p_nom_mod * (1 - Generator_maintenance)
 
 assumptions:
@@ -236,16 +249,17 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$ — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$ — dispatch periods |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y},\ \mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$ — dispatch periods |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$ — generating units, each on one bus |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{mnt}`$ | `Generator_maintainable` over $`\mathcal{G}`$ — whether a generator must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
-| $`\gamma`$ | `Generator_maintenance_pu` over $`\Xi \times \mathcal{G}`$ — the share of the build a maintenance event takes off |
-| $`\mathrm{n}^{\mathrm{mnt}}`$ | `Generator_maintenance_events` over $`\Xi \times \mathcal{G}`$ — how many maintenance events the horizon holds |
+| $`\gamma`$ | `Generator_maintenance_pu` over $`\Xi \times \mathcal{G}`$ — the share of the build a maintenance event takes off — PyPSA's `maintenance_pu`, per unit |
+| $`\mathrm{n}^{\mathrm{mnt}}`$ | `Generator_maintenance_events` over $`\Xi \times \mathcal{G}`$ — how many maintenance events the horizon holds — PyPSA's `maintenance_events` |
 | $`\tau^{\mathrm{mnt}}`$ | `Generator_maintenance_duration` over $`\Xi \times \mathcal{G}`$ — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the generator is not maintainable. No row reads it: data prep turns it into `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the assumptions hold it to the horizon |
 | $`\mathrm{blk}`$ | `Generator_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the generator does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 
@@ -265,10 +279,14 @@ assumptions:
 | $`\mathrm{ext}`$ | `Generator_p_nom_extendable` over $`\mathcal{G}`$, data another file declares |
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$, data another file declares |
 | $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$, data another file declares |
-| $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{T} \times \mathcal{G}`$, data another file declares |
+| $`\mathrm{multi}`$ | `multi_investment_periods` (scalar), data another file declares |
+| $`\mathrm{yr}`$ | `period_year` over $`\mathcal{Y}`$, data another file declares |
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
 | $`\underline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_min` over $`\Xi \times \mathcal{G}`$, data another file declares |
 | $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\Xi \times \mathcal{G}`$, data another file declares |
+| $`\mathrm{act}`$ | `Generator_active` over $`\mathcal{G}`$, data another file declares |
+| $`\mathrm{by}`$ | `Generator_build_year` over $`\mathcal{G}`$, data another file declares |
+| $`\mathrm{L}`$ | `Generator_lifetime` over $`\mathcal{G}`$, data another file declares |
 | $`u`$ | `Generator_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ |
 
@@ -283,73 +301,73 @@ assumptions:
 **`Generator_maint_window`**
 
 ```math
-\mu_{\xi,t,g} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ g,\ t',\ t \right) \in \mathrm{Generator\_maintenance\_cover}} \mu^{\mathrm{up}}_{\xi,t',g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g}
+\mu_{\xi,t,g} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ g,\ t',\ t \right) \in \mathrm{Generator\_maintenance\_cover}} \mu^{\mathrm{up}}_{\xi,t',g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maint_start_horizon`**
 
 ```math
-\mu^{\mathrm{up}}_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g} \wedge \mathrm{blk}_{\xi,t,g}
+\mu^{\mathrm{up}}_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right) \wedge \mathrm{blk}_{\xi,t,g}
 ```
 
 **`Generator_maintcap_upper`**
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \le P_{g} - \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{nom}}_{\xi,t,g} \le P_{g} - \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maintcap_upper_nommax`**
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{nom}}_{\xi,t,g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maintcap_lower_nommax`**
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \ge P_{g} - \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{nom}}_{\xi,t,g} \ge P_{g} - \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maintcap_lower_nommin`**
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g} \wedge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} > 0
+\mu^{\mathrm{nom}}_{\xi,t,g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right) \wedge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} > 0
 ```
 
 **`Generator_maint_status_le_status`**
 
 ```math
-\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maint_status_le_maint`**
 
 ```math
-\mu^{u}_{\xi,t,g} \le \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \le \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maint_status_lb`**
 
 ```math
-\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} + \mu_{\xi,t,g} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} + \mu_{\xi,t,g} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maint_modstatus_le_status`**
 
 ```math
-\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maint_modstatus_le_maint`**
 
 ```math
-\mu^{u}_{\xi,t,g} \le \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \le \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maint_modstatus_lb`**
 
 ```math
-\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} - \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} - \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 #### Variable domains
@@ -357,25 +375,25 @@ assumptions:
 **`Generator_maintenance`**
 
 ```math
-0 \le \mu_{\xi,t,g} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g}
+0 \le \mu_{\xi,t,g} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maintenance_start`**
 
 ```math
-\mu^{\mathrm{up}}_{\xi,t,g} \in \{0, 1\} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{up}}_{\xi,t,g} \in \{0, 1\} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maintenance_capacity`**
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{nom}}_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_maintenance_status`**
 
 ```math
-\mu^{u}_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 #### Assumptions

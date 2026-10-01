@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(pypsa): the generator spec declares PyPSA's generator attributes and derives its period, cost and commitment data from them ([#802](https://github.com/energy-models/mathspec/pull/802))
 - fix(language): a cases block with one case may compare expressions in its when: ([#795](https://github.com/energy-models/mathspec/pull/795))
 - feat(language): a parameter value that is null or NaN is refused when the data is attached ([#788](https://github.com/energy-models/mathspec/pull/788))
 - fix(language): a where string names several columns in at's over= and into=, as an expression does ([#782](https://github.com/energy-models/mathspec/pull/782))

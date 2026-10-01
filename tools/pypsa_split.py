@@ -72,10 +72,11 @@ PREFIX_TOPIC = {
 }
 
 #: The system totals, whose names carry no component, and the data every
-#: topic reads: the risk preference, and how a snapshot counts in a global
-#: constraint, which a component's share of one reads.
+#: topic reads: the risk preference, the carriers table, and how a snapshot
+#: counts in a global constraint, which a component's share of one reads.
 NAME_TOPIC = {
     'CVaR_omega': 'settings',
+    'Carrier_attribute_value': 'settings',
     'GlobalConstraint_counts_snapshot': 'settings',
     'GlobalConstraint_energy_weight': 'settings',
     'GlobalConstraint_snapshot_closes': 'settings',
@@ -122,8 +123,11 @@ COMMITTABLE = ('Generator', 'Link', 'Process')
 #: the first that matches wins, and a name none matches is the component's own.
 FEATURES = (
     ('maintenance', re.compile(r'maint')),
-    ('ramping', re.compile(r'ramp|_rate$|allowance|previous_p$|p_init|came_in_running')),
-    ('commitment', re.compile(r'status|start_up|shut_down|stand_by|committable|com_|must_stay|min_up|min_down|big_m')),
+    ('ramping', re.compile(r'ramp|_up_rate$|_down_rate$|allowance|previous_p$|p_init|came_in_running')),
+    (
+        'commitment',
+        re.compile(r'status|start_up|shut_down|stand_by|committable|com_|must_stay|min_up|min_down|time_before|big_m'),
+    ),
 )
 
 

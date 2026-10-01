@@ -37,17 +37,21 @@ parameters:
     description: >-
       the output a unit brought into the horizon — PyPSA's `p_init`, read
       only where the unit came in running; no value means it is unknown, so
-      the unit carries no ramp row at the first snapshot
+      the unit carries no ramp row at the first snapshot; in MW
     dims: [scenario, generator]
 
 given:
   parameters:
     Generator_p_nom_extendable: { dims: [generator], dtype: bool }
     Generator_committable: { dims: [generator], dtype: bool }
-    Generator_status_initial: { dims: [scenario, generator], dtype: int }
+    Generator_up_time_before: { dims: [scenario, generator], dtype: int }
     Generator_p_nom_mod: { dims: [generator] }
     Generator_big_m: { dims: [scenario, generator] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
+    multi_investment_periods: { dims: [], dtype: bool }
+    period_year: { dims: [period], dtype: int }
+    Generator_active: { dims: [generator], dtype: bool }
+    Generator_build_year: { dims: [generator], dtype: int }
+    Generator_lifetime: { dims: [generator] }
   variables:
     Generator_p: { dims: [scenario, snapshot, generator] }
     Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
@@ -55,6 +59,7 @@ given:
     Generator_shut_down: { dims: [scenario, snapshot, generator], domain: integer }
     Generator_p_nom_ext: { dims: [generator] }
   expressions:
+    Generator_status_initial: { dims: [scenario, generator] }
     Generator_previous_status: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_effective: { dims: [scenario, generator] }
     Generator_p_nom_committed: { dims: [scenario, generator] }
@@ -140,8 +145,8 @@ constraints:
     where: >-
       Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
       AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+      AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: >-
       Generator_p - Generator_previous_p <=
       Generator_ramp_up_rate * Generator_p_nom_ext
@@ -155,8 +160,8 @@ constraints:
     where: >-
       Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
       AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+      AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: >-
       Generator_p - Generator_previous_p <=
       Generator_start_up_rate * Generator_p_nom_ext
@@ -170,8 +175,8 @@ constraints:
     where: >-
       Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
       AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+      AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: >-
       Generator_previous_p - Generator_p <=
       Generator_ramp_down_rate * Generator_p_nom_ext
@@ -185,8 +190,8 @@ constraints:
     where: >-
       Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
       AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+      AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: >-
       Generator_previous_p - Generator_p <=
       Generator_shut_down_rate * Generator_p_nom_ext
@@ -203,8 +208,8 @@ constraints:
     where: >-
       (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
       AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+      AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_p - Generator_previous_p <= Generator_ramp_up_allowance
   Generator_p_ramp_limit_down:
     description: >-
@@ -218,13 +223,13 @@ constraints:
     where: >-
       (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
       AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+      AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_previous_p - Generator_p <= Generator_ramp_down_allowance
 
 assumptions:
   Generator_came_in_running_unless_committable:
-    holds: "Generator_status_initial == 1"
+    holds: "Generator_up_time_before > 0"
     where: "NOT Generator_committable AND (Generator_ramp_limit_up OR Generator_ramp_limit_down)"
     description: >-
       PyPSA reads `up_time_before` of a unit that is not committable in its

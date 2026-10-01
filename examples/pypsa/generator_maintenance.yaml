@@ -10,8 +10,15 @@ dimensions:
     dtype: datetime
   generator:
     description: generating units, each on one bus
+  period:
+    description: investment periods — PyPSA's `investment_periods`
+    dtype: int
 
 relations:
+  snapshot_period:
+    description: the investment period a snapshot falls in
+    key: snapshot
+    values: period
   Generator_maintenance_cover:
     description: >-
       the snapshots a maintenance event covers, by the snapshot it starts in —
@@ -29,10 +36,12 @@ parameters:
     dims: [generator]
     dtype: bool
   Generator_maintenance_pu:
-    description: the share of the build a maintenance event takes off
+    description: >-
+      the share of the build a maintenance event takes off — PyPSA's
+      `maintenance_pu`, per unit
     dims: [scenario, generator]
   Generator_maintenance_events:
-    description: how many maintenance events the horizon holds
+    description: how many maintenance events the horizon holds — PyPSA's `maintenance_events`
     dims: [scenario, generator]
     dtype: int
   Generator_maintenance_duration:
@@ -58,7 +67,7 @@ variables:
       `Generator-maintenance` — whether a maintainable generator is in maintenance:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_active
+    where: Generator_maintainable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     absence: zero
     bounds:
       lower: 0
@@ -66,7 +75,7 @@ variables:
   Generator_maintenance_start:
     description: "`Generator-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_active
+    where: Generator_maintainable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     absence: zero
     domain: binary
   Generator_maintenance_capacity:
@@ -76,7 +85,7 @@ variables:
     dims: [scenario, snapshot, generator]
     where: >-
       Generator_maintainable AND Generator_p_nom_extendable
-      AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+      AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     absence: zero
     bounds:
       lower: 0
@@ -88,7 +97,7 @@ variables:
     dims: [scenario, snapshot, generator]
     where: >-
       Generator_maintainable AND Generator_committable
-      AND NOT (Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)) AND Generator_active
+      AND NOT (Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     absence: zero
     bounds:
       lower: 0
@@ -98,10 +107,14 @@ given:
     Generator_p_nom_extendable: { dims: [generator], dtype: bool }
     Generator_committable: { dims: [generator], dtype: bool }
     Generator_p_nom_mod: { dims: [generator] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
+    multi_investment_periods: { dims: [], dtype: bool }
+    period_year: { dims: [period], dtype: int }
     snapshot_weightings_generators: { dims: [snapshot] }
     Generator_p_nom_min: { dims: [scenario, generator] }
     Generator_p_nom_max: { dims: [scenario, generator] }
+    Generator_active: { dims: [generator], dtype: bool }
+    Generator_build_year: { dims: [generator], dtype: int }
+    Generator_lifetime: { dims: [generator] }
   variables:
     Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
     Generator_p_nom_ext: { dims: [generator] }
@@ -118,66 +131,66 @@ constraints:
       started covers the snapshot; two events do not overlap, since the
       maintenance status is at most one
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_active
+    where: Generator_maintainable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance == sum(Generator_maintenance_start, by=Generator_maintenance_cover, over=start, into=covered)
   Generator_maint_start_horizon:
     description: "`Generator-maint-start-horizon` — no event starts where it could not run its whole duration"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_active AND Generator_maintenance_start_blocked
+    where: Generator_maintainable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime)) AND Generator_maintenance_start_blocked
     expression: Generator_maintenance_start == 0
   Generator_maintcap_upper:
     description: >-
       `Generator-maintcap_upper` — the build taken off is at most the chosen build in
       maintenance, and at most the build less its floor out of it
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_capacity <= Generator_p_nom_ext - Generator_p_nom_min * (1 - Generator_maintenance)
   Generator_maintcap_upper_nommax:
     description: "`Generator-maintcap_upper_nommax` — out of maintenance, no build is taken off"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_capacity <= Generator_p_nom_max * Generator_maintenance
   Generator_maintcap_lower_nommax:
     description: "`Generator-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_capacity >= Generator_p_nom_ext - Generator_p_nom_max * (1 - Generator_maintenance)
   Generator_maintcap_lower_nommin:
     description: "`Generator-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND Generator_p_nom_min > 0
+    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime)) AND Generator_p_nom_min > 0
     expression: Generator_maintenance_capacity >= Generator_p_nom_min * Generator_maintenance
   Generator_maint_status_le_status:
     description: "`Generator-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_status <= Generator_status
   Generator_maint_status_le_maint:
     description: "`Generator-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_status <= Generator_maintenance
   Generator_maint_status_lb:
     description: "`Generator-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_status >= Generator_status + Generator_maintenance - 1
   Generator_maint_modstatus_le_status:
     description: "`Generator-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_status <= Generator_status
   Generator_maint_modstatus_le_maint:
     description: >-
       `Generator-maint-modstatus-le-maint` — out of maintenance, no module is on in
       maintenance; in it, at most the modules the build cap holds
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_status <= Generator_p_nom_max / Generator_p_nom_mod * Generator_maintenance
   Generator_maint_modstatus_lb:
     description: "`Generator-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_maintenance_status >= Generator_status - Generator_p_nom_max / Generator_p_nom_mod * (1 - Generator_maintenance)
 
 assumptions:

@@ -44,17 +44,21 @@ parameters:
     description: >-
       the output a unit brought into the horizon — PyPSA's `p_init`, read
       only where the unit came in running; no value means it is unknown, so
-      the unit carries no ramp row at the first snapshot
+      the unit carries no ramp row at the first snapshot; in MW
     dims: [scenario, generator]
 
 given:
   parameters:
     Generator_p_nom_extendable: { dims: [generator], dtype: bool }
     Generator_committable: { dims: [generator], dtype: bool }
-    Generator_status_initial: { dims: [scenario, generator], dtype: int }
+    Generator_up_time_before: { dims: [scenario, generator], dtype: int }
     Generator_p_nom_mod: { dims: [generator] }
     Generator_big_m: { dims: [scenario, generator] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
+    multi_investment_periods: { dims: [], dtype: bool }
+    period_year: { dims: [period], dtype: int }
+    Generator_active: { dims: [generator], dtype: bool }
+    Generator_build_year: { dims: [generator], dtype: int }
+    Generator_lifetime: { dims: [generator] }
   variables:
     Generator_p: { dims: [scenario, snapshot, generator] }
     Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
@@ -62,6 +66,7 @@ given:
     Generator_shut_down: { dims: [scenario, snapshot, generator], domain: integer }
     Generator_p_nom_ext: { dims: [generator] }
   expressions:
+    Generator_status_initial: { dims: [scenario, generator] }
     Generator_previous_status: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_effective: { dims: [scenario, generator] }
     Generator_p_nom_committed: { dims: [scenario, generator] }
@@ -147,8 +152,8 @@ constraints:
     where: >-
       Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
       AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+      AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: >-
       Generator_p - Generator_previous_p <=
       Generator_ramp_up_rate * Generator_p_nom_ext
@@ -162,8 +167,8 @@ constraints:
     where: >-
       Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
       AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+      AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: >-
       Generator_p - Generator_previous_p <=
       Generator_start_up_rate * Generator_p_nom_ext
@@ -177,8 +182,8 @@ constraints:
     where: >-
       Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
       AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+      AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: >-
       Generator_previous_p - Generator_p <=
       Generator_ramp_down_rate * Generator_p_nom_ext
@@ -192,8 +197,8 @@ constraints:
     where: >-
       Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
       AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+      AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: >-
       Generator_previous_p - Generator_p <=
       Generator_shut_down_rate * Generator_p_nom_ext
@@ -210,8 +215,8 @@ constraints:
     where: >-
       (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
       AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+      AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_p - Generator_previous_p <= Generator_ramp_up_allowance
   Generator_p_ramp_limit_down:
     description: >-
@@ -225,13 +230,13 @@ constraints:
     where: >-
       (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
       AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (NOT (Generator_up_time_before > 0) OR Generator_p_init)))
+      AND Generator_active AND (NOT multi_investment_periods OR (Generator_build_year <= at(period_year, by=snapshot_period, over=period, into=snapshot) AND at(period_year, by=snapshot_period, over=period, into=snapshot) < Generator_build_year + Generator_lifetime))
     expression: Generator_previous_p - Generator_p <= Generator_ramp_down_allowance
 
 assumptions:
   Generator_came_in_running_unless_committable:
-    holds: "Generator_status_initial == 1"
+    holds: "Generator_up_time_before > 0"
     where: "NOT Generator_committable AND (Generator_ramp_limit_up OR Generator_ramp_limit_down)"
     description: >-
       PyPSA reads `up_time_before` of a unit that is not committable in its
@@ -261,7 +266,7 @@ assumptions:
 | $`\mathrm{rd}`$ | `Generator_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — most a generator may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
 | $`\mathrm{ru}^{\mathrm{up}}`$ | `Generator_ramp_limit_start_up` over $`\Xi \times \mathcal{G}`$ — most output in the snapshot a unit starts, per unit of nominal power |
 | $`\mathrm{rd}^{\mathrm{dn}}`$ | `Generator_ramp_limit_shut_down` over $`\Xi \times \mathcal{G}`$ — most output in the snapshot before a unit stops, per unit of nominal power |
-| $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\Xi \times \mathcal{G}`$ — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot |
+| $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\Xi \times \mathcal{G}`$ — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot; in MW |
 
 #### Given
 
@@ -269,15 +274,20 @@ assumptions:
 |---|---|
 | $`\mathrm{ext}`$ | `Generator_p_nom_extendable` over $`\mathcal{G}`$, data another file declares |
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$, data another file declares |
-| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$, data another file declares |
+| $`\mathrm{UT}^{0}`$ | `Generator_up_time_before` over $`\Xi \times \mathcal{G}`$, data another file declares |
 | $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$, data another file declares |
 | $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, data another file declares |
-| $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{T} \times \mathcal{G}`$, data another file declares |
+| $`\mathrm{multi}`$ | `multi_investment_periods` (scalar), data another file declares |
+| $`\mathrm{yr}`$ | `period_year` over $`\mathcal{Y}`$, data another file declares |
+| $`\mathrm{act}`$ | `Generator_active` over $`\mathcal{G}`$, data another file declares |
+| $`\mathrm{by}`$ | `Generator_build_year` over $`\mathcal{G}`$, data another file declares |
+| $`\mathrm{L}`$ | `Generator_lifetime` over $`\mathcal{G}`$, data another file declares |
 | $`p`$ | `Generator_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`u`$ | `Generator_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`\mathit{up}`$ | `Generator_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`\mathit{dn}`$ | `Generator_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ |
+| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$, an expression another file defines |
 | $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, an expression another file defines |
 | $`\widetilde{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_effective` over $`\Xi \times \mathcal{G}`$, an expression another file defines |
 | $`\widehat{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_committed` over $`\Xi \times \mathcal{G}`$, an expression another file defines |
@@ -303,37 +313,37 @@ $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ counts within the group a relation pu
 **`Generator_p_ramp_limit_up_run_big_m`**
 
 ```math
-p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \neg \left( \mathrm{UT}^{0}_{\xi,g} > 0 \right) \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_p_ramp_limit_up_start_big_m`**
 
 ```math
-p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{up}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{up}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \neg \left( \mathrm{UT}^{0}_{\xi,g} > 0 \right) \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_p_ramp_limit_down_run_big_m`**
 
 ```math
-\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{on}_{t,g}
+\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \neg \left( \mathrm{UT}^{0}_{\xi,g} > 0 \right) \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_p_ramp_limit_down_shut_big_m`**
 
 ```math
-\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{dn}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{on}_{t,g}
+\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{dn}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \neg \left( \mathrm{UT}^{0}_{\xi,g} > 0 \right) \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_p_ramp_limit_up`**
 
 ```math
-p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \Delta^{+}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \Delta^{+}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \neg \left( \mathrm{UT}^{0}_{\xi,g} > 0 \right) \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 **`Generator_p_ramp_limit_down`**
 
 ```math
-\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \Delta^{-}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{on}_{t,g}
+\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \Delta^{-}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \neg \left( \mathrm{UT}^{0}_{\xi,g} > 0 \right) \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \right) \wedge \mathrm{act}_{g} \wedge \left( \neg \mathrm{multi} \vee \mathrm{by}_{g} \le \mathrm{yr}_{\mathrm{snapshot\_period}(t)} \wedge \mathrm{yr}_{\mathrm{snapshot\_period}(t)} < \mathrm{by}_{g} + \mathrm{L}_{g} \right)
 ```
 
 #### Definitions
@@ -385,6 +395,6 @@ p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \Delta^{+}_{\xi,t,g} \qquad \foral
 **`Generator_came_in_running_unless_committable`**
 
 ```math
-\mathrm{u}^{0}_{\xi,g} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{com}_{g} \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}_{\xi,t,g} \text{ is defined} \right)
+\mathrm{UT}^{0}_{\xi,g} > 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{com}_{g} \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}_{\xi,t,g} \text{ is defined} \right)
 ```
 <!-- gallery:end -->
