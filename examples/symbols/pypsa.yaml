@@ -190,6 +190,8 @@ names:
   Line_s_nom_ext: "S"
   Line_s_nom: '\mathrm{s}^{\mathrm{nom}}'
   Line_s_nom_extendable: '\mathrm{ext}^{s}'
+  Line_s_nom_mod: '\mathrm{s}^{\mathrm{mod}}'
+  Line_n_mod: "N^{s}"
   Line_s_max_pu: '\overline{\mathrm{s}}'
   Line_s_nom_min: '\underline{\mathrm{s}}^{\mathrm{nom}}'
   Line_s_nom_max: '\overline{\mathrm{s}}^{\mathrm{nom}}'
@@ -206,6 +208,8 @@ names:
   Transformer_s_nom_ext: '\Sigma'
   Transformer_s_nom: '\sigma^{\mathrm{nom}}'
   Transformer_s_nom_extendable: '\mathrm{ext}^{\sigma}'
+  Transformer_s_nom_mod: '\sigma^{\mathrm{mod}}'
+  Transformer_n_mod: 'N^{\sigma}'
   Transformer_s_max_pu: '\overline{\sigma}'
   Transformer_s_nom_min: '\underline{\sigma}^{\mathrm{nom}}'
   Transformer_s_nom_max: '\overline{\sigma}^{\mathrm{nom}}'
@@ -254,6 +258,8 @@ names:
   StorageUnit_spill: '\mathit{spill}'
   StorageUnit_p_nom: '\mathrm{h}^{\mathrm{nom}}'
   StorageUnit_p_nom_extendable: '\mathrm{ext}^{h}'
+  StorageUnit_p_nom_mod: '\mathrm{h}^{\mathrm{mod}}'
+  StorageUnit_n_mod: "N^{h}"
   StorageUnit_p_min_pu: '\underline{\mathrm{h}}'
   StorageUnit_p_max_pu: '\overline{\mathrm{h}}'
   StorageUnit_max_hours: '\mathrm{T}^{h}'
@@ -281,6 +287,8 @@ names:
   Store_p: "q"
   Store_e_nom: '\mathrm{e}^{\mathrm{nom}}'
   Store_e_nom_extendable: '\mathrm{ext}^{e}'
+  Store_e_nom_mod: '\mathrm{e}^{\mathrm{mod}}'
+  Store_n_mod: "N^{e}"
   Store_e_min_pu: '\underline{\mathrm{e}}'
   Store_e_max_pu: '\overline{\mathrm{e}}'
   Store_sign: '\mathrm{sgn}^{q}'
