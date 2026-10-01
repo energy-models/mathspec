@@ -227,3 +227,6 @@ fom = "fom"
 # case is that a typo of a real operator keyword is refused by the signature, so
 # correcting the spelling deletes the test.
 egde = "egde"
+# `expec` is GEMS's expectation operator, quoted by name in
+# examples/ports/gems_basic_models.yaml, not a misspelling of "expect".
+expec = "expec"
