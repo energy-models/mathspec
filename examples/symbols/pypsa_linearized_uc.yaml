@@ -42,7 +42,6 @@ names:
   Link_efficiency: '\eta'
   Link_marginal_cost: '\mathrm{c}^{f}'
   Load_p_set: '\mathrm{load}'
-  Generator_partly_tightened: '\mathrm{tight}'
   snapshot_weightings_generators: '\mathrm{w}^{\mathrm{gen}}'
   Generator_must_stay_down: '\mathrm{rest}'
   Generator_ramp_up_rate: '\widetilde{\mathrm{ru}}'

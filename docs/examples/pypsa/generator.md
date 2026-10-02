@@ -146,9 +146,9 @@ variables:
     dims: [scenario, snapshot, generator]
     where: Generator_active
   Generator_n_mod:
-    description: "`Generator-n_mod` — how many modules of an extendable modular build"
+    description: "`Generator-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0
+    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND count(Generator_active, over=snapshot) > 0
     domain: integer
     bounds:
       lower: 0
@@ -272,7 +272,7 @@ constraints:
   Generator_p_nom_modularity:
     description: "`Generator-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0
+    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND count(Generator_active, over=snapshot) > 0
     expression: Generator_p_nom_ext == Generator_p_nom_mod * Generator_n_mod
   Generator_p_set:
     description: "`Generator-p_set` — output pinned to the given schedule, wherever one is given"
@@ -287,7 +287,7 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -336,7 +336,7 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`p`$ | `Generator_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-p` — output of a generator in a snapshot |
-| $`N`$ | `Generator_n_mod` over $`\mathcal{G}`$ — `Generator-n_mod` — how many modules of an extendable modular build |
+| $`N`$ | `Generator_n_mod` over $`\mathcal{G}`$ — `Generator-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ — `Generator-p_nom` — nominal power where it is a decision; the parameter of the same PyPSA name carries the fixed regime |
 
 #### Given
@@ -434,7 +434,7 @@ P_{g} = \mathrm{p}^{\mathrm{nom,set}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \
 **`Generator_p_nom_modularity`**
 
 ```math
-P_{g} = \mathrm{p}^{\mathrm{mod}}_{g} \cdot N_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+P_{g} = \mathrm{p}^{\mathrm{mod}}_{g} \cdot N_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}_{t,g} \} \rvert > 0
 ```
 
 **`Generator_p_set`**
@@ -510,7 +510,7 @@ p_{\xi,t,g} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g 
 **`Generator_n_mod`**
 
 ```math
-N_{g} \ge 0, N_{g} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+N_{g} \ge 0, N_{g} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}_{t,g} \} \rvert > 0
 ```
 
 **`Generator_p_nom_ext`**
