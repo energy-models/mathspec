@@ -1115,7 +1115,7 @@ class Spec(_StrictBlock):
         variable's ``where:`` left out keeps its meaning as a missing row: under
         ``absent`` a row that reads it there is still not built, and under
         ``neutral`` it still reads ``0``. A variable with no ``where:`` existed
-        at every coordinate, so its parameter keeps the default, ``error``.
+        at every coordinate, so its parameter keeps the default, ``refused``.
 
         Args:
             names: The variables to fix, each once. All are fixed in one

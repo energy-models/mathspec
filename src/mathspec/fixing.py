@@ -93,7 +93,7 @@ def _rewrite(raw: dict[str, object], spec: Spec, name: str) -> None:
     """Rewrite variable *name* in *raw* as a parameter that reads a missing row as the variable read its mask.
 
     A variable with no ``where:`` exists at every coordinate, so its parameter
-    keeps the default, ``error``, and a supplied table short of a row is refused.
+    keeps the default, ``refused``, and a supplied table short of a row is refused.
     """
     declared = spec.variables[name]
     del section(raw, 'variables')[name]
