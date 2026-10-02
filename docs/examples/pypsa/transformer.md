@@ -68,9 +68,11 @@ parameters:
   Transformer_s_nom_set:
     description: a given nominal apparent power for an extendable transformer; one without a value has no row here
     dims: [scenario, transformer]
+    missing: neutral
   Transformer_s_set:
     description: a given flow schedule; a transformer without one has no row here
     dims: [scenario, snapshot, transformer]
+    missing: neutral
   Transformer_cycle_weight:
     description: >-
       the transformer's effective series reactance, `x` times its tap ratio,
@@ -78,6 +80,7 @@ parameters:
       basis, data prep; a transformer in no cycle has no row. From the first
       scenario only, as a line's
     dims: [transformer, cycle]
+    missing: neutral
   Transformer_phase_shift_weight:
     description: >-
       a fixed transformer's phase shift in radians at each snapshot, signed by
@@ -86,6 +89,7 @@ parameters:
       the variable term never both count a shift. A transformer with no shift or
       in no cycle has no row
     dims: [snapshot, transformer, cycle]
+    missing: neutral
   Transformer_phase_shift_varying:
     description: >-
       whether a transformer's phase shift is a decision — PyPSA's
@@ -145,7 +149,7 @@ variables:
       lossless
     dims: [scenario, snapshot, transformer]
     where: transmission_losses AND Transformer_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Transformer_phase_shift:
@@ -156,7 +160,7 @@ variables:
       where the shift is fixed
     dims: [scenario, snapshot, transformer]
     where: Transformer_phase_shift_varying AND Transformer_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: Transformer_phase_shift_min
       upper: Transformer_phase_shift_max

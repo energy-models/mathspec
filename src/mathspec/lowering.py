@@ -141,7 +141,7 @@ def lower(schema: Spec) -> Program:
             lower=lower_bound,
             upper=upper_bound,
             domain=vdef.domain,
-            absence=vdef.absence,
+            missing=vdef.missing,
             description=vdef.description,
         )
 
@@ -202,9 +202,12 @@ def lower(schema: Spec) -> Program:
             assert assumption is not None and not errors, 'what a method assumes is stated in the language'
             assumptions[aname] = assumption
 
+    owned = {name for block in schema.piecewise.values() for name in block.consumes}
     program = Program(
         parameters={
-            name: ParameterDeclaration(tuple(pdef.dims), pdef.dtype, pdef.default, pdef.description)
+            name: ParameterDeclaration(
+                tuple(pdef.dims), pdef.dtype, None if name in owned else pdef.reading, pdef.description
+            )
             for name, pdef in schema.parameters.items()
         },
         variables=variables,
@@ -232,7 +235,7 @@ def lower(schema: Spec) -> Program:
         },
         given=GivenTargets(
             parameters={
-                name: ParameterDeclaration(tuple(g.dims), g.dtype, description=g.description)
+                name: ParameterDeclaration(tuple(g.dims), g.dtype, None, g.description)
                 for name, g in schema.given.parameters.items()
             },
             variables={

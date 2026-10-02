@@ -104,14 +104,17 @@ class Namespace:
             **{p: pd.dtype for p, pd in parameters.items()},
             **{d: dd.dtype for d, dd in schema.dimensions.items()},
         }
-        #: parameter name -> its declared ``default:``, for the parameters that
-        #: have one; what a where comparison reads where the data has no row.
+        #: parameter name -> the value its ``missing:`` reads a missing row as,
+        #: for the parameters that name one; what a where comparison reads there.
         self.defaults: dict[str, bool | float] = {
-            p: pd.default for p, pd in schema.parameters.items() if pd.default is not None
+            p: pd.missing
+            for p, pd in schema.parameters.items()
+            if pd.missing is not None and not isinstance(pd.missing, str)
         }
         #: relation name -> its columns and key, as declared.
         self.relations: dict[str, RelationDeclaration] = {
-            n: RelationDeclaration(lk.pairs, lk.key_roles, lk.description) for n, lk in schema.relations.items()
+            n: RelationDeclaration(lk.pairs, lk.key_roles, lk.reading, lk.description)
+            for n, lk in schema.relations.items()
         }
         #: parameter or variable name -> the dims it is read through —
         #: parameters by their ``dims``, variables by their frame. Stamped onto

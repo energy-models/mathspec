@@ -86,15 +86,18 @@ parameters:
   Line_s_nom_set:
     description: a given nominal apparent power for an extendable line; one without a value has no row here
     dims: [scenario, line]
+    missing: neutral
   Line_s_set:
     description: a given flow schedule; a line without one has no row here
     dims: [scenario, snapshot, line]
+    missing: neutral
   Line_cycle_weight:
     description: >-
       the line's series impedance, signed by its orientation in the cycle —
       the cycle basis, data prep; a line in no cycle has no row. PyPSA builds
       the cycle basis from the first scenario only (`networks.py:1354-1361`)
     dims: [line, cycle]
+    missing: neutral
   Line_loss_max:
     description: the loss at a line's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep
     dims: [scenario, snapshot, line]
@@ -117,6 +120,7 @@ parameters:
       line outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [scenario, global_constraint, line]
+    missing: neutral
   Line_expansion_cost_weight:
     description: >-
       the line's capital cost where its carrier is in the row's set, times
@@ -125,12 +129,14 @@ parameters:
       line outside the set, or one that does not stand in the row's period,
       has no row
     dims: [scenario, global_constraint, line]
+    missing: neutral
   Line_tech_capacity_weight:
     description: >-
       one where the line is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, line]
+    missing: neutral
 
 variables:
   Line_s:
@@ -146,7 +152,7 @@ variables:
       the network is lossless
     dims: [scenario, snapshot, line]
     where: transmission_losses AND Line_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Line_s_nom_ext:

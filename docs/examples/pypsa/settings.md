@@ -75,6 +75,7 @@ parameters:
       on a row that names a period without it (`global_constraints.py:375`)
     dims: [scenario, global_constraint, snapshot]
     dtype: bool
+    missing: neutral
 
 given:
   expressions:

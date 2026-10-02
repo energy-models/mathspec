@@ -32,13 +32,16 @@ from mathspec._expression_parser import NAME, ComparisonOperator
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
     DimensionDtype,
+    Missing,
+    MissingReading,
     ObjectiveSense,
     ParameterDtype,
     PiecewiseMethod,
     Program,
+    RelationMissing,
     SosType,
-    VariableAbsence,
     VariableDomain,
+    VariableMissing,
 )
 
 if TYPE_CHECKING:
@@ -98,11 +101,25 @@ Curvature = Literal['convex', 'concave', 'either']
 #: term, a divisor, a bound. A label selects and a flag masks; neither is one.
 NUMERIC_DTYPES: frozenset[ParameterDtype] = frozenset({'float', 'int'})
 
-#: What ``default:`` is written as. The validator takes ``inf`` and ``-inf`` as
-#: the numbers they name, which an editor would otherwise flag as strings.
-_DEFAULT_SCHEMA: dict[str, object] = {
-    'anyOf': [{'type': 'boolean'}, {'type': 'number'}, {'enum': ['inf', '-inf']}, {'type': 'null'}],
+#: What a parameter's ``missing:`` is written as. The validator takes ``inf``
+#: and ``-inf`` as the numbers they name, which an editor would otherwise flag.
+_MISSING_SCHEMA: dict[str, object] = {
+    'anyOf': [
+        {'enum': [*get_args(MissingReading), 'inf', '-inf']},
+        {'type': 'boolean'},
+        {'type': 'number'},
+    ],
+    'default': 'error',
 }
+
+#: The spellings of a missing row, for a refusal to list.
+_READINGS = ', '.join(get_args(MissingReading))
+
+
+def _missing_null(kind: str, rewrite: str) -> ValueError:
+    """``missing: null`` reads as either the default or an absent row, so it is refused for the word that says which."""
+    return ValueError(f'missing: null on {kind} names no reading. {rewrite}')
+
 
 #: Every formulation, in the order [`Spec.expand`][] writes them out: a curve
 #: emits a set, and no set emits a curve.
@@ -167,7 +184,38 @@ class RelationBlock(_StrictBlock):
 
     key: str | list[str] | dict[str, str]
     values: str | list[str] | dict[str, str] | None = None
+    missing: RelationMissing | None = None
     description: str | None = None
+
+    @field_validator('missing', mode='before')
+    @classmethod
+    def _error_or_absent(cls, v: object) -> object:
+        """A label is data, so no value fills a gap in a map, and neutral reads as absent wherever a map is read."""
+        if v is not None and v not in get_args(RelationMissing):
+            msg = (
+                f'missing: {v!r} on a relation, which takes error or absent. A label the map leaves out '
+                f'is refused, or belongs to no group.'
+            )
+            raise ValueError(msg)
+        return v
+
+    @model_validator(mode='after')
+    def _a_bare_relation_has_no_gap(self) -> RelationBlock:
+        """A bare relation's rows are its membership, so a key it leaves out is not missing."""
+        if self.missing is not None and self.values is None:
+            msg = (
+                f'missing: {self.missing} on a relation with no `values:`. Its rows are its membership, '
+                f'so a key it leaves out is not missing: drop the key.'
+            )
+            raise ValueError(msg)
+        return self
+
+    @property
+    def reading(self) -> RelationMissing | None:
+        """What a key the map leaves out means: ``error`` unless the file says, and ``None`` for a bare relation."""
+        if self.values is None:
+            return None
+        return self.missing or 'error'
 
     @property
     def pairs(self) -> tuple[tuple[str, str], ...]:
@@ -214,46 +262,55 @@ class DimensionBlock(_StrictBlock):
 
 
 class ParameterBlock(_StrictBlock):
-    """A declared parameter with dims and dtype, and the value a missing row reads as."""
+    """A declared parameter with dims and dtype, and what a missing row of its data means."""
 
     _label: ClassVar[str] = 'a parameter declaration'
 
     dims: list[str]
     dtype: ParameterDtype = 'float'
-    default: Annotated[bool | int | float | None, WithJsonSchema(_DEFAULT_SCHEMA)] = None
+    missing: Annotated[MissingReading | bool | int | float | None, WithJsonSchema(_MISSING_SCHEMA)] = None
     description: str | None = None
 
-    @field_validator('default', mode='before')
+    @field_validator('missing', mode='before')
     @classmethod
-    def _a_value(cls, v: object) -> object:
+    def _a_reading_or_a_value(cls, v: object) -> object:
         """``inf`` is a string to YAML and a number to the expression grammar, so it is taken as the number."""
+        if v is None:
+            raise _missing_null(
+                'a parameter', 'Write absent for a row that is not there, or leave the key out for error.'
+            )
         if v in ('inf', '-inf'):
             return float(cast('str', v))
-        if isinstance(v, str):
-            msg = f'default is the string {v!r}, and a default is a number, true or false. Remove the quotes.'
+        if isinstance(v, str) and v not in get_args(MissingReading):
+            msg = f'missing is the string {v!r}. It takes {_READINGS}, or a value: a number, true or false.'
             raise ValueError(msg)
         if isinstance(v, float) and math.isnan(v):
-            msg = 'default is nan, and a parameter has no nan value. Write a number, or leave the key out.'
+            msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _READINGS + '.'
             raise ValueError(msg)
         return v
 
+    @property
+    def reading(self) -> Missing:
+        """What a missing row means: what the file wrote, or ``error`` where it wrote nothing."""
+        return 'error' if self.missing is None else self.missing
+
     @model_validator(mode='after')
-    def _default_fits_the_dtype(self) -> ParameterBlock:
-        """A default is a value of the column, so it has the column's dtype."""
-        v = self.default
-        if v is None:
+    def _a_value_fits_the_dtype(self) -> ParameterBlock:
+        """A value fills rows of the column, so it has the column's dtype."""
+        v = self.missing
+        if v is None or isinstance(v, str):
             return self
         if self.dtype == 'str':
-            msg = f'default: {v!r} on a str parameter. A label has no default: leave the key out.'
+            msg = f'missing: {v!r} on a str parameter. A label has no value to fill: write {_READINGS}.'
             raise ValueError(msg)
         if self.dtype == 'bool' and not isinstance(v, bool):
-            msg = f'default: {v!r} on a bool parameter, which takes true or false.'
+            msg = f'missing: {v!r} on a bool parameter, which takes true or false.'
             raise ValueError(msg)
         if self.dtype != 'bool' and isinstance(v, bool):
-            msg = f'default: {str(v).lower()} on a {self.dtype} parameter, which takes a number. Write 1 or 0.'
+            msg = f'missing: {str(v).lower()} on a {self.dtype} parameter, which takes a number. Write 1 or 0.'
             raise ValueError(msg)
         if self.dtype == 'int' and isinstance(v, float):
-            msg = f'default: {v} on an int parameter, which takes an integer. Write one, or declare dtype: float.'
+            msg = f'missing: {v} on an int parameter, which takes an integer. Write one, or declare dtype: float.'
             raise ValueError(msg)
         return self
 
@@ -309,16 +366,30 @@ class VariableBlock(_StrictBlock):
     where: str | None = None
     bounds: BoundsBlock = BoundsBlock()
     domain: VariableDomain = 'continuous'
-    absence: VariableAbsence = 'undefined'
+    missing: VariableMissing = 'absent'
     description: str | None = None
 
-    @model_validator(mode='after')
-    def _absence_needs_a_mask(self) -> VariableBlock:
-        """``absence:`` says what a *missing* coordinate means, so one must be missable."""
-        if self.absence != 'undefined' and self.where is None:
+    @field_validator('missing', mode='before')
+    @classmethod
+    def _absent_or_neutral(cls, v: object) -> object:
+        """A variable has no data, so the readings of data have nothing to read."""
+        if v is None:
+            raise _missing_null('a variable', 'Write neutral, or leave the key out for absent.')
+        if v not in get_args(VariableMissing):
             msg = (
-                f'absence: {self.absence} needs a `where:` — a variable with no mask exists at every '
-                f'coordinate of its dims, so there is no absence for it to describe. Add the mask, '
+                f'missing: {v!r} on a variable, which takes absent or neutral. A variable has no data: '
+                f'error and a value are readings of a parameter.'
+            )
+            raise ValueError(msg)
+        return v
+
+    @model_validator(mode='after')
+    def _neutral_needs_a_mask(self) -> VariableBlock:
+        """``missing:`` says what a masked-out coordinate means, so one must be missable."""
+        if self.missing != 'absent' and self.where is None:
+            msg = (
+                f'missing: {self.missing} needs a `where:` — a variable with no mask exists at every '
+                f'coordinate of its dims, so nothing is missing for it to describe. Add the mask, '
                 f'or drop the key.'
             )
             raise ValueError(msg)
@@ -720,6 +791,15 @@ class PiecewiseBlock(_StrictBlock):
     #: A boolean parameter saying how far each curve runs, for curves of unequal length.
     points: str | None = None
     description: str | None = None
+
+    @property
+    def consumes(self) -> frozenset[str]:
+        """The parameters the block reads: each link's values, and the ``points:`` mask.
+
+        The block owns the shape of every one of them, so ``missing:`` is
+        refused on them at load and lowering reports none.
+        """
+        return frozenset({link.values for link in self.links} | ({self.points} if self.points else set()))
 
     @property
     def nominated(self) -> str | None:

@@ -50,6 +50,7 @@ parameters:
       `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [scenario, generator]
+    missing: neutral
   Generator_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it
@@ -66,7 +67,7 @@ variables:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: 1
@@ -74,7 +75,7 @@ variables:
     description: "`Generator-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_active
-    absence: zero
+    missing: neutral
     domain: binary
   Generator_maintenance_capacity:
     description: >-
@@ -84,7 +85,7 @@ variables:
     where: >-
       Generator_maintainable AND Generator_p_nom_extendable
       AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Generator_maintenance_status:
@@ -96,7 +97,7 @@ variables:
     where: >-
       Generator_maintainable AND Generator_committable
       AND NOT (Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)) AND Generator_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
 

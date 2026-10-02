@@ -328,19 +328,20 @@ class TestSoundness:
         assert proved > 150, f'only {proved} pairs proved apart; the fuzz is not exercising the check'
 
 
-class TestADefault:
+class TestAMissingRow:
     CASES: ClassVar[dict[str, str]] = {'lossless': 'efficiency == 1', 'not_given': 'not efficiency'}
 
-    def test_a_missing_row_compares_as_the_default(self):
+    def test_a_missing_row_compares_as_the_value_it_reads_as(self):
         """Both cases claim a storage with no `efficiency` row: it is not given, and it reads 1.
 
         The prover read a missing row as false in every comparison, so it proved
         the two apart, and a coordinate the data leaves out had two values.
         """
-        schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'default': 1}}))
+        schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': 1}}))
         [refusal] = refusals(schema, self.CASES)
         assert 'efficiency is absent' in refusal, 'the witness is the missing row'
 
-    def test_without_a_default_a_missing_row_compares_false(self):
-        schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage']}}))
-        assert refusals(schema, self.CASES) == [], 'a missing row with no default is in neither case'
+    @pytest.mark.parametrize('reading', ['error', 'absent', 'neutral'])
+    def test_under_a_reading_a_missing_row_compares_false(self, reading: str):
+        schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': reading}}))
+        assert refusals(schema, self.CASES) == [], 'a missing row with no value is in neither case'

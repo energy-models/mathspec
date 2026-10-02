@@ -30,7 +30,7 @@ from mathspec.typesetting.format import Entry, number
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from mathspec.program import Expression, Mask, Program, RelationDeclaration
+    from mathspec.program import Expression, Mask, Missing, Program, RelationDeclaration
     from mathspec.typesetting.format import Format, OperatorName
     from mathspec.typesetting.symbols import Symbols
 
@@ -150,7 +150,7 @@ class Legend:
         parameters = [
             self._entry(
                 self.symbols.name[p],
-                f'{fmt.mono(p)}{self._over(list(block.dims))}{self._default(block.default)}',
+                f'{fmt.mono(p)}{self._over(list(block.dims))}{self._default(block.missing)}',
                 block.description,
             )
             for p, block in program.parameters.items()
@@ -219,9 +219,9 @@ class Legend:
         product = self.format.joined([self.symbols.set[d] for d in dims], self._op('times'))
         return f' over {self.format.math(product)}'
 
-    def _default(self, value: bool | float | None) -> str:
-        """What a missing row reads as, where the declaration says; nothing where it is the value that contributes nothing."""
-        if value is None:
+    def _default(self, value: Missing | None) -> str:
+        """The value a missing row reads as, where ``missing:`` names one; nothing for a reading."""
+        if value is None or isinstance(value, str):
             return ''
         shown = (
             self.format.mono(str(value).lower())

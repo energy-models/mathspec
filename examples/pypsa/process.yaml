@@ -94,6 +94,7 @@ parameters:
   Process_p_set:
     description: a given internal power schedule; a process without one has no row here
     dims: [scenario, snapshot, process]
+    missing: neutral
   Process_p_nom_min:
     description: least nominal power an extendable process may be built at
     dims: [scenario, process]
@@ -106,9 +107,11 @@ parameters:
   Process_p_nom_set:
     description: a given nominal power for an extendable process; one without a value has no row here
     dims: [scenario, process]
+    missing: neutral
   Process_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [process]
+    missing: neutral
   Process_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Process_p_nom
@@ -142,6 +145,7 @@ parameters:
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, process]
+    missing: neutral
 
 variables:
   Process_p:

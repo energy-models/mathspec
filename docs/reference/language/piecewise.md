@@ -70,13 +70,13 @@ variables:
 ```
 
 Where the gate does not exist, the curve is ungated. To have no curve there
-instead, put `absence: zero` on the gate.
+instead, put `missing: neutral` on the gate.
 
 ### `points`
 
-A values parameter short of a row does not build a shorter curve: the missing
-row reads as a breakpoint at the origin. A curve with fewer breakpoints than the
-dimension holds says so with `points:`. Name one of the block's own values
+A values parameter short of a row does not build a shorter curve: the block's
+[assumption](assumptions.md#what-a-curve-assumes) refuses the data. A curve with
+fewer breakpoints than the dimension holds says so with `points:`. Name one of the block's own values
 parameters, and the curve is as long as that parameter has rows:
 
 ```yaml
@@ -172,6 +172,7 @@ shows a spec before and after.
 - **Every name written out starts with the name of the block.** The weights of
   the curve `curve` are `curve_lam`.
 - **No formulation emits a parameter.** The same data attaches to a spec and its
-  expansion.
+  expansion. A curve under `points:` declares the parameters it reads
+  `missing: neutral`, because its rows read them only where the mask holds.
 - **The assumptions a `method:` implies become `assumptions:` entries** with
   the same names.

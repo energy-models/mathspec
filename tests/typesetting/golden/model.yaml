@@ -32,11 +32,11 @@ relations:
   gen_bt: { key: generator, values: [bus, technology] } # one table with two value columns, read to both at once
 
 parameters:
-  p_max: { dims: [generator], default: .inf } # a default: the legend says what a missing row reads as
+  p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
   cost: { dims: [generator] }
   load: { dims: [snapshot, bus] }
-  is_flexible: { dims: [generator], dtype: bool, default: false }
+  is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology] }
   min_up: { dims: [generator], dtype: int }

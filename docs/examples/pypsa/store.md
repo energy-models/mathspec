@@ -68,6 +68,7 @@ parameters:
   Store_e_nom_set:
     description: a given nominal capacity for an extendable store; one without a value has no row here
     dims: [scenario, store]
+    missing: neutral
   Store_e_nom:
     description: nominal energy capacity
     dims: [scenario, store]
@@ -139,21 +140,26 @@ parameters:
   Store_e_set:
     description: a given energy schedule; a store without one has no row here
     dims: [scenario, snapshot, store]
+    missing: neutral
   Store_p_set:
     description: a given schedule of power delivered; a store without one has no row here
     dims: [scenario, snapshot, store]
+    missing: neutral
   Store_primary_energy_weight:
     description: the constrained attribute per unit of energy depleted — data prep; an unweighted store has no row
     dims: [scenario, global_constraint, store]
+    missing: neutral
   Store_operational_limit_weight:
     description: one where the store is in the row's set — data prep; one outside it has no row
     dims: [scenario, global_constraint, store]
+    missing: neutral
   Store_tech_capacity_weight:
     description: >-
       one where the store is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, store]
+    missing: neutral
 
 variables:
   Store_e:

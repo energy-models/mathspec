@@ -27,7 +27,7 @@ parameters:
 | ------------- | -------------------------------------------------------------- | --------------- |
 | `dims`        | required. The dimensions it is indexed by. `[]` means a scalar |                 |
 | `dtype`       | `float`, `int`, `bool`, `str`                                  | default `float` |
-| `default`     | the value a missing row reads as ([a default](#a-default))     | default `null`  |
+| `missing`     | what a missing row means ([a missing row](#a-missing-row))     | default `error` |
 | `description` | free text                                                      | default `null`  |
 
 The column has to match the `dtype`:
@@ -48,40 +48,52 @@ parameter is a mask: each selects rows in a
 a term or a divisor is a load error. A `0` or `1` that is meant to be
 multiplied by is declared `dtype: int`.
 
-### A default
+### A missing row
 
-`default:` is the value a missing row reads as.
+`missing:` says what a coordinate the `dims` reach with no row means. A table
+that lost a row in preparation and a table that never had one look the same in
+the data, so the file says which was meant.
 
 ```yaml
 dimensions:
   generator: { dtype: str }
 parameters:
-  efficiency: { dims: [generator], default: 1 }
-  p_nom_max: { dims: [generator], default: .inf }
-  active: { dims: [generator], dtype: bool, default: true }
+  cost: { dims: [generator] } # error: every generator has a cost
+  ramp_limit: { dims: [generator], missing: neutral } # no row means no limit
+  p_set: { dims: [generator], missing: absent } # no row, no fixing row
+  efficiency: { dims: [generator], missing: 1 }
+  p_nom_max: { dims: [generator], missing: .inf }
+  active: { dims: [generator], dtype: bool, missing: true }
 ```
 
-Where the data has no row, every position that reads a value reads the
-default: a coefficient, a term, a divisor, a bound, and a comparison in a
-`where`. A bare numeric name in a `where` still asks whether the data has a
-row, so `where: p_nom_max` selects the rows the data gives. A bare `bool` name
-reads its value, so `where: active` reads the default. A
-[curve](assumptions.md#what-a-curve-assumes) still needs a row at each
-breakpoint.
+| `missing:`          | A missing row                                                                                         |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| `error`, by default | is refused when the data is attached, and the refusal names the coordinate                            |
+| `absent`            | is [absence](absence.md): it takes the row of a term that reads it, and is one summand fewer in a sum |
+| `neutral`           | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a `where`           |
+| a value             | reads as that value, wherever a value is read                                                         |
 
-| `dtype` | `default:` takes                                        |
+A bare numeric name in a `where` asks whether the data has a row under every
+reading, so `where: p_nom_max` selects the rows the data gives. A comparison
+reads the value: `where: efficiency < 1` is true at a missing row of the
+parameter above. Under `absent` and `neutral`, a comparison at a missing row is
+false. A bare `bool` name reads its value, so `where: active` reads `true`
+there.
+
+A value has the parameter's dtype:
+
+| `dtype` | a value                                                 |
 | ------- | ------------------------------------------------------- |
 | `float` | a number. `.inf`, `inf`, `-.inf` and `-inf` are numbers |
-| `int`   | an integer                                              |
+| `int`   | an integer. An integer column cannot hold `inf`         |
 | `bool`  | `true` or `false`                                       |
-| `str`   | nothing. A label has no default                         |
+| `str`   | none. A label has no value to fill                      |
 
-A NaN and a quoted number are refused. `default: null` is no default. Without
-a default, a missing row reads as the value that contributes nothing
-([absence](absence.md#what-creates-absence)).
-
-A `given:` parameter has no `default:`. The file that declares the parameter
-owns it. The typeset legend prints the default beside the parameter.
+A NaN, a quoted number and `missing: null` are refused. A `given:` parameter
+has no `missing:`. The file that declares the parameter owns it. A parameter a
+[`piecewise:`](piecewise.md) block reads takes no `missing:` either: the block
+owns the shape of its curve. The typeset legend prints a value beside the
+parameter.
 
 ## `variables`
 
@@ -109,7 +121,7 @@ variables:
 | `where`                         | which coordinates exist ([absence](absence.md))                                                                   | default `null`       |
 | `bounds.lower` / `bounds.upper` | a finite number, or the name of a `float` or `int` parameter. `null` leaves that side open                        | default `null`       |
 | `domain`                        | `continuous`, `integer` or `binary`. `binary` carries fixed 0/1 bounds                                            | default `continuous` |
-| `absence`                       | `undefined` or `zero`: what a masked-out coordinate means ([absence](absence.md#what-a-missing-coordinate-means)) | default `undefined`  |
+| `missing`                       | `absent` or `neutral`: what a masked-out coordinate means ([absence](absence.md#what-a-missing-coordinate-means)) | default `absent`     |
 | `description`                   | free text                                                                                                         | default `null`       |
 
 An open side is `null`. A bound is never infinite: `.inf` and `-.inf` are

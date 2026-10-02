@@ -100,10 +100,11 @@ def test_a_named_expression_has_a_legend_row_exactly_while_its_symbol_prints(nam
 DEFAULTED = varied(
     DISPATCH_MODEL,
     **{
-        'parameters.p_max.default': 'inf',
-        'parameters.cost.default': 1,
-        'parameters.floor': {'dims': [], 'default': '-inf'},
-        'parameters.online': {'dims': ['generator'], 'dtype': 'bool', 'default': True},
+        'parameters.p_max.missing': 'inf',
+        'parameters.cost.missing': 1,
+        'parameters.load.missing': 'neutral',
+        'parameters.floor': {'dims': [], 'missing': '-inf'},
+        'parameters.online': {'dims': ['generator'], 'dtype': 'bool', 'missing': True},
     },
 )
 
@@ -118,7 +119,9 @@ def test_the_legend_prints_what_a_missing_row_reads_as(name: FormatName, fmt: Fo
         fmt.mono('true'),
     ):
         assert f'{shown} where the data has no row' in out
-    assert out.count('where the data has no row') == 4, '`load` declares no default, so its row names none'
+    assert out.count('where the data has no row') == 4, (
+        '`load` reads a missing row as neutral, which is a reading and not a value, so its row names none'
+    )
 
 
 #: The dispatch model with a curve on it, so one model has two readings and one

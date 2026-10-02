@@ -12,7 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(language): a parameter may declare the value a missing row reads as ([#810](https://github.com/energy-models/mathspec/pull/810))
+- feat(language): `missing:` says what a missing row means, and a table is complete unless the file says otherwise ([#810](https://github.com/energy-models/mathspec/pull/810))
 
 ## 0.2.1 (2026-10-01)
 
