@@ -7,7 +7,7 @@
 A bare name, a comparison, a count and a predicate read through a relation
 or along a dimension are each typed here against the namespace, and a
 comparison of expressions hands its sides to the expression walk.
-:mod:`mathspec.resolution` holds the namespace and the doors that call this.
+[`mathspec.resolution`][] holds the namespace and the doors that call this.
 """
 
 from __future__ import annotations
@@ -72,6 +72,7 @@ from mathspec.program import (
     TypedPredicate,
     VariableDefined,
     carries_variable,
+    variables_of,
     walk,
 )
 
@@ -80,6 +81,14 @@ if TYPE_CHECKING:
 
     from mathspec.program import DeclaredDtype
     from mathspec.resolution import Namespace
+
+#: Why a mask may not read a given expression. The namespace files a given
+#: expression with the variables, since it is read as a column, so the refusal
+#: names it apart.
+GIVEN_IN_A_MASK = (
+    'A given expression may hold a variable, and a where mask is built before variables exist — it may test '
+    'parameters and dimension coordinates only.'
+)
 
 
 @dataclass(frozen=True)
@@ -90,7 +99,7 @@ class WhereResolver:
     appended to ``errors``; every sibling is still read, so a mask with two
     faults reports both. ``self_variable`` is the variable whose own
     ``where`` is being read, which may not ask whether it exists. A side
-    that is an expression is built by an :class:`ExpressionResolver` over
+    that is an expression is built by an [`ExpressionResolver`][] over
     the same namespace.
     """
 
@@ -169,7 +178,7 @@ class WhereResolver:
         """``shift(<predicate>, along=, offset=)`` or ``at(<predicate>, by=, over=, into=)`` — the two operators that read a predicate and answer one.
 
         ``count`` answers a number, so it stands on a comparison's side and
-        :meth:`_count` reads it there. Anything else naming a predicate is
+        [`_count`][] reads it there. Anything else naming a predicate is
         refused here rather than resolved into arithmetic it cannot be.
 
         An operand that failed to resolve is handed straight back: resolution
@@ -323,9 +332,9 @@ class WhereResolver:
             value = literal.value
         else:
             value = _side_name(right)
-            if value is not None and (value in ns.schema.expressions or ns.kind(value) == 'parameter'):
+            if value is not None and (value in ns.bodies or ns.kind(value) == 'parameter'):
                 return None
-        if name is None or value is None or name in ns.schema.expressions:
+        if name is None or value is None or name in ns.bodies:
             return None
         return _Plain(name, node.op, value, quoted)
 
@@ -361,7 +370,12 @@ class WhereResolver:
         assert len(sides) == 2, 'a side of a where builds or refuses, since a where holds no formal'
         dims: set[str] = set()
         for side in sides:
-            if carries_variable(side):
+            if given := sorted(variables_of(side) & set(ns.schema.given.expressions)):
+                self.errors.append(
+                    f'{context}: a where compares expressions, and one side reads the given expression '
+                    f'{given[0]!r}. {GIVEN_IN_A_MASK}'
+                )
+            elif carries_variable(side):
                 self.errors.append(
                     f'{context}: a where compares expressions, and one side names a variable. A where mask '
                     f'is built before variables exist — it may test parameters and dimension coordinates only.'
@@ -453,7 +467,8 @@ class WhereResolver:
                         return node
                     dims = tuple(ns.relations[left_name].dim(k) for k in ns.relations[left_name].key)
                     return RelationPairComparison(left_name, left, right_name, right, plain.op, dims)
-                self.errors.append(_declared_rhs_error(context, plain, value, rhs_kind))
+                given = right_name in ns.schema.given.expressions
+                self.errors.append(_declared_rhs_error(context, plain, value, rhs_kind, given=given))
                 return node
 
         kind = ns.kind(left_name)
@@ -491,6 +506,8 @@ class WhereResolver:
                 assert column is not None
                 shape = ns.relations[left_name]
                 return RelationComparison(left_name, column, plain.op, value, tuple(shape.dim(k) for k in shape.key))
+            case 'variable' if left_name in ns.schema.given.expressions:
+                self.errors.append(f"{context}: where references the given expression '{left_name}'. {GIVEN_IN_A_MASK}")
             case 'variable':
                 self.errors.append(
                     f"{context}: where references variable '{left_name}'. A where "
@@ -693,9 +710,14 @@ def _not_arithmetic(context: str, side: ColumnNode | KeywordNode) -> str:
     )
 
 
-def _declared_rhs_error(context: str, node: _Plain, value: str, kind: str) -> str:
-    """Why the right-hand side of a where-comparison may not name a variable, a relation or a dimension."""
+def _declared_rhs_error(context: str, node: _Plain, value: str, kind: str, *, given: bool = False) -> str:
+    """Why the right-hand side of a where-comparison may not name a variable, a relation or a dimension.
+
+    A given expression is filed with the variables, and *given* says the name is one.
+    """
     comparison = f"'{node.name} {node.op} {value}'"
+    if given:
+        return f'{context}: {comparison} compares against the given expression {value!r}. {GIVEN_IN_A_MASK}'
     if kind == 'variable':
         return (
             f'{context}: {comparison} compares against variable {value!r}. '

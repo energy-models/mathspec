@@ -114,7 +114,7 @@ class _Step:
     """One translation of an index, and what stands where it vacated.
 
     ``fill`` is the rendered ``edge=`` value, and it rides on the operator
-    rather than in the legend because it is per call site: one model may pad a
+    rather than in the legend because it is per call site: one spec may pad a
     sum with ``0`` and a product with ``1``, and one legend entry cannot say
     which term is which. It is empty for the two policies that substitute
     nothing.
@@ -214,10 +214,10 @@ def _unsigned(node: Expression) -> Expression | None:
 
 
 class Walk:
-    """Walks a program, emitting :class:`Line`s in one format.
+    """Walks a program, emitting [`Line`][]s in one format.
 
-    :meth:`equations` prints every section; what those sections use, the
-    legend reads off the program (:func:`~mathspec.typesetting.legend.notice`).
+    [`equations`][] prints every section; what those sections use, the
+    legend reads off the program ([`notice`][]).
     """
 
     def __init__(
@@ -234,10 +234,12 @@ class Walk:
         #: Substitute each plain named expression where it is used, rather than
         #: printing its symbol there and its definition once.
         self.inline_expressions = inline_expressions
+        self._parameters = {**program.parameters, **program.given.parameters}
 
     def _frame_of(self, name: str) -> list[str]:
         """The dims named expression *name* is read over, as its declaration carries them."""
-        return list(self.program.expressions[name].dims)
+        entry = self.program.expressions.get(name) or self.program.given.expressions[name]
+        return list(entry.dims)
 
     def _op(self, name: OperatorName) -> str:
         return self.format.operators[name]
@@ -326,10 +328,11 @@ class Walk:
             return self._number(node.value), _ATOM if node.value >= 0 else 1
 
         if isinstance(node, Parameter):
-            return ctx.indexed(self.symbols.name[node.name], list(self.program.parameters[node.name].dims)), _ATOM
+            return ctx.indexed(self.symbols.name[node.name], list(self._parameters[node.name].dims)), _ATOM
 
         if isinstance(node, Variable):
-            return ctx.indexed(self.symbols.name[node.name], list(self.program.variables[node.name].dims)), _ATOM
+            frames = {**self.program.variables, **self.program.given.variables, **self.program.given.expressions}
+            return ctx.indexed(self.symbols.name[node.name], list(frames[node.name].dims)), _ATOM
 
         if isinstance(node, Negate):
             text, precedence = self._arithmetic(node.operand, ctx)
@@ -364,7 +367,8 @@ class Walk:
 
     def _dual(self, node: Dual, ctx: _Context) -> str:
         """λ subscripted by the constraint's symbol, then the indices of the constraint's own frame."""
-        frame = self._sorted(frozenset(self.program.constraints[node.constraint].dims))
+        frames = {**self.program.constraints, **self.program.given.constraints}
+        frame = self._sorted(frozenset(frames[node.constraint].dims))
         return self.format.subscript(
             self._op('dual'), [self.symbols.constraint[node.constraint], *(ctx.subscript(d) for d in frame)]
         )
@@ -390,8 +394,10 @@ class Walk:
             return self.format.superscript(base, self._expression(node.exponent, ctx)), _PRECEDENCE['**']
         op: BinaryOperator = '*' if isinstance(node, Multiply) else '+'
         precedence = _PRECEDENCE[op]
+        operand = self._substituted(node.right)
+        if op == '+' and isinstance(operand, Add):
+            return self._binary(Add(Add(node.left, operand.left), operand.right), ctx)
         left = self._expression(node.left, ctx, need=precedence)
-        operand = node.right
         if op == '+':
             while (unsigned := _unsigned(operand)) is not None:
                 operand, op = unsigned, '-' if op == '+' else '+'
@@ -400,6 +406,15 @@ class Walk:
         right = self._expression(operand, ctx, need=need)
         names: dict[BinaryOperator, OperatorName] = {'*': 'cdot', '+': 'plus', '-': 'minus'}
         return self.format.joined([left, right], self._op(names[op])), precedence
+
+    def _substituted(self, node: Expression) -> Expression:
+        """*node*, a plain named expression replaced by its body where inlining prints the body.
+
+        [`_binary`][] folds the sign of the result, so a substituted term prints as its body written out.
+        """
+        while self.inline_expressions and isinstance(node, Named) and not isinstance(node.body, Cases):
+            node = node.body
+        return node
 
     def _sum(self, node: Sum, ctx: _Context) -> tuple[str, int]:
         """A reduction over named dims: one dummy index per dim, in declaration order."""
@@ -528,7 +543,7 @@ class Walk:
 
         if isinstance(node, ParameterDefined):
             indexed = ctx.indexed(self.symbols.name[node.name], list(node.dims))
-            if self.program.parameters[node.name].dtype == 'bool':
+            if self._parameters[node.name].dtype == 'bool':
                 return indexed, _ATOM
             return f'{indexed} {self.format.prose(" is defined")}', comparison
 
@@ -706,20 +721,29 @@ class Walk:
         """The named expressions that print under their own symbol: every one, or only the unsubstitutable when inlining.
 
         Inlining leaves a name standing only where substitution cannot reach
-        it — a ``cases`` block, and an entry the objective and constraints
-        never read, which is a quantity reported back rather than solved for.
+        it — a ``cases`` block, an entry the objective and constraints never
+        read, which is a quantity reported back rather than solved for, and a
+        term this file adds to a sum, which the math reads only as that sum's
+        symbol.
         """
         entries = self.program.expressions
         if not self.inline_expressions:
             return list(entries)
-        return [name for name, entry in entries.items() if isinstance(entry.expression, Cases) or not entry.in_math]
+        return [
+            name
+            for name, entry in entries.items()
+            if isinstance(entry.expression, Cases) or not entry.in_math or entry.adds_to is not None
+        ]
 
     def definition(self, name: str) -> Line:
         """The line defining one named expression, ``symbol = body`` over its frame."""
-        body = self.program.expressions[name].expression
+        entry = self.program.expressions[name]
         frame = self._frame_of(name)
         ctx = self._context(frame)
-        rendered = self.format.cases(self._arms(body, ctx)) if isinstance(body, Cases) else self._expression(body, ctx)
+        if isinstance(entry.expression, Cases):
+            rendered = self.format.cases(self._arms(entry.expression, ctx))
+        else:
+            rendered = self._expression(entry.expression, ctx)
         return Line(
             label=name,
             left=ctx.indexed(self.symbols.name[name], frame),
@@ -829,7 +853,7 @@ class Walk:
     # -- assumptions -------------------------------------------------------
 
     def _assumptions(self) -> list[Line]:
-        """What the model assumes of its data, in the order a program carries it.
+        """What the spec assumes of its data, in the order a program carries it.
 
         A curve's conditions stand here with the file's own, because the
         method states them in the same language: the reader sees every
@@ -932,7 +956,7 @@ class Walk:
     def _bound(self, ctx: _Context, value: Expression) -> str:
         """A bound as the file wrote it: a number, or a parameter indexed over its dims."""
         if isinstance(value, Parameter):
-            return ctx.indexed(self.symbols.name[value.name], list(self.program.parameters[value.name].dims))
+            return ctx.indexed(self.symbols.name[value.name], list(self._parameters[value.name].dims))
         assert isinstance(value, Constant), 'a bound is a number or the name of a parameter'
         return self._number(value.value)
 

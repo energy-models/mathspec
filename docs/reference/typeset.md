@@ -5,13 +5,13 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Typeset the math
 
-`to_latex`, `to_typst` and `to_markdown` print a model as the equations it
+`to_latex`, `to_typst` and `to_markdown` print a spec as the equations it
 stands for, from the file alone. No data is attached, and no solver runs.
 
 ```python
 import mathspec as ms
 
-spec = ms.to_spec('model.yaml')  # read and checked once, then printed three ways
+spec = ms.to_spec('spec.yaml')  # read and checked once, then printed three ways
 
 print(ms.to_latex(spec))  # amsmath align
 print(ms.to_typst(spec))  # compiles without a TeX toolchain
@@ -20,10 +20,10 @@ print(ms.to_markdown(spec))  # renders as-is on GitHub
 
 Each function takes a path, the YAML, a mapping, a `Spec` or a `Program`, and
 prints the program: the one a spec holds, or the one it was handed.
-From a shell, `python -m mathspec latex model.yaml` prints the same, and
+From a shell, `python -m mathspec latex spec.yaml` prints the same, and
 `typst` or `markdown` in place of `latex` picks the format.
 
-[Print a model as math](../howto/print.md) is the recipe, and
+[Print a spec as math](../howto/print.md) is the recipe, and
 [every operator as math](language/operators.md#every-operator-as-math) shows
 what each operator prints.
 
@@ -34,7 +34,7 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
 
 |                      |                                  |                                                                                                                                 |
 | -------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `symbols`            | `--symbols FILE`, `--no-symbols` | How the names print, in place of the model's `symbols:` block. See [symbol tables](#symbol-tables). Default: the model's block  |
+| `symbols`            | `--symbols FILE`, `--no-symbols` | How the names print, in place of the spec's `symbols:` block. See [symbol tables](#symbol-tables). Default: the spec's block    |
 | `standalone`         | `--standalone`                   | Emit a document that compiles. Default: a fragment to include                                                                   |
 | `legend`             | `--no-legend`                    | Print the table of sets, parameters, variables and definitions above the math. Default: on                                      |
 | `numbered`           | `--no-numbers`                   | Number the equations. Default: on                                                                                               |
@@ -43,22 +43,23 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
 
 `-o FILE` writes to a file instead of stdout.
 
-- The model's `description:` opens the document.
+- The spec's `description:` opens the document.
 - A `piecewise:` block prints as one line: the curve it states, over the frame
   it states one curve per coordinate of. To print its rows, print
   [`spec.expand()`](api.md#mathspec.Spec.expand) or pass `--expand`
   ([see an expansion](../howto/see-an-expansion.md)).
 - An [`assumptions:`](language/assumptions.md) entry prints under an
   **Assumptions** heading, last, beside what each curve assumes of its
-  breakpoints. A model that assumes nothing of its data prints no such
+  breakpoints. A spec that assumes nothing of its data prints no such
   heading.
 - A [named expression](language/named.md) prints its symbol where it is used
   and its body once, under a **Definitions** heading, in declaration order. A
-  `cases:` block and a [reported entry](language/named.md#reported-expressions)
-  keep their definition line under either `inline_expressions` setting.
+  `cases:` block, a [reported entry](language/named.md#reported-expressions)
+  and a [term](language/declarations.md#terms) keep their definition line
+  under either `inline_expressions` setting.
 - Wherever the math moves an index, which every `shift` does, the document
   prints a line saying what that notation means.
-- A model that does not load does not print.
+- A file that does not load does not print.
 - Lines are not broken. A wide equation runs off the page.
 
 ## Markdown's delimiters
@@ -83,9 +84,9 @@ expression, constraint, assumption or variable, with its quantifier and without
 a document, a label, a number or math delimiters:
 
 ```python
-ms.typeset_declaration('model.yaml', 'spend', 'latex')
+ms.typeset_declaration('spec.yaml', 'spend', 'latex')
 # \mathit{spend}_{t} = \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
-ms.typeset_declaration('model.yaml', 'balance', 'latex')
+ms.typeset_declaration('spec.yaml', 'balance', 'latex')
 # \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
@@ -94,7 +95,7 @@ optional `symbols` table. A Markdown line arrives without delimiters too, so put
 it inside the inline pair:
 
 ```python
-line = ms.typeset_declaration('model.yaml', 'balance', 'markdown')
+line = ms.typeset_declaration('spec.yaml', 'balance', 'markdown')
 print(f'The balance holds: $`{line}`$')
 ```
 
@@ -109,7 +110,7 @@ declared as two of them, such as a constraint and a variable, is refused too.
 
 With no table, the symbols are **derived** from the names in the file, such as
 $\mathrm{load}_t$ and $\mathrm{capacity}_g$. A symbol table makes the output
-conventional. The model carries its tables under `symbols:`, one per notation:
+conventional. The spec carries its tables under `symbols:`, one per notation:
 
 ```yaml
 symbols:
@@ -134,19 +135,24 @@ symbols:
 
 - **A render reads only the table for its notation.** `to_latex` and
   `to_markdown` read `latex`, and `to_typst` reads `typst`. A name the table
-  does not carry is derived, and so is every name where the model has no table
+  does not carry is derived, and so is every name where the spec has no table
   for that notation.
 - **Every spelling is printed as you wrote it.** Nothing translates between
   notations.
 - **An entry that names nothing is a load error.** The loader checks each entry
-  against the model and against what its formulations emit, and names the near
+  against the spec and against what its formulations emit, and names the near
   miss:
 
   ```text
-  symbols: latex: 'capacityy' under names: is not declared by the model. Did you mean 'capacity'?
+  symbols: latex: 'capacityy' under names: is not declared by the spec. Did you mean 'capacity'?
   ```
 
-`symbols=` replaces the model's `symbols:` block. It takes a path to a YAML
+- **Composed files join their tables.** [`merge`](api.md#mathspec.merge) joins the
+  fragments' tables, and refuses two fragments that spell one symbol
+  differently. [`override`](api.md#mathspec.override) lays a patch's entries over the base's,
+  and a declaration the patch removes takes its symbols with it.
+
+`symbols=` replaces the spec's `symbols:` block. It takes a path to a YAML
 file or a mapping, with the same keys as the block. `symbols={}` derives every
 symbol, which is what a reader whose LaTeX lacks a package the table needs
 passes:

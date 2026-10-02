@@ -36,6 +36,8 @@ The [grammar](expressions.md#where-strings) says what a `where:` may hold.
 Nothing else creates absence. **A missing parameter row is not absence.** It
 reads as the value that contributes nothing: `0` as a coefficient, and `false`
 in a `where`.
+A missing row is the only gap a parameter has: a null or NaN value is
+[refused](declarations.md#parameters) when the data is attached.
 
 Where no such value exists, loading is refused. There are four such positions:
 a divisor, a `bounds:` entry, the whole constant side of a comparison, and a
@@ -122,6 +124,10 @@ load.
 ## Reported values
 
 A [reported expression](named.md#reported-expressions) inherits the absence of
-the solved numbers it reads, by the rules above. A quotient whose divisor solved
-to zero is absent too. A deleted row has
+the solved numbers it reads, by the rules above. A quotient is absent where its
+divisor is absent, and where its divisor is exactly zero, whether a solve or the
+data gave that zero. A solved value is read as the engine reads it back, and an
+engine may read a value within its solver's tolerance of zero as zero.
+A divisor parameter with a missing row where the quotient is read is still
+refused, because a missing row is not absence. A deleted row has
 [no dual](named.md#reading-a-constraints-dual).

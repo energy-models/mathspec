@@ -16,6 +16,7 @@ from mathspec._expression_parser import (
     ArithmeticNode,
     ComparisonNode,
     FunctionCallNode,
+    NameListNode,
     NameNode,
     ParsedNode,
     parse_expression,
@@ -24,8 +25,8 @@ from mathspec._expression_parser import (
 from mathspec.errors import SchemaError
 
 if TYPE_CHECKING:
-    from mathspec.model import MacroBlock
     from mathspec.resolution import Namespace
+    from mathspec.spec import MacroBlock
 
 
 def parse_and_expand(text: str, ns: Namespace, context: str) -> ParsedNode:
@@ -113,12 +114,30 @@ def _expand_macro(call: FunctionCallNode, ns: Namespace, context: str, stack: tu
         **{formal: _expand(call.kwargs[formal], ns, context, stack) for formal in macro.kwargs},
     }
     body = parse_template(call.name, macro, context)
-    substituted = _substitute(body, bindings)
+    substituted = _substitute(body, bindings, f"{context}: macro '{call.name}'")
     return _expand(substituted, ns, context, (*stack, call.name))
 
 
-def _substitute(node: ArithmeticNode, bindings: dict[str, ArithmeticNode]) -> ArithmeticNode:
-    """Replace formal-name NameNodes in *node* with their bound subtrees."""
+def _substitute(node: ArithmeticNode, bindings: dict[str, ArithmeticNode], caller: str) -> ArithmeticNode:
+    """Replace formal-name NameNodes in *node* with their bound subtrees, and formals in a list with the names bound to them."""
     if isinstance(node, NameNode) and node.name in bindings:
         return bindings[node.name]
-    return with_children(node, lambda child: _substitute(child, bindings))
+    if isinstance(node, NameListNode):
+        return NameListNode(tuple(bound for name in node.names for bound in _names(name, node, bindings, caller)))
+    return with_children(node, lambda child: _substitute(child, bindings, caller))
+
+
+def _names(name: str, listed: NameListNode, bindings: dict[str, ArithmeticNode], caller: str) -> tuple[str, ...]:
+    """What *name* in the list *listed* stands for: a list holds names, so a formal binds a name or a list spliced in."""
+    if name not in bindings:
+        return (name,)
+    bound = bindings[name]
+    if isinstance(bound, NameNode):
+        return (bound.name,)
+    if isinstance(bound, NameListNode):
+        return bound.names
+    msg = (
+        f"{caller} writes its formal '{name}' in the list {listed}, and the call binds it to {bound}. "
+        f'A list holds names: bind a name, or a list of names.'
+    )
+    raise SchemaError(msg)

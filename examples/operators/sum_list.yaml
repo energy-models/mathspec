@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: Several dimensions at once — `sum(array, over=[a, b])` collapses each one it names.
+
+dimensions:
+  snapshot: { dtype: int }
+  generator: { dtype: str }
+  carrier: { dtype: str }
+
+parameters:
+  limit: { dims: [carrier] }
+
+variables:
+  p:
+    dims: [snapshot, generator, carrier]
+    bounds: { lower: 0 }
+
+constraints:
+  carrier_total:
+    dims: [carrier]
+    expression: sum(p, over=[snapshot, generator]) <= limit
+
+objective: { sense: minimize, expression: sum(p) }

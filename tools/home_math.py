@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The homepage's model and the math under it, from one file.
+"""The homepage's spec and the math under it, from one file.
 
     pixi run python -m tools.home_math           # rewrite every block
     pixi run python -m tools.home_math --check   # fail if one has drifted
@@ -16,11 +16,9 @@ that produced the other two.
 
 from __future__ import annotations
 
-import textwrap
-
 from mathspec import to_spec
 from mathspec.typesetting import to_latex, to_markdown
-from tools._page import ROOT, inlined, splice, without_header
+from tools._page import ROOT, inlined, splice, tab, without_header
 from tools._page import main as page_main
 
 PAGE = ROOT / 'docs' / 'index.md'
@@ -46,7 +44,7 @@ ms.to_markdown(spec)
 
 The file's `symbols:` block gives every name its conventional spelling, one
 table per notation; Markdown math reads the `latex` one. It is optional: pass
-`symbols={}` and the same model prints from the names in the file, as
+`symbols={}` and the same spec prints from the names in the file, as
 $\\mathrm{load}_t$ and $\\mathrm{capacity}_g$.
 
 Or from a shell. `--standalone` emits a document that compiles, rather than a
@@ -60,11 +58,6 @@ python -m mathspec typst dispatch.yaml --standalone -o dispatch.typ
 [Typeset the math](reference/typeset.md) documents the three functions, their
 options and symbol tables. Each reads the same file every other page here
 loads."""
-
-
-def tab(title: str, body: str) -> str:
-    """One tab of the block: its title, and its body indented into it."""
-    return f'=== "{title}"\n\n{textwrap.indent(body, "    ")}'
 
 
 def block() -> str:

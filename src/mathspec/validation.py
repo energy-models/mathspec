@@ -4,15 +4,15 @@
 
 """The front door, and the rules a declaration is held to against the others before any expression is read.
 
-:func:`to_spec` reads a model definition into a :class:`~mathspec.model.Spec`.
-:func:`reference_errors` holds the rules one declaration is held to against
+[`to_spec`][] reads a spec definition into a [`Spec`][].
+[`reference_errors`][] holds the rules one declaration is held to against
 the others — a name declared once, a frame over declared dimensions, a bound
 naming a numeric parameter, a set over one dim of one variable, a curve
 through parameters carrying its breakpoints — which lowering runs before it
 reads any expression, since resolution assumes every one of them.
-:func:`emitted_name_errors` is read off the program instead: what a block's
+[`emitted_name_errors`][] is read off the program instead: what a block's
 expansion writes is decided by the block as lowered. The rules that need a
-typed expression stay with the expressions in :func:`~mathspec.lowering.lower`:
+typed expression stay with the expressions in [`lower`][mathspec.lowering.lower]:
 a macro formal against a dimension, a curve's links, and every dim rule.
 """
 
@@ -22,14 +22,14 @@ from collections import Counter
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from mathspec._yaml import read_model
+from mathspec._yaml import read_spec
 from mathspec.errors import SchemaError, did_you_mean
-from mathspec.model import NUMERIC_DTYPES, Spec, side_columns
 from mathspec.operators import BUILTIN_NAMES
 from mathspec.piecewise import Emitted as EmittedCurve
 from mathspec.piecewise import leaves_ungated
 from mathspec.sos import Emitted as EmittedSet
 from mathspec.sos import coefficients
+from mathspec.spec import NUMERIC_DTYPES, Spec, side_columns
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -38,17 +38,17 @@ if TYPE_CHECKING:
     from mathspec.program import Notation, Program, Symbols
 
 
-def to_spec(model: str | Path | Mapping[str, object] | Spec) -> Spec:
-    """Load and validate a model definition — the language's front door.
+def to_spec(spec: str | Path | Mapping[str, object] | Spec) -> Spec:
+    """Load and validate a spec definition — the language's front door.
 
     Everything decidable without data is decided here: schema shape, every
     rule one declaration is held to against the others, every expression and
     where string, and every macro template.
 
     Args:
-        model: A YAML path — a :class:`~pathlib.Path`, or a ``str`` with no
+        spec: A YAML path — a [`Path`][], or a ``str`` with no
             newline in it — the YAML text itself as a ``str`` with one, a
-            mapping, or a loaded :class:`Spec`.
+            mapping, or a loaded [`Spec`][].
 
     Returns:
         The schema *as the file declares it*, ``piecewise:`` intact.
@@ -58,12 +58,12 @@ def to_spec(model: str | Path | Mapping[str, object] | Spec) -> Spec:
             not a mapping of sections included.
         FileNotFoundError: A ``str`` with no newline that names no file.
     """
-    if isinstance(model, (list, tuple)):
-        msg = 'a model is one file, one dict or one Spec, never a list of them; merge the declarations into one dict.'
+    if isinstance(spec, (list, tuple)):
+        msg = 'a spec is one file, one dict or one Spec, never a list of them; merge the declarations into one dict.'
         raise SchemaError(msg)
-    if isinstance(model, Spec):
-        return model
-    return Spec.model_validate(model if isinstance(model, Mapping) else read_model(model))
+    if isinstance(spec, Spec):
+        return spec
+    return Spec.model_validate(spec if isinstance(spec, Mapping) else read_spec(spec))
 
 
 def emitted_name_errors(schema: Spec, program: Program) -> list[str]:
@@ -83,13 +83,13 @@ def symbol_errors(tables: Mapping[Notation, Symbols], program: Program) -> list[
     """Every entry of *tables* that names nothing in *program*, each with the near miss.
 
     A name a ``piecewise:`` or ``sos:`` block emits counts as declared, so one
-    table spells both readings of a model: the blocks as the file states them,
-    and the rows :meth:`~mathspec.model.Spec.expand` writes out.
+    table spells both readings of a spec: the blocks as the file states them,
+    and the rows [`expand`][mathspec.spec.Spec.expand] writes out.
     """
     dims = set(program.dimensions)
     names = _declared(program) | _emitted(program)
     return sorted(
-        f"symbols: {notation}: '{entry}' under {section}: is not declared by the model. {did_you_mean(entry, known)}"
+        f"symbols: {notation}: '{entry}' under {section}: is not declared by the spec. {did_you_mean(entry, known)}"
         for notation, table in tables.items()
         for section, entries, known in (
             ('dimensions', {*table.indices, *table.sets}, dims),
@@ -100,8 +100,17 @@ def symbol_errors(tables: Mapping[Notation, Symbols], program: Program) -> list[
 
 
 def _declared(program: Program) -> set[str]:
-    """Every name *program* declares that a symbol table may spell."""
-    return set(program.parameters) | set(program.variables) | set(program.expressions) | set(program.constraints)
+    """Every name *program* declares or reads under ``given:`` that a symbol table may spell."""
+    return (
+        set(program.parameters)
+        | set(program.given.parameters)
+        | set(program.variables)
+        | set(program.given.variables)
+        | set(program.expressions)
+        | set(program.given.expressions)
+        | set(program.constraints)
+        | set(program.given.constraints)
+    )
 
 
 def _emitted(program: Program) -> set[str]:
@@ -130,6 +139,7 @@ def reference_errors(schema: Spec) -> list[str]:
         *_sos_shapes(schema),
         *_sos_bounds(schema),
         *_piecewise_references(schema),
+        *_given_constraint_collisions(schema),
     ]
 
 
@@ -144,8 +154,11 @@ def _flat_namespace(schema: Spec) -> list[tuple[str, Iterable[str]]]:
         ('dimension', schema.dimensions),
         ('relation', schema.relations),
         ('parameter', schema.parameters),
+        ('given parameter', schema.given.parameters),
         ('variable', schema.variables),
+        ('given variable', schema.given.variables),
         ('named expression', schema.expressions),
+        ('given expression', schema.given.expressions),
         ('macro', schema.macros),
     ]
 
@@ -170,11 +183,29 @@ def _name_collisions(schema: Spec) -> Iterator[str]:
                 seen[name] = kind
 
 
+def _given_constraint_collisions(schema: Spec) -> Iterator[str]:
+    """A row family is either built here or given, never both.
+
+    Constraint names sit outside the flat namespace [`_name_collisions`][]
+    walks, so this is the one place the two constraint sections meet.
+    """
+    for name in schema.given.constraints:
+        if name in schema.constraints:
+            yield (
+                f"Given constraint '{name}' is also declared under 'constraints:'. A row family is "
+                f'either built by this file or given to it — drop one of the two.'
+            )
+
+
 def _frame_dimensions(schema: Spec) -> Iterator[str]:
     """Every frame is a product of distinct, declared dimensions."""
     frames = [
         *(('Parameter', name, p.dims) for name, p in schema.parameters.items()),
         *(('Variable', name, v.dims) for name, v in schema.variables.items()),
+        *(('Given parameter', name, g.dims) for name, g in schema.given.parameters.items()),
+        *(('Given variable', name, g.dims) for name, g in schema.given.variables.items()),
+        *(('Given expression', name, g.dims) for name, g in schema.given.expressions.items()),
+        *(('Given constraint', name, g.dims) for name, g in schema.given.constraints.items()),
         *(('Constraint', name, c.dims) for name, c in schema.constraints.items()),
         *(('Named expression', name, e.dims or []) for name, e in schema.expressions.items()),
     ]
@@ -234,14 +265,15 @@ def _relation_targets(schema: Spec) -> Iterator[str]:
 
 
 def _bound_names(schema: Spec) -> Iterator[str]:
-    """A named bound is a numeric parameter."""
+    """A named bound is a numeric parameter, declared here or given."""
+    parameters = {**schema.parameters, **schema.given.parameters}
     for vname, vdef in schema.variables.items():
         for side in ('lower', 'upper'):
             val = getattr(vdef.bounds, side)
             if not isinstance(val, str):
                 continue
-            if val in schema.parameters:
-                dtype = schema.parameters[val].dtype
+            if val in parameters:
+                dtype = parameters[val].dtype
                 if dtype not in NUMERIC_DTYPES:
                     yield (
                         f"Variable '{vname}' bounds.{side}: '{val}' is a {dtype} parameter, and a bound "
@@ -290,7 +322,7 @@ def _sos_bounds(schema: Spec) -> Iterator[str]:
     """A set states what the binaries it expands to state: each side of a member carries a coefficient.
 
     The rewrite holds an unpicked member at zero from both sides, so a side
-    the model leaves open leaves the member free of it. Either coefficient
+    the spec leaves open leaves the member free of it. Either coefficient
     may be a parameter, because a row multiplies by it rather than reading
     it. Decided here rather than where the rewrite runs, so a set the
     language cannot state twice is refused before any data exists.
@@ -364,7 +396,7 @@ def _collisions(schema: Spec, context: str, by_kind: Iterable[tuple[str, Iterabl
     An emitted variable joins the flat namespace, so any declaration there
     takes its name; a constraint, a set and an assumption each have their own.
     """
-    sections = {'named expression': 'expressions', 'sos': 'sos'}
+    sections = {'named expression': 'expressions', 'sos': 'sos', 'given variable': 'given: variables'}
     declared: dict[str, dict[str, str]] = {
         'variable': {name: kind for kind, group in _flat_namespace(schema) for name in group},
         'constraint': dict.fromkeys(schema.constraints, 'constraint'),

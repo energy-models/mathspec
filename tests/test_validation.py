@@ -16,22 +16,23 @@ from mathspec._yaml import parse_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
 from mathspec.program import DimensionPosition
 from mathspec.resolution import Namespace
-from mathspec.typesetting import to_markdown
+from mathspec.typesetting import FORMATS, to_markdown, typeset_declaration
 from mathspec.validation import to_spec
-from tests.fixtures import DISPATCH_MODEL, OPERATOR_PROBES, SMALL_MODEL, override, where_of
+from tests.fixtures import DISPATCH_MODEL, OPERATOR_PROBES, SMALL_MODEL, varied, where_of
 
 if TYPE_CHECKING:
-    from mathspec.model import Spec
+    from mathspec.spec import Spec
+    from mathspec.typesetting import FormatName
 
 
 def _schema(**patch) -> Spec:
-    return to_spec(override(SMALL_MODEL, **patch))
+    return to_spec(varied(SMALL_MODEL, **patch))
 
 
 def _refusal(model: dict[str, Any] = SMALL_MODEL, **patch: Any) -> str:
     """The message `to_spec` refuses *model* patched with — and it has to refuse."""
     with pytest.raises(LanguageError) as caught:
-        to_spec(override(model, **patch))
+        to_spec(varied(model, **patch))
     return str(caught.value)
 
 
@@ -193,7 +194,7 @@ class TestValidateExpressions:
         definition like any other — rather than degree-checking a declaration
         nothing consumes.
         """
-        model = override(SMALL_MODEL, expressions={'lcoe': 'c / sum(p)'})
+        model = varied(SMALL_MODEL, expressions={'lcoe': 'c / sum(p)'})
         assert to_spec(model).program.expressions['lcoe'].in_math is False, (
             'the unread nonlinear body loads rather than being refused, and nothing in the math reads it'
         )
@@ -224,7 +225,7 @@ def _kwarg_model(expression: str, dims: list[str] | None = None) -> dict[str, An
 class TestDual:
     """`dual(c)`: a primitive legal only in an entry the math never reads, its argument a constraint name resolved against constraints alone."""
 
-    BASE = override(SMALL_MODEL, **{'constraints.lim': {'dims': ['g'], 'expression': 'p <= c'}})
+    BASE = varied(SMALL_MODEL, **{'constraints.lim': {'dims': ['g'], 'expression': 'p <= c'}})
 
     @pytest.mark.parametrize(
         ('patch', 'fragments'),
@@ -284,13 +285,13 @@ class TestDual:
     )
     def test_a_dual_out_of_place_is_refused(self, patch, fragments):
         with pytest.raises(LanguageError) as exc:
-            to_spec(override(self.BASE, **patch))
+            to_spec(varied(self.BASE, **patch))
         for fragment in fragments:
             assert fragment in str(exc.value)
 
     def test_a_dual_loads_in_an_expressions_entry(self):
         """The one place it is legal: an ``expressions:`` entry naming a declared constraint, which nothing in the math reads."""
-        assert to_spec(override(self.BASE, expressions={'price': 'dual(lim)'})).expressions['price']
+        assert to_spec(varied(self.BASE, expressions={'price': 'dual(lim)'})).expressions['price']
 
 
 class TestDimensionKwargs:
@@ -300,6 +301,11 @@ class TestDimensionKwargs:
         ('expression', 'fragments'),
         [
             pytest.param('sum(p, over=snapshto) == load', ('silent no-op', 'sum(over=snapshto)'), id='sum-over-typo'),
+            pytest.param(
+                'sum(p, over=[generator, snapshto]) == 1',
+                ('silent no-op', 'sum(over=snapshto)'),
+                id='sum-over-a-list-with-a-typo',
+            ),
             pytest.param(
                 'sum(p, by=bus) == load',
                 ("'bus' is a dimension, and by= takes a relation",),
@@ -342,6 +348,16 @@ class TestDimensionKwargs:
         ('expression', 'fragment'),
         [
             pytest.param('sum(p, over=1)', 'sum(over=...) must name a dimension', id='a-number-as-a-dimension'),
+            pytest.param(
+                'shift(p, along=[snapshot, generator], offset=1)',
+                'shift(along=...) must name a dimension',
+                id='a-list-where-one-dimension-steps',
+            ),
+            pytest.param(
+                'sum(p, over=[generator, snapshot, generator])',
+                "sum(over=[generator, snapshot, generator]) names 'generator' twice",
+                id='a-dimension-named-twice',
+            ),
             pytest.param("sum(p, by='lk', over=g, into=h)", 'sum(by=...) must name a relation', id='a-quoted-relation'),
             pytest.param(
                 'sum(p, by=lk, over=1, into=h)',
@@ -645,6 +661,8 @@ class TestAWhereSideIsReadInResolution:
         ('patch', 'where'),
         [
             pytest.param({}, 'c <= 0.5 * k', id='arithmetic-on-a-side'),
+            pytest.param({}, 'c / (k + 1) > 0', id='a-divisor-that-adds'),
+            pytest.param({}, '(1 + k) ** c > 1', id='a-base-that-adds'),
             pytest.param({}, 'c > k', id='two-parameters'),
             pytest.param({}, '2 < c', id='a-literal-on-the-left'),
             pytest.param({'macros.half': {'args': ['x'], 'template': 'x / 2'}}, 'c <= half(k)', id='a-macro'),
@@ -694,11 +712,6 @@ class TestAWhereSideIsReadInResolution:
                 id='a-flag-against-a-parameter',
             ),
             pytest.param(
-                {'variables.p.where': 'c / (k + 1) > 0'},
-                ('a divisor must be a single Constant/Parameter factor',),
-                id='a-divisor-that-adds',
-            ),
-            pytest.param(
                 {'variables.p.where': 'shift(c, along=g, offset=1) <= k'},
                 ('shift() over a variable-free expression leaves vacated positions with no value',),
                 id='a-translation-with-no-edge',
@@ -745,6 +758,25 @@ class TestAWhereSideIsReadInResolution:
         for fragment in fragments:
             assert fragment in message
 
+    @pytest.mark.parametrize(
+        'where',
+        [
+            pytest.param('e > 0', id='on-the-left'),
+            pytest.param('c > e', id='on-the-right'),
+            pytest.param('c > 2 * e', id='inside-arithmetic'),
+        ],
+    )
+    def test_a_given_expression_in_a_where_is_named_as_one(self, where):
+        """The refusal called a given expression a variable (#803).
+
+        A given expression is read as a column, so the resolver files it with
+        the variables, and the message named the wrong kind of thing.
+        """
+        message = _refusal(**{'given.expressions.e': {'dims': ['g']}, 'variables.p.where': where})
+        assert "given expression 'e'" in message, 'the refusal names the kind the file declares'
+        assert "variable 'e'" not in message and 'names a variable' not in message, 'and no other kind'
+        assert 'may hold a variable' in message, 'it says why a given expression cannot mask'
+
     def test_a_case_comparing_expressions_is_refused_as_undecidable(self):
         """Two cases split by arithmetic cannot be proved apart without the numbers, and the rewrite is named."""
         message = _refusal(
@@ -762,16 +794,23 @@ class TestAWhereSideIsReadInResolution:
         assert 'cannot be told apart before the data arrives: it compares expressions' in message
         assert 'precompute the test as a boolean parameter' in message
 
-    def test_a_lone_case_comparing_expressions_is_refused_too(self):
-        """One case has no pair to be proved apart from, and it loaded: the pairwise
-        check never observed it. The rule is on the case, not on the pair — the
-        `otherwise` is its negation, and only the data decides where that falls."""
-        message = _refusal(
-            expressions={
-                'e': {'dims': ['g'], 'cases': {'wide': {'when': 'c > 2 * k', 'expression': 'c'}}, 'otherwise': 0}
-            }
+    @pytest.mark.parametrize('fmt', sorted(FORMATS))
+    def test_a_lone_case_comparing_expressions_loads(self, fmt: FormatName):
+        """A block of one case that compared expressions was refused as if it
+        could overlap its `otherwise`. The `otherwise` is built as the complement
+        of the cases, so one case overlaps nothing, and the same comparison
+        loaded inside `shift(..., offset=0)` (#794)."""
+        spec = to_spec(
+            varied(
+                SMALL_MODEL,
+                expressions={
+                    'e': {'dims': ['g'], 'cases': {'wide': {'when': 'c > 2 * k', 'expression': 'c'}}, 'otherwise': 0}
+                },
+            )
         )
-        assert "case 'wide' cannot be told apart before the data arrives: it compares expressions" in message
+        assert to_spec(spec.to_yaml()).program == spec.program, 'the when string reads back to the same mask'
+        printed = typeset_declaration(spec, 'e', fmt).replace('\\_', '_')
+        assert '> 2' in printed and 'otherwise' in printed, f'{fmt} prints the comparison and its otherwise'
 
 
 class TestAPredicateIsAnOperand:
@@ -799,6 +838,56 @@ class TestAPredicateIsAnOperand:
     def test_a_shape_the_language_admits(self, where):
         mask = where_of(where, Namespace(_schema()), 'probe')
         assert mask is not None, 'the predicate decides some rows, so it is a mask rather than nothing'
+
+    @pytest.mark.parametrize(
+        ('where', 'dims', 'reads'),
+        [
+            pytest.param(
+                'at(has_curve, by=cost_of, over=curve, into=[flow, effect])',
+                ['effect', 'flow'],
+                {'has_curve', 'cost_of'},
+                id='into-names-several-columns',
+            ),
+            pytest.param(
+                'at(has_cost, by=pair_of, over=[flow, effect], into=curve)',
+                ['curve'],
+                {'has_cost', 'pair_of'},
+                id='over-names-several-columns',
+            ),
+        ],
+    )
+    def test_a_read_names_several_columns_as_an_expression_does(self, where, dims, reads):
+        """The where grammar took one name after `into=` and `over=`, and the expression grammar a list (#781).
+
+        A piecewise block whose mask is read through a walk into `[flow, effect]`
+        writes this `where:`, and the load failed on its own assertion.
+        """
+        spec = to_spec(
+            {
+                'dimensions': {name: {'dtype': 'str'} for name in ('curve', 'effect', 'flow')},
+                'relations': {
+                    'cost_of': {'key': ['flow', 'effect'], 'values': 'curve'},
+                    'pair_of': {'key': 'curve', 'values': ['flow', 'effect']},
+                },
+                'parameters': {
+                    'has_curve': {'dims': ['curve'], 'dtype': 'bool'},
+                    'has_cost': {'dims': ['flow', 'effect'], 'dtype': 'bool'},
+                },
+                'variables': {'x': {'dims': dims}},
+                'constraints': {'k': {'dims': dims, 'where': where, 'expression': 'x >= 0'}},
+                'objective': {'sense': 'minimize', 'expression': 'sum(x)'},
+            }
+        )
+        mask = spec.program.constraints['k'].where
+        assert mask is not None
+        assert sorted(mask.dims) == dims, 'the read lands on the columns the other end names'
+        assert mask.names_read == reads, 'a consumer attaches the relation as well as the operand'
+        assert to_spec(spec.to_yaml()).program == spec.program, 'the where string reads back to the same mask'
+        for fmt in ('markdown', 'latex', 'typst'):
+            printed = typeset_declaration(spec, 'k', fmt).replace('\\_', '_')
+            assert all(name in printed for name in reads), (
+                f'{fmt} prints the operand and the relation it is read through'
+            )
 
     @pytest.mark.parametrize(
         ('where', 'fragments'),
@@ -1710,7 +1799,7 @@ class TestTheFrontDoor:
             to_spec('{dimensions: {t: {dtype: int}}}')
 
     def test_a_text_that_is_not_a_model_says_how_a_string_was_read(self):
-        with pytest.raises(SchemaError, match='YAML text: a model file must be a mapping of sections'):
+        with pytest.raises(SchemaError, match='YAML text: a spec file must be a mapping of sections'):
             to_spec('- dimensions\n- variables\n')
 
     @pytest.mark.parametrize('probe', OPERATOR_PROBES, ids=[p.stem for p in OPERATOR_PROBES])
@@ -1817,11 +1906,6 @@ class TestExpressionCases:
             ),
             pytest.param({'description': 'nothing at all'}, 'this has neither', id='neither'),
             pytest.param({'cases': OPENING, 'otherwise': 0}, '`cases:` needs a `dims:`', id='no-dims'),
-            pytest.param(
-                {'expression': 'load', 'dims': ['snapshot']},
-                '`dims:` is only for a named expression with `cases:`',
-                id='dims-alone',
-            ),
             pytest.param(
                 {'dims': ['snapshot', 'generator'], 'cases': OPENING},
                 'a `cases:` block needs an `otherwise:`',
@@ -2067,7 +2151,7 @@ def test_an_expression_too_deep_to_walk_fails_as_a_language_error(patch, nests):
     nothing naming the file, the declaration, or what to write instead.
     """
     with pytest.raises(LanguageError, match='past the 100 levels'):
-        to_spec(override(DISPATCH_MODEL, **patch))
+        to_spec(varied(DISPATCH_MODEL, **patch))
 
 
 def _chain(n: int, *, deepest_first: bool) -> dict[str, str]:
@@ -2089,24 +2173,22 @@ def test_a_chain_of_named_expressions_is_held_to_the_resolved_depth_and_costs_no
     """
     chain = _chain(150, deepest_first=deepest_first)
     constraint = {'dims': ['snapshot'], 'expression': 'sum(p, over=generator) <= e149'}
-    spec = to_spec(override(DISPATCH_MODEL, expressions=chain, **{'constraints.c': constraint}))
+    spec = to_spec(varied(DISPATCH_MODEL, expressions=chain, **{'constraints.c': constraint}))
     to_markdown(spec.program and spec)
 
     with pytest.raises(LanguageError, match='nests 301 deep with every named expression it reads written in') as caught:
-        to_spec(override(DISPATCH_MODEL, expressions=_chain(151, deepest_first=deepest_first)))
+        to_spec(varied(DISPATCH_MODEL, expressions=_chain(151, deepest_first=deepest_first)))
     assert 'past the 300 levels' in str(caught.value)
     assert "Named expression 'e150'" in str(caught.value), 'refused at the first entry past the depth, by name'
 
     with pytest.raises(LanguageError, match='past the 300 levels'):
-        to_spec(override(DISPATCH_MODEL, expressions=_chain(400, deepest_first=deepest_first)))
+        to_spec(varied(DISPATCH_MODEL, expressions=_chain(400, deepest_first=deepest_first)))
 
 
 def test_a_name_may_open_with_an_underscore():
     """`expressions.md` said a name opens with a letter while the schema and the grammar both admitted `_`, so the page refused what the language accepts."""
     schema = to_spec(
-        override(
-            DISPATCH_MODEL, **{'parameters._reserve': {'dims': ['generator']}, 'variables.p.where': '_reserve > 0'}
-        )
+        varied(DISPATCH_MODEL, **{'parameters._reserve': {'dims': ['generator']}, 'variables.p.where': '_reserve > 0'})
     )
 
     assert '_reserve' in schema.parameters, 'a leading underscore is a name, as NAME and the schema both say'
@@ -2139,7 +2221,7 @@ def test_each_declaration_is_resolved_once_however_many_readers(monkeypatch):
             monkeypatch.setattr(module, door.__name__, recorded(door))
 
     spec = to_spec(
-        override(
+        varied(
             DISPATCH_MODEL,
             **{
                 'variables.p.where': 'p_max > 0',
@@ -2189,7 +2271,7 @@ def test_a_plain_entry_that_breaks_a_dim_rule_is_refused_at_load_under_its_own_n
     """An entry nothing read loaded and failed only when printed, and one a constraint read was
     refused under the constraint's name. The program reads an entry's frame off its body at
     load, so the fault is the entry's, wherever it is read."""
-    model = override(SMALL_MODEL, expressions={'bad': {'expression': 'sum(k, over=g)'}}, constraints=constraints)
+    model = varied(SMALL_MODEL, expressions={'bad': {'expression': 'sum(k, over=g)'}}, constraints=constraints)
     with pytest.raises(DimensionError, match=r"^Named expression 'bad': sum\(over=g\)"):
         to_spec(model)
 
@@ -2203,7 +2285,7 @@ def test_a_plain_entry_that_breaks_a_dim_rule_is_refused_at_load_under_its_own_n
 )
 def test_an_open_bound_is_null_in_the_file_and_in_the_program(upper):
     """`upper: null` was refused, though every other field a file may leave open takes `null`."""
-    spec = to_spec(override(DISPATCH_MODEL, **{'variables.p.bounds': {'lower': 0, **upper}}))
+    spec = to_spec(varied(DISPATCH_MODEL, **{'variables.p.bounds': {'lower': 0, **upper}}))
     assert spec.variables['p'].bounds.upper is None
     assert spec.program.variables['p'].upper is None, 'the program says the side is open rather than infinite'
     assert spec.to_dict()['variables']['p']['bounds'] == {'lower': 0}, 'an open bound is not written back out'

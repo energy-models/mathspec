@@ -14,16 +14,16 @@ import yaml
 from mathspec.errors import SchemaError
 from mathspec.typesetting import to_latex, to_markdown, to_typst, typeset
 from mathspec.validation import to_spec
-from tests.fixtures import DISPATCH_MODEL, override
+from tests.fixtures import DISPATCH_MODEL, varied
 from tests.typesetting.fixtures import EVERY_FORMAT, TYPST_SYMBOLS
 
 if TYPE_CHECKING:
-    from mathspec.model import Spec
+    from mathspec.spec import Spec
     from mathspec.typesetting import FormatName
     from mathspec.typesetting.format import Format
 
 
-WITH_MARGINAL_COST = override(
+WITH_MARGINAL_COST = varied(
     DISPATCH_MODEL,
     **{'parameters.marginal_cost': {'dims': ['generator']}, 'objective.expression': 'sum(p * marginal_cost)'},
 )
@@ -59,15 +59,15 @@ def test_the_table_prints_verbatim_and_the_rest_is_still_derived(render, symbols
         assert fragment in out
 
 
-#: The dispatch model spelling its own symbols, one table per notation.
-SPELLED = override(
+#: The dispatch spec spelling its own symbols, one table per notation.
+SPELLED = varied(
     DISPATCH_MODEL,
     **{'symbols.latex.names': {'p': r'\pi'}, 'symbols.typst.names': {'p': 'pi'}},
 )
 
 
 @pytest.mark.parametrize(
-    'model',
+    'spec',
     [
         pytest.param(lambda: SPELLED, id='a-mapping'),
         pytest.param(lambda: yaml.safe_dump(SPELLED), id='the-yaml'),
@@ -84,16 +84,16 @@ SPELLED = override(
         pytest.param(to_typst, 'pi_(t,g)', id='typst'),
     ],
 )
-def test_the_model_carries_its_own_symbols_and_each_render_reads_its_notation(model, render, symbol):
-    """#492: the symbols lived in a sidecar written in one notation, so a model
+def test_the_spec_carries_its_own_symbols_and_each_render_reads_its_notation(spec, render, symbol):
+    """#492: the symbols lived in a sidecar written in one notation, so a spec
     documented in LaTeX could not print as Typst without a second file that
     drifts. Markdown's math is MathJax's, so it reads the `latex` table."""
-    assert symbol in render(model(), legend=False)
+    assert symbol in render(spec(), legend=False)
 
 
-def test_a_notation_the_model_does_not_spell_prints_derived():
-    """A model with only a LaTeX table used to be refused by a Typst render."""
-    latex_only = override(DISPATCH_MODEL, **{'symbols.latex.names': {'p': r'\pi'}})
+def test_a_notation_the_spec_does_not_spell_prints_derived():
+    """A spec with only a LaTeX table used to be refused by a Typst render."""
+    latex_only = varied(DISPATCH_MODEL, **{'symbols.latex.names': {'p': r'\pi'}})
     assert to_typst(latex_only) == to_typst(DISPATCH_MODEL), 'no typst table, so every symbol is derived'
 
 
@@ -104,11 +104,11 @@ def test_a_notation_the_model_does_not_spell_prints_derived():
         pytest.param(
             {'latex': {'names': {'cost': 'c'}}},
             lambda: to_latex(DISPATCH_MODEL, symbols={'latex': {'names': {'cost': 'c'}}}),
-            id='a-block-replaces-the-models-whole',
+            id='a-block-replaces-the-specs-whole',
         ),
     ],
 )
-def test_the_symbols_argument_replaces_the_models_block(symbols, expected):
+def test_the_symbols_argument_replaces_the_specs_block(symbols, expected):
     """An author whose symbols need a package the reader lacks, such as
     `upgreek`, is not stuck with them: `symbols=` replaces the block rather than
     merging into it, so `p` is no longer `\\pi` in either case."""
@@ -123,7 +123,7 @@ def test_a_render_reads_only_the_table_for_its_own_notation():
     assert to_typst(DISPATCH_MODEL, symbols=latex_only) == to_typst(DISPATCH_MODEL)
 
 
-DESCRIBED = override(
+DESCRIBED = varied(
     DISPATCH_MODEL,
     **{
         'dimensions.generator.description': 'dispatchable units',
@@ -163,7 +163,7 @@ def test_a_named_expression_has_a_legend_row_exactly_while_its_symbol_prints(nam
 
 #: The dispatch model with a curve on it, so one model has two readings and one
 #: table has to spell both.
-CURVED = override(
+CURVED = varied(
     DISPATCH_MODEL,
     **{
         'dimensions.bp': {'dtype': 'int'},
@@ -178,7 +178,7 @@ CURVED = override(
 def test_one_table_spells_the_blocks_a_file_states_and_the_rows_they_state():
     """The weights are named after the block, which no equation can carry, and the
     table that renames them has to render the file they came from too."""
-    spec = to_spec(override(CURVED, **{'symbols.latex.names': {'curve_lam': r'\lambda'}}))
+    spec = to_spec(varied(CURVED, **{'symbols.latex.names': {'curve_lam': r'\lambda'}}))
 
     assert r'\lambda' not in to_latex(spec, legend=False), 'no weight stands where the curve prints'
     assert r'\lambda_{t,g,b}' in to_latex(spec.expand(), legend=False), 'the expansion keeps the block'
@@ -186,7 +186,7 @@ def test_one_table_spells_the_blocks_a_file_states_and_the_rows_they_state():
 
 def test_a_misspelled_name_is_still_a_typo_where_a_formulation_could_have_emitted_it():
     with pytest.raises(SchemaError, match="Did you mean 'curve_lam'"):
-        to_spec(override(CURVED, **{'symbols.latex.names': {'curve_laam': 'x'}}))
+        to_spec(varied(CURVED, **{'symbols.latex.names': {'curve_laam': 'x'}}))
 
 
 def _names(spec: Spec) -> set[str]:
@@ -216,7 +216,7 @@ def test_a_table_spells_the_names_the_expansion_declares_and_no_other(patch):
     """A name any method could write counted as declared, so a table naming the
     chord of a curve that has none, or the curve's own set, was ignored rather
     than refused."""
-    spec = to_spec(override(CURVED, **patch))
+    spec = to_spec(varied(CURVED, **patch))
     written = _names(spec.expand()) - _names(spec)
     reserved = {
         'curve',

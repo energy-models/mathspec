@@ -5,12 +5,12 @@
 """Name resolution — the pass that reads the syntax tree into the program vocabulary.
 
 The grammars emit bare names and calls; resolution builds the
-:mod:`mathspec.program` node each stands for, so every pass after — the dim
+[`mathspec.program`][] node each stands for, so every pass after — the dim
 rules, the degree rules, the typesetter, lowering — reads one vocabulary. This
-module holds the :class:`Namespace` a resolution reads names from and the doors
+module holds the [`Namespace`][] a resolution reads names from and the doors
 lowering calls, one per kind of text; the walks are
-:class:`~mathspec._expression_resolver.ExpressionResolver` for arithmetic and
-:class:`~mathspec._where_resolver.WhereResolver` for a where string. The rules
+[`ExpressionResolver`][] for arithmetic and
+[`WhereResolver`][] for a where string. The rules
 live in the language reference.
 """
 
@@ -52,12 +52,12 @@ if TYPE_CHECKING:
 
     from mathspec._expression_parser import ComparisonOperator, ParsedNode
     from mathspec._where_parser import ParsedWhere
-    from mathspec.model import ExpressionBlock, Spec
     from mathspec.program import DeclaredDtype
+    from mathspec.spec import ExpressionBlock, Spec
 
 
 #: What a name a file may write turns out to be. Answered by
-#: :meth:`Namespace.kind`, so a pass reading a name switches over this rather
+#: [`Namespace.kind`][], so a pass reading a name switches over this rather
 #: than over the stores it would otherwise have to try in order.
 DeclarationKind = Literal['variable', 'parameter', 'dimension', 'relation']
 
@@ -71,6 +71,7 @@ class Namespace:
     __slots__ = (
         '_loading',
         '_named',
+        'bodies',
         'constraints',
         'dimensions',
         'dtypes',
@@ -86,17 +87,20 @@ class Namespace:
         #: dim-checked against, since macros, named expressions and the dim
         #: rules read declarations the flat listing below does not carry.
         self.schema = schema
-        self.variables = frozenset(schema.variables)
-        self.parameters = frozenset(schema.parameters)
+        variables = {**schema.variables, **schema.given.variables, **schema.given.expressions}
+        parameters = {**schema.parameters, **schema.given.parameters}
+        self.variables = frozenset(variables)
+        self.bodies = frozenset(schema.expressions)
+        self.parameters = frozenset(parameters)
         self.dimensions = frozenset(schema.dimensions)
         #: The declared constraint names, off the flat namespace: a bare name
-        #: never reaches them, so a model may name a constraint after a variable.
+        #: never reaches them, so a spec may name a constraint after a variable.
         #: Consulted only in ``dual()``'s argument position.
-        self.constraints = frozenset(schema.constraints)
+        self.constraints = frozenset({**schema.constraints, **schema.given.constraints})
         #: name -> declared dtype, for dimensions, parameters and relations alike;
         #: what a where comparison checks its literal against.
         self.dtypes: dict[str, DeclaredDtype] = {
-            **{p: pd.dtype for p, pd in schema.parameters.items()},
+            **{p: pd.dtype for p, pd in parameters.items()},
             **{d: dd.dtype for d, dd in schema.dimensions.items()},
         }
         #: relation name -> its columns and key, as declared.
@@ -107,8 +111,8 @@ class Namespace:
         #: parameters by their ``dims``, variables by their frame. Stamped onto
         #: each leaf a where names, the way a relation leaf carries ``over``.
         self.leaf_dims: dict[str, tuple[str, ...]] = {
-            **{p: tuple(pd.dims) for p, pd in schema.parameters.items()},
-            **{v: tuple(vd.dims) for v, vd in schema.variables.items()},
+            **{p: tuple(pd.dims) for p, pd in parameters.items()},
+            **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
         }
         #: named expression -> its resolved node, or ``None``, and its refusals;
         #: filled the first time anything reads the name.
@@ -147,7 +151,7 @@ class Namespace:
         The entries it reads are resolved before it, walked from a stack that
         holds the path of reads from *name* rather than by recursing into
         each, so a chain of entries however long costs no stack. An entry
-        that reads one on the path is a cycle, which :meth:`named` refuses
+        that reads one on the path is a cycle, which [`named`][] refuses
         with that path when the resolution reaches the read.
         """
         base = len(self._loading)
@@ -195,7 +199,7 @@ class Namespace:
                         continue
                 else:
                     pending.extend(nested(node))
-        names = (n.name for n in nodes(*arithmetic) if isinstance(n, NameNode) and n.name in self.schema.expressions)
+        names = (n.name for n in nodes(*arithmetic) if isinstance(n, NameNode) and n.name in self.bodies)
         return tuple(dict.fromkeys(names))
 
     def kind(self, name: str) -> DeclarationKind | None:
@@ -237,7 +241,8 @@ class Namespace:
         return (
             f"{context}: dual({name}): '{name}' is not a declared constraint{also}.\n"
             f'  Constraints: {sorted(self.constraints)}\n'
-            f"Check for typos, or declare '{name}' under 'constraints:'."
+            f"Check for typos, or declare '{name}': under 'constraints:' if this file builds the row, "
+            f"or under 'given: constraints:' if it reads the dual of a row another model builds."
         )
 
 
@@ -302,7 +307,7 @@ def resolve_where(
     errors: list[str],
     self_variable: str | None = None,
 ) -> Predicate | None:
-    """Rewrite a parsed where AST into typed predicates, folded as :class:`~mathspec.program.Mask` folds.
+    """Rewrite a parsed where AST into typed predicates, folded as [`Mask`][] folds.
 
     Returns:
         The typed tree — a mask admitting every row or none comes back as the
@@ -321,7 +326,7 @@ def resolve_where_text(
     errors: list[str],
     self_variable: str | None = None,
 ) -> Predicate | None:
-    """Parse and resolve one where string as :func:`resolve_where` does, a parse failure appended to *errors*.
+    """Parse and resolve one where string as [`resolve_where`][] does, a parse failure appended to *errors*.
 
     Returns:
         ``None`` where there is no mask to read, and where reading it failed.
@@ -343,10 +348,10 @@ def resolve_expression_text(
 
     *ceiling* is the degree the position honours, and ``None`` for an
     ``expressions:`` entry's body: what the math admits
-    (:func:`~mathspec.degree.check_expression`) is a rule about the position
+    ([`check_expression`][mathspec.degree.check_expression]) is a rule about the position
     that *reads* it, so it fires on the expanded tree of every objective and
     piecewise link, and not where an entry is declared. A constraint is
-    :func:`resolve_constraint_text`'s.
+    [`resolve_constraint_text`][]'s.
 
     Returns:
         The typed tree, or ``None`` once anything failed, the problem appended

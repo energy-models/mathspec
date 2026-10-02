@@ -26,23 +26,26 @@ validation:
 nav:
   - Home: index.md
   # Arranged by what a page is for — tutorial, how-to guide, reference,
-  # explanation (https://diataxis.fr) — for someone who writes a model.
+  # explanation (https://diataxis.fr) — for someone who writes a spec.
   # `.claude/skills/docs-writing/SKILL.md` says how one kind is told from
-  # another, and the folders under `docs/` follow the same split. The model
+  # another, and the folders under `docs/` follow the same split. The example
   # pages are reference in their own form and sit at the end of the Reference
   # section, after the pages a reader looks things up in.
   - Tutorials:
-      - Your first model: first-model.md
+      - Your first spec: first-spec.md
+      - A spec in several files: several-files.md
   - How-to guides:
       - Installation: howto/installation.md
-      - Check a model without data: howto/check.md
-      - Print a model as math: howto/print.md
+      - Check a spec without data: howto/check.md
+      - Print a spec as math: howto/print.md
       - Change the symbols for one render: howto/change-the-symbols.md
       - State a rule that differs by regime: howto/regimes.md
       - Declare a column of data: howto/declare-a-column.md
       - Fix a quantity that is data in one model and a decision in another: howto/pin-a-variable.md
       - Write a piecewise curve out by hand: howto/curve-by-hand.md
       - See what a curve or a set expands to: howto/see-an-expansion.md
+      - Compare two specs: howto/compare.md
+      - Compose a spec from several files: howto/compose.md
   - Reference:
       - Language:
           - reference/language/index.md
@@ -64,15 +67,21 @@ nav:
           - examples/index.md
           - Least-cost dispatch: examples/dispatch.md
           - Unit commitment: examples/commitment.md
-          - One construct per model: examples/operators.md
+          - One construct per spec: examples/operators.md
+          - A component library:
+              - examples/library/index.md
+              - The coupling surface: examples/library/surface.md
+              - Generators: examples/library/generator.md
+              - Loads: examples/library/load.md
+              - The composed spec: examples/library/composed.md
   - About:
       - The limits: about/limits.md
       - Versions: about/versions.md
       - Changelog: changelog.md
-  # Everything a model writer does not need, grouped by reader: whoever
+  # Everything a spec writer does not need, grouped by reader: whoever
   # writes a tool against `Spec` and `Program` (an engine such as specsolve, a
   # renderer, a checker), whoever changes mathspec itself, and the proofs of
-  # concept: the notation page, which renders the typesetting test model, and
+  # concept: the notation page, which renders the typesetting test spec, and
   # the PyPSA pages. The PyPSA pages stay in `docs/examples/`, where
   # `tools/gallery.py` writes them.
   - Development:
@@ -86,29 +95,56 @@ nav:
       - Proofs of concept:
           - Every construct, as math: reference/notation.md
           - PyPSA in one file: examples/pypsa.md
-          - PyPSA, the quadratic class: examples/pypsa_quadratic.md
           - PyPSA, the relaxed commitment: examples/pypsa_linearized_uc.md
-          - PyPSA, the lossy lines: examples/pypsa_losses.md
-          - PyPSA, the two-stage class: examples/pypsa_stochastic.md
-          - PyPSA, the multi-period class: examples/pypsa_multi_period.md
+          - PyPSA in 24 files:
+              - examples/pypsa/index.md
+              - Settings: examples/pypsa/settings.md
+              - The network: examples/pypsa/network.md
+              - Power flow: examples/pypsa/power_flow.md
+              - The cost: examples/pypsa/cost.md
+              - Carriers: examples/pypsa/carrier.md
+              - Global constraints: examples/pypsa/global_constraints.md
+              - Security: examples/pypsa/security.md
+              - Generators: examples/pypsa/generator.md
+              - Generators, the commitment: examples/pypsa/generator_commitment.md
+              - Generators, the ramping: examples/pypsa/generator_ramping.md
+              - Generators, the maintenance: examples/pypsa/generator_maintenance.md
+              - Links: examples/pypsa/link.md
+              - Links, the commitment: examples/pypsa/link_commitment.md
+              - Links, the ramping: examples/pypsa/link_ramping.md
+              - Links, the maintenance: examples/pypsa/link_maintenance.md
+              - Processes: examples/pypsa/process.md
+              - Processes, the commitment: examples/pypsa/process_commitment.md
+              - Processes, the ramping: examples/pypsa/process_ramping.md
+              - Processes, the maintenance: examples/pypsa/process_maintenance.md
+              - Storage units: examples/pypsa/storage_unit.md
+              - Stores: examples/pypsa/store.md
+              - Lines: examples/pypsa/line.md
+              - Transformers: examples/pypsa/transformer.md
+              - Loads: examples/pypsa/load.md
 
 theme:
   palette:
-    # Dark first = default for new visitors (no auto/system-pref entry).
-    # Icon represents the CURRENT scheme — moon when active is dark,
-    # sun when active is light. The `name` describes the toggle action.
-    - scheme: slate
+    - media: "(prefers-color-scheme)"
       primary: custom
       accent: custom
       toggle:
-        icon: lucide/moon
+        icon: lucide/sun-moon
         name: Switch to light mode
-    - scheme: default
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
       primary: custom
       accent: custom
       toggle:
         icon: lucide/sun
         name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: lucide/moon
+        name: Switch to system preference
 
   icon:
     repo: fontawesome/brands/github
@@ -128,12 +164,14 @@ theme:
     - navigation.indexes
     - navigation.top
     - navigation.footer
+    - navigation.path
     - toc.follow
     - search.highlight
     - search.share
     - content.code.copy
     - content.code.select
     - content.tabs.link
+    - content.tooltips
     - content.action.edit
 
 # The prose licence, on every page — CC-BY asks for attribution, so it has to be
@@ -160,6 +198,9 @@ markdown_extensions:
       generic: true
   - pymdownx.superfences:
       custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: pymdownx.superfences.fence_code_format
         # A ```math fence is how GitHub takes block math verbatim, and is what
         # this project's own typesetter prints. Arithmatex reads `$$…$$`, so
         # the fence hands it over — indented inside a tab or a list included,
@@ -194,7 +235,7 @@ markdown_extensions:
       permalink: "#"
       toc_depth: 3
       # GitHub's slug rules, not mkdocs'. Every page here is read in both
-      # places and they cross-link by anchor — `pypsa_losses.md#rung-13
+      # places and they cross-link by anchor — `pypsa.md#rung-13
       # --transmission-losses`, whose double hyphen is an em dash GitHub
       # drops. The default slugifier collapses that to one, so such a link
       # would 404 on the site while working in the repository. Same file,
@@ -217,6 +258,7 @@ plugins:
             merge_init_into_class: true
             show_if_no_docstring: true
             signature_crossrefs: true
+            scoped_crossrefs: true
             show_root_toc_entry: false
             show_signature_annotations: false
           paths: [src]

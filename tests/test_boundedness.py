@@ -14,9 +14,9 @@ import pytest
 
 from mathspec.boundedness import unbounded_notes
 from mathspec.operators import BUILTIN_NAMES
-from tests.fixtures import SMALL_MODEL, override, schema_of
+from tests.fixtures import SMALL_MODEL, schema_of, varied
 
-BASE = override(
+BASE = varied(
     SMALL_MODEL,
     variables={'v': {'dims': ['g']}, 'w': {'dims': ['g']}},
     objective={'sense': 'minimize', 'expression': 'sum(v, over=g)'},
@@ -118,6 +118,10 @@ def test_a_named_constant_coefficient_carries_its_sign(objective, side):
         pytest.param(
             {'objective.expression': '-sum(v, over=g)', 'variables.v.bounds': {'upper': 10}},
             id='bounded-on-the-improving-side-running-up',
+        ),
+        pytest.param(
+            {'given': {'expressions': {'e': {'dims': ['g']}}}, 'objective.expression': 'sum(e, over=g)'},
+            id='a-given-expression-is-bounded-by-whoever-defines-it',
         ),
     ],
 )

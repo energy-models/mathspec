@@ -4,9 +4,9 @@
 
 """The expression walk of name resolution: an arithmetic syntax tree into the program's expression nodes.
 
-Every operator call is read here — its shape against :data:`~mathspec.operators.BUILTINS`,
+Every operator call is read here — its shape against [`BUILTINS`][],
 its dimension and relation arguments against the namespace — and the node it
-stands for is built. :mod:`mathspec.resolution` holds the namespace and the
+stands for is built. [`mathspec.resolution`][] holds the namespace and the
 doors that call this.
 """
 
@@ -32,7 +32,6 @@ from mathspec._expression_parser import (
 )
 from mathspec.dimensions import dims_of
 from mathspec.errors import DimensionError, SchemaError, did_you_mean
-from mathspec.model import NUMERIC_DTYPES
 from mathspec.operators import (
     AMOUNTS,
     BUILTINS,
@@ -62,6 +61,7 @@ from mathspec.program import (
     carries_variable,
     children,
 )
+from mathspec.spec import NUMERIC_DTYPES
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -101,7 +101,7 @@ class ExpressionResolver:
         return isinstance(value, NameNode) and value.name in self.formals
 
     def build(self, node: ArithmeticNode) -> Expression | None:
-        """The program tree *node* stands for, held to :data:`MAX_RESOLVED_DEPTH` before anything walks it.
+        """The program tree *node* stands for, held to [`MAX_RESOLVED_DEPTH`][] before anything walks it.
 
         The depth is measured with every named expression written in, since
         that is the tree every later pass recurses over, and measured with an
@@ -175,14 +175,14 @@ class ExpressionResolver:
     def _name(self, node: NameNode) -> Expression | None:
         """A bare name as the variable, parameter or named expression it declares; a dimension or relation is not a value.
 
-        A named expression arrives as the one node :meth:`Namespace.named`
+        A named expression arrives as the one node [`Namespace.named`][]
         built for it; the cast is the one place a
-        :class:`~mathspec.program.Named` enters a tree typed as a program's,
+        [`Named`][mathspec.program.Named] enters a tree typed as a program's,
         which lowering makes true.
         """
         if node.name in self.formals:
             return None
-        if node.name in self.ns.schema.expressions:
+        if node.name in self.ns.bodies:
             try:
                 return cast('Expression', self.ns.named(node.name, self.context))
             except SchemaError as e:
@@ -243,7 +243,7 @@ class ExpressionResolver:
                 f'{self.context}: {node.name}({", ".join(f"{k}=" for k in roles)}) names a column of a relation, '
                 f'and no by= names the relation. Write {builtin.usage}'
             )
-        dims: dict[str, str | None] = {}
+        dims: dict[str, tuple[str, ...] | None] = {}
         amounts: dict[str, int | str | None] = {}
         edge: _Edge | None = None
         for key, value in node.kwargs.items():
@@ -251,14 +251,15 @@ class ExpressionResolver:
                 case 'edge':
                     edge = self._edge(value, node.name)
                 case 'dimension':
-                    dims[key] = self._dim_ref(value, node.name, key)
+                    dims[key] = self._dim_refs(value, node.name, key, several=key in builtin.dimension_or_role_kwargs)
                 case 'value':
                     amounts[key] = self._amount(value, node.name, key)
                 case 'relation' | 'role' | None:
                     pass
         read = None
         if 'by' in node.kwargs and builtin.kind_of('by') == 'relation':
-            read = self.relation_ref(node.kwargs['by'], node.name, 'by', roles, dims.get('along'))
+            along = dims.get('along')
+            read = self.relation_ref(node.kwargs['by'], node.name, 'by', roles, along[0] if along else None)
         unread = (
             shape_error is not None
             or unrelated
@@ -277,7 +278,7 @@ class ExpressionResolver:
         self,
         operator: str,
         operand: Expression,
-        dims: Mapping[str, str | None],
+        dims: Mapping[str, tuple[str, ...] | None],
         amounts: Mapping[str, int | str | None],
         edge: _Edge | None,
         read: Direction | Partition | None,
@@ -288,14 +289,15 @@ class ExpressionResolver:
                 assert isinstance(read, Direction), 'a sum reads its relation in a direction'
                 return GroupSum(operand, read)
             if (over := dims.get('over')) is not None:
-                return Sum(operand, (over,))
+                return Sum(operand, over)
             return self._bare_sum(operand)
         if operator == 'at':
             assert isinstance(read, Direction), 'at reads its relation in a direction'
             return Pullback(operand, read)
         assert read is None or isinstance(read, Partition), 'a translation reads its relation as a partition'
-        along = dims['along']
-        assert along is not None
+        named = dims['along']
+        assert named is not None, 'a translation names the dimension it steps along'
+        (along,) = named
         wrap, fill = edge if edge is not None else (False, None)
         if operator == 'shift':
             offset = amounts['offset']
@@ -360,7 +362,7 @@ class ExpressionResolver:
     def _amount(self, value: ArithmeticNode, operator: str, key: str) -> int | str | None:
         """``offset=`` or ``window=``: a whole number in the operator's range, or the name of a parameter.
 
-        Closed so that :func:`mathspec.dimensions._check_named_amount` sees
+        Closed so that [`mathspec.dimensions._check_named_amount`][] sees
         every parameter an amount carries, and so that a program's
         ``offset`` and ``width`` are the ``int | str`` they say.
         """
@@ -421,6 +423,20 @@ class ExpressionResolver:
             return None
         return False, literal.value
 
+    def _dim_refs(self, value: ArithmeticNode, operator: str, key: str, *, several: bool) -> tuple[str, ...] | None:
+        """An operator kwarg whose *value* names declared dimensions: one, or a list where *several* are allowed."""
+        if not (several and isinstance(value, NameListNode)):
+            found = self._dim_ref(value, operator, key)
+            return None if found is None else (found,)
+        if repeated := sorted({name for name in value.names if value.names.count(name) > 1}):
+            self.errors.append(
+                f'{self.context}: {operator}({key}={value}) names {", ".join(map(repr, repeated))} twice. '
+                f'Name each dimension once.'
+            )
+            return None
+        found = [self._dim_ref(NameNode(name), operator, key) for name in value.names]
+        return None if None in found else tuple(cast('list[str]', found))
+
     def _dim_ref(self, value: ArithmeticNode, operator: str, key: str) -> str | None:
         """An operator kwarg whose *value* must name a declared dimension."""
         if self._formal(value):
@@ -441,7 +457,7 @@ class ExpressionResolver:
         Constraints sit outside the flat namespace, so this store is consulted
         only here — a bare name in arithmetic never reaches it. A dual standing
         where the math is built is refused separately
-        (:mod:`mathspec.degree`); this pass only types the name.
+        ([`mathspec.degree`][]); this pass only types the name.
         """
         (value,) = node.args
         if self._formal(value):

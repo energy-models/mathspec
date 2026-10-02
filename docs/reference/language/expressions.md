@@ -45,11 +45,29 @@ bound it:
 
 A [reported expression](named.md#reported-expressions) is not held to these.
 
-`/` needs a divisor that carries no variable and is a single factor.
+`/` needs a divisor that carries no variable. `**` needs a base and an exponent
+that carry no variable. Any arithmetic over numbers and parameters is allowed in
+those places, so a discount factor is written where it is used:
 
-`**` needs a base and an exponent that both carry no variable and neither of
-which adds. `growth ** period` is allowed, and `(1 + rate) ** period` is
-refused: declare the factor itself as a parameter. Write `x * x` for a square.
+```yaml
+dimensions:
+  period: { dtype: int }
+parameters:
+  rate: { dims: [] }
+  years: { dims: [period] }
+  price: { dims: [period] }
+variables:
+  build: { dims: [period], bounds: { lower: 0 } }
+constraints:
+  enough: { dims: [], expression: "sum(build, over=period) >= 1" }
+objective:
+  sense: minimize
+  expression: sum(build * price / (1 + rate) ** years, over=period)
+```
+
+`years` is a parameter over `period`. The exponent cannot be `period` itself,
+because an expression reads no [dimension](#name-resolution). Write `x * x` for
+a square.
 
 ## Name resolution
 
@@ -225,12 +243,13 @@ objective:
 $$0 \le \mathit{rate}_{f} \le \mathrm{cap}_{f} \qquad \forall\thinspace f \in \mathcal{F} \thinspace : \thinspace \mathrm{has\_curve}_{\mathrm{converter\_of}(f)}$$
 
 The mask above is over `flow` alone. The rules are those of `at` in an
-expression: `by=`, `over=` and `into=` are all written, the read lands on the
+expression: `by=`, `over=` and `into=` are all written, each of `over=` and
+`into=` names one column or a list of them, `[a, …]`, the read lands on the
 relation's key, and the predicate carries every dimension the read consumes.
 
 ### The right-hand side of a comparison
 
-A bare name on the right is read as a string label when the model does not
+A bare name on the right is read as a string label when the spec does not
 declare it. A declared name there is a load error.
 
 Quote a label that is not an identifier, such as `'combined-cycle'`. A quoted
@@ -274,8 +293,8 @@ constraints:
     expression: shed >= load - ramp
 ```
 
-A [case `when:`](named.md#the-rules-that-keep-the-cases-apart) may not compare
-expressions. A comparison with a number on both sides, such as `2 < 1`, is
+A [case `when:`](named.md#the-rules-that-keep-the-cases-apart) may compare
+expressions only in a block with one case. A comparison with a number on both sides, such as `2 < 1`, is
 refused everywhere.
 
 ### `position()`

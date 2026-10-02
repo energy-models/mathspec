@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: mathspec Contributors
 SPDX-License-Identifier: MIT
 -->
 
-# `typesetting/` — the model, printed
+# `typesetting/` — the spec, printed
 
 This package is a consumer of the program. It builds no model and attaches no
 data. It walks a program, the one a loaded `Spec` holds or one handed to it,
@@ -15,7 +15,7 @@ and prints it.
 | `walk.py`     | the program's trees to `Line`s. Every decision about the **math**, written once                        |
 | `legend.py`   | the notes under the equations, read off what the program uses                                          |
 | `format.py`   | the boundary: what a format must spell, and the operator vocabulary                                    |
-| `symbols.py`  | which symbol a name gets, and the `symbols=` file that replaces the model's own table                  |
+| `symbols.py`  | which symbol a name gets, and the `symbols=` file that replaces the spec's own table                   |
 | `latex.py`    | amsmath, the format that lands in a journal                                                            |
 | `typst.py`    | Typst, the format that compiles without a toolchain                                                    |
 | `markdown.py` | GitHub-flavoured Markdown: LaTeX math, with a Markdown document layer                                  |
@@ -32,8 +32,8 @@ A `Format` makes a much smaller decision: that a sum is written `\sum_{…}` or
 
 Those are different questions, and they live in different files. With one
 module, the second format becomes a _copy of the walk_. Two copies of a walk are
-two walks that can disagree about what the model says. That matters more here
-than it looks, because a typeset model is what a reader checks the math against.
+two walks that can disagree about what the spec says. That matters more here
+than it looks, because a typeset spec is what a reader checks the math against.
 
 Two rules keep the split honest:
 
@@ -41,27 +41,27 @@ Two rules keep the split honest:
   math with `math()` when it embeds it in prose, so the walk never knows which
   mode it is in.
 - **A format spells; it never decides.** No method in `format.py` takes a
-  syntax-tree node or a schema. If a format had to look at the model to answer a
+  syntax-tree node or a schema. If a format had to look at the spec to answer a
   question, that question belongs in the walk.
 
 ## Notation
 
-Symbols are derived by default, so a model prints with no setup at all.
+Symbols are derived by default, so a spec prints with no setup at all.
 
-A model's `symbols:` block overrides the derived symbols, one table per
+A spec's `symbols:` block overrides the derived symbols, one table per
 notation. The loader types each table as `Symbols` on
 `Program.symbols`, and a render reads the one for its format's notation.
 `symbols=` replaces the whole block, in the same shape. The `--symbols` flag on
 the command line is the path case:
 
 ```python
-mathspec.to_latex('dispatch.yaml')  # the model's own block
+mathspec.to_latex('dispatch.yaml')  # the spec's own block
 mathspec.to_latex('dispatch.yaml', symbols='other.symbols.yaml')  # a path
 mathspec.to_latex('dispatch.yaml', symbols={'latex': {'names': {'load': r'\ell'}}})  # a dict
 mathspec.to_latex('dispatch.yaml', symbols={})  # every symbol derived
 ```
 
-Whichever form you use, the table is checked against the model. A key that names
+Whichever form you use, the table is checked against the spec. A key that names
 nothing is an error, and the message gives the near miss. Without that check, a
 silent typo would be a symbol that never applies, and a reader who never finds
 out.
@@ -71,8 +71,8 @@ or translates it, so a render never reads a table written for the other
 notation.
 
 The table carries **notation only**. What a declaration _is_, which is the prose
-in the right-hand column of the legend, comes from the model's own
-`description:`, read straight off the block. That is the model talking about
+in the right-hand column of the legend, comes from the spec's own
+`description:`, read straight off the block. That is the spec talking about
 itself, rather than a reader choosing symbols.
 
 A description travels with the file, and survives a rename.

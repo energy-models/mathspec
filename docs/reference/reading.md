@@ -6,12 +6,12 @@ SPDX-License-Identifier: CC-BY-4.0
 # Reading a spec and its program
 
 This page is for whoever writes an engine that builds models, a renderer, or a
-checker. A tool reads the model through two objects, `Spec` and `Program`.
+checker. A tool reads the spec through two objects, `Spec` and `Program`.
 
 ## `Spec` and `Program`
 
 A `Spec` holds the file as written: its `macros:`, its descriptions, and a
-`piecewise:` block as one block. A `Program` holds the model the file builds:
+`piecewise:` block as one block. A `Program` holds what the file means:
 every macro expanded, every name typed, every operator resolved to a node, and
 every dimension and degree rule already checked. A curve stays one curve there
 until [`spec.expand()`](#formulations-written-out) writes it out. The
@@ -27,8 +27,9 @@ Each tool reads the object that holds what it needs:
 | A tool that rewrites files | the `Spec`, which alone holds the text      |
 
 The program keeps each curve as the one declaration the file states, so the
-typesetter and `advice` read the model the author wrote. A program does not
-hold its spec: a tool handed a bare `Program` has the model, not the file.
+typesetter and `advice` read the spec the author wrote. A program does not
+hold its spec: a tool handed a bare `Program` has what the file means, not the
+file.
 
 The curve below [expands](language/piecewise.md) into a weight per breakpoint,
 a convexity row and one row per link:
@@ -81,7 +82,7 @@ sorted(rows.variables)  # ['cost', 'curve_lam', 'p']
 ```
 
 `to_spec` takes a path, the YAML, a mapping or a `Spec`. `spec.program` is the
-program built when the model loaded, so every ask on one model returns one
+program built when the spec loaded, so every ask on one spec returns one
 object. A `piecewise:` block is a curve under `program.piecewise`, typed, and a
 `sos:` block is a set under `program.sos`. Every parameter the program declares
 is one the file declared.
@@ -161,9 +162,47 @@ and the relation a `PulledBackPredicate` reads is in its `.names_read`.
 and `~`, `&` and `|` combine masks into a mask. A mask folds as it is built, so a boolean literal
 stands at a mask's root or nowhere. A `Region`'s `when` is a `Mask` too.
 
+## What a program does not build
+
+`program.given.parameters`, `program.given.variables`,
+`program.given.expressions` and `program.given.constraints` name what the spec
+reads and does not build ([given](language/declarations.md#given)). Every
+other group is a build instruction. These four are names to look up in the
+model this one is layered onto. An expression reads a given expression as a
+`Variable` of that name, over the frame under `program.given.expressions`.
+An entry of `program.expressions` whose `adds_to` names a given expression is
+a term this file adds to it. The name is still one the program reads and does
+not build.
+
+```python
+layer = to_spec(
+    {
+        'dimensions': {'snapshot': {'dtype': 'int'}, 'bus': {'dtype': 'str'}},
+        'given': {
+            'variables': {'p': {'dims': ['snapshot', 'bus']}},
+            'constraints': {'balance': {'dims': ['snapshot', 'bus']}},
+        },
+        'parameters': {'rate': {'dims': ['bus']}},
+        'constraints': {'cap': {'dims': [], 'expression': 'sum(p * rate) <= 100'}},
+        'expressions': {'price': {'expression': 'dual(balance)'}},
+    }
+).program
+
+sorted(layer.variables)  # []
+sorted(layer.given.variables)  # ['p']
+layer.given.constraints['balance'].dims  # ('snapshot', 'bus')
+```
+
+The host model provides each name: it holds a column or a row family of that
+name. A consumer that builds the program checks that the host provides each
+name on the same frame, and refuses the program where it does not. A consumer
+with no host refuses a program whose four groups are not all empty. `advice`
+returns one note of kind `given` per name
+([what `advice` warns about](language/errors.md#what-advice-warns-about)).
+
 ## Asking what a program uses
 
-`program.footprint` says which of the language's constructs one model uses.
+`program.footprint` says which of the language's constructs one program uses.
 It answers for the rows the program holds. A curve still on the program is not
 a row, so its constructs count on the program of the expansion:
 
@@ -176,14 +215,14 @@ sorted(footprint.sos_types)  # []
 sorted(kind.__name__ for kind in footprint.kinds)  # ['Constant', 'Multiply', 'Parameter', 'Sum', 'Variable']
 ```
 
-Every field is a set, and an empty field means the model does not use the
+Every field is a set, and an empty field means the program does not use the
 construct. Whether a solver takes a construct is the engine's question
 ([what counts as language](../about/what-counts-as-language.md#what-each-tool-decides-for-itself)).
 Convexity is not reported: it depends on the numbers.
 
 ## Asking whether an axis can be cut
 
-`program.separability` says, per axis, whether every row of the model fits
+`program.separability` says, per axis, whether every row of the program fits
 inside one window along it: a storage balance that reads the previous snapshot
 does, and an annual emissions cap does not. Like the footprint, it answers for
 the rows the program holds. The curve's rows sum over `bp`, so only the rows
@@ -229,3 +268,50 @@ that data as a file. Both round-trip, so `to_spec(spec.to_dict()) == spec`.
 `to_yaml()` writes every value and omits every absence. `domain: continuous` is
 written out. A `null` and an empty section are left out.
 `dims: []` is written, because it says the declaration is a scalar.
+
+## Comparing two specs
+
+`to_yaml(canonical=True)` writes the normal form: the one text every file that
+states the same spec writes. Two specs then differ in a diff only where they
+differ as specs.
+
+```python
+spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(canonical=True)  # True
+```
+
+- **The sections come in one order**, whatever order the file wrote them in:
+  `version`, `description`, `dimensions`, `relations`, `parameters`,
+  `variables`, `constraints`, `objective`, `expressions`, `macros`,
+  `piecewise`, `sos`, `assumptions`. The keys of a declaration also come in one
+  order.
+- **Declarations are sorted by name** within each section.
+- **Every expression is printed from its parsed tree**, so the spacing and the
+  brackets are the printer's rather than the author's.
+- **The terms of a sum are sorted**, and so are the factors of a product and the
+  keyword arguments of a call. Subtraction, division, exponentiation and a
+  call's positional arguments keep the order the file wrote, because moving
+  those changes what the spec says.
+- **A sum of two or more terms is broken one term to a line**, each under its
+  own sign. A term that changes is then one line of a diff.
+- **A constant is never folded into another.** `2 * 3` stays `2 * 3`, because a
+  coefficient that changed is what a reviewer is looking for.
+
+Four things are left as the file wrote them. They are a predicate in the
+`where` grammar, the order of a `cases:` block's regions, the order of a
+declaration's `dims`, and the order of a piecewise block's links. A difference
+in any of them is a difference in the text.
+
+Sorting `variables:` changes the order a
+[`piecewise:`](language/piecewise.md) expansion meets them in, so a constraint
+the expansion emits can carry its dims in another order. The frame is the same
+set of dimensions.
+
+The normal form loads to the same spec. It does not load to a `Spec` equal to
+the original: a reprinted expression is a different string. Writing the form out
+again gives the same text, which is what the line above says.
+
+`python -m mathspec canonical spec.yaml` writes it from a shell. `--write`
+rewrites the file in the form, and `--check` exits with status 1 if the file is
+not in the form. The form holds no YAML comments, so `--write` drops them.
+[Compare two specs](../howto/compare.md) shows how to diff two files in this
+form.

@@ -15,36 +15,27 @@ SPDX-License-Identifier: CC-BY-4.0
 
 <!--- --8<-- [end:badges] -->
 
-**Write an optimisation model as a YAML file. Check it and print it as math,
-with no data and no solver.**
+**Write the specification (spec) of an optimisation model as a YAML file. Check it and print it
+as math, with no data and no solver.**
 
-A mathspec file declares four things: the axes the model runs over, such as
-`snapshot` and `generator`; the data it expects, such as `load` and `cost`; the
-decisions the solver makes, such as `dispatch`; and the rules those decisions
-obey, such as `sum(dispatch, over=generator) == load`. The file
-[below](#example) is a complete model.
-
-<!--- --8<-- [start:engines] -->
-
-mathspec builds nothing and solves nothing itself.
-[specsolve](https://github.com/fluxopt/specsolve) and
-[linopy](https://github.com/PyPSA/linopy) build and solve a mathspec model.
-Support in both is work in progress.
-
-<!--- --8<-- [end:engines] -->
+A mathspec file states a specification, or spec. A spec declares four things: the axes it runs
+over, such as `snapshot` and `generator`; the data it expects, such as `load`
+and `cost`; the decisions the solver makes, such as `dispatch`; and the rules
+those decisions obey, such as `sum(dispatch, over=generator) == load`. The file
+[below](#example) is a complete spec.
 
 <!--- --8<-- [start:benefits] -->
 
-- **Check models in CI, with no data.** A wrong name or
+- **Check specs in CI, with no data.** A wrong name or
   dimension fails when the file loads, and the error names the fix.
   [Errors →](https://mathspec.readthedocs.io/en/latest/reference/language/errors/)
 - **Publish the math you solve.** The equations in the paper
   print from the file the solver reads.
   [Typeset →](https://mathspec.readthedocs.io/en/latest/reference/typeset/)
-- **One model, many tools.** Engines, renderers and analysers read the model
+- **One spec, many tools.** Engines, renderers and analysers read the spec
   through one public API, so no two of them can read the file differently.
   [Program API →](https://mathspec.readthedocs.io/en/latest/reference/program/)
-- **Write full-size models.** PyPSA's `n.optimize()` model is
+- **Write full-size specs.** The spec of PyPSA's `n.optimize()` model is
   one file, with stochastic, multi-period and quadratic variants.
   [PyPSA in one file →](https://mathspec.readthedocs.io/en/latest/examples/pypsa/)
 
@@ -204,7 +195,36 @@ ms.to_typst(spec)
 
 A [symbol table](https://mathspec.readthedocs.io/en/latest/reference/typeset/#symbol-tables) gives the names their
 conventional spelling, as in the folded block.
-[Print a model as math](https://mathspec.readthedocs.io/en/latest/howto/print/) does the same from a shell.
+[Print a spec as math](https://mathspec.readthedocs.io/en/latest/howto/print/) does the same from a shell.
+
+## Engines and other tools
+
+<!--- --8<-- [start:engines] -->
+
+mathspec builds nothing and solves nothing itself.
+[specsolve](https://github.com/fluxopt/specsolve) and
+[linopy](https://github.com/PyPSA/linopy) build a model from a spec and its
+data, and solve it. Support in both is work in progress. Any other tool can
+read the same spec through the
+[Program API](https://mathspec.readthedocs.io/en/latest/reference/program/).
+The solid boxes are mathspec; the dashed boxes are outside it.
+
+```mermaid
+flowchart LR
+    accTitle: What mathspec does, and what other tools do with a spec
+    accDescr: A YAML file loads into a Spec and the Program it lowers to. mathspec checks the spec and prints it as math, with no data. Outside mathspec, drawn dashed, an engine such as specsolve or linopy reads the same spec, takes your data and returns your answers, and any other tool, such as a renderer or an analyser, reads the same spec through the Program API.
+    Y(["your spec<br/>one YAML file"]) --> SPEC["<b>Spec</b> and the <b>Program</b> it lowers to<br/><i>checked before any data exists</i>"]
+    SPEC --> CHECK["<b>check it</b><br/>python -m mathspec check"]
+    SPEC --> SHOW["<b>print it as math</b><br/>LaTeX · Typst · Markdown"]
+    SPEC -.-> OTHER["<b>your own tool</b><br/>a renderer · an analyser · …<br/>reads the Program API"]
+    SPEC -.-> ENGINE["<b>an engine</b><br/>specsolve · linopy<br/>builds and solves the model"]
+    DATA[("your data")] -.-> ENGINE
+    ENGINE -.-> ANS(["your answers"])
+    classDef outside stroke-dasharray:5 4
+    class ENGINE,DATA,ANS,OTHER outside
+```
+
+<!--- --8<-- [end:engines] -->
 
 ## Documentation
 

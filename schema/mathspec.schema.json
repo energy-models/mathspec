@@ -4,7 +4,7 @@
       "anyOf": [
         {
           "additionalProperties": false,
-          "description": "What the model assumes of its data: a predicate every coordinate it is checked at has to satisfy.\n\nWritten in YAML as a bare where string, or as a mapping once it carries a\n``where:`` or a ``description:``, and serialised back to whichever form it\nwas written in::\n\n    assumptions:\n      efficiency_is_a_fraction: \"efficiency > 0 AND efficiency <= 1\"\n      bounds_do_not_cross:\n        holds: \"p_min <= p_max\"\n        where: \"p_min\"\n        description: a unit with no minimum is unconstrained below\n\nThe language decides nothing about the numbers, so the consumer attaching\nthe data checks it, and refuses the data where it does not hold.",
+          "description": "What the spec assumes of its data: a predicate every coordinate it is checked at has to satisfy.\n\nWritten in YAML as a bare where string, or as a mapping once it carries a\n``where:`` or a ``description:``, and serialised back to whichever form it\nwas written in::\n\n    assumptions:\n      efficiency_is_a_fraction: \"efficiency > 0 AND efficiency <= 1\"\n      bounds_do_not_cross:\n        holds: \"p_min <= p_max\"\n        where: \"p_min\"\n        description: a unit with no minimum is unconstrained below\n\nThe language decides nothing about the numbers, so the consumer attaching\nthe data checks it, and refuses the data where it does not hold.",
           "properties": {
             "description": {
               "anyOf": [
@@ -133,7 +133,7 @@
     },
     "DimensionBlock": {
       "additionalProperties": false,
-      "description": "A declared dimension, and the dtype its coordinates must be.\n\nA dimension is an axis and nothing else: it declares that the axis exists\nand what its coordinates are typed as, never which coordinates there are \u2014\nthose are data, and arrive when the data is attached. The maps its members carry \u2014 a\ngenerator's bus, a snapshot's period \u2014 are top-level ``relations:``\n(:class:`RelationBlock`), keyed by their own name.",
+      "description": "A declared dimension, and the dtype its coordinates must be.\n\nA dimension is an axis and nothing else: it declares that the axis exists\nand what its coordinates are typed as, never which coordinates there are \u2014\nthose are data, and arrive when the data is attached. The maps its members carry \u2014 a\ngenerator's bus, a snapshot's period \u2014 are top-level ``relations:``\n([`RelationBlock`][]), keyed by their own name.",
       "properties": {
         "description": {
           "anyOf": [
@@ -198,8 +198,20 @@
       "anyOf": [
         {
           "additionalProperties": false,
-          "description": "A named quantity: one arithmetic expression, referenced by the math or read back after a solve.\n\nWritten in YAML as a bare string, or as a mapping once it carries a\n``description:`` \u2014 and serialised back to whichever form it was written in,\nso a round trip through :meth:`Spec.to_yaml` reproduces the file::\n\n    expressions:\n      total_generation: sum(p, over=generator)\n      emissions:\n        expression: sum(p * rate, over=generator)\n        description: CO2 released, the quantity the cap bounds\n\nA quantity whose value varies by region is written as ``cases:`` over a\ndeclared ``dims:``, with an ``otherwise:`` for the rest \u2014 see the\nlanguage reference.",
+          "description": "A named quantity: one arithmetic expression, referenced by the math or read back after a solve.\n\nWritten in YAML as a bare string, or as a mapping once it carries a\n``description:`` \u2014 and serialised back to whichever form it was written in,\nso a round trip through [`Spec.to_yaml`][] reproduces the file::\n\n    expressions:\n      total_generation: sum(p, over=generator)\n      emissions:\n        expression: sum(p * rate, over=generator)\n        description: CO2 released, the quantity the cap bounds\n\n``dims:`` declares the frame the quantity is read over. A plain entry may\nleave it out, and its body then decides the frame; a body that carries a\ndimension the frame does not name is refused, and one that carries fewer\nis constant along the rest. A quantity whose value varies by region is\nwritten as ``cases:`` over a declared ``dims:``, with an ``otherwise:``\nfor the rest \u2014 see the language reference.\n\n``adds_to:`` adds this entry as a term to the sum it names, a\n``given: expressions:`` entry of this file: a write, where the given entry\nis the read.\n[`merge`][mathspec.composition.merge] adds every term to that name by\nname, after the body a file defines where one does. The term is read over at most the\nframe the given entry states, and does not read the name it adds to.",
           "properties": {
+            "adds_to": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Adds To"
+            },
             "cases": {
               "additionalProperties": {
                 "$ref": "#/$defs/ExpressionCase"
@@ -302,9 +314,190 @@
       "title": "ExpressionCase",
       "type": "object"
     },
+    "GivenBlock": {
+      "additionalProperties": false,
+      "description": "What this file reads and does not build, by kind. Closed at the four kinds.",
+      "properties": {
+        "constraints": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GivenConstraintBlock"
+          },
+          "default": {},
+          "title": "Constraints",
+          "type": "object"
+        },
+        "expressions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GivenExpressionBlock"
+          },
+          "default": {},
+          "title": "Expressions",
+          "type": "object"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GivenParameterBlock"
+          },
+          "default": {},
+          "title": "Parameters",
+          "type": "object"
+        },
+        "variables": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GivenVariableBlock"
+          },
+          "default": {},
+          "title": "Variables",
+          "type": "object"
+        }
+      },
+      "title": "GivenBlock",
+      "type": "object"
+    },
+    "GivenConstraintBlock": {
+      "additionalProperties": false,
+      "description": "A row family this file reads the dual of and another model builds.\n\nThe frame says how many duals there are and what indexes them, which is\nwhat ``dual()`` needs. There is no ``expression:``, because nothing here\nbuilds a row.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dims",
+          "type": "array"
+        }
+      },
+      "required": [
+        "dims"
+      ],
+      "title": "GivenConstraintBlock",
+      "type": "object"
+    },
+    "GivenExpressionBlock": {
+      "additionalProperties": false,
+      "description": "A named expression this file reads and another file defines.\n\nThe frame is all this file states. This file reads the name as a quantity\nover that frame, affine in the columns, as it reads a given variable: the\nbody is the definer's, and the composed spec holds the body to the rules\nof every place this file reads it.\n\nA named expression of this file may add to the name with ``adds_to:``.\n[`merge`][mathspec.composition.merge] then writes every term the files\nadd after the body a file defines, or as the whole body where no file\ndefines it. The file itself reads the name as the whole sum, alone and\ncomposed.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dims",
+          "type": "array"
+        }
+      },
+      "required": [
+        "dims"
+      ],
+      "title": "GivenExpressionBlock",
+      "type": "object"
+    },
+    "GivenParameterBlock": {
+      "additionalProperties": false,
+      "description": "Data this file reads and another file declares.\n\nIt says what a [`ParameterBlock`][] says, because the frame and the\ndtype are all a parameter declaration holds: a where compares against the\ndtype, and the dim rules read the frame.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dims",
+          "type": "array"
+        },
+        "dtype": {
+          "default": "float",
+          "enum": [
+            "float",
+            "int",
+            "bool",
+            "str"
+          ],
+          "title": "Dtype",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dims"
+      ],
+      "title": "GivenParameterBlock",
+      "type": "object"
+    },
+    "GivenVariableBlock": {
+      "additionalProperties": false,
+      "description": "A column this file reads and another file introduces.\n\nThe frame and the domain are all this file states. The file that introduces\nthe column owns its bounds and its mask.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dims",
+          "type": "array"
+        },
+        "domain": {
+          "default": "continuous",
+          "enum": [
+            "continuous",
+            "integer",
+            "binary"
+          ],
+          "title": "Domain",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dims"
+      ],
+      "title": "GivenVariableBlock",
+      "type": "object"
+    },
     "MacroBlock": {
       "additionalProperties": false,
-      "description": "A parameterised expression template, defined in the YAML itself.\n\nLanguage, not code: formals (``args`` positional, ``kwargs`` keyword)\nshadow model names inside the template, and every call site expands in\nthe syntax tree before resolution reads the expression.",
+      "description": "A parameterised expression template, defined in the YAML itself.\n\nLanguage, not code: formals (``args`` positional, ``kwargs`` keyword)\nshadow the spec's names inside the template, and every call site expands in\nthe syntax tree before resolution reads the expression.",
       "properties": {
         "args": {
           "default": [],
@@ -347,7 +540,7 @@
     },
     "NotationSymbols": {
       "additionalProperties": false,
-      "description": "How the model prints in one notation, under ``symbols: {latex: \u2026, typst: \u2026}``.\n\nEvery entry is a spelling, printed verbatim, which changes nothing the\nmodel means::\n\n    symbols:\n      latex:\n        dimensions:\n          snapshot: {index: t, set: \"\\\\mathcal{T}\"}\n        names:\n          marginal_cost: \"c^{\\\\mathrm{marg}}\"\n      typst:\n        names:\n          marginal_cost: 'c^\"marg\"'",
+      "description": "How the spec prints in one notation, under ``symbols: {latex: \u2026, typst: \u2026}``.\n\nEvery entry is a spelling, printed verbatim, which changes nothing the\nspec means::\n\n    symbols:\n      latex:\n        dimensions:\n          snapshot: {index: t, set: \"\\\\mathcal{T}\"}\n        names:\n          marginal_cost: \"c^{\\\\mathrm{marg}}\"\n      typst:\n        names:\n          marginal_cost: 'c^\"marg\"'",
       "properties": {
         "dimensions": {
           "additionalProperties": {
@@ -520,7 +713,7 @@
       "anyOf": [
         {
           "additionalProperties": false,
-          "description": "One link of a piecewise block: an expression pinned to a values curve.\n\nWritten in YAML as ``[expression, values]`` or ``[expression, values,\nsign]`` and serialised back to exactly that form, so a round trip through\n:meth:`Spec.to_yaml` reproduces the file.",
+          "description": "One link of a piecewise block: an expression pinned to a values curve.\n\nWritten in YAML as ``[expression, values]`` or ``[expression, values,\nsign]`` and serialised back to exactly that form, so a round trip through\n[`Spec.to_yaml`][] reproduces the file.",
           "properties": {
             "expression": {
               "title": "Expression",
@@ -627,7 +820,7 @@
     },
     "SosBlock": {
       "additionalProperties": false,
-      "description": "A special-ordered set over one dimension of one variable.\n\nOne set per coordinate of the variable's ``dims`` minus ``along``; the\nmembers are the variable's *existing* coordinates along ``along``, in that\ndimension's declared order.\n\n``type: 1`` admits at most one nonzero member, ``type: 2`` at most two,\nand those two consecutive. A consumer with the concept takes the set as\none; :meth:`Spec.expand` states it as binaries instead, and the rows it\nwrites multiply by the member's own ``bounds``, which is why a member\nneeds both.",
+      "description": "A special-ordered set over one dimension of one variable.\n\nOne set per coordinate of the variable's ``dims`` minus ``along``; the\nmembers are the variable's *existing* coordinates along ``along``, in that\ndimension's declared order.\n\n``type: 1`` admits at most one nonzero member, ``type: 2`` at most two,\nand those two consecutive. A consumer with the concept takes the set as\none; [`Spec.expand`][] states it as binaries instead, and the rows it\nwrites multiply by the member's own ``bounds``, which is why a member\nneeds both.",
       "properties": {
         "along": {
           "title": "Along",
@@ -737,7 +930,7 @@
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "The declared math \u2014 one YAML file, or one dict, validated. Nothing here has seen data.\n\nA ``Spec`` that exists has passed the whole language: constructing one by\nany route \u2014 ``to_spec``, :meth:`model_validate`, the constructor \u2014 runs\nevery load-time check, expression pass included, and raises\n:class:`~mathspec.errors.LanguageError` on a model the language refuses.\nHolding one is the proof, so nothing downstream checks it again.\n\nThe API is the eleven declaration sections plus ``version``,\n``description`` and ``symbols``, three ways back out \u2014 :meth:`to_dict` for the model as\ndata, :meth:`to_yaml` for the file a reviewer reads, :meth:`expand` for the\nmodel with its formulations written out as plain rows \u2014 and :attr:`program`, the\nmodel typed, which every reader after load walks. Everything else on this\nclass is pydantic's, not a contract this package keeps.",
+  "description": "The declared math \u2014 one YAML file, or one dict, validated. Nothing here has seen data.\n\nA ``Spec`` that exists has passed the whole language: constructing one by\nany route \u2014 ``to_spec``, [`model_validate`][], the constructor \u2014 runs\nevery load-time check, expression pass included, and raises\n[`LanguageError`][] on a spec the language refuses.\nHolding one is the proof, so nothing downstream checks it again.\n\nThe API is the twelve declaration sections plus ``version``,\n``description`` and ``symbols``, three ways back out \u2014 [`to_dict`][] for the spec as\ndata, [`to_yaml`][] for the file a reviewer reads, [`expand`][] for the\nspec with its formulations written out as plain rows \u2014 and [`program`][], the\nspec typed, which every reader after load walks. Everything else on this\nclass is pydantic's, not a contract this package keeps.",
   "properties": {
     "assumptions": {
       "additionalProperties": {
@@ -782,6 +975,15 @@
       "default": {},
       "title": "Expressions",
       "type": "object"
+    },
+    "given": {
+      "$ref": "#/$defs/GivenBlock",
+      "default": {
+        "constraints": {},
+        "expressions": {},
+        "parameters": {},
+        "variables": {}
+      }
     },
     "macros": {
       "additionalProperties": {

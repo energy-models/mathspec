@@ -15,10 +15,10 @@ from mathspec.errors import SchemaError
 from mathspec.program import Mask, RelationPairComparison
 from mathspec.resolution import Namespace
 from mathspec.validation import to_spec
-from tests.fixtures import expression_of, override, schema_of, where_of
+from tests.fixtures import DISPATCH_MODEL, expression_of, schema_of, varied, where_of
 
 if TYPE_CHECKING:
-    from mathspec.model import Spec
+    from mathspec.spec import Spec
 
 #: `fixtures.DISPATCH_MODEL` plus buses: a dim rule is mostly about an
 #: expression carrying a dim its frame does not, which needs three dims to
@@ -94,6 +94,8 @@ def namespace() -> Namespace:
         ('sum(p * cost)', set()),
         ('sum(p, over=generator)', {'snapshot'}),
         ('sum(p * cost, over=generator)', {'snapshot'}),
+        pytest.param('sum(p, over=[snapshot, generator])', set(), id='a-list-sums-every-dim-it-names'),
+        pytest.param('sum(p, over=[generator])', {'snapshot'}, id='a-list-of-one-is-that-dim'),
         ('sum(p, by=gen_bus, over=generator, into=bus)', {'snapshot', 'bus'}),
         ("shift(p, along=snapshot, offset=1, edge='wrap')", {'snapshot', 'generator'}),
         ("shift(p, along=snapshot, offset=spinup, edge='wrap')", {'snapshot', 'generator'}),
@@ -254,6 +256,12 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
             DimensionError,
             r'sum\(over=bus\) but the expression has dims',
             id='sum-consuming-an-absent-dim-is-an-error-not-a-noop',
+        ),
+        pytest.param(
+            'sum(p, over=[generator, bus])',
+            DimensionError,
+            r'sum\(over=bus\) but the expression has dims',
+            id='and-so-is-one-absent-dim-in-a-list',
         ),
         pytest.param(
             'sum(sum(p))',
@@ -453,7 +461,7 @@ class TestTheEdgeRulesAreDecidedAtLoad:
 
     def _refused(self, expression: str) -> str:
         """The message `to_spec` refuses *expression* with — a `SchemaError`, since every rule here is resolution's."""
-        raw = override(self.BASE, **{'constraints.k.expression': expression})
+        raw = varied(self.BASE, **{'constraints.k.expression': expression})
         with pytest.raises(SchemaError) as caught:
             to_spec(raw)
         return str(caught.value)
@@ -507,7 +515,7 @@ class TestTheEdgeRulesAreDecidedAtLoad:
         literal zero vacates none, so there is nothing for an `edge=` to answer
         for. A *named* offset may be zero in the data and is not known here.
         """
-        to_spec(override(self.BASE, **{'constraints.k.expression': 'p <= shift(cap, along=g, offset=0)'}))
+        to_spec(varied(self.BASE, **{'constraints.k.expression': 'p <= shift(cap, along=g, offset=0)'}))
 
 
 # ---------------------------------------------------------------------------
@@ -605,3 +613,41 @@ def test_names_read_takes_both_sides_of_a_relation_pair():
     where = RelationPairComparison('from_bus', 'bus', 'to_bus', 'bus', '!=', ('line',))
 
     assert Mask(where).names_read == {'from_bus', 'to_bus'}, 'a relation pair names both maps it compares'
+
+
+# ---------------------------------------------------------------------------
+# a named expression's declared frame
+# ---------------------------------------------------------------------------
+
+#: A quantity that is one number per generator, read over every snapshot as well.
+FRAMED = varied(
+    DISPATCH_MODEL,
+    **{
+        'variables.build': {'dims': ['generator']},
+        'expressions.limit': {'dims': ['snapshot', 'generator'], 'expression': 'build * p_max'},
+    },
+)
+
+
+def test_a_declared_frame_is_the_frame_as_written():
+    """A plain entry's frame was its body's, in declaration order; declared, it is the dims: as written."""
+    spec = to_spec(
+        varied(FRAMED, **{'expressions.limit': {'dims': ['generator', 'snapshot'], 'expression': 'build * p_max'}})
+    )
+    assert spec.program.expressions['limit'].dims == ('generator', 'snapshot')
+    assert spec.to_dict()['expressions']['limit']['dims'] == ['generator', 'snapshot'], 'and it round-trips'
+
+
+def test_a_body_outside_its_declared_frame_is_refused():
+    wide = varied(DISPATCH_MODEL, **{'expressions.limit': {'dims': ['generator'], 'expression': 'p * p_max'}})
+    with pytest.raises(DimensionError, match=r"the body carries dims \['snapshot'\] outside the dims: \['generator'\]"):
+        to_spec(wide)
+
+
+def test_a_declared_frame_is_read_at_every_coordinate_where_the_body_is_narrower():
+    """The row would repeat across `snapshot` on the body's own frame; the declared frame says that is meant."""
+    row = {'constraints.capped': {'dims': ['snapshot', 'generator'], 'expression': 'limit <= 10'}}
+    assert to_spec(varied(FRAMED, **row)).program.constraints['capped'].dims == ('snapshot', 'generator')
+    undeclared = varied(FRAMED, **row, **{'expressions.limit': 'build * p_max'})
+    with pytest.raises(DimensionError, match=r"would be repeated across \['snapshot'\]"):
+        to_spec(undeclared)

@@ -2,14 +2,14 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Lower a model to a :class:`~mathspec.program.Program` — the pass that decides every expression.
+"""Lower a spec to a [`Program`][] — the pass that decides every expression.
 
-One lowering, on the language side, run when a :class:`~mathspec.model.Spec`
+One lowering, on the language side, run when a [`Spec`][]
 loads: it reads every expression and where string into the program's own
 nodes, checks every rule decidable without data, and packages the
-declarations, section for section. The program mirrors the model it was
-lowered from: a ``piecewise:`` block the model still declares is a curve on
-the program, and :meth:`~mathspec.model.Spec.expand` is what writes it out
+declarations, section for section. The program mirrors the spec it was
+lowered from: a ``piecewise:`` block the spec still declares is a curve on
+the program, and [`expand`][mathspec.spec.Spec.expand] is what writes it out
 as rows.
 """
 
@@ -18,17 +18,18 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from mathspec.dimensions import check_schema, dims_of
-from mathspec.errors import SchemaError, prefixed
+from mathspec.errors import SchemaError, did_you_mean, prefixed
 from mathspec.expansion import expand, parse_template
 from mathspec.piecewise import assumptions_of, curve_frame, lp_domain_refusal, resolve_links
 from mathspec.program import (
     Assumption,
     BooleanLiteral,
-    Cases,
     Constant,
     ConstraintDeclaration,
     DimensionDeclaration,
     ExpressionDeclaration,
+    GivenDeclaration,
+    GivenTargets,
     Link,
     Mask,
     Named,
@@ -40,6 +41,7 @@ from mathspec.program import (
     SosDeclaration,
     VariableDeclaration,
     VariableDefined,
+    variables_of,
     walk,
 )
 from mathspec.resolution import (
@@ -53,8 +55,10 @@ from mathspec.resolution import (
 from mathspec.validation import emitted_name_errors, reference_errors, symbol_errors
 
 if TYPE_CHECKING:
-    from mathspec.model import AssumptionBlock, Spec
+    from collections.abc import Iterable, Mapping
+
     from mathspec.program import Expression
+    from mathspec.spec import AssumptionBlock, Spec
 
 
 def lower(schema: Spec) -> Program:
@@ -63,7 +67,7 @@ def lower(schema: Spec) -> Program:
     What is checked:
 
     - every rule one declaration is held to against the others
-      (:func:`~mathspec.validation.reference_errors`), before any expression
+      ([`reference_errors`][]), before any expression
       is read, since resolution assumes each of them;
     - the expression parses, and constraints hold exactly one comparison where
       objectives hold none;
@@ -71,17 +75,17 @@ def lower(schema: Spec) -> Program:
       dimension arguments name declared dimensions;
     - where strings parse *and* resolve — an unknown name there is an error,
       not a silently-empty mask;
-    - macro formals may shadow model names but not a declared dimension, since
+    - macro formals may shadow the spec's names but not a declared dimension, since
       ``over=snapshot`` under a formal ``snapshot`` cannot say which it means;
     - no name a set or curve writes out is one the file declares
-      (:func:`~mathspec.validation.emitted_name_errors`), read off the
+      ([`emitted_name_errors`][]), read off the
       curve as lowered;
     - every dim rule (``dimensions.check_schema``), once names resolve.
 
     A ``piecewise:`` block's links are resolved and its frame checked here, on
     the link the file wrote, so the expansion writes rows the language has
     already held to every rule; what its method assumes of the breakpoints
-    stands under the program's assumptions with the file's own, so a model
+    stands under the program's assumptions with the file's own, so a spec
     states what it assumes whether or not its curves are written out.
 
     Returns:
@@ -121,6 +125,8 @@ def lower(schema: Spec) -> Program:
         errors.extend(refusals)
         if node is not None:
             entries[ename] = node
+
+    terms = _terms(entries, schema, ns, errors)
 
     variables = {}
     for vname, vdef in schema.variables.items():
@@ -176,6 +182,7 @@ def lower(schema: Spec) -> Program:
     if objective is not None:
         roots.append(objective.expression)
     roots.extend(link for links in curves.values() for link in links)
+    roots.extend(terms)
     in_math = frozenset(node.name for node in walk(*roots) if isinstance(node, Named))
 
     piecewise = {}
@@ -219,9 +226,25 @@ def lower(schema: Spec) -> Program:
                 _frame_of(name, entry, schema),
                 in_math=name in in_math,
                 description=schema.expressions[name].description,
+                adds_to=schema.expressions[name].adds_to,
             )
             for name, entry in entries.items()
         },
+        given=GivenTargets(
+            parameters={
+                name: ParameterDeclaration(tuple(g.dims), g.dtype, g.description)
+                for name, g in schema.given.parameters.items()
+            },
+            variables={
+                name: GivenDeclaration(tuple(g.dims), g.description) for name, g in schema.given.variables.items()
+            },
+            constraints={
+                name: GivenDeclaration(tuple(g.dims), g.description) for name, g in schema.given.constraints.items()
+            },
+            expressions={
+                name: GivenDeclaration(tuple(g.dims), g.description) for name, g in schema.given.expressions.items()
+            },
+        ),
         description=schema.description,
         symbols={notation: block.table(notation) for notation, block in schema.symbols.items()},
     )
@@ -231,10 +254,89 @@ def lower(schema: Spec) -> Program:
     return program
 
 
+def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str]) -> list[Named]:
+    """Every entry with ``adds_to:`` that loads as a term, with a refusal in *errors* for each other.
+
+    A term that reads its own sum, directly or through the sums the file's
+    other terms add to, defines that sum by itself whatever the other files
+    add, so the one file decides it.
+    """
+    resolved = {
+        name: (target, entry)
+        for name in entries
+        if (target := schema.expressions[name].adds_to) is not None
+        and (entry := _term(name, target, schema, ns, errors)) is not None
+    }
+    sums: dict[str, list[Named]] = {}
+    for target, entry in resolved.values():
+        sums.setdefault(target, []).append(entry)
+    terms = []
+    for name, (target, entry) in resolved.items():
+        through = _loop(target, entry, sums)
+        if through is None:
+            terms.append(entry)
+            continue
+        via = f', through {" -> ".join(repr(sum_) for sum_ in through)}' if through else ''
+        errors.append(
+            f"Named expression '{name}': it reads {target!r}, the sum it adds to{via}, so the sum would define "
+            f'itself. A term is what this file puts in: write it in what this file declares.'
+        )
+    return terms
+
+
+def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]) -> Named | None:
+    """Named expression *name* as the term it writes into a given expression of its file, or ``None``.
+
+    The given entry is what makes a misspelt target a refusal in the file that
+    wrote it: a term lands only on a name its own file reads. The term is
+    resolved as a use of its name, so it is held to the degree the math that
+    reads the sum admits.
+    """
+    context = f"Named expression '{name}'"
+    if target in schema.expressions:
+        errors.append(
+            f'{context}: it adds to {target!r}, which this file defines. A file writes its own body in one '
+            f"place, so a term fills only a name read under 'given: expressions:': write the term into the body of "
+            f'{target!r}, or read {target!r} there and add its body as a term of its own.'
+        )
+        return None
+    if target not in schema.given.expressions:
+        errors.append(
+            f"{context}: it adds to {target!r}, which this file does not read under 'given: expressions:'. "
+            f'A term writes into a name this file reads: declare the name there over its frame, or fix '
+            f'the spelling. {did_you_mean(target, schema.given.expressions)}'
+        )
+        return None
+    entry = resolve_expression_text(name, ns, context, errors, ceiling=2)
+    if entry is None:
+        return None
+    assert isinstance(entry, Named), 'a term is a name, and a name resolves to the entry it names'
+    return entry
+
+
+def _loop(target: str, entry: Named, sums: Mapping[str, list[Named]]) -> list[str] | None:
+    """The sums *entry* reads *target* through, by the terms in *sums*, or ``None`` where it does not read it.
+
+    ``[]`` is a term that reads its own sum.
+    """
+    seen = {target}
+    stack: list[tuple[list[str], frozenset[str]]] = [([], variables_of(entry))]
+    while stack:
+        path, reads = stack.pop()
+        for read in sorted(reads):
+            if read == target:
+                return path
+            if read in sums and read not in seen:
+                seen.add(read)
+                stack.append(([*path, read], variables_of(*sums[read])))
+    return None
+
+
 def _frame_of(name: str, entry: Named, schema: Spec) -> tuple[str, ...]:
-    """The dims an entry is read over, in declaration order: declared for a cased entry, the body's for a plain one."""
-    if isinstance(entry.body, Cases):
-        return tuple(schema.expressions[name].dims or ())
+    """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's in declaration order."""
+    declared = schema.expressions[name].dims
+    if declared is not None:
+        return tuple(declared)
     carried = dims_of(entry.body, schema, f"Named expression '{name}'")
     return tuple(d for d in schema.dimensions if d in carried)
 

@@ -76,16 +76,7 @@ def overlapping(cases: Mapping[str, Predicate], dtypes: Mapping[str, DeclaredDty
         both claim or what stopped the pair being decided. Empty where every
         pair is proved apart.
     """
-    undecided = {name: reason for name, mask in cases.items() if (reason := _undecided(mask)) is not None}
-    for name, reason in undecided.items():
-        yield (
-            f"case '{name}' cannot be told apart before the data arrives: {reason}. "
-            f'The `otherwise` is its negation, and only the data says where that falls, so this is refused '
-            f'the way a proven overlap is.'
-        )
     for (first, left), (second, right) in itertools.combinations(cases.items(), 2):
-        if first in undecided or second in undecided:
-            continue
         try:
             witness = _witness(left, right, dtypes)
         except Undecidable as exc:
@@ -215,26 +206,13 @@ _FLIPPED: Mapping[PredicateOperator, PredicateOperator] = {
 }
 
 
-def _undecided(mask: Predicate) -> str | None:
-    """The rewrite for a comparison of expressions under *mask*, or ``None`` where every atom is decidable alone.
-
-    A case is refused on its own rather than as a pair, because a block of one
-    case has no pair and the rule is the same: nothing proves where a
-    comparison of expressions falls before the numbers arrive.
-    """
-    for atom in Mask(mask).atoms:
-        if isinstance(atom, ExpressionComparison):
-            return _expression_rewrite(atom)
-    return None
-
-
 def _expression_rewrite(node: ExpressionComparison) -> str:
     """Why a comparison of expressions is not decided, and what to write instead.
 
     A parameter against a literal is decided, and the same test with its sides
     swapped is not — so that one is named as the order it is, rather than told
     to do what it already does. Only the literal-first order needs naming: the
-    other resolves to a :class:`~mathspec.program.ParameterComparison` and
+    other resolves to a [`ParameterComparison`][] and
     never reaches here, and a quoted label cannot stand on the left at all.
     """
     left, right = node.left, node.right
@@ -340,7 +318,7 @@ def _subject_of(node: TypedPredicate) -> Subject:
 def _cells_for(subject: Subject, values: set[_Literal], dtypes: Mapping[str, DeclaredDtype]) -> list[Cell]:
     """Every region *subject*'s value can sit in — ordinary values first.
 
-    The order is the order :func:`_witness` searches, so a refusal names an
+    The order is the order [`_witness`][] searches, so a refusal names an
     absent value or an infinity only where nothing plainer is a witness.
     """
     if subject.kind == 'rank':

@@ -5,7 +5,7 @@
 """The legend: the glossary of symbols, and a note for each notation the equations use.
 
 What the equations use is read off the program before anything prints
-(:func:`notice`), so the legend explains every symbol the walk will print and
+([`notice`][]), so the legend explains every symbol the walk will print and
 nothing the walk decides is asked of it twice.
 """
 
@@ -133,7 +133,7 @@ class Legend:
         return self.format.operators[name]
 
     def glossaries(self, noticed: Noticed, defined: Iterable[str]) -> list[tuple[str, list[Entry]]]:
-        """The sets, parameters, variables and definitions, each with its symbol, its dims and its description.
+        """The sets, parameters, variables, given declarations and definitions, each with its symbol, its dims and its description.
 
         *defined* names the expressions that print under their own symbol, so
         a legend row stands exactly where a symbol does.
@@ -155,13 +155,54 @@ class Legend:
             self._entry(self.symbols.name[v], f'{fmt.mono(v)}{self._over(list(block.dims))}', block.description)
             for v, block in program.variables.items()
         ]
+        given = [
+            *(
+                self._entry(
+                    self.symbols.name[g],
+                    f'{fmt.mono(g)}{self._over(list(block.dims))}, data another file declares',
+                    block.description,
+                )
+                for g, block in program.given.parameters.items()
+            ),
+            *(
+                self._entry(self.symbols.name[g], f'{fmt.mono(g)}{self._over(list(block.dims))}', block.description)
+                for g, block in program.given.variables.items()
+            ),
+            *(
+                self._entry(
+                    self.symbols.name[g],
+                    f'{fmt.mono(g)}{self._over(list(block.dims))}, '
+                    + (
+                        f'an expression this file adds {", ".join(fmt.mono(t) for t in terms)} to'
+                        if (terms := [t for t, e in program.expressions.items() if e.adds_to == g])
+                        else 'an expression another file defines'
+                    ),
+                    block.description,
+                )
+                for g, block in program.given.expressions.items()
+            ),
+            *(
+                self._entry(
+                    self.symbols.constraint[g],
+                    f'{fmt.mono(g)}{self._over(list(block.dims))}, a row family this file reads the dual of',
+                    block.description,
+                )
+                for g, block in program.given.constraints.items()
+            ),
+        ]
         shown = set(defined)
         definitions = [
             self._entry(self.symbols.name[e], f'{fmt.mono(e)}{self._over(list(block.dims))}', block.description)
             for e, block in program.expressions.items()
             if e in shown
         ]
-        groups = (('Sets', sets), ('Parameters', parameters), ('Variables', variables), ('Definitions', definitions))
+        groups = (
+            ('Sets', sets),
+            ('Parameters', parameters),
+            ('Variables', variables),
+            ('Given', given),
+            ('Definitions', definitions),
+        )
         return [(title, entries) for title, entries in groups if entries]
 
     def _entry(self, symbol: str, what: str, description: str | None) -> Entry:
@@ -201,9 +242,9 @@ class Legend:
         return ''.join(clauses)
 
     def convention_notes(self) -> list[str]:
-        """What the two faces mean, with the model's own symbols.
+        """What the two faces mean, with the spec's own symbols.
 
-        Only where the model has both, and quoting only derived symbols: a
+        Only where the spec has both, and quoting only derived symbols: a
         table is the author's to write, so a symbol it supplies is not one this
         note governs.
         """
@@ -215,13 +256,13 @@ class Legend:
             return []
         given, chosen = (self.format.math(self.symbols.name[n]) for n in derived if n is not None)
         return [
-            f'Upright is what the model is given {self.format.dash} a parameter such as {given}, a coordinate '
+            f'Upright is what the data supplies {self.format.dash} a parameter such as {given}, a coordinate '
             f'map, a label {self.format.dash} and italic is what the solver chooses, such as {chosen}. '
             f'An index is italic too, being what a quantifier chooses, and a set is script.'
         ]
 
     def translation_notes(self, noticed: Noticed) -> list[str]:
-        """A sentence for each translation symbol the model printed; plain ``t-k`` needs none."""
+        """A sentence for each translation symbol printed; plain ``t-k`` needs none."""
         notes = []
         if 'wrap' in noticed.policies:
             cyclic = self.format.math(f't {self._op("cyclic_minus")} k')
@@ -255,7 +296,7 @@ class Legend:
         return notes
 
     def position_notes(self, noticed: Noticed) -> list[str]:
-        """A sentence for each positional symbol the model printed; the first says which of ``pos(t)`` and ``t`` is the position."""
+        """A sentence for each positional symbol printed; the first says which of ``pos(t)`` and ``t`` is the position."""
         notes = []
         if noticed.positions:
             index = self.format.math('t')

@@ -5,7 +5,7 @@
 """The syntax tree the expression grammar builds, and the grammar — package-private.
 
 Only expansion and resolution read it: resolution rewrites it into the
-:mod:`mathspec.program` vocabulary, which every pass after reads. Arithmetic
+[`mathspec.program`][] vocabulary, which every pass after reads. Arithmetic
 nests anywhere; a comparison appears only at the top of a parsed expression.
 """
 
@@ -31,7 +31,7 @@ ComparisonOperator = Literal['<=', '>=', '==']
 UnaryOperator = Literal['+', '-']
 
 #: The arithmetic a binary operator may spell. Closed by the grammar, and the
-#: vocabulary a renderer dispatching on :attr:`BinaryOperatorNode.op`
+#: vocabulary a renderer dispatching on [`BinaryOperatorNode.op`][]
 #: switches over — it keeps no list of its own.
 BinaryOperator = Literal['+', '-', '*', '/', '**']
 
@@ -145,7 +145,7 @@ class ComparisonNode:
     right: ArithmeticNode
 
     def __str__(self) -> str:
-        """Both sides bare: a comparison is not an :data:`ArithmeticNode`, so nothing can take one as an operand."""
+        """Both sides bare: a comparison is not an [`ArithmeticNode`][], so nothing can take one as an operand."""
         return f'{self.left} {self.op} {self.right}'
 
 
@@ -191,7 +191,7 @@ def nodes(*roots: ParsedNode) -> Iterator[ParsedNode]:
     """Every node under *roots*, each root itself included, parents first.
 
     The traversal a question about a tree is a filter of, the way
-    :func:`mathspec.program.walk` is for a program.
+    [`mathspec.program.walk`][] is for a program.
     """
     for root in roots:
         yield root
@@ -199,7 +199,7 @@ def nodes(*roots: ParsedNode) -> Iterator[ParsedNode]:
 
 
 def with_children(node: ArithmeticNode, recurse: Callable[[ArithmeticNode], ArithmeticNode]) -> ArithmeticNode:
-    """*node* rebuilt with *recurse* applied to each of its :func:`children`; a leaf comes back as is."""
+    """*node* rebuilt with *recurse* applied to each of its [`children`][]; a leaf comes back as is."""
     if isinstance(node, NumberNode | NameNode | NameListNode | KeywordNode):
         return node
     if isinstance(node, UnaryOperatorNode):
@@ -220,6 +220,13 @@ def with_children(node: ArithmeticNode, recurse: Callable[[ArithmeticNode], Arit
 # ---------------------------------------------------------------------------
 
 
+#: A bracketed list of names as a kwarg value, in an expression and in a where
+#: string alike.
+NAME_LIST = (pp.Suppress('[') + pp.DelimitedList(pp.Regex(NAME)) + pp.Suppress(']')).set_parse_action(
+    lambda t: NameListNode(tuple(str(x) for x in t))
+)
+
+
 def _build_grammar() -> tuple[pp.ParserElement, pp.ParserElement]:
     """The arithmetic grammar, and the expression grammar that puts one comparison over it.
 
@@ -235,10 +242,7 @@ def _build_grammar() -> tuple[pp.ParserElement, pp.ParserElement]:
     name = pp.Regex(NAME)
 
     quoted = (pp.QuotedString("'") | pp.QuotedString('"')).set_parse_action(lambda t: KeywordNode(str(t[0])))
-    name_list = (pp.Suppress('[') + pp.DelimitedList(name) + pp.Suppress(']')).set_parse_action(
-        lambda t: NameListNode(tuple(str(x) for x in t))
-    )
-    kwarg = (name + pp.Suppress('=') + (quoted | name_list | arith)).set_parse_action(lambda t: (t[0], t[1]))
+    kwarg = (name + pp.Suppress('=') + (quoted | NAME_LIST | arith)).set_parse_action(lambda t: (t[0], t[1]))
     pos_arg = arith
     arg_list = pp.Optional(pp.DelimitedList(kwarg | pos_arg))
     func_call = (name + pp.Suppress('(') + arg_list + pp.Suppress(')')).set_parse_action(_make_func_call)
@@ -346,11 +350,11 @@ def parse_text[T](
     child_of: Callable[[T], tuple[T, ...]],
     deep_rewrite: str,
 ) -> T:
-    """Parse the whole of *text* with *grammar*, or raise :class:`SchemaError` naming *what* failed to parse.
+    """Parse the whole of *text* with *grammar*, or raise [`SchemaError`][] naming *what* failed to parse.
 
     *rewrite* is asked for the predictable mistake at the failure position; its
     sentence, if any, precedes the grammar's own complaint. A tree nesting past
-    :data:`MAX_DEPTH`, measured through *child_of*, is refused with
+    [`MAX_DEPTH`][], measured through *child_of*, is refused with
     *deep_rewrite* — and so is one the parser itself ran out of stack on. The
     node comes back as the type *child_of* walks, which is the grammar's word
     for what it builds.

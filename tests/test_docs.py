@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import inspect
 import re
 from functools import partial
 from pathlib import Path
@@ -13,7 +14,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from mathspec.model import PIECEWISE_METHODS
+from mathspec.spec import PIECEWISE_METHODS
 from tools import expansion_math, gallery, home_math, notation, spec_math
 
 if TYPE_CHECKING:
@@ -122,7 +123,7 @@ def test_the_published_grammar_spells_a_name_the_way_the_code_reads_one():
 
     The EBNF on that page is the language's published definition, and
     `expression_parser.NAME` is the one the loader and the schema both apply —
-    `model.py` validates every declaration name against it. A page that refuses
+    `spec.py` validates every declaration name against it. A page that refuses
     what the language accepts is the drift this asks about; it went unnoticed
     because nothing compared the two.
     """
@@ -297,3 +298,45 @@ def test_every_name_the_package_exports_has_an_entry_on_an_api_page():
     rendered = {target for page in API_PAGES.values() for target in _targets(ROOT / page)}
     missing = sorted(name for name in mathspec.__all__ if f'mathspec.{name}' not in rendered)
     assert missing == [], f'names in mathspec.__all__ with no ::: entry on an API page: {missing}'
+
+
+def test_every_api_entry_renders_the_object_python_imports():
+    """`::: mathspec.advice` rendered the module `mathspec/advice.py`, not the function the package exports.
+
+    mkdocstrings reads the source, where a submodule wins over a name the
+    package imports under the same spelling. Python reads the attribute, where
+    the import wins. The page showed the module docstring with the function
+    nested under it.
+    """
+    import importlib
+
+    griffe = pytest.importorskip('griffe', reason='the docs feature; the bare test environment skips it')
+    package = griffe.load('mathspec', search_paths=[ROOT / 'src'])
+    mismatched = []
+    for target in (target for page in API_PAGES.values() for target in _targets(ROOT / page)):
+        module, _, name = target.rpartition('.')
+        imported = getattr(importlib.import_module(module), name) if module else importlib.import_module(target)
+        read = package[target.removeprefix('mathspec.')] if target != 'mathspec' else package
+        if read.is_module != inspect.ismodule(imported):
+            mismatched.append(target)
+    assert mismatched == [], f'an API entry renders a module where Python imports something else: {mismatched}'
+
+
+#: A Sphinx role, which mkdocstrings prints as it stands.
+SPHINX_ROLE = re.compile(r':(?:func|class|meth|attr|mod|data|exc|obj):`')
+
+
+def test_no_docstring_links_with_a_sphinx_role():
+    """Every ``:func:`advice``` in `src/` printed on the site as the literal text ``:func:advice``.
+
+    mkdocstrings reads Google docstrings, which link as ``[`advice`][]``. The
+    strict build fails on a link of that form that resolves to nothing, but it
+    has no way to tell a Sphinx role from prose.
+    """
+    found = [
+        f'{path.relative_to(ROOT)}:{number}'
+        for path in sorted((ROOT / 'src').rglob('*.py'))
+        for number, line in enumerate(path.read_text().splitlines(), 1)
+        if SPHINX_ROLE.search(line)
+    ]
+    assert found == [], f'write [`name`][] instead of a Sphinx role: {found}'

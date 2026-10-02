@@ -16,16 +16,16 @@ if TYPE_CHECKING:
     from pydantic import ValidationError
 
 
-#: Which pass an :class:`Advice` comes from. Closed, like the operator set: a
+#: Which pass an [`Advice`][] comes from. Closed, like the operator set: a
 #: consumer filtering on it can enumerate every value.
-AdviceKind = Literal['never-an-axis', 'unbounded']
+AdviceKind = Literal['never-an-axis', 'given', 'unbounded']
 
 
 @dataclass(frozen=True)
 class Advice:
     """One thing the language advises about a file it accepts.
 
-    Never an error: each is what a half-written model looks like too. A
+    Never an error: each is what a half-written spec looks like too. A
     consumer prints it, or filters on ``kind`` and ``subject``; the text is the
     language's, so no consumer writes its own.
 
@@ -48,7 +48,7 @@ class MathSpecError(ValueError):
 
 
 class LanguageError(MathSpecError):
-    """The model is not sayable in the language, or does not obey its rules."""
+    """The spec is not sayable in the language, or does not obey its rules."""
 
 
 class SchemaError(LanguageError):
@@ -59,20 +59,20 @@ class DimensionError(LanguageError):
     """A dim-set rule was violated. Raised at load time, before any data."""
 
 
-def did_you_mean(name: str, known: Iterable[str], *, label: str = 'Declared') -> str:
-    """The repair clause for an unrecognised name: the near miss, or the set."""
+def did_you_mean(name: str, known: Iterable[str], *, label: str = 'Declared', listing: bool = True) -> str:
+    """The repair clause for an unrecognised name: the near miss, or the set, or nothing where *listing* is off."""
     candidates = sorted(known)
     near = difflib.get_close_matches(name, candidates, n=1, cutoff=0.6)
     if near:
         return f"Did you mean '{near[0]}'?"
-    return f'{label}: {", ".join(candidates) or "nothing"}.'
+    return f'{label}: {", ".join(candidates) or "nothing"}.' if listing else ''
 
 
 def schema_error(exc: ValidationError) -> LanguageError:
     """A pydantic ``ValidationError`` as one of ours.
 
-    Returns the original :class:`LanguageError` subclass where exactly one
-    error carries one, and a :class:`SchemaError` otherwise.
+    Returns the original [`LanguageError`][] subclass where exactly one
+    error carries one, and a [`SchemaError`][] otherwise.
     """
     errors = exc.errors()
     lines = []

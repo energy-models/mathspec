@@ -1,0 +1,42 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: >-
+  The coupling surface every component in this library is written against: one
+  flow per port, one balance per bus, and one cost to minimise. A component is
+  wired to a port, the port to a bus, and the balance names no component class.
+  A flow is positive where the port injects into its bus. A component that
+  costs something adds its cost to `total_cost`.
+dimensions:
+  snapshot: { dtype: datetime, description: dispatch periods }
+  bus: { dtype: str, description: network nodes }
+  port: { dtype: str, description: "the connections components make, one label per connection" }
+relations:
+  Port_bus: { key: port, values: bus }
+variables:
+  Port_p:
+    dims: [snapshot, port]
+    description: what a port puts into its bus in a snapshot, negative for a withdrawal
+constraints:
+  Bus_nodal_balance:
+    description: "`Bus-nodal_balance` — what the ports on a bus put in nets to nothing"
+    dims: [snapshot, bus]
+    expression: sum(Port_p, by=Port_bus, over=port, into=bus) == 0
+given:
+  expressions:
+    total_cost: { dims: [], description: what running the system costs }
+objective:
+  sense: minimize
+  expression: total_cost
+
+# The symbols `examples/pypsa.yaml` prints with, cut to what this file declares
+# or reads. Fragments that spell one name spell it the same, or do not merge.
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      bus: { index: n, set: '\mathcal{N}' }
+      port: { index: j, set: '\mathcal{J}' }
+    names:
+      Port_p: f

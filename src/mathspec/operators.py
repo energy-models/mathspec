@@ -46,7 +46,7 @@ class Builtin:
     #: ``by=`` names one. ``sum(x, over=generator)`` reduces the dimension
     #: away; ``sum(x, by=l, over=c)`` names the column the call consumes.
     #: One meaning — what leaves the frame — read in the namespace ``by=``
-    #: decides.
+    #: decides. Either reading takes a list, ``over=[a, b]``.
     dimension_or_role_kwargs: tuple[str, ...] = ()
     edge_kwargs: tuple[str, ...] = ()
     required_value_kwargs: tuple[str, ...] = ()
@@ -73,7 +73,7 @@ class Builtin:
 
         A dimension, a relation, a column of it, an edge policy, or a plain value.
         *with_relation* says whether the call carries a ``by=``, which is what
-        decides the kind of a :attr:`dimension_or_role_kwargs` member.
+        decides the kind of a [`dimension_or_role_kwargs`][] member.
         """
         if kwarg in self.dimension_or_role_kwargs:
             return 'role' if with_relation else 'dimension'
@@ -98,7 +98,7 @@ class Builtin:
 #: that names a ``by=``.
 BUILTINS: dict[str, Builtin] = {
     'sum': Builtin(
-        'sum(<expr>), sum(<expr>, over=<dim>) or sum(<expr>, by=<relation>, over=<column>, into=<column>)',
+        'sum(<expr>), sum(<expr>, over=<dim>|[<dim>, …]) or sum(<expr>, by=<relation>, over=<column>, into=<column>)',
         relation_kwargs=('by',),
         role_kwargs=('into',),
         dimension_or_role_kwargs=('over',),
