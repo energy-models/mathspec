@@ -68,6 +68,9 @@ parameters:
     description: whether the nominal energy capacity is a decision
     dims: [store]
     dtype: bool
+  Store_e_nom_mod:
+    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    dims: [store]
   Store_e_min_pu:
     description: least energy held, per unit of nominal capacity — negative for a store that may go short
     dims: [scenario, snapshot, store]
@@ -163,6 +166,13 @@ variables:
       of the same PyPSA name carries the fixed regime
     dims: [store]
     where: Store_e_nom_extendable
+  Store_n_mod:
+    description: "`Store-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
+    dims: [store]
+    where: Store_e_nom_extendable AND Store_e_nom_mod > 0 AND count(Store_active, over=snapshot) > 0
+    domain: integer
+    bounds:
+      lower: 0
 
 given:
   parameters:
@@ -293,6 +303,11 @@ constraints:
     dims: [scenario, store]
     where: Store_e_nom_extendable AND Store_e_nom_set
     expression: Store_e_nom_ext == Store_e_nom_set
+  Store_e_nom_modularity:
+    description: "`Store-e_nom_modularity` — the chosen build is a whole number of modules"
+    dims: [store]
+    where: Store_e_nom_extendable AND Store_e_nom_mod > 0 AND count(Store_active, over=snapshot) > 0
+    expression: Store_e_nom_ext == Store_e_nom_mod * Store_n_mod
   Store_energy_balance:
     description: "`Store-energy_balance` — the energy carried in, less what is delivered to the bus"
     dims: [scenario, snapshot, store]
@@ -360,5 +375,5 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive

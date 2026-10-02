@@ -13,6 +13,11 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - docs(pypsa): a committable unit built in a later period starts from off, and the big M follows pypsa for an infinite build cap ([#817](https://github.com/energy-models/mathspec/pull/817))
+- docs(pypsa): a line, a transformer, a storage unit and a store may be built in whole modules, and a unit that is not active counts no modules ([#815](https://github.com/energy-models/mathspec/pull/815))
+- docs(pypsa): the cycle rows read each investment period's own cycle basis ([#814](https://github.com/energy-models/mathspec/pull/814))
+- docs(pypsa): a start-up or shut-down cost may change from snapshot to snapshot, as in pypsa master ([#807](https://github.com/energy-models/mathspec/pull/807))
+- docs(pypsa): a line or transformer limits its voltage angle difference, as in pypsa master ([#808](https://github.com/energy-models/mathspec/pull/808))
+- docs(pypsa): the pypsa line references point at pypsa master ([#806](https://github.com/energy-models/mathspec/pull/806))
 - docs(pypsa): a fixed modular committable unit gets only its per-module commitment rows, as in pypsa master ([#787](https://github.com/energy-models/mathspec/pull/787))
 - docs(pypsa): the pypsa references are recorded against pypsa master ([#786](https://github.com/energy-models/mathspec/pull/786))
 

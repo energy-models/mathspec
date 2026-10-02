@@ -2065,6 +2065,116 @@
       "Transformer-fix-s-upper": 4
     }
   },
+  "rung_61_voltage_angle_limits": {
+    "columns": {
+      "Generator-p": 24,
+      "Line-s": 20,
+      "Link-p": 4,
+      "Transformer-phase_shift": 4,
+      "Transformer-s": 8
+    },
+    "global_constraints": {},
+    "objective": 121834.62083205313,
+    "objective_constant": 0.0,
+    "pypsa": "1.3.0.post1.dev23+g02bdcbbaf",
+    "rows": {
+      "Bus-nodal_balance": 32,
+      "Generator-fix-p-lower": 24,
+      "Generator-fix-p-upper": 24,
+      "Kirchhoff-Voltage-Law": 8,
+      "Line-fix-s-lower": 20,
+      "Line-fix-s-upper": 20,
+      "Line-v_ang-lower": 4,
+      "Line-v_ang-upper": 4,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4,
+      "Transformer-fix-s-lower": 8,
+      "Transformer-fix-s-upper": 8,
+      "Transformer-v_ang-lower": 4,
+      "Transformer-v_ang-upper": 4,
+      "Transformer-v_ang-var-lower": 4,
+      "Transformer-v_ang-var-upper": 4
+    }
+  },
+  "rung_62_startup_cost_per_snapshot": {
+    "columns": {
+      "Generator-p": 15,
+      "Generator-shut_down": 5,
+      "Generator-start_up": 5,
+      "Generator-status": 5
+    },
+    "global_constraints": {},
+    "objective": 6850.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.3.0.post1.dev23+g02bdcbbaf",
+    "rows": {
+      "Bus-nodal_balance": 5,
+      "Generator-com-p-lower": 5,
+      "Generator-com-p-upper": 5,
+      "Generator-com-transition-shut-down": 5,
+      "Generator-com-transition-start-up": 5,
+      "Generator-fix-p-lower": 10,
+      "Generator-fix-p-upper": 10,
+      "Generator-shut_down-p-fixed-upper": 5,
+      "Generator-start_up-p-fixed-upper": 5,
+      "Generator-status-p-fixed-upper": 5
+    }
+  },
+  "rung_63_modular_branches_and_storage": {
+    "columns": {
+      "Generator-p": 12,
+      "Line-n_mod": 1,
+      "Line-s": 4,
+      "Line-s_nom": 1,
+      "Link-p": 4,
+      "Process-p": 0,
+      "StorageUnit-n_mod": 1,
+      "StorageUnit-p_dispatch": 4,
+      "StorageUnit-p_nom": 1,
+      "StorageUnit-p_store": 4,
+      "StorageUnit-state_of_charge": 4,
+      "Store-e": 4,
+      "Store-e_nom": 1,
+      "Store-n_mod": 1,
+      "Store-p": 4,
+      "Transformer-n_mod": 1,
+      "Transformer-s": 4,
+      "Transformer-s_nom": 1
+    },
+    "global_constraints": {},
+    "objective": 13927.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.3.0.post1.dev23+g02bdcbbaf",
+    "rows": {
+      "Bus-nodal_balance": 12,
+      "Generator-fix-p-lower": 12,
+      "Generator-fix-p-upper": 12,
+      "Line-ext-s-lower": 4,
+      "Line-ext-s-upper": 4,
+      "Line-ext-s_nom-lower": 1,
+      "Line-s_nom_modularity": 1,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4,
+      "StorageUnit-energy_balance": 4,
+      "StorageUnit-ext-p_dispatch-lower": 4,
+      "StorageUnit-ext-p_dispatch-upper": 4,
+      "StorageUnit-ext-p_nom-lower": 1,
+      "StorageUnit-ext-p_store-lower": 4,
+      "StorageUnit-ext-p_store-upper": 4,
+      "StorageUnit-ext-state_of_charge-lower": 4,
+      "StorageUnit-ext-state_of_charge-upper": 4,
+      "StorageUnit-p_nom_modularity": 1,
+      "Store-e_nom_modularity": 1,
+      "Store-energy_balance": 4,
+      "Store-ext-e-lower": 4,
+      "Store-ext-e-upper": 4,
+      "Store-ext-e_nom-lower": 1,
+      "Transformer-ext-s-lower": 4,
+      "Transformer-ext-s-upper": 4,
+      "Transformer-ext-s_nom-lower": 1,
+      "Transformer-s_nom_modularity": 1
+    }
+  },
   "rung_64_commitment_edges": {
     "columns": {
       "Generator-p": 28,
@@ -2118,6 +2228,26 @@
       "Process-shut_down-p-fixed-upper": 4,
       "Process-start_up-p-fixed-upper": 4,
       "Process-status-p-fixed-upper": 4
+    }
+  },
+  "rung_66_cycles_per_period": {
+    "columns": {
+      "Generator-p": 8,
+      "Line-s": 10
+    },
+    "global_constraints": {},
+    "objective": 16000.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.3.0.post1.dev23+g02bdcbbaf",
+    "rows": {
+      "Bus-nodal_balance": 12,
+      "Generator-fix-p-lower": 8,
+      "Generator-fix-p-upper": 8,
+      "Kirchhoff-Voltage-Law": 2,
+      "Line-fix-s-lower": 10,
+      "Line-fix-s-lower-security-for-Line-outage-in-sub-network-0": 12,
+      "Line-fix-s-upper": 10,
+      "Line-fix-s-upper-security-for-Line-outage-in-sub-network-0": 12
     }
   }
 }

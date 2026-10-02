@@ -190,6 +190,34 @@ def test_a_fixed_modular_committable_unit_gets_only_its_per_module_commitment_ro
     }, 'a fixed modular committable unit gets the per-module rows and no whole-unit ones'
 
 
+@pytest.mark.parametrize(
+    ('component', 'attr'),
+    [
+        ('Generator', 'p_nom'),
+        ('Link', 'p_nom'),
+        ('Process', 'p_nom'),
+        ('Line', 's_nom'),
+        ('Transformer', 's_nom'),
+        ('StorageUnit', 'p_nom'),
+        ('Store', 'e_nom'),
+    ],
+)
+def test_a_modular_build_counts_modules_only_where_the_unit_stands(component: str, attr: str):
+    """PyPSA builds `{c}-n_mod` and `{c}-{attr}_modularity` over `c.active_assets` alone (`variables.py:379`, `constraints.py:1864`).
+
+    The file built both for a Generator, Link or Process that is not active,
+    and neither for a Line, Transformer, StorageUnit or Store. Rung 63.
+    """
+    stands = (
+        f'{component}_{attr}_extendable AND {component}_{attr}_mod > 0 AND count({component}_active, over=snapshot) > 0'
+    )
+    column = BASE.variables[f'{component}_n_mod'].where
+    row = BASE.constraints[f'{component}_{attr}_modularity'].where
+    assert column == row == stands, (
+        'the module count and its row stand for an extendable modular unit that stands in at least one snapshot'
+    )
+
+
 def test_the_spine_weightings_are_generic():
     """At weighting 1.0 a missing hours factor builds the identical matrix and passes every gate."""
     sys.path.insert(0, str(REFERENCES))

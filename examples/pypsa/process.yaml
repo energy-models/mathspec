@@ -67,7 +67,7 @@ parameters:
       positive where it injects; a link is a process whose `bus0` rate is minus
       one and whose output rates are its efficiencies. Read at the snapshot the
       transfer arrives, so a delayed port transfers at its arrival snapshot's
-      rate (`constraints.py:1522`)
+      rate (`constraints.py:1528`)
     dims: [scenario, snapshot, process_output]
   Process_output_delay:
     description: >-
@@ -152,9 +152,9 @@ variables:
     dims: [scenario, snapshot, process]
     where: Process_active
   Process_n_mod:
-    description: "`Process-n_mod` — how many modules of an extendable modular build"
+    description: "`Process-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_p_nom_mod > 0
+    where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND count(Process_active, over=snapshot) > 0
     domain: integer
     bounds:
       lower: 0
@@ -272,7 +272,7 @@ constraints:
   Process_p_nom_modularity:
     description: "`Process-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_p_nom_mod > 0
+    where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND count(Process_active, over=snapshot) > 0
     expression: Process_p_nom_ext == Process_p_nom_mod * Process_n_mod
   Process_p_set:
     description: "`Process-p_set` — internal power pinned to the given schedule, wherever one is given"
@@ -287,5 +287,5 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive

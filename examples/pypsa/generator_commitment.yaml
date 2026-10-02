@@ -52,11 +52,11 @@ parameters:
     dims: [scenario, snapshot, generator]
     dtype: bool
   Generator_start_up_cost:
-    description: cost of one start
-    dims: [scenario, generator]
+    description: cost of one start in this snapshot
+    dims: [scenario, snapshot, generator]
   Generator_shut_down_cost:
-    description: cost of one stop
-    dims: [scenario, generator]
+    description: cost of one stop in this snapshot
+    dims: [scenario, snapshot, generator]
   Generator_stand_by_cost:
     description: cost of one snapshot spent on
     dims: [scenario, snapshot, generator]

@@ -74,7 +74,7 @@ parameters:
       positive where it injects; a link is a process whose `bus0` rate is minus
       one and whose output rates are its efficiencies. Read at the snapshot the
       transfer arrives, so a delayed port transfers at its arrival snapshot's
-      rate (`constraints.py:1522`)
+      rate (`constraints.py:1528`)
     dims: [scenario, snapshot, process_output]
   Process_output_delay:
     description: >-
@@ -159,9 +159,9 @@ variables:
     dims: [scenario, snapshot, process]
     where: Process_active
   Process_n_mod:
-    description: "`Process-n_mod` — how many modules of an extendable modular build"
+    description: "`Process-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_p_nom_mod > 0
+    where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND count(Process_active, over=snapshot) > 0
     domain: integer
     bounds:
       lower: 0
@@ -279,7 +279,7 @@ constraints:
   Process_p_nom_modularity:
     description: "`Process-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_p_nom_mod > 0
+    where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND count(Process_active, over=snapshot) > 0
     expression: Process_p_nom_ext == Process_p_nom_mod * Process_n_mod
   Process_p_set:
     description: "`Process-p_set` — internal power pinned to the given schedule, wherever one is given"
@@ -294,7 +294,7 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -319,7 +319,7 @@ assumptions:
 | $`\mathrm{ext}^{z}`$ | `Process_p_nom_extendable` over $`\mathcal{J}`$ — whether the nominal internal power is a decision |
 | $`\underline{\mathrm{z}}`$ | `Process_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — least internal power, per unit of nominal power — negative for a process that runs both ways |
 | $`\overline{\mathrm{z}}`$ | `Process_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — most internal power, per unit of nominal power |
-| $`\alpha`$ | `Process_rate` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — the energy a port draws or delivers per unit of internal power, PyPSA's `rate0`, `rate1`, … read long — negative where the port withdraws, positive where it injects; a link is a process whose `bus0` rate is minus one and whose output rates are its efficiencies. Read at the snapshot the transfer arrives, so a delayed port transfers at its arrival snapshot's rate (`constraints.py:1522`) |
+| $`\alpha`$ | `Process_rate` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — the energy a port draws or delivers per unit of internal power, PyPSA's `rate0`, `rate1`, … read long — negative where the port withdraws, positive where it injects; a link is a process whose `bus0` rate is minus one and whose output rates are its efficiencies. Read at the snapshot the transfer arrives, so a delayed port transfers at its arrival snapshot's rate (`constraints.py:1528`) |
 | $`\mathrm{d}^{z}`$ | `Process_output_delay` over $`\Xi \times \mathcal{R}`$ — snapshots a port's transfer lags its process's internal power — PyPSA's `delay0`, `delay1`, … read long, in `snapshot_weightings.generators` units, which the file states as whole snapshots; zero for a port that transfers at once. Each scenario takes its own, as a link's |
 | $`\mathrm{cyc}^{z}`$ | `Process_output_cyclic_delay` over $`\Xi \times \mathcal{R}`$ — whether a delayed port's transfer wraps from the end of its investment period — PyPSA's `cyclic_delay0`, `cyclic_delay1`, …; where it does not, the energy still in transit at each period's first snapshots is lost. Each scenario takes its own, as the delay |
 | $`\mathrm{c}^{z}`$ | `Process_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one unit of internal power |
@@ -342,7 +342,7 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`z`$ | `Process_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-p` — PyPSA's internal power `p`: a positive value drives every port at its own rate, withdrawing where the rate is negative and injecting where it is positive |
-| $`N^{z}`$ | `Process_n_mod` over $`\mathcal{J}`$ — `Process-n_mod` — how many modules of an extendable modular build |
+| $`N^{z}`$ | `Process_n_mod` over $`\mathcal{J}`$ — `Process-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ — `Process-p_nom` — nominal internal power where it is a decision; the parameter of the same PyPSA name carries the fixed regime |
 
 #### Given
@@ -429,7 +429,7 @@ Z_{j} = \mathrm{z}^{\mathrm{nom,set}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ j \
 **`Process_p_nom_modularity`**
 
 ```math
-Z_{j} = \mathrm{z}^{\mathrm{mod}}_{j} \cdot N^{z}_{j} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+Z_{j} = \mathrm{z}^{\mathrm{mod}}_{j} \cdot N^{z}_{j} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{z}_{t,j} \} \rvert > 0
 ```
 
 **`Process_p_set`**
@@ -499,7 +499,7 @@ z_{\xi,t,j} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j 
 **`Process_n_mod`**
 
 ```math
-N^{z}_{j} \ge 0, N^{z}_{j} \in \mathbb{Z} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+N^{z}_{j} \ge 0, N^{z}_{j} \in \mathbb{Z} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{z}_{t,j} \} \rvert > 0
 ```
 
 **`Process_p_nom_ext`**
