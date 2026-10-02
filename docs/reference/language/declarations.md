@@ -360,10 +360,10 @@ constraints:
     expression: p - shift(p, along=period, offset=1) <= ramp
 ```
 
-| Field         |                                             |                |
-| ------------- | ------------------------------------------- | -------------- |
-| `dims`        | required. The dimensions the mask runs over |                |
-| `description` | free text                                   | default `null` |
+| Field         |                                                        |                |
+| ------------- | ------------------------------------------------------ | -------------- |
+| `dims`        | required. The dimensions the definer's predicate reads |                |
+| `description` | free text                                              | default `null` |
 
 There is no predicate. A `where` reads the name as data over the frame, true
 or false at each coordinate. A `where` may read a given mask where it may not
@@ -372,8 +372,9 @@ arithmetic the name is refused, as a mask is. The typeset legend lists a given
 mask under _Given_.
 
 [`merge`](../../howto/compose.md#a-library-of-components) folds a given mask
-into the mask another fragment defines. The `dims` are an upper bound: the
-definer's frame may name no dimension they leave out.
+into the mask another fragment defines. The `dims` name the dimensions the
+definer's predicate reads, no more and no fewer. A reading that names a
+different set is refused, with both frames.
 
 ## `constraints`
 

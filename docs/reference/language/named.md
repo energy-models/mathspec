@@ -203,7 +203,6 @@ parameters:
   p_nom: { dims: [generator] }
 masks:
   stands:
-    dims: [period, generator]
     where: build_year <= period_year AND period_year < build_year + lifetime
     description: the generator stands in this period
 variables:
@@ -230,20 +229,21 @@ expression prints =:
 p_{e,g} - p_{e - 1,g} \le 0.5 \cdot \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, e \in \mathcal{E},\ g \in \mathcal{G} \,:\, \mathrm{stands}_{e,g} \wedge \mathrm{stands}_{e - 1,g}
 ```
 
-| Field         |                                                 |                     |
-| ------------- | ----------------------------------------------- | ------------------- |
-| `where`       | required. The predicate, in the `where` grammar |                     |
-| `dims`        | the frame the mask is read over                 | the predicate's own |
-| `description` | free text                                       | default `null`      |
+| Field         |                                                 |                |
+| ------------- | ----------------------------------------------- | -------------- |
+| `where`       | required. The predicate, in the `where` grammar |                |
+| `description` | free text                                       | default `null` |
 
-An entry with no `dims:` and no `description:` may be the bare `where` string.
+An entry with no `description:` may be the bare `where` string.
 
 - **A bare mask name stands for its predicate.** It does so in a `where:`, a
   `when:` and a `holds:`, under `NOT`, and inside `count`, `shift` and `at`.
   The rows are the rows the predicate written out gives.
-- **A declared frame bounds the predicate.** The predicate may carry no
-  dimension the `dims:` do not name, and it may carry fewer: the mask is then
-  the same along the rest.
+- **The predicate gives the frame.** A mask runs over the dimensions its
+  predicate reads, in the order `dimensions:` declares them, and the symbol
+  prints with those indices. A mask declares no `dims:`. A use over more
+  dimensions reads the mask as the same along the rest, and `shift` reads it
+  back along a dimension of its frame only.
 - **A mask may read another mask**, and a named expression that reads data
   only. A cycle is refused with its chain:
 

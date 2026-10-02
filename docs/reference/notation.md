@@ -804,12 +804,11 @@ expressions:
 
 #### Named mask
 
-a named predicate with its frame and its words: a use prints the symbol, the predicate prints once
+a named predicate with its words: a use prints the symbol over the dims its predicate reads, the predicate prints once
 
 ```yaml
 masks:
   dispatchable:
-    dims: [generator]
     where: "p_max > 0 AND NOT is_flexible"
 ```
 

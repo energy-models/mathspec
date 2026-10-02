@@ -35,7 +35,7 @@ CORE: dict[str, Any] = {
         'period_year': {'dims': ['period']},
         'p_nom': {'dims': ['generator']},
     },
-    'masks': {'stands': {'dims': FRAME, 'where': STANDS, 'description': 'the unit stands in this period'}},
+    'masks': {'stands': {'where': STANDS, 'description': 'the unit stands in this period'}},
     'variables': {'p': {'dims': FRAME, 'where': 'stands', 'bounds': {'lower': 0}}},
     'constraints': {'cap': {'dims': FRAME, 'where': 'stands', 'expression': 'p <= p_nom'}},
     'objective': {'sense': 'minimize', 'expression': 'sum(p, over=[period, generator])'},
@@ -99,7 +99,23 @@ def test_a_mask_is_read_wherever_a_where_string_is(patch):
 
 def test_the_one_line_form_writes_back_as_written():
     spec = to_spec(varied(CORE, **{'masks.stands': STANDS}))
-    assert spec.to_dict()['masks'] == {'stands': STANDS}, 'a mask with no frame and no words is one where string'
+    assert spec.to_dict()['masks'] == {'stands': STANDS}, 'a mask with no words is one where string'
+
+
+def test_a_mask_declares_no_frame():
+    """A declared frame wider than the predicate printed a use over an index no quantifier binds.
+
+    ``young`` over ``[period, generator]`` read only ``lifetime``. A use over
+    ``[generator]`` loaded, and every format printed ``young`` with a period
+    index under a quantifier over generators alone. The predicate gives a mask
+    its frame, so the closed schema now refuses ``dims:`` on a mask.
+    """
+    young = {
+        'masks.young': {'dims': FRAME, 'where': 'lifetime > 10'},
+        'constraints.total': {'dims': ['generator'], 'where': 'young', 'expression': 'sum(p, over=period) <= p_nom'},
+    }
+    with pytest.raises(LanguageError, match=r"masks\.young: unknown key 'dims' in a mask declaration"):
+        to_spec(varied(CORE, **young))
 
 
 def test_a_variable_that_asks_through_a_mask_whether_it_exists_is_refused():
@@ -121,11 +137,6 @@ def test_a_mask_may_ask_whether_another_variable_exists():
         pytest.param({'masks': {'a': 'a'}}, 'circular mask reference: a -> a', id='a-mask-reading-itself'),
         pytest.param({'masks': {'a': 'True'}}, 'folds to true, so the mask admits every row', id='always-true'),
         pytest.param({'masks': {'a': 'NOT True'}}, 'folds to false, so the mask admits no row', id='always-false'),
-        pytest.param(
-            {'masks': {'a': {'dims': ['h'], 'where': 'c > 0'}}},
-            "the predicate reads ['g'], which the dims ['h'] do not name",
-            id='a-predicate-wider-than-its-frame',
-        ),
         pytest.param(
             {'masks': {'a': 'c > 0'}, 'expressions.e': 'c * a'},
             "'a' is a mask, which is true or false where it is read, and not a number",
@@ -233,16 +244,20 @@ def test_a_reading_the_definer_does_not_answer_is_refused(reader, says):
     assert says in str(raised.value)
 
 
-def test_a_reader_may_state_a_frame_wider_than_the_mask_s():
-    """A mask over fewer dimensions holds alike along the rest, as a given expression's narrower body does.
+def test_a_reader_that_states_a_frame_wider_than_the_mask_s_is_refused():
+    """A reader stated a superset of the predicate's dims, and the merge took it.
 
-    The one-line definer has no ``dims:`` in its block, so the frame is read
-    off the definer's program rather than off the block it wrote.
+    A mask's frame is the dims its predicate reads, which no file chooses, so
+    a wider reading only defers the failure to the composed load.
     """
     definer = varied(CORE, **{'masks.stands': 'lifetime > 0'})
-    program = merge([definer, varied(RAMPING, **{'constraints.ramp_up.where': 'stands'})]).program
-    assert program.masks['stands'].dims == ('generator',), 'the definer decides the frame'
-    assert not program.given
+    reader = varied(RAMPING, **{'constraints.ramp_up.where': 'stands'})
+    with pytest.raises(LanguageError) as raised:
+        merge([definer, reader])
+    assert "reads the given mask 'stands' as {'dims': ['period', 'generator']}" in str(raised.value), (
+        'the refusal names the frame the reader states'
+    )
+    assert "introduces it over ['generator']" in str(raised.value), "and the frame the definer's predicate reads"
 
 
 def test_two_fragments_that_define_one_mask_collide():
@@ -254,7 +269,7 @@ def test_two_fragments_that_define_one_mask_collide():
 def test_a_patch_rewrites_a_mask_s_predicate():
     laid = override(CORE, [{'masks': {'stands': {'where': 'lifetime > 0'}}}])
     assert laid.masks['stands'].where == 'lifetime > 0'
-    assert laid.masks['stands'].dims == FRAME, 'a patch says only what it changes'
+    assert laid.masks['stands'].description == 'the unit stands in this period', 'a patch says only what it changes'
 
 
 # ---------------------------------------------------------------------------

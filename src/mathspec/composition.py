@@ -45,9 +45,9 @@ What that means for each section:
   reads its own sum through another fragment is refused, both named.
 * **A given declaration is folded** into the declaration that introduces the
   name, once the reader is checked to say the same as the introducer or less.
-  A given expression's body, and a given mask's frame, may carry no dimension
-  its reader does not state, and a name read as one kind and introduced as
-  another is refused. A
+  A given expression's body may carry no dimension its reader does not
+  state. A given mask states exactly the dims its definer's predicate reads.
+  A name read as one kind and introduced as another is refused. A
   reader's description fills a declaration its owner left undescribed.
   Two fragments that both read a name have to read it over one frame, as a
   set. What no fragment introduces stays under ``given:`` until a host model
@@ -559,8 +559,9 @@ def _fits(
     """Refuse a reading that says more than the declaration it folds into.
 
     A reading states the frame its introducer declares, and every other field
-    it writes is the introducer's. A given expression and a given mask are the
-    kinds whose frame may be wider than the composed body: a body over fewer
+    it writes is the introducer's. A mask declares no frame, so its reader
+    states the dims the predicate reads. A given expression is the one kind
+    whose frame may be wider than the composed body: a body over fewer
     dimensions broadcasts, and the composed load refuses a row it would repeat.
     """
     stated = set(cast('list[str]', _mapping(reading)['dims']))
@@ -569,7 +570,7 @@ def _fits(
         fits = frame <= stated
     elif kind == 'masks':
         frame = set(next(spec.program.masks[key].dims for spec in loaded.values() if key in spec.program.masks))
-        fits = frame <= stated
+        fits = frame == stated
     else:
         frame = set(cast('list[str]', _mapping(introduced)['dims']))
         fits = frame == stated

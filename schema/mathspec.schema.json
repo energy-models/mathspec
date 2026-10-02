@@ -392,7 +392,7 @@
     },
     "GivenMaskBlock": {
       "additionalProperties": false,
-      "description": "A mask this file reads and another file defines.\n\nThe frame is all this file states. A where reads the name as data over\nthat frame, true or false at each coordinate, since a mask reads nothing\na solve decides: the predicate is the definer's.",
+      "description": "A mask this file reads and another file defines.\n\nThe frame is all this file states, and it names the dims the definer's\npredicate reads. A where reads the name as data over that frame, true or false at each coordinate, since a mask reads nothing\na solve decides: the predicate is the definer's.",
       "properties": {
         "description": {
           "anyOf": [
@@ -548,7 +548,7 @@
       "anyOf": [
         {
           "additionalProperties": false,
-          "description": "A named predicate: one where string, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.\n\nWritten in YAML as a bare where string, or as a mapping once it carries a\n``dims:`` or a ``description:``, and serialised back to whichever form it\nwas written in::\n\n    masks:\n      committable: \"Generator_committable AND Generator_active\"\n      stands:\n        dims: [period, generator]\n        where: build_year <= period_year AND period_year < build_year + lifetime\n        description: the generator stands in this period\n\nA bare mask name in a where string stands for its predicate, inside\n``count``, ``shift`` and ``at`` too. ``dims:`` declares the frame the mask\nis read over; left out, the predicate decides it. A mask is a predicate,\nso it is never a value in an expression.",
+          "description": "A named predicate: one where string, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.\n\nWritten in YAML as a bare where string, or as a mapping once it carries a\n``description:``, and serialised back to whichever form it was written in::\n\n    masks:\n      committable: \"Generator_committable AND Generator_active\"\n      stands:\n        where: build_year <= period_year AND period_year < build_year + lifetime\n        description: the generator stands in this period\n\nA bare mask name in a where string stands for its predicate, inside\n``count``, ``shift`` and ``at`` too. The mask's frame is the dims its\npredicate reads, so it declares none. A mask is a predicate, so it is\nnever a value in an expression.",
           "properties": {
             "description": {
               "anyOf": [
@@ -561,21 +561,6 @@
               ],
               "default": null,
               "title": "Description"
-            },
-            "dims": {
-              "anyOf": [
-                {
-                  "items": {
-                    "type": "string"
-                  },
-                  "type": "array"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null,
-              "title": "Dims"
             },
             "where": {
               "title": "Where",
