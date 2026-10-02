@@ -564,10 +564,6 @@ class JoinColumns:
         return tuple(self.dim(role) for role in self.added)
 
     @property
-    def kept_dims(self) -> tuple[str, ...]:
-        return tuple(self.dim(role) for role in self.kept)
-
-    @property
     def one_row_per_group(self) -> bool:
         """Whether the grouped columns hold the relation's whole key, so each group is one row: a lookup, not a sum."""
         return set(self.relation.key) <= set(self.grouped)

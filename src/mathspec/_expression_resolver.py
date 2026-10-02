@@ -601,8 +601,18 @@ class ExpressionResolver:
                 f"through '{name}'. Name in over= the column the operand is joined on — {_columns_over(shape, plain)}."
             )
             return None
-        join = self._checked_join(name, call, from_roles, into_roles, lookup=False)
-        return None if join is None else (join, plain)
+        join = self._checked_join(name, call, from_roles, into_roles)
+        if join is None:
+            return None
+        if join.one_row_per_group:
+            self.errors.append(
+                f'{self.context}: {call}: the columns this sum groups by, {list(join.grouped)}, hold the whole key '
+                f'{list(shape.key)}, so every group is one row and nothing is added up — that is a join with no '
+                f"group-by, which is at()'s. Write {_lookup_rewrite(name, from_roles, plain)}, or group by a "
+                f'value column.'
+            )
+            return None
+        return join, plain
 
     def lookup(self, columns: ColumnsNode, inner: frozenset[str]) -> JoinColumns | None:
         """How ``at`` reads the columns *columns* names, at an operand carrying *inner*.
@@ -629,18 +639,12 @@ class ExpressionResolver:
             return None
         matched = inner - {shape.dim(r) for r in columns.columns}
         into = tuple(r for r in shape.key if shape.dim(r) not in matched)
-        return self._checked_join(name, call, columns.columns, into, lookup=True)
+        return self._checked_join(name, call, columns.columns, into)
 
     def _checked_join(
-        self, name: str, call: str, from_roles: tuple[str, ...], into_roles: tuple[str, ...], *, lookup: bool
+        self, name: str, call: str, from_roles: tuple[str, ...], into_roles: tuple[str, ...]
     ) -> JoinColumns | None:
-        """The join of relation *name* between the columns that leave the frame and the columns that arrive.
-
-        A sum needs several rows per group: a sum whose grouped columns hold
-        the whole key has one row per group and adds up nothing, which is a
-        lookup, so it is refused toward ``at``. A lookup groups by the whole
-        key by construction.
-        """
+        """The join of relation *name* between the columns that leave the frame and the columns that arrive."""
         context = self.context
         shape = self.ns.relations[name]
         if both := sorted(set(from_roles) & set(into_roles)):
@@ -658,16 +662,7 @@ class ExpressionResolver:
                 )
                 return None
         kept = tuple(r for r in shape.key if r not in from_roles and r not in into_roles)
-        join = JoinColumns(name, shape, (*from_roles, *kept), (*into_roles, *kept))
-        if not lookup and set(shape.key) <= set(join.grouped):
-            self.errors.append(
-                f'{context}: {call}: the columns this sum groups by, {list(join.grouped)}, hold the whole key '
-                f'{list(shape.key)}, so every group is one row and nothing is added up — that is a join with no '
-                f"group-by, which is at()'s. Write at(..., by={name}[{', '.join(from_roles)}]), or group by a "
-                f'value column.'
-            )
-            return None
-        return join
+        return JoinColumns(name, shape, (*from_roles, *kept), (*into_roles, *kept))
 
     def partition(self, columns: ColumnsNode, operator: str, along_dim: str) -> Partition | None:
         """How a partition (``shift``, ``sum_back``, ``position``) steps along the relation *columns* names.
@@ -750,6 +745,17 @@ def _undeclared_dim(context: str, operator: str, call: str, name: str, ns: Names
         f"Declare '{name}' under 'dimensions:', or fix the typo — an unknown "
         f'dimension makes {operator}() a silent no-op rather than an error.'
     )
+
+
+def _lookup_rewrite(name: str, columns: tuple[str, ...], plain: tuple[str, ...]) -> str:
+    """The ``at`` a sum that groups by the whole key means, with its plain dims summed around it.
+
+    The columns the sum joins on become the columns ``at`` reads. A dim in
+    ``over=`` with no column of the relation is summed after the group-by, so
+    the rewrite sums it around the ``at`` too, or that dim stays in the frame.
+    """
+    lookup = f'at(..., by={name}[{", ".join(columns)}])'
+    return f'sum({lookup}, over={shown(plain)})' if plain else lookup
 
 
 def _columns_over(shape: RelationDeclaration, dims: tuple[str, ...]) -> str:

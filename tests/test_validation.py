@@ -1646,25 +1646,39 @@ class TestRulesDecidedWithoutData:
         for fragment in fragments:
             assert fragment in message
 
-    def test_the_at_a_sum_grouped_by_the_whole_key_names_is_one_the_language_takes(self):
+    @pytest.mark.parametrize(
+        ('operand', 'call', 'patch'),
+        [
+            pytest.param('q', 'sum(q, over=h, by=lk[g])', {}, id='over-names-only-columns'),
+            pytest.param(
+                'qt',
+                'sum(qt, over=[h, t], by=lk[g])',
+                {'dimensions.t': {}, 'variables.qt': {'dims': ['g', 'h', 't']}},
+                id='over-names-a-dimension-beside-the-columns',
+            ),
+        ],
+    )
+    def test_the_rewrite_a_sum_grouped_by_the_whole_key_names_is_one_the_language_takes(self, operand, call, patch):
         """A refusal that names a call is holding out a rewrite, so the rewrite has to load.
 
         Was: the message swapped the join's ends, answering a sum refused
         for grouping by the whole key with `at(..., over=<into>, into=<over>)` —
         which `at` refuses in turn, for grouping in a way that leaves several
-        rows per group. Both operators take `over=` as the columns joined on
-        and dropped, so the rewrite is the author's own spelling with `at` in
-        place of `sum`.
+        rows per group. Later, the message held out the bare
+        `at(..., by=lk[h])` where `over=` also named a dimension with no
+        column, and that `at` left the dimension in the frame. The rewrite
+        moves the columns in `over=` into `at`'s `by=`, and sums each
+        dimension in `over=` that has no column around the `at`.
 
         Reading the call out of the message rather than restating it is the
         point: a fragment can agree with a message that names a call nothing
         accepts.
         """
-        message = _refusal(objective={'expression': 'sum(sum(q, over=h, by=lk[g]))'})
-        named = re.search(r'Write (at\(.*?\)), or group', message)
-        assert named is not None, f'the refusal holds out no at() to write instead: {message}'
-        rewrite = named.group(1).replace("'", '').replace('...', 'r')
-        _schema(objective={'expression': f'sum({rewrite})'})
+        message = _refusal(**{'constraints.k': {'dims': ['g'], 'expression': f'{call} >= 0'}}, **patch)
+        named = re.search(r'Write (.*?), or group', message)
+        assert named is not None, f'the refusal holds out no call to write instead: {message}'
+        rewrite = named.group(1).replace('...', operand)
+        _schema(**{'constraints.k': {'dims': ['g'], 'expression': f'{rewrite} >= 0'}}, **patch)
 
 
 class TestAssumptions:
