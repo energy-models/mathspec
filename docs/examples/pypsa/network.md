@@ -9,15 +9,6 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the buses and the 
 
 <!-- gallery:begin -->
 ```yaml
-dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-  bus:
-    description: network nodes
-
 given:
   expressions:
     Bus_injection:
@@ -26,6 +17,15 @@ given:
         what every component puts into a bus, less what it takes out of it;
         PyPSA writes each term into the balance, and a load on its right-hand
         side
+
+dimensions:
+  scenario:
+    description: the futures dispatch is chosen in, each with a weight
+  snapshot:
+    description: dispatch periods
+    dtype: datetime
+  bus:
+    description: network nodes
 
 constraints:
   Bus_nodal_balance:

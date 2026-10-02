@@ -291,13 +291,15 @@ def _fragment(
     adds: Mapping[str, str],
     homes: set[str],
 ) -> str:
-    """One fragment as YAML text, its sections and declarations in the order of the source file.
+    """One fragment as YAML text, its ``given:`` block first, then its sections and declarations in source order.
 
     A term carries the hub it adds to as ``adds_to:``. A hub the fragment is
     home to is read under ``given:`` with its description, and the home of the
     hub the objective reads writes the objective.
     """
     parts = [HEADER]
+    if given:
+        parts.append('given:\n' + ''.join(_given(model, kind, given, stated, homes) for kind in GIVEN_KINDS))
     hubs = {term: hub for hub, term in adds.items()}
     for section in SECTIONS:
         blocks = [
@@ -309,8 +311,6 @@ def _fragment(
         ]
         if blocks:
             parts.append(f'{section}:\n' + '\n'.join(blocks) + '\n')
-        if section == 'variables' and given:
-            parts.append('given:\n' + ''.join(_given(model, kind, given, stated, homes) for kind in GIVEN_KINDS))
     objective = model.data['objective']
     if objective['expression'] in homes:
         parts.append(_dumped('objective', objective, indent='') + '\n')

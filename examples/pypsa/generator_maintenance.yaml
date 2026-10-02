@@ -2,6 +2,19 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
+    Generator_committable: { dims: [generator], dtype: bool }
+    Generator_p_nom_mod: { dims: [generator] }
+    Generator_active: { dims: [snapshot, generator], dtype: bool }
+    snapshot_weightings_generators: { dims: [snapshot] }
+    Generator_p_nom_min: { dims: [scenario, generator] }
+    Generator_p_nom_max: { dims: [scenario, generator] }
+  variables:
+    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_p_nom_ext: { dims: [generator] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -92,19 +105,6 @@ variables:
     absence: zero
     bounds:
       lower: 0
-
-given:
-  parameters:
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
-    Generator_committable: { dims: [generator], dtype: bool }
-    Generator_p_nom_mod: { dims: [generator] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
-    snapshot_weightings_generators: { dims: [snapshot] }
-    Generator_p_nom_min: { dims: [scenario, generator] }
-    Generator_p_nom_max: { dims: [scenario, generator] }
-  variables:
-    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_p_nom_ext: { dims: [generator] }
 
 constraints:
   Generator_maint_event_count:

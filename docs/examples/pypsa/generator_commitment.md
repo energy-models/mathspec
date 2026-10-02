@@ -9,6 +9,28 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Generator
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    Generator_p_nom: { dims: [scenario, generator] }
+    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
+    Generator_p_min_pu: { dims: [scenario, snapshot, generator] }
+    Generator_p_max_pu: { dims: [scenario, snapshot, generator] }
+    Generator_p_nom_mod: { dims: [generator] }
+    Generator_modules_installed: { dims: [scenario, generator] }
+    Generator_p_min_pu_nonneg: { dims: [generator], dtype: bool }
+    Generator_maintenance_pu: { dims: [scenario, generator] }
+    period_weight_objective: { dims: [period] }
+    Generator_active: { dims: [snapshot, generator], dtype: bool }
+  variables:
+    Generator_p: { dims: [scenario, snapshot, generator] }
+    Generator_n_mod: { dims: [generator], domain: integer }
+    Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
+    Generator_maintenance_status: { dims: [scenario, snapshot, generator] }
+    Generator_p_nom_ext: { dims: [generator] }
+  expressions:
+    scenario_opex: { dims: [scenario] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -104,28 +126,6 @@ variables:
     domain: integer
     bounds:
       lower: 0
-
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    Generator_p_nom: { dims: [scenario, generator] }
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
-    Generator_p_min_pu: { dims: [scenario, snapshot, generator] }
-    Generator_p_max_pu: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom_mod: { dims: [generator] }
-    Generator_modules_installed: { dims: [scenario, generator] }
-    Generator_p_min_pu_nonneg: { dims: [generator], dtype: bool }
-    Generator_maintenance_pu: { dims: [scenario, generator] }
-    period_weight_objective: { dims: [period] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
-  variables:
-    Generator_p: { dims: [scenario, snapshot, generator] }
-    Generator_n_mod: { dims: [generator], domain: integer }
-    Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
-    Generator_maintenance_status: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom_ext: { dims: [generator] }
-  expressions:
-    scenario_opex: { dims: [scenario] }
 
 expressions:
   Generator_previous_status:

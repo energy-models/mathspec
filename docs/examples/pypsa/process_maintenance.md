@@ -9,6 +9,19 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Process`,
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    Process_p_nom_extendable: { dims: [process], dtype: bool }
+    Process_p_nom_min: { dims: [scenario, process] }
+    Process_p_nom_max: { dims: [scenario, process] }
+    Process_committable: { dims: [process], dtype: bool }
+    Process_p_nom_mod: { dims: [process] }
+    Process_active: { dims: [snapshot, process], dtype: bool }
+    snapshot_weightings_generators: { dims: [snapshot] }
+  variables:
+    Process_status: { dims: [scenario, snapshot, process], domain: integer }
+    Process_p_nom_ext: { dims: [process] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -99,19 +112,6 @@ variables:
     absence: zero
     bounds:
       lower: 0
-
-given:
-  parameters:
-    Process_p_nom_extendable: { dims: [process], dtype: bool }
-    Process_p_nom_min: { dims: [scenario, process] }
-    Process_p_nom_max: { dims: [scenario, process] }
-    Process_committable: { dims: [process], dtype: bool }
-    Process_p_nom_mod: { dims: [process] }
-    Process_active: { dims: [snapshot, process], dtype: bool }
-    snapshot_weightings_generators: { dims: [snapshot] }
-  variables:
-    Process_status: { dims: [scenario, snapshot, process], domain: integer }
-    Process_p_nom_ext: { dims: [process] }
 
 constraints:
   Process_maint_event_count:

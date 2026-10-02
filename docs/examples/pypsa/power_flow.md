@@ -9,6 +9,14 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: Kirchhoff's voltag
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  expressions:
+    Cycle_angle_sum:
+      dims: [scenario, snapshot, cycle]
+      description: >-
+        the voltage angle differences around a cycle: every branch flow times
+        its cycle weight, and every transformer phase shift
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -21,14 +29,6 @@ dimensions:
       prep. Each period has its own basis, of the branches that stand in it;
       a label is a position in that period's basis, so one label names a
       different cycle in another period
-
-given:
-  expressions:
-    Cycle_angle_sum:
-      dims: [scenario, snapshot, cycle]
-      description: >-
-        the voltage angle differences around a cycle: every branch flow times
-        its cycle weight, and every transformer phase shift
 
 constraints:
   Kirchhoff_Voltage_Law:
