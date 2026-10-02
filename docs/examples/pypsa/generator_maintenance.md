@@ -126,7 +126,7 @@ constraints:
       maintenance status is at most one
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_active
-    expression: Generator_maintenance == sum(Generator_maintenance_start, by=Generator_maintenance_cover, over=start, into=covered)
+    expression: Generator_maintenance == sum(Generator_maintenance_start, over=start, by=Generator_maintenance_cover[covered])
   Generator_maint_start_horizon:
     description: "`Generator-maint-start-horizon` — no event starts where it could not run its whole duration"
     dims: [scenario, snapshot, generator]

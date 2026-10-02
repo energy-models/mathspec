@@ -72,8 +72,8 @@ expressions:
       transformer's flow before it goes out
     dims: [scenario, snapshot, outage]
     cases:
-      line: { when: Outage_line, expression: "at(Line_s_monitored, by=Outage_line, over=line, into=outage)" }
-    otherwise: at(Transformer_s_monitored, by=Outage_transformer, over=transformer, into=outage)
+      line: { when: Outage_line, expression: "at(Line_s_monitored, by=Outage_line[line])" }
+    otherwise: at(Transformer_s_monitored, by=Outage_transformer[transformer])
 
 constraints:
   Line_fix_s_lower_security:
