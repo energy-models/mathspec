@@ -37,11 +37,13 @@ parameters:
     dims: [scenario, snapshot, process]
     missing: neutral
   Process_ramp_limit_start_up:
-    description: most internal power in the snapshot a process starts, per unit of nominal power
+    description: most internal power in the snapshot a process starts, per unit of nominal power; no value means no limit
     dims: [scenario, process]
+    missing: neutral
   Process_ramp_limit_shut_down:
-    description: most internal power in the snapshot before a process stops, per unit of nominal power
+    description: most internal power in the snapshot before a process stops, per unit of nominal power; no value means no limit
     dims: [scenario, process]
+    missing: neutral
   Process_p_init:
     description: >-
       the internal power a process brought into the horizon — PyPSA's `p_init`, read
@@ -264,8 +266,8 @@ assumptions:
 |---|---|
 | $`\mathrm{ru}^{z}`$ | `Process_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — most a process may raise its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
 | $`\mathrm{rd}^{z}`$ | `Process_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — most a process may lower its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{ru}^{z,\mathrm{up}}`$ | `Process_ramp_limit_start_up` over $`\Xi \times \mathcal{J}`$ — most internal power in the snapshot a process starts, per unit of nominal power |
-| $`\mathrm{rd}^{z,\mathrm{dn}}`$ | `Process_ramp_limit_shut_down` over $`\Xi \times \mathcal{J}`$ — most internal power in the snapshot before a process stops, per unit of nominal power |
+| $`\mathrm{ru}^{z,\mathrm{up}}`$ | `Process_ramp_limit_start_up` over $`\Xi \times \mathcal{J}`$ — most internal power in the snapshot a process starts, per unit of nominal power; no value means no limit |
+| $`\mathrm{rd}^{z,\mathrm{dn}}`$ | `Process_ramp_limit_shut_down` over $`\Xi \times \mathcal{J}`$ — most internal power in the snapshot before a process stops, per unit of nominal power; no value means no limit |
 | $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\Xi \times \mathcal{J}`$ — the internal power a process brought into the horizon — PyPSA's `p_init`, read only where the process came in running; no value means it is unknown, so the process carries no ramp row at the first snapshot |
 
 #### Given
