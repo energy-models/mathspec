@@ -133,6 +133,26 @@ def test_the_legend_prints_what_a_missing_row_means(name: FormatName, fmt: Forma
     )
 
 
+#: The dispatch model with a masked variable of each reading.
+MASKED = varied(
+    DISPATCH_MODEL,
+    **{
+        'parameters.on': {'dims': ['generator'], 'dtype': 'bool', 'missing': 'neutral'},
+        'variables.spill': {'dims': ['snapshot', 'generator'], 'where': 'on', 'missing': 'neutral'},
+        'variables.store': {'dims': ['snapshot', 'generator'], 'where': 'on'},
+    },
+)
+
+
+@EVERY_FORMAT
+def test_the_legend_prints_what_a_masked_out_variable_means(name: FormatName, fmt: Format):
+    """The legend printed a parameter's reading and not a variable's, so `missing: neutral` on a variable was unseen."""
+    out = typeset(MASKED, name)
+    [row] = [line for line in out.splitlines() if fmt.mono('spill') in line and ' over ' in line]
+    assert f'{fmt.mono("spill")} over ' in row and f', {fmt.mono("neutral")} where the mask leaves it out' in row, row
+    assert out.count('where the mask leaves it out') == 1, '`store` keeps the default, absent, and says nothing'
+
+
 #: The dispatch model with a curve on it, so one model has two readings and one
 #: table has to spell both.
 CURVED = varied(

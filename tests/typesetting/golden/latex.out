@@ -48,7 +48,7 @@
 \item[{$\mathit{units}$}] \texttt{units} over $\mathcal{G}$
 \item[{$\mathit{spare}$}] \texttt{spare} over $\mathcal{G}$
 \item[{$\mathit{reserve}$}] \texttt{reserve} (scalar)
-\item[{$\mathit{headroom}$}] \texttt{headroom} (scalar)
+\item[{$\mathit{headroom}$}] \texttt{headroom} (scalar), \texttt{neutral} where the mask leaves it out
 \item[{$\mathit{weight}$}] \texttt{weight} over $\mathcal{T} \times \mathcal{G}$
 \item[{$\mathit{fuel}$}] \texttt{fuel} over $\mathcal{T} \times \mathcal{G}$
 \item[{$\mathit{heat}$}] \texttt{heat} over $\mathcal{T} \times \mathcal{G}$

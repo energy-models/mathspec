@@ -127,6 +127,8 @@ At a storage with a store and no inflow, `balance` reads `inflow - soc == 0`. At
 a storage with inflow and no store, there is no row.
 
 `missing: neutral` needs a `where:`. It changes nothing inside a summing operator.
+The typeset legend prints `` `neutral` where the mask leaves it out `` beside
+the variable.
 
 ## Rows with no variable terms
 

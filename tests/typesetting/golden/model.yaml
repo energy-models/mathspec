@@ -75,9 +75,10 @@ variables:
   reserve: # an empty dims: a scalar declaration, whose line carries no quantifier
     dims: []
     bounds: { lower: 0 }
-  headroom: # scalar too, but masked, so the condition stands with no set beside it
+  headroom: # scalar too, but masked, so the condition stands with no set beside it; neutral, so the legend names the reading
     dims: []
     where: "budget"
+    missing: neutral
     bounds: { lower: 0 }
   weight: # the family a sos runs along
     dims: [snapshot, generator]

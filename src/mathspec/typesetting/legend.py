@@ -121,6 +121,13 @@ def notice(program: Program) -> Noticed:
     return Noticed(frozenset(policies), grouped, frozenset(positions), frozenset(numeric))
 
 
+#: Where a parameter's or a relation's ``missing:`` applies, as the legend says it.
+_NO_ROW = 'where the data has no row'
+
+#: Where a variable's ``missing:`` applies, as the legend says it.
+_MASKED_OUT = 'where the mask leaves it out'
+
+
 @dataclass(frozen=True)
 class Legend:
     """The glossary and the notes, spelled with one program's symbols in one format."""
@@ -156,7 +163,11 @@ class Legend:
             for p, block in program.parameters.items()
         ]
         variables = [
-            self._entry(self.symbols.name[v], f'{fmt.mono(v)}{self._over(list(block.dims))}', block.description)
+            self._entry(
+                self.symbols.name[v],
+                f'{fmt.mono(v)}{self._over(list(block.dims))}{self._missing(block.missing, "absent", _MASKED_OUT)}',
+                block.description,
+            )
             for v, block in program.variables.items()
         ]
         given = [
@@ -219,15 +230,15 @@ class Legend:
         product = self.format.joined([self.symbols.set[d] for d in dims], self._op('times'))
         return f' over {self.format.math(product)}'
 
-    def _missing(self, value: Missing | None) -> str:
-        """What a missing row means: the reading or the value ``missing:`` names, and nothing for ``refused``, the default."""
-        if value is None or value == 'refused':
+    def _missing(self, value: Missing | None, default: str = 'refused', where: str = _NO_ROW) -> str:
+        """What *where* means: the reading or the value ``missing:`` names, and nothing for the *default* reading."""
+        if value is None or value == default:
             return ''
         if isinstance(value, str | bool):
             shown = self.format.mono(str(value).lower())
         else:
             shown = self.format.math(number(value, self.format))
-        return f', {shown} where the data has no row'
+        return f', {shown} {where}'
 
     def _signature(self, name: str, lk: RelationDeclaration) -> str:
         """A relation in the legend: a function from its key sets to its value sets, or a relation inside the product."""
@@ -254,7 +265,7 @@ class Legend:
             maps = self.format.joined([self._signature(c, lk) for c, lk in carried.items()], '')
             clauses.append(f' with {self.format.math(maps)}')
             clauses.extend(
-                f', {self.format.mono(c)} is {self.format.mono("absent")} where the data has no row'
+                f', {self.format.mono(c)} is {self.format.mono("absent")} {_NO_ROW}'
                 for c, lk in carried.items()
                 if lk.missing == 'absent'
             )
