@@ -77,7 +77,12 @@ parameters:
     description: most nominal apparent power an extendable transformer may be built at
     dims: [scenario, transformer]
   Transformer_capital_cost:
-    description: cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal apparent power for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, transformer]
   Transformer_s_nom_set:
     description: a given nominal apparent power for an extendable transformer; one without a value has no row here
@@ -364,7 +369,7 @@ constraints:
 | $`\overline{\sigma}`$ | `Transformer_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — most flow either way, per unit of nominal apparent power |
 | $`\underline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_min` over $`\Xi \times \mathcal{M}`$ — least nominal apparent power an extendable transformer may be built at |
 | $`\overline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_max` over $`\Xi \times \mathcal{M}`$ — most nominal apparent power an extendable transformer may be built at |
-| $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
+| $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\sigma^{\mathrm{nom,set}}`$ | `Transformer_s_nom_set` over $`\Xi \times \mathcal{M}`$ — a given nominal apparent power for an extendable transformer; one without a value has no row here |
 | $`\sigma^{\mathrm{set}}`$ | `Transformer_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — a given flow schedule; a transformer without one has no row here |
 | $`\overline{\delta}^{\sigma}`$ | `Transformer_v_ang_max` over $`\Xi \times \mathcal{M}`$ — the most the voltage angle difference across a transformer, its phase shift included, may be either way, in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default. The deprecated `v_ang_min` is ignored, as a line's |

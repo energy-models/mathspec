@@ -56,7 +56,12 @@ parameters:
     description: most nominal capacity an extendable store may be built at
     dims: [scenario, store]
   Store_capital_cost:
-    description: cost of one unit of nominal capacity — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal capacity for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, store]
   Store_e_nom_set:
     description: a given nominal capacity for an extendable store; one without a value has no row here
