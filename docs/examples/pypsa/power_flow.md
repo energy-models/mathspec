@@ -24,7 +24,11 @@ dimensions:
     description: dispatch periods
     dtype: datetime
   cycle:
-    description: independent cycles of the passive network graph — the cycle basis, data prep
+    description: >-
+      independent cycles of the passive network graph — the cycle basis, data
+      prep. Each period has its own basis, of the branches that stand in it;
+      a label is a position in that period's basis, so one label names a
+      different cycle in another period
 
 constraints:
   Kirchhoff_Voltage_Law:
@@ -34,7 +38,10 @@ constraints:
       power flow physical rather than transport. A transformer's flow weighs its
       effective reactance, and its phase shift enters the cycle sum too: a
       constant where the shift is fixed, or the shift decision times its cycle
-      weight where the shift is a phase-shifting transformer's to choose
+      weight where the shift is a phase-shifting transformer's to choose. A
+      snapshot reads the cycles of its own period, of the branches that stand
+      in it (`constraints.py:1640-1652`); a cycle label that period's basis
+      does not reach has no row
     dims: [scenario, snapshot, cycle]
     expression: Cycle_angle_sum == 0
 ```
@@ -45,7 +52,7 @@ constraints:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep |
+| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep. Each period has its own basis, of the branches that stand in it; a label is a position in that period's basis, so one label names a different cycle in another period |
 
 #### Given
 

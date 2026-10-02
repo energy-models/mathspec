@@ -5,7 +5,7 @@
 
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["pypsa==1.3.0", "linopy==0.9.1", "pandas>=2.2", "xarray==2026.7.0", "highspy==1.15.1"]
+# dependencies = ["pypsa @ git+https://github.com/PyPSA/PyPSA@02bdcbbafe523d2825488af8f77a8637a07faa27", "linopy==0.9.1", "pandas>=2.2", "xarray==2026.7.0", "highspy==1.15.1"]
 # ///
 """Solve every rung's network through PyPSA and record what it saw.
 
@@ -19,7 +19,7 @@ its own names it as `MODEL`; one that needs `n.optimize` keywords names them
 as `OPTIMIZE`; one that names `BRANCH_OUTAGES` is solved by
 `n.optimize.optimize_security_constrained` over them.
 
-A rung that names `ISSUE` records a PyPSA bug: the network PyPSA 1.3.0 gets
+A rung that names `ISSUE` records a PyPSA bug: the network the pinned PyPSA gets
 wrong, until the fix ships. Its `oracle()` returns networks PyPSA solves
 correctly, each with the weight its objective takes in the intended one. The
 record's `objective` is that intended objective, and `diverges` holds the issue

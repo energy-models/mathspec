@@ -85,7 +85,7 @@ parameters:
       positive where it injects; a link is a process whose `bus0` rate is minus
       one and whose output rates are its efficiencies. Read at the snapshot the
       transfer arrives, so a delayed port transfers at its arrival snapshot's
-      rate (`constraints.py:1522`)
+      rate (`constraints.py:1528`)
     dims: [scenario, snapshot, process_output]
   Process_output_delay:
     description: >-
@@ -119,7 +119,12 @@ parameters:
     description: most nominal power an extendable process may be built at
     dims: [scenario, process]
   Process_capital_cost:
-    description: cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal power for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, process]
   Process_p_nom_set:
     description: a given nominal power for an extendable process; one without a value has no row here
@@ -150,7 +155,7 @@ parameters:
   Process_first_active:
     description: >-
       one in the first period a process stands in, zero elsewhere, data prep.
-      PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a process
+      PyPSA takes `active.cumsum() == 1`, which also counts a process
       that has retired in every later period (`global_constraints.py:276`,
       PyPSA/PyPSA#1938)
     dims: [period, process]
@@ -170,9 +175,9 @@ variables:
     dims: [scenario, snapshot, process]
     where: Process_active
   Process_n_mod:
-    description: "`Process-n_mod` — how many modules of an extendable modular build"
+    description: "`Process-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_p_nom_mod > 0
+    where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND count(Process_active, over=snapshot) > 0
     domain: integer
     bounds:
       lower: 0
@@ -272,7 +277,7 @@ constraints:
   Process_p_nom_modularity:
     description: "`Process-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_p_nom_mod > 0
+    where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND count(Process_active, over=snapshot) > 0
     expression: Process_p_nom_ext == Process_p_nom_mod * Process_n_mod
   Process_p_set:
     description: "`Process-p_set` — internal power pinned to the given schedule, wherever one is given"
@@ -287,5 +292,5 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
