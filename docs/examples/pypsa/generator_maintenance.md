@@ -170,17 +170,17 @@ constraints:
   Generator_maint_status_le_status:
     description: "`Generator-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable
+    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     expression: Generator_maintenance_status <= Generator_status
   Generator_maint_status_le_maint:
     description: "`Generator-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable
+    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     expression: Generator_maintenance_status <= Generator_maintenance
   Generator_maint_status_lb:
     description: "`Generator-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable
+    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     expression: Generator_maintenance_status >= Generator_status + Generator_maintenance - 1
   Generator_maint_modstatus_le_status:
     description: "`Generator-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
@@ -241,7 +241,7 @@ assumptions:
       the `maint-modstatus` rows bound the modules on in maintenance by
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
-      (`constraints.py:500-503`)
+      (`constraints.py:503-506`)
 ```
 
 #### Sets
@@ -339,19 +339,19 @@ assumptions:
 **`Generator_maint_status_le_status`**
 
 ```math
-\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g}
+\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
 ```
 
 **`Generator_maint_status_le_maint`**
 
 ```math
-\mu^{u}_{\xi,t,g} \le \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g}
+\mu^{u}_{\xi,t,g} \le \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
 ```
 
 **`Generator_maint_status_lb`**
 
 ```math
-\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} + \mu_{\xi,t,g} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g}
+\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} + \mu_{\xi,t,g} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
 ```
 
 **`Generator_maint_modstatus_le_status`**

@@ -69,16 +69,16 @@ parameters:
       share of the flow that arrives at an output port, PyPSA's `efficiency`,
       `efficiency2`, … read long — negative where that port consumes rather
       than delivers. Read at the snapshot the flow arrives, so a delayed port
-      delivers at its arrival snapshot's efficiency (`constraints.py:1522`)
+      delivers at its arrival snapshot's efficiency (`constraints.py:1528`)
     dims: [scenario, snapshot, link_output]
   Link_output_delay:
     description: >-
       snapshots a port's delivery lags its link's flow — PyPSA's `delay`,
       `delay2`, … read long, in `snapshot_weightings.generators` units, which
       the file states as whole snapshots; zero for a port that delivers at once.
-      Each scenario takes its own. PyPSA `1.3.0` groups the ports by delay over
+      Each scenario takes its own. PyPSA groups the ports by delay over
       all scenarios and shifts each group in every one, so a delay that differs
-      by scenario delivers the flow twice (`constraints.py:1269-1276`,
+      by scenario delivers the flow twice (`constraints.py:1275-1282`,
       PyPSA/PyPSA#1941)
     dims: [scenario, link_output]
     dtype: int
@@ -122,7 +122,7 @@ parameters:
   Link_first_active:
     description: >-
       one in the first period a link stands in, zero elsewhere, data prep.
-      PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a link
+      PyPSA takes `active.cumsum() == 1`, which also counts a link
       that has retired in every later period (`global_constraints.py:276`,
       PyPSA/PyPSA#1938)
     dims: [period, link]
@@ -136,7 +136,12 @@ parameters:
     description: most nominal power an extendable link may be built at
     dims: [scenario, link]
   Link_capital_cost:
-    description: cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal power for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, link]
   Link_p_nom_set:
     description: a given nominal power for an extendable link; one without a value has no row here
@@ -155,7 +160,9 @@ parameters:
       the objective weights of the periods it stands in where the row names
       no `investment_period` under `multi_investment_periods` — data prep; a
       link outside the set, or one that does not stand in the row's period,
-      has no row
+      has no row. The capital cost is PyPSA's `capital_cost` property, which is
+      `Link_capital_cost` without `fom_cost` (`components.py:1151-1169`,
+      `global_constraints.py:935`)
     dims: [scenario, global_constraint, link]
   Link_tech_capacity_weight:
     description: >-
@@ -173,9 +180,9 @@ variables:
     dims: [scenario, snapshot, link]
     where: Link_active
   Link_n_mod:
-    description: "`Link-n_mod` — how many modules of an extendable modular build"
+    description: "`Link-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
     dims: [link]
-    where: Link_p_nom_extendable AND Link_p_nom_mod > 0
+    where: Link_p_nom_extendable AND Link_p_nom_mod > 0 AND count(Link_active, over=snapshot) > 0
     domain: integer
     bounds:
       lower: 0
@@ -309,7 +316,7 @@ constraints:
   Link_p_nom_modularity:
     description: "`Link-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [link]
-    where: Link_p_nom_extendable AND Link_p_nom_mod > 0
+    where: Link_p_nom_extendable AND Link_p_nom_mod > 0 AND count(Link_active, over=snapshot) > 0
     expression: Link_p_nom_ext == Link_p_nom_mod * Link_n_mod
   Link_p_set:
     description: "`Link-p_set` — flow pinned to the given schedule, wherever one is given"
@@ -324,5 +331,5 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
