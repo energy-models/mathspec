@@ -19,3 +19,10 @@ constraints:
     description: "`Generator-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing"
     dims: [snapshot, generator]
     expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * Generator_status
+
+# The symbols of what this patch adds, as `examples/pypsa.yaml` spells them.
+symbols:
+  latex:
+    names:
+      Generator_p_min_pu: '\underline{\mathrm{p}}'
+      Generator_status: u

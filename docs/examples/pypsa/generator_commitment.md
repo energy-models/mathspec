@@ -269,6 +269,45 @@ constraints:
     dims: [scenario, snapshot, generator]
     where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active
     expression: Generator_shut_down <= Generator_n_mod
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      generator: { index: g, set: '\mathcal{G}' }
+      scenario: { index: '\xi', set: '\Xi' }
+      period: { index: y, set: '\mathcal{Y}' }
+    names:
+      snapshot_weightings_objective: '\mathrm{w}'
+      Generator_p: p
+      Generator_p_nom: '\mathrm{p}^{\mathrm{nom}}'
+      Generator_p_nom_extendable: '\mathrm{ext}'
+      Generator_p_min_pu: '\underline{\mathrm{p}}'
+      Generator_p_max_pu: '\overline{\mathrm{p}}'
+      Generator_committable: '\mathrm{com}'
+      Generator_status: "u"
+      Generator_start_up: '\mathit{up}'
+      Generator_shut_down: '\mathit{dn}'
+      Generator_min_up_time: '\mathrm{UT}'
+      Generator_min_down_time: '\mathrm{DT}'
+      Generator_status_initial: '\mathrm{u}^{0}'
+      Generator_previous_status: '\overleftarrow{u}'
+      Generator_must_stay_up: '\mathrm{hold}'
+      Generator_must_stay_down: '\mathrm{rest}'
+      Generator_start_up_cost: '\mathrm{c}^{\mathrm{up}}'
+      Generator_shut_down_cost: '\mathrm{c}^{\mathrm{dn}}'
+      Generator_stand_by_cost: '\mathrm{c}^{\mathrm{on}}'
+      Generator_p_nom_mod: '\mathrm{p}^{\mathrm{mod}}'
+      Generator_n_mod: "N"
+      Generator_modules_installed: '\mathrm{N}^{\mathrm{fix}}'
+      Generator_big_m: '\mathrm{M}'
+      Generator_p_min_pu_nonneg: '\mathrm{nonneg}'
+      Generator_p_nom_ext: "P"
+      period_weight_objective: '\mathrm{w}^{y}'
+      Generator_active: '\mathrm{on}'
+      Generator_maintenance_pu: '\gamma'
+      Generator_maintenance_capacity: '\mu^{\mathrm{nom}}'
+      Generator_maintenance_status: '\mu^{u}'
 ```
 
 #### Sets

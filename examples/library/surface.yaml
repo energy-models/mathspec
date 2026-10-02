@@ -29,3 +29,14 @@ given:
 objective:
   sense: minimize
   expression: total_cost
+
+# The symbols `examples/pypsa.yaml` prints with, cut to what this file declares
+# or reads. Fragments that spell one name spell it the same, or do not merge.
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      bus: { index: n, set: '\mathcal{N}' }
+      port: { index: j, set: '\mathcal{J}' }
+    names:
+      Port_p: f

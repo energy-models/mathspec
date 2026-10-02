@@ -31,11 +31,13 @@ from mathspec._expression_parser import NAME, ComparisonOperator
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
     DimensionDtype,
+    Notation,
     ObjectiveSense,
     ParameterDtype,
     PiecewiseMethod,
     Program,
     SosType,
+    Symbols,
     VariableAbsence,
     VariableDomain,
 )
@@ -777,6 +779,47 @@ class SosBlock(_StrictBlock):
             raise ValueError(msg) from None
 
 
+class DimensionSymbols(_StrictBlock):
+    """How one dimension prints: the letter that indexes it and the symbol of its set, each optional."""
+
+    _label: ClassVar[str] = 'a dimension under symbols:'
+
+    index: str | None = None
+    set: str | None = None
+
+
+class NotationSymbols(_StrictBlock):
+    r"""How the spec prints in one notation, under ``symbols: {latex: …, typst: …}``.
+
+    Every entry is a spelling, printed verbatim, which changes nothing the
+    spec means::
+
+        symbols:
+          latex:
+            dimensions:
+              snapshot: {index: t, set: "\\mathcal{T}"}
+            names:
+              marginal_cost: "c^{\\mathrm{marg}}"
+          typst:
+            names:
+              marginal_cost: 'c^"marg"'
+    """
+
+    _label: ClassVar[str] = 'a notation under symbols:'
+
+    dimensions: dict[str, DimensionSymbols] = {}
+    names: dict[str, str] = {}
+
+    def table(self, notation: Notation) -> Symbols:
+        """These spellings as the [`Symbols`][mathspec.program.Symbols] a render in *notation* reads."""
+        return Symbols(
+            notation,
+            indices={d: s.index for d, s in self.dimensions.items() if s.index is not None},
+            sets={d: s.set for d, s in self.dimensions.items() if s.set is not None},
+            names=self.names,
+        )
+
+
 #: The language surfaces this reader understands. A **language** version, not a
 #: package one: it moves when the accepted YAML surface moves, which most
 #: releases do not, so deriving it from the package version would be automatic
@@ -811,8 +854,8 @@ class Spec(_StrictBlock):
     [`LanguageError`][] on a spec the language refuses.
     Holding one is the proof, so nothing downstream checks it again.
 
-    The API is the twelve declaration sections plus ``version`` and
-    ``description``, three ways back out — [`to_dict`][] for the spec as
+    The API is the twelve declaration sections plus ``version``,
+    ``description`` and ``symbols``, three ways back out — [`to_dict`][] for the spec as
     data, [`to_yaml`][] for the file a reviewer reads, [`expand`][] for the
     spec with its formulations written out as plain rows — and [`program`][], the
     spec typed, which every reader after load walks. Everything else on this
@@ -842,6 +885,9 @@ class Spec(_StrictBlock):
     piecewise: dict[str, PiecewiseBlock] = {}
     sos: dict[str, SosBlock] = {}
     assumptions: dict[str, AssumptionBlock] = {}
+    #: How the spec prints, one table per notation. It changes nothing the
+    #: spec means, and a render reads only the table for its own notation.
+    symbols: dict[Notation, NotationSymbols] = {}
 
     @cached_property
     def program(self) -> Program:

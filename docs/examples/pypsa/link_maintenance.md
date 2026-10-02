@@ -229,6 +229,32 @@ assumptions:
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
       (`constraints.py:500-503`)
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      link: { index: l, set: '\mathcal{L}' }
+      scenario: { index: '\xi', set: '\Xi' }
+    names:
+      Link_p_nom_extendable: '\mathrm{ext}^{f}'
+      Link_committable: '\mathrm{com}^{f}'
+      Link_status: "u^{f}"
+      Link_p_nom_mod: '\mathrm{f}^{\mathrm{mod}}'
+      snapshot_weightings_generators: '\mathrm{w}^{\mathrm{gen}}'
+      Link_p_nom_ext: "F"
+      Link_p_nom_min: '\underline{\mathrm{f}}^{\mathrm{nom}}'
+      Link_p_nom_max: '\overline{\mathrm{f}}^{\mathrm{nom}}'
+      Link_active: '\mathrm{on}^{f}'
+      Link_maintainable: '\mathrm{mnt}^{f}'
+      Link_maintenance_pu: '\gamma^{f}'
+      Link_maintenance_events: '\mathrm{n}^{f,\mathrm{mnt}}'
+      Link_maintenance_duration: '\tau^{f,\mathrm{mnt}}'
+      Link_maintenance_start_blocked: '\mathrm{blk}^{f}'
+      Link_maintenance: '\mu^{f}'
+      Link_maintenance_start: '\mu^{f,\mathrm{up}}'
+      Link_maintenance_capacity: '\mu^{f,\mathrm{nom}}'
+      Link_maintenance_status: '\mu^{f,u}'
 ```
 
 #### Sets

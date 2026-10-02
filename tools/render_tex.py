@@ -17,15 +17,15 @@ import sys
 from pathlib import Path
 
 from mathspec.__main__ import main as render
-from tools._page import ROOT, sidecar_for
+from tools._page import ROOT
 
 #: Every spec the repository has; `examples/*.yaml` is not recursive, and a glob that narrows is a gate that stops testing.
 CORPUS = ('examples/**/*.yaml', 'tests/typesetting/golden/*.yaml')
 
-#: Inside that glob and not specs: the symbol tables `sidecar_for` looks up,
-#: and the patches a library's variants are written as, which `override` lays
-#: over a spec rather than anything loading them on their own.
-NOT_MODELS = ('examples/symbols', 'examples/library/variants')
+#: Inside that glob and not specs: the patches a library's variants are
+#: written as, which `override` lays over a spec rather than anything loading
+#: them on their own.
+NOT_MODELS = ('examples/library/variants',)
 
 
 def models() -> list[Path]:
@@ -60,10 +60,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     for model in found:
-        args = ['latex', str(model), '--standalone', '-o', str(out / document_name(model))]
-        if symbols := sidecar_for(model):
-            args += ['--symbols', str(symbols)]
-        render(args)
+        render(['latex', str(model), '--standalone', '-o', str(out / document_name(model))])
 
     print(f'rendered {len(found)} spec(s) to {out}')
     return 0

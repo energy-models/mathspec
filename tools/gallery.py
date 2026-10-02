@@ -17,14 +17,14 @@ import json
 import re
 import textwrap
 from functools import partial
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import yaml
 
 from mathspec import merge, override, to_spec, typeset_declaration
 from mathspec.program import Add, Constant, Named
 from mathspec.typesetting import to_markdown
-from tools._page import ROOT, sidecar_for, splice, tab, without_header
+from tools._page import ROOT, splice, tab, without_header
 from tools._page import main as page_main
 from tools.notation import equations
 from tools.spec_math import OPERATORS, PROBES, _section, rendered_probe
@@ -38,12 +38,6 @@ if TYPE_CHECKING:
 PAGES = ROOT / 'docs' / 'examples'
 LIBRARY = ROOT / 'examples' / 'library'
 PYPSA = ROOT / 'examples' / 'pypsa'
-#: How `examples/library/` prints: one table for every fragment, the spec
-#: they compose and each variant laid over it. `symbols_for` cuts it to what
-#: one spec declares, because a table naming anything else is refused. The
-#: PyPSA split prints in the one file's table, cut the same way.
-LIBRARY_SYMBOLS = ROOT / 'examples' / 'symbols' / 'library.yaml'
-PYPSA_SYMBOLS = ROOT / 'examples' / 'symbols' / 'pypsa.yaml'
 BEGIN, END = '<!-- gallery:begin -->', '<!-- gallery:end -->'
 
 #: Page -> the spec it shows. One spec per page, because a gallery of
@@ -89,34 +83,6 @@ RECORDED = json.loads((REFERENCES / 'references.json').read_text())
 def model_block(path: Path) -> str:
     """One spec, then the whole document the typesetter prints from it."""
     return f'```yaml\n{without_header(path)}\n```\n\n{to_markdown(path, numbered=False).strip()}'
-
-
-def symbols_for(model: Spec, table_path: Path = LIBRARY_SYMBOLS) -> dict[str, Any]:
-    """The symbol table at *table_path*, cut to the dimensions and names *model* declares or reads."""
-    table = yaml.safe_load(table_path.read_text())
-    given = model.given
-    named = {
-        *model.parameters,
-        *model.variables,
-        *model.expressions,
-        *model.constraints,
-        *given.parameters,
-        *given.variables,
-        *given.expressions,
-        *given.constraints,
-    }
-    return {
-        'notation': table['notation'],
-        'dimensions': {name: symbol for name, symbol in table['dimensions'].items() if name in model.dimensions},
-        'names': {name: symbol for name, symbol in table['names'].items() if name in named},
-    }
-
-
-def fragment_block(path: Path, table_path: Path) -> str:
-    """One fragment, then its document in the notation the whole composition prints in."""
-    model = to_spec(path)
-    printed = to_markdown(model, symbols=symbols_for(model, table_path), numbered=False)
-    return f'```yaml\n{without_header(path)}\n```\n\n{printed.strip()}'
 
 
 def split_index_block() -> str:
@@ -184,14 +150,14 @@ def composed_block(fragments: list[Path], patches: dict[str, Path]) -> str:
     document of the spec it is laid over.
     """
     model = merge(fragments)
-    tabs = [tab('As composed', to_markdown(model, symbols=symbols_for(model), numbered=False).strip())]
+    tabs = [tab('As composed', to_markdown(model, numbered=False).strip())]
     for name, path in patches.items():
         patched = override(model, [path])
         tabs.append(
             tab(
                 f'With {name}',
                 f'```yaml title="variants/{path.name}"\n{without_header(path)}\n```\n\n'
-                f'{to_markdown(patched, symbols=symbols_for(patched), numbered=False).strip()}',
+                f'{to_markdown(patched, numbered=False).strip()}',
             )
         )
     dumped = yaml.safe_dump(
@@ -253,7 +219,7 @@ def declared_block(path: Path) -> str:
     """The legend, the objective, then every constraint and every named expression as YAML beside its equation."""
     text = without_header(path)
     model = to_spec(path)
-    page = to_markdown(model, symbols=sidecar_for(path), numbered=False)
+    page = to_markdown(model, numbered=False)
     legend = page[: page.index('#### Objective')].strip()
     objective = _section(page, 'Objective').strip().removeprefix('#### Objective').strip()
     equation = equations(_section(page, 'Subject to'))
@@ -264,7 +230,7 @@ def declared_block(path: Path) -> str:
     for name, block in model.constraints.items():
         printed = equation[name]
         if _reads_a_sum(model, name):
-            line = typeset_declaration(model, name, 'markdown', symbols=sidecar_for(path), inline_expressions=True)
+            line = typeset_declaration(model, name, 'markdown', inline_expressions=True)
             printed = f'```math\n{line}\n```'
         parts.append(
             f'### `{_stands_for(name, block.description)}`\n\n'
@@ -379,10 +345,6 @@ def block(page: str) -> str:
         return composed_block(*COMPOSED[page])
     if page == SPLIT_INDEX:
         return split_index_block()
-    if MODELS[page].parent == LIBRARY:
-        return fragment_block(MODELS[page], LIBRARY_SYMBOLS)
-    if MODELS[page].parent == PYPSA:
-        return fragment_block(MODELS[page], PYPSA_SYMBOLS)
     return model_block(MODELS[page])
 
 

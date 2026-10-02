@@ -130,3 +130,13 @@ assumptions:
       (`global_constraints.py:66-68`). The spec cannot tell a network with
       one scenario from one with none, so it refuses only where there is
       more than one scenario
+
+symbols:
+  latex:
+    dimensions:
+      scenario: { index: '\xi', set: '\Xi' }
+    names:
+      GlobalConstraint_type: '\mathrm{type}'
+      GlobalConstraint_sense: '\mathrm{sense}'
+      GlobalConstraint_constant: '\mathrm{K}'
+      scenario_weight: '\pi'

@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 # File shape
 
 A spec file is a YAML mapping with **twelve declaration keys**, plus
-`version` and `description`. Any subset of the twelve is accepted.
+`version`, `description` and `symbols`. Any subset of the twelve is accepted.
 
 | Key           |                                                                                                   |
 | ------------- | ------------------------------------------------------------------------------------------------- |
@@ -34,6 +34,24 @@ Free text that says what the spec is. It is optional, and a
 ```yaml
 description: Least-cost dispatch of a generator fleet against an hourly load.
 ```
+
+## `symbols`
+
+How the names print, one table per notation. It is optional, and it changes
+nothing the spec means. A [typeset document](../typeset.md#symbol-tables)
+reads the table for its own notation.
+
+```yaml
+symbols:
+  latex:
+    names:
+      load: "\\ell"
+  typst:
+    names:
+      load: ell
+```
+
+An entry that names nothing in the spec is a load error.
 
 ## `version`
 

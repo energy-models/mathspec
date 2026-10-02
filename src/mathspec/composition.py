@@ -51,6 +51,10 @@ What that means for each section:
   Two fragments that both read a name have to read it over one frame, as a
   set. What no fragment introduces stays under ``given:`` until a host model
   provides it.
+* **Symbols join a spelling at a time.** A fragment spells the names it
+  declares, and may spell a name it reads under ``given:``, so it prints alone
+  as it prints composed. Two fragments that spell one name, index or set in
+  one notation have to spell it the same, as for a dimension.
 
 A patch says only what it changes, because declarations are laid over a field
 at a time::
@@ -83,6 +87,9 @@ What a patch may say, and what is refused:
   set to ``null`` is refused, because it removes nothing.
 * **``given:`` is laid over one kind at a time**, by the same rules as any
   owned section.
+* **Symbols are laid over a spelling at a time.** A patch's spelling wins,
+  ``null`` makes a name print derived, and a declaration the patch removes
+  takes its symbols with it.
 """
 
 from __future__ import annotations
@@ -101,16 +108,19 @@ from mathspec.spec import GivenBlock, Spec
 from mathspec.validation import to_spec
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Iterator
 
     from mathspec.program import Program
 
 SHARED_SECTIONS = ('dimensions', 'relations')
 
+#: How the spec prints, which no fragment owns: it states nothing the math means.
+SYMBOLS = 'symbols'
+
 OWNED_SECTIONS = tuple(
     name
     for name, field in Spec.model_fields.items()
-    if get_origin(field.annotation) is dict and name not in SHARED_SECTIONS
+    if get_origin(field.annotation) is dict and name not in (*SHARED_SECTIONS, SYMBOLS)
 )
 
 GIVEN_KINDS = {
@@ -156,7 +166,8 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
             but the fragments that add a term to it, or by one fragment alone;
             the readers of such a name write its dims in different orders; two
             fragments are written against different language versions; two
-            fragments set the objective; or the composed spec does not load.
+            fragments set the objective; two fragments spell one symbol
+            differently; or the composed spec does not load.
         FileNotFoundError: A ``str`` with no newline that names no file.
         TypeError: *fragments* is one path rather than a list.
     """
@@ -183,6 +194,8 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
         merged['given'] = given
     if (objective := _one_objective(read)) is not None:
         merged['objective'] = objective
+    if spelled := _spelled(read):
+        merged[SYMBOLS] = spelled
     return to_spec(merged)
 
 
@@ -609,6 +622,49 @@ def _same_kind(read: Mapping[str, dict[str, object]], merged: Mapping[str, objec
             )
 
 
+def _spelled(read: Mapping[str, dict[str, object]]) -> dict[str, object]:
+    """Every fragment's ``symbols:`` as one block, a symbol two fragments spell differently being the refusal.
+
+    A reader may spell a name its sibling introduces, so that it prints alone
+    as it prints composed. Neither spelling is the one being restated, so
+    neither wins: two that differ are a difference nothing settles.
+    """
+    spelled: dict[tuple[str, ...], tuple[str, object]] = {}
+    for name, sections in read.items():
+        for path, symbol in _spellings(_mapping(sections.get(SYMBOLS))):
+            author, standing = spelled.setdefault(path, (name, symbol))
+            if standing != symbol:
+                raise LanguageError(
+                    f"fragments '{author}' and '{name}' spell {_spelling(path)} differently: {standing!r} "
+                    f'against {symbol!r}. One spec prints one name one way: make the two identical, or '
+                    f'spell it in one fragment only.'
+                )
+    block: dict[str, object] = {}
+    for path, (_, symbol) in spelled.items():
+        level = block
+        for key in path[:-1]:
+            level = cast('dict[str, object]', level.setdefault(key, {}))
+        level[path[-1]] = symbol
+    return block
+
+
+def _spellings(block: object, path: tuple[str, ...] = ()) -> Iterator[tuple[tuple[str, ...], object]]:
+    """Each symbol a ``symbols:`` block spells, under the path of keys that leads to it."""
+    if not isinstance(block, dict):
+        yield path, block
+        return
+    for key, value in block.items():
+        if value is not None:
+            yield from _spellings(value, (*path, key))
+
+
+def _spelling(path: tuple[str, ...]) -> str:
+    """What one symbol spells, as a refusal names it: ``the latex symbol of 'cost'``."""
+    if path[1] == 'dimensions':
+        return f'the {path[0]} {path[3]} of the dimension {path[2]!r}'
+    return f'the {path[0]} symbol of {path[2]!r}'
+
+
 def _one_objective(read: Mapping[str, dict[str, object]]) -> object | None:
     """The objective the one fragment that sets it wrote, or ``None`` where none sets one.
 
@@ -747,10 +803,32 @@ def _lay_over(base: dict[str, object], patch: dict[str, object], name: str) -> d
             laid[key] = _owned(_mapping(laid.get(key)), block, _singular(key), _entry_class(Spec, key), name)
         elif key == 'objective':
             laid = _objective(laid, value, name)
+        elif key == SYMBOLS:
+            laid[key] = _field_by_field(_mapping(laid.get(key)), _section(value, key, name))
         elif value is None:
             laid.pop(key, None)
         else:
             laid[key] = value
+    return _unspelled(laid, patch)
+
+
+def _unspelled(laid: dict[str, object], patch: Mapping[str, object]) -> dict[str, object]:
+    """*laid* without the symbols of what *patch* removed: a symbol of nothing is refused at load.
+
+    A constraint may share a variable's name, so a name still declared under
+    another section keeps its symbol.
+    """
+    removed = {entry for key in OWNED_SECTIONS for entry, over in _mapping(patch.get(key)).items() if over is None}
+    gone = removed - {entry for key in OWNED_SECTIONS for entry in _mapping(laid.get(key))}
+    if not gone or SYMBOLS not in laid:
+        return laid
+    laid[SYMBOLS] = {
+        notation: {
+            **_mapping(table),
+            'names': {key: symbol for key, symbol in _mapping(_mapping(table).get('names')).items() if key not in gone},
+        }
+        for notation, table in _mapping(laid[SYMBOLS]).items()
+    }
     return laid
 
 

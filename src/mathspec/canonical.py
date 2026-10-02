@@ -223,7 +223,9 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
     """The spec as plain data, in the form two files that state the same spec share.
 
     Declarations are sorted by name, the ones under each kind of ``given:``
-    too, and every expression is printed from its parsed tree, so what is left of a difference is a difference in the spec.
+    too, and so are the entries of each ``symbols:`` table. Every expression
+    is printed from its parsed tree, so what is left of a difference is a
+    difference in the spec.
     A ``where`` string, the order of a ``cases:`` block's regions, the order of
     a declaration's ``dims`` and the order of a piecewise block's links are all
     left as written.
@@ -241,6 +243,11 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
     for section, value in data.items():
         if section == 'given' and isinstance(value, dict):
             built[section] = {kind: _sorted_blocks(entries) for kind, entries in sorted(value.items())}
+        elif section == 'symbols' and isinstance(value, dict):
+            built[section] = {
+                notation: {part: dict(sorted(entries.items())) for part, entries in table.items()}
+                for notation, table in sorted(value.items())
+            }
         elif isinstance(value, dict) and section != 'objective':
             built[section] = _sorted_blocks(value, bare_is_expression=section == 'expressions')
         else:

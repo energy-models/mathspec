@@ -64,6 +64,20 @@ expressions:
   Generator_cost:
     expression: sum(Generator_p * Generator_marginal_cost)
     adds_to: total_cost
+
+# The symbols `examples/pypsa.yaml` prints with, cut to what this file declares
+# or reads. Fragments that spell one name spell it the same, or do not merge.
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      port: { index: j, set: '\mathcal{J}' }
+      generator: { index: g, set: '\mathcal{G}' }
+    names:
+      Port_p: f
+      Generator_p: p
+      Generator_p_nom: '\mathrm{p}^{\mathrm{nom}}'
+      Generator_marginal_cost: '\mathrm{c}'
 ```
 
 PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to what a dispatch spec needs: a fixed build, no availability profile, no ramp limits.

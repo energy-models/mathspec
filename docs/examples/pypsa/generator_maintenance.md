@@ -229,6 +229,32 @@ assumptions:
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
       (`constraints.py:500-503`)
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      generator: { index: g, set: '\mathcal{G}' }
+      scenario: { index: '\xi', set: '\Xi' }
+    names:
+      Generator_p_nom_extendable: '\mathrm{ext}'
+      Generator_committable: '\mathrm{com}'
+      Generator_status: "u"
+      Generator_p_nom_mod: '\mathrm{p}^{\mathrm{mod}}'
+      snapshot_weightings_generators: '\mathrm{w}^{\mathrm{gen}}'
+      Generator_p_nom_ext: "P"
+      Generator_p_nom_min: '\underline{\mathrm{p}}^{\mathrm{nom}}'
+      Generator_p_nom_max: '\overline{\mathrm{p}}^{\mathrm{nom}}'
+      Generator_active: '\mathrm{on}'
+      Generator_maintainable: '\mathrm{mnt}'
+      Generator_maintenance_pu: '\gamma'
+      Generator_maintenance_events: '\mathrm{n}^{\mathrm{mnt}}'
+      Generator_maintenance_duration: '\tau^{\mathrm{mnt}}'
+      Generator_maintenance_start_blocked: '\mathrm{blk}'
+      Generator_maintenance: '\mu'
+      Generator_maintenance_start: '\mu^{\mathrm{up}}'
+      Generator_maintenance_capacity: '\mu^{\mathrm{nom}}'
+      Generator_maintenance_status: '\mu^{u}'
 ```
 
 #### Sets

@@ -155,3 +155,26 @@ constraints:
     dims: [scenario, snapshot, transformer, outage]
     where: Transformer_s_nom_extendable AND Transformer_BODF
     expression: Transformer_s_monitored + Transformer_BODF * Outage_s <= Transformer_s_max_pu * Transformer_s_nom_ext
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      line: { index: k, set: '\mathcal{K}' }
+      transformer: { index: m, set: '\mathcal{M}' }
+      outage: { index: '\kappa', set: '\mathcal{K}^{\mathrm{out}}' }
+      scenario: { index: '\xi', set: '\Xi' }
+    names:
+      Line_s_nom_ext: "S"
+      Line_s_nom: '\mathrm{s}^{\mathrm{nom}}'
+      Line_s_nom_extendable: '\mathrm{ext}^{s}'
+      Line_s_max_pu: '\overline{\mathrm{s}}'
+      Transformer_s_nom_ext: '\Sigma'
+      Transformer_s_nom: '\sigma^{\mathrm{nom}}'
+      Transformer_s_nom_extendable: '\mathrm{ext}^{\sigma}'
+      Transformer_s_max_pu: '\overline{\sigma}'
+      Line_BODF: '\beta'
+      Transformer_BODF: '\beta^{\sigma}'
+      Line_s_monitored: '\check{s}'
+      Transformer_s_monitored: '\check{\sigma}'
+      Outage_s: '\hat{s}'

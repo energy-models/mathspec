@@ -46,7 +46,11 @@ def parser() -> argparse.ArgumentParser:
         verb = verbs.add_parser(name, help=f'render a spec as {name}')
         verb.add_argument('spec', help='path to a mathspec YAML file')
         verb.add_argument('-o', '--out', help='write here instead of stdout')
-        verb.add_argument('--symbols', help='sidecar YAML saying how names should print')
+        symbols = verb.add_mutually_exclusive_group()
+        symbols.add_argument('--symbols', help="YAML shaped like a symbols: block, printed in place of the spec's")
+        symbols.add_argument(
+            '--no-symbols', action='store_true', help="ignore the spec's symbols: block and derive every symbol"
+        )
         verb.add_argument('--standalone', action='store_true', help='emit a compilable document')
         verb.add_argument('--no-legend', action='store_true', help='omit the sets/parameters/variables table')
         verb.add_argument('--no-numbers', action='store_true', help='leave the equations unnumbered')
@@ -107,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
         text = typeset(
             spec,
             args.verb,
-            symbols=args.symbols,
+            symbols={} if args.no_symbols else args.symbols,
             standalone=args.standalone,
             legend=not args.no_legend,
             numbered=not args.no_numbers,

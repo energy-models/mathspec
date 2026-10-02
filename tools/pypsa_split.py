@@ -18,7 +18,9 @@ what another topic declares under `given:`; each term names the hub it adds to
 with `adds_to:`, and the fragment reads that hub under `given:`. One fragment
 reads each hub without adding to it, with its description, so the terms always
 have a reader, and a new component is one new fragment. The reader of
-`total_cost` also sets the objective.
+`total_cost` also sets the objective. Each fragment carries the file's symbols
+for the dimensions it states and the names it declares or reads, so it prints
+alone as it prints merged.
 
 `merge` then writes each hub as the file does, so `check` is one comparison:
 the merged fragments and the one file have one canonical form.
@@ -165,6 +167,14 @@ def _sliced(text: str) -> dict[Key, str]:
     return blocks
 
 
+def _symbol_lines(text: str) -> list[str]:
+    """The lines of the file's ``symbols:`` block under its key, its comments left out."""
+    lines = text.splitlines()
+    start = lines.index('symbols:') + 1
+    end = next((i for i in range(start, len(lines)) if lines[i] and not lines[i][0].isspace()), len(lines))
+    return [line for line in lines[start:end] if line.strip() and not line.lstrip().startswith('#')]
+
+
 def _names_in(value: object, known: Mapping[str, str]) -> set[str]:
     """Every name in *known* that *value* reads, prose left out."""
     if isinstance(value, str):
@@ -188,6 +198,7 @@ class Model:
         text = path.read_text()
         self.data: dict[str, Any] = yaml.safe_load(text)
         self.blocks = _sliced(text)
+        self.symbols = _symbol_lines(text)
         self.kind = {n: s for s in SECTIONS if s not in ('constraints', 'assumptions') for n in self.data.get(s, {})}
         #: hub -> the topic of each term -> the term, in the order the topics sort in.
         self.shares: dict[str, dict[str, str]] = {}
@@ -314,7 +325,39 @@ def _fragment(
     objective = model.data['objective']
     if objective['expression'] in homes:
         parts.append(_dumped('objective', objective, indent='') + '\n')
+    if symbols := _symbols(model, included | given):
+        parts.append(symbols)
     return '\n'.join(parts)
+
+
+def _symbols(model: Model, keys: set[Key]) -> str:
+    """The file's ``symbols:`` block cut to the dimensions and names among *keys*, a part it leaves empty dropped.
+
+    Cut line by line rather than dumped, so a symbol keeps the quoting the file
+    gave it.
+    """
+    spelled = {
+        'dimensions': {n for s, n in keys if s == 'dimensions'},
+        'names': {n for s, n in keys if s not in FRAME},
+    }
+    kept: list[str] = []
+    part = ''
+    for line in model.symbols:
+        depth = (len(line) - len(line.lstrip())) // 2
+        key = line.strip().partition(':')[0]
+        if depth == 2:
+            part = key
+        if depth < 3 or key in spelled[part]:
+            kept.append(line)
+    for _ in ('parts', 'notations'):
+        kept = [line for i, line in enumerate(kept) if _holds(line, kept[i + 1 :])]
+    return 'symbols:\n' + '\n'.join(kept) + '\n' if kept else ''
+
+
+def _holds(line: str, after: list[str]) -> bool:
+    """Whether *line* is an entry, or a heading the next line nests under."""
+    depth = len(line) - len(line.lstrip())
+    return depth >= 6 or (bool(after) and len(after[0]) - len(after[0].lstrip()) > depth)
 
 
 #: The kinds a fragment reads under `given:`, and the fields of the source

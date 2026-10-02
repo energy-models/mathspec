@@ -235,3 +235,38 @@ assumptions:
       the attribute as read only for a committable process and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      process: { index: j, set: '\mathcal{J}' }
+      scenario: { index: '\xi', set: '\Xi' }
+      period: { index: y, set: '\mathcal{Y}' }
+    names:
+      Process_p: z
+      Process_p_nom_extendable: '\mathrm{ext}^{z}'
+      Process_ramp_limit_up: '\mathrm{ru}^{z}'
+      Process_ramp_limit_down: '\mathrm{rd}^{z}'
+      Process_p_nom_ext: "Z"
+      Process_p_nom_effective: '\widetilde{\mathrm{z}}^{\mathrm{nom}}'
+      Process_committable: '\mathrm{com}^{z}'
+      Process_ramp_limit_start_up: '\mathrm{ru}^{z,\mathrm{up}}'
+      Process_ramp_limit_shut_down: '\mathrm{rd}^{z,\mathrm{dn}}'
+      Process_status: "u^{z}"
+      Process_start_up: '\mathit{up}^{z}'
+      Process_shut_down: '\mathit{dn}^{z}'
+      Process_status_initial: '\mathrm{u}^{z,0}'
+      Process_p_init: '\mathrm{z}^{0}'
+      Process_previous_status: '\overleftarrow{u}^{z}'
+      Process_previous_p: '\overleftarrow{z}'
+      Process_ramp_up_allowance: '\Delta^{z,+}'
+      Process_ramp_down_allowance: '\Delta^{z,-}'
+      Process_ramp_up_rate: '\widetilde{\mathrm{ru}}^{z}'
+      Process_ramp_down_rate: '\widetilde{\mathrm{rd}}^{z}'
+      Process_start_up_rate: '\widetilde{\mathrm{ru}}^{z,\mathrm{up}}'
+      Process_shut_down_rate: '\widetilde{\mathrm{rd}}^{z,\mathrm{dn}}'
+      Process_p_nom_committed: '\widehat{\mathrm{z}}^{\mathrm{nom}}'
+      Process_p_nom_mod: '\mathrm{z}^{\mathrm{mod}}'
+      Process_big_m: '\mathrm{M}^{z}'
+      Process_active: '\mathrm{on}^{z}'

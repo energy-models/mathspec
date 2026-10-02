@@ -207,6 +207,7 @@ which each component pins at its own port.
 | a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                              |
 | an expression with `adds_to:`                     | the sum it names is the body one fragment defines, if any, followed by every term by its name, in the order of the list. [Terms](../reference/language/declarations.md#terms) gives what is refused |
 | `objective`                                       | one fragment sets it, and a second is refused. Several fragments contribute to it as terms of a sum the objective reads                                                                             |
+| `symbols`                                         | the tables are joined. A fragment may spell a name it reads under `given:`, and two fragments that spell one symbol spell it the same                                                               |
 | `version`                                         | every fragment is written against the same one                                                                                                                                                      |
 | `description` at the top of a fragment            | it is about the fragment and is not carried. Pass the composed spec's as `description=`                                                                                                             |
 
@@ -348,17 +349,18 @@ Given variable 'Generator_p' collides with the variable of the same name. Names 
 
 ## What a patch may say
 
-| The entry                            | What happens                                                                  |
-| ------------------------------------ | ----------------------------------------------------------------------------- |
-| some fields of a declaration         | those fields change, and the rest of the declaration stays                    |
-| a whole declaration under a new name | it is added                                                                   |
-| `null` under a declaration's name    | it is removed                                                                 |
-| `null` on a field of a declaration   | the field takes its default, and the rest of the declaration stays            |
-| `null` under a section's name        | it is refused                                                                 |
-| a dimension or a relation            | it is added, or restated word for word as the base declares it                |
-| an entry under one kind of `given:`  | it is edited, added or removed like any declaration, and the other kinds stay |
-| `version`, `description`             | the patch's value replaces the base's                                         |
-| a field an earlier patch writes      | the later patch's value replaces it                                           |
+| The entry                            | What happens                                                                                                             |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| some fields of a declaration         | those fields change, and the rest of the declaration stays                                                               |
+| a whole declaration under a new name | it is added                                                                                                              |
+| `null` under a declaration's name    | it is removed                                                                                                            |
+| `null` on a field of a declaration   | the field takes its default, and the rest of the declaration stays                                                       |
+| `null` under a section's name        | it is refused                                                                                                            |
+| a dimension or a relation            | it is added, or restated word for word as the base declares it                                                           |
+| an entry under one kind of `given:`  | it is edited, added or removed like any declaration, and the other kinds stay                                            |
+| an entry under `symbols:`            | the patch's spelling replaces the base's, and `null` derives the symbol. A removed declaration takes its symbols with it |
+| `version`, `description`             | the patch's value replaces the base's                                                                                    |
+| a field an earlier patch writes      | the later patch's value replaces it                                                                                      |
 
 ## A partial entry on a missing name
 

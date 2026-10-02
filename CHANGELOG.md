@@ -10,6 +10,10 @@ request renames that heading to the version and the day, such as
 `## 0.1.0 (2026-10-01)`, and edits the section into the release notes. Merging
 it releases that version ([RELEASING.md](https://github.com/energy-models/mathspec/blob/main/RELEASING.md)).
 
+## Upcoming version
+
+- feat(language): a spec file declares how its names print, one symbol table per notation, and composed files join their tables ([#716](https://github.com/energy-models/mathspec/pull/716))
+
 ## 0.2.1 (2026-10-01)
 
 A spec can now be written as several files. [`merge`](https://mathspec.readthedocs.io/en/latest/howto/compose/)

@@ -19,7 +19,7 @@ from mathspec.operators import BUILTIN_NAMES
 from mathspec.spec import Spec
 from mathspec.typesetting import (
     FORMATS,
-    SymbolTable,
+    Symbols,
     to_latex,
     to_markdown,
     to_typst,
@@ -38,7 +38,7 @@ __all__ = [
     'MathSpecError',
     'SchemaError',
     'Spec',
-    'SymbolTable',
+    'Symbols',
     'advice',
     'did_you_mean',
     'merge',

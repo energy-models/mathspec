@@ -42,6 +42,13 @@ constraints:
       carries load, and this file does not yet.
     dims: [scenario, snapshot, bus]
     expression: Bus_injection == 0
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      bus: { index: n, set: '\mathcal{N}' }
+      scenario: { index: '\xi', set: '\Xi' }
 ```
 
 #### Sets

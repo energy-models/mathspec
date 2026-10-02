@@ -254,3 +254,34 @@ constraints:
     dims: [scenario, snapshot, transformer, segment]
     where: transmission_losses AND Transformer_active
     expression: Transformer_loss - Transformer_loss_slope * Transformer_s >= Transformer_loss_offset
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      bus: { index: n, set: '\mathcal{N}' }
+      transformer: { index: m, set: '\mathcal{M}' }
+      cycle: { index: c, set: '\mathcal{C}' }
+      scenario: { index: '\xi', set: '\Xi' }
+    names:
+      transmission_losses: '\mathrm{lossy}'
+      Transformer_s: '\sigma'
+      Transformer_s_nom_ext: '\Sigma'
+      Transformer_s_nom: '\sigma^{\mathrm{nom}}'
+      Transformer_s_nom_extendable: '\mathrm{ext}^{\sigma}'
+      Transformer_s_max_pu: '\overline{\sigma}'
+      Transformer_s_nom_min: '\underline{\sigma}^{\mathrm{nom}}'
+      Transformer_s_nom_max: '\overline{\sigma}^{\mathrm{nom}}'
+      Transformer_capital_cost: '\mathrm{c}^{\mathrm{cap},\sigma}'
+      Transformer_s_nom_set: '\sigma^{\mathrm{nom,set}}'
+      Transformer_s_set: '\sigma^{\mathrm{set}}'
+      Transformer_cycle_weight: '\mathrm{x}^{\sigma}'
+      Transformer_phase_shift_weight: '\vartheta'
+      Transformer_loss: '\ell^{\sigma}'
+      Transformer_loss_max: '\overline{\ell}^{\sigma}'
+      Transformer_loss_slope: '\mathrm{a}^{\sigma}'
+      Transformer_loss_offset: '\mathrm{b}^{\sigma}'
+      Transformer_s_monitored: '\check{\sigma}'
+      scenario_weight: '\pi'
+      Transformer_active: '\mathrm{on}^{\sigma}'
+      Transformer_capital_weight: '\mathrm{W}^{\sigma}'

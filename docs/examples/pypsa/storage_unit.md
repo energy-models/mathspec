@@ -472,6 +472,66 @@ assumptions:
       refuses quadratic costs under any risk preference
       (`optimize.py:467-474`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      bus: { index: n, set: '\mathcal{N}' }
+      storage_unit: { index: s, set: '\mathcal{S}' }
+      scenario: { index: '\xi', set: '\Xi' }
+      period: { index: y, set: '\mathcal{Y}' }
+      carrier: { index: i, set: '\mathcal{I}' }
+    names:
+      snapshot_weightings_objective: '\mathrm{w}'
+      snapshot_weightings_stores: '\mathrm{w}^{\mathrm{sto}}'
+      StorageUnit_p_nom_ext: "H"
+      StorageUnit_p_nom_min: '\underline{\mathrm{h}}^{\mathrm{nom}}'
+      StorageUnit_p_nom_max: '\overline{\mathrm{h}}^{\mathrm{nom}}'
+      StorageUnit_capital_cost: '\mathrm{c}^{\mathrm{cap},h}'
+      StorageUnit_p_nom_set: '\mathrm{h}^{\mathrm{nom,set}}'
+      GlobalConstraint_counts_snapshot: '\mathrm{in}'
+      StorageUnit_closing_weight: '\mathit{w}^{h}'
+      GlobalConstraint_snapshot_closes: '\mathit{last}'
+      StorageUnit_primary_energy_weight: '\mathrm{a}^{h}'
+      StorageUnit_operational_limit_weight: '\mathrm{b}^{h}'
+      StorageUnit_tech_capacity_weight: '\mathrm{m}^{h}'
+      StorageUnit_p_dispatch: "h^{+}"
+      StorageUnit_p_store: "h^{-}"
+      StorageUnit_state_of_charge: '\mathit{soc}'
+      StorageUnit_spill: '\mathit{spill}'
+      StorageUnit_p_nom: '\mathrm{h}^{\mathrm{nom}}'
+      StorageUnit_p_nom_extendable: '\mathrm{ext}^{h}'
+      StorageUnit_p_min_pu: '\underline{\mathrm{h}}'
+      StorageUnit_p_max_pu: '\overline{\mathrm{h}}'
+      StorageUnit_max_hours: '\mathrm{T}^{h}'
+      StorageUnit_efficiency_store: '\eta^{-}'
+      StorageUnit_efficiency_dispatch: '\eta^{+}'
+      StorageUnit_sign: '\mathrm{sgn}^{h}'
+      StorageUnit_retention: '\rho'
+      StorageUnit_inflow: '\mathrm{inflow}'
+      StorageUnit_state_of_charge_initial: '\mathrm{soc}^{0}'
+      StorageUnit_charge_carried_in: '\overleftarrow{\mathit{soc}}'
+      StorageUnit_cyclic_state_of_charge: '\mathrm{cyc}'
+      StorageUnit_cyclic_state_of_charge_per_period: '\mathrm{cyc}^{y}'
+      StorageUnit_state_of_charge_initial_per_period: '\mathrm{reset}'
+      StorageUnit_opens_late: '\mathrm{open}'
+      StorageUnit_inactive_snapshots: '\mathrm{idle}'
+      StorageUnit_marginal_cost: '\mathrm{c}^{h}'
+      StorageUnit_marginal_cost_quadratic: '\mathrm{c}^{h,(2)}'
+      StorageUnit_marginal_cost_storage: '\mathrm{c}^{\mathrm{soc}}'
+      StorageUnit_spill_cost: '\mathrm{c}^{\mathrm{spill}}'
+      StorageUnit_p_set: '\mathrm{h}^{\mathrm{set}}'
+      StorageUnit_p_dispatch_set: '\mathrm{h}^{+,\mathrm{set}}'
+      StorageUnit_p_store_set: '\mathrm{h}^{-,\mathrm{set}}'
+      StorageUnit_state_of_charge_set: '\mathrm{soc}^{\mathrm{set}}'
+      scenario_weight: '\pi'
+      CVaR_omega: '\omega'
+      period_weight_objective: '\mathrm{w}^{y}'
+      period_weight_years: '\mathrm{w}^{\mathrm{yr}}'
+      StorageUnit_active: '\mathrm{on}^{h}'
+      StorageUnit_capital_weight: '\mathrm{W}^{h}'
+      StorageUnit_first_active: '\mathrm{new}^{h}'
 ```
 
 #### Sets

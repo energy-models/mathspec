@@ -152,6 +152,26 @@ expressions:
 objective:
   sense: minimize
   expression: total_cost
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      scenario: { index: '\xi', set: '\Xi' }
+      period: { index: y, set: '\mathcal{Y}' }
+      carrier: { index: i, set: '\mathcal{I}' }
+    names:
+      snapshot_weightings_objective: '\mathrm{w}'
+      snapshot_weightings_stores: '\mathrm{w}^{\mathrm{sto}}'
+      snapshot_weightings_generators: '\mathrm{w}^{\mathrm{gen}}'
+      transmission_losses: '\mathrm{lossy}'
+      GlobalConstraint_counts_snapshot: '\mathrm{in}'
+      GlobalConstraint_energy_weight: '\mathit{w}^{\mathrm{gc}}'
+      GlobalConstraint_snapshot_closes: '\mathit{last}'
+      scenario_weight: '\pi'
+      CVaR_omega: '\omega'
+      period_weight_objective: '\mathrm{w}^{y}'
+      period_weight_years: '\mathrm{w}^{\mathrm{yr}}'
 ```
 
 #### Sets

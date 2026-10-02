@@ -52,3 +52,13 @@ constraints:
       Carrier_additions
       - shift(Carrier_additions, along=period, offset=1, edge=0) * Carrier_relative_growth
       <= Carrier_max_growth
+
+symbols:
+  latex:
+    dimensions:
+      period: { index: y, set: '\mathcal{Y}' }
+      carrier: { index: i, set: '\mathcal{I}' }
+    names:
+      Carrier_max_growth: '\overline{\Delta}'
+      Carrier_max_relative_growth: '\mathrm{r}'
+      Carrier_relative_growth: '\mathrm{r}^{+}'

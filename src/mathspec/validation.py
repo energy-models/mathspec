@@ -23,9 +23,10 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from mathspec._yaml import read_spec
-from mathspec.errors import SchemaError
+from mathspec.errors import SchemaError, did_you_mean
 from mathspec.operators import BUILTIN_NAMES
 from mathspec.piecewise import Emitted as EmittedCurve
+from mathspec.piecewise import leaves_ungated
 from mathspec.sos import Emitted as EmittedSet
 from mathspec.sos import coefficients
 from mathspec.spec import NUMERIC_DTYPES, Spec, side_columns
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
     from pathlib import Path
 
-    from mathspec.program import Program
+    from mathspec.program import Notation, Program, Symbols
 
 
 def to_spec(spec: str | Path | Mapping[str, object] | Spec) -> Spec:
@@ -76,6 +77,56 @@ def emitted_name_errors(schema: Spec, program: Program) -> list[str]:
         *((f"piecewise '{name}'", EmittedCurve.of(name, curve).by_kind) for name, curve in program.piecewise.items()),
     ]
     return [error for context, by_kind in by_block for error in _collisions(schema, context, by_kind)]
+
+
+def symbol_errors(tables: Mapping[Notation, Symbols], program: Program) -> list[str]:
+    """Every entry of *tables* that names nothing in *program*, each with the near miss.
+
+    A name a ``piecewise:`` or ``sos:`` block emits counts as declared, so one
+    table spells both readings of a spec: the blocks as the file states them,
+    and the rows [`expand`][mathspec.spec.Spec.expand] writes out.
+    """
+    dims = set(program.dimensions)
+    names = _declared(program) | _emitted(program)
+    return sorted(
+        f"symbols: {notation}: '{entry}' under {section}: is not declared by the spec. {did_you_mean(entry, known)}"
+        for notation, table in tables.items()
+        for section, entries, known in (
+            ('dimensions', {*table.indices, *table.sets}, dims),
+            ('names', set(table.names), names),
+        )
+        for entry in entries - known
+    )
+
+
+def _declared(program: Program) -> set[str]:
+    """Every name *program* declares or reads under ``given:`` that a symbol table may spell."""
+    return (
+        set(program.parameters)
+        | set(program.given.parameters)
+        | set(program.variables)
+        | set(program.given.variables)
+        | set(program.expressions)
+        | set(program.given.expressions)
+        | set(program.constraints)
+        | set(program.given.constraints)
+    )
+
+
+def _emitted(program: Program) -> set[str]:
+    """Every variable and constraint writing *program*'s curves and sets out would declare."""
+    curves = (
+        EmittedCurve.of(name, curve).written(
+            curve.method,
+            ungated=leaves_ungated(program.variables[curve.activity] if curve.activity is not None else None),
+        )
+        for name, curve in program.piecewise.items()
+    )
+    sets = (EmittedSet.of(name, block.sos_type).by_kind for name, block in program.sos.items())
+    return {
+        *(name for names in curves for name in names),
+        *(name for by_kind in sets for _, names in by_kind for name in names),
+    }
 
 
 def reference_errors(schema: Spec) -> list[str]:

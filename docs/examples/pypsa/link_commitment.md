@@ -269,6 +269,45 @@ constraints:
     dims: [scenario, snapshot, link]
     where: Link_committable AND Link_p_nom_extendable AND Link_p_nom_mod > 0 AND Link_active
     expression: Link_shut_down <= Link_n_mod
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      link: { index: l, set: '\mathcal{L}' }
+      scenario: { index: '\xi', set: '\Xi' }
+      period: { index: y, set: '\mathcal{Y}' }
+    names:
+      snapshot_weightings_objective: '\mathrm{w}'
+      Link_p: f
+      Link_p_nom: '\mathrm{f}^{\mathrm{nom}}'
+      Link_p_nom_extendable: '\mathrm{ext}^{f}'
+      Link_p_min_pu: '\underline{\mathrm{f}}'
+      Link_p_max_pu: '\overline{\mathrm{f}}'
+      Link_committable: '\mathrm{com}^{f}'
+      Link_status: "u^{f}"
+      Link_start_up: '\mathit{up}^{f}'
+      Link_shut_down: '\mathit{dn}^{f}'
+      Link_min_up_time: '\mathrm{UT}^{f}'
+      Link_min_down_time: '\mathrm{DT}^{f}'
+      Link_status_initial: '\mathrm{u}^{f,0}'
+      Link_previous_status: '\overleftarrow{u}^{f}'
+      Link_must_stay_up: '\mathrm{hold}^{f}'
+      Link_must_stay_down: '\mathrm{rest}^{f}'
+      Link_start_up_cost: '\mathrm{c}^{f,\mathrm{up}}'
+      Link_shut_down_cost: '\mathrm{c}^{f,\mathrm{dn}}'
+      Link_stand_by_cost: '\mathrm{c}^{f,\mathrm{on}}'
+      Link_p_nom_mod: '\mathrm{f}^{\mathrm{mod}}'
+      Link_n_mod: "N^{f}"
+      Link_modules_installed: '\mathrm{N}^{f,\mathrm{fix}}'
+      Link_big_m: '\mathrm{M}^{f}'
+      Link_p_min_pu_nonneg: '\mathrm{nonneg}^{f}'
+      Link_p_nom_ext: "F"
+      period_weight_objective: '\mathrm{w}^{y}'
+      Link_active: '\mathrm{on}^{f}'
+      Link_maintenance_pu: '\gamma^{f}'
+      Link_maintenance_capacity: '\mu^{f,\mathrm{nom}}'
+      Link_maintenance_status: '\mu^{f,u}'
 ```
 
 #### Sets

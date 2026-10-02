@@ -229,6 +229,32 @@ assumptions:
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
       (`constraints.py:500-503`)
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      process: { index: j, set: '\mathcal{J}' }
+      scenario: { index: '\xi', set: '\Xi' }
+    names:
+      snapshot_weightings_generators: '\mathrm{w}^{\mathrm{gen}}'
+      Process_p_nom_extendable: '\mathrm{ext}^{z}'
+      Process_p_nom_min: '\underline{\mathrm{z}}^{\mathrm{nom}}'
+      Process_p_nom_max: '\overline{\mathrm{z}}^{\mathrm{nom}}'
+      Process_p_nom_ext: "Z"
+      Process_committable: '\mathrm{com}^{z}'
+      Process_status: "u^{z}"
+      Process_p_nom_mod: '\mathrm{z}^{\mathrm{mod}}'
+      Process_active: '\mathrm{on}^{z}'
+      Process_maintainable: '\mathrm{mnt}^{z}'
+      Process_maintenance_pu: '\gamma^{z}'
+      Process_maintenance_events: '\mathrm{n}^{z,\mathrm{mnt}}'
+      Process_maintenance_duration: '\tau^{z,\mathrm{mnt}}'
+      Process_maintenance_start_blocked: '\mathrm{blk}^{z}'
+      Process_maintenance: '\mu^{z}'
+      Process_maintenance_start: '\mu^{z,\mathrm{up}}'
+      Process_maintenance_capacity: '\mu^{z,\mathrm{nom}}'
+      Process_maintenance_status: '\mu^{z,u}'
 ```
 
 #### Sets

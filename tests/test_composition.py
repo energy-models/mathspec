@@ -624,3 +624,68 @@ def test_a_patch_creates_a_given_entry_of_every_kind(kind, entry):
     laid = override(GIVEN_BASE, [{'given': {kind: {'r': entry}}}])
     assert getattr(laid.given, kind)['r'].dims == ['g']
     assert sorted(laid.given.variables) == ['p'], 'the kinds the patch did not name are still there'
+
+
+# ---------------------------------------------------------------------------
+# symbols
+# ---------------------------------------------------------------------------
+
+
+def _spelling(fragment: dict[str, object], **names: str) -> dict[str, object]:
+    """*fragment* with a LaTeX table spelling *names*, and `snapshot` indexed by `t`."""
+    return {**fragment, 'symbols': {'latex': {'dimensions': {'snapshot': {'index': 't'}}, 'names': names}}}
+
+
+def test_each_fragment_s_symbols_reach_the_composition():
+    """A reader may spell the name it reads, so `SUPPLY` prints `flow` alone as it prints composed."""
+    composed = merge([_spelling(SURFACE, flow='f'), _spelling(SUPPLY, flow='f', gen_p='p'), DEMAND])
+    assert composed.to_dict()['symbols'] == {
+        'latex': {'dimensions': {'snapshot': {'index': 't'}}, 'names': {'flow': 'f', 'gen_p': 'p'}}
+    }, 'one table: the spellings two fragments share once, and a fragment that spells nothing adds nothing'
+
+
+@pytest.mark.parametrize(
+    ('fragments', 'says'),
+    [
+        pytest.param(
+            [_spelling(SURFACE, flow='f'), _spelling(SUPPLY, flow='q')],
+            r"fragments '#1' and '#2' spell the latex symbol of 'flow' differently: 'f' against 'q'",
+            id='a-name-its-owner-and-its-reader-spell-apart',
+        ),
+        pytest.param(
+            [_spelling(SURFACE), {**DEMAND, 'symbols': {'latex': {'dimensions': {'snapshot': {'index': 's'}}}}}],
+            r"fragments '#1' and '#2' spell the latex index of the dimension 'snapshot' differently",
+            id='a-dimension-two-fragments-index-apart',
+        ),
+    ],
+)
+def test_a_symbol_two_fragments_spell_apart_is_refused(fragments, says):
+    """Neither spelling is the one being restated, so the owner's does not win
+    over its reader's: the fragment printed alone would disagree with the
+    composition."""
+    with pytest.raises(LanguageError, match=says):
+        merge(fragments)
+
+
+#: `DISPATCH_MODEL` with `CARBON` laid over it, and a table spelling a name of each.
+SPELLED_BASE = varied(
+    override(DISPATCH_MODEL, [CARBON]).to_dict(), symbols={'latex': {'names': {'p': r'\pi', 'co2': 'e'}}}
+)
+
+
+@pytest.mark.parametrize(
+    ('patch', 'names'),
+    [
+        pytest.param({'symbols': {'latex': {'names': {'p': 'x'}}}}, {'p': 'x', 'co2': 'e'}, id='a-spelling-wins'),
+        pytest.param({'symbols': {'latex': {'names': {'p': None}}}}, {'co2': 'e'}, id='null-derives-the-name'),
+        pytest.param(
+            {'constraints': {'co2_cap': None}, 'parameters': {'co2': None}},
+            {'p': r'\pi'},
+            id='a-removed-declaration-takes-its-symbol',
+        ),
+    ],
+)
+def test_symbols_are_laid_over_a_spelling_at_a_time(patch, names):
+    """A patch's table replaced the base's whole, and a patch that removed a
+    spelled declaration was refused for the symbol it left behind."""
+    assert override(SPELLED_BASE, [patch]).to_dict()['symbols']['latex']['names'] == names

@@ -235,3 +235,38 @@ assumptions:
       the attribute as read only for a committable unit and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      generator: { index: g, set: '\mathcal{G}' }
+      scenario: { index: '\xi', set: '\Xi' }
+      period: { index: y, set: '\mathcal{Y}' }
+    names:
+      Generator_p: p
+      Generator_p_nom_extendable: '\mathrm{ext}'
+      Generator_committable: '\mathrm{com}'
+      Generator_ramp_limit_up: '\mathrm{ru}'
+      Generator_ramp_limit_down: '\mathrm{rd}'
+      Generator_ramp_limit_start_up: '\mathrm{ru}^{\mathrm{up}}'
+      Generator_ramp_limit_shut_down: '\mathrm{rd}^{\mathrm{dn}}'
+      Generator_status: "u"
+      Generator_start_up: '\mathit{up}'
+      Generator_shut_down: '\mathit{dn}'
+      Generator_status_initial: '\mathrm{u}^{0}'
+      Generator_p_init: '\mathrm{p}^{0}'
+      Generator_previous_status: '\overleftarrow{u}'
+      Generator_previous_p: '\overleftarrow{p}'
+      Generator_ramp_up_allowance: '\Delta^{+}'
+      Generator_ramp_down_allowance: '\Delta^{-}'
+      Generator_ramp_up_rate: '\widetilde{\mathrm{ru}}'
+      Generator_ramp_down_rate: '\widetilde{\mathrm{rd}}'
+      Generator_start_up_rate: '\widetilde{\mathrm{ru}}^{\mathrm{up}}'
+      Generator_shut_down_rate: '\widetilde{\mathrm{rd}}^{\mathrm{dn}}'
+      Generator_p_nom_committed: '\widehat{\mathrm{p}}^{\mathrm{nom}}'
+      Generator_p_nom_mod: '\mathrm{p}^{\mathrm{mod}}'
+      Generator_big_m: '\mathrm{M}'
+      Generator_p_nom_ext: "P"
+      Generator_p_nom_effective: '\widetilde{\mathrm{p}}^{\mathrm{nom}}'
+      Generator_active: '\mathrm{on}'

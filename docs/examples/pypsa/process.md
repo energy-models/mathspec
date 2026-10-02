@@ -296,6 +296,53 @@ assumptions:
       refuses quadratic costs under any risk preference
       (`optimize.py:467-474`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      bus: { index: n, set: '\mathcal{N}' }
+      process: { index: j, set: '\mathcal{J}' }
+      process_output: { index: r, set: '\mathcal{R}' }
+      scenario: { index: '\xi', set: '\Xi' }
+      period: { index: y, set: '\mathcal{Y}' }
+      carrier: { index: i, set: '\mathcal{I}' }
+    names:
+      snapshot_weightings_objective: '\mathrm{w}'
+      Process_p: z
+      Process_p_nom: '\mathrm{z}^{\mathrm{nom}}'
+      Process_p_nom_extendable: '\mathrm{ext}^{z}'
+      Process_p_min_pu: '\underline{\mathrm{z}}'
+      Process_p_max_pu: '\overline{\mathrm{z}}'
+      Process_rate: '\alpha'
+      Process_output_delay: '\mathrm{d}^{z}'
+      Process_output_cyclic_delay: '\mathrm{cyc}^{z}'
+      Process_marginal_cost: '\mathrm{c}^{z}'
+      Process_marginal_cost_quadratic: '\mathrm{c}^{z,(2)}'
+      Process_p_set: '\mathrm{z}^{\mathrm{set}}'
+      Process_p_nom_min: '\underline{\mathrm{z}}^{\mathrm{nom}}'
+      Process_p_nom_max: '\overline{\mathrm{z}}^{\mathrm{nom}}'
+      Process_capital_cost: '\mathrm{c}^{\mathrm{cap},z}'
+      Process_p_nom_set: '\mathrm{z}^{\mathrm{nom,set}}'
+      Process_p_nom_ext: "Z"
+      Process_p_nom_effective: '\widetilde{\mathrm{z}}^{\mathrm{nom}}'
+      Process_output_arrival: '\overrightarrow{z}'
+      Process_committable: '\mathrm{com}^{z}'
+      Process_p_nom_committed: '\widehat{\mathrm{z}}^{\mathrm{nom}}'
+      Process_p_nom_mod: '\mathrm{z}^{\mathrm{mod}}'
+      Process_n_mod: "N^{z}"
+      Process_modules_installed: '\mathrm{N}^{z,\mathrm{fix}}'
+      Process_p_min_pu_nonneg: '\mathrm{nonneg}^{z}'
+      Process_tech_capacity_weight: '\mathrm{m}^{z}'
+      scenario_weight: '\pi'
+      CVaR_omega: '\omega'
+      period_weight_objective: '\mathrm{w}^{y}'
+      Process_active: '\mathrm{on}^{z}'
+      Process_capital_weight: '\mathrm{W}^{z}'
+      Process_first_active: '\mathrm{new}^{z}'
+      Process_maintenance_pu: '\gamma^{z}'
+      Process_maintenance: '\mu^{z}'
+      Process_maintenance_capacity: '\mu^{z,\mathrm{nom}}'
 ```
 
 #### Sets

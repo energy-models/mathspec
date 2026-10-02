@@ -261,3 +261,39 @@ constraints:
     dims: [scenario, snapshot, line, segment]
     where: transmission_losses AND Line_active
     expression: Line_loss - Line_loss_slope * Line_s >= Line_loss_offset
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      bus: { index: n, set: '\mathcal{N}' }
+      line: { index: k, set: '\mathcal{K}' }
+      cycle: { index: c, set: '\mathcal{C}' }
+      scenario: { index: '\xi', set: '\Xi' }
+      period: { index: y, set: '\mathcal{Y}' }
+      carrier: { index: i, set: '\mathcal{I}' }
+    names:
+      Line_s: "s"
+      Line_s_nom_ext: "S"
+      Line_s_nom: '\mathrm{s}^{\mathrm{nom}}'
+      Line_s_nom_extendable: '\mathrm{ext}^{s}'
+      Line_s_max_pu: '\overline{\mathrm{s}}'
+      Line_s_nom_min: '\underline{\mathrm{s}}^{\mathrm{nom}}'
+      Line_s_nom_max: '\overline{\mathrm{s}}^{\mathrm{nom}}'
+      Line_capital_cost: '\mathrm{c}^{\mathrm{cap},s}'
+      Line_s_nom_set: '\mathrm{s}^{\mathrm{nom,set}}'
+      Line_s_set: '\mathrm{s}^{\mathrm{set}}'
+      Line_cycle_weight: '\mathrm{x}'
+      transmission_losses: '\mathrm{lossy}'
+      Line_loss: '\ell'
+      Line_loss_max: '\overline{\ell}'
+      Line_loss_slope: '\mathrm{a}'
+      Line_loss_offset: '\mathrm{b}'
+      Line_s_monitored: '\check{s}'
+      Line_volume_weight: '\mathrm{len}'
+      Line_expansion_cost_weight: '\mathrm{cc}'
+      Line_tech_capacity_weight: '\mathrm{m}^{l}'
+      scenario_weight: '\pi'
+      Line_active: '\mathrm{on}^{s}'
+      Line_capital_weight: '\mathrm{W}^{s}'
+      Line_first_active: '\mathrm{new}^{s}'

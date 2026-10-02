@@ -61,6 +61,19 @@ expressions:
   Load_injection:
     expression: sum(Load_demand, by=Load_bus, over=load, into=bus)
     adds_to: Bus_injection
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      bus: { index: n, set: '\mathcal{N}' }
+      load: { index: d, set: '\mathcal{D}' }
+      scenario: { index: '\xi', set: '\Xi' }
+    names:
+      Load_p_set: '\mathrm{load}'
+      Load_sign: '\mathrm{sgn}^{\mathrm{load}}'
+      Load_active: '\mathrm{on}^{\mathrm{load}}'
+      Load_demand: '\check{\mathrm{load}}'
 ```
 
 #### Sets

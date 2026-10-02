@@ -153,6 +153,7 @@ SECTIONS = [
     'piecewise',
     'sos',
     'assumptions',
+    'symbols',
 ]
 
 
@@ -176,6 +177,16 @@ def test_a_file_written_backwards_writes_the_same_text(path):
     raw = raw_of(path)
     backwards = ms.to_spec(_written_backwards(raw)).to_yaml(canonical=True)
     assert backwards == ms.to_spec(raw).to_yaml(canonical=True), 'three orders reversed, one text'
+
+
+def test_a_symbol_table_written_backwards_writes_the_same_text():
+    """A table's entries sit a level below where the backwards file stops, and
+    their order is spelling too: the canonical form kept it as written."""
+    raw = raw_of(EXAMPLES / 'dispatch.yaml')
+    backwards = varied(raw, symbols=_written_backwards(raw['symbols']))
+    assert ms.to_spec(backwards).to_yaml(canonical=True) == ms.to_spec(raw).to_yaml(canonical=True), (
+        'the notations, the two parts and the entries reversed, one text'
+    )
 
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)

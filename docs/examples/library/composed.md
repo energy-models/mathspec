@@ -97,6 +97,16 @@ expressions:
     dims: []
     expression: Generator_cost
     description: what running the system costs
+symbols:
+  latex:
+    dimensions:
+      snapshot: {index: t, set: '\mathcal{T}'}
+      bus: {index: n, set: '\mathcal{N}'}
+      port: {index: j, set: '\mathcal{J}'}
+      generator: {index: g, set: '\mathcal{G}'}
+      load: {index: d, set: '\mathcal{D}'}
+    names: {Port_p: f, Generator_p: p, Generator_p_nom: '\mathrm{p}^{\mathrm{nom}}', Generator_marginal_cost: '\mathrm{c}',
+      Load_p_set: '\mathrm{load}'}
 ```
 
 === "As composed"
@@ -207,6 +217,13 @@ expressions:
         description: "`Generator-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing"
         dims: [snapshot, generator]
         expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * Generator_status
+
+    # The symbols of what this patch adds, as `examples/pypsa.yaml` spells them.
+    symbols:
+      latex:
+        names:
+          Generator_p_min_pu: '\underline{\mathrm{p}}'
+          Generator_status: u
     ```
 
     #### Sets

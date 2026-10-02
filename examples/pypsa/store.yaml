@@ -362,3 +362,54 @@ assumptions:
       refuses quadratic costs under any risk preference
       (`optimize.py:467-474`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      bus: { index: n, set: '\mathcal{N}' }
+      store: { index: v, set: '\mathcal{V}' }
+      scenario: { index: '\xi', set: '\Xi' }
+      period: { index: y, set: '\mathcal{Y}' }
+      carrier: { index: i, set: '\mathcal{I}' }
+    names:
+      snapshot_weightings_objective: '\mathrm{w}'
+      snapshot_weightings_stores: '\mathrm{w}^{\mathrm{sto}}'
+      Store_e_nom_ext: "E"
+      Store_e_nom_min: '\underline{\mathrm{e}}^{\mathrm{nom}}'
+      Store_e_nom_max: '\overline{\mathrm{e}}^{\mathrm{nom}}'
+      Store_capital_cost: '\mathrm{c}^{\mathrm{cap},e}'
+      Store_e_nom_set: '\mathrm{e}^{\mathrm{nom,set}}'
+      GlobalConstraint_counts_snapshot: '\mathrm{in}'
+      Store_closing_weight: '\mathit{w}^{e}'
+      GlobalConstraint_snapshot_closes: '\mathit{last}'
+      Store_primary_energy_weight: '\mathrm{a}^{e}'
+      Store_operational_limit_weight: '\mathrm{b}^{e}'
+      Store_tech_capacity_weight: '\mathrm{m}^{e}'
+      Store_e: "e"
+      Store_p: "q"
+      Store_e_nom: '\mathrm{e}^{\mathrm{nom}}'
+      Store_e_nom_extendable: '\mathrm{ext}^{e}'
+      Store_e_min_pu: '\underline{\mathrm{e}}'
+      Store_e_max_pu: '\overline{\mathrm{e}}'
+      Store_sign: '\mathrm{sgn}^{q}'
+      Store_retention: '\rho^{e}'
+      Store_e_initial: '\mathrm{e}^{0}'
+      Store_energy_carried_in: '\overleftarrow{e}'
+      Store_e_cyclic: '\mathrm{cyc}^{e}'
+      Store_e_cyclic_per_period: '\mathrm{cyc}^{e,y}'
+      Store_e_initial_per_period: '\mathrm{reset}^{e}'
+      Store_opens_late: '\mathrm{open}^{e}'
+      Store_inactive_snapshots: '\mathrm{idle}^{e}'
+      Store_marginal_cost: '\mathrm{c}^{q}'
+      Store_marginal_cost_quadratic: '\mathrm{c}^{q,(2)}'
+      Store_marginal_cost_storage: '\mathrm{c}^{e}'
+      Store_e_set: '\mathrm{e}^{\mathrm{set}}'
+      Store_p_set: '\mathrm{q}^{\mathrm{set}}'
+      scenario_weight: '\pi'
+      CVaR_omega: '\omega'
+      period_weight_objective: '\mathrm{w}^{y}'
+      period_weight_years: '\mathrm{w}^{\mathrm{yr}}'
+      Store_active: '\mathrm{on}^{e}'
+      Store_capital_weight: '\mathrm{W}^{e}'
+      Store_first_active: '\mathrm{new}^{e}'

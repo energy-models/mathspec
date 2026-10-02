@@ -55,6 +55,18 @@ constraints:
     dims: []
     where: CVaR_omega > 0
     expression: CVaR_theta + 1 / (1 - CVaR_alpha) * sum(scenario_weight * CVaR_a, over=scenario) <= CVaR
+
+symbols:
+  latex:
+    dimensions:
+      scenario: { index: '\xi', set: '\Xi' }
+    names:
+      scenario_weight: '\pi'
+      CVaR_omega: '\omega'
+      CVaR_alpha: '\alpha'
+      CVaR_a: a
+      CVaR_theta: '\theta'
+      CVaR: "CVaR"
 ```
 
 #### Sets

@@ -262,3 +262,42 @@ constraints:
     dims: [scenario, snapshot, process]
     where: Process_committable AND Process_p_nom_extendable AND Process_p_nom_mod > 0 AND Process_active
     expression: Process_shut_down <= Process_n_mod
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      process: { index: j, set: '\mathcal{J}' }
+      scenario: { index: '\xi', set: '\Xi' }
+      period: { index: y, set: '\mathcal{Y}' }
+    names:
+      snapshot_weightings_objective: '\mathrm{w}'
+      Process_p: z
+      Process_p_nom: '\mathrm{z}^{\mathrm{nom}}'
+      Process_p_nom_extendable: '\mathrm{ext}^{z}'
+      Process_p_min_pu: '\underline{\mathrm{z}}'
+      Process_p_max_pu: '\overline{\mathrm{z}}'
+      Process_p_nom_ext: "Z"
+      Process_committable: '\mathrm{com}^{z}'
+      Process_status: "u^{z}"
+      Process_start_up: '\mathit{up}^{z}'
+      Process_shut_down: '\mathit{dn}^{z}'
+      Process_min_up_time: '\mathrm{UT}^{z}'
+      Process_min_down_time: '\mathrm{DT}^{z}'
+      Process_status_initial: '\mathrm{u}^{z,0}'
+      Process_previous_status: '\overleftarrow{u}^{z}'
+      Process_must_stay_up: '\mathrm{hold}^{z}'
+      Process_must_stay_down: '\mathrm{rest}^{z}'
+      Process_start_up_cost: '\mathrm{c}^{z,\mathrm{up}}'
+      Process_shut_down_cost: '\mathrm{c}^{z,\mathrm{dn}}'
+      Process_stand_by_cost: '\mathrm{c}^{z,\mathrm{on}}'
+      Process_p_nom_mod: '\mathrm{z}^{\mathrm{mod}}'
+      Process_n_mod: "N^{z}"
+      Process_modules_installed: '\mathrm{N}^{z,\mathrm{fix}}'
+      Process_big_m: '\mathrm{M}^{z}'
+      Process_p_min_pu_nonneg: '\mathrm{nonneg}^{z}'
+      period_weight_objective: '\mathrm{w}^{y}'
+      Process_active: '\mathrm{on}^{z}'
+      Process_maintenance_pu: '\gamma^{z}'
+      Process_maintenance_capacity: '\mu^{z,\mathrm{nom}}'
+      Process_maintenance_status: '\mu^{z,u}'

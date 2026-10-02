@@ -283,6 +283,55 @@ assumptions:
       refuses quadratic costs under any risk preference
       (`optimize.py:467-474`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      bus: { index: n, set: '\mathcal{N}' }
+      generator: { index: g, set: '\mathcal{G}' }
+      scenario: { index: '\xi', set: '\Xi' }
+      period: { index: y, set: '\mathcal{Y}' }
+      carrier: { index: i, set: '\mathcal{I}' }
+    names:
+      snapshot_weightings_objective: '\mathrm{w}'
+      Generator_p: p
+      Generator_p_nom: '\mathrm{p}^{\mathrm{nom}}'
+      Generator_p_nom_extendable: '\mathrm{ext}'
+      Generator_p_min_pu: '\underline{\mathrm{p}}'
+      Generator_p_max_pu: '\overline{\mathrm{p}}'
+      Generator_marginal_cost: '\mathrm{c}'
+      Generator_marginal_cost_quadratic: '\mathrm{c}^{(2)}'
+      Generator_sign: '\mathrm{sgn}'
+      Generator_committable: '\mathrm{com}'
+      Generator_p_nom_committed: '\widehat{\mathrm{p}}^{\mathrm{nom}}'
+      Generator_p_nom_mod: '\mathrm{p}^{\mathrm{mod}}'
+      Generator_n_mod: "N"
+      Generator_modules_installed: '\mathrm{N}^{\mathrm{fix}}'
+      Generator_p_min_pu_nonneg: '\mathrm{nonneg}'
+      Generator_p_set: '\mathrm{p}^{\mathrm{set}}'
+      snapshot_weightings_generators: '\mathrm{w}^{\mathrm{gen}}'
+      Generator_p_nom_ext: "P"
+      Generator_p_nom_effective: '\widetilde{\mathrm{p}}^{\mathrm{nom}}'
+      Generator_p_nom_min: '\underline{\mathrm{p}}^{\mathrm{nom}}'
+      Generator_p_nom_max: '\overline{\mathrm{p}}^{\mathrm{nom}}'
+      Generator_capital_cost: '\mathrm{c}^{\mathrm{cap}}'
+      Generator_p_nom_set: '\mathrm{p}^{\mathrm{nom,set}}'
+      Generator_e_sum_min: '\underline{\mathrm{E}}'
+      Generator_e_sum_max: '\overline{\mathrm{E}}'
+      GlobalConstraint_energy_weight: '\mathit{w}^{\mathrm{gc}}'
+      Generator_primary_energy_weight: '\mathrm{a}'
+      Generator_operational_limit_weight: '\mathrm{b}'
+      Generator_tech_capacity_weight: '\mathrm{m}'
+      scenario_weight: '\pi'
+      CVaR_omega: '\omega'
+      period_weight_objective: '\mathrm{w}^{y}'
+      Generator_active: '\mathrm{on}'
+      Generator_capital_weight: '\mathrm{W}'
+      Generator_first_active: '\mathrm{new}'
+      Generator_maintenance_pu: '\gamma'
+      Generator_maintenance: '\mu'
+      Generator_maintenance_capacity: '\mu^{\mathrm{nom}}'
 ```
 
 #### Sets

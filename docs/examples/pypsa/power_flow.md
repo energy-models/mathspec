@@ -37,6 +37,13 @@ constraints:
       weight where the shift is a phase-shifting transformer's to choose
     dims: [scenario, snapshot, cycle]
     expression: Cycle_angle_sum == 0
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      cycle: { index: c, set: '\mathcal{C}' }
+      scenario: { index: '\xi', set: '\Xi' }
 ```
 
 #### Sets

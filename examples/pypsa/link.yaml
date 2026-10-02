@@ -319,3 +319,52 @@ assumptions:
       refuses quadratic costs under any risk preference
       (`optimize.py:467-474`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
+
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      bus: { index: n, set: '\mathcal{N}' }
+      link: { index: l, set: '\mathcal{L}' }
+      link_output: { index: o, set: '\mathcal{O}' }
+      scenario: { index: '\xi', set: '\Xi' }
+      period: { index: y, set: '\mathcal{Y}' }
+      carrier: { index: i, set: '\mathcal{I}' }
+    names:
+      snapshot_weightings_objective: '\mathrm{w}'
+      Link_p: f
+      Link_p_nom: '\mathrm{f}^{\mathrm{nom}}'
+      Link_p_nom_extendable: '\mathrm{ext}^{f}'
+      Link_p_min_pu: '\underline{\mathrm{f}}'
+      Link_p_max_pu: '\overline{\mathrm{f}}'
+      Link_efficiency: '\eta'
+      Link_output_delay: '\mathrm{d}^{f}'
+      Link_output_cyclic_delay: '\mathrm{cyc}^{f}'
+      Link_marginal_cost: '\mathrm{c}^{f}'
+      Link_marginal_cost_quadratic: '\mathrm{c}^{f,(2)}'
+      Link_committable: '\mathrm{com}^{f}'
+      Link_p_nom_committed: '\widehat{\mathrm{f}}^{\mathrm{nom}}'
+      Link_p_nom_mod: '\mathrm{f}^{\mathrm{mod}}'
+      Link_n_mod: "N^{f}"
+      Link_modules_installed: '\mathrm{N}^{f,\mathrm{fix}}'
+      Link_p_min_pu_nonneg: '\mathrm{nonneg}^{f}'
+      Link_p_set: '\mathrm{f}^{\mathrm{set}}'
+      Link_p_nom_ext: "F"
+      Link_p_nom_effective: '\widetilde{\mathrm{f}}^{\mathrm{nom}}'
+      Link_output_arrival: '\overrightarrow{f}'
+      Link_p_nom_min: '\underline{\mathrm{f}}^{\mathrm{nom}}'
+      Link_p_nom_max: '\overline{\mathrm{f}}^{\mathrm{nom}}'
+      Link_capital_cost: '\mathrm{c}^{\mathrm{cap},f}'
+      Link_p_nom_set: '\mathrm{f}^{\mathrm{nom,set}}'
+      Link_volume_weight: '\mathrm{len}^{f}'
+      Link_expansion_cost_weight: '\mathrm{cc}^{f}'
+      Link_tech_capacity_weight: '\mathrm{m}^{f}'
+      scenario_weight: '\pi'
+      CVaR_omega: '\omega'
+      period_weight_objective: '\mathrm{w}^{y}'
+      Link_active: '\mathrm{on}^{f}'
+      Link_capital_weight: '\mathrm{W}^{f}'
+      Link_first_active: '\mathrm{new}^{f}'
+      Link_maintenance_pu: '\gamma^{f}'
+      Link_maintenance: '\mu^{f}'
+      Link_maintenance_capacity: '\mu^{f,\mathrm{nom}}'

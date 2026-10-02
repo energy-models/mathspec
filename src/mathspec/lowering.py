@@ -52,7 +52,7 @@ from mathspec.resolution import (
     resolve_expression_text,
     resolve_where_text,
 )
-from mathspec.validation import emitted_name_errors, reference_errors
+from mathspec.validation import emitted_name_errors, reference_errors, symbol_errors
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -246,8 +246,9 @@ def lower(schema: Spec) -> Program:
             },
         ),
         description=schema.description,
+        symbols={notation: block.table(notation) for notation, block in schema.symbols.items()},
     )
-    if errors := emitted_name_errors(schema, program):
+    if errors := [*emitted_name_errors(schema, program), *symbol_errors(program.symbols, program)]:
         raise SchemaError('\n'.join(errors))
     check_schema(schema, program)
     return program

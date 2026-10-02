@@ -35,6 +35,18 @@ constraints:
       this: PyPSA writes the load into the balance instead
     dims: [snapshot, load]
     expression: at(Port_p, by=Load_port, over=port, into=load) == -Load_p_set
+
+# The symbols `examples/pypsa.yaml` prints with, cut to what this file declares
+# or reads. Fragments that spell one name spell it the same, or do not merge.
+symbols:
+  latex:
+    dimensions:
+      snapshot: { index: t, set: '\mathcal{T}' }
+      port: { index: j, set: '\mathcal{J}' }
+      load: { index: d, set: '\mathcal{D}' }
+    names:
+      Port_p: f
+      Load_p_set: '\mathrm{load}'
 ```
 
 PyPSA's `Load`, wired to a port rather than straight to a bus. What it takes is data, so it decides nothing.
