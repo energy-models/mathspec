@@ -73,6 +73,9 @@ parameters:
     description: whether the nominal power is a decision
     dims: [storage_unit]
     dtype: bool
+  StorageUnit_p_nom_mod:
+    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    dims: [storage_unit]
   StorageUnit_p_min_pu:
     description: most storing, per unit of nominal power and negated
     dims: [scenario, snapshot, storage_unit]
@@ -204,6 +207,13 @@ variables:
       parameter of the same PyPSA name carries the fixed regime
     dims: [storage_unit]
     where: StorageUnit_p_nom_extendable
+  StorageUnit_n_mod:
+    description: "`StorageUnit-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
+    dims: [storage_unit]
+    where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_mod > 0 AND count(StorageUnit_active, over=snapshot) > 0
+    domain: integer
+    bounds:
+      lower: 0
 
 given:
   parameters:
@@ -386,6 +396,11 @@ constraints:
     dims: [scenario, storage_unit]
     where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_set
     expression: StorageUnit_p_nom_ext == StorageUnit_p_nom_set
+  StorageUnit_p_nom_modularity:
+    description: "`StorageUnit-p_nom_modularity` — the chosen build is a whole number of modules"
+    dims: [storage_unit]
+    where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_mod > 0 AND count(StorageUnit_active, over=snapshot) > 0
+    expression: StorageUnit_p_nom_ext == StorageUnit_p_nom_mod * StorageUnit_n_mod
   StorageUnit_energy_balance:
     description: >-
       `StorageUnit-energy_balance` — the charge carried in, plus what is
@@ -468,5 +483,5 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive

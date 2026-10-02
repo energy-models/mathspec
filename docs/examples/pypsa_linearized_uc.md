@@ -19,7 +19,7 @@ them for the integer run, and the keyword relaxes them in the same way.
 | PyPSA | status | note |
 | --- | --- | --- |
 | [`Generator-status`, `-start_up`, `-shut_down`](#variable-domains) | done | shares in [0, 1] |
-| [`Generator-com-p-before`](#generator-com-p-before) | done | where start and stop cost the same — a data-prep bool |
+| [`Generator-com-p-before`](#generator-com-p-before) | done | where start and stop cost the same in every snapshot — a `count` over `snapshot` |
 | [`Generator-com-p-current`](#generator-com-p-current) | done | |
 | [`Generator-com-partly-start-up`](#generator-com-partly-start-up) | done | |
 | [`Generator-com-partly-shut-down`](#generator-com-partly-shut-down) | done | |
@@ -99,21 +99,21 @@ def build():
 `n.optimize(linearized_unit_commitment=True)` builds the same commitment rows as
 the integer run, except the four tightening rows: the keyword only relaxes the
 status, start and stop to shares in [0, 1] (`variables.py:81-88`) and adds the
-tightening rows (`constraints.py:650`). So this file states each row that
+tightening rows (`constraints.py:656`). So this file states each row that
 [PyPSA in one file](pypsa.md) states for a fixed committable generator:
 
 - A unit still serving the down time it brought in stays off
-  (`constraints.py:622-628`).
+  (`constraints.py:625-631`).
 - A ramp row stands where a unit has a ramp limit or only a start-up or
   shut-down ramp, and a missing limit reads as the full build
-  (`constraints.py:1046-1055`). The earlier file built no row for a start-up
+  (`constraints.py:1052-1061`). The earlier file built no row for a start-up
   ramp alone, and read a missing start-up or shut-down ramp as `0`, which kept
   a unit that came in off from starting.
 - A maintainable unit is taken off for its events. The maintenance start stays
   a binary under the keyword (`variables.py:234-259`), and the product of
   status and maintenance enters the commitment rows through the `maint-status`
-  rows (`constraints.py:425-458`). A maintainable unit that is not committable
-  loses the same share of its fixed rows (`constraints.py:135-145`).
+  rows (`constraints.py:428-461`). A maintainable unit that is not committable
+  loses the same share of its fixed rows (`constraints.py:138-148`).
 
 The rung adds five cheap units under a swinging load. A start costs more than a
 stop, so PyPSA does not tighten them and the rung isolates these rows. Each
@@ -204,21 +204,21 @@ This rung brings five rows of [PyPSA in one file](pypsa.md) into this file,
 each on the fixed builds of this file's surface:
 
 - The four tightening rows read each ramp limit filled to the full build where
-  it is missing (`constraints.py:313-318`). They read `Generator_ramp_up_rate`
+  it is missing (`constraints.py:316-321`). They read `Generator_ramp_up_rate`
   and the other three rates. The earlier file read a missing limit as `0`.
 - A ramp limit is given per snapshot and read at the later of the two
-  snapshots (`constraints.py:1040-1041`). A row is absent at a snapshot where
+  snapshots (`constraints.py:1046-1047`). A row is absent at a snapshot where
   neither the limit nor the start-up or shut-down ramp has a value
-  (`constraints.py:1046-1047`, `1136`, `1154`).
+  (`constraints.py:1052-1053`, `1142`, `1160`).
 - A unit that came in running with a `p_init` ramps from it into the first
-  snapshot (`constraints.py:1091-1094`, `1102-1104`). Where `p_init` has no
+  snapshot (`constraints.py:1097-1100`, `1108-1110`). Where `p_init` has no
   value, the unit carries no ramp row at the first snapshot.
 - A unit that is not committable carries ramp rows with its status fixed at
-  `1` (`constraints.py:1073-1079`). The assumption
+  `1` (`constraints.py:1079-1085`). The assumption
   `Generator_came_in_running_unless_committable` refuses such a unit that came
   in off, as the integer file does.
 - Each generator and load term enters the bus balance with its component's
-  `sign` (`constraints.py:1428-1429`, `:1538`).
+  `sign` (`constraints.py:1434-1435`, `:1544`).
 
 The rung adds a relax bus with a tightened unit that has only start-up and
 shut-down ramps, a committable unit whose ramp limit lifts at the third
@@ -320,7 +320,7 @@ def build():
 ## The file
 
 <!-- gallery:begin -->
-The relaxed class of a plain `n.optimize()`: `linearized_unit_commitment`, stated on rung 1's transport surface in a file of its own. The status, its starts and its stops are shares in \[0, 1\] rather than binaries — a domain is the spec's, not the data's — and four rows PyPSA adds only under the keyword tighten the relaxation where a unit's start and stop cost the same. The surface is generators, links and loads with a fixed build, in one scenario, every asset active in every snapshot, and only a generator committable. `examples/pypsa.yaml` stays the integer one, and states the rest: a committable link or process, an extendable build, scenarios and `active`.
+The relaxed class of a plain `n.optimize()`: `linearized_unit_commitment`, stated on rung 1's transport surface in a file of its own. The status, its starts and its stops are shares in \[0, 1\] rather than binaries — a domain is the spec's, not the data's — and four rows PyPSA adds only under the keyword tighten the relaxation where a unit's start and stop cost the same in every snapshot (`constraints.py:636-660`). The surface is generators, links and loads with a fixed build, in one scenario, every asset active in every snapshot, and only a generator committable. `examples/pypsa.yaml` stays the integer one, and states the rest: a committable link or process, an extendable build, scenarios and `active`.
 
 #### Sets
 
@@ -362,10 +362,9 @@ The relaxed class of a plain `n.optimize()`: `linearized_unit_commitment`, state
 | $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\mathcal{G}`$ — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot |
 | $`\mathrm{hold}`$ | `Generator_must_stay_up` over $`\mathcal{T} \times \mathcal{G}`$ — true while the up time a unit brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
 | $`\mathrm{rest}`$ | `Generator_must_stay_down` over $`\mathcal{T} \times \mathcal{G}`$ — true while the down time a unit brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
-| $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\mathcal{G}`$ — cost of one start |
-| $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\mathcal{G}`$ — cost of one stop |
+| $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\mathcal{T} \times \mathcal{G}`$ — cost of one start in this snapshot |
+| $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\mathcal{T} \times \mathcal{G}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
-| $`\mathrm{tight}`$ | `Generator_partly_tightened` over $`\mathcal{G}`$ — whether the four tightening rows below apply — PyPSA adds them only where a unit's start-up and shut-down costs are equal; two parameters cannot be compared in a `where`, so the equality is data prep |
 | $`\mathrm{mnt}`$ | `Generator_maintainable` over $`\mathcal{G}`$ — whether a generator must be taken off for maintenance within the horizon |
 | $`\gamma`$ | `Generator_maintenance_pu` over $`\mathcal{G}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{\mathrm{mnt}}`$ | `Generator_maintenance_events` over $`\mathcal{G}`$ — how many maintenance events the horizon holds |
@@ -415,7 +414,7 @@ objective:
 ```
 
 ```math
-\min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{t,g} \cdot \mathrm{w}_{t} + \sum_{t \in \mathcal{T},\ l \in \mathcal{L}} f_{t,l} \cdot \mathrm{c}^{f}_{t,l} \cdot \mathrm{w}_{t} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} u_{t,g} \cdot \mathrm{c}^{\mathrm{on}}_{t,g} \cdot \mathrm{w}_{t} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{up}_{t,g} \cdot \mathrm{c}^{\mathrm{up}}_{g} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dn}_{t,g} \cdot \mathrm{c}^{\mathrm{dn}}_{g}
+\min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{t,g} \cdot \mathrm{w}_{t} + \sum_{t \in \mathcal{T},\ l \in \mathcal{L}} f_{t,l} \cdot \mathrm{c}^{f}_{t,l} \cdot \mathrm{w}_{t} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} u_{t,g} \cdot \mathrm{c}^{\mathrm{on}}_{t,g} \cdot \mathrm{w}_{t} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{up}_{t,g} \cdot \mathrm{c}^{\mathrm{up}}_{t,g} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dn}_{t,g} \cdot \mathrm{c}^{\mathrm{dn}}_{t,g}
 ```
 
 ### `Generator-fix-p-lower`
@@ -490,7 +489,7 @@ Bus_nodal_balance:
     `Bus-nodal_balance` — what is generated at a bus, less what the links
     take away, plus what arrives over them after losses, meets the load
     there. Each generator and load term enters with its component's `sign`
-    (`constraints.py:1428-1429`, `:1538`)
+    (`constraints.py:1434-1435`, `:1544`)
   dims: [snapshot, bus]
   expression: >-
     sum(Generator_sign * Generator_p, by=Generator_bus, over=generator, into=bus)
@@ -844,7 +843,7 @@ Generator_com_p_before:
     the shut-down ramp. The translated term vacates the first snapshot, as
     PyPSA's `sns[1:]` does
   dims: [snapshot, generator]
-  where: Generator_committable AND Generator_partly_tightened
+  where: Generator_committable AND count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) == 0
   expression: >-
     shift(Generator_p, along=snapshot, offset=1)
     - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
@@ -853,7 +852,7 @@ Generator_com_p_before:
 ```
 
 ```math
-p_{t - 1,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t - 1,g} - \left( \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \left( u_{t,g} - \mathit{up}_{t,g} \right) \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{tight}_{g}
+p_{t - 1,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t - 1,g} - \left( \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \left( u_{t,g} - \mathit{up}_{t,g} \right) \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{t',g} \neq \mathrm{c}^{\mathrm{dn}}_{t',g} \} \rvert = 0
 ```
 
 ### `Generator-com-p-current`
@@ -864,14 +863,14 @@ p_{t - 1,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathr
 Generator_com_p_current:
   description: "`Generator-com-p-current` — output fits the share on, and the share starting up only up to the start-up ramp"
   dims: [snapshot, generator]
-  where: Generator_committable AND Generator_partly_tightened AND position(snapshot) > 0
+  where: Generator_committable AND count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) == 0 AND position(snapshot) > 0
   expression: >-
     Generator_p - Generator_p_max_pu * Generator_p_nom * Generator_status
     + (Generator_p_max_pu * Generator_p_nom - Generator_start_up_rate * Generator_p_nom) * Generator_start_up <= 0
 ```
 
 ```math
-p_{t,g} - \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t,g} + \left( \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{ru}}^{\mathrm{up}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \mathit{up}_{t,g} \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{tight}_{g} \wedge \mathrm{pos}(t) > 0
+p_{t,g} - \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t,g} + \left( \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{ru}}^{\mathrm{up}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \mathit{up}_{t,g} \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{t',g} \neq \mathrm{c}^{\mathrm{dn}}_{t',g} \} \rvert = 0 \wedge \mathrm{pos}(t) > 0
 ```
 
 ### `Generator-com-partly-start-up`
@@ -882,7 +881,7 @@ p_{t,g} - \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot 
 Generator_com_partly_start_up:
   description: "`Generator-com-partly-start-up` — raising output while a share is starting up is bounded by the ramp of the share on and the start-up ramp of the share coming on"
   dims: [snapshot, generator]
-  where: Generator_committable AND Generator_partly_tightened
+  where: Generator_committable AND count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) == 0
   expression: >-
     Generator_p - shift(Generator_p, along=snapshot, offset=1)
     - (Generator_p_min_pu * Generator_p_nom + Generator_ramp_up_rate * Generator_p_nom) * Generator_status
@@ -892,7 +891,7 @@ Generator_com_partly_start_up:
 ```
 
 ```math
-p_{t,g} - p_{t - 1,g} - \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} + \widetilde{\mathrm{ru}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot u_{t,g} + \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t - 1,g} + \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} + \widetilde{\mathrm{ru}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{ru}}^{\mathrm{up}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \mathit{up}_{t,g} \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{tight}_{g}
+p_{t,g} - p_{t - 1,g} - \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} + \widetilde{\mathrm{ru}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot u_{t,g} + \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t - 1,g} + \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} + \widetilde{\mathrm{ru}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{ru}}^{\mathrm{up}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \mathit{up}_{t,g} \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{t',g} \neq \mathrm{c}^{\mathrm{dn}}_{t',g} \} \rvert = 0
 ```
 
 ### `Generator-com-partly-shut-down`
@@ -903,7 +902,7 @@ p_{t,g} - p_{t - 1,g} - \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\m
 Generator_com_partly_shut_down:
   description: "`Generator-com-partly-shut-down` — lowering output while a share is shutting down is bounded likewise, by the shut-down ramp"
   dims: [snapshot, generator]
-  where: Generator_committable AND Generator_partly_tightened
+  where: Generator_committable AND count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) == 0
   expression: >-
     shift(Generator_p, along=snapshot, offset=1) - Generator_p
     - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
@@ -913,7 +912,7 @@ Generator_com_partly_shut_down:
 ```
 
 ```math
-p_{t - 1,g} - p_{t,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t - 1,g} + \left( \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{rd}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot u_{t,g} - \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} + \widetilde{\mathrm{rd}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \mathit{up}_{t,g} \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{tight}_{g}
+p_{t - 1,g} - p_{t,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t - 1,g} + \left( \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{rd}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot u_{t,g} - \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} + \widetilde{\mathrm{rd}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \mathit{up}_{t,g} \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{t',g} \neq \mathrm{c}^{\mathrm{dn}}_{t',g} \} \rvert = 0
 ```
 
 ### `Generator_previous_status`
@@ -1120,19 +1119,21 @@ u_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \math
 ```yaml
 Generator_came_in_running_unless_committable:
   holds: "Generator_status_initial == 1"
-  where: "NOT Generator_committable AND (Generator_ramp_limit_up OR Generator_ramp_limit_down)"
+  where: "NOT Generator_committable AND (Generator_ramp_limit_up OR Generator_ramp_limit_down OR Generator_ramp_limit_start_up OR Generator_ramp_limit_shut_down)"
   description: >-
     PyPSA reads `up_time_before` of a unit that is not committable in its
-    ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
-    with nothing carried in, and caps the unit there at zero, or at its
-    start-up ramp where another unit of the component is committable with a
-    fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+    ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp
+    alone builds (`constraints.py:1052-1053`). Where it is zero, PyPSA
+    builds a row at the first snapshot with nothing carried in, and caps
+    the unit there at zero, or at its start-up ramp where another unit of
+    the component is committable with a fixed build
+    (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
     the attribute as read only for a committable unit and does not check
     it. The spec does not state that row, so it refuses the data
 ```
 
 ```math
-\mathrm{u}^{0}_{g} = 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{com}_{g} \wedge \left( \mathrm{ru}_{t,g} \text{ is defined} \vee \mathrm{rd}_{t,g} \text{ is defined} \right)
+\mathrm{u}^{0}_{g} = 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{com}_{g} \wedge \left( \mathrm{ru}_{t,g} \text{ is defined} \vee \mathrm{rd}_{t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{g} \text{ is defined} \right)
 ```
 
 ### `Generator_maintenance_events_positive`

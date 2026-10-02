@@ -562,11 +562,13 @@ parameters:
     - snapshot
     - generator
   Generator_shut_down_cost:
+    - snapshot
     - generator
   Generator_stand_by_cost:
     - snapshot
     - generator
   Generator_start_up_cost:
+    - snapshot
     - generator
   Generator_status_initial:
     - generator
@@ -688,11 +690,13 @@ parameters:
     - snapshot
     - link
   Link_shut_down_cost:
+    - snapshot
     - link
   Link_stand_by_cost:
     - snapshot
     - link
   Link_start_up_cost:
+    - snapshot
     - link
   Link_status_initial:
     - link
@@ -772,11 +776,13 @@ parameters:
     - snapshot
     - process_output
   Process_shut_down_cost:
+    - snapshot
     - process
   Process_stand_by_cost:
     - snapshot
     - process
   Process_start_up_cost:
+    - snapshot
     - process
   Process_status_initial:
     - process
