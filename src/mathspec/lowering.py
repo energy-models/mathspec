@@ -136,7 +136,7 @@ def lower(schema: Spec) -> Program:
         errors.extend(refusals)
         if named_mask is not None:
             body = Mask(named_mask.body)
-            frame = tuple(mdef.dims) if mdef.dims is not None else tuple(d for d in schema.dimensions if d in body.dims)
+            frame = tuple(d for d in schema.dimensions if d in body.dims)
             masks[mname] = MaskDeclaration(body, frame, mdef.description)
 
     variables = {}

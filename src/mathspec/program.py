@@ -735,8 +735,8 @@ class MaskDeclaration:
     """
 
     where: Mask
-    #: The frame the mask is read over: the ``dims:`` the entry declares, or
-    #: the dims its predicate carries.
+    #: The frame the mask is read over: the dims its predicate carries, in the
+    #: order ``dimensions:`` declares them.
     dims: tuple[str, ...]
     description: str | None = None
 

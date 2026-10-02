@@ -350,8 +350,8 @@ class GivenExpressionBlock(_StrictBlock):
 class GivenMaskBlock(_StrictBlock):
     """A mask this file reads and another file defines.
 
-    The frame is all this file states. A where reads the name as data over
-    that frame, true or false at each coordinate, since a mask reads nothing
+    The frame is all this file states, and it names the dims the definer's
+    predicate reads. A where reads the name as data over that frame, true or false at each coordinate, since a mask reads nothing
     a solve decides: the predicate is the definer's.
     """
 
@@ -573,27 +573,24 @@ class MaskBlock(_StrictBlock):
     """A named predicate: one where string, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.
 
     Written in YAML as a bare where string, or as a mapping once it carries a
-    ``dims:`` or a ``description:``, and serialised back to whichever form it
-    was written in::
+    ``description:``, and serialised back to whichever form it was written in::
 
         masks:
           committable: "Generator_committable AND Generator_active"
           stands:
-            dims: [period, generator]
             where: build_year <= period_year AND period_year < build_year + lifetime
             description: the generator stands in this period
 
     A bare mask name in a where string stands for its predicate, inside
-    ``count``, ``shift`` and ``at`` too. ``dims:`` declares the frame the mask
-    is read over; left out, the predicate decides it. A mask is a predicate,
-    so it is never a value in an expression.
+    ``count``, ``shift`` and ``at`` too. The mask's frame is the dims its
+    predicate reads, so it declares none. A mask is a predicate, so it is
+    never a value in an expression.
     """
 
     _label: ClassVar[str] = 'a mask declaration'
 
     #: The predicate, in the where grammar.
     where: str
-    dims: list[str] | None = None
     description: str | None = None
 
     @model_validator(mode='before')
@@ -609,13 +606,9 @@ class MaskBlock(_StrictBlock):
 
     @model_serializer
     def _as_written(self) -> str | dict[str, object]:
-        if self.dims is None and self.description is None:
+        if self.description is None:
             return self.where
-        written: dict[str, object] = {'dims': list(self.dims)} if self.dims is not None else {}
-        written['where'] = self.where
-        if self.description is not None:
-            written['description'] = self.description
-        return written
+        return {'where': self.where, 'description': self.description}
 
 
 class AssumptionBlock(_StrictBlock):

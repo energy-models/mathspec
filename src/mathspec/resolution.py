@@ -514,9 +514,7 @@ def _mask(name: str, block: MaskBlock, ns: Namespace, errors: list[str]) -> Name
     """One ``masks:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
 
     A predicate the connectives decide is refused, since a name for every row
-    or for none narrows nothing a where could not say plainly; and a predicate
-    over a dimension the declared frame leaves out is refused, as an
-    expression's body is.
+    or for none narrows nothing a where could not say plainly.
     """
     context = f"Mask '{name}'"
     body = resolve_where_text(block.where, ns, context, errors)
@@ -527,13 +525,6 @@ def _mask(name: str, block: MaskBlock, ns: Namespace, errors: list[str]) -> Name
             f'{context}: the predicate {block.where!r} folds to {str(body.value).lower()}, so the mask '
             f'{"admits every row" if body.value else "admits no row"} and names nothing a where needs. '
             f'Delete it, or write the predicate over the data.'
-        )
-        return None
-    carried = Mask(body).dims
-    if block.dims is not None and (outside := sorted(carried - set(block.dims))):
-        errors.append(
-            f'{context}: the predicate reads {outside}, which the dims {block.dims} do not name. A mask '
-            f'is read over the frame it declares: add {outside} to its dims, or leave them out of the predicate.'
         )
         return None
     return NamedMask(name, body)
