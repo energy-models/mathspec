@@ -95,7 +95,8 @@ A value has the parameter's dtype:
 A NaN, a quoted number and `missing: null` are refused. A `given:` parameter
 has no `missing:`. The file that declares the parameter owns it. A parameter a
 [`piecewise:`](piecewise.md) block reads takes no `missing:` either: the block
-owns the shape of its curve. The typeset legend prints a value beside the
+owns the shape of its curve. Such a parameter is `neutral` where only curves
+with `points:` read it, and `refused` otherwise, in the curve and outside it. The typeset legend prints a value beside the
 parameter.
 
 ## `variables`

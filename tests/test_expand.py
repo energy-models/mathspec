@@ -200,10 +200,10 @@ SMALL_CURVE = {
     ],
 )
 def test_the_expansion_says_what_a_missing_breakpoint_means(points, missing):
-    """A curve's own parameters answer for no `missing:`, because the block owns their shape. The expansion keeps
+    """A curve's own parameters take no `missing:`, because the block owns their shape. The expansion keeps
     no block: its weights stand on `points:` and its assumptions ask for a value only where the mask holds. Left
-    unwritten, lowering would report `refused`, and a consumer attaching the rows would refuse the ragged curve the
-    block admits; a curve with no `points:` reads every breakpoint."""
+    unwritten, the expansion would declare `refused`, and a consumer attaching the rows would refuse the ragged curve
+    the block admits; a curve with no `points:` reads every breakpoint."""
     rows = schema_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **points)).expand('piecewise').program
     assert {name: rows.parameters[name].missing for name in ('bx', 'by', 'c')} == {
         'bx': missing,
@@ -212,14 +212,31 @@ def test_the_expansion_says_what_a_missing_breakpoint_means(points, missing):
     }, "the expansion reads the curve's tables as the block did, and every other parameter as declared"
 
 
-def test_a_parameter_a_curve_owns_answers_for_no_missing():
-    """The block's own parameters report `None`: reporting the unwritten `refused` would tell a consumer to require
-    every coordinate the dims reach, which a ragged curve does not carry."""
-    program = schema_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **{'piecewise.curve.points': 'bx'})).program
-    missing = {name: p.missing for name, p in program.parameters.items()}
-    assert missing == {'c': 'refused', 'k': 'refused', 'flag': 'refused', 'tag': 'refused', 'bx': None, 'by': None}, (
-        "the parameters the block consumes answer for no missing; every other parameter's declaration is carried"
+@pytest.mark.parametrize(
+    'points',
+    [
+        pytest.param({'piecewise.curve.points': 'bx'}, id='a-curve-that-says-how-far-it-runs'),
+        pytest.param({}, id='a-curve-over-every-breakpoint'),
+    ],
+)
+def test_a_spec_and_its_expansion_read_a_missing_row_alike(points):
+    """A row outside the curve that reads a curve's values parameter, `r <= by`, had no reading in the spec.
+
+    Lowering reported `None` for every parameter a block consumes, and the expansion declared the same parameter
+    `neutral`, so one file gave two answers for one table, and the spec's program gave a consumer none for the row
+    outside the curve. The program reports what the expansion declares.
+    """
+    spec = schema_of(
+        varied(
+            SMALL_MODEL,
+            **copy.deepcopy(SMALL_CURVE),
+            **points,
+            **{'constraints.cap': {'dims': ['h'], 'expression': 'r <= by'}},
+        )
     )
+    declared = {name: p.missing for name, p in spec.program.parameters.items()}
+    expanded = {name: p.missing for name, p in spec.expand('piecewise').program.parameters.items()}
+    assert declared == expanded, 'a spec and its expansion read a missing row of every parameter alike'
 
 
 @pytest.mark.parametrize('missing', ['refused', 'neutral', 0])

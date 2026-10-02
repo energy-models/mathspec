@@ -805,7 +805,8 @@ class PiecewiseBlock(_StrictBlock):
         """The parameters the block reads: each link's values, and the ``points:`` mask.
 
         The block owns the shape of every one of them, so ``missing:`` is
-        refused on them at load and lowering reports none.
+        refused on them at load, and ``mathspec.piecewise.curve_readings``
+        says what a missing row of each means.
         """
         return frozenset({link.values for link in self.links} | ({self.points} if self.points else set()))
 

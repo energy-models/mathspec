@@ -121,10 +121,10 @@ written  # "assumption 'cost_is_never_negative' does not hold for the data attac
 
 `program.parameters[name].missing` says what a missing row of that parameter
 means: `'refused'`, `'absent'`, `'neutral'`, or the value it reads as. It is
-`None` for a parameter a `piecewise:` block reads, because the block owns its
-shape, and for a given parameter, whose declaring file says. The program of
-`spec.expand(...)` declares a curve's parameters `'neutral'` where the curve has
-`points:`. `program.relations[name].missing` is `'refused'` or `'absent'`, and
+`None` for a given parameter, whose declaring file says. A parameter that a
+`piecewise:` block reads is `'neutral'` where only curves with `points:` read
+it, and `'refused'` otherwise. The program of `spec.expand(...)` reports the
+same readings. `program.relations[name].missing` is `'refused'` or `'absent'`, and
 `None` for a bare relation. Under `'refused'` the engine does not build the model from a
 table with a missing row, and names the coordinate; whether it raises at the
 first gap or lists them all is its own. A value is read wherever a value is read: an expression,

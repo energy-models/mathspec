@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from mathspec.dimensions import check_schema, dims_of
 from mathspec.errors import SchemaError, did_you_mean, prefixed
 from mathspec.expansion import expand, parse_template
-from mathspec.piecewise import assumptions_of, curve_frame, lp_domain_refusal, resolve_links
+from mathspec.piecewise import assumptions_of, curve_frame, curve_readings, lp_domain_refusal, resolve_links
 from mathspec.program import (
     Assumption,
     BooleanLiteral,
@@ -202,12 +202,10 @@ def lower(schema: Spec) -> Program:
             assert assumption is not None and not errors, 'what a method assumes is stated in the language'
             assumptions[aname] = assumption
 
-    owned = {name for block in schema.piecewise.values() for name in block.consumes}
+    readings = curve_readings(schema)
     program = Program(
         parameters={
-            name: ParameterDeclaration(
-                tuple(pdef.dims), pdef.dtype, None if name in owned else pdef.reading, pdef.description
-            )
+            name: ParameterDeclaration(tuple(pdef.dims), pdef.dtype, readings.get(name, pdef.reading), pdef.description)
             for name, pdef in schema.parameters.items()
         },
         variables=variables,

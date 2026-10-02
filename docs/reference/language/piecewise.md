@@ -172,7 +172,8 @@ shows a spec before and after.
 - **Every name written out starts with the name of the block.** The weights of
   the curve `curve` are `curve_lam`.
 - **No formulation emits a parameter.** The same data attaches to a spec and its
-  expansion. A curve under `points:` declares the parameters it reads
-  `missing: neutral`, because its rows read them only where the mask holds.
+  expansion, and reads alike in both. A curve under `points:` declares the
+  parameters it reads `missing: neutral`, because its rows read them only where
+  the mask holds.
 - **The assumptions a `method:` implies become `assumptions:` entries** with
   the same names.
