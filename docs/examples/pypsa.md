@@ -2539,8 +2539,11 @@ A network with no passive branch is the exception: PyPSA runs a plain
 exists. An outage is a line or a transformer, and
 a plain list names lines. The outaged branch is monitored too, at the factor
 `-1`. The file states the copies over an `outage` axis, with the factors as
-data prep, `Line_BODF` and `Transformer_BODF`. A plain run supplies no outage,
-so no copy is built and the model collapses to the standard one.
+data prep, `Line_BODF` and `Transformer_BODF`. The factors span `period`:
+data prep computes them from the branches active in each period, and a branch
+not active in a period has no factor there, so it has no copy there. A plain
+run supplies no outage, so no copy is built and the model collapses to the
+standard one.
 
 The rung outages two lines and a transformer of a meshed triangle and leaves
 the third line monitored only. A plain `n.optimize()` solves the same network
@@ -2554,7 +2557,8 @@ bind, in `Transformer-fix-s-lower` against a line outage and in
 | --- | --- | --- |
 | [`Line-fix-s-*-security-for-{c}-outage-in-sub-network-{n}`](#line-fix-s-lower-security-for-c-outage-in-sub-network-n), [`Line-ext-s-*-security-…`](#line-ext-s-lower-security-for-c-outage-in-sub-network-n) | split | PyPSA names a row per outaged component and sub-network; one block over the `outage` axis |
 | [`Transformer-fix-s-*-security-…`](#transformer-fix-s-lower-security-for-c-outage-in-sub-network-n), [`Transformer-ext-s-*-security-…`](#transformer-ext-s-lower-security-for-c-outage-in-sub-network-n) | split | the same for a transformer |
-| a branch not active in a period | split | PyPSA keeps the copy with that branch's flow dropped, so the file reads its flow as zero there; a copy left with no variable is not built here, where linopy counts it; rung 66 |
+| a branch not active in a period | split | the file has no factor for it there and builds no copy; PyPSA keeps the copy with that branch's flow dropped, which repeats a plain limit or is left with no variable; rung 66 |
+| outage factors of a period other than the last | diverges | rung 68, [PyPSA/PyPSA#1971](https://github.com/PyPSA/PyPSA/issues/1971); PyPSA takes the factors of the last period for every period |
 | a security-constrained run over scenarios | diverges | rung 56, [PyPSA/PyPSA#1942](https://github.com/PyPSA/PyPSA/issues/1942) |
 | `transmission_losses`, `linearized_unit_commitment` in a security-constrained run | done | PyPSA builds neither, so the copies carry no loss term and data prep feeds `transmission_losses` false; no rung, since rung 30 is lossless |
 
@@ -5244,16 +5248,19 @@ with `ca66` absent. That row and the balance at `b` force the flow on `ab66`
 and `bc66` to zero, and PyPSA solves the network without those two lines in
 2020 to `43900.0` (#814).
 
-The run outages `ca66`. Its copies in 2020 monitor `ab66`, `bc66` and `ca66`.
-At `ca66` itself the monitored and the outaged flow are both absent, and
-linopy counts a copy with no variable (`abstract.py:472-489`): PyPSA records
-12 rows each for the lower and the upper copy, of which 2 are empty. The file
-builds the other 10 of each, the same feasible set.
+The run outages `ca66`, which stands in the last period, so PyPSA's factors
+are the 2030 ones, and they are correct there. In 2020 `ca66` is not active,
+so the file has no factor for it and builds no copy in 2020. PyPSA builds the
+2020 copies with the flow of `ca66` dropped. On `ab66` and `bc66` a copy
+repeats the plain limit. On `ca66` itself the monitored and the outaged flow
+are both absent, and linopy counts a copy with no variable
+(`abstract.py:472-489`). PyPSA records 12 rows each for the lower and the
+upper copy. The file builds the 6 of 2030 of each, the same feasible set.
 
 | PyPSA | status | note |
 | --- | --- | --- |
 | [`Kirchhoff-Voltage-Law`](#kirchhoff-voltage-law) per investment period | done | the cycle weights span `period`, read at each snapshot's period |
-| [`Line-fix-s-*-security-…`](#line-fix-s-lower-security-for-c-outage-in-sub-network-n) for a branch not active in a period | split | a copy left with no variable is not built here, where linopy counts it |
+| [`Line-fix-s-*-security-…`](#line-fix-s-lower-security-for-c-outage-in-sub-network-n) for a branch not active in a period | split | no factor and no copy here; PyPSA's 2020 copies repeat a plain limit or have no variable |
 
 <!-- reference:rung_66_cycles_per_period:begin -->
 > ✔ `pypsa 1.3.0.post1.dev23+g02bdcbbaf` solves this rung's network at objective `16000.0`, 74 rows.
@@ -5304,6 +5311,98 @@ def build():
 
 </details>
 <!-- reference:rung_66_cycles_per_period:end -->
+
+### Rung 68 — outage factors per period
+
+`n.optimize.optimize_security_constrained(multi_investment_periods=True)` with
+an outage of a line that retires before the last period. The file computes the
+outage factors of each period from the branches active in it, and builds the
+copies of a period over its snapshots only. PyPSA computes one set of factors
+after it builds the model, from the sub-networks the cycle loop of the last
+period leaves behind (`abstract.py:443-460`, `constraints.py:1641`). A branch
+not active in the last period is in no sub-network (`networks.py:1278-1281`),
+so its outage builds no copy in any period, and PyPSA raises no error
+([PyPSA/PyPSA#1971](https://github.com/PyPSA/PyPSA/issues/1971)). The copies
+of an earlier period also take the factors of the last period's network.
+
+The rung joins `a` and `b` over two lines rated `60`. `ab_old68` stands in
+2020 and retires in 2025, `ab68` stands in both periods. The run outages
+`ab_old68`. In 2020 its factor on `ab68` is `1`, so `ab68` carries the whole
+import alone after the outage, and the import is at most `60`. PyPSA builds no
+copy, imports up to `120` in 2020, and solves to `8050.0`. The network has no
+build to decide, so each period solves on its own. The oracle solves the
+network once per period, where that period is the last one, and the sum is the
+intended objective `13000.0`.
+
+| PyPSA | status | note |
+| --- | --- | --- |
+| [`Line-fix-s-*-security-…`](#line-fix-s-lower-security-for-c-outage-in-sub-network-n) for an outage of a branch not active in the last period | diverges | [PyPSA/PyPSA#1971](https://github.com/PyPSA/PyPSA/issues/1971); `Line_BODF` and `Transformer_BODF` span `period` |
+
+<!-- reference:rung_68_outage_factors_per_period:begin -->
+> ✘ `pypsa 1.3.0.post1.dev23+g02bdcbbaf` solves this rung's network at objective `8050.0`, 38 rows, [PyPSA/PyPSA#1971](https://github.com/PyPSA/PyPSA/issues/1971). The intended objective is `13000.0`.
+
+<details markdown="1">
+<summary>The network, as PyPSA code</summary>
+
+`rung_68_outage_factors_per_period.py`
+
+```python
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+"""Rung 68: outage factors per period — a security-constrained run outages a line that retires before the last period.
+
+PyPSA takes the outage factors of every period from the last period's
+network, so an outage of a line that is gone by then builds no rows
+(PyPSA/PyPSA#1971). The network has no build to decide, so each period
+solves on its own, and in a network of one period the last period is that
+period: the oracle is the network once per period.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+
+import pandas as pd
+
+ISSUE = 1971
+OPTIMIZE = {'multi_investment_periods': True}
+BRANCH_OUTAGES = ['ab_old68']
+PERIODS = {2020: (1.0, [2.0, 1.5], [80, 70]), 2030: (0.5, [2.5, 3.0], [90, 60])}
+
+
+def network(periods: list[int]):
+    """Cheap hydro at `a`, a town with diesel at `b`, and two parallel lines; `ab_old68` retires in 2025."""
+    import pypsa
+
+    n = pypsa.Network()
+    n.snapshots = pd.MultiIndex.from_tuples([(p, datetime(p, 1, 1, t)) for p in periods for t in range(2)])
+    n.investment_periods = periods
+    n.investment_period_weightings['objective'] = [PERIODS[p][0] for p in periods]
+    n.investment_period_weightings['years'] = 10.0
+    n.snapshot_weightings['objective'] = [w for p in periods for w in PERIODS[p][1]]
+    n.add('Bus', ['a', 'b'])
+    n.add('Generator', 'hydro68', bus='a', p_nom=300, marginal_cost=10)
+    n.add('Generator', 'diesel68', bus='b', p_nom=300, marginal_cost=100)
+    n.add('Load', 'town68', bus='b', p_set=[load for p in periods for load in PERIODS[p][2]])
+    n.add('Line', 'ab68', bus0='a', bus1='b', x=0.1, s_nom=60)
+    n.add('Line', 'ab_old68', bus0='a', bus1='b', x=0.1, s_nom=60, build_year=2000, lifetime=25)
+    return n
+
+
+def build():
+    """Both periods: after the outage of `ab_old68`, `ab68` carries the whole import of 2020 alone."""
+    return network(list(PERIODS))
+
+
+def oracle():
+    """Each period alone, whose last period is its own."""
+    return [(1.0, network([p])) for p in PERIODS]
+```
+
+</details>
+<!-- reference:rung_68_outage_factors_per_period:end -->
 
 ## Refusals
 
@@ -5380,6 +5479,11 @@ file.
   (`variables.py:354-360`). Data prep feeds `Generator_p_nom_extendable` and
   the others false for an inactive unit, so the file builds no capacity
   variable for it either.
+- **Outage factors come from the branches active in each period.** Data
+  prep finds the sub-networks of each period's active branches and computes
+  `Line_BODF` and `Transformer_BODF` there, with no row for a branch not
+  active in the period. PyPSA takes the sub-networks of the last period for
+  every period (PyPSA/PyPSA#1971, rung 68).
 - **A global constraint with nothing to count has no row in PyPSA.** PyPSA
   skips a row whose set is empty (`global_constraints.py:98-99`, `:538-539`,
   `:730-731`, `:844-845`, `:939-940`). The file builds that row as `0`
@@ -5626,7 +5730,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\overline{\delta}`$ | `Line_v_ang_max` over $`\Xi \times \mathcal{K}`$ — the most the voltage angle difference across a line may be either way, in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default. A line whose carrier is not AC has no row either. The deprecated `v_ang_min` is ignored, as PyPSA ignores it with a `DeprecationWarning` (`constraints.py:1713-1720`) |
 | $`\mathrm{x}^{\mathrm{eff}}`$ | `Line_x_pu_eff` over $`\Xi \times \mathcal{K}`$ — the line's effective series reactance — PyPSA's `x_pu_eff`, `x` over the square of its bus's nominal voltage, data prep |
 | $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{Y} \times \mathcal{K} \times \mathcal{C}`$ — the line's series impedance, signed by its orientation in the cycle — the cycle basis, data prep; a line in no cycle has no row. PyPSA builds the cycle basis from the first scenario only (`networks.py:1356-1363`) |
-| $`\beta`$ | `Line_BODF` over $`\mathcal{K} \times \mathcal{K}^{\mathrm{out}}`$ — the share of an outaged branch's flow a line takes on when that branch goes out — PyPSA's `BODF`, from the sub-network's PTDF, data prep; a row only where the line and the outage share a sub-network, -1 at the outaged line itself |
+| $`\beta`$ | `Line_BODF` over $`\mathcal{Y} \times \mathcal{K} \times \mathcal{K}^{\mathrm{out}}`$ — the share of an outaged branch's flow a line takes on when that branch goes out — PyPSA's `BODF`, from the PTDF of the sub-network the period's active branches form, data prep; a row only where the line and the outage are active in the period and share a sub-network, -1 at the outaged line itself. PyPSA takes the sub-networks of the last period for every period (PyPSA/PyPSA\#1971) |
 | $`\mathrm{lossy}`$ | `transmission_losses` (scalar) — whether the network dissipates transmission losses — PyPSA's `transmission_losses` read as a flag; its mode, tangents or secants, only decides how data prep fills the `segment` axis, the rows are the same; false with no segments is a lossless run. A security-constrained run over a network with passive branches builds no loss: PyPSA does not hand the keyword to `create_model` (`abstract.py:437-441`) but to the solver (`:491`), so data prep feeds false there |
 | $`\overline{\ell}`$ | `Line_loss_max` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the loss at a line's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep |
 | $`\mathrm{a}`$ | `Line_loss_slope` over $`\Xi \times \mathcal{T} \times \mathcal{K} \times \mathcal{B}`$ — the slope of a cut to the loss curve — a tangent's `2 * r_pu_eff * p_k` at its segment's flow, a secant's `r_pu_eff * (p_k + p_k+1)` between consecutive breakpoints, data prep |
@@ -5643,7 +5747,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\overline{\delta}^{\sigma}`$ | `Transformer_v_ang_max` over $`\Xi \times \mathcal{M}`$ — the most the voltage angle difference across a transformer, its phase shift included, may be either way, in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default. The deprecated `v_ang_min` is ignored, as a line's |
 | $`\mathrm{x}^{\mathrm{eff},\sigma}`$ | `Transformer_x_pu_eff` over $`\Xi \times \mathcal{M}`$ — the transformer's effective series reactance — PyPSA's `x_pu_eff`, `x` over its `s_nom` times its tap ratio, data prep |
 | $`\mathrm{x}^{\sigma}`$ | `Transformer_cycle_weight` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{C}`$ — the transformer's effective series reactance, `x` times its tap ratio, signed by its orientation in the cycle — PyPSA's `x_pu_eff`, the cycle basis, data prep; a transformer in no cycle has no row. From the first scenario only, as a line's |
-| $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{M} \times \mathcal{K}^{\mathrm{out}}`$ — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's; a row only where the transformer and the outage share a sub-network |
+| $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{K}^{\mathrm{out}}`$ — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's; a row only where the transformer and the outage are active in the period and share a sub-network |
 | $`\vartheta`$ | `Transformer_phase_shift_weight` over $`\mathcal{T} \times \mathcal{M} \times \mathcal{C}`$ — a fixed transformer's phase shift in radians at each snapshot, signed by its orientation in the cycle — a constant added to the cycle sum, data prep; zero for a varying transformer, whose shift is a decision instead, so the constant and the variable term never both count a shift. A transformer with no shift or in no cycle of its snapshot's period has no row |
 | $`\mathrm{Transformer\_phase\_shift\_varying}`$ | `Transformer_phase_shift_varying` over $`\mathcal{M}`$ — whether a transformer's phase shift is a decision — PyPSA's `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a fixed shift carried by `phase_shift`. The shift parameters carry no scenario: only a cycle row and an angle row read them, PyPSA fails on a transformer in a cycle on a network with scenarios (`constraints.py:1660`), and builds no angle row on one |
 | $`\mathrm{Transformer\_phase\_shift\_min}`$ | `Transformer_phase_shift_min` over $`\mathcal{M}`$ — the least a varying transformer's phase shift may take, in degrees — PyPSA's `phase_shift_min`; where it is below `phase_shift_max` the shift is a decision, otherwise the transformer keeps its fixed `phase_shift` |
@@ -8918,12 +9022,12 @@ Line_fix_s_lower_security:
     sub-network `n`; this block states them all over the outage
     dimension
   dims: [scenario, snapshot, line, outage]
-  where: not Line_s_nom_extendable AND Line_BODF
-  expression: Line_s_monitored + Line_BODF * Outage_s >= -Line_s_max_pu * Line_s_nom
+  where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period, over=period, into=snapshot)
+  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s >= -Line_s_max_pu * Line_s_nom
 ```
 
 ```math
-\check{s}_{\xi,t,k} + \beta_{k,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa} \text{ is defined}
+\check{s}_{\xi,t,k} + \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \text{ is defined}
 ```
 
 ### `Line-fix-s-upper-security-for-{c}-outage-in-sub-network-{n}`
@@ -8939,12 +9043,12 @@ Line_fix_s_upper_security:
     one row per outaged component `c` and sub-network `n`; this block
     states them all over the outage dimension
   dims: [scenario, snapshot, line, outage]
-  where: not Line_s_nom_extendable AND Line_BODF
-  expression: Line_s_monitored + Line_BODF * Outage_s <= Line_s_max_pu * Line_s_nom
+  where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period, over=period, into=snapshot)
+  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s <= Line_s_max_pu * Line_s_nom
 ```
 
 ```math
-\check{s}_{\xi,t,k} + \beta_{k,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa} \text{ is defined}
+\check{s}_{\xi,t,k} + \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \text{ is defined}
 ```
 
 ### `Line-ext-s-lower-security-for-{c}-outage-in-sub-network-{n}`
@@ -8961,12 +9065,12 @@ Line_ext_s_lower_security:
     outaged component `c` and sub-network `n`; this block states them
     all over the outage dimension
   dims: [scenario, snapshot, line, outage]
-  where: Line_s_nom_extendable AND Line_BODF
-  expression: Line_s_monitored + Line_BODF * Outage_s >= -Line_s_max_pu * Line_s_nom_ext
+  where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period, over=period, into=snapshot)
+  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s >= -Line_s_max_pu * Line_s_nom_ext
 ```
 
 ```math
-\check{s}_{\xi,t,k} + \beta_{k,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa} \text{ is defined}
+\check{s}_{\xi,t,k} + \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \text{ is defined}
 ```
 
 ### `Line-ext-s-upper-security-for-{c}-outage-in-sub-network-{n}`
@@ -8983,12 +9087,12 @@ Line_ext_s_upper_security:
     sub-network `n`; this block states them all over the outage
     dimension
   dims: [scenario, snapshot, line, outage]
-  where: Line_s_nom_extendable AND Line_BODF
-  expression: Line_s_monitored + Line_BODF * Outage_s <= Line_s_max_pu * Line_s_nom_ext
+  where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period, over=period, into=snapshot)
+  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s <= Line_s_max_pu * Line_s_nom_ext
 ```
 
 ```math
-\check{s}_{\xi,t,k} + \beta_{k,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa} \text{ is defined}
+\check{s}_{\xi,t,k} + \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \text{ is defined}
 ```
 
 ### `Transformer-fix-s-lower-security-for-{c}-outage-in-sub-network-{n}`
@@ -9005,12 +9109,12 @@ Transformer_fix_s_lower_security:
     sub-network `n`; this block states them all over the outage
     dimension
   dims: [scenario, snapshot, transformer, outage]
-  where: not Transformer_s_nom_extendable AND Transformer_BODF
-  expression: Transformer_s_monitored + Transformer_BODF * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom
+  where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot)
+  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom
 ```
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{m,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{m,\kappa} \text{ is defined}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \text{ is defined}
 ```
 
 ### `Transformer-fix-s-upper-security-for-{c}-outage-in-sub-network-{n}`
@@ -9026,12 +9130,12 @@ Transformer_fix_s_upper_security:
     PyPSA names one row per outaged component `c` and sub-network `n`;
     this block states them all over the outage dimension
   dims: [scenario, snapshot, transformer, outage]
-  where: not Transformer_s_nom_extendable AND Transformer_BODF
-  expression: Transformer_s_monitored + Transformer_BODF * Outage_s <= Transformer_s_max_pu * Transformer_s_nom
+  where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot)
+  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom
 ```
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{m,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{m,\kappa} \text{ is defined}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \text{ is defined}
 ```
 
 ### `Transformer-ext-s-lower-security-for-{c}-outage-in-sub-network-{n}`
@@ -9048,12 +9152,12 @@ Transformer_ext_s_lower_security:
     outaged component `c` and sub-network `n`; this block states them
     all over the outage dimension
   dims: [scenario, snapshot, transformer, outage]
-  where: Transformer_s_nom_extendable AND Transformer_BODF
-  expression: Transformer_s_monitored + Transformer_BODF * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom_ext
+  where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot)
+  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom_ext
 ```
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{m,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \ge -\overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{m,\kappa} \text{ is defined}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \ge -\overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \text{ is defined}
 ```
 
 ### `Transformer-ext-s-upper-security-for-{c}-outage-in-sub-network-{n}`
@@ -9070,12 +9174,12 @@ Transformer_ext_s_upper_security:
     `c` and sub-network `n`; this block states them all over the
     outage dimension
   dims: [scenario, snapshot, transformer, outage]
-  where: Transformer_s_nom_extendable AND Transformer_BODF
-  expression: Transformer_s_monitored + Transformer_BODF * Outage_s <= Transformer_s_max_pu * Transformer_s_nom_ext
+  where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot)
+  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom_ext
 ```
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{m,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{m,\kappa} \text{ is defined}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \text{ is defined}
 ```
 
 ### `Kirchhoff-Voltage-Law`
