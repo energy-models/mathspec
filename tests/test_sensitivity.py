@@ -123,18 +123,10 @@ def test_an_entry_of_that_name_is_refused():
         _written(SUBPROBLEM, 'cap', expressions={'cap_sensitivity': 'sum(avail)'})
 
 
-@pytest.mark.xfail(
-    raises=LanguageError,
-    strict=True,
-    reason='#790: a parameter cannot be absent outside a mask, so the rate there is missing where it is 2',
-)
 def test_the_rate_of_a_fixed_masked_variable():
-    """`cap` exists only where `flag`. Fixed, `within` takes `where: flag`, and
-    `2.0 + dual(within)` is missing outside it, where the objective still reads
-    `cap` at rate 2. Once `fix` can make `cap` absent outside `flag`, the
-    missing rate is right there and the refusal goes."""
+    """`cap` exists only where `flag`. `fix` added `where: flag` to `within`, so `2.0 + dual(within)` was missing
+    outside it while the objective still read `cap` at rate 2, and the call was refused. Fixed as `missing: absent`,
+    `cap` is absent outside `flag` in the objective and in `within` alike, so the missing rate there is right."""
     spec = schema_of(MASKED).fix('cap').sensitivity('cap')
-    assert spec.to_dict()['parameters']['cap'].get('absence') == 'undefined', (
-        'the parameter is absent where the variable was'
-    )
+    assert spec.program.parameters['cap'].missing == 'absent', 'the parameter is absent where the variable was'
     assert spec.expressions['cap_sensitivity'].expression == '2.0 + dual(within)'
