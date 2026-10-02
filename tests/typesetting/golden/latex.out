@@ -35,7 +35,7 @@
 \item[{$\mathrm{bp\_x}$}] \texttt{bp\_x} over $\mathcal{G} \times \mathcal{A}$
 \item[{$\mathrm{bp\_y}$}] \texttt{bp\_y} over $\mathcal{G} \times \mathcal{A}$
 \item[{$\mathrm{bp\_heat}$}] \texttt{bp\_heat} over $\mathcal{G} \times \mathcal{A}$
-\item[{$\mathrm{bp\_run}$}] \texttt{bp\_run} over $\mathcal{G} \times \mathcal{A}$, \texttt{neutral} where the data has no row
+\item[{$\mathrm{bp\_run}$}] \texttt{bp\_run} over $\mathcal{G} \times \mathcal{A}$
 \end{description}
 
 \paragraph{Variables}

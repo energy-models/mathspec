@@ -88,7 +88,6 @@ def reference_errors(schema: Spec) -> list[str]:
         *_sos_shapes(schema),
         *_sos_bounds(schema),
         *_piecewise_references(schema),
-        *_curve_parameters_declare_no_missing(schema),
         *_given_constraint_collisions(schema),
     ]
 
@@ -338,25 +337,6 @@ def _piecewise_references(schema: Spec) -> Iterator[str]:
                 f"{context}: points parameter '{points}' must carry dim '{pw.over}' — "
                 f'it says how far each curve runs along it (has {schema.parameters[points].dims})'
             )
-
-
-def _curve_parameters_declare_no_missing(schema: Spec) -> Iterator[str]:
-    """A curve's shape is its block's to state, so the parameters it consumes state no ``missing:``.
-
-    ``points:`` already says how far a curve runs, and a breakpoint it leaves
-    out is not asked for, so a values parameter is complete over the points
-    its block admits: neither ``refused`` over every coordinate its dims reach
-    nor a gap any other reading fills.
-    """
-    for block_name, block in schema.piecewise.items():
-        for name in sorted(block.consumes):
-            if name in schema.parameters and schema.parameters[name].missing is not None:
-                yield (
-                    f"parameter '{name}': 'missing:' is not for a parameter a piecewise block consumes — "
-                    f"'{block_name}' already owns the shape of its curve. A breakpoint 'points:' leaves out "
-                    f'is not asked for, and every other breakpoint needs a row. Drop the '
-                    f"'missing:' line, and say how far the curve runs with 'points:'."
-                )
 
 
 def _collisions(schema: Spec, context: str, by_kind: Iterable[tuple[str, Iterable[str]]]) -> Iterator[str]:

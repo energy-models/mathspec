@@ -93,6 +93,28 @@ A row missing from `bp_y` is still refused. Where the length is its own data,
 name a boolean parameter instead. The marked breakpoints are one consecutive
 run, anywhere on the axis.
 
+### Missing breakpoints
+
+A parameter a block reads takes [`missing:`](declarations.md#a-missing-row)
+like any other parameter. Where the file writes none:
+
+- **A values parameter that only curves with `points:` read is `neutral`.** The
+  curve stops where the mask stops, so the table has no rows past it by design,
+  and the curve reads none of them.
+- **Every other parameter a block reads is `refused`**, the default. This is a
+  values parameter of a curve with no `points:`, and a boolean `points:` mask.
+  A mask that leaves out a breakpoint with no row declares `missing: neutral`.
+- **A parameter that a declaration outside every curve also reads is refused at
+  load.** The curve says nothing about what a missing row means there, so the
+  file says it:
+
+```text
+parameter 'bp_y': piecewise 'cost_curve' reads it as breakpoints and constraint 'cost_cap' reads it too, so the file says what a missing row of it means. Declare missing: refused, absent, neutral, or a value of its dtype.
+```
+
+The assumptions a `method:` implies read the parameters as the curve does, and
+are not outside it. An `assumptions:` entry the file writes is.
+
 ### `method`
 
 `method` says how the weights are restricted once they exist.
@@ -172,8 +194,7 @@ shows a spec before and after.
 - **Every name written out starts with the name of the block.** The weights of
   the curve `curve` are `curve_lam`.
 - **No formulation emits a parameter.** The same data attaches to a spec and its
-  expansion, and reads alike in both. A curve under `points:` declares the
-  parameters it reads `missing: neutral`, because its rows read them only where
-  the mask holds.
+  expansion, and reads alike in both. The expansion writes `missing: neutral` on
+  each values parameter that [reads as `neutral`](#missing-breakpoints).
 - **The assumptions a `method:` implies become `assumptions:` entries** with
   the same names.

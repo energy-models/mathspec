@@ -48,11 +48,11 @@ what a missing row is:**
 
 `neutral` has no value in three positions: a divisor, a `bounds:` entry, and
 the whole constant side of a comparison. A missing row there is refused when
-the data is attached. A [`piecewise:`](piecewise.md) block owns the parameters
-it reads, so they take no `missing:`, and a curve needs a row at each breakpoint
-its `points:` admits. Under
-`absent`, a missing divisor or constant side is absence and takes the row, and a
-missing bound leaves that side of the variable open. For a bound only where the
+the data is attached. A curve needs a row at each breakpoint its `points:`
+admits. [Missing breakpoints](piecewise.md#missing-breakpoints) says what a
+missing row of a table a curve reads means. Under `absent`, a missing divisor
+or constant side is absence and takes the row, and a missing bound leaves that
+side of the variable open. For a bound only where the
 data has one, declare the parameter `missing: absent` or `missing: .inf`, or mask
 the variable.
 

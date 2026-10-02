@@ -94,9 +94,8 @@ A value has the parameter's dtype:
 
 A NaN, a quoted number and `missing: null` are refused. A `given:` parameter
 has no `missing:`. The file that declares the parameter owns it. A parameter a
-[`piecewise:`](piecewise.md) block reads takes no `missing:` either: the block
-owns the shape of its curve. Such a parameter is `neutral` where only curves
-with `points:` read it, and `refused` otherwise, in the curve and outside it.
+[`piecewise:`](piecewise.md#missing-breakpoints) block reads takes `missing:`
+too, and declares it where a declaration outside the curve reads it.
 
 The typeset legend prints what a missing row means beside the parameter, such
 as `` `neutral` where the data has no row ``. It prints nothing for `refused`.

@@ -28,7 +28,7 @@ from mathspec.spec import AssumptionBlock, Curvature, PiecewiseBlock, Spec, Vari
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from mathspec.program import Expression, MissingReading
+    from mathspec.program import Expression
     from mathspec.resolution import Namespace
 
 
@@ -481,19 +481,20 @@ class _Block:
             )
 
 
-def curve_readings(schema: Spec) -> dict[str, MissingReading]:
-    """What a missing row of each parameter a ``piecewise:`` block consumes means, by name.
+def ragged(schema: Spec) -> frozenset[str]:
+    """The values parameters a missing row of which is a breakpoint the curve does not run through.
 
-    A parameter that only curves with ``points:`` consume is ``neutral``: the
-    weights and the segment rows stand on the mask, and the ``<block>_complete``
-    assumption asks for a row only where it holds, so the table may stop short
-    of the dimension. A parameter that a curve over every breakpoint consumes is
-    ``refused``. The spec and its expansion both report these readings, so the
-    same data reads alike in either, outside the curve too.
+    ``points:`` says the curve stops short of the dimension, and its weights
+    and segment rows read a values parameter only where the mask holds, so a
+    row is missing outside the mask by design: ``refused`` would refuse the
+    curve the block declares. Every other reading reads alike there, and
+    ``neutral`` is the one written. A parameter a curve over every breakpoint
+    also reads, a ``points:`` mask that is not a values parameter, and a
+    parameter whose ``missing:`` the file wrote are not among them.
     """
-    ragged = {n for pw in schema.piecewise.values() if pw.points for n in pw.consumes}
-    full = {n for pw in schema.piecewise.values() if not pw.points for n in pw.consumes}
-    return {n: 'refused' if n in full else 'neutral' for n in ragged | full}
+    shortened = {link.values for pw in schema.piecewise.values() if pw.points for link in pw.links}
+    complete = {n for pw in schema.piecewise.values() if not pw.points for n in pw.consumes}
+    return frozenset(n for n in shortened - complete if n in schema.parameters and schema.parameters[n].missing is None)
 
 
 def expand_piecewise(schema: Spec) -> Spec:
@@ -505,7 +506,7 @@ def expand_piecewise(schema: Spec) -> Spec:
     set of its own ([`mathspec.sos.emit`][] is where they are spelled).
     Each block's frame and names are read off the program *schema* lowered to.
 
-    Each parameter a block consumes is declared as [`curve_readings`][] reads it.
+    Each parameter in [`ragged`][] is declared ``missing: neutral``.
     """
     if not schema.piecewise:
         return schema
@@ -515,9 +516,8 @@ def expand_piecewise(schema: Spec) -> Spec:
     raw.setdefault('constraints', {})
     for name, pw in schema.piecewise.items():
         _Block(schema, raw, name, pw, program.piecewise[name]).expand()
-    for parameter, reading in curve_readings(schema).items():
-        if reading == 'neutral':
-            raw['parameters'][parameter]['missing'] = reading
+    for parameter in ragged(schema):
+        raw['parameters'][parameter]['missing'] = 'neutral'
     raw['piecewise'].clear()
     for name, pw in schema.piecewise.items():
         if pw.method == 'adjacency':
