@@ -95,9 +95,10 @@ def lp_domain_refusal(name: str, pw: PiecewiseBlock, links: tuple[Expression, ..
 def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, AssumptionBlock]:
     """What *block* assumes of its numbers, by the name the document prints and a refusal quotes.
 
-    Every curve assumes its breakpoints are there: a missing parameter row is
-    not absence, it is a zero, so an undeclared breakpoint sits the curve on
-    the origin rather than shortening it. A curve has an x-axis only where two
+    Every curve assumes its breakpoints are there, because a missing row does
+    not shorten a curve. Under ``points:`` its parameters read ``neutral``, so
+    a breakpoint missing inside the mask would read as a zero and sit the curve
+    on the origin. A curve has an x-axis only where two
     links tie it, so the increasing condition — and the shape it is checked
     with — exist only there; ``lp`` alone needs a segment to state a line for;
     a mask must be one run.
@@ -115,8 +116,7 @@ def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, Assumption
         holds=' AND '.join(dict.fromkeys(link.values for link in pw.links)),
         where=mask,
         description=f"piecewise '{block}': every breakpoint the curve runs through needs a row in "
-        f'{_quoted(link.values for link in pw.links)} — a missing row is read as a zero rather than as a '
-        f'shorter curve, so it sits the curve on the origin. '
+        f'{_quoted(link.values for link in pw.links)} — a missing row does not shorten the curve. '
         + (
             f"Attach the rows, or narrow points: '{mask}' to where the curve runs."
             if mask is not None
