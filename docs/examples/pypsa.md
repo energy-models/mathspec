@@ -618,7 +618,7 @@ def build():
 | [`{c}-com-up-time`, `-down-time`](#generator-com-up-time) | done | `sum_back(window=min_up_time)`                    |
 | [`{c}-com-status-min_up_time_must_stay_up`](#generator-com-status-min_up_time_must_stay_up) | done | the window is a prep mask — `position()` takes a literal |
 | [`{c}-com-status-min_down_time_must_stay_up`](#generator-com-status-min_down_time_must_stay_up) | done | the same prep mask over the down time brought in, status zero; PyPSA's name says `_must_stay_up`; rung 24 records it |
-| [`stand_by_cost`, `start_up_cost`, `shut_down_cost`](#objective) | done | a start and a stop carry no snapshot or period weight, rung 48 |
+| [`stand_by_cost`, `start_up_cost`, `shut_down_cost`](#objective) | done | a start and a stop carry no snapshot or period weight, rung 48; their cost may change per snapshot, rung 62 |
 | [`{c}-com-p-before/-current/-partly-*`](pypsa_linearized_uc.md) | done | rungs 12, 44 and 47, a file of its own: Generator commitment on fixed builds |
 
 <!-- reference:rung_07_commitment:begin -->
@@ -4433,7 +4433,7 @@ def oracle():
 `n.set_scenarios(...)` with two transformers in parallel, a cycle. The file
 builds the Kirchhoff voltage row in every scenario. PyPSA raises
 `KeyError`: it selects the transformers of a cycle by name from a table indexed
-by scenario and name (`constraints.py:1654`,
+by scenario and name (`constraints.py:1660`,
 [PyPSA/PyPSA#1942](https://github.com/PyPSA/PyPSA/issues/1942)).
 
 The rung adds two transformers of reactance `0.1` and `0.2`, each rated `30`,
@@ -4859,6 +4859,189 @@ def build():
 </details>
 <!-- reference:rung_60_efficiency_per_snapshot:end -->
 
+### Rung 61 — voltage angle limits
+
+`n.optimize()` with a cap on the voltage angle difference across a line or a
+transformer. PyPSA master adds `v_ang_max`, in degrees, on Line and
+Transformer (PyPSA#1910). For each AC line and each transformer with a finite
+`v_ang_max` that is active, it builds two rows that hold the angle difference
+within the cap either way (`constraints.py:1680-1782`, called at
+`optimize.py:882`). The angle difference is `x_pu_eff` times the flow, plus the
+shift in radians for a transformer. PyPSA divides through by `x_pu_eff`, so the
+flow takes coefficient one. A fixed shift moves the bounds:
+`Transformer-v_ang-lower` and `Transformer-v_ang-upper`. A decided shift is a
+term of the row: `Transformer-v_ang-var-lower` and
+`Transformer-v_ang-var-upper`. PyPSA ignores `v_ang_min` and warns that it is
+deprecated, so the file has no parameter for it.
+
+| PyPSA | status | note |
+| --- | --- | --- |
+| [`Line-v_ang-lower`](#line-v_ang-lower), [`Line-v_ang-upper`](#line-v_ang-upper) | done | `Line_carrier == 'AC'` in the `where`; an infinite `Line_v_ang_max` is no row |
+| [`Transformer-v_ang-lower`](#transformer-v_ang-lower), [`Transformer-v_ang-upper`](#transformer-v_ang-upper) | done | the fixed shift is `Transformer_phase_shift_fixed`, per snapshot |
+| [`Transformer-v_ang-var-lower`](#transformer-v_ang-var-lower), [`Transformer-v_ang-var-upper`](#transformer-v_ang-var-upper) | done | the decided shift is the `Transformer_phase_shift` variable, in degrees |
+| angle rows with scenarios | diverges | PyPSA builds no angle row and raises no error ([comment on PyPSA#1951](https://github.com/PyPSA/PyPSA/pull/1951#issuecomment-5889683015)); the file builds them per scenario. No rung records it yet, so this rung has no scenario |
+
+The rung adds a line beside the spine's link with a cap of one degree, so
+the lossy link carries the rest of the flow south. Two triangles each carry
+cheap upstream power to a town past a costly local unit: in the first, the
+transformer has a fixed shift of two degrees; in the second, the shift is a
+decision. In one cycle the angle caps of all branches couple, so each
+triangle has one cap. PyPSA solves to `121834.62`. Each cap binds: without
+it, PyPSA solves to these objectives (#620).
+
+| cap removed | objective |
+| --- | --- |
+| line `north_south61` | `121161.89` |
+| transformer `ca61`, fixed shift | `35214.37` |
+| transformer `fd61`, decided shift | `111382.98` |
+| all three | `24090.0` |
+
+<!-- reference:rung_61_voltage_angle_limits:begin -->
+> ✔ `pypsa 1.3.0.post1.dev23+g02bdcbbaf` solves this rung's network at objective `121834.62083205313`, 176 rows.
+
+<details markdown="1">
+<summary>The network, as PyPSA code</summary>
+
+`rung_61_voltage_angle_limits.py`
+
+```python
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+"""Rung 61: voltage angle limits — a line, a transformer with a fixed phase shift and one with a decided shift, each holding the angle difference across it within its `v_ang_max`.
+
+A line beside the spine's link may carry only the flow that keeps the angle
+across it within one degree, so the lossy link carries the rest. Two triangles
+carry cheap upstream power to a town past a costly local unit. In the first a
+transformer has a fixed shift, in the second the shift is a decision; the
+angle cap on each transformer binds before its thermal rating does, so the
+local unit runs. In one cycle the angle caps of all branches couple, so each
+triangle carries one cap only. No scenario: with scenarios PyPSA builds no
+angle row.
+"""
+
+from __future__ import annotations
+
+import spine
+
+
+def build():
+    """The spine plus a line beside its link and two triangles, each with one voltage angle limit that binds, as a ``pypsa.Network``."""
+    n = spine.build()
+    n.add('Line', 'north_south61', bus0='north', bus1='south', carrier='AC', x=0.002, s_nom=100, v_ang_max=1)
+    n.add('Bus', ['a', 'b', 'c'])
+    n.add('Generator', 'hydro61', bus='a', p_nom=300, marginal_cost=10)
+    n.add('Generator', 'diesel61', bus='c', p_nom=300, marginal_cost=200)
+    n.add('Load', 'town61', bus='c', p_set=[90, 75, 120, 105])
+    n.add('Line', 'ab61', bus0='a', bus1='b', carrier='AC', x=0.002, s_nom=200)
+    n.add('Line', 'bc61', bus0='b', bus1='c', carrier='AC', x=0.002, s_nom=200)
+    n.add('Transformer', 'ca61', bus0='c', bus1='a', x=0.4, s_nom=200, phase_shift=2, v_ang_max=2.5)
+    n.add('Bus', ['d', 'e', 'f'])
+    n.add('Generator', 'hydro61_shift', bus='d', p_nom=300, marginal_cost=10)
+    n.add('Generator', 'diesel61_shift', bus='f', p_nom=300, marginal_cost=200)
+    n.add('Load', 'town61_shift', bus='f', p_set=[90, 75, 120, 105])
+    n.add('Line', 'de61', bus0='d', bus1='e', carrier='AC', x=0.002, s_nom=200)
+    n.add('Line', 'ef61', bus0='e', bus1='f', carrier='AC', x=0.002, s_nom=200)
+    n.add(
+        'Transformer',
+        'fd61',
+        bus0='f',
+        bus1='d',
+        x=0.4,
+        s_nom=80,
+        phase_shift_min=-30,
+        phase_shift_max=30,
+        v_ang_max=5,
+    )
+    return n
+```
+
+</details>
+<!-- reference:rung_61_voltage_angle_limits:end -->
+
+### Rung 62 — a start-up cost per snapshot
+
+`n.optimize()` with a committable unit whose start-up and shut-down costs
+change over time. PyPSA declares `start_up_cost` and `shut_down_cost` of a
+Generator, a Link and a Process `static or series` (PyPSA/PyPSA#1909), and
+reads the cost of a start or a stop at its snapshot (`optimize.py:424-432`).
+It still adds the cost without the snapshot's weight and without the period's
+weight, as rung 48 records. The file copies that. This is a PyPSA bug
+candidate in #783, not filed. So the file states `Generator_start_up_cost`,
+`Generator_shut_down_cost` and the Link and Process pairs over `snapshot`. A
+static cost is the same value at each snapshot.
+
+The rung builds a committable peaker that the load needs in the third and
+fourth snapshots. A start costs `100` in the second snapshot and `900` in the
+third, and a stop is free only in the last snapshot. PyPSA solves to `6850.0`:
+the unit starts one snapshot early at minimum output and stops in the last
+snapshot. Each series binds (#807).
+
+| cost changed | objective |
+| --- | --- |
+| start-up cost held at its mean, `640.0` | `7090.0` |
+| shut-down cost held at its mean, `240.0` | `7050.0` |
+| start-up cost times the snapshot weight | `6900.0` |
+
+| PyPSA | status | note |
+| --- | --- | --- |
+| [`start_up_cost`, `shut_down_cost`](#objective) per snapshot | done | Generator, Link and Process over `[scenario, snapshot, …]`; no snapshot weight, as rung 48 |
+
+<!-- reference:rung_62_startup_cost_per_snapshot:begin -->
+> ✔ `pypsa 1.3.0.post1.dev23+g02bdcbbaf` solves this rung's network at objective `6850.0`, 60 rows.
+
+<details markdown="1">
+<summary>The network, as PyPSA code</summary>
+
+`rung_62_startup_cost_per_snapshot.py`
+
+```python
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+"""Rung 62: a start-up cost per snapshot — a committable unit starts in the snapshot where a start costs least, with no snapshot weight on that cost."""
+
+from __future__ import annotations
+
+from datetime import datetime
+
+SNAPSHOTS = [datetime(2015, 1, 1, hour) for hour in range(5)]
+WEIGHTINGS = [2.0, 1.5, 1.0, 2.0, 1.0]
+START_UP_COST = [400.0, 100.0, 900.0, 900.0, 900.0]
+SHUT_DOWN_COST = [300.0, 300.0, 300.0, 300.0, 0.0]
+
+
+def build():
+    """A whole network, not the spine: a committable peaker the load needs in the third and fourth snapshots, cheap to start one snapshot early and free to stop in the last."""
+    import pypsa
+
+    n = pypsa.Network()
+    n.set_snapshots(SNAPSHOTS)
+    n.snapshot_weightings['objective'] = WEIGHTINGS
+    n.add('Bus', 'grid')
+    n.add('Generator', 'base62', bus='grid', p_nom=60, marginal_cost=10)
+    n.add('Generator', 'dear62', bus='grid', p_nom=100, marginal_cost=90)
+    n.add(
+        'Generator',
+        'peak62',
+        bus='grid',
+        p_nom=50,
+        marginal_cost=20,
+        committable=True,
+        p_min_pu=0.4,
+        up_time_before=0,
+    )
+    n.generators_t.start_up_cost['peak62'] = START_UP_COST
+    n.generators_t.shut_down_cost['peak62'] = SHUT_DOWN_COST
+    n.add('Load', 'town62', bus='grid', p_set=[50, 50, 100, 100, 50])
+    return n
+```
+
+</details>
+<!-- reference:rung_62_startup_cost_per_snapshot:end -->
+
 ### Rung 66 — cycles per period
 
 `n.optimize.optimize_security_constrained(multi_investment_periods=True)` over
@@ -5024,8 +5207,8 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\Xi \times \mathcal{G}`$ — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot |
 | $`\mathrm{hold}`$ | `Generator_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true while the up time a unit brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
 | $`\mathrm{rest}`$ | `Generator_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true while the down time a unit brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
-| $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{G}`$ — cost of one start |
-| $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{G}`$ — cost of one stop |
+| $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one start in this snapshot |
+| $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
 | $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$ — the module size a build comes in whole numbers of; no value means the build is continuous |
 | $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\Xi \times \mathcal{G}`$ — how many whole modules a committable build has in place: `Generator_p_nom / Generator_p_nom_mod` where a fixed build is modular, one where it is not, data prep. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
@@ -5042,8 +5225,8 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$ — whether the nominal power is a decision |
 | $`\underline{\mathrm{f}}`$ | `Link_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — least flow, per unit of nominal power — negative for a link that carries both ways |
 | $`\overline{\mathrm{f}}`$ | `Link_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — most flow, per unit of nominal power |
-| $`\eta`$ | `Link_efficiency` over $`\Xi \times \mathcal{T} \times \mathcal{O}`$ — share of the flow that arrives at an output port, PyPSA's `efficiency`, `efficiency2`, … read long — negative where that port consumes rather than delivers. Read at the snapshot the flow arrives, so a delayed port delivers at its arrival snapshot's efficiency (`constraints.py:1522`) |
-| $`\mathrm{d}^{f}`$ | `Link_output_delay` over $`\Xi \times \mathcal{O}`$ — snapshots a port's delivery lags its link's flow — PyPSA's `delay`, `delay2`, … read long, in `snapshot_weightings.generators` units, which the file states as whole snapshots; zero for a port that delivers at once. Each scenario takes its own. PyPSA groups the ports by delay over all scenarios and shifts each group in every one, so a delay that differs by scenario delivers the flow twice (`constraints.py:1269-1276`, PyPSA/PyPSA\#1941) |
+| $`\eta`$ | `Link_efficiency` over $`\Xi \times \mathcal{T} \times \mathcal{O}`$ — share of the flow that arrives at an output port, PyPSA's `efficiency`, `efficiency2`, … read long — negative where that port consumes rather than delivers. Read at the snapshot the flow arrives, so a delayed port delivers at its arrival snapshot's efficiency (`constraints.py:1528`) |
+| $`\mathrm{d}^{f}`$ | `Link_output_delay` over $`\Xi \times \mathcal{O}`$ — snapshots a port's delivery lags its link's flow — PyPSA's `delay`, `delay2`, … read long, in `snapshot_weightings.generators` units, which the file states as whole snapshots; zero for a port that delivers at once. Each scenario takes its own. PyPSA groups the ports by delay over all scenarios and shifts each group in every one, so a delay that differs by scenario delivers the flow twice (`constraints.py:1275-1282`, PyPSA/PyPSA\#1941) |
 | $`\mathrm{cyc}^{f}`$ | `Link_output_cyclic_delay` over $`\Xi \times \mathcal{O}`$ — whether a delayed port's flow wraps from the end of its investment period — PyPSA's `cyclic_delay`, `cyclic_delay2`, …; where it does not, the flow still in transit at each period's first snapshots is lost. Each scenario takes its own, as the delay |
 | $`\mathrm{c}^{f}`$ | `Link_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one unit of flow |
 | $`\mathrm{c}^{f,(2)}`$ | `Link_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of the square of one unit of flow |
@@ -5056,8 +5239,8 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{f}^{0}`$ | `Link_p_init` over $`\Xi \times \mathcal{L}`$ — the flow a link brought into the horizon — PyPSA's `p_init`, read only where the link came in running; no value means it is unknown, so the link carries no ramp row at the first snapshot |
 | $`\mathrm{hold}^{f}`$ | `Link_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true while the up time a link brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
 | $`\mathrm{rest}^{f}`$ | `Link_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true while the down time a link brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
-| $`\mathrm{c}^{f,\mathrm{up}}`$ | `Link_start_up_cost` over $`\Xi \times \mathcal{L}`$ — cost of one start |
-| $`\mathrm{c}^{f,\mathrm{dn}}`$ | `Link_shut_down_cost` over $`\Xi \times \mathcal{L}`$ — cost of one stop |
+| $`\mathrm{c}^{f,\mathrm{up}}`$ | `Link_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one start in this snapshot |
+| $`\mathrm{c}^{f,\mathrm{dn}}`$ | `Link_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{f,\mathrm{on}}`$ | `Link_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one snapshot spent on |
 | $`\mathrm{f}^{\mathrm{mod}}`$ | `Link_p_nom_mod` over $`\mathcal{L}`$ — the module size a build comes in whole numbers of; no value means the build is continuous |
 | $`\mathrm{N}^{f,\mathrm{fix}}`$ | `Link_modules_installed` over $`\Xi \times \mathcal{L}`$ — how many whole modules a committable build has in place: `Link_p_nom / Link_p_nom_mod` where a fixed build is modular, one where it is not, data prep. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
@@ -5072,7 +5255,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{ext}^{z}`$ | `Process_p_nom_extendable` over $`\mathcal{J}`$ — whether the nominal internal power is a decision |
 | $`\underline{\mathrm{z}}`$ | `Process_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — least internal power, per unit of nominal power — negative for a process that runs both ways |
 | $`\overline{\mathrm{z}}`$ | `Process_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — most internal power, per unit of nominal power |
-| $`\alpha`$ | `Process_rate` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — the energy a port draws or delivers per unit of internal power, PyPSA's `rate0`, `rate1`, … read long — negative where the port withdraws, positive where it injects; a link is a process whose `bus0` rate is minus one and whose output rates are its efficiencies. Read at the snapshot the transfer arrives, so a delayed port transfers at its arrival snapshot's rate (`constraints.py:1522`) |
+| $`\alpha`$ | `Process_rate` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — the energy a port draws or delivers per unit of internal power, PyPSA's `rate0`, `rate1`, … read long — negative where the port withdraws, positive where it injects; a link is a process whose `bus0` rate is minus one and whose output rates are its efficiencies. Read at the snapshot the transfer arrives, so a delayed port transfers at its arrival snapshot's rate (`constraints.py:1528`) |
 | $`\mathrm{d}^{z}`$ | `Process_output_delay` over $`\Xi \times \mathcal{R}`$ — snapshots a port's transfer lags its process's internal power — PyPSA's `delay0`, `delay1`, … read long, in `snapshot_weightings.generators` units, which the file states as whole snapshots; zero for a port that transfers at once. Each scenario takes its own, as a link's |
 | $`\mathrm{cyc}^{z}`$ | `Process_output_cyclic_delay` over $`\Xi \times \mathcal{R}`$ — whether a delayed port's transfer wraps from the end of its investment period — PyPSA's `cyclic_delay0`, `cyclic_delay1`, …; where it does not, the energy still in transit at each period's first snapshots is lost. Each scenario takes its own, as the delay |
 | $`\mathrm{c}^{z}`$ | `Process_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one unit of internal power |
@@ -5093,8 +5276,8 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\Xi \times \mathcal{J}`$ — the internal power a process brought into the horizon — PyPSA's `p_init`, read only where the process came in running; no value means it is unknown, so the process carries no ramp row at the first snapshot |
 | $`\mathrm{hold}^{z}`$ | `Process_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true while the up time a process brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
 | $`\mathrm{rest}^{z}`$ | `Process_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true while the down time a process brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
-| $`\mathrm{c}^{z,\mathrm{up}}`$ | `Process_start_up_cost` over $`\Xi \times \mathcal{J}`$ — cost of one start |
-| $`\mathrm{c}^{z,\mathrm{dn}}`$ | `Process_shut_down_cost` over $`\Xi \times \mathcal{J}`$ — cost of one stop |
+| $`\mathrm{c}^{z,\mathrm{up}}`$ | `Process_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one start in this snapshot |
+| $`\mathrm{c}^{z,\mathrm{dn}}`$ | `Process_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{z,\mathrm{on}}`$ | `Process_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one snapshot spent on |
 | $`\mathrm{z}^{\mathrm{mod}}`$ | `Process_p_nom_mod` over $`\mathcal{J}`$ — the module size a build comes in whole numbers of; no value means the build is continuous |
 | $`\mathrm{N}^{z,\mathrm{fix}}`$ | `Process_modules_installed` over $`\Xi \times \mathcal{J}`$ — how many whole modules a committable build has in place: `Process_p_nom / Process_p_nom_mod` where a fixed build is modular, one where it is not, data prep. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
@@ -5206,7 +5389,9 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\Xi \times \mathcal{K}`$ — cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
 | $`\mathrm{s}^{\mathrm{nom,set}}`$ | `Line_s_nom_set` over $`\Xi \times \mathcal{K}`$ — a given nominal apparent power for an extendable line; one without a value has no row here |
 | $`\mathrm{s}^{\mathrm{set}}`$ | `Line_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — a given flow schedule; a line without one has no row here |
-| $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{Y} \times \mathcal{K} \times \mathcal{C}`$ — the line's series impedance, signed by its orientation in the cycle — the cycle basis, data prep; a line in no cycle has no row. PyPSA builds the cycle basis from the first scenario only (`networks.py:1354-1361`) |
+| $`\overline{\delta}`$ | `Line_v_ang_max` over $`\Xi \times \mathcal{K}`$ — the most the voltage angle difference across a line may be either way, in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default. A line whose carrier is not AC has no row either. The deprecated `v_ang_min` is ignored, as PyPSA ignores it with a `DeprecationWarning` (`constraints.py:1713-1720`) |
+| $`\mathrm{x}^{\mathrm{eff}}`$ | `Line_x_pu_eff` over $`\Xi \times \mathcal{K}`$ — the line's effective series reactance — PyPSA's `x_pu_eff`, `x` over the square of its bus's nominal voltage, data prep |
+| $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{Y} \times \mathcal{K} \times \mathcal{C}`$ — the line's series impedance, signed by its orientation in the cycle — the cycle basis, data prep; a line in no cycle has no row. PyPSA builds the cycle basis from the first scenario only (`networks.py:1356-1363`) |
 | $`\beta`$ | `Line_BODF` over $`\mathcal{K} \times \mathcal{K}^{\mathrm{out}}`$ — the share of an outaged branch's flow a line takes on when that branch goes out — PyPSA's `BODF`, from the sub-network's PTDF, data prep; a row only where the line and the outage share a sub-network, -1 at the outaged line itself |
 | $`\mathrm{lossy}`$ | `transmission_losses` (scalar) — whether the network dissipates transmission losses — PyPSA's `transmission_losses` read as a flag; its mode, tangents or secants, only decides how data prep fills the `segment` axis, the rows are the same; false with no segments is a lossless run. A security-constrained run over a network with passive branches builds no loss: PyPSA does not hand the keyword to `create_model` (`abstract.py:437-441`) but to the solver (`:491`), so data prep feeds false there |
 | $`\overline{\ell}`$ | `Line_loss_max` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the loss at a line's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep |
@@ -5220,12 +5405,15 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
 | $`\sigma^{\mathrm{nom,set}}`$ | `Transformer_s_nom_set` over $`\Xi \times \mathcal{M}`$ — a given nominal apparent power for an extendable transformer; one without a value has no row here |
 | $`\sigma^{\mathrm{set}}`$ | `Transformer_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — a given flow schedule; a transformer without one has no row here |
+| $`\overline{\delta}^{\sigma}`$ | `Transformer_v_ang_max` over $`\Xi \times \mathcal{M}`$ — the most the voltage angle difference across a transformer, its phase shift included, may be either way, in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default. The deprecated `v_ang_min` is ignored, as a line's |
+| $`\mathrm{x}^{\mathrm{eff},\sigma}`$ | `Transformer_x_pu_eff` over $`\Xi \times \mathcal{M}`$ — the transformer's effective series reactance — PyPSA's `x_pu_eff`, `x` over its `s_nom` times its tap ratio, data prep |
 | $`\mathrm{x}^{\sigma}`$ | `Transformer_cycle_weight` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{C}`$ — the transformer's effective series reactance, `x` times its tap ratio, signed by its orientation in the cycle — PyPSA's `x_pu_eff`, the cycle basis, data prep; a transformer in no cycle has no row. From the first scenario only, as a line's |
 | $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{M} \times \mathcal{K}^{\mathrm{out}}`$ — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's; a row only where the transformer and the outage share a sub-network |
 | $`\vartheta`$ | `Transformer_phase_shift_weight` over $`\mathcal{T} \times \mathcal{M} \times \mathcal{C}`$ — a fixed transformer's phase shift in radians at each snapshot, signed by its orientation in the cycle — a constant added to the cycle sum, data prep; zero for a varying transformer, whose shift is a decision instead, so the constant and the variable term never both count a shift. A transformer with no shift or in no cycle of its snapshot's period has no row |
-| $`\mathrm{Transformer\_phase\_shift\_varying}`$ | `Transformer_phase_shift_varying` over $`\mathcal{M}`$ — whether a transformer's phase shift is a decision — PyPSA's `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a fixed shift carried by `phase_shift`. The shift parameters carry no scenario: only a cycle row reads them, and PyPSA fails on a transformer in a cycle on a network with scenarios (`constraints.py:1654`) |
+| $`\mathrm{Transformer\_phase\_shift\_varying}`$ | `Transformer_phase_shift_varying` over $`\mathcal{M}`$ — whether a transformer's phase shift is a decision — PyPSA's `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a fixed shift carried by `phase_shift`. The shift parameters carry no scenario: only a cycle row and an angle row read them, PyPSA fails on a transformer in a cycle on a network with scenarios (`constraints.py:1660`), and builds no angle row on one |
 | $`\mathrm{Transformer\_phase\_shift\_min}`$ | `Transformer_phase_shift_min` over $`\mathcal{M}`$ — the least a varying transformer's phase shift may take, in degrees — PyPSA's `phase_shift_min`; where it is below `phase_shift_max` the shift is a decision, otherwise the transformer keeps its fixed `phase_shift` |
 | $`\mathrm{Transformer\_phase\_shift\_max}`$ | `Transformer_phase_shift_max` over $`\mathcal{M}`$ — the most a varying transformer's phase shift may take, in degrees — PyPSA's `phase_shift_max`; equal to `phase_shift_min` for a fixed transformer |
+| $`\varphi^{\sigma}`$ | `Transformer_phase_shift_fixed` over $`\mathcal{T} \times \mathcal{M}`$ — a fixed transformer's phase shift at each snapshot, in degrees — PyPSA's `phase_shift`, zero by default; a varying transformer's shift is a decision instead |
 | $`\mathrm{Transformer\_phase\_shift\_cycle\_weight}`$ | `Transformer_phase_shift_cycle_weight` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{C}`$ — the cycle sign for a varying transformer's phase shift, times π/180 so a shift in degrees enters the cycle sum in radians — data prep; zero for a fixed transformer or one in no cycle |
 | $`\overline{\ell}^{\sigma}`$ | `Transformer_loss_max` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — the loss at a transformer's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, its `r_pu_eff` the resistance over the given `s_nom` times the tap ratio, data prep |
 | $`\mathrm{a}^{\sigma}`$ | `Transformer_loss_slope` over $`\Xi \times \mathcal{T} \times \mathcal{M} \times \mathcal{B}`$ — the slope of a cut to a transformer's loss curve — a tangent's `2 * r_pu_eff * p_k`, a secant's `r_pu_eff * (p_k + p_k+1)`, as a line's, over the transformer's own `r_pu_eff` and rating, data prep |
@@ -5375,7 +5563,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathit{Process\_commitment\_opex}`$ | `Process_commitment_opex` over $`\Xi`$ |
 | $`\mathit{StorageUnit\_opex}`$ | `StorageUnit_opex` over $`\Xi`$ |
 | $`\mathit{Store\_opex}`$ | `Store_opex` over $`\Xi`$ |
-| $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$ — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:414-429`) |
+| $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$ — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:415-432`) |
 | $`\mathit{Generator\_capex}`$ | `Generator_capex` (scalar) |
 | $`\mathit{Link\_capex}`$ | `Link_capex` (scalar) |
 | $`\mathit{StorageUnit\_capex}`$ | `StorageUnit_capex` (scalar) |
@@ -5393,7 +5581,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathit{Store\_additions}`$ | `Store_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$ — what a carrier adds in a period — every extendable component of that carrier, counting each build in the first period it stands in. Like PyPSA, it sums only the components that carry a carrier attribute, so a transformer, which has none, counts in no carrier |
 | $`\mathrm{r}^{+}`$ | `Carrier_relative_growth` over $`\mathcal{I}`$ — the share of the previous period's additions a carrier's growth limit reads — PyPSA's `max_relative_growth` clipped at zero, so a negative share adds nothing and never tightens the limit |
-| $`\check{\mathrm{load}}`$ | `Load_demand` over $`\Xi \times \mathcal{T} \times \mathcal{D}`$ — what a load draws from its bus's balance — its demand times its sign where it is active, nothing where it is not, since PyPSA drops an inactive load from the balance (`constraints.py:1537-1538`) |
+| $`\check{\mathrm{load}}`$ | `Load_demand` over $`\Xi \times \mathcal{T} \times \mathcal{D}`$ — what a load draws from its bus's balance — its demand times its sign where it is active, nothing where it is not, since PyPSA drops an inactive load from the balance (`constraints.py:1543-1544`) |
 | $`\check{s}`$ | `Line_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the flow a line's post-contingency rows read — its flow where it stands, nothing where it does not, since PyPSA builds those rows for every branch of the sub-network in every snapshot |
 | $`\check{\sigma}`$ | `Transformer_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — the flow a transformer's post-contingency rows read, as a line's |
 | $`\hat{s}`$ | `Outage_s` over $`\Xi \times \mathcal{T} \times \mathcal{K}^{\mathrm{out}}`$ — the flow an outage takes off its branch — the outaged line's or transformer's flow before it goes out |
@@ -8094,6 +8282,43 @@ Line_s_set:
 s_{\xi,t,k} = \mathrm{s}^{\mathrm{set}}_{\xi,t,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{s}^{\mathrm{set}}_{\xi,t,k} \text{ is defined} \wedge \mathrm{on}^{s}_{t,k}
 ```
 
+### `Line-v_ang-lower`
+
+`Line_v_ang_lower`
+
+```yaml
+Line_v_ang_lower:
+  description: >-
+    `Line-v_ang-lower` — an AC line carries at least the flow at which the
+    voltage angle difference across it, `x_pu_eff` times the flow in
+    radians, is the negative of its limit
+  dims: [scenario, snapshot, line]
+  where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+  expression: Line_s >= -Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
+```
+
+```math
+s_{\xi,t,k} \ge \frac{-\overline{\delta}_{\xi,k} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{\xi,k}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \overline{\delta}_{\xi,k} \text{ is defined} \wedge \mathrm{Line\_carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{t,k}
+```
+
+### `Line-v_ang-upper`
+
+`Line_v_ang_upper`
+
+```yaml
+Line_v_ang_upper:
+  description: >-
+    `Line-v_ang-upper` — an AC line carries at most the flow at which the
+    voltage angle difference across it reaches its limit
+  dims: [scenario, snapshot, line]
+  where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+  expression: Line_s <= Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
+```
+
+```math
+s_{\xi,t,k} \le \frac{\overline{\delta}_{\xi,k} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{\xi,k}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \overline{\delta}_{\xi,k} \text{ is defined} \wedge \mathrm{Line\_carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{t,k}
+```
+
 ### `Line-loss_upper`
 
 `Line_loss_upper`
@@ -8274,6 +8499,82 @@ Transformer_s_set:
 
 ```math
 \sigma_{\xi,t,m} = \sigma^{\mathrm{set}}_{\xi,t,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \sigma^{\mathrm{set}}_{\xi,t,m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
+```
+
+### `Transformer-v_ang-lower`
+
+`Transformer_v_ang_lower`
+
+```yaml
+Transformer_v_ang_lower:
+  description: >-
+    `Transformer-v_ang-lower` — a transformer with a fixed shift carries at
+    least the flow at which the voltage angle difference across it,
+    `x_pu_eff` times the flow plus the shift, is the negative of its limit
+  dims: [scenario, snapshot, transformer]
+  where: Transformer_v_ang_max AND NOT Transformer_phase_shift_varying AND Transformer_active
+  expression: Transformer_s >= -(Transformer_v_ang_max + Transformer_phase_shift_fixed) * (3.141592653589793 / 180) / Transformer_x_pu_eff
+```
+
+```math
+\sigma_{\xi,t,m} \ge \frac{-\left( \overline{\delta}^{\sigma}_{\xi,m} + \varphi^{\sigma}_{t,m} \right) \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \overline{\delta}^{\sigma}_{\xi,m} \text{ is defined} \wedge \neg \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+```
+
+### `Transformer-v_ang-upper`
+
+`Transformer_v_ang_upper`
+
+```yaml
+Transformer_v_ang_upper:
+  description: >-
+    `Transformer-v_ang-upper` — a transformer with a fixed shift carries at
+    most the flow at which the voltage angle difference across it, the
+    shift included, reaches its limit
+  dims: [scenario, snapshot, transformer]
+  where: Transformer_v_ang_max AND NOT Transformer_phase_shift_varying AND Transformer_active
+  expression: Transformer_s <= (Transformer_v_ang_max - Transformer_phase_shift_fixed) * (3.141592653589793 / 180) / Transformer_x_pu_eff
+```
+
+```math
+\sigma_{\xi,t,m} \le \frac{\left( \overline{\delta}^{\sigma}_{\xi,m} - \varphi^{\sigma}_{t,m} \right) \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \overline{\delta}^{\sigma}_{\xi,m} \text{ is defined} \wedge \neg \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+```
+
+### `Transformer-v_ang-var-lower`
+
+`Transformer_v_ang_var_lower`
+
+```yaml
+Transformer_v_ang_var_lower:
+  description: >-
+    `Transformer-v_ang-var-lower` — for a transformer whose shift is a
+    decision, the flow plus the shift over `x_pu_eff` is at least the
+    negative of the limit over `x_pu_eff`
+  dims: [scenario, snapshot, transformer]
+  where: Transformer_v_ang_max AND Transformer_phase_shift_varying AND Transformer_active
+  expression: Transformer_s + Transformer_phase_shift * (3.141592653589793 / 180) / Transformer_x_pu_eff >= -Transformer_v_ang_max * (3.141592653589793 / 180) / Transformer_x_pu_eff
+```
+
+```math
+\sigma_{\xi,t,m} + \frac{\mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \ge \frac{-\overline{\delta}^{\sigma}_{\xi,m} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \overline{\delta}^{\sigma}_{\xi,m} \text{ is defined} \wedge \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+```
+
+### `Transformer-v_ang-var-upper`
+
+`Transformer_v_ang_var_upper`
+
+```yaml
+Transformer_v_ang_var_upper:
+  description: >-
+    `Transformer-v_ang-var-upper` — for a transformer whose shift is a
+    decision, the flow plus the shift over `x_pu_eff` is at most the limit
+    over `x_pu_eff`
+  dims: [scenario, snapshot, transformer]
+  where: Transformer_v_ang_max AND Transformer_phase_shift_varying AND Transformer_active
+  expression: Transformer_s + Transformer_phase_shift * (3.141592653589793 / 180) / Transformer_x_pu_eff <= Transformer_v_ang_max * (3.141592653589793 / 180) / Transformer_x_pu_eff
+```
+
+```math
+\sigma_{\xi,t,m} + \frac{\mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \le \frac{\overline{\delta}^{\sigma}_{\xi,m} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \overline{\delta}^{\sigma}_{\xi,m} \text{ is defined} \wedge \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 
 ### `Transformer-loss_upper`
@@ -9382,7 +9683,7 @@ Bus_nodal_balance:
     carrying its flow, meets the load there, less half of every incident
     line's and transformer's loss — PyPSA dissipates a branch's loss half at
     either end. Each generator, storage unit, store and load term enters
-    with its component's `sign` (`constraints.py:1428-1429`, `:1538`), and
+    with its component's `sign` (`constraints.py:1434-1435`, `:1544`), and
     an inactive load not at all. A bus nothing is attached to has no row; PyPSA refuses one that
     carries load, and this file does not yet.
   dims: [scenario, snapshot, bus]
@@ -10502,7 +10803,7 @@ Generator_commitment_opex:
 ```
 
 ```math
-\mathit{Generator\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} u_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{on}}_{\xi,t,g} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{up}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{up}}_{\xi,g} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{dn}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{dn}}_{\xi,g} \qquad \forall\, \xi \in \Xi
+\mathit{Generator\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} u_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{on}}_{\xi,t,g} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{up}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{up}}_{\xi,t,g} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{dn}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{dn}}_{\xi,t,g} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `Link_opex`
@@ -10529,7 +10830,7 @@ Link_commitment_opex:
 ```
 
 ```math
-\mathit{Link\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} u^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{on}}_{\xi,t,l} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{up}^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{up}}_{\xi,l} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{dn}^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{dn}}_{\xi,l} \qquad \forall\, \xi \in \Xi
+\mathit{Link\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} u^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{on}}_{\xi,t,l} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{up}^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{up}}_{\xi,t,l} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{dn}^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{dn}}_{\xi,t,l} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `Process_opex`
@@ -10556,7 +10857,7 @@ Process_commitment_opex:
 ```
 
 ```math
-\mathit{Process\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} u^{z}_{\xi,t,j} \cdot \mathrm{c}^{z,\mathrm{on}}_{\xi,t,j} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{up}^{z}_{\xi,t,j} \cdot \mathrm{c}^{z,\mathrm{up}}_{\xi,j} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{dn}^{z}_{\xi,t,j} \cdot \mathrm{c}^{z,\mathrm{dn}}_{\xi,j} \qquad \forall\, \xi \in \Xi
+\mathit{Process\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} u^{z}_{\xi,t,j} \cdot \mathrm{c}^{z,\mathrm{on}}_{\xi,t,j} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{up}^{z}_{\xi,t,j} \cdot \mathrm{c}^{z,\mathrm{up}}_{\xi,t,j} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{dn}^{z}_{\xi,t,j} \cdot \mathrm{c}^{z,\mathrm{dn}}_{\xi,t,j} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `StorageUnit_opex`
@@ -10606,7 +10907,7 @@ scenario_opex:
     what a future costs to run — every operating term, weighted by the
     snapshot's hours and its period, before the scenario's own weight; a
     start and a stop cost what they cost, unweighted, as PyPSA adds them
-    (`optimize.py:414-429`)
+    (`optimize.py:415-432`)
 ```
 
 ```math
@@ -10845,7 +11146,7 @@ Load_demand:
   description: >-
     what a load draws from its bus's balance — its demand times its sign
     where it is active, nothing where it is not, since PyPSA drops an
-    inactive load from the balance (`constraints.py:1537-1538`)
+    inactive load from the balance (`constraints.py:1543-1544`)
   dims: [scenario, snapshot, load]
   cases:
     active: { when: Load_active, expression: Load_sign * Load_p_set }
@@ -11445,7 +11746,7 @@ Generator_maintenance_module_count_is_finite:
     the `maint-modstatus` rows bound the modules on in maintenance by
     `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
     coefficient. PyPSA does not check it, and HiGHS refuses the model
-    (`constraints.py:500-503`)
+    (`constraints.py:503-506`)
 ```
 
 ```math
@@ -11540,7 +11841,7 @@ Link_maintenance_module_count_is_finite:
     the `maint-modstatus` rows bound the modules on in maintenance by
     `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
     coefficient. PyPSA does not check it, and HiGHS refuses the model
-    (`constraints.py:500-503`)
+    (`constraints.py:503-506`)
 ```
 
 ```math
@@ -11635,7 +11936,7 @@ Process_maintenance_module_count_is_finite:
     the `maint-modstatus` rows bound the modules on in maintenance by
     `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
     coefficient. PyPSA does not check it, and HiGHS refuses the model
-    (`constraints.py:500-503`)
+    (`constraints.py:503-506`)
 ```
 
 ```math
@@ -11841,7 +12142,7 @@ Generator_marginal_cost_quadratic_without_risk_preference:
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:467-474`). The spec cannot tell no risk preference from
+    (`optimize.py:470-477`). The spec cannot tell no risk preference from
     one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -11858,7 +12159,7 @@ Link_marginal_cost_quadratic_without_risk_preference:
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:467-474`). The spec cannot tell no risk preference from
+    (`optimize.py:470-477`). The spec cannot tell no risk preference from
     one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -11875,7 +12176,7 @@ Process_marginal_cost_quadratic_without_risk_preference:
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:467-474`). The spec cannot tell no risk preference from
+    (`optimize.py:470-477`). The spec cannot tell no risk preference from
     one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -11892,7 +12193,7 @@ StorageUnit_marginal_cost_quadratic_without_risk_preference:
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:467-474`). The spec cannot tell no risk preference from
+    (`optimize.py:470-477`). The spec cannot tell no risk preference from
     one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -11909,7 +12210,7 @@ Store_marginal_cost_quadratic_without_risk_preference:
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:467-474`). The spec cannot tell no risk preference from
+    (`optimize.py:470-477`). The spec cannot tell no risk preference from
     one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -11946,7 +12247,7 @@ Generator_came_in_running_unless_committable:
     ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
     with nothing carried in, and caps the unit there at zero, or at its
     start-up ramp where another unit of the component is committable with a
-    fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+    fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
     the attribute as read only for a committable unit and does not check
     it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
     spec does not state that row, so it refuses the data
@@ -11967,7 +12268,7 @@ Link_came_in_running_unless_committable:
     ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
     with nothing carried in, and caps the link there at zero, or at its
     start-up ramp where another link of the component is committable with a
-    fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+    fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
     the attribute as read only for a committable link and does not check
     it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
     spec does not state that row, so it refuses the data
@@ -11988,7 +12289,7 @@ Process_came_in_running_unless_committable:
     ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
     with nothing carried in, and caps the process there at zero, or at its
     start-up ramp where another process of the component is committable with a
-    fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+    fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
     the attribute as read only for a committable process and does not check
     it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
     spec does not state that row, so it refuses the data
