@@ -232,13 +232,15 @@ constraints:
 assumptions:
   Process_came_in_running_unless_committable:
     holds: "Process_status_initial == 1"
-    where: "NOT Process_committable AND (Process_ramp_limit_up OR Process_ramp_limit_down)"
+    where: "NOT Process_committable AND (Process_ramp_limit_up OR Process_ramp_limit_down OR Process_ramp_limit_start_up OR Process_ramp_limit_shut_down)"
     description: >-
       PyPSA reads `up_time_before` of a process that is not committable in its
-      ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
-      with nothing carried in, and caps the process there at zero, or at its
-      start-up ramp where another process of the component is committable with a
-      fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
+      ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp
+      alone builds (`constraints.py:1052-1053`). Where it is zero, PyPSA
+      builds a row at the first snapshot with nothing carried in, and caps
+      the process there at zero, or at its start-up ramp where another process of
+      the component is committable with a fixed build
+      (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
       the attribute as read only for a committable process and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data
@@ -385,6 +387,6 @@ z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \Delta^{z,+}_{\xi,t,j} \qquad \for
 **`Process_came_in_running_unless_committable`**
 
 ```math
-\mathrm{u}^{z,0}_{\xi,j} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \neg \mathrm{com}^{z}_{j} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \right)
+\mathrm{u}^{z,0}_{\xi,j} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \neg \mathrm{com}^{z}_{j} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right)
 ```
 <!-- gallery:end -->

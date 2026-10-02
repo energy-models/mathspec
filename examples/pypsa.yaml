@@ -173,7 +173,15 @@ parameters:
       is not a whole number of modules
     dims: [scenario, generator]
   Generator_big_m:
-    description: a bound safely above any feasible output — the build cap at full availability, data prep
+    description: >-
+      the bound a committed extendable generator's big-M rows release it by — the
+      build cap `p_nom_max` times the highest `p_max_pu`, where the cap is
+      finite and positive. Elsewhere it is `committable_big_m` times the
+      highest `p_max_pu`, and where that keyword is not given, ten times the
+      largest of the peak total load and the component's largest finite
+      `p_nom` and `p_nom_max`, or 1e6 where there is none of them
+      (`components.py:1050-1121`). Below the output a solve wants, it caps that
+      output; data prep
     dims: [scenario, generator]
   Generator_p_min_pu_nonneg:
     description: >-
@@ -323,7 +331,15 @@ parameters:
       is not a whole number of modules
     dims: [scenario, link]
   Link_big_m:
-    description: a bound safely above any feasible flow — the build cap at full availability, data prep
+    description: >-
+      the bound a committed extendable link's big-M rows release it by — the
+      build cap `p_nom_max` times the highest `p_max_pu`, where the cap is
+      finite and positive. Elsewhere it is `committable_big_m` times the
+      highest `p_max_pu`, and where that keyword is not given, ten times the
+      largest of the peak total load and the component's largest finite
+      `p_nom` and `p_nom_max`, or 1e6 where there is none of them
+      (`components.py:1050-1121`). Below the flow a solve wants, it caps that
+      flow; data prep
     dims: [scenario, link]
   Link_p_min_pu_nonneg:
     description: >-
@@ -487,7 +503,15 @@ parameters:
       is not a whole number of modules
     dims: [scenario, process]
   Process_big_m:
-    description: a bound safely above any feasible internal power — the build cap at full availability, data prep
+    description: >-
+      the bound a committed extendable process's big-M rows release it by — the
+      build cap `p_nom_max` times the highest `p_max_pu`, where the cap is
+      finite and positive. Elsewhere it is `committable_big_m` times the
+      highest `p_max_pu`, and where that keyword is not given, ten times the
+      largest of the peak total load and the component's largest finite
+      `p_nom` and `p_nom_max`, or 1e6 where there is none of them
+      (`components.py:1050-1121`). Below the internal power a solve wants, it caps that
+      internal power; data prep
     dims: [scenario, process]
   Process_p_min_pu_nonneg:
     description: >-
@@ -1726,8 +1750,18 @@ variables:
 expressions:
   Generator_previous_status:
     description: >-
-      the commitment state a generator carries into a snapshot — the state it
-      brought into the horizon at the first, the previous snapshot's after that
+      the commitment state a generator carries into a snapshot — off at the
+      first snapshot it stands in past the first of the horizon, as PyPSA
+      reads a status it did not build (`constraints.py:297`), and the state
+      carried over otherwise
+    dims: [scenario, snapshot, generator]
+    cases:
+      opening_late: { when: "position(snapshot) > 0 AND NOT shift(Generator_active, along=snapshot, offset=1)", expression: 0 }
+    otherwise: Generator_status_carried_over
+  Generator_status_carried_over:
+    description: >-
+      the state a generator carries over into a snapshot — the state it brought
+      into the horizon at the first, the previous snapshot's after that
     dims: [scenario, snapshot, generator]
     cases:
       opening: { when: "position(snapshot) == 0", expression: Generator_status_initial }
@@ -1823,8 +1857,18 @@ expressions:
     otherwise: Link_p_nom
   Link_previous_status:
     description: >-
-      the commitment state a link carries into a snapshot — the state it
-      brought into the horizon at the first, the previous snapshot's after that
+      the commitment state a link carries into a snapshot — off at the
+      first snapshot it stands in past the first of the horizon, as PyPSA
+      reads a status it did not build (`constraints.py:297`), and the state
+      carried over otherwise
+    dims: [scenario, snapshot, link]
+    cases:
+      opening_late: { when: "position(snapshot) > 0 AND NOT shift(Link_active, along=snapshot, offset=1)", expression: 0 }
+    otherwise: Link_status_carried_over
+  Link_status_carried_over:
+    description: >-
+      the state a link carries over into a snapshot — the state it brought
+      into the horizon at the first, the previous snapshot's after that
     dims: [scenario, snapshot, link]
     cases:
       opening: { when: "position(snapshot) == 0", expression: Link_status_initial }
@@ -1914,8 +1958,18 @@ expressions:
     otherwise: Process_p_nom
   Process_previous_status:
     description: >-
-      the commitment state a process carries into a snapshot — the state it
-      brought into the horizon at the first, the previous snapshot's after that
+      the commitment state a process carries into a snapshot — off at the
+      first snapshot it stands in past the first of the horizon, as PyPSA
+      reads a status it did not build (`constraints.py:297`), and the state
+      carried over otherwise
+    dims: [scenario, snapshot, process]
+    cases:
+      opening_late: { when: "position(snapshot) > 0 AND NOT shift(Process_active, along=snapshot, offset=1)", expression: 0 }
+    otherwise: Process_status_carried_over
+  Process_status_carried_over:
+    description: >-
+      the state a process carries over into a snapshot — the state it brought
+      into the horizon at the first, the previous snapshot's after that
     dims: [scenario, snapshot, process]
     cases:
       opening: { when: "position(snapshot) == 0", expression: Process_status_initial }
@@ -4288,37 +4342,43 @@ assumptions:
       more than one scenario
   Generator_came_in_running_unless_committable:
     holds: "Generator_status_initial == 1"
-    where: "NOT Generator_committable AND (Generator_ramp_limit_up OR Generator_ramp_limit_down)"
+    where: "NOT Generator_committable AND (Generator_ramp_limit_up OR Generator_ramp_limit_down OR Generator_ramp_limit_start_up OR Generator_ramp_limit_shut_down)"
     description: >-
       PyPSA reads `up_time_before` of a unit that is not committable in its
-      ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
-      with nothing carried in, and caps the unit there at zero, or at its
-      start-up ramp where another unit of the component is committable with a
-      fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
+      ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp
+      alone builds (`constraints.py:1052-1053`). Where it is zero, PyPSA
+      builds a row at the first snapshot with nothing carried in, and caps
+      the unit there at zero, or at its start-up ramp where another unit of
+      the component is committable with a fixed build
+      (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
       the attribute as read only for a committable unit and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data
   Link_came_in_running_unless_committable:
     holds: "Link_status_initial == 1"
-    where: "NOT Link_committable AND (Link_ramp_limit_up OR Link_ramp_limit_down)"
+    where: "NOT Link_committable AND (Link_ramp_limit_up OR Link_ramp_limit_down OR Link_ramp_limit_start_up OR Link_ramp_limit_shut_down)"
     description: >-
       PyPSA reads `up_time_before` of a link that is not committable in its
-      ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
-      with nothing carried in, and caps the link there at zero, or at its
-      start-up ramp where another link of the component is committable with a
-      fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
+      ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp
+      alone builds (`constraints.py:1052-1053`). Where it is zero, PyPSA
+      builds a row at the first snapshot with nothing carried in, and caps
+      the link there at zero, or at its start-up ramp where another link of
+      the component is committable with a fixed build
+      (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
       the attribute as read only for a committable link and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data
   Process_came_in_running_unless_committable:
     holds: "Process_status_initial == 1"
-    where: "NOT Process_committable AND (Process_ramp_limit_up OR Process_ramp_limit_down)"
+    where: "NOT Process_committable AND (Process_ramp_limit_up OR Process_ramp_limit_down OR Process_ramp_limit_start_up OR Process_ramp_limit_shut_down)"
     description: >-
       PyPSA reads `up_time_before` of a process that is not committable in its
-      ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
-      with nothing carried in, and caps the process there at zero, or at its
-      start-up ramp where another process of the component is committable with a
-      fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
+      ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp
+      alone builds (`constraints.py:1052-1053`). Where it is zero, PyPSA
+      builds a row at the first snapshot with nothing carried in, and caps
+      the process there at zero, or at its start-up ramp where another process of
+      the component is committable with a fixed build
+      (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
       the attribute as read only for a committable process and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data
