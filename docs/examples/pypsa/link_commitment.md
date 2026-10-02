@@ -78,6 +78,7 @@ parameters:
       (`components.py:1050-1121`). Below the flow a solve wants, it caps that
       flow; data prep
     dims: [scenario, link]
+    missing: neutral
 
 variables:
   Link_status:
@@ -311,7 +312,7 @@ constraints:
 | $`\mathrm{c}^{f,\mathrm{up}}`$ | `Link_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{f,\mathrm{dn}}`$ | `Link_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{f,\mathrm{on}}`$ | `Link_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\Xi \times \mathcal{L}`$ — the bound a committed extendable link's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the flow a solve wants, it caps that flow; data prep |
+| $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the bound a committed extendable link's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the flow a solve wants, it caps that flow; data prep |
 
 #### Variables
 

@@ -544,7 +544,7 @@
     },
     "ParameterBlock": {
       "additionalProperties": false,
-      "description": "A declared parameter with dims and dtype.",
+      "description": "A declared parameter with dims and dtype, and what a missing row of its data means.",
       "properties": {
         "description": {
           "anyOf": [
@@ -575,6 +575,31 @@
           ],
           "title": "Dtype",
           "type": "string"
+        },
+        "missing": {
+          "anyOf": [
+            {
+              "enum": [
+                "refused",
+                "absent",
+                "neutral"
+              ]
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "enum": [
+                "inf",
+                "-inf"
+              ]
+            }
+          ],
+          "default": "refused",
+          "title": "Missing"
         }
       },
       "required": [
@@ -731,6 +756,14 @@
           ],
           "title": "Key"
         },
+        "missing": {
+          "default": "refused",
+          "enum": [
+            "refused",
+            "absent"
+          ],
+          "title": "Missing"
+        },
         "values": {
           "anyOf": [
             {
@@ -807,15 +840,6 @@
       "additionalProperties": false,
       "description": "A declared decision variable.",
       "properties": {
-        "absence": {
-          "default": "undefined",
-          "enum": [
-            "undefined",
-            "zero"
-          ],
-          "title": "Absence",
-          "type": "string"
-        },
         "bounds": {
           "$ref": "#/$defs/BoundsBlock",
           "default": {
@@ -850,6 +874,15 @@
             "binary"
           ],
           "title": "Domain",
+          "type": "string"
+        },
+        "missing": {
+          "default": "absent",
+          "enum": [
+            "absent",
+            "neutral"
+          ],
+          "title": "Missing",
           "type": "string"
         },
         "where": {

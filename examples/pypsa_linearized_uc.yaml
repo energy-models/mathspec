@@ -89,15 +89,19 @@ parameters:
   Generator_ramp_limit_up:
     description: most a generator may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
     dims: [snapshot, generator]
+    missing: neutral
   Generator_ramp_limit_down:
     description: most a generator may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
     dims: [snapshot, generator]
+    missing: neutral
   Generator_ramp_limit_start_up:
-    description: most output in the snapshot a unit starts, per unit of nominal power
+    description: most output in the snapshot a unit starts, per unit of nominal power; no value means no limit
     dims: [generator]
+    missing: neutral
   Generator_ramp_limit_shut_down:
-    description: most output in the snapshot before a unit stops, per unit of nominal power
+    description: most output in the snapshot before a unit stops, per unit of nominal power; no value means no limit
     dims: [generator]
+    missing: neutral
   Generator_min_up_time:
     description: least snapshots a unit stays on once started
     dims: [generator]
@@ -116,6 +120,7 @@ parameters:
       only where the unit came in running; no value means it is unknown, so
       the unit carries no ramp row at the first snapshot
     dims: [generator]
+    missing: neutral
   Generator_must_stay_up:
     description: >-
       true while the up time a unit brought into the horizon still binds —
@@ -158,6 +163,7 @@ parameters:
       `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [generator]
+    missing: neutral
   Generator_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it
@@ -236,7 +242,7 @@ variables:
       continuous, and one exactly where an event covers the snapshot
     dims: [snapshot, generator]
     where: Generator_maintainable
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: 1
@@ -246,7 +252,7 @@ variables:
       this snapshot — a binary, which the keyword does not relax
     dims: [snapshot, generator]
     where: Generator_maintainable
-    absence: zero
+    missing: neutral
     domain: binary
   Generator_maintenance_status:
     description: >-
@@ -255,7 +261,7 @@ variables:
       maintenance may also be off
     dims: [snapshot, generator]
     where: Generator_maintainable AND Generator_committable
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
 

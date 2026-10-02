@@ -71,6 +71,7 @@ parameters:
       (`components.py:1050-1121`). Below the flow a solve wants, it caps that
       flow; data prep
     dims: [scenario, link]
+    missing: neutral
 
 variables:
   Link_status:

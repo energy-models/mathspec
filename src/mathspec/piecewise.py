@@ -95,9 +95,10 @@ def lp_domain_refusal(name: str, pw: PiecewiseBlock, links: tuple[Expression, ..
 def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, AssumptionBlock]:
     """What *block* assumes of its numbers, by the name the document prints and a refusal quotes.
 
-    Every curve assumes its breakpoints are there: a missing parameter row is
-    not absence, it is a zero, so an undeclared breakpoint sits the curve on
-    the origin rather than shortening it. A curve has an x-axis only where two
+    Every curve assumes its breakpoints are there, because a missing row does
+    not shorten a curve. Under ``points:`` its parameters read ``neutral``, so
+    a breakpoint missing inside the mask would read as a zero and sit the curve
+    on the origin. A curve has an x-axis only where two
     links tie it, so the increasing condition — and the shape it is checked
     with — exist only there; ``lp`` alone needs a segment to state a line for;
     a mask must be one run.
@@ -115,8 +116,7 @@ def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, Assumption
         holds=' AND '.join(dict.fromkeys(link.values for link in pw.links)),
         where=mask,
         description=f"piecewise '{block}': every breakpoint the curve runs through needs a row in "
-        f'{_quoted(link.values for link in pw.links)} — a missing row is read as a zero rather than as a '
-        f'shorter curve, so it sits the curve on the origin. '
+        f'{_quoted(link.values for link in pw.links)} — a missing row does not shorten the curve. '
         + (
             f"Attach the rows, or narrow points: '{mask}' to where the curve runs."
             if mask is not None
@@ -302,9 +302,9 @@ def leaves_ungated(gate: VariableBlock | VariableDeclaration | None) -> bool:
     """Whether a curve gated by *gate* runs ungated where the gate does not exist, which takes a second convexity row.
 
     A masked gate is absent off its mask, and there the curve sums to 1;
-    ``absence: zero`` reads the gate as 0 there instead, which one row states.
+    ``missing: neutral`` reads the gate as 0 there instead, which one row states.
     """
-    return gate is not None and gate.where is not None and gate.absence != 'zero'
+    return gate is not None and gate.where is not None and gate.missing != 'neutral'
 
 
 def curve_frame(schema: Spec, name: str, pw: PiecewiseBlock, links: Iterable[Expression]) -> tuple[str, ...]:
@@ -441,7 +441,7 @@ class _Block:
         reduction, so the right-hand side would take the row with it and leave the
         weights without the convexity that makes them a curve at all (#1158).
 
-        ``absence: zero`` is the other reading and stays one row — the gate is 0
+        ``missing: neutral`` is the other reading and stays one row — the gate is 0
         where it does not exist, so the curve is pinned off there.
         """
         activity = self.pw.activity
@@ -481,6 +481,22 @@ class _Block:
             )
 
 
+def ragged(schema: Spec) -> frozenset[str]:
+    """The values parameters a missing row of which is a breakpoint the curve does not run through.
+
+    ``points:`` says the curve stops short of the dimension, and its weights
+    and segment rows read a values parameter only where the mask holds, so a
+    row is missing outside the mask by design: ``refused`` would refuse the
+    curve the block declares. Every other reading reads alike there, and
+    ``neutral`` is the one written. A parameter a curve over every breakpoint
+    also reads, a ``points:`` mask that is not a values parameter, and a
+    parameter whose ``missing:`` the file wrote are not among them.
+    """
+    shortened = {link.values for pw in schema.piecewise.values() if pw.points for link in pw.links}
+    complete = {n for pw in schema.piecewise.values() if not pw.points for n in pw.consumes}
+    return frozenset(n for n in shortened - complete if n in schema.parameters and schema.parameters[n].missing is None)
+
+
 def expand_piecewise(schema: Spec) -> Spec:
     """*schema* with every ``piecewise:`` block written out — *schema* itself where it declares none.
 
@@ -489,6 +505,8 @@ def expand_piecewise(schema: Spec) -> Spec:
     binaries are what the method *is*, so the spec that comes back carries no
     set of its own ([`mathspec.sos.emit`][] is where they are spelled).
     Each block's frame and names are read off the program *schema* lowered to.
+
+    Each parameter in [`ragged`][] is declared ``missing: neutral``.
     """
     if not schema.piecewise:
         return schema
@@ -498,6 +516,8 @@ def expand_piecewise(schema: Spec) -> Spec:
     raw.setdefault('constraints', {})
     for name, pw in schema.piecewise.items():
         _Block(schema, raw, name, pw, program.piecewise[name]).expand()
+    for parameter in ragged(schema):
+        raw['parameters'][parameter]['missing'] = 'neutral'
     raw['piecewise'].clear()
     for name, pw in schema.piecewise.items():
         if pw.method == 'adjacency':

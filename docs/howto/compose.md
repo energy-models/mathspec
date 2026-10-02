@@ -247,7 +247,7 @@ constraints:
 ```
 
 ```text
-fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'absence': 'undefined'}. A given declaration says the same as the declaration it is folded into, or less: restate the frame as the introducer declares it, or leave the field out.
+fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'missing': 'absent'}. A given declaration says the same as the declaration it is folded into, or less: restate the frame as the introducer declares it, or leave the field out.
 ```
 
 Two fragments that both only read a column have to read it the same way, and

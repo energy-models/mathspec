@@ -63,6 +63,8 @@ __all__ = [
     'GroupSum',
     'Link',
     'Mask',
+    'Missing',
+    'MissingReading',
     'Multiply',
     'Named',
     'Negate',
@@ -90,6 +92,7 @@ __all__ = [
     'RelationComparison',
     'RelationDeclaration',
     'RelationDefined',
+    'RelationMissing',
     'RelationPairComparison',
     'Separability',
     'SosDeclaration',
@@ -99,15 +102,16 @@ __all__ = [
     'TranslatedPredicate',
     'TypedPredicate',
     'Variable',
-    'VariableAbsence',
     'VariableDeclaration',
     'VariableDefined',
     'VariableDomain',
+    'VariableMissing',
     'WindowSum',
     'assumption_message',
     'carries_variable',
     'children',
     'is_quadratic',
+    'names_under',
     'parameters_of',
     'variables_of',
     'walk',
@@ -143,11 +147,21 @@ DeclaredDtype = ParameterDtype | DimensionDtype
 #: The domain a variable may declare.
 VariableDomain = Literal['continuous', 'integer', 'binary']
 
-#: What a masked variable's non-existence *means* where it does not exist.
-#: ``undefined`` is the absence rules' default — a term carrying it takes its
-#: row. ``zero`` says the quantity *is* zero there, so the term contributes
-#: nothing and the row stands.
-VariableAbsence = Literal['undefined', 'zero']
+#: What a missing row means. ``refused`` refuses the data, ``absent`` takes the
+#: row of a term that reads it, and ``neutral`` reads the value that
+#: contributes nothing: ``0`` as a coefficient, ``false`` in a ``where``.
+MissingReading = Literal['refused', 'absent', 'neutral']
+
+#: A parameter's ``missing:``: a reading, or the value a missing row reads as.
+Missing = MissingReading | bool | float
+
+#: A relation's ``missing:``. A label the map leaves out is refused, or belongs to no group.
+RelationMissing = Literal['refused', 'absent']
+
+#: A variable's ``missing:``: what a coordinate its ``where`` masks out means.
+#: ``absent`` takes the row of a term that reads it; ``neutral`` says the
+#: quantity *is* zero there, so the term contributes nothing and the row stands.
+VariableMissing = Literal['absent', 'neutral']
 
 #: Which way an objective is optimised (the declaration rules).
 ObjectiveSense = Literal['minimize', 'maximize']
@@ -447,6 +461,9 @@ class RelationDeclaration:
 
     columns: tuple[tuple[str, str], ...]
     key: tuple[str, ...]
+    #: What a key the map leaves out means, or ``None`` for a bare relation,
+    #: whose rows are its membership and so have no gap.
+    missing: RelationMissing | None = 'refused'
     description: str | None = None
 
     @property
@@ -598,6 +615,10 @@ class ParameterDeclaration:
 
     dims: tuple[str, ...]
     dtype: ParameterDtype = 'float'
+    #: What a missing row means, or the value it reads as wherever a value is
+    #: read; ``None`` for a given parameter, whose declaring file says. A bare
+    #: numeric name in a ``where`` still asks whether the data has a row.
+    missing: Missing | None = 'refused'
     description: str | None = None
 
 
@@ -611,7 +632,7 @@ class VariableDeclaration:
     #: As [`lower`][], for the other side.
     upper: Expression | None = None
     domain: VariableDomain = 'continuous'
-    absence: VariableAbsence = 'undefined'
+    missing: VariableMissing = 'absent'
     description: str | None = None
 
 
@@ -1419,7 +1440,7 @@ def _atom_names(atom: TypedPredicate) -> frozenset[str]:
         case RelationPairComparison():
             return frozenset({atom.name, atom.other})
         case ExpressionComparison():
-            return _names_under(atom.left, atom.right)
+            return names_under(atom.left, atom.right)
         case CountComparison():
             return atom.predicate.names_read
         case TranslatedPredicate():
@@ -1432,7 +1453,7 @@ def _atom_names(atom: TypedPredicate) -> frozenset[str]:
             assert_never(atom)
 
 
-def _names_under(*expressions: Expression) -> frozenset[str]:
+def names_under(*expressions: Expression) -> frozenset[str]:
     """Every parameter and relation the data has to supply for *expressions* — what a mask's ``names_read`` promises.
 
     [`parameters_of`][] alone misses the data an operator reads beside its

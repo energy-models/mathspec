@@ -40,7 +40,7 @@ dimensions:
   bp: { dtype: int }
 parameters:
   bp_x: { dims: [generator, bp] }
-  bp_y: { dims: [generator, bp] }
+  bp_y: { dims: [generator, bp], missing: refused } # the assumption below reads it too
 variables:
   p:
     dims: [generator]
@@ -118,6 +118,19 @@ message  # "assumption 'curve_increasing' does not hold for the data attached to
 written = assumption_message('cost_is_never_negative', program.assumptions['cost_is_never_negative'])
 written  # "assumption 'cost_is_never_negative' does not hold for the data attached to 'bp_y' — a negative cost is a gain the objective would chase"
 ```
+
+`program.parameters[name].missing` says what a missing row of that parameter
+means: `'refused'`, `'absent'`, `'neutral'`, or the value it reads as. It is
+`None` for a given parameter, whose declaring file says. A values parameter
+that only curves with `points:` read, with no `missing:` written, is
+`'neutral'`. The program of `spec.expand(...)` reports the same readings. `program.relations[name].missing` is `'refused'` or `'absent'`, and
+`None` for a bare relation. Under `'refused'` the engine does not build the model from a
+table with a missing row, and names the coordinate; whether it raises at the
+first gap or lists them all is its own. A value is read wherever a value is read: an expression,
+a bound, and a comparison in a mask. A `ParameterDefined` on a numeric
+parameter asks whether the data has a row, so a value does not answer it. A
+`ParameterDefined` on a `bool` parameter reads the value. Under `'absent'`, a
+bound that reads a missing row leaves that side open.
 
 ## Nodes and masks
 

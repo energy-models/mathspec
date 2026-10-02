@@ -73,6 +73,7 @@ class Namespace:
         '_named',
         'bodies',
         'constraints',
+        'defaults',
         'dimensions',
         'dtypes',
         'leaf_dims',
@@ -103,9 +104,17 @@ class Namespace:
             **{p: pd.dtype for p, pd in parameters.items()},
             **{d: dd.dtype for d, dd in schema.dimensions.items()},
         }
+        #: parameter name -> the value its ``missing:`` reads a missing row as,
+        #: for the parameters that name one; what a where comparison reads there.
+        self.defaults: dict[str, bool | float] = {
+            p: pd.missing
+            for p, pd in schema.parameters.items()
+            if pd.missing is not None and not isinstance(pd.missing, str)
+        }
         #: relation name -> its columns and key, as declared.
         self.relations: dict[str, RelationDeclaration] = {
-            n: RelationDeclaration(lk.pairs, lk.key_roles, lk.description) for n, lk in schema.relations.items()
+            n: RelationDeclaration(lk.pairs, lk.key_roles, lk.reading, lk.description)
+            for n, lk in schema.relations.items()
         }
         #: parameter or variable name -> the dims it is read through —
         #: parameters by their ``dims``, variables by their frame. Stamped onto
@@ -456,7 +465,7 @@ def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) 
     fallback = resolve_expression_text(block.otherwise, ns, case_context(name, None), errors, ceiling=None)
     if len(errors) > found or fallback is None:
         return None
-    errors.extend(f'{context}: {problem}' for problem in overlapping(masks, ns.dtypes))
+    errors.extend(f'{context}: {problem}' for problem in overlapping(masks, ns.dtypes, ns.defaults))
     if len(errors) > found:
         return None
     left_over = Region(remainder(region.when for region in regions), fallback)

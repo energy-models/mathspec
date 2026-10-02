@@ -112,15 +112,19 @@ parameters:
   Generator_ramp_limit_up:
     description: most a generator may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
     dims: [scenario, snapshot, generator]
+    missing: neutral
   Generator_ramp_limit_down:
     description: most a generator may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
     dims: [scenario, snapshot, generator]
+    missing: neutral
   Generator_ramp_limit_start_up:
-    description: most output in the snapshot a unit starts, per unit of nominal power
+    description: most output in the snapshot a unit starts, per unit of nominal power; no value means no limit
     dims: [scenario, generator]
+    missing: neutral
   Generator_ramp_limit_shut_down:
-    description: most output in the snapshot before a unit stops, per unit of nominal power
+    description: most output in the snapshot before a unit stops, per unit of nominal power; no value means no limit
     dims: [scenario, generator]
+    missing: neutral
   Generator_min_up_time:
     description: least snapshots a unit stays on once started
     dims: [scenario, generator]
@@ -139,6 +143,7 @@ parameters:
       only where the unit came in running; no value means it is unknown, so
       the unit carries no ramp row at the first snapshot
     dims: [scenario, generator]
+    missing: neutral
   Generator_must_stay_up:
     description: >-
       true while the up time a unit brought into the horizon still binds —
@@ -165,6 +170,7 @@ parameters:
   Generator_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [generator]
+    missing: neutral
   Generator_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Generator_p_nom
@@ -183,6 +189,7 @@ parameters:
       (`components.py:1050-1121`). Below the output a solve wants, it caps that
       output; data prep
     dims: [scenario, generator]
+    missing: neutral
   Generator_p_min_pu_nonneg:
     description: >-
       true where none of the generator's own minimums-per-unit is negative —
@@ -210,6 +217,7 @@ parameters:
       `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [scenario, generator]
+    missing: neutral
   Generator_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it
@@ -221,9 +229,11 @@ parameters:
   Link_ramp_limit_up:
     description: most a link may raise its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
     dims: [scenario, snapshot, link]
+    missing: neutral
   Link_ramp_limit_down:
     description: most a link may lower its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
     dims: [scenario, snapshot, link]
+    missing: neutral
   Link_p_nom:
     description: nominal power
     dims: [scenario, link]
@@ -274,11 +284,13 @@ parameters:
     dims: [link]
     dtype: bool
   Link_ramp_limit_start_up:
-    description: most flow in the snapshot a link starts, per unit of nominal power
+    description: most flow in the snapshot a link starts, per unit of nominal power; no value means no limit
     dims: [scenario, link]
+    missing: neutral
   Link_ramp_limit_shut_down:
-    description: most flow in the snapshot before a link stops, per unit of nominal power
+    description: most flow in the snapshot before a link stops, per unit of nominal power; no value means no limit
     dims: [scenario, link]
+    missing: neutral
   Link_min_up_time:
     description: least snapshots a link stays on once started
     dims: [scenario, link]
@@ -297,6 +309,7 @@ parameters:
       only where the link came in running; no value means it is unknown, so
       the link carries no ramp row at the first snapshot
     dims: [scenario, link]
+    missing: neutral
   Link_must_stay_up:
     description: >-
       true while the up time a link brought into the horizon still binds —
@@ -323,6 +336,7 @@ parameters:
   Link_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [link]
+    missing: neutral
   Link_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Link_p_nom
@@ -341,6 +355,7 @@ parameters:
       (`components.py:1050-1121`). Below the flow a solve wants, it caps that
       flow; data prep
     dims: [scenario, link]
+    missing: neutral
   Link_p_min_pu_nonneg:
     description: >-
       true where none of the link's own minimums-per-unit is negative —
@@ -368,6 +383,7 @@ parameters:
       `Link_maintenance_cover` and `Link_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [scenario, link]
+    missing: neutral
   Link_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it
@@ -423,12 +439,15 @@ parameters:
   Process_ramp_limit_up:
     description: most a process may raise its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
     dims: [scenario, snapshot, process]
+    missing: neutral
   Process_ramp_limit_down:
     description: most a process may lower its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
     dims: [scenario, snapshot, process]
+    missing: neutral
   Process_p_set:
     description: a given internal power schedule; a process without one has no row here
     dims: [scenario, snapshot, process]
+    missing: neutral
   Process_p_nom_min:
     description: least nominal power an extendable process may be built at
     dims: [scenario, process]
@@ -446,16 +465,19 @@ parameters:
   Process_p_nom_set:
     description: a given nominal power for an extendable process; one without a value has no row here
     dims: [scenario, process]
+    missing: neutral
   Process_committable:
     description: whether internal power is gated by an on/off status decision
     dims: [process]
     dtype: bool
   Process_ramp_limit_start_up:
-    description: most internal power in the snapshot a process starts, per unit of nominal power
+    description: most internal power in the snapshot a process starts, per unit of nominal power; no value means no limit
     dims: [scenario, process]
+    missing: neutral
   Process_ramp_limit_shut_down:
-    description: most internal power in the snapshot before a process stops, per unit of nominal power
+    description: most internal power in the snapshot before a process stops, per unit of nominal power; no value means no limit
     dims: [scenario, process]
+    missing: neutral
   Process_min_up_time:
     description: least snapshots a process stays on once started
     dims: [scenario, process]
@@ -474,6 +496,7 @@ parameters:
       only where the process came in running; no value means it is unknown, so
       the process carries no ramp row at the first snapshot
     dims: [scenario, process]
+    missing: neutral
   Process_must_stay_up:
     description: >-
       true while the up time a process brought into the horizon still binds —
@@ -500,6 +523,7 @@ parameters:
   Process_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [process]
+    missing: neutral
   Process_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Process_p_nom
@@ -518,6 +542,7 @@ parameters:
       (`components.py:1050-1121`). Below the internal power a solve wants, it caps that
       internal power; data prep
     dims: [scenario, process]
+    missing: neutral
   Process_p_min_pu_nonneg:
     description: >-
       true where none of the process's own minimums-per-unit is negative —
@@ -545,6 +570,7 @@ parameters:
       `Process_maintenance_cover` and `Process_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [scenario, process]
+    missing: neutral
   Process_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it
@@ -690,6 +716,7 @@ parameters:
       `multi_investment_periods` (`global_constraints.py:219-220`), so data
       prep feeds no value otherwise
     dims: [carrier]
+    missing: neutral
   Carrier_max_relative_growth:
     description: >-
       share of the previous period's additions that may be added on top — the
@@ -698,9 +725,11 @@ parameters:
   Generator_p_set:
     description: a given output schedule; a generator without one has no row here
     dims: [scenario, snapshot, generator]
+    missing: neutral
   Link_p_set:
     description: a given flow schedule; a link without one has no row here
     dims: [scenario, snapshot, link]
+    missing: neutral
   snapshot_weightings_stores:
     description: PyPSA's `snapshot_weightings.stores` — hours a snapshot stands for in a storage balance
     dims: [snapshot]
@@ -724,6 +753,7 @@ parameters:
   Generator_p_nom_set:
     description: a given nominal power for an extendable generator; one without a value has no row here
     dims: [scenario, generator]
+    missing: neutral
   Generator_e_sum_min:
     description: least energy over the horizon; minus infinity where no floor is meant
     dims: [scenario, generator]
@@ -747,6 +777,7 @@ parameters:
   Link_p_nom_set:
     description: a given nominal power for an extendable link; one without a value has no row here
     dims: [scenario, link]
+    missing: neutral
   StorageUnit_p_nom_min:
     description: least nominal power an extendable storage unit may be built at
     dims: [scenario, storage_unit]
@@ -764,6 +795,7 @@ parameters:
   StorageUnit_p_nom_set:
     description: a given nominal power for an extendable storage unit; one without a value has no row here
     dims: [scenario, storage_unit]
+    missing: neutral
   Store_e_nom_min:
     description: least nominal capacity an extendable store may be built at
     dims: [scenario, store]
@@ -781,6 +813,7 @@ parameters:
   Store_e_nom_set:
     description: a given nominal capacity for an extendable store; one without a value has no row here
     dims: [scenario, store]
+    missing: neutral
   StorageUnit_p_nom:
     description: nominal power
     dims: [scenario, storage_unit]
@@ -791,6 +824,7 @@ parameters:
   StorageUnit_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [storage_unit]
+    missing: neutral
   StorageUnit_p_min_pu:
     description: most storing, per unit of nominal power and negated
     dims: [scenario, snapshot, storage_unit]
@@ -870,15 +904,19 @@ parameters:
   StorageUnit_p_set:
     description: a given net dispatch schedule; a unit without one has no row here
     dims: [scenario, snapshot, storage_unit]
+    missing: neutral
   StorageUnit_p_dispatch_set:
     description: a given dispatch schedule; a unit without one has no row here
     dims: [scenario, snapshot, storage_unit]
+    missing: neutral
   StorageUnit_p_store_set:
     description: a given charging schedule; a unit without one has no row here
     dims: [scenario, snapshot, storage_unit]
+    missing: neutral
   StorageUnit_state_of_charge_set:
     description: a given charge schedule; a unit without one has no row here
     dims: [scenario, snapshot, storage_unit]
+    missing: neutral
   Store_e_nom:
     description: nominal energy capacity
     dims: [scenario, store]
@@ -889,6 +927,7 @@ parameters:
   Store_e_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [store]
+    missing: neutral
   Store_e_min_pu:
     description: least energy held, per unit of nominal capacity — negative for a store that may go short
     dims: [scenario, snapshot, store]
@@ -953,9 +992,11 @@ parameters:
   Store_e_set:
     description: a given energy schedule; a store without one has no row here
     dims: [scenario, snapshot, store]
+    missing: neutral
   Store_p_set:
     description: a given schedule of power delivered; a store without one has no row here
     dims: [scenario, snapshot, store]
+    missing: neutral
   Line_s_nom:
     description: nominal apparent power
     dims: [scenario, line]
@@ -966,6 +1007,7 @@ parameters:
   Line_s_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [line]
+    missing: neutral
   Line_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, line]
@@ -986,9 +1028,11 @@ parameters:
   Line_s_nom_set:
     description: a given nominal apparent power for an extendable line; one without a value has no row here
     dims: [scenario, line]
+    missing: neutral
   Line_s_set:
     description: a given flow schedule; a line without one has no row here
     dims: [scenario, snapshot, line]
+    missing: neutral
   Line_v_ang_max:
     description: >-
       the most the voltage angle difference across a line may be either way,
@@ -997,6 +1041,7 @@ parameters:
       ignored, as PyPSA ignores it with a `DeprecationWarning`
       (`constraints.py:1713-1720`)
     dims: [scenario, line]
+    missing: neutral
   Line_x_pu_eff:
     description: >-
       the line's effective series reactance — PyPSA's `x_pu_eff`, `x` over
@@ -1008,6 +1053,7 @@ parameters:
       the cycle basis, data prep; a line in no cycle has no row. PyPSA builds
       the cycle basis from the first scenario only (`networks.py:1356-1363`)
     dims: [period, line, cycle]
+    missing: neutral
   Line_BODF:
     description: >-
       the share of an outaged branch's flow a line takes on when that branch
@@ -1015,6 +1061,7 @@ parameters:
       only where the line and the outage share a sub-network, -1 at the
       outaged line itself
     dims: [line, outage]
+    missing: neutral
   transmission_losses:
     description: >-
       whether the network dissipates transmission losses — PyPSA's
@@ -1050,6 +1097,7 @@ parameters:
   Transformer_s_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [transformer]
+    missing: neutral
   Transformer_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, transformer]
@@ -1070,9 +1118,11 @@ parameters:
   Transformer_s_nom_set:
     description: a given nominal apparent power for an extendable transformer; one without a value has no row here
     dims: [scenario, transformer]
+    missing: neutral
   Transformer_s_set:
     description: a given flow schedule; a transformer without one has no row here
     dims: [scenario, snapshot, transformer]
+    missing: neutral
   Transformer_v_ang_max:
     description: >-
       the most the voltage angle difference across a transformer, its phase
@@ -1080,6 +1130,7 @@ parameters:
       infinite, and so no row, by default. The deprecated `v_ang_min` is
       ignored, as a line's
     dims: [scenario, transformer]
+    missing: neutral
   Transformer_x_pu_eff:
     description: >-
       the transformer's effective series reactance — PyPSA's `x_pu_eff`, `x`
@@ -1092,12 +1143,14 @@ parameters:
       basis, data prep; a transformer in no cycle has no row. From the first
       scenario only, as a line's
     dims: [period, transformer, cycle]
+    missing: neutral
   Transformer_BODF:
     description: >-
       the share of an outaged branch's flow a transformer takes on when that
       branch goes out, as a line's; a row only where the transformer and the
       outage share a sub-network
     dims: [transformer, outage]
+    missing: neutral
   Transformer_phase_shift_weight:
     description: >-
       a fixed transformer's phase shift in radians at each snapshot, signed by
@@ -1106,6 +1159,7 @@ parameters:
       the variable term never both count a shift. A transformer with no shift or
       in no cycle of its snapshot's period has no row
     dims: [snapshot, transformer, cycle]
+    missing: neutral
   Transformer_phase_shift_varying:
     description: >-
       whether a transformer's phase shift is a decision — PyPSA's
@@ -1189,27 +1243,34 @@ parameters:
       on a row that names a period without it (`global_constraints.py:375`)
     dims: [scenario, global_constraint, snapshot]
     dtype: bool
+    missing: neutral
   Generator_primary_energy_weight:
     description: >-
       the constrained attribute per unit of energy at the bus — the carrier's
       `co2_emissions` over the generator's efficiency at the snapshot, data prep; a generator
       of an unweighted carrier has no row
     dims: [scenario, global_constraint, snapshot, generator]
+    missing: neutral
   StorageUnit_primary_energy_weight:
     description: the constrained attribute per unit of charge depleted — data prep; an unweighted unit has no row
     dims: [scenario, global_constraint, storage_unit]
+    missing: neutral
   Store_primary_energy_weight:
     description: the constrained attribute per unit of energy depleted — data prep; an unweighted store has no row
     dims: [scenario, global_constraint, store]
+    missing: neutral
   Generator_operational_limit_weight:
     description: one where the generator is in the row's set — data prep; one outside it has no row
     dims: [scenario, global_constraint, generator]
+    missing: neutral
   StorageUnit_operational_limit_weight:
     description: one where the storage unit is in the row's set — data prep; one outside it has no row
     dims: [scenario, global_constraint, storage_unit]
+    missing: neutral
   Store_operational_limit_weight:
     description: one where the store is in the row's set — data prep; one outside it has no row
     dims: [scenario, global_constraint, store]
+    missing: neutral
   Line_volume_weight:
     description: >-
       the line's length where its carrier is in the row's set, the first
@@ -1218,6 +1279,7 @@ parameters:
       line outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [scenario, global_constraint, line]
+    missing: neutral
   Link_volume_weight:
     description: >-
       the link's length where its carrier is in the row's set, the first
@@ -1226,6 +1288,7 @@ parameters:
       link outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [scenario, global_constraint, link]
+    missing: neutral
   Line_expansion_cost_weight:
     description: >-
       the line's capital cost where its carrier is in the row's set, times
@@ -1236,6 +1299,7 @@ parameters:
       `Line_capital_cost` without `fom_cost` (`components.py:1151-1169`,
       `global_constraints.py:935`)
     dims: [scenario, global_constraint, line]
+    missing: neutral
   Link_expansion_cost_weight:
     description: >-
       the link's capital cost where its carrier is in the row's set, times
@@ -1246,42 +1310,49 @@ parameters:
       `Link_capital_cost` without `fom_cost` (`components.py:1151-1169`,
       `global_constraints.py:935`)
     dims: [scenario, global_constraint, link]
+    missing: neutral
   Generator_tech_capacity_weight:
     description: >-
       one where the generator is in the row's carrier-and-bus set — data
       prep; one outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [global_constraint, generator]
+    missing: neutral
   Link_tech_capacity_weight:
     description: >-
       one where the link is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, link]
+    missing: neutral
   Line_tech_capacity_weight:
     description: >-
       one where the line is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, line]
+    missing: neutral
   StorageUnit_tech_capacity_weight:
     description: >-
       one where the storage unit is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, storage_unit]
+    missing: neutral
   Store_tech_capacity_weight:
     description: >-
       one where the store is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, store]
+    missing: neutral
   Process_tech_capacity_weight:
     description: >-
       one where the process is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, process]
+    missing: neutral
 
 relations:
   snapshot_period:
@@ -1374,10 +1445,12 @@ relations:
     description: the line an outage takes out; an outage of a transformer has no row
     key: outage
     values: line
+    missing: absent
   Outage_transformer:
     description: the transformer an outage takes out; an outage of a line has no row
     key: outage
     values: transformer
+    missing: absent
   Generator_maintenance_cover:
     description: >-
       the snapshots a maintenance event covers, by the snapshot it starts in —
@@ -1441,7 +1514,7 @@ variables:
       the variable rather than as rows
     dims: [scenario, snapshot, storage_unit]
     where: "StorageUnit_inflow > 0 AND StorageUnit_active"
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: StorageUnit_inflow
@@ -1490,7 +1563,7 @@ variables:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: 1
@@ -1498,7 +1571,7 @@ variables:
     description: "`Generator-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_active
-    absence: zero
+    missing: neutral
     domain: binary
   Generator_maintenance_capacity:
     description: >-
@@ -1508,7 +1581,7 @@ variables:
     where: >-
       Generator_maintainable AND Generator_p_nom_extendable
       AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Generator_maintenance_status:
@@ -1520,7 +1593,7 @@ variables:
     where: >-
       Generator_maintainable AND Generator_committable
       AND NOT (Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)) AND Generator_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Link_n_mod:
@@ -1560,7 +1633,7 @@ variables:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, link]
     where: Link_maintainable AND Link_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: 1
@@ -1568,7 +1641,7 @@ variables:
     description: "`Link-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, link]
     where: Link_maintainable AND Link_active
-    absence: zero
+    missing: neutral
     domain: binary
   Link_maintenance_capacity:
     description: >-
@@ -1578,7 +1651,7 @@ variables:
     where: >-
       Link_maintainable AND Link_p_nom_extendable
       AND NOT (Link_committable AND Link_p_nom_mod > 0) AND Link_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Link_maintenance_status:
@@ -1590,7 +1663,7 @@ variables:
     where: >-
       Link_maintainable AND Link_committable
       AND NOT (Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)) AND Link_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Process_n_mod:
@@ -1630,7 +1703,7 @@ variables:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: 1
@@ -1638,7 +1711,7 @@ variables:
     description: "`Process-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_active
-    absence: zero
+    missing: neutral
     domain: binary
   Process_maintenance_capacity:
     description: >-
@@ -1648,7 +1721,7 @@ variables:
     where: >-
       Process_maintainable AND Process_p_nom_extendable
       AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Process_maintenance_status:
@@ -1660,7 +1733,7 @@ variables:
     where: >-
       Process_maintainable AND Process_committable
       AND NOT (Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)) AND Process_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Line_s:
@@ -1676,7 +1749,7 @@ variables:
       the network is lossless
     dims: [scenario, snapshot, line]
     where: transmission_losses AND Line_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Transformer_s:
@@ -1693,7 +1766,7 @@ variables:
       lossless
     dims: [scenario, snapshot, transformer]
     where: transmission_losses AND Transformer_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Transformer_phase_shift:
@@ -1704,7 +1777,7 @@ variables:
       where the shift is fixed
     dims: [scenario, snapshot, transformer]
     where: Transformer_phase_shift_varying AND Transformer_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: Transformer_phase_shift_min
       upper: Transformer_phase_shift_max

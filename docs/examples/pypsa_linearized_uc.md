@@ -352,14 +352,14 @@ The relaxed class of a plain `n.optimize()`: `linearized_unit_commitment`, state
 | $`\mathrm{load}`$ | `Load_p_set` over $`\mathcal{T} \times \mathcal{D}`$ — demand |
 | $`\mathrm{sgn}^{\mathrm{load}}`$ | `Load_sign` over $`\mathcal{D}`$ — the sign a load's demand enters its bus's balance with — PyPSA's `sign`, `-1` unless given, `1` for a load that feeds its bus |
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$ — whether output is gated by an on/off status decision |
-| $`\mathrm{ru}`$ | `Generator_ramp_limit_up` over $`\mathcal{T} \times \mathcal{G}`$ — most a generator may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{rd}`$ | `Generator_ramp_limit_down` over $`\mathcal{T} \times \mathcal{G}`$ — most a generator may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{ru}^{\mathrm{up}}`$ | `Generator_ramp_limit_start_up` over $`\mathcal{G}`$ — most output in the snapshot a unit starts, per unit of nominal power |
-| $`\mathrm{rd}^{\mathrm{dn}}`$ | `Generator_ramp_limit_shut_down` over $`\mathcal{G}`$ — most output in the snapshot before a unit stops, per unit of nominal power |
+| $`\mathrm{ru}`$ | `Generator_ramp_limit_up` over $`\mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — most a generator may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{rd}`$ | `Generator_ramp_limit_down` over $`\mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — most a generator may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{ru}^{\mathrm{up}}`$ | `Generator_ramp_limit_start_up` over $`\mathcal{G}`$, `neutral` where the data has no row — most output in the snapshot a unit starts, per unit of nominal power; no value means no limit |
+| $`\mathrm{rd}^{\mathrm{dn}}`$ | `Generator_ramp_limit_shut_down` over $`\mathcal{G}`$, `neutral` where the data has no row — most output in the snapshot before a unit stops, per unit of nominal power; no value means no limit |
 | $`\mathrm{UT}`$ | `Generator_min_up_time` over $`\mathcal{G}`$ — least snapshots a unit stays on once started |
 | $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\mathcal{G}`$ — least snapshots a unit stays off once stopped |
 | $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\mathcal{G}`$ — one where the unit was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
-| $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\mathcal{G}`$ — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot |
+| $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\mathcal{G}`$, `neutral` where the data has no row — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot |
 | $`\mathrm{hold}`$ | `Generator_must_stay_up` over $`\mathcal{T} \times \mathcal{G}`$ — true while the up time a unit brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
 | $`\mathrm{rest}`$ | `Generator_must_stay_down` over $`\mathcal{T} \times \mathcal{G}`$ — true while the down time a unit brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
 | $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\mathcal{T} \times \mathcal{G}`$ — cost of one start in this snapshot |
@@ -368,7 +368,7 @@ The relaxed class of a plain `n.optimize()`: `linearized_unit_commitment`, state
 | $`\mathrm{mnt}`$ | `Generator_maintainable` over $`\mathcal{G}`$ — whether a generator must be taken off for maintenance within the horizon |
 | $`\gamma`$ | `Generator_maintenance_pu` over $`\mathcal{G}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{\mathrm{mnt}}`$ | `Generator_maintenance_events` over $`\mathcal{G}`$ — how many maintenance events the horizon holds |
-| $`\tau^{\mathrm{mnt}}`$ | `Generator_maintenance_duration` over $`\mathcal{G}`$ — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the generator is not maintainable. No row reads it: data prep turns it into `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the assumptions hold it to the horizon |
+| $`\tau^{\mathrm{mnt}}`$ | `Generator_maintenance_duration` over $`\mathcal{G}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the generator is not maintainable. No row reads it: data prep turns it into `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the assumptions hold it to the horizon |
 | $`\mathrm{blk}`$ | `Generator_maintenance_start_blocked` over $`\mathcal{T} \times \mathcal{G}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the generator does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 
 #### Variables
@@ -380,9 +380,9 @@ The relaxed class of a plain `n.optimize()`: `linearized_unit_commitment`, state
 | $`u`$ | `Generator_status` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-status` — how much of a committable unit is on, a share in \[0, 1\] rather than a binary: the relaxation `linearized_unit_commitment` solves |
 | $`\mathit{up}`$ | `Generator_start_up` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-start_up` — how much of a committable unit turns on this snapshot |
 | $`\mathit{dn}`$ | `Generator_shut_down` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-shut_down` — how much of a committable unit turns off this snapshot |
-| $`\mu`$ | `Generator_maintenance` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-maintenance` — whether a maintainable generator is in maintenance: continuous, and one exactly where an event covers the snapshot |
-| $`\mu^{\mathrm{up}}`$ | `Generator_maintenance_start` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-maintenance_start` — whether a maintenance event starts in this snapshot — a binary, which the keyword does not relax |
-| $`\mu^{u}`$ | `Generator_maintenance_status` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
+| $`\mu`$ | `Generator_maintenance` over $`\mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance` — whether a maintainable generator is in maintenance: continuous, and one exactly where an event covers the snapshot |
+| $`\mu^{\mathrm{up}}`$ | `Generator_maintenance_start` over $`\mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_start` — whether a maintenance event starts in this snapshot — a binary, which the keyword does not relax |
+| $`\mu^{u}`$ | `Generator_maintenance_status` over $`\mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
 
 #### Definitions
 

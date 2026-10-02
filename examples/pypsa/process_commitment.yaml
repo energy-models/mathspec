@@ -71,6 +71,7 @@ parameters:
       (`components.py:1050-1121`). Below the internal power a solve wants, it caps that
       internal power; data prep
     dims: [scenario, process]
+    missing: neutral
 
 variables:
   Process_status:

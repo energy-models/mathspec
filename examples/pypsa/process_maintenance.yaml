@@ -43,6 +43,7 @@ parameters:
       `Process_maintenance_cover` and `Process_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [scenario, process]
+    missing: neutral
   Process_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it
@@ -59,7 +60,7 @@ variables:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: 1
@@ -67,7 +68,7 @@ variables:
     description: "`Process-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_active
-    absence: zero
+    missing: neutral
     domain: binary
   Process_maintenance_capacity:
     description: >-
@@ -77,7 +78,7 @@ variables:
     where: >-
       Process_maintainable AND Process_p_nom_extendable
       AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Process_maintenance_status:
@@ -89,7 +90,7 @@ variables:
     where: >-
       Process_maintainable AND Process_committable
       AND NOT (Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)) AND Process_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
 

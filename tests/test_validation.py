@@ -1197,7 +1197,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'relations.tag': {'key': 'g', 'dtype': 'str'}},
-                ("unknown key 'dtype' in a relation declaration. Valid keys: description, key, values.",),
+                ("unknown key 'dtype' in a relation declaration. Valid keys: description, key, missing, values.",),
                 id='relation-with-a-dtype-of-its-own',
             ),
             pytest.param({'relations.tag': {'key': 'g'}}, ('has 1 column(s)',), id='relation-with-one-column'),
@@ -1428,7 +1428,7 @@ class TestRulesDecidedWithoutData:
                 id='a-relation-naming-one-value-column',
             ),
             pytest.param(
-                {'variables.p.absence': 'zero'}, ('absence: zero needs a `where:`',), id='absence-without-a-mask'
+                {'variables.p.missing': 'neutral'}, ('missing: neutral needs a `where:`',), id='neutral-without-a-mask'
             ),
             pytest.param(
                 {'variables.p.bounds.upper': 'c * 2'},
@@ -2308,3 +2308,117 @@ def test_an_infinite_bound_is_refused_with_the_null_that_opens_a_side(side, valu
     message = _refusal(DISPATCH_MODEL, **{f'variables.p.bounds.{side}': value})
     assert f'bounds.{side} is {value}, and a bound is finite' in message
     assert f'{side}: null' in message, 'the refusal names the spelling of an open side'
+
+
+@pytest.mark.parametrize(
+    ('dtype', 'written', 'read'),
+    [
+        pytest.param('float', None, 'refused', id='left-out-is-refused'),
+        pytest.param('float', 'absent', 'absent', id='absent'),
+        pytest.param('str', 'neutral', 'neutral', id='neutral-on-a-label'),
+        pytest.param('float', 1, 1, id='a-number'),
+        pytest.param('float', float('inf'), float('inf'), id='yaml-dot-inf'),
+        pytest.param('float', 'inf', float('inf'), id='the-expression-spelling-of-inf'),
+        pytest.param('float', '-inf', float('-inf'), id='the-expression-spelling-of-minus-inf'),
+        pytest.param('int', 2, 2, id='an-integer'),
+        pytest.param('bool', True, True, id='a-flag'),
+    ],
+)
+def test_a_parameter_says_what_a_missing_row_means(dtype, written, read):
+    declared = {'dims': ['g'], 'dtype': dtype} | ({} if written is None else {'missing': written})
+    spec = to_spec(varied(SMALL_MODEL, **{'parameters.c': declared}))
+    assert spec.program.parameters['c'].missing == read
+
+
+def test_inf_and_dot_inf_load_as_one_number():
+    """YAML reads `inf` as a string and `.inf` as a number; the expression grammar takes both."""
+    read = [
+        to_spec(parse_yaml(f'dimensions: {{g: {{}}}}\nparameters: {{c: {{dims: [g], missing: {spelling}}}}}'))
+        .program.parameters['c']
+        .missing
+        for spelling in ('inf', '.inf')
+    ]
+    assert read == [float('inf'), float('inf')], 'the string `inf` and the number `.inf` read as the same infinity'
+
+
+@pytest.mark.parametrize(
+    ('dtype', 'written', 'fragment'),
+    [
+        pytest.param('float', None, 'missing: null on a parameter names no reading', id='null'),
+        pytest.param('float', 'zero', "missing is the string 'zero'. It takes refused, absent, neutral", id='a-word'),
+        pytest.param('float', '1', "missing is the string '1'", id='a-quoted-number'),
+        pytest.param('float', float('nan'), 'missing is nan', id='nan'),
+        pytest.param(
+            'float', True, 'missing: true on a float parameter, which takes a number', id='a-flag-on-a-number'
+        ),
+        pytest.param('int', 1.5, 'missing: 1.5 on an int parameter, which takes an integer', id='a-fraction-on-an-int'),
+        pytest.param('int', float('inf'), 'missing: inf on an int parameter', id='an-infinity-on-an-int'),
+        pytest.param('bool', 1, 'missing: 1 on a bool parameter, which takes true or false', id='a-number-on-a-flag'),
+        pytest.param('str', 1, 'A label has no value to fill', id='a-number-on-a-label'),
+    ],
+)
+def test_a_parameter_missing_that_reads_nothing_is_refused(dtype, written, fragment):
+    message = _refusal(**{'parameters.c': {'dims': ['g'], 'dtype': dtype, 'missing': written}})
+    assert fragment in message
+
+
+def test_a_given_parameter_has_no_missing():
+    """The file that declares the parameter owns what a missing row means, as it owns a variable's bounds."""
+    message = _refusal(**{'given.parameters.d': {'dims': ['g'], 'missing': 'neutral'}})
+    assert "unknown key 'missing' in a given parameter declaration" in message
+
+
+@pytest.mark.parametrize(
+    ('written', 'read'),
+    [
+        pytest.param({}, 'refused', id='left-out-is-refused'),
+        pytest.param({'missing': 'refused'}, 'refused', id='refused'),
+        pytest.param({'missing': 'absent'}, 'absent', id='absent'),
+    ],
+)
+def test_a_relation_says_what_a_label_it_leaves_out_means(written, read):
+    spec = to_spec(varied(SMALL_MODEL, **{'relations.lk': {'key': 'g', 'values': 'h', **written}}))
+    assert spec.program.relations['lk'].missing == read
+
+
+def test_a_bare_relation_has_no_missing_rows():
+    """Its rows are its membership: a pair it leaves out is not a gap, so `refused` would refuse every sparse set."""
+    spec = to_spec(varied(SMALL_MODEL, **{'relations.pair': {'key': ['g', 'h']}}))
+    assert spec.program.relations['pair'].missing is None
+
+
+@pytest.mark.parametrize(
+    ('relation', 'fragment'),
+    [
+        pytest.param(
+            {'key': 'g', 'values': 'h', 'missing': 'neutral'},
+            "missing: 'neutral' on a relation, which takes refused or absent",
+            id='neutral',
+        ),
+        pytest.param(
+            {'key': 'g', 'values': 'h', 'missing': 'h1'}, "missing: 'h1' on a relation", id='a-label-as-a-value'
+        ),
+        pytest.param(
+            {'key': 'g', 'values': 'h', 'missing': None}, 'missing: null on a relation names no reading', id='null'
+        ),
+        pytest.param(
+            {'key': ['g', 'h'], 'missing': 'refused'},
+            'missing: refused on a relation with no `values:`',
+            id='a-bare-relation',
+        ),
+    ],
+)
+def test_a_relation_missing_that_reads_nothing_is_refused(relation, fragment):
+    assert fragment in _refusal(**{'relations.lk': relation})
+
+
+@pytest.mark.parametrize(
+    ('written', 'fragment'),
+    [
+        pytest.param('refused', "missing: 'refused' on a variable, which takes absent or neutral", id='refused'),
+        pytest.param(0, 'missing: 0 on a variable, which takes absent or neutral', id='a-value'),
+        pytest.param(None, 'missing: null on a variable names no reading', id='null'),
+    ],
+)
+def test_a_variable_missing_that_reads_data_is_refused(written, fragment):
+    assert fragment in _refusal(**{'variables.p': {'dims': ['g'], 'where': 'c', 'missing': written}})

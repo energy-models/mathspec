@@ -11,6 +11,7 @@ are about the verb rather than about either formulation — those are in
 
 from __future__ import annotations
 
+import copy
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -18,7 +19,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mathspec import piecewise, to_spec
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, schema_of, varied
+from mathspec.errors import LanguageError
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, schema_of, varied
 from tests.test_sos import CURVE
 from tools.render_tex import models
 
@@ -122,7 +124,9 @@ def test_an_expansion_declares_exactly_the_parameters_the_file_declared():
     schema = schema_of(MASKED)
     expanded = schema.expand()
 
-    assert expanded.parameters == schema.parameters, 'a curve emits no parameter, so the same data attaches to both'
+    assert {name: (p.dims, p.dtype) for name, p in expanded.parameters.items()} == {
+        name: (p.dims, p.dtype) for name, p in schema.parameters.items()
+    }, 'a curve emits no parameter, so the same data attaches to both'
     assert schema_of(expanded.to_yaml()).to_dict() == expanded.to_dict(), (
         'the expansion is a file like any other, and loading it back changes nothing'
     )
@@ -176,3 +180,110 @@ def test_a_model_with_no_formulation_expands_to_itself():
     spec = schema_of(DISPATCH_MODEL)
 
     assert spec.expand() is spec, 'nothing to write out returns the same object, not a copy'
+
+
+#: `fixtures.SMALL_MODEL` plus a two-link curve over its second dimension, so a
+#: block's own parameters stand beside ordinary ones in one model.
+SMALL_CURVE = {
+    'parameters.bx': {'dims': ['h']},
+    'parameters.by': {'dims': ['h']},
+    'variables.s': {'dims': ['g']},
+    'piecewise.curve': {'over': 'h', 'links': [['p', 'bx'], ['s', 'by']], 'method': 'convex'},
+}
+
+
+@pytest.mark.parametrize(
+    ('points', 'missing'),
+    [
+        pytest.param({'piecewise.curve.points': 'bx'}, 'neutral', id='a-curve-that-says-how-far-it-runs'),
+        pytest.param({}, 'refused', id='a-curve-over-every-breakpoint'),
+    ],
+)
+def test_the_expansion_says_what_a_missing_breakpoint_means(points, missing):
+    """A curve's own parameters take no `missing:`, because the block owns their shape. The expansion keeps
+    no block: its weights stand on `points:` and its assumptions ask for a value only where the mask holds. Left
+    unwritten, the expansion would declare `refused`, and a consumer attaching the rows would refuse the ragged curve
+    the block admits; a curve with no `points:` reads every breakpoint."""
+    rows = schema_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **points)).expand('piecewise').program
+    assert {name: rows.parameters[name].missing for name in ('bx', 'by', 'c')} == {
+        'bx': missing,
+        'by': missing,
+        'c': 'refused',
+    }, "the expansion reads the curve's tables as the block did, and every other parameter as declared"
+
+
+@pytest.mark.parametrize(
+    'points',
+    [
+        pytest.param({'piecewise.curve.points': 'bx'}, id='a-curve-that-says-how-far-it-runs'),
+        pytest.param({}, id='a-curve-over-every-breakpoint'),
+    ],
+)
+def test_a_spec_and_its_expansion_read_a_missing_row_alike(points):
+    """Lowering reported `None` for every parameter a block consumes, and the expansion declared it `neutral`."""
+    spec = schema_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **points))
+    declared = {name: p.missing for name, p in spec.program.parameters.items()}
+    expanded = {name: p.missing for name, p in spec.expand('piecewise').program.parameters.items()}
+    assert declared == expanded, 'a spec and its expansion read a missing row of every parameter alike'
+
+
+#: A row outside the curve that reads one of its values parameters.
+READ_OUTSIDE = {'constraints.cap': {'dims': ['h'], 'expression': 'r <= by'}}
+
+
+@pytest.mark.parametrize(
+    'points',
+    [
+        pytest.param({'piecewise.curve.points': 'bx'}, id='a-curve-that-says-how-far-it-runs'),
+        pytest.param({}, id='a-curve-over-every-breakpoint'),
+    ],
+)
+def test_a_curve_parameter_read_outside_the_curve_declares_missing(points):
+    """`r <= by` read a curve's values parameter with no `missing:` the author could set.
+
+    The loader refused `missing:` on it, and the reading came from the curve: `None` from lowering, then
+    `neutral` inferred by the expansion. Nothing in the file said what a missing row of `by` means in `cap`.
+    """
+    with pytest.raises(LanguageError) as caught:
+        to_spec(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **READ_OUTSIDE, **points))
+    message = str(caught.value)
+    assert "parameter 'by'" in message, 'the message names the parameter that has to change'
+    assert "piecewise 'curve'" in message, 'and the curve that reads it'
+    assert "constraint 'cap'" in message, 'and the declaration outside the curve that reads it too'
+    assert 'missing: refused, absent, neutral, or a value' in message, 'and names the rewrite'
+
+
+@pytest.mark.parametrize('missing', ['refused', 'absent', 'neutral', 0])
+def test_a_curve_parameter_takes_the_missing_it_declares(missing):
+    """`missing:` on a curve's parameter was refused at load, so a row outside the curve could not say what it reads."""
+    spec = to_spec(
+        varied(
+            SMALL_MODEL,
+            **copy.deepcopy(SMALL_CURVE),
+            **READ_OUTSIDE,
+            **{'piecewise.curve.points': 'bx', 'parameters.by.missing': missing},
+        )
+    )
+    assert spec.program.parameters['by'].missing == missing
+    assert spec.expand('piecewise').program.parameters['by'].missing == missing
+
+
+def test_a_boolean_points_mask_reads_a_missing_row_as_its_declaration_says():
+    """The expansion declared a boolean `points:` mask `neutral`, so a missing row was a breakpoint left out.
+
+    The curve does not decide that: a table of `true` and `false` at every breakpoint is a mask as well. The mask
+    reads the default, `refused`, unless the file says otherwise.
+    """
+    spec = schema_of(
+        varied(
+            SMALL_MODEL,
+            **copy.deepcopy(SMALL_CURVE),
+            **{'parameters.run': {'dims': ['h'], 'dtype': 'bool'}, 'piecewise.curve.points': 'run'},
+        )
+    )
+    for program in (spec.program, spec.expand('piecewise').program):
+        assert {name: program.parameters[name].missing for name in ('bx', 'by', 'run')} == {
+            'bx': 'neutral',
+            'by': 'neutral',
+            'run': 'refused',
+        }, 'a values table under points: stops short of the dimension, and the mask reads as declared'

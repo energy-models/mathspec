@@ -11,8 +11,8 @@
 \begin{description}
 \item[{$\mathcal{T}$}] index $t$ --- \texttt{snapshot} (\texttt{int} coordinates) with $\mathrm{season\_of}: \mathcal{T} \to \mathcal{S},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T}$
 \item[{$\mathcal{G}$}] index $g$ --- \texttt{generator} with $\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}$
-\item[{$\mathcal{B}$}] index $b$ --- \texttt{bus} with $\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}$
-\item[{$\mathcal{Z}$}] index $z$ --- \texttt{zone} with $\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}$
+\item[{$\mathcal{B}$}] index $b$ --- \texttt{bus} with $\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}$, \texttt{area\_of} is \texttt{absent} where the data has no row
+\item[{$\mathcal{Z}$}] index $z$ --- \texttt{zone} with $\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}$, \texttt{area\_of} is \texttt{absent} where the data has no row
 \item[{$\mathcal{S}$}] index $s$ --- \texttt{season} with $\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}$
 \item[{$\mathcal{E}$}] index $e$ --- \texttt{technology} with $\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}$
 \item[{$\mathcal{A}$}] index $a$ --- \texttt{bp}
@@ -20,13 +20,13 @@
 
 \paragraph{Parameters}
 \begin{description}
-\item[{$\mathrm{p}^{\mathrm{max}}$}] \texttt{p\_max} over $\mathcal{G}$
+\item[{$\mathrm{p}^{\mathrm{max}}$}] \texttt{p\_max} over $\mathcal{G}$, $\infty$ where the data has no row
 \item[{$\mathrm{p}^{\mathrm{min}}$}] \texttt{p\_min} over $\mathcal{G}$
-\item[{$\mathrm{cost}$}] \texttt{cost} over $\mathcal{G}$
+\item[{$\mathrm{cost}$}] \texttt{cost} over $\mathcal{G}$, \texttt{neutral} where the data has no row
 \item[{$\mathrm{load}$}] \texttt{load} over $\mathcal{T} \times \mathcal{B}$
-\item[{$\mathrm{is\_flexible}$}] \texttt{is\_flexible} over $\mathcal{G}$
+\item[{$\mathrm{is\_flexible}$}] \texttt{is\_flexible} over $\mathcal{G}$, \texttt{false} where the data has no row
 \item[{$\mathrm{zone\_cap}$}] \texttt{zone\_cap} over $\mathcal{Z}$
-\item[{$\mathrm{tech\_cap}$}] \texttt{tech\_cap} over $\mathcal{B} \times \mathcal{E}$
+\item[{$\mathrm{tech\_cap}$}] \texttt{tech\_cap} over $\mathcal{B} \times \mathcal{E}$, \texttt{absent} where the data has no row
 \item[{$\mathrm{min\_up}$}] \texttt{min\_up} over $\mathcal{G}$
 \item[{$\mathrm{eta}$}] \texttt{eta} over $\mathcal{G}$
 \item[{$\mathrm{lead}$}] \texttt{lead} over $\mathcal{G}$
@@ -48,7 +48,7 @@
 \item[{$\mathit{units}$}] \texttt{units} over $\mathcal{G}$
 \item[{$\mathit{spare}$}] \texttt{spare} over $\mathcal{G}$
 \item[{$\mathit{reserve}$}] \texttt{reserve} (scalar)
-\item[{$\mathit{headroom}$}] \texttt{headroom} (scalar)
+\item[{$\mathit{headroom}$}] \texttt{headroom} (scalar), \texttt{neutral} where the mask leaves it out
 \item[{$\mathit{weight}$}] \texttt{weight} over $\mathcal{T} \times \mathcal{G}$
 \item[{$\mathit{fuel}$}] \texttt{fuel} over $\mathcal{T} \times \mathcal{G}$
 \item[{$\mathit{heat}$}] \texttt{heat} over $\mathcal{T} \times \mathcal{G}$
