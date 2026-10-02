@@ -85,9 +85,10 @@ def test_every_rung_script_has_a_recorded_solve():
 
 @pytest.mark.parametrize('stem', sorted(RECORDED), ids=sorted(RECORDED))
 def test_the_record_is_from_the_pinned_pypsa(stem: str):
-    pinned = re.search(r'"pypsa==([^"]+)"', SCRIPT.read_text())
-    assert pinned is not None, 'reference.py pins pypsa in its PEP 723 block'
-    assert RECORDED[stem]['pypsa'] == pinned.group(1), (
+    pinned = re.search(r'"pypsa @ git\+https://github\.com/PyPSA/PyPSA@([0-9a-f]{40})"', SCRIPT.read_text())
+    assert pinned is not None, 'reference.py pins pypsa to a commit in its PEP 723 block'
+    built = re.search(r'\+g([0-9a-f]+)$', RECORDED[stem]['pypsa'])
+    assert built is not None and pinned.group(1).startswith(built.group(1)), (
         'the recorded solve is from another pypsa than the script pins — re-run it in the pinned environment'
     )
 

@@ -25,7 +25,7 @@ them for the integer run, and the keyword relaxes them in the same way.
 | [`Generator-com-partly-shut-down`](#generator-com-partly-shut-down) | done | |
 
 <!-- reference:rung_12_linearized_uc:begin -->
-> ✔ `pypsa 1.3.0` solves this rung's network at objective `7775.0`, 128 rows.
+> ✔ `pypsa 1.3.0.post1.dev23+g02bdcbbaf` solves this rung's network at objective `7775.0`, 128 rows.
 
 <details markdown="1">
 <summary>The network, as PyPSA code</summary>
@@ -130,7 +130,7 @@ maintainable, to `7310.0`; with the fixed unit not maintainable, to `7100.0`.
 | [`Generator-com-p-lower`](#generator-com-p-lower), [`-upper`](#generator-com-p-upper), [`Generator-fix-p-lower`](#generator-fix-p-lower), [`-upper`](#generator-fix-p-upper) in maintenance | done | |
 
 <!-- reference:rung_44_linearized_commitment:begin -->
-> ✔ `pypsa 1.3.0` solves this rung's network at objective `7400.0`, 191 rows.
+> ✔ `pypsa 1.3.0.post1.dev23+g02bdcbbaf` solves this rung's network at objective `7400.0`, 191 rows.
 
 <details markdown="1">
 <summary>The network, as PyPSA code</summary>
@@ -240,7 +240,7 @@ sign at `-1`, it solves to `13887.5`.
 | [`Bus-nodal_balance`](#bus-nodal_balance) with `sign` | done | `Generator_sign` and `Load_sign` |
 
 <!-- reference:rung_47_linearized_ramps:begin -->
-> ✔ `pypsa 1.3.0` solves this rung's network at objective `12862.5`, 179 rows.
+> ✔ `pypsa 1.3.0.post1.dev23+g02bdcbbaf` solves this rung's network at objective `12862.5`, 179 rows.
 
 <details markdown="1">
 <summary>The network, as PyPSA code</summary>
