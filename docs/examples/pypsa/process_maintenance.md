@@ -157,17 +157,17 @@ constraints:
   Process_maint_status_le_status:
     description: "`Process-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_active
+    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
     expression: Process_maintenance_status <= Process_status
   Process_maint_status_le_maint:
     description: "`Process-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_active
+    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
     expression: Process_maintenance_status <= Process_maintenance
   Process_maint_status_lb:
     description: "`Process-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_active
+    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
     expression: Process_maintenance_status >= Process_status + Process_maintenance - 1
   Process_maint_modstatus_le_status:
     description: "`Process-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
@@ -228,7 +228,7 @@ assumptions:
       the `maint-modstatus` rows bound the modules on in maintenance by
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
-      (`constraints.py:500-503`)
+      (`constraints.py:503-506`)
 ```
 
 #### Sets
@@ -319,19 +319,19 @@ assumptions:
 **`Process_maint_status_le_status`**
 
 ```math
-\mu^{z,u}_{\xi,t,j} \le u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,u}_{\xi,t,j} \le u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j}
 ```
 
 **`Process_maint_status_le_maint`**
 
 ```math
-\mu^{z,u}_{\xi,t,j} \le \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,u}_{\xi,t,j} \le \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j}
 ```
 
 **`Process_maint_status_lb`**
 
 ```math
-\mu^{z,u}_{\xi,t,j} \ge u^{z}_{\xi,t,j} + \mu^{z}_{\xi,t,j} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,u}_{\xi,t,j} \ge u^{z}_{\xi,t,j} + \mu^{z}_{\xi,t,j} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j}
 ```
 
 **`Process_maint_modstatus_le_status`**

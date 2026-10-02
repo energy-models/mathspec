@@ -232,13 +232,15 @@ constraints:
 assumptions:
   Link_came_in_running_unless_committable:
     holds: "Link_status_initial == 1"
-    where: "NOT Link_committable AND (Link_ramp_limit_up OR Link_ramp_limit_down)"
+    where: "NOT Link_committable AND (Link_ramp_limit_up OR Link_ramp_limit_down OR Link_ramp_limit_start_up OR Link_ramp_limit_shut_down)"
     description: >-
       PyPSA reads `up_time_before` of a link that is not committable in its
-      ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
-      with nothing carried in, and caps the link there at zero, or at its
-      start-up ramp where another link of the component is committable with a
-      fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+      ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp
+      alone builds (`constraints.py:1052-1053`). Where it is zero, PyPSA
+      builds a row at the first snapshot with nothing carried in, and caps
+      the link there at zero, or at its start-up ramp where another link of
+      the component is committable with a fixed build
+      (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
       the attribute as read only for a committable link and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data
@@ -385,6 +387,6 @@ f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \Delta^{f,+}_{\xi,t,l} \qquad \for
 **`Link_came_in_running_unless_committable`**
 
 ```math
-\mathrm{u}^{f,0}_{\xi,l} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \neg \mathrm{com}^{f}_{l} \wedge \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \right)
+\mathrm{u}^{f,0}_{\xi,l} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \neg \mathrm{com}^{f}_{l} \wedge \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right)
 ```
 <!-- gallery:end -->
