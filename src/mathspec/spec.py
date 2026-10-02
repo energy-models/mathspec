@@ -346,19 +346,16 @@ class GivenExpressionBlock(_StrictBlock):
     body is the definer's, and the composed spec holds the body to the rules
     of every place this file reads it.
 
-    ``term:`` names the expression this file adds to the name, one this file
-    declares under ``expressions:`` and reads over at most the frame.
-    [`merge`][mathspec.composition.merge] adds it by name to the definition
-    another file writes and to the terms other files add, and keeps it as a
-    named expression. The file itself reads the name as the whole sum, alone
-    and composed.
+    A named expression of this file may add to the name with ``adds_to:``.
+    [`merge`][mathspec.composition.merge] then writes every term the files
+    add after the body a file defines, or as the whole body where no file
+    defines it. The file itself reads the name as the whole sum, alone and
+    composed.
     """
 
     _label: ClassVar[str] = 'a given expression declaration'
 
     dims: list[str]
-    #: The named expression this file adds to the name, or ``None`` where it only reads it.
-    term: str | None = None
     description: str | None = None
 
 
@@ -477,10 +474,12 @@ class ExpressionBlock(_StrictBlock):
     written as ``cases:`` over a declared ``dims:``, with an ``otherwise:``
     for the rest — see the language reference.
 
-    ``empty: true`` over a declared ``dims:``, with no body, is an **empty
-    sum**: a quantity this file declares and other files add terms to,
-    through [`merge`][mathspec.composition.merge]. Alone, the file reads it as
-    a column over the frame, as it reads a given expression.
+    ``adds_to:`` adds this entry as a term to the sum it names, a
+    ``given: expressions:`` entry of this file: a write, where the given entry
+    is the read.
+    [`merge`][mathspec.composition.merge] adds every term to that name by
+    name, after the body a file defines where one does. The term is read over at most the
+    frame the given entry states, and does not read the name it adds to.
     """
 
     _label: ClassVar[str] = 'a named expression'
@@ -493,8 +492,8 @@ class ExpressionBlock(_StrictBlock):
     cases: Annotated[dict[str, ExpressionCase], Field(min_length=1)] = {}
     #: The value wherever no case's ``when`` holds, printed as the last row.
     otherwise: Expression | None = None
-    #: Whether the entry is an empty sum: no body of its own, and the terms other files add are all of it.
-    empty: bool = False
+    #: The sum this entry adds to as a term, a ``given: expressions:`` entry of this file, or ``None``.
+    adds_to: str | None = None
     description: str | None = None
 
     @model_validator(mode='before')
@@ -504,10 +503,7 @@ class ExpressionBlock(_StrictBlock):
 
     @model_validator(mode='after')
     def _one_form_or_the_other(self) -> Self:
-        """One ``expression:``, ``cases:`` with the ``otherwise:`` and ``dims:`` they need, or ``empty: true`` over a ``dims:``."""
-        if self.empty:
-            self._check_empty()
-            return self
+        """One ``expression:``, or ``cases:`` with the ``otherwise:`` and ``dims:`` they need."""
         if self.cases and self.expression is not None:
             msg = (
                 'a named expression is one `expression:` or a set of `cases:`, and this has both. '
@@ -518,7 +514,8 @@ class ExpressionBlock(_StrictBlock):
             msg = (
                 'a named expression is one `expression:` or a set of `cases:`, and this has neither. '
                 'Cases are for a quantity whose value varies by region; one expression is everything else. '
-                'A sum other files add every term to is written `empty: true`, over a `dims:`.'
+                "A sum other files add every term to is read under 'given: expressions:', and each file "
+                'names it with `adds_to:` on its term.'
             )
             raise ValueError(msg)
         if self.cases and self.dims is None:
@@ -542,22 +539,6 @@ class ExpressionBlock(_StrictBlock):
             raise ValueError(msg)
         return self
 
-    def _check_empty(self) -> None:
-        """An empty sum has a frame and nothing else to be read over: no body, no cases, no fallback."""
-        written = [f'`{key}:`' for key in ('expression', 'cases', 'otherwise') if getattr(self, key)]
-        if written:
-            msg = (
-                f'`empty: true` is a sum with no body of its own, and this also has {" and ".join(written)}. '
-                f'Drop `empty:` to keep the body, or drop the body: the terms other files add are all of it.'
-            )
-            raise ValueError(msg)
-        if self.dims is None:
-            msg = (
-                '`empty: true` needs a `dims:` — an empty sum has no body to give the frame it is read over, '
-                'and the terms that fill it are read over that frame.'
-            )
-            raise ValueError(msg)
-
     @classmethod
     @override
     def __get_pydantic_json_schema__(cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler) -> dict[str, object]:
@@ -572,16 +553,15 @@ class ExpressionBlock(_StrictBlock):
                 written['description'] = self.description
             written['cases'] = {name: case.model_dump() for name, case in self.cases.items()}
             written['otherwise'] = self.otherwise
-            return written
-        if self.expression is not None and self.description is None and self.dims is None:
+        elif self.expression is not None and self.description is None and self.dims is None and self.adds_to is None:
             return self.expression
-        written = {'dims': list(self.dims)} if self.dims is not None else {}
-        if self.empty:
-            written['empty'] = True
         else:
+            written = {'dims': list(self.dims)} if self.dims is not None else {}
             written['expression'] = self.expression
-        if self.description is not None:
-            written['description'] = self.description
+            if self.description is not None:
+                written['description'] = self.description
+        if self.adds_to is not None:
+            written['adds_to'] = self.adds_to
         return written
 
 
@@ -1042,11 +1022,6 @@ class Spec(_StrictBlock):
         """
         _ = self.program
         return self
-
-
-def empty_sums(schema: Spec) -> dict[str, ExpressionBlock]:
-    """The named expressions of *schema* written ``empty: true``: the sums other files add terms to."""
-    return {name: e for name, e in schema.expressions.items() if e.empty}
 
 
 def _formulations(asked: tuple[str, ...]) -> tuple[Formulation, ...]:

@@ -47,19 +47,21 @@ parameters:
 
 given:
   expressions:
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Load_injection }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Load_demand:
     description: >-
       what a load draws from its bus's balance — its demand times its sign
       where it is active, nothing where it is not, since PyPSA drops an
-      inactive load from the balance (`constraints.py:1537-1538`)
+      inactive load from the balance (`constraints.py:1543-1544`)
     dims: [scenario, snapshot, load]
     cases:
       active: { when: Load_active, expression: Load_sign * Load_p_set }
     otherwise: 0
-  Load_injection: sum(Load_demand, by=Load_bus, over=load, into=bus)
+  Load_injection:
+    expression: sum(Load_demand, by=Load_bus, over=load, into=bus)
+    adds_to: Bus_injection
 ```
 
 #### Sets
@@ -89,7 +91,7 @@ expressions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\check{\mathrm{load}}`$ | `Load_demand` over $`\Xi \times \mathcal{T} \times \mathcal{D}`$ — what a load draws from its bus's balance — its demand times its sign where it is active, nothing where it is not, since PyPSA drops an inactive load from the balance (`constraints.py:1537-1538`) |
+| $`\check{\mathrm{load}}`$ | `Load_demand` over $`\Xi \times \mathcal{T} \times \mathcal{D}`$ — what a load draws from its bus's balance — its demand times its sign where it is active, nothing where it is not, since PyPSA drops an inactive load from the balance (`constraints.py:1543-1544`) |
 | $`\mathrm{Load\_injection}`$ | `Load_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 
 #### Definitions

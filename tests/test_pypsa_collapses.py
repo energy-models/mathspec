@@ -4,12 +4,13 @@
 
 """`examples/pypsa.yaml` is the superset that collapses to the standard PyPSA model.
 
-The file always declares a `scenario` axis, a mask-only `period` axis, a `carrier`
+The file always declares a `scenario` axis, a `period` axis, a `carrier`
 axis and the CVaR rows. Fed one scenario, one period, all-active masks and unit
 weights, every addition is a no-op and the standard model returns. The repository
 runs no solver, so the reduction is guarded structurally: `tests/fixtures/
 pypsa_standard_shape.yaml` freezes the standard model's names and frames, and the
-only frame change a standard row may carry is a leading `scenario`.
+only frame change a standard row may carry is a leading `scenario`, or for a
+parameter a leading `period`.
 """
 
 from __future__ import annotations
@@ -75,13 +76,13 @@ def test_a_standard_constraint_changes_frame_only_by_a_leading_scenario():
     assert not wrong, f'a standard row may gain only a leading scenario; these differ: {wrong}'
 
 
-def test_a_standard_parameter_changes_frame_only_by_a_leading_scenario():
+def test_a_standard_parameter_changes_frame_only_by_a_leading_scenario_or_period():
     wrong = {
         name: _dims(ALL.parameters[name])
         for name, dims in STANDARD['parameters'].items()
-        if _dims(ALL.parameters[name]) not in (dims, ['scenario', *dims])
+        if _dims(ALL.parameters[name]) not in (dims, ['scenario', *dims], ['period', *dims])
     }
-    assert not wrong, f'a standard parameter may gain only a leading scenario; these differ: {wrong}'
+    assert not wrong, f'a standard parameter may gain only a leading scenario or period; these differ: {wrong}'
 
 
 #: PyPSA refuses a difference across scenarios in these attributes and in what is derived from them
@@ -107,7 +108,9 @@ def test_the_extra_axes_and_rows_are_declared():
 
 
 def test_omega_blends_expectation_and_tail_in_the_objective():
-    expr = ALL.objective.expression
+    assert ALL.objective.expression == 'total_cost', 'the objective reads the system cost'
+    assert 'risk_weighted_opex' in ALL.expressions['total_cost'].expression, 'the system cost carries opex at risk'
+    expr = ALL.expressions['risk_weighted_opex'].expression
     assert all(term in expr for term in ('CVaR_omega', 'scenario_weight', 'scenario_opex', 'CVaR')), (
         'the objective prices expected opex by scenario weight and blends the tail by omega'
     )

@@ -46,7 +46,6 @@ from mathspec.program import (
     RelationDeclaration,
     carries_variable,
 )
-from mathspec.spec import empty_sums
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -88,11 +87,10 @@ class Namespace:
         #: dim-checked against, since macros, named expressions and the dim
         #: rules read declarations the flat listing below does not carry.
         self.schema = schema
-        empty = empty_sums(schema)
-        variables = {**schema.variables, **schema.given.variables, **schema.given.expressions, **empty}
+        variables = {**schema.variables, **schema.given.variables, **schema.given.expressions}
         parameters = {**schema.parameters, **schema.given.parameters}
         self.variables = frozenset(variables)
-        self.bodies = frozenset(name for name in schema.expressions if name not in empty)
+        self.bodies = frozenset(schema.expressions)
         self.parameters = frozenset(parameters)
         self.dimensions = frozenset(schema.dimensions)
         #: The declared constraint names, off the flat namespace: a bare name

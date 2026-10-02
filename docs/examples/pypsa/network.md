@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The network
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the buses and the balance at each of them. It declares `Bus_injection` as an empty sum, `empty: true`, which every component adds its injection to.
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the buses and the balance at each of them. It reads `Bus_injection` under `given:`, and every component adds its injection to it.
 
 <!-- gallery:begin -->
 ```yaml
@@ -19,14 +19,14 @@ dimensions:
   bus:
     description: network nodes
 
-expressions:
-  Bus_injection:
-    dims: [scenario, snapshot, bus]
-    empty: true
-    description: >-
-      what every component puts into a bus, less what it takes out of it;
-      PyPSA writes each term into the balance, and a load on its right-hand
-      side
+given:
+  expressions:
+    Bus_injection:
+      dims: [scenario, snapshot, bus]
+      description: >-
+        what every component puts into a bus, less what it takes out of it;
+        PyPSA writes each term into the balance, and a load on its right-hand
+        side
 
 constraints:
   Bus_nodal_balance:
@@ -38,7 +38,7 @@ constraints:
       carrying its flow, meets the load there, less half of every incident
       line's and transformer's loss — PyPSA dissipates a branch's loss half at
       either end. Each generator, storage unit, store and load term enters
-      with its component's `sign` (`constraints.py:1428-1429`, `:1538`), and
+      with its component's `sign` (`constraints.py:1434-1435`, `:1544`), and
       an inactive load not at all. A bus nothing is attached to has no row; PyPSA refuses one that
       carries load, and this file does not yet.
     dims: [scenario, snapshot, bus]
@@ -53,11 +53,11 @@ constraints:
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 | $`\mathcal{N}`$ | index $`n`$ — `bus` — network nodes |
 
-#### Definitions
+#### Given
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression another file defines — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
 
 #### Subject to
 
@@ -65,13 +65,5 @@ constraints:
 
 ```math
 \mathit{Bus\_injection}_{\xi,t,n} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
-```
-
-#### Definitions
-
-**`Bus_injection`**
-
-```math
-\mathit{Bus\_injection}_{\xi,t,n} = \cdots \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
 ```
 <!-- gallery:end -->

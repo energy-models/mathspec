@@ -6,10 +6,12 @@ SPDX-License-Identifier: CC-BY-4.0
 # Generators
 
 PyPSA's `Generator`, as one fragment. It owns its dimension, its relation into
-`port`, its parameters, its column and its cost. It reads `Port_p` from
-[the surface](surface.md) under
-[`given`](../../reference/language/declarations.md#given). `Generator_port`
-stands where PyPSA writes `Generator_bus`.
+`port`, its parameters, its column and its cost. It reads `Port_p` and
+`total_cost` from [the surface](surface.md) under
+[`given`](../../reference/language/declarations.md#given), and adds its cost to
+`total_cost` as the term `Generator_cost`. `Generator_port` stands where PyPSA
+writes `Generator_bus`. The surface sets the objective, so this file on its
+own sets none.
 
 The constraint is what makes the library composable.
 `at(Port_p, by=Generator_port, over=port, into=generator)` pins the flow at
@@ -41,6 +43,8 @@ given:
     Port_p:
       dims: [snapshot, port]
       description: the surface introduces this flow, and this file pins it at its own ports
+  expressions:
+    total_cost: { dims: [] }
 parameters:
   Generator_p_nom: { dims: [generator], description: nominal power }
   Generator_marginal_cost: { dims: [generator], description: cost of one unit of output }
@@ -56,9 +60,10 @@ constraints:
       for this: PyPSA writes the generator into the balance instead
     dims: [snapshot, generator]
     expression: at(Port_p, by=Generator_port, over=port, into=generator) == Generator_p
-objective:
-  sense: minimize
-  expression: sum(Generator_p * Generator_marginal_cost)
+expressions:
+  Generator_cost:
+    expression: sum(Generator_p * Generator_marginal_cost)
+    adds_to: total_cost
 ```
 
 PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to what a dispatch spec needs: a fixed build, no availability profile, no ramp limits.
@@ -89,12 +94,13 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 | Symbol | Meaning |
 |---|---|
 | $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — the surface introduces this flow, and this file pins it at its own ports |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Generator_cost` to |
 
-#### Objective
+#### Definitions
 
-```math
-\min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
-```
+| Symbol | Meaning |
+|---|---|
+| $`\mathit{Generator\_cost}`$ | `Generator_cost` (scalar) |
 
 #### Subject to
 
@@ -102,6 +108,14 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 
 ```math
 f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+#### Definitions
+
+**`Generator_cost`**
+
+```math
+\mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
 ```
 
 #### Variable domains

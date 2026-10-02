@@ -88,7 +88,7 @@ parameters:
   Generator_first_active:
     description: >-
       one in the first period a generator stands in, zero elsewhere, data prep.
-      PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a generator
+      PyPSA takes `active.cumsum() == 1`, which also counts a generator
       that has retired in every later period (`global_constraints.py:276`,
       PyPSA/PyPSA#1938)
     dims: [period, generator]
@@ -102,7 +102,12 @@ parameters:
     description: most nominal power an extendable generator may be built at
     dims: [scenario, generator]
   Generator_capital_cost:
-    description: cost of one unit of nominal power — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal power for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, generator]
   Generator_p_nom_set:
     description: a given nominal power for an extendable generator; one without a value has no row here
@@ -135,9 +140,9 @@ variables:
     dims: [scenario, snapshot, generator]
     where: Generator_active
   Generator_n_mod:
-    description: "`Generator-n_mod` — how many modules of an extendable modular build"
+    description: "`Generator-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0
+    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND count(Generator_active, over=snapshot) > 0
     domain: integer
     bounds:
       lower: 0
@@ -162,12 +167,13 @@ given:
     Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
   expressions:
     GlobalConstraint_energy_weight: { dims: [scenario, global_constraint, snapshot] }
-    primary_energy: { dims: [scenario, global_constraint], term: Generator_primary_energy }
-    operational_limit: { dims: [scenario, global_constraint], term: Generator_operational_limit }
-    tech_capacity_expansion: { dims: [global_constraint], term: Generator_tech_capacity_expansion }
-    scenario_opex: { dims: [scenario], term: Generator_opex }
-    Carrier_additions: { dims: [period, carrier], term: Generator_additions }
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Generator_injection }
+    primary_energy: { dims: [scenario, global_constraint] }
+    operational_limit: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Generator_p_nom_effective:
@@ -187,20 +193,29 @@ expressions:
   Generator_primary_energy:
     expression: >-
       sum(sum((Generator_p * GlobalConstraint_energy_weight) * Generator_primary_energy_weight, over=snapshot), over=generator)
+    adds_to: primary_energy
   Generator_operational_limit:
     expression: >-
       sum(sum((Generator_p * GlobalConstraint_energy_weight) * Generator_operational_limit_weight, over=snapshot), over=generator)
+    adds_to: operational_limit
   Generator_tech_capacity_expansion:
     expression: sum(Generator_p_nom_ext * Generator_tech_capacity_weight, over=generator)
+    adds_to: tech_capacity_expansion
   Generator_opex:
     expression: >-
       sum(sum(((Generator_p * Generator_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=generator), over=snapshot)
       + sum(sum((((Generator_p * Generator_p) * Generator_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=generator), over=snapshot)
+    adds_to: scenario_opex
+  Generator_capex:
+    expression: sum(scenario_weight * Generator_p_nom_ext * Generator_capital_cost * Generator_capital_weight)
+    adds_to: total_cost
   Generator_additions:
     expression: >-
       sum(Generator_p_nom_ext * Generator_first_active, by=Generator_carrier, over=generator, into=carrier)
+    adds_to: Carrier_additions
   Generator_injection:
     expression: sum(Generator_sign * Generator_p, by=Generator_bus, over=generator, into=bus)
+    adds_to: Bus_injection
 
 constraints:
   Generator_fix_p_lower:
@@ -251,7 +266,7 @@ constraints:
   Generator_p_nom_modularity:
     description: "`Generator-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0
+    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND count(Generator_active, over=snapshot) > 0
     expression: Generator_p_nom_ext == Generator_p_nom_mod * Generator_n_mod
   Generator_p_set:
     description: "`Generator-p_set` — output pinned to the given schedule, wherever one is given"
@@ -266,10 +281,5 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Generator_p_nom_ext) * Generator_capital_cost) * Generator_capital_weight)

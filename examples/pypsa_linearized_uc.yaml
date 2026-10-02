@@ -7,8 +7,8 @@ description: >-
   stated on rung 1's transport surface in a file of its own. The status, its
   starts and its stops are shares in [0, 1] rather than binaries — a domain is
   the spec's, not the data's — and four rows PyPSA adds only under the
-  keyword tighten the relaxation where a unit's start and stop cost the same.
-  The surface is generators, links and loads with a fixed build, in one
+  keyword tighten the relaxation where a unit's start and stop cost the same
+  in every snapshot (`constraints.py:636-660`). The surface is generators, links and loads with a fixed build, in one
   scenario, every asset active in every snapshot, and only a generator
   committable. `examples/pypsa.yaml` stays the integer one, and states the
   rest: a committable link or process, an extendable build, scenarios and
@@ -132,21 +132,14 @@ parameters:
     dims: [snapshot, generator]
     dtype: bool
   Generator_start_up_cost:
-    description: cost of one start
-    dims: [generator]
+    description: cost of one start in this snapshot
+    dims: [snapshot, generator]
   Generator_shut_down_cost:
-    description: cost of one stop
-    dims: [generator]
+    description: cost of one stop in this snapshot
+    dims: [snapshot, generator]
   Generator_stand_by_cost:
     description: cost of one snapshot spent on
     dims: [snapshot, generator]
-  Generator_partly_tightened:
-    description: >-
-      whether the four tightening rows below apply — PyPSA adds them only where
-      a unit's start-up and shut-down costs are equal; two parameters cannot be
-      compared in a `where`, so the equality is data prep
-    dims: [generator]
-    dtype: bool
   Generator_maintainable:
     description: whether a generator must be taken off for maintenance within the horizon
     dims: [generator]
@@ -370,7 +363,7 @@ constraints:
       `Bus-nodal_balance` — what is generated at a bus, less what the links
       take away, plus what arrives over them after losses, meets the load
       there. Each generator and load term enters with its component's `sign`
-      (`constraints.py:1428-1429`, `:1538`)
+      (`constraints.py:1434-1435`, `:1544`)
     dims: [snapshot, bus]
     expression: >-
       sum(Generator_sign * Generator_p, by=Generator_bus, over=generator, into=bus)
@@ -504,7 +497,7 @@ constraints:
       the shut-down ramp. The translated term vacates the first snapshot, as
       PyPSA's `sns[1:]` does
     dims: [snapshot, generator]
-    where: Generator_committable AND Generator_partly_tightened
+    where: Generator_committable AND count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) == 0
     expression: >-
       shift(Generator_p, along=snapshot, offset=1)
       - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
@@ -513,14 +506,14 @@ constraints:
   Generator_com_p_current:
     description: "`Generator-com-p-current` — output fits the share on, and the share starting up only up to the start-up ramp"
     dims: [snapshot, generator]
-    where: Generator_committable AND Generator_partly_tightened AND position(snapshot) > 0
+    where: Generator_committable AND count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) == 0 AND position(snapshot) > 0
     expression: >-
       Generator_p - Generator_p_max_pu * Generator_p_nom * Generator_status
       + (Generator_p_max_pu * Generator_p_nom - Generator_start_up_rate * Generator_p_nom) * Generator_start_up <= 0
   Generator_com_partly_start_up:
     description: "`Generator-com-partly-start-up` — raising output while a share is starting up is bounded by the ramp of the share on and the start-up ramp of the share coming on"
     dims: [snapshot, generator]
-    where: Generator_committable AND Generator_partly_tightened
+    where: Generator_committable AND count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) == 0
     expression: >-
       Generator_p - shift(Generator_p, along=snapshot, offset=1)
       - (Generator_p_min_pu * Generator_p_nom + Generator_ramp_up_rate * Generator_p_nom) * Generator_status
@@ -530,7 +523,7 @@ constraints:
   Generator_com_partly_shut_down:
     description: "`Generator-com-partly-shut-down` — lowering output while a share is shutting down is bounded likewise, by the shut-down ramp"
     dims: [snapshot, generator]
-    where: Generator_committable AND Generator_partly_tightened
+    where: Generator_committable AND count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) == 0
     expression: >-
       shift(Generator_p, along=snapshot, offset=1) - Generator_p
       - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
@@ -551,13 +544,15 @@ objective:
 assumptions:
   Generator_came_in_running_unless_committable:
     holds: "Generator_status_initial == 1"
-    where: "NOT Generator_committable AND (Generator_ramp_limit_up OR Generator_ramp_limit_down)"
+    where: "NOT Generator_committable AND (Generator_ramp_limit_up OR Generator_ramp_limit_down OR Generator_ramp_limit_start_up OR Generator_ramp_limit_shut_down)"
     description: >-
       PyPSA reads `up_time_before` of a unit that is not committable in its
-      ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
-      with nothing carried in, and caps the unit there at zero, or at its
-      start-up ramp where another unit of the component is committable with a
-      fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+      ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp
+      alone builds (`constraints.py:1052-1053`). Where it is zero, PyPSA
+      builds a row at the first snapshot with nothing carried in, and caps
+      the unit there at zero, or at its start-up ramp where another unit of
+      the component is committable with a fixed build
+      (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
       the attribute as read only for a committable unit and does not check
       it. The spec does not state that row, so it refuses the data
   Generator_maintenance_events_positive:

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Stores
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Store`. It adds a term to `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `Carrier_additions`, `Bus_injection`. It reads `CVaR_omega`, `GlobalConstraint_counts_snapshot`, `GlobalConstraint_snapshot_closes`, `period_weight_objective`, `period_weight_years`, `scenario_weight` and 2 more under [`given`](../../reference/language/declarations.md#given).
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Store`. It adds a term to `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection`. It reads `CVaR_omega`, `GlobalConstraint_counts_snapshot`, `GlobalConstraint_snapshot_closes`, `period_weight_objective`, `period_weight_years`, `scenario_weight` and 2 more under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -54,7 +54,7 @@ parameters:
   Store_first_active:
     description: >-
       one in the first period a store stands in, zero elsewhere, data prep.
-      PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a store
+      PyPSA takes `active.cumsum() == 1`, which also counts a store
       that has retired in every later period (`global_constraints.py:276`,
       PyPSA/PyPSA#1938)
     dims: [period, store]
@@ -65,7 +65,12 @@ parameters:
     description: most nominal capacity an extendable store may be built at
     dims: [scenario, store]
   Store_capital_cost:
-    description: cost of one unit of nominal capacity — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal capacity for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, store]
   Store_e_nom_set:
     description: a given nominal capacity for an extendable store; one without a value has no row here
@@ -77,6 +82,9 @@ parameters:
     description: whether the nominal energy capacity is a decision
     dims: [store]
     dtype: bool
+  Store_e_nom_mod:
+    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    dims: [store]
   Store_e_min_pu:
     description: least energy held, per unit of nominal capacity — negative for a store that may go short
     dims: [scenario, snapshot, store]
@@ -172,6 +180,13 @@ variables:
       of the same PyPSA name carries the fixed regime
     dims: [store]
     where: Store_e_nom_extendable
+  Store_n_mod:
+    description: "`Store-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
+    dims: [store]
+    where: Store_e_nom_extendable AND Store_e_nom_mod > 0 AND count(Store_active, over=snapshot) > 0
+    domain: integer
+    bounds:
+      lower: 0
 
 given:
   parameters:
@@ -184,12 +199,13 @@ given:
     GlobalConstraint_counts_snapshot: { dims: [scenario, global_constraint, snapshot], dtype: bool }
   expressions:
     GlobalConstraint_snapshot_closes: { dims: [scenario, global_constraint, snapshot] }
-    primary_energy: { dims: [scenario, global_constraint], term: Store_primary_energy }
-    operational_limit: { dims: [scenario, global_constraint], term: Store_operational_limit }
-    tech_capacity_expansion: { dims: [global_constraint], term: Store_tech_capacity_expansion }
-    scenario_opex: { dims: [scenario], term: Store_opex }
-    Carrier_additions: { dims: [period, carrier], term: Store_additions }
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Store_injection }
+    primary_energy: { dims: [scenario, global_constraint] }
+    operational_limit: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Store_energy_carried_in:
@@ -240,20 +256,30 @@ expressions:
   Store_primary_energy:
     expression: >-
       -sum(sum((Store_e * Store_closing_weight) * Store_primary_energy_weight, over=snapshot), over=store)
+    adds_to: primary_energy
   Store_operational_limit:
     expression: >-
       -sum(sum((Store_e * Store_closing_weight) * Store_operational_limit_weight, over=snapshot), over=store)
+    adds_to: operational_limit
   Store_tech_capacity_expansion:
     expression: sum(Store_e_nom_ext * Store_tech_capacity_weight, over=store)
+    adds_to: tech_capacity_expansion
   Store_opex:
     expression: >-
       sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
       + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
       + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
+    adds_to: scenario_opex
+  Store_capex:
+    expression: sum(scenario_weight * Store_e_nom_ext * Store_capital_cost * Store_capital_weight)
+    adds_to: total_cost
   Store_additions:
     expression: >-
       sum(Store_e_nom_ext * Store_first_active, by=Store_carrier, over=store, into=carrier)
-  Store_injection: sum(Store_sign * Store_p, by=Store_bus, over=store, into=bus)
+    adds_to: Carrier_additions
+  Store_injection:
+    expression: sum(Store_sign * Store_p, by=Store_bus, over=store, into=bus)
+    adds_to: Bus_injection
 
 constraints:
   Store_fix_e_lower:
@@ -291,6 +317,11 @@ constraints:
     dims: [scenario, store]
     where: Store_e_nom_extendable AND Store_e_nom_set
     expression: Store_e_nom_ext == Store_e_nom_set
+  Store_e_nom_modularity:
+    description: "`Store-e_nom_modularity` — the chosen build is a whole number of modules"
+    dims: [store]
+    where: Store_e_nom_extendable AND Store_e_nom_mod > 0 AND count(Store_active, over=snapshot) > 0
+    expression: Store_e_nom_ext == Store_e_nom_mod * Store_n_mod
   Store_energy_balance:
     description: "`Store-energy_balance` — the energy carried in, less what is delivered to the bus"
     dims: [scenario, snapshot, store]
@@ -358,13 +389,8 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Store_e_nom_ext) * Store_capital_cost) * Store_capital_weight)
 ```
 
 #### Sets
@@ -385,13 +411,14 @@ objective:
 |---|---|
 | $`\mathrm{on}^{e}`$ | `Store_active` over $`\mathcal{T} \times \mathcal{V}`$ — whether a store stands in a snapshot's period — PyPSA's `active`, data prep |
 | $`\mathrm{W}^{e}`$ | `Store_capital_weight` over $`\mathcal{V}`$ — the sum of period weights a store stands in — PyPSA's `active * period_weighting`, summed, data prep |
-| $`\mathrm{new}^{e}`$ | `Store_first_active` over $`\mathcal{Y} \times \mathcal{V}`$ — one in the first period a store stands in, zero elsewhere, data prep. PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a store that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
+| $`\mathrm{new}^{e}`$ | `Store_first_active` over $`\mathcal{Y} \times \mathcal{V}`$ — one in the first period a store stands in, zero elsewhere, data prep. PyPSA takes `active.cumsum() == 1`, which also counts a store that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
 | $`\underline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_min` over $`\Xi \times \mathcal{V}`$ — least nominal capacity an extendable store may be built at |
 | $`\overline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_max` over $`\Xi \times \mathcal{V}`$ — most nominal capacity an extendable store may be built at |
-| $`\mathrm{c}^{\mathrm{cap},e}`$ | `Store_capital_cost` over $`\Xi \times \mathcal{V}`$ — cost of one unit of nominal capacity — PyPSA's `capital_cost`, periodized as an annuity in data prep |
+| $`\mathrm{c}^{\mathrm{cap},e}`$ | `Store_capital_cost` over $`\Xi \times \mathcal{V}`$ — cost of one unit of nominal capacity for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{e}^{\mathrm{nom,set}}`$ | `Store_e_nom_set` over $`\Xi \times \mathcal{V}`$ — a given nominal capacity for an extendable store; one without a value has no row here |
 | $`\mathrm{e}^{\mathrm{nom}}`$ | `Store_e_nom` over $`\Xi \times \mathcal{V}`$ — nominal energy capacity |
 | $`\mathrm{ext}^{e}`$ | `Store_e_nom_extendable` over $`\mathcal{V}`$ — whether the nominal energy capacity is a decision |
+| $`\mathrm{e}^{\mathrm{mod}}`$ | `Store_e_nom_mod` over $`\mathcal{V}`$ — the module size a build comes in whole numbers of; no value means the build is continuous |
 | $`\underline{\mathrm{e}}`$ | `Store_e_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — least energy held, per unit of nominal capacity — negative for a store that may go short |
 | $`\overline{\mathrm{e}}`$ | `Store_e_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — most energy held, per unit of nominal capacity |
 | $`\mathrm{sgn}^{q}`$ | `Store_sign` over $`\mathcal{V}`$ — the sign the power a store delivers enters its bus's balance with — PyPSA's `sign`, `1` unless given. PyPSA refuses one that differs by scenario (`consistency.py:1187`) |
@@ -418,6 +445,7 @@ objective:
 | $`e`$ | `Store_e` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-e` — energy held at the end of a snapshot |
 | $`q`$ | `Store_p` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-p` — power delivered to the bus; charging is negative |
 | $`E`$ | `Store_e_nom_ext` over $`\mathcal{V}`$ — `Store-e_nom` — nominal capacity where it is a decision; the parameter of the same PyPSA name carries the fixed regime |
+| $`N^{e}`$ | `Store_n_mod` over $`\mathcal{V}`$ — `Store-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot |
 
 #### Given
 
@@ -435,6 +463,7 @@ objective:
 | $`\mathit{operational\_limit}`$ | `operational_limit` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Store_operational_limit` to |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression this file adds `Store_tech_capacity_expansion` to |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Store_opex` to |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Store_capex` to |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression this file adds `Store_additions` to |
 | $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Store_injection` to |
 
@@ -448,6 +477,7 @@ objective:
 | $`\mathit{Store\_operational\_limit}`$ | `Store_operational_limit` over $`\Xi \times \mathcal{G}`$ |
 | $`\mathit{Store\_tech\_capacity\_expansion}`$ | `Store_tech_capacity_expansion` over $`\mathcal{G}`$ |
 | $`\mathit{Store\_opex}`$ | `Store_opex` over $`\Xi`$ |
+| $`\mathit{Store\_capex}`$ | `Store_capex` (scalar) |
 | $`\mathit{Store\_additions}`$ | `Store_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Store\_injection}`$ | `Store_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 
@@ -460,12 +490,6 @@ $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own ord
 $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ counts within the group a relation puts $`t`$ in: the subscript names the map, $`\mathcal{T}_{\mathrm{relation}(t)}`$ is the group it lands in, and that group has a first position of its own.
 
 $`\lvert \mathcal{T} \rvert`$ denotes the size of the set being counted along, and a position counted from the end prints against it — $`\lvert \mathcal{T} \rvert - 1`$ is the last position, one less than the size because the first is $`0`$.
-
-#### Objective
-
-```math
-\min \sum_{\xi \in \Xi,\ v \in \mathcal{V}} \pi_{\xi} \cdot E_{v} \cdot \mathrm{c}^{\mathrm{cap},e}_{\xi,v} \cdot \mathrm{W}^{e}_{v}
-```
 
 #### Subject to
 
@@ -509,6 +533,12 @@ E_{v} \le \overline{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in 
 
 ```math
 E_{v} = \mathrm{e}^{\mathrm{nom,set}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{nom,set}}_{\xi,v} \text{ is defined}
+```
+
+**`Store_e_nom_modularity`**
+
+```math
+E_{v} = \mathrm{e}^{\mathrm{mod}}_{v} \cdot N^{e}_{v} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{e}_{t,v} \} \rvert > 0
 ```
 
 **`Store_energy_balance`**
@@ -567,6 +597,12 @@ q_{\xi,t,v} = \mathrm{q}^{\mathrm{set}}_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\
 \mathit{Store\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot \mathrm{c}^{q}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot q_{\xi,t,v} \cdot \mathrm{c}^{q,(2)}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} e_{\xi,t,v} \cdot \mathrm{c}^{e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
+**`Store_capex`**
+
+```math
+\mathit{Store\_capex} = \sum_{\xi \in \Xi,\ v \in \mathcal{V}} \pi_{\xi} \cdot E_{v} \cdot \mathrm{c}^{\mathrm{cap},e}_{\xi,v} \cdot \mathrm{W}^{e}_{v}
+```
+
 **`Store_additions`**
 
 ```math
@@ -597,6 +633,12 @@ q_{\xi,t,v} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v 
 
 ```math
 E_{v} \in \mathbb{R} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v}
+```
+
+**`Store_n_mod`**
+
+```math
+N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{e}_{t,v} \} \rvert > 0
 ```
 
 #### Assumptions

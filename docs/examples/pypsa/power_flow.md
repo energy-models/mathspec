@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Power flow
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: Kirchhoff's voltage law around each cycle. It declares `Cycle_angle_sum` as an empty sum, `empty: true`, which the lines and transformers add to.
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: Kirchhoff's voltage law around each cycle. It reads `Cycle_angle_sum` under `given:` and adds nothing to it, and the lines and transformers add their terms to it.
 
 <!-- gallery:begin -->
 ```yaml
@@ -17,15 +17,19 @@ dimensions:
     dtype: datetime
     ordered: true
   cycle:
-    description: independent cycles of the passive network graph — the cycle basis, data prep
-
-expressions:
-  Cycle_angle_sum:
-    dims: [scenario, snapshot, cycle]
-    empty: true
     description: >-
-      the voltage angle differences around a cycle: every branch flow times
-      its cycle weight, and every transformer phase shift
+      independent cycles of the passive network graph — the cycle basis, data
+      prep. Each period has its own basis, of the branches that stand in it;
+      a label is a position in that period's basis, so one label names a
+      different cycle in another period
+
+given:
+  expressions:
+    Cycle_angle_sum:
+      dims: [scenario, snapshot, cycle]
+      description: >-
+        the voltage angle differences around a cycle: every branch flow times
+        its cycle weight, and every transformer phase shift
 
 constraints:
   Kirchhoff_Voltage_Law:
@@ -35,7 +39,10 @@ constraints:
       power flow physical rather than transport. A transformer's flow weighs its
       effective reactance, and its phase shift enters the cycle sum too: a
       constant where the shift is fixed, or the shift decision times its cycle
-      weight where the shift is a phase-shifting transformer's to choose
+      weight where the shift is a phase-shifting transformer's to choose. A
+      snapshot reads the cycles of its own period, of the branches that stand
+      in it (`constraints.py:1640-1652`); a cycle label that period's basis
+      does not reach has no row
     dims: [scenario, snapshot, cycle]
     expression: Cycle_angle_sum == 0
 ```
@@ -46,13 +53,13 @@ constraints:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep |
+| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep. Each period has its own basis, of the branches that stand in it; a label is a position in that period's basis, so one label names a different cycle in another period |
 
-#### Definitions
+#### Given
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ — the voltage angle differences around a cycle: every branch flow times its cycle weight, and every transformer phase shift |
+| $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$, an expression another file defines — the voltage angle differences around a cycle: every branch flow times its cycle weight, and every transformer phase shift |
 
 #### Subject to
 
@@ -60,13 +67,5 @@ constraints:
 
 ```math
 \mathit{Cycle\_angle\_sum}_{\xi,t,c} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
-```
-
-#### Definitions
-
-**`Cycle_angle_sum`**
-
-```math
-\mathit{Cycle\_angle\_sum}_{\xi,t,c} = \cdots \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
 ```
 <!-- gallery:end -->

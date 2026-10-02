@@ -43,17 +43,10 @@ expressions:
     description: the nominal capacity, the same in every snapshot
 ```
 
-An entry written `empty: true` over a `dims:` is an **empty sum**: a
-quantity this file declares and other files add terms to, through
-[`merge`](../../howto/compose.md#a-library-of-components). It has no
-`expression:`, `cases:` or `otherwise:`, and `dims:` is required. `empty`
-defaults to `false`, and a spec writes it only where it is `true`. An entry
-with a `dims:` and no body, and no `empty: true`, is refused. Alone, the file
-reads it as a column over the frame, the way it reads a
-[given expression](declarations.md#given-expressions), and its definition
-prints as `injection = ⋯`: the name is declared here, and the body is what
-the other files add. [A term a file adds](declarations.md#a-term-a-file-adds)
-is the other half.
+[`adds_to:`](declarations.md#terms) adds this expression as a term to the sum
+it names. The sum is a [given expression](declarations.md#given-expressions)
+of the same file, and [`merge`](../../howto/compose.md#a-library-of-components)
+adds the entry to it by its own name.
 
 Where the objective or a constraint names it, the body is substituted there,
 and the [degree limit](expressions.md#where-a-product-of-two-variables-is-allowed)
@@ -92,8 +85,7 @@ Each case prints as one row of the definition, and `otherwise:` as the last:
 
 $$\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \cr \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \cr \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\thinspace t \in \mathcal{T},\enspace g \in \mathcal{G}$$
 
-A named expression carries **exactly one** of `expression:` and `cases:`, or
-is an [empty sum](#expressions), `empty: true`.
+A named expression carries **exactly one** of `expression:` and `cases:`.
 
 | Key         |                                                                              |
 | ----------- | ---------------------------------------------------------------------------- |
@@ -121,8 +113,11 @@ is an [empty sum](#expressions), `empty: true`.
   against `position(snapshot) == -1` pick the same row on an axis with one
   member. Count from one end only.
 
-- **A `when:` may not compare expressions**, such as `c > 2 * k`, even in a
-  block with one case. Precompute the test as a boolean parameter.
+- **In a block of two or more cases, a `when:` may not compare expressions**,
+  such as `c > 2 * k`. Nothing proves such a case apart from the others before
+  the data arrives. Precompute the test as a boolean parameter. A block with one
+  case may compare expressions: its `otherwise:` claims only what the case
+  leaves.
 
 - **Each `when:` and each value sits inside the frame.** A narrower case
   broadcasts as a parameter with fewer dimensions does.

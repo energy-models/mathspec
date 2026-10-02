@@ -4,8 +4,7 @@
 
 name: Report a documentation issue
 description: Missing, incorrect, or confusing information in our docs? Report a documentation issue
-labels:
-  - documentation
+labels: [docs]
 body:
   - type: textarea
     id: description

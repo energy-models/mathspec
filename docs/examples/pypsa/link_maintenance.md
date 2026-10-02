@@ -158,17 +158,17 @@ constraints:
   Link_maint_status_le_status:
     description: "`Link-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND Link_active
+    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0) AND Link_active
     expression: Link_maintenance_status <= Link_status
   Link_maint_status_le_maint:
     description: "`Link-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND Link_active
+    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0) AND Link_active
     expression: Link_maintenance_status <= Link_maintenance
   Link_maint_status_lb:
     description: "`Link-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND Link_active
+    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0) AND Link_active
     expression: Link_maintenance_status >= Link_status + Link_maintenance - 1
   Link_maint_modstatus_le_status:
     description: "`Link-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
@@ -229,7 +229,7 @@ assumptions:
       the `maint-modstatus` rows bound the modules on in maintenance by
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
-      (`constraints.py:500-503`)
+      (`constraints.py:503-506`)
 ```
 
 #### Sets
@@ -320,19 +320,19 @@ assumptions:
 **`Link_maint_status_le_status`**
 
 ```math
-\mu^{f,u}_{\xi,t,l} \le u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+\mu^{f,u}_{\xi,t,l} \le u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \wedge \mathrm{on}^{f}_{t,l}
 ```
 
 **`Link_maint_status_le_maint`**
 
 ```math
-\mu^{f,u}_{\xi,t,l} \le \mu^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+\mu^{f,u}_{\xi,t,l} \le \mu^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \wedge \mathrm{on}^{f}_{t,l}
 ```
 
 **`Link_maint_status_lb`**
 
 ```math
-\mu^{f,u}_{\xi,t,l} \ge u^{f}_{\xi,t,l} + \mu^{f}_{\xi,t,l} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+\mu^{f,u}_{\xi,t,l} \ge u^{f}_{\xi,t,l} + \mu^{f}_{\xi,t,l} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \wedge \mathrm{on}^{f}_{t,l}
 ```
 
 **`Link_maint_modstatus_le_status`**

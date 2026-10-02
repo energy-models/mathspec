@@ -12,14 +12,14 @@ dimensions:
   bus:
     description: network nodes
 
-expressions:
-  Bus_injection:
-    dims: [scenario, snapshot, bus]
-    empty: true
-    description: >-
-      what every component puts into a bus, less what it takes out of it;
-      PyPSA writes each term into the balance, and a load on its right-hand
-      side
+given:
+  expressions:
+    Bus_injection:
+      dims: [scenario, snapshot, bus]
+      description: >-
+        what every component puts into a bus, less what it takes out of it;
+        PyPSA writes each term into the balance, and a load on its right-hand
+        side
 
 constraints:
   Bus_nodal_balance:
@@ -31,7 +31,7 @@ constraints:
       carrying its flow, meets the load there, less half of every incident
       line's and transformer's loss — PyPSA dissipates a branch's loss half at
       either end. Each generator, storage unit, store and load term enters
-      with its component's `sign` (`constraints.py:1428-1429`, `:1538`), and
+      with its component's `sign` (`constraints.py:1434-1435`, `:1544`), and
       an inactive load not at all. A bus nothing is attached to has no row; PyPSA refuses one that
       carries load, and this file does not yet.
     dims: [scenario, snapshot, bus]
