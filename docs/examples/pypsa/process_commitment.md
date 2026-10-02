@@ -68,7 +68,15 @@ parameters:
     description: cost of one snapshot spent on
     dims: [scenario, snapshot, process]
   Process_big_m:
-    description: a bound safely above any feasible internal power — the build cap at full availability, data prep
+    description: >-
+      the bound a committed extendable process's big-M rows release it by — the
+      build cap `p_nom_max` times the highest `p_max_pu`, where the cap is
+      finite and positive. Elsewhere it is `committable_big_m` times the
+      highest `p_max_pu`, and where that keyword is not given, ten times the
+      largest of the peak total load and the component's largest finite
+      `p_nom` and `p_nom_max`, or 1e6 where there is none of them
+      (`components.py:1050-1121`). Below the internal power a solve wants, it caps that
+      internal power; data prep
     dims: [scenario, process]
     missing: neutral
 
@@ -123,8 +131,18 @@ given:
 expressions:
   Process_previous_status:
     description: >-
-      the commitment state a process carries into a snapshot — the state it
-      brought into the horizon at the first, the previous snapshot's after that
+      the commitment state a process carries into a snapshot — off at the
+      first snapshot it stands in past the first of the horizon, as PyPSA
+      reads a status it did not build (`constraints.py:297`), and the state
+      carried over otherwise
+    dims: [scenario, snapshot, process]
+    cases:
+      opening_late: { when: "position(snapshot) > 0 AND NOT shift(Process_active, along=snapshot, offset=1)", expression: 0 }
+    otherwise: Process_status_carried_over
+  Process_status_carried_over:
+    description: >-
+      the state a process carries over into a snapshot — the state it brought
+      into the horizon at the first, the previous snapshot's after that
     dims: [scenario, snapshot, process]
     cases:
       opening: { when: "position(snapshot) == 0", expression: Process_status_initial }
@@ -294,7 +312,7 @@ constraints:
 | $`\mathrm{c}^{z,\mathrm{up}}`$ | `Process_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{z,\mathrm{dn}}`$ | `Process_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{z,\mathrm{on}}`$ | `Process_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$ — a bound safely above any feasible internal power — the build cap at full availability, data prep |
+| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$ — the bound a committed extendable process's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the internal power a solve wants, it caps that internal power; data prep |
 
 #### Variables
 
@@ -330,7 +348,8 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the commitment state a process carries into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
+| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the commitment state a process carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:297`), and the state carried over otherwise |
+| $`\overleftarrow{u}^{\circ z}`$ | `Process_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the state a process carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Process\_commitment\_opex}`$ | `Process_commitment_opex` over $`\Xi`$ |
 
 $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own order — the order `shift` steps along, not the order labels sort in — counted from $`0`$. The index itself stays the coordinate, so $`t`$ compares against labels and $`\mathrm{pos}(t)`$ against positions.
@@ -462,7 +481,13 @@ u^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\
 **`Process_previous_status`**
 
 ```math
-\overleftarrow{u}^{z}_{\xi,t,j} = \begin{cases} \mathrm{u}^{z,0}_{\xi,j} & \text{if } \mathrm{pos}(t) = 0 \\ u^{z}_{\xi,t - 1,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+\overleftarrow{u}^{z}_{\xi,t,j} = \begin{cases} 0 & \text{if } \mathrm{pos}(t) > 0 \wedge \neg \mathrm{on}^{z}_{t - 1,j} \\ \overleftarrow{u}^{\circ z}_{\xi,t,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+**`Process_status_carried_over`**
+
+```math
+\overleftarrow{u}^{\circ z}_{\xi,t,j} = \begin{cases} \mathrm{u}^{z,0}_{\xi,j} & \text{if } \mathrm{pos}(t) = 0 \\ u^{z}_{\xi,t - 1,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
 ```
 
 **`Process_commitment_opex`**
