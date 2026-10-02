@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(pypsa): the cycle rows read each investment period's own cycle basis ([#814](https://github.com/energy-models/mathspec/pull/814))
 - docs(pypsa): a start-up or shut-down cost may change from snapshot to snapshot, as in pypsa master ([#807](https://github.com/energy-models/mathspec/pull/807))
 - docs(pypsa): a line or transformer limits its voltage angle difference, as in pypsa master ([#808](https://github.com/energy-models/mathspec/pull/808))
 - docs(pypsa): the pypsa line references point at pypsa master ([#806](https://github.com/energy-models/mathspec/pull/806))
