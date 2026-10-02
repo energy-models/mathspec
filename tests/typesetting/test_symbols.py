@@ -100,27 +100,36 @@ def test_a_named_expression_has_a_legend_row_exactly_while_its_symbol_prints(nam
 DEFAULTED = varied(
     DISPATCH_MODEL,
     **{
+        'dimensions.bus': {'dtype': 'str'},
+        'relations.gen_bus': {'key': 'generator', 'values': 'bus', 'missing': 'absent'},
         'parameters.p_max.missing': 'inf',
         'parameters.cost.missing': 1,
         'parameters.load.missing': 'neutral',
         'parameters.floor': {'dims': [], 'missing': '-inf'},
         'parameters.online': {'dims': ['generator'], 'dtype': 'bool', 'missing': True},
+        'parameters.p_set': {'dims': ['generator'], 'missing': 'absent'},
+        'parameters.ramp': {'dims': ['generator']},
     },
 )
 
 
 @EVERY_FORMAT
-def test_the_legend_prints_what_a_missing_row_reads_as(name: FormatName, fmt: Format):
+def test_the_legend_prints_what_a_missing_row_means(name: FormatName, fmt: Format):
+    """The legend printed a value and left out a reading, so `absent`, `neutral` and a partial map looked complete."""
     out = typeset(DEFAULTED, name)
     for shown in (
         fmt.math(number(math.inf, fmt)),
         fmt.math(number(-math.inf, fmt)),
         fmt.math('1'),
         fmt.mono('true'),
+        fmt.mono('neutral'),
+        fmt.mono('absent'),
+        f'{fmt.mono("gen_bus")} is {fmt.mono("absent")}',
     ):
         assert f'{shown} where the data has no row' in out
-    assert out.count('where the data has no row') == 4, (
-        '`load` reads a missing row as neutral, which is a reading and not a value, so its row names none'
+    assert out.count('where the data has no row') == 8, (
+        'six parameters and the map in each of its two sets say what a missing row means; '
+        '`ramp` keeps the default, refused, and says nothing'
     )
 
 

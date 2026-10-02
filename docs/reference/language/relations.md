@@ -88,7 +88,9 @@ relations:
 
 A label is data, so no value fills a gap in a map, and `neutral` is refused. A
 bare relation takes no `missing:`: its rows are its membership, so a pair it
-leaves out is not missing.
+leaves out is not missing. The typeset legend prints
+`` `line_to` is `absent` where the data has no row `` beside each set the map
+joins. It prints nothing for `refused`.
 
 ## How a relation is used
 

@@ -73,7 +73,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overline{\Delta}`$ | `Carrier_max_growth` over $`\mathcal{I}`$ — most capacity of a carrier that may be added in a period; no value means no limit. The least over the scenarios, as PyPSA takes it (`global_constraints.py:226-230`), data prep. PyPSA reads it only under `multi_investment_periods` (`global_constraints.py:219-220`), so data prep feeds no value otherwise |
+| $`\overline{\Delta}`$ | `Carrier_max_growth` over $`\mathcal{I}`$, `neutral` where the data has no row — most capacity of a carrier that may be added in a period; no value means no limit. The least over the scenarios, as PyPSA takes it (`global_constraints.py:226-230`), data prep. PyPSA reads it only under `multi_investment_periods` (`global_constraints.py:219-220`), so data prep feeds no value otherwise |
 | $`\mathrm{r}`$ | `Carrier_max_relative_growth` over $`\mathcal{I}`$ — share of the previous period's additions that may be added on top — the least over the scenarios, as PyPSA takes it, data prep |
 
 #### Given

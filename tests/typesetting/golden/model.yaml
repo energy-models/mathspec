@@ -24,7 +24,7 @@ dimensions:
 relations:
   gen_bus: { key: generator, values: bus }
   zone_of: { key: bus, values: zone }
-  area_of: { key: bus, values: zone } # a second map into the same set, to compare against
+  area_of: { key: bus, values: zone, missing: absent } # a second map into the same set, to compare against; a bus may be in no area
   season_of: { key: snapshot, values: season }
   gen_zone: { key: [generator, snapshot], values: zone } # a map keyed by two dimensions: a call consumes one and joins on the other
   rep_of: { key: snapshot, values: { rep: snapshot } } # a map into its own dimension: the representative snapshot
@@ -34,11 +34,11 @@ relations:
 parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
-  cost: { dims: [generator] }
+  cost: { dims: [generator], missing: neutral } # a reading: the legend names it
   load: { dims: [snapshot, bus] }
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
-  tech_cap: { dims: [bus, technology] }
+  tech_cap: { dims: [bus, technology], missing: absent }
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }

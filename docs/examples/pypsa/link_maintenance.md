@@ -247,7 +247,7 @@ assumptions:
 | $`\mathrm{mnt}^{f}`$ | `Link_maintainable` over $`\mathcal{L}`$ — whether a link must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
 | $`\gamma^{f}`$ | `Link_maintenance_pu` over $`\Xi \times \mathcal{L}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{f,\mathrm{mnt}}`$ | `Link_maintenance_events` over $`\Xi \times \mathcal{L}`$ — how many maintenance events the horizon holds |
-| $`\tau^{f,\mathrm{mnt}}`$ | `Link_maintenance_duration` over $`\Xi \times \mathcal{L}`$ — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the link is not maintainable. No row reads it: data prep turns it into `Link_maintenance_cover` and `Link_maintenance_start_blocked`, and the assumptions hold it to the horizon |
+| $`\tau^{f,\mathrm{mnt}}`$ | `Link_maintenance_duration` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the link is not maintainable. No row reads it: data prep turns it into `Link_maintenance_cover` and `Link_maintenance_start_blocked`, and the assumptions hold it to the horizon |
 | $`\mathrm{blk}^{f}`$ | `Link_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the link does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 
 #### Variables

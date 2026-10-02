@@ -174,16 +174,16 @@ constraints:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K}`$ — passive branches, each between two buses, their flow set by impedance |
-| $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$ — passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised |
-| $`\mathcal{K}^{\mathrm{out}}`$ | index $`\kappa`$ — `outage` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K},\ \mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$ — the passive branches a security-constrained run takes out one at a time — PyPSA's `branch_outages`, each a line or a transformer; none on a plain run |
+| $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K}`$, `Outage_line` is `absent` where the data has no row — passive branches, each between two buses, their flow set by impedance |
+| $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$, `Outage_transformer` is `absent` where the data has no row — passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised |
+| $`\mathcal{K}^{\mathrm{out}}`$ | index $`\kappa`$ — `outage` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K},\ \mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$, `Outage_line` is `absent` where the data has no row, `Outage_transformer` is `absent` where the data has no row — the passive branches a security-constrained run takes out one at a time — PyPSA's `branch_outages`, each a line or a transformer; none on a plain run |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
-| $`\beta`$ | `Line_BODF` over $`\mathcal{K} \times \mathcal{K}^{\mathrm{out}}`$ — the share of an outaged branch's flow a line takes on when that branch goes out — PyPSA's `BODF`, from the sub-network's PTDF, data prep; a row only where the line and the outage share a sub-network, -1 at the outaged line itself |
-| $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{M} \times \mathcal{K}^{\mathrm{out}}`$ — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's; a row only where the transformer and the outage share a sub-network |
+| $`\beta`$ | `Line_BODF` over $`\mathcal{K} \times \mathcal{K}^{\mathrm{out}}`$, `neutral` where the data has no row — the share of an outaged branch's flow a line takes on when that branch goes out — PyPSA's `BODF`, from the sub-network's PTDF, data prep; a row only where the line and the outage share a sub-network, -1 at the outaged line itself |
+| $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{M} \times \mathcal{K}^{\mathrm{out}}`$, `neutral` where the data has no row — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's; a row only where the transformer and the outage share a sub-network |
 
 #### Given
 

@@ -150,7 +150,7 @@ class Legend:
         parameters = [
             self._entry(
                 self.symbols.name[p],
-                f'{fmt.mono(p)}{self._over(list(block.dims))}{self._default(block.missing)}',
+                f'{fmt.mono(p)}{self._over(list(block.dims))}{self._missing(block.missing)}',
                 block.description,
             )
             for p, block in program.parameters.items()
@@ -219,15 +219,14 @@ class Legend:
         product = self.format.joined([self.symbols.set[d] for d in dims], self._op('times'))
         return f' over {self.format.math(product)}'
 
-    def _default(self, value: Missing | None) -> str:
-        """The value a missing row reads as, where ``missing:`` names one; nothing for a reading."""
-        if value is None or isinstance(value, str):
+    def _missing(self, value: Missing | None) -> str:
+        """What a missing row means: the reading or the value ``missing:`` names, and nothing for ``refused``, the default."""
+        if value is None or value == 'refused':
             return ''
-        shown = (
-            self.format.mono(str(value).lower())
-            if isinstance(value, bool)
-            else self.format.math(number(value, self.format))
-        )
+        if isinstance(value, str | bool):
+            shown = self.format.mono(str(value).lower())
+        else:
+            shown = self.format.math(number(value, self.format))
         return f', {shown} where the data has no row'
 
     def _signature(self, name: str, lk: RelationDeclaration) -> str:
@@ -241,7 +240,7 @@ class Legend:
         return f'{self.format.upright(name)} {self._op("subset_of")} {product(lk.roles)}'
 
     def _coords(self, dim: str, noticed: Noticed) -> str:
-        """The dimension's carried structure: each relation with a column over it, as the map or relation it is.
+        """The dimension's carried structure: each relation with a column over it, as the map or relation it is, and each map that may leave a key out.
 
         The dtype is named only where an equation compared the index against a
         number, the one place "position 3" and "the coordinate 3" are both
@@ -254,6 +253,11 @@ class Legend:
         if carried:
             maps = self.format.joined([self._signature(c, lk) for c, lk in carried.items()], '')
             clauses.append(f' with {self.format.math(maps)}')
+            clauses.extend(
+                f', {self.format.mono(c)} is {self.format.mono("absent")} where the data has no row'
+                for c, lk in carried.items()
+                if lk.missing == 'absent'
+            )
         return ''.join(clauses)
 
     def convention_notes(self) -> list[str]:
