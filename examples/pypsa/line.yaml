@@ -72,6 +72,9 @@ parameters:
     description: whether the nominal apparent power is a decision
     dims: [line]
     dtype: bool
+  Line_s_nom_mod:
+    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    dims: [line]
   Line_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, line]
@@ -169,6 +172,13 @@ variables:
       parameter of the same PyPSA name carries the fixed regime
     dims: [line]
     where: Line_s_nom_extendable
+  Line_n_mod:
+    description: "`Line-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
+    dims: [line]
+    where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND count(Line_active, over=snapshot) > 0
+    domain: integer
+    bounds:
+      lower: 0
 
 given:
   parameters:
@@ -256,6 +266,11 @@ constraints:
     dims: [scenario, line]
     where: Line_s_nom_extendable AND Line_s_nom_set
     expression: Line_s_nom_ext == Line_s_nom_set
+  Line_s_nom_modularity:
+    description: "`Line-s_nom_modularity` — the chosen build is a whole number of modules"
+    dims: [line]
+    where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND count(Line_active, over=snapshot) > 0
+    expression: Line_s_nom_ext == Line_s_nom_mod * Line_n_mod
   Line_s_set:
     description: "`Line-s_set` — flow pinned to the given schedule, wherever one is given"
     dims: [scenario, snapshot, line]

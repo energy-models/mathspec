@@ -735,6 +735,9 @@ parameters:
     description: whether the nominal power is a decision
     dims: [storage_unit]
     dtype: bool
+  StorageUnit_p_nom_mod:
+    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    dims: [storage_unit]
   StorageUnit_p_min_pu:
     description: most storing, per unit of nominal power and negated
     dims: [scenario, snapshot, storage_unit]
@@ -830,6 +833,9 @@ parameters:
     description: whether the nominal energy capacity is a decision
     dims: [store]
     dtype: bool
+  Store_e_nom_mod:
+    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    dims: [store]
   Store_e_min_pu:
     description: least energy held, per unit of nominal capacity — negative for a store that may go short
     dims: [scenario, snapshot, store]
@@ -904,6 +910,9 @@ parameters:
     description: whether the nominal apparent power is a decision
     dims: [line]
     dtype: bool
+  Line_s_nom_mod:
+    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    dims: [line]
   Line_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, line]
@@ -980,6 +989,9 @@ parameters:
     description: whether the nominal apparent power is a decision
     dims: [transformer]
     dtype: bool
+  Transformer_s_nom_mod:
+    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    dims: [transformer]
   Transformer_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, transformer]
@@ -1375,9 +1387,9 @@ variables:
     dims: [scenario, snapshot, store]
     where: Store_active
   Generator_n_mod:
-    description: "`Generator-n_mod` — how many modules of an extendable modular build"
+    description: "`Generator-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0
+    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND count(Generator_active, over=snapshot) > 0
     domain: integer
     bounds:
       lower: 0
@@ -1445,9 +1457,9 @@ variables:
     bounds:
       lower: 0
   Link_n_mod:
-    description: "`Link-n_mod` — how many modules of an extendable modular build"
+    description: "`Link-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
     dims: [link]
-    where: Link_p_nom_extendable AND Link_p_nom_mod > 0
+    where: Link_p_nom_extendable AND Link_p_nom_mod > 0 AND count(Link_active, over=snapshot) > 0
     domain: integer
     bounds:
       lower: 0
@@ -1515,9 +1527,9 @@ variables:
     bounds:
       lower: 0
   Process_n_mod:
-    description: "`Process-n_mod` — how many modules of an extendable modular build"
+    description: "`Process-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_p_nom_mod > 0
+    where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND count(Process_active, over=snapshot) > 0
     domain: integer
     bounds:
       lower: 0
@@ -1635,6 +1647,13 @@ variables:
       parameter of the same PyPSA name carries the fixed regime
     dims: [line]
     where: Line_s_nom_extendable
+  Line_n_mod:
+    description: "`Line-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
+    dims: [line]
+    where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND count(Line_active, over=snapshot) > 0
+    domain: integer
+    bounds:
+      lower: 0
   Generator_p_nom_ext:
     description: >-
       `Generator-p_nom` — nominal power where it is a decision; the parameter
@@ -1659,18 +1678,39 @@ variables:
       parameter of the same PyPSA name carries the fixed regime
     dims: [transformer]
     where: Transformer_s_nom_extendable
+  Transformer_n_mod:
+    description: "`Transformer-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
+    dims: [transformer]
+    where: Transformer_s_nom_extendable AND Transformer_s_nom_mod > 0 AND count(Transformer_active, over=snapshot) > 0
+    domain: integer
+    bounds:
+      lower: 0
   StorageUnit_p_nom_ext:
     description: >-
       `StorageUnit-p_nom` — nominal power where it is a decision; the
       parameter of the same PyPSA name carries the fixed regime
     dims: [storage_unit]
     where: StorageUnit_p_nom_extendable
+  StorageUnit_n_mod:
+    description: "`StorageUnit-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
+    dims: [storage_unit]
+    where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_mod > 0 AND count(StorageUnit_active, over=snapshot) > 0
+    domain: integer
+    bounds:
+      lower: 0
   Store_e_nom_ext:
     description: >-
       `Store-e_nom` — nominal capacity where it is a decision; the parameter
       of the same PyPSA name carries the fixed regime
     dims: [store]
     where: Store_e_nom_extendable
+  Store_n_mod:
+    description: "`Store-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
+    dims: [store]
+    where: Store_e_nom_extendable AND Store_e_nom_mod > 0 AND count(Store_active, over=snapshot) > 0
+    domain: integer
+    bounds:
+      lower: 0
   CVaR_a:
     description: "`CVaR-a` — how far a scenario's operating cost exceeds the tail's start; nothing where it does not"
     dims: [scenario]
@@ -2655,7 +2695,7 @@ constraints:
   Generator_p_nom_modularity:
     description: "`Generator-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0
+    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND count(Generator_active, over=snapshot) > 0
     expression: Generator_p_nom_ext == Generator_p_nom_mod * Generator_n_mod
   Generator_com_ext_p_upper_cap:
     description: >-
@@ -2925,7 +2965,7 @@ constraints:
   Link_p_nom_modularity:
     description: "`Link-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [link]
-    where: Link_p_nom_extendable AND Link_p_nom_mod > 0
+    where: Link_p_nom_extendable AND Link_p_nom_mod > 0 AND count(Link_active, over=snapshot) > 0
     expression: Link_p_nom_ext == Link_p_nom_mod * Link_n_mod
   Link_com_ext_p_upper_cap:
     description: >-
@@ -3195,7 +3235,7 @@ constraints:
   Process_p_nom_modularity:
     description: "`Process-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_p_nom_mod > 0
+    where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND count(Process_active, over=snapshot) > 0
     expression: Process_p_nom_ext == Process_p_nom_mod * Process_n_mod
   Process_com_ext_p_upper_cap:
     description: >-
@@ -3389,6 +3429,11 @@ constraints:
     dims: [scenario, line]
     where: Line_s_nom_extendable AND Line_s_nom_set
     expression: Line_s_nom_ext == Line_s_nom_set
+  Line_s_nom_modularity:
+    description: "`Line-s_nom_modularity` — the chosen build is a whole number of modules"
+    dims: [line]
+    where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND count(Line_active, over=snapshot) > 0
+    expression: Line_s_nom_ext == Line_s_nom_mod * Line_n_mod
   Line_s_set:
     description: "`Line-s_set` — flow pinned to the given schedule, wherever one is given"
     dims: [scenario, snapshot, line]
@@ -3465,6 +3510,11 @@ constraints:
     dims: [scenario, transformer]
     where: Transformer_s_nom_extendable AND Transformer_s_nom_set
     expression: Transformer_s_nom_ext == Transformer_s_nom_set
+  Transformer_s_nom_modularity:
+    description: "`Transformer-s_nom_modularity` — the chosen build is a whole number of modules"
+    dims: [transformer]
+    where: Transformer_s_nom_extendable AND Transformer_s_nom_mod > 0 AND count(Transformer_active, over=snapshot) > 0
+    expression: Transformer_s_nom_ext == Transformer_s_nom_mod * Transformer_n_mod
   Transformer_s_set:
     description: "`Transformer-s_set` — flow pinned to the given schedule, wherever one is given"
     dims: [scenario, snapshot, transformer]
@@ -3758,6 +3808,11 @@ constraints:
     dims: [scenario, storage_unit]
     where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_set
     expression: StorageUnit_p_nom_ext == StorageUnit_p_nom_set
+  StorageUnit_p_nom_modularity:
+    description: "`StorageUnit-p_nom_modularity` — the chosen build is a whole number of modules"
+    dims: [storage_unit]
+    where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_mod > 0 AND count(StorageUnit_active, over=snapshot) > 0
+    expression: StorageUnit_p_nom_ext == StorageUnit_p_nom_mod * StorageUnit_n_mod
   StorageUnit_energy_balance:
     description: >-
       `StorageUnit-energy_balance` — the charge carried in, plus what is
@@ -3806,6 +3861,11 @@ constraints:
     dims: [scenario, store]
     where: Store_e_nom_extendable AND Store_e_nom_set
     expression: Store_e_nom_ext == Store_e_nom_set
+  Store_e_nom_modularity:
+    description: "`Store-e_nom_modularity` — the chosen build is a whole number of modules"
+    dims: [store]
+    where: Store_e_nom_extendable AND Store_e_nom_mod > 0 AND count(Store_active, over=snapshot) > 0
+    expression: Store_e_nom_ext == Store_e_nom_mod * Store_n_mod
   Store_energy_balance:
     description: "`Store-energy_balance` — the energy carried in, less what is delivered to the bus"
     dims: [scenario, snapshot, store]

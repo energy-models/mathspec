@@ -66,7 +66,7 @@ cost at risk.
 | [generator_maintenance](generator_maintenance.md) | 5 | 4 | 13 | 9 |  |
 | [generator_ramping](generator_ramping.md) | 5 | 0 | 6 | 14 |  |
 | [global_constraints](global_constraints.md) | 3 | 0 | 15 | 6 |  |
-| [line](line.md) | 20 | 3 | 13 | 9 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
+| [line](line.md) | 21 | 4 | 14 | 9 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
 | [link](link.md) | 23 | 3 | 9 | 15 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
 | [link_commitment](link_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
 | [link_maintenance](link_maintenance.md) | 5 | 4 | 13 | 9 |  |
@@ -80,9 +80,9 @@ cost at risk.
 | [process_ramping](process_ramping.md) | 5 | 0 | 6 | 14 |  |
 | [security](security.md) | 2 | 0 | 8 | 10 |  |
 | [settings](settings.md) | 9 | 0 | 0 | 8 |  |
-| [storage_unit](storage_unit.md) | 34 | 5 | 20 | 15 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [store](store.md) | 27 | 3 | 10 | 15 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [transformer](transformer.md) | 22 | 4 | 15 | 5 | `total_cost`, `Bus_injection`, `Cycle_angle_sum` |
+| [storage_unit](storage_unit.md) | 35 | 6 | 21 | 15 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [store](store.md) | 28 | 4 | 11 | 15 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [transformer](transformer.md) | 23 | 5 | 16 | 5 | `total_cost`, `Bus_injection`, `Cycle_angle_sum` |
 <!-- gallery:end -->
 
 ## Leaving a file out
