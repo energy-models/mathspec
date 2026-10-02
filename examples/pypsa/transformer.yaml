@@ -97,7 +97,7 @@ parameters:
       `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a
       fixed shift carried by `phase_shift`. The shift parameters carry no
       scenario: only a cycle row and an angle row read them, PyPSA fails on a
-      transformer in a cycle on a network with scenarios (`constraints.py:1654`),
+      transformer in a cycle on a network with scenarios (`constraints.py:1660`),
       and builds no angle row on one
     dims: [transformer]
     dtype: bool

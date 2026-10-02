@@ -106,7 +106,7 @@ given:
         what a future costs to run — every operating term, weighted by the
         snapshot's hours and its period, before the scenario's own weight; a
         start and a stop cost what they cost, unweighted, as PyPSA adds them
-        (`optimize.py:414-429`)
+        (`optimize.py:415-432`)
     total_cost:
       dims: []
       description: >-
