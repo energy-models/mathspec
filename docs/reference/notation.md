@@ -1510,9 +1510,9 @@ constraints:
 p_{t,g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{p}^{\mathrm{max}}_{g} - \mathrm{p}^{\mathrm{min}}_{g} > \frac{\mathrm{cost}_{g}}{2}
 ```
 
-#### Shift and pullback in a condition
+#### Shift and lookup in a condition
 
-a translation under a comparison names its edge, a pullback reads through a relation, and the position keeps the vacated row out
+a translation under a comparison names its edge, a lookup reads through a relation, and the position keeps the vacated row out
 
 ```yaml
 constraints:

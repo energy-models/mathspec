@@ -31,6 +31,7 @@ from mathspec.program import (
     ExpressionComparison,
     Join,
     JoinColumns,
+    JoinedPredicate,
     Mask,
     Multiply,
     Named,
@@ -44,7 +45,6 @@ from mathspec.program import (
     Power,
     Predicate,
     PredicateOperator,
-    PulledBackPredicate,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -559,7 +559,7 @@ class Walk:
             moved = ctx.translated(node.along, _Step(node.offset, 'plain'))
             return self._where(node.operand.root, moved)
 
-        if isinstance(node, PulledBackPredicate):
+        if isinstance(node, JoinedPredicate):
             return self._where(node.operand.root, self._looked_up(node.columns, ctx))
 
         if isinstance(node, RelationDefined):

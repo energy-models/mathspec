@@ -19,7 +19,7 @@ from mathspec.program import (
     DimensionComparison,
     DimensionPosition,
     ExpressionComparison,
-    PulledBackPredicate,
+    JoinedPredicate,
     Translate,
     TranslatedPredicate,
     WindowSum,
@@ -103,7 +103,7 @@ def notice(program: Program) -> Noticed:
                 expressions(atom.left, atom.right)
             elif isinstance(atom, CountComparison):
                 masks(atom.predicate)
-            elif isinstance(atom, TranslatedPredicate | PulledBackPredicate):
+            elif isinstance(atom, TranslatedPredicate | JoinedPredicate):
                 masks(atom.operand)
 
     expressions(*program.roots)

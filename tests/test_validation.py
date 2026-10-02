@@ -668,7 +668,7 @@ class TestAWhereSideIsReadInResolution:
             pytest.param(
                 {'parameters.d': {'dims': ['h']}},
                 'c <= at(d, by=lk[h])',
-                id='a-pullback-through-a-relation',
+                id='a-lookup-through-a-relation',
             ),
             pytest.param(
                 {}, 'c - shift(c, along=g, offset=1, edge=0) <= k AND position(g) > 0', id='a-translation-with-its-edge'

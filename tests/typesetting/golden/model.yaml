@@ -299,7 +299,7 @@ constraints:
     dims: [snapshot, generator]
     where: "p_max - p_min > cost / 2"
     expression: p <= p_max
-  ramped: # a translation under a comparison names its edge, a pullback reads through a relation, and the position keeps the vacated row out
+  ramped: # a translation under a comparison names its edge, a lookup reads through a relation, and the position keeps the vacated row out
     dims: [snapshot, bus]
     where: "load - shift(load, along=snapshot, offset=1, edge=0) <= at(zone_cap, by=zone_of[zone]) AND position(snapshot) > 0"
     expression: slack <= load

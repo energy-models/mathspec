@@ -37,6 +37,7 @@ from mathspec.program import (
     Footprint,
     Join,
     JoinColumns,
+    JoinedPredicate,
     Mask,
     Multiply,
     Not,
@@ -47,7 +48,6 @@ from mathspec.program import (
     Partition,
     Power,
     Program,
-    PulledBackPredicate,
     QuadraticPosition,
     Region,
     RelationDeclaration,
@@ -418,7 +418,7 @@ def test_a_comparison_of_expressions_lowers_to_program_expressions_on_both_sides
     assert mask is not None and isinstance(mask.root, ExpressionComparison)
     assert isinstance(mask.root.right, Add) and isinstance(mask.root.right.left, Join)
     assert mask.names_read == frozenset({'c', 'zc', 'lk2'}), (
-        'the relation a pullback and a partition read through is data the consumer attaches too'
+        'the relation a lookup and a partition read through is data the consumer attaches too'
     )
 
 
@@ -474,7 +474,7 @@ def test_a_predicate_read_through_a_relation_is_lowered_and_keeps_the_relation_i
         )
     ).program
     mask = program.constraints['w'].where
-    assert mask is not None and isinstance(mask.root, PulledBackPredicate)
+    assert mask is not None and isinstance(mask.root, JoinedPredicate)
     assert mask.root.operand.root == ExpressionComparison(
         Parameter('zcap'), '<=', Multiply(Constant(0.5), Parameter('k')), ('z',)
     ), 'the read predicate is rebuilt, not handed through with the resolved comparison still in it'

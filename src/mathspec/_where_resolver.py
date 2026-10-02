@@ -48,6 +48,7 @@ from mathspec.program import (
     Divide,
     Expression,
     ExpressionComparison,
+    JoinedPredicate,
     Mask,
     Multiply,
     Negate,
@@ -58,7 +59,6 @@ from mathspec.program import (
     Power,
     Predicate,
     PredicateOperator,
-    PulledBackPredicate,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -197,7 +197,7 @@ class WhereResolver:
         if len(self.errors) > found:
             return node
         if node.name == 'at':
-            return self._pulled_back(node, Mask(operand))
+            return self._joined(node, Mask(operand))
         if (refusal := _kwargs_error(context, 'shift', node.kwargs, required=('along', 'offset'))) is not None:
             self.errors.append(refusal)
             return node
@@ -224,7 +224,7 @@ class WhereResolver:
             return node
         return TranslatedPredicate(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
 
-    def _pulled_back(self, node: UnresolvedPredicateCallNode, mask: Mask) -> Predicate | UnresolvedWhereNode:
+    def _joined(self, node: UnresolvedPredicateCallNode, mask: Mask) -> Predicate | UnresolvedWhereNode:
         """``at(<predicate>, by=relation[column])`` — the predicate read through a relation, as ``at`` reads an array.
 
         The columns are read by the rules an expression's ``at`` is, so the one
@@ -244,7 +244,7 @@ class WhereResolver:
         except DimensionError as refusal:
             self.errors.append(str(refusal))
             return node
-        return PulledBackPredicate(mask, by, tuple(sorted(dims)))
+        return JoinedPredicate(mask, by, tuple(sorted(dims)))
 
     def _count(self, node: UnresolvedCountNode) -> Predicate | UnresolvedWhereNode:
         """``count(<predicate>, over=<dim>) <op> <integer>`` — how many coordinates the predicate admits.

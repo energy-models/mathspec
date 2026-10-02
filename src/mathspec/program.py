@@ -63,6 +63,7 @@ __all__ = [
     'GivenTargets',
     'Join',
     'JoinColumns',
+    'JoinedPredicate',
     'Link',
     'Mask',
     'Multiply',
@@ -84,7 +85,6 @@ __all__ = [
     'Predicate',
     'PredicateOperator',
     'Program',
-    'PulledBackPredicate',
     'QuadraticPosition',
     'Reach',
     'Region',
@@ -1354,8 +1354,8 @@ class TranslatedPredicate:
 
 
 @dataclass(frozen=True)
-class PulledBackPredicate:
-    """*operand* read through a relation — ``at(has_curve, by=converter_of[converter])``.
+class JoinedPredicate:
+    """*operand* read through a relation — ``at(has_curve, by=converter_of[converter])``, the predicate's lookup [`Join`][].
 
     True at a coordinate where the relation has a row and *operand* holds at
     the coordinate that row reads. False where the relation has no row, which
@@ -1401,7 +1401,7 @@ TypedPredicate = (
     | RelationDefined
     | CountComparison
     | TranslatedPredicate
-    | PulledBackPredicate
+    | JoinedPredicate
 )
 
 #: The boolean connectives — the only where nodes carrying other where nodes,
@@ -1471,7 +1471,7 @@ def _atom_dims(atom: TypedPredicate) -> frozenset[str]:
             | RelationComparison()
             | RelationPairComparison()
             | RelationDefined()
-            | PulledBackPredicate()
+            | JoinedPredicate()
         ):
             return frozenset(atom.dims)
         case DimensionComparison():
@@ -1504,7 +1504,7 @@ def _atom_names(atom: TypedPredicate) -> frozenset[str]:
             return atom.predicate.names_read
         case TranslatedPredicate():
             return atom.operand.names_read
-        case PulledBackPredicate():
+        case JoinedPredicate():
             return atom.operand.names_read | {atom.columns.name}
         case DimensionComparison() | DimensionPosition():
             return frozenset()
@@ -1516,7 +1516,7 @@ def _names_under(*expressions: Expression) -> frozenset[str]:
     """Every parameter and relation the data has to supply for *expressions* — what a mask's ``names_read`` promises.
 
     [`parameters_of`][] alone misses the data an operator reads beside its
-    operand: the relation a grouping or a pullback reads through, the one a
+    operand: the relation a grouping or a lookup reads through, the one a
     translation or a window is partitioned by, the parameter a named offset or
     width is read from, and whatever decides which region of a cased value
     applies.

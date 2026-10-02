@@ -154,7 +154,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         'redundant': 'Constant true inside a condition',
         'never': 'Constant false condition',
         'margin': 'Comparison of two expressions',
-        'ramped': 'Shift and pullback in a condition',
+        'ramped': 'Shift and lookup in a condition',
         'covered': 'Reduction in a scalar condition',
         'counted': 'Count over a dimension',
         'counted_here': 'Count along a dimension of the frame',

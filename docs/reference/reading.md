@@ -152,11 +152,11 @@ both mask the same coordinates.
 Three predicates read another predicate rather than a declaration. A
 `CountComparison` carries the mask it counts and the dimension it counts away.
 A `TranslatedPredicate` carries the mask it reads at a neighbouring
-coordinate. A `PulledBackPredicate` carries the mask it reads through a
+coordinate. A `JoinedPredicate` carries the mask it reads through a
 relation, and the `JoinColumns` it joins on and groups by. Each holds that
 mask as a `Mask`, where a connective holds a bare predicate, so the walk
 recurses through a connective and stops at these. `.names_read` and `.dims` see
-through all three, and the relation a `PulledBackPredicate` reads is in its
+through all three, and the relation a `JoinedPredicate` reads is in its
 `.names_read`.
 
 `Mask(predicate)` answers the same four questions of any resolved predicate,

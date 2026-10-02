@@ -29,6 +29,7 @@ from mathspec.program import (
     ExpressionComparison,
     Join,
     JoinColumns,
+    JoinedPredicate,
     Mask,
     Multiply,
     Named,
@@ -38,7 +39,6 @@ from mathspec.program import (
     ParameterDefined,
     Partition,
     Power,
-    PulledBackPredicate,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -377,7 +377,7 @@ def _check_where_dims(
                 leaf = f"a where-count over '{atom.over}'"
             case TranslatedPredicate():
                 leaf = f"a where-predicate translated along '{atom.along}'"
-            case PulledBackPredicate():
+            case JoinedPredicate():
                 leaf = f"a where-predicate read through '{atom.columns.name}'"
             case _:
                 assert_never(atom)
