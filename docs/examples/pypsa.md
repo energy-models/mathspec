@@ -132,7 +132,7 @@ def build():
 | PyPSA                                                 | status | note                                                          |
 | ----------------------------------------------------- | ------ | ------------------------------------------------------------- |
 | [`StorageUnit-p_dispatch`, `-p_store`, `-state_of_charge`, `Store-e`, `Store-p`](#variable-domains) | done |                                 |
-| [`StorageUnit-spill`](#variable-domains)              | done   | `where: inflow > 0`, `absence: zero`; bounds on the variable, as PyPSA's |
+| [`StorageUnit-spill`](#variable-domains)              | done   | `where: inflow > 0`, `missing: neutral`; bounds on the variable, as PyPSA's |
 | [`StorageUnit-fix-*`](#storageunit-fix-p_dispatch-lower), [`Store-fix-e-*`](#store-fix-e-lower) | done |                                 |
 | [`StorageUnit-energy_balance`](#storageunit-energy_balance) | done | the charge carried into a snapshot is a cased quantity — cyclic, opening, carried; `(1-loss)**eh` is prep |
 | [`StorageUnit-energy_balance`](#storageunit-energy_balance) with efficiencies per snapshot | done | rung 60 |
