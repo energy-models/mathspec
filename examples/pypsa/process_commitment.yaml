@@ -52,16 +52,24 @@ parameters:
     dims: [scenario, snapshot, process]
     dtype: bool
   Process_start_up_cost:
-    description: cost of one start
-    dims: [scenario, process]
+    description: cost of one start in this snapshot
+    dims: [scenario, snapshot, process]
   Process_shut_down_cost:
-    description: cost of one stop
-    dims: [scenario, process]
+    description: cost of one stop in this snapshot
+    dims: [scenario, snapshot, process]
   Process_stand_by_cost:
     description: cost of one snapshot spent on
     dims: [scenario, snapshot, process]
   Process_big_m:
-    description: a bound safely above any feasible internal power — the build cap at full availability, data prep
+    description: >-
+      the bound a committed extendable process's big-M rows release it by — the
+      build cap `p_nom_max` times the highest `p_max_pu`, where the cap is
+      finite and positive. Elsewhere it is `committable_big_m` times the
+      highest `p_max_pu`, and where that keyword is not given, ten times the
+      largest of the peak total load and the component's largest finite
+      `p_nom` and `p_nom_max`, or 1e6 where there is none of them
+      (`components.py:1050-1121`). Below the internal power a solve wants, it caps that
+      internal power; data prep
     dims: [scenario, process]
 
 variables:
@@ -115,8 +123,18 @@ given:
 expressions:
   Process_previous_status:
     description: >-
-      the commitment state a process carries into a snapshot — the state it
-      brought into the horizon at the first, the previous snapshot's after that
+      the commitment state a process carries into a snapshot — off at the
+      first snapshot it stands in past the first of the horizon, as PyPSA
+      reads a status it did not build (`constraints.py:297`), and the state
+      carried over otherwise
+    dims: [scenario, snapshot, process]
+    cases:
+      opening_late: { when: "position(snapshot) > 0 AND NOT shift(Process_active, along=snapshot, offset=1)", expression: 0 }
+    otherwise: Process_status_carried_over
+  Process_status_carried_over:
+    description: >-
+      the state a process carries over into a snapshot — the state it brought
+      into the horizon at the first, the previous snapshot's after that
     dims: [scenario, snapshot, process]
     cases:
       opening: { when: "position(snapshot) == 0", expression: Process_status_initial }
@@ -132,12 +150,12 @@ constraints:
   Process_com_p_lower:
     description: "`Process-com-p-lower` — a committed process runs at least its minimum; off, at least nothing"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND not Process_p_nom_extendable AND Process_active
+    where: Process_committable AND not Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
     expression: Process_p >= Process_p_min_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_p_upper:
     description: "`Process-com-p-upper` — a committed process runs at most what is available; off, at most nothing"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND not Process_p_nom_extendable AND Process_active
+    where: Process_committable AND not Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
     expression: Process_p <= Process_p_max_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_transition_start_up:
     description: "`Process-com-transition-start-up` — turning on is a start, counted against the state the process carried into the snapshot"

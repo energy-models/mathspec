@@ -4,7 +4,7 @@
 
 """Rung 53: a `transmission_volume_expansion_limit` row holds in every scenario under `multi_investment_periods`.
 
-PyPSA 1.3.0 builds no such row on a network with scenarios and investment
+PyPSA builds no such row on a network with scenarios and investment
 periods (PyPSA/PyPSA#1939). The two futures are identical, so the oracle is the
 same network without scenarios, which PyPSA solves with the row.
 """
