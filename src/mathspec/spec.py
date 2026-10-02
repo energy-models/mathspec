@@ -211,10 +211,10 @@ class DimensionBlock(_StrictBlock):
 
     @model_serializer(mode='wrap')
     def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``ordered`` is written where it is true, as ``empty`` is: false is what leaving it out says."""
+        """``ordered`` is written where it is true: false is what leaving it out says."""
         written = cast('dict[str, object]', handler(self))
         if not self.ordered:
-            del written['ordered']
+            written.pop('ordered', None)
         return written
 
 

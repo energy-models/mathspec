@@ -2375,9 +2375,29 @@ def test_a_type_1_set_reads_no_order():
     to_spec(varied(UNORDERED, **{'sos.s': {'variable': 'z', 'along': 'bp', 'type': 1}}))
 
 
-@pytest.mark.parametrize(('ordered', 'written'), [(False, {'dtype': 'int'}), (True, {'dtype': 'int', 'ordered': True})])
+@pytest.mark.parametrize(
+    ('ordered', 'written'),
+    [
+        pytest.param(False, {'dtype': 'int'}, id='unordered'),
+        pytest.param(True, {'dtype': 'int', 'ordered': True}, id='ordered'),
+    ],
+)
 def test_a_dimension_writes_ordered_only_where_it_is_true(ordered, written):
     """Leaving it out is what `false` says, so a file that never wrote it round-trips unchanged."""
     spec = to_spec({'dimensions': {'t': {'dtype': 'int', 'ordered': ordered}}})
     assert spec.to_dict()['dimensions'] == {'t': written}
     assert to_spec(spec.to_dict()) == spec
+
+
+@pytest.mark.parametrize(
+    'dump',
+    [
+        pytest.param({'exclude_defaults': True}, id='exclude_defaults'),
+        pytest.param({'exclude_unset': True}, id='exclude_unset'),
+        pytest.param({'exclude': {'dimensions': {'t': {'ordered'}}}}, id='exclude'),
+    ],
+)
+def test_a_dump_that_leaves_ordered_out_still_writes_the_dimension(dump):
+    """The serializer dropped `ordered` with `del`, so a dump that had already left it out raised a KeyError."""
+    spec = to_spec({'dimensions': {'t': {'dtype': 'int'}}})
+    assert spec.model_dump(**dump)['dimensions'] == {'t': {'dtype': 'int'}}
