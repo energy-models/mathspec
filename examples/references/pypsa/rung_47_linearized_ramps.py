@@ -10,7 +10,7 @@ import math
 
 import spine
 
-MODEL = 'pypsa_linearized_uc.yaml'
+PATCH = 'variants/pypsa_linearized_uc.yaml'
 OPTIMIZE = {'linearized_unit_commitment': True}
 
 
