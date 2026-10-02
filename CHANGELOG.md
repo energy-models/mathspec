@@ -14,6 +14,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 - feat(language): `missing:` says what a missing row means, and a table is complete unless the file says otherwise ([#810](https://github.com/energy-models/mathspec/pull/810))
 - feat(spec): a decided variable becomes a supplied number in one call, so a subproblem is not a second file ([#824](https://github.com/energy-models/mathspec/pull/824))
+- feat(spec): a spec reports how its optimum moves with a parameter, which for a fixed decision is a Benders cut ([#826](https://github.com/energy-models/mathspec/pull/826))
 - docs(pypsa): a line, a transformer, a storage unit and a store may be built in whole modules, and a unit that is not active counts no modules ([#815](https://github.com/energy-models/mathspec/pull/815))
 - docs(pypsa): the cycle rows read each investment period's own cycle basis ([#814](https://github.com/energy-models/mathspec/pull/814))
 - docs(pypsa): a start-up or shut-down cost may change from snapshot to snapshot, as in pypsa master ([#807](https://github.com/energy-models/mathspec/pull/807))

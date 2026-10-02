@@ -186,6 +186,13 @@ duals are opposite.
 
 A row that `c`'s `where:` deletes has no dual.
 
+[`spec.sensitivity('q')`](../api.md#mathspec.Spec.sensitivity) reports the
+rate at which the optimal objective rises per unit of the parameter `q`, as the
+reported expression `q_sensitivity`. It is the objective's own rate in `q`,
+plus, for each row `c` that reads `q`, `dual(c)` times the rate of `rhs - lhs`
+in `q`. Of a variable that [`spec.fix`](../api.md#mathspec.Spec.fix) made a
+parameter, it is the slope of a Benders cut.
+
 ## `macros`
 
 A macro is a template that takes arguments and is substituted into an expression
