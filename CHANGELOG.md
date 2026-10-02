@@ -12,7 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(language): a call names the columns of a relation as relation[column], and a sum through a relation is a sum over the axes its join opens ([#664](https://github.com/energy-models/mathspec/pull/664))
+- feat(language)!: a call names the columns of a relation as relation[column], and a sum through a relation is a sum over the axes its join opens ([#664](https://github.com/energy-models/mathspec/pull/664))
 
 ## 0.2.1 (2026-10-01)
 
