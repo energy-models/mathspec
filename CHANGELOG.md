@@ -13,6 +13,8 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(language): `missing:` says what a missing row means, and a table is complete unless the file says otherwise ([#810](https://github.com/energy-models/mathspec/pull/810))
+- docs(pypsa): a fixed modular committable unit gets only its per-module commitment rows, as in pypsa master ([#787](https://github.com/energy-models/mathspec/pull/787))
+- docs(pypsa): the pypsa references are recorded against pypsa master ([#786](https://github.com/energy-models/mathspec/pull/786))
 
 ## 0.2.1 (2026-10-01)
 

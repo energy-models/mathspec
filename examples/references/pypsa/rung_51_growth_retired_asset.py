@@ -4,7 +4,7 @@
 
 """Rung 51: a carrier's growth limit counts an asset in the first period it stands in only, not again after it retires.
 
-PyPSA 1.3.0 counts an asset that retires in every later period too (PyPSA/PyPSA#1938).
+PyPSA counts an asset that retires in every later period too (PyPSA/PyPSA#1938).
 The oracle gives each build its own carrier with the same limit: each carrier
 then has one asset, which PyPSA counts in its first period, and a retired one
 counted again repeats a row it already has.

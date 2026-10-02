@@ -4,7 +4,7 @@
 
 """Rung 57: `p_nom_set` pins an extendable build on a network with scenarios.
 
-PyPSA 1.3.0 raises on any `*_nom_set` on a network with scenarios
+PyPSA raises on any `*_nom_set` on a network with scenarios
 (PyPSA/PyPSA#1942). The two futures are identical, so the oracle is the same
 network without scenarios.
 """
