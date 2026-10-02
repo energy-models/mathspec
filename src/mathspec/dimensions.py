@@ -31,7 +31,7 @@ from mathspec.program import (
     GroupSum,
     Mask,
     Multiply,
-    Named,
+    NamedExpression,
     Negate,
     Parameter,
     ParameterComparison,
@@ -76,7 +76,7 @@ def dims_of(node: Expression, schema: Spec, context: str) -> frozenset[str]:
     if isinstance(node, Dual):
         return frozenset({**schema.constraints, **schema.given.constraints}[node.constraint].dims)
 
-    if isinstance(node, Named):
+    if isinstance(node, NamedExpression):
         return _named_dims(node, schema, context)
 
     if isinstance(node, Cases):
@@ -98,7 +98,7 @@ def dims_of(node: Expression, schema: Spec, context: str) -> frozenset[str]:
     assert_never(node)
 
 
-def _named_dims(node: Named, schema: Spec, context: str) -> frozenset[str]:
+def _named_dims(node: NamedExpression, schema: Spec, context: str) -> frozenset[str]:
     """An entry's declared frame where it has one — a narrower arm or body broadcasts along the rest — else its body's."""
     declared = schema.expressions[node.name].dims
     if declared is not None:

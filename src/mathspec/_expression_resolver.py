@@ -177,7 +177,7 @@ class ExpressionResolver:
 
         A named expression arrives as the one node [`Namespace.named`][]
         built for it; the cast is the one place a
-        [`Named`][mathspec.program.Named] enters a tree typed as a program's,
+        [`NamedExpression`][mathspec.program.NamedExpression] enters a tree typed as a program's,
         which lowering makes true.
         """
         if node.name in self.formals:

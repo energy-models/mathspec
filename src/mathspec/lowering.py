@@ -33,7 +33,7 @@ from mathspec.program import (
     Link,
     Mask,
     MaskDeclaration,
-    Named,
+    NamedExpression,
     ObjectiveDeclaration,
     Parameter,
     ParameterDeclaration,
@@ -121,7 +121,7 @@ def lower(schema: Spec) -> Program:
         )
         resolve_expression(body_ast, ns, context, errors, formals=formals)
 
-    entries: dict[str, Named] = {}
+    entries: dict[str, NamedExpression] = {}
     for ename in schema.expressions:
         node, refusals = ns.named_entry(ename)
         errors.extend(refusals)
@@ -196,7 +196,7 @@ def lower(schema: Spec) -> Program:
         roots.append(objective.expression)
     roots.extend(link for links in curves.values() for link in links)
     roots.extend(terms)
-    in_math = frozenset(node.name for node in walk(*roots) if isinstance(node, Named))
+    in_math = frozenset(node.name for node in walk(*roots) if isinstance(node, NamedExpression))
 
     piecewise = {}
     for pname, links in curves.items():
@@ -268,7 +268,7 @@ def lower(schema: Spec) -> Program:
     return program
 
 
-def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str]) -> list[Named]:
+def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str]) -> list[NamedExpression]:
     """Every entry with ``adds_to:`` that loads as a term, with a refusal in *errors* for each other.
 
     A term that reads its own sum, directly or through the sums the file's
@@ -281,7 +281,7 @@ def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str
         if (target := schema.expressions[name].adds_to) is not None
         and (entry := _term(name, target, schema, ns, errors)) is not None
     }
-    sums: dict[str, list[Named]] = {}
+    sums: dict[str, list[NamedExpression]] = {}
     for target, entry in resolved.values():
         sums.setdefault(target, []).append(entry)
     terms = []
@@ -298,7 +298,7 @@ def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str
     return terms
 
 
-def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]) -> Named | None:
+def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]) -> NamedExpression | None:
     """Named expression *name* as the term it writes into a given expression of its file, or ``None``.
 
     The given entry is what makes a misspelt target a refusal in the file that
@@ -324,11 +324,11 @@ def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]
     entry = resolve_expression_text(name, ns, context, errors, ceiling=2)
     if entry is None:
         return None
-    assert isinstance(entry, Named), 'a term is a name, and a name resolves to the entry it names'
+    assert isinstance(entry, NamedExpression), 'a term is a name, and a name resolves to the entry it names'
     return entry
 
 
-def _loop(target: str, entry: Named, sums: Mapping[str, list[Named]]) -> list[str] | None:
+def _loop(target: str, entry: NamedExpression, sums: Mapping[str, list[NamedExpression]]) -> list[str] | None:
     """The sums *entry* reads *target* through, by the terms in *sums*, or ``None`` where it does not read it.
 
     ``[]`` is a term that reads its own sum.
@@ -346,7 +346,7 @@ def _loop(target: str, entry: Named, sums: Mapping[str, list[Named]]) -> list[st
     return None
 
 
-def _frame_of(name: str, entry: Named, schema: Spec) -> tuple[str, ...]:
+def _frame_of(name: str, entry: NamedExpression, schema: Spec) -> tuple[str, ...]:
     """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's in declaration order."""
     declared = schema.expressions[name].dims
     if declared is not None:
