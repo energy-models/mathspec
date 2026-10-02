@@ -2399,6 +2399,9 @@ def test_a_bare_relation_has_no_missing_rows():
             {'key': 'g', 'values': 'h', 'missing': 'h1'}, "missing: 'h1' on a relation", id='a-label-as-a-value'
         ),
         pytest.param(
+            {'key': 'g', 'values': 'h', 'missing': None}, 'missing: null on a relation names no reading', id='null'
+        ),
+        pytest.param(
             {'key': ['g', 'h'], 'missing': 'refused'},
             'missing: refused on a relation with no `values:`',
             id='a-bare-relation',

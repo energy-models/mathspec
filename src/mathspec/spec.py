@@ -105,11 +105,11 @@ NUMERIC_DTYPES: frozenset[ParameterDtype] = frozenset({'float', 'int'})
 #: and ``-inf`` as the numbers they name, which an editor would otherwise flag.
 _MISSING_SCHEMA: dict[str, object] = {
     'anyOf': [
-        {'enum': [*get_args(MissingReading), 'inf', '-inf']},
+        {'enum': list(get_args(MissingReading))},
         {'type': 'boolean'},
         {'type': 'number'},
+        {'enum': ['inf', '-inf']},
     ],
-    'default': 'refused',
 }
 
 #: The spellings of a missing row, for a refusal to list.
@@ -184,14 +184,20 @@ class RelationBlock(_StrictBlock):
 
     key: str | list[str] | dict[str, str]
     values: str | list[str] | dict[str, str] | None = None
-    missing: RelationMissing | None = None
+    missing: Annotated[RelationMissing | None, WithJsonSchema({'enum': list(get_args(RelationMissing))})] = Field(
+        default=None, json_schema_extra={'default': 'refused'}
+    )
     description: str | None = None
 
     @field_validator('missing', mode='before')
     @classmethod
-    def _error_or_absent(cls, v: object) -> object:
+    def _refused_or_absent(cls, v: object) -> object:
         """A label is data, so no value fills a gap in a map, and neutral reads as absent wherever a map is read."""
-        if v is not None and v not in get_args(RelationMissing):
+        if v is None:
+            raise _missing_null(
+                'a relation', 'Write absent for a key the map leaves out, or leave the key out for refused.'
+            )
+        if v not in get_args(RelationMissing):
             msg = (
                 f'missing: {v!r} on a relation, which takes refused or absent. A label the map leaves out '
                 f'is refused, or belongs to no group.'
@@ -268,7 +274,9 @@ class ParameterBlock(_StrictBlock):
 
     dims: list[str]
     dtype: ParameterDtype = 'float'
-    missing: Annotated[MissingReading | bool | int | float | None, WithJsonSchema(_MISSING_SCHEMA)] = None
+    missing: Annotated[MissingReading | bool | int | float | None, WithJsonSchema(_MISSING_SCHEMA)] = Field(
+        default=None, json_schema_extra={'default': 'refused'}
+    )
     description: str | None = None
 
     @field_validator('missing', mode='before')
