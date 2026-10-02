@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs: a page compares mathspec with GEMS ([#805](https://github.com/energy-models/mathspec/pull/805))
 - docs(examples): the GEMS basic models library is written as one fragment per GEMS model ([#819](https://github.com/energy-models/mathspec/pull/819))
 
 ## 0.2.1 (2026-10-01)
