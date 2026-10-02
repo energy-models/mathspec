@@ -119,7 +119,7 @@ constraints:
       maintenance status is at most one
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_active
-    expression: Process_maintenance == sum(Process_maintenance_start, over=Process_maintenance_cover[start], by=Process_maintenance_cover[covered])
+    expression: Process_maintenance == sum(Process_maintenance_start, over=start, by=Process_maintenance_cover[covered])
   Process_maint_start_horizon:
     description: "`Process-maint-start-horizon` — no event starts where it could not run its whole duration"
     dims: [scenario, snapshot, process]

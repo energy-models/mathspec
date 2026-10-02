@@ -55,6 +55,7 @@ from mathspec.program import (
     Parameter,
     Partition,
     Power,
+    RelationDeclaration,
     Sum,
     Translate,
     Variable,
@@ -218,7 +219,7 @@ class ExpressionResolver:
                 self.errors.append(
                     f"{self.context}: '{node.name}' is a relation, and a relation is structure "
                     f'rather than data, so it is not a value in an expression. Its columns '
-                    f'appear in an operator (sum(x, over=<dim>, by={node.name}[<column>])) and in a '
+                    f'appear in an operator (sum(x, over=<column>, by={node.name}[<column>])) and in a '
                     f'where — to carry numbers along this dimension, declare a parameter over it.'
                 )
                 return None
@@ -244,7 +245,7 @@ class ExpressionResolver:
             return None if shape_error is not None else self._dual(node)
         args = [self.arith(a) for a in node.args]
         along: str | None = None
-        over: tuple[str, ...] | ColumnsNode | None = None
+        over: tuple[str, ...] | None = None
         amounts: dict[str, int | str | None] = {}
         edge: _Edge | None = None
         unread = False
@@ -283,19 +284,16 @@ class ExpressionResolver:
             return None
         return self._translation(node.name, operand, along, amounts, edge, partition)
 
-    def _sum(
-        self, operand: Expression, over: tuple[str, ...] | ColumnsNode | None, columns: ColumnsNode | None
-    ) -> Expression | None:
+    def _sum(self, operand: Expression, over: tuple[str, ...] | None, columns: ColumnsNode | None) -> Expression | None:
         """A plain sum over the dims *over* names, or a sum through a relation, grouped by *columns*.
 
         Through a relation, the join and the sum over the axes it opens are one
-        call, so no axis is ever left open. A dim in *over* that no column of
-        the relation is over is summed away after the group-by.
+        call, so no axis is ever left open. A name in *over* that is no column
+        of the relation is a dim, summed away after the group-by.
         """
         if columns is None:
             if over is None:
                 return self._bare_sum(operand)
-            assert not isinstance(over, ColumnsNode), 'over=relation[column] is read only beside by='
             return Sum(operand, tuple(Axis(d) for d in over))
         assert over is not None, 'the call shape requires over= beside by='
         grouping = self._grouping(columns, over)
@@ -486,20 +484,19 @@ class ExpressionResolver:
             return None
         return Dual(value.name)
 
-    def _over(self, value: ArithmeticNode, operator: str, *, relation: bool) -> tuple[str, ...] | ColumnsNode | None:
-        """``over=``: a dimension or a list of them, and beside ``by=`` the columns of a relation too.
+    def _over(self, value: ArithmeticNode, operator: str, *, relation: bool) -> tuple[str, ...] | None:
+        """``over=``: a dimension or a list of them, and beside ``by=`` the columns of the relation too, each a bare name.
 
-        A column is named in ``over=`` only where a dimension would match two
-        columns of the relation, so the one it joins on has to be said.
+        Beside ``by=`` a name is read against the relation in [`_grouping`][],
+        so only a plain sum checks its names here.
         """
         if self._formal(value):
             return None
         if isinstance(value, ColumnsNode):
-            if relation:
-                return value
             self.errors.append(
-                f'{self.context}: {operator}(over={value}) names columns of a relation, which over= reads only '
-                f'beside by=. Write over=<dim> to sum a dimension away.'
+                f'{self.context}: {operator}(over={value}) writes the relation before its columns, and over= takes '
+                f'the names bare: over={shown(value.columns)}. Beside by={value.relation}[...], a name in over= is '
+                f"a column of '{value.relation}', or else a dimension."
             )
             return None
         names = names_in(value)
@@ -509,13 +506,14 @@ class ExpressionResolver:
         if any(n in self.formals for n in names):
             return None
         found = len(self.errors)
-        for n in names:
-            if n not in self.ns.dimensions:
-                self.errors.append(_undeclared_dim(self.context, operator, f'over={n}', n, self.ns, self.formals))
+        if not relation:
+            for n in names:
+                if n not in self.ns.dimensions:
+                    self.errors.append(_undeclared_dim(self.context, operator, f'over={n}', n, self.ns, self.formals))
         if repeated := sorted({n for n in names if names.count(n) > 1}):
             self.errors.append(
                 f'{self.context}: {operator}(over={shown(names)}) names {", ".join(map(repr, repeated))} twice. '
-                f'Name each dimension once.'
+                f'Name each one once.'
             )
         return names if len(self.errors) == found else None
 
@@ -576,60 +574,35 @@ class ExpressionResolver:
             f'relation[column, ...].'
         )
 
-    def _grouping(
-        self, columns: ColumnsNode, over: tuple[str, ...] | ColumnsNode
-    ) -> tuple[JoinColumns, tuple[str, ...]] | None:
+    def _grouping(self, columns: ColumnsNode, over: tuple[str, ...]) -> tuple[JoinColumns, tuple[str, ...]] | None:
         """How ``sum(x, over=..., by=relation[...])`` joins the relation, and the dims it sums away with no column.
 
-        Each dim in *over* is the one column of the relation over it that
-        *columns* does not name. A dim no column is over is summed away after
-        the group-by. A dim two columns are over is refused, since nothing
-        says which one the operand is joined on, and so is a dim only the
-        grouped columns are over, since the sum would group onto it and sum it
-        away at once.
+        A name in *over* is a column of the relation where it has one, and a
+        dimension otherwise, summed away after the group-by. The declaration
+        refuses a column named after a dimension it is not over, so the two
+        readings never disagree. Every column a call touches is written in it,
+        so a relation may gain a column without changing what the call means.
         """
         name, into_roles = columns.relation, columns.columns
-        shape = self.ns.relations[name]
+        ns, shape = self.ns, self.ns.relations[name]
         call = f'sum(by={columns})'
-        if isinstance(over, ColumnsNode):
-            if over.relation != name:
-                self.errors.append(
-                    f"{self.context}: {call}: over={over} names columns of '{over.relation}', and one call reads "
-                    f"one table. Name columns of '{name}' in over=, or dimensions."
-                )
-                return None
-            if self.columns_ref(over, 'sum', 'over') is None:
-                return None
-            join = self._checked_join(name, call, over.columns, into_roles, lookup=False)
-            return None if join is None else (join, ())
-        from_roles: list[str] = []
-        plain: list[str] = []
-        for dim in over:
-            candidates = [r for r in shape.roles if shape.dim(r) == dim and r not in into_roles]
-            if not candidates and (arriving := [r for r in into_roles if shape.dim(r) == dim]):
-                self.errors.append(
-                    f'{self.context}: {call}: over= names {dim!r}, which the column this sum groups by, '
-                    f'{name}[{arriving[0]}], brings in. A sum cannot sum away what it groups onto — drop '
-                    f'{dim!r} from over=.'
-                )
-                return None
-            if len(candidates) > 1:
-                self.errors.append(
-                    f"{self.context}: {call}: over={dim} matches {len(candidates)} columns of '{name}', "
-                    f"{candidates}, and nothing says which one the operand's {dim!r} is joined on. Name it: "
-                    f'over={name}[{candidates[0]}].'
-                )
-                return None
-            (from_roles if candidates else plain).append(candidates[0] if candidates else dim)
-        if not from_roles:
+        from_roles = tuple(n for n in over if n in shape.roles)
+        plain = tuple(n for n in over if n not in shape.roles)
+        if unknown := [n for n in plain if n not in ns.dimensions]:
             self.errors.append(
-                f"{self.context}: {call}: over={shown(over)} names no dimension a column of '{name}' is over, "
-                f"so the sum reads nothing through '{name}'. Name in over= the dimension the relation maps "
-                f'from — its columns are over {sorted({shape.dim(r) for r in shape.roles})}.'
+                f"{self.context}: {call}: over={unknown[0]} names no column of '{name}', whose columns are "
+                f'{list(shape.roles)}, and no dimension{_or_a_formal(self.formals)}. '
+                f'{did_you_mean(unknown[0], [*shape.roles, *ns.dimensions], label="Names")}'
             )
             return None
-        join = self._checked_join(name, call, tuple(from_roles), into_roles, lookup=False)
-        return None if join is None else (join, tuple(plain))
+        if not from_roles:
+            self.errors.append(
+                f"{self.context}: {call}: over={shown(over)} names no column of '{name}', so the sum reads nothing "
+                f"through '{name}'. Name in over= the column the operand is joined on — {_columns_over(shape, plain)}."
+            )
+            return None
+        join = self._checked_join(name, call, from_roles, into_roles, lookup=False)
+        return None if join is None else (join, plain)
 
     def lookup(self, columns: ColumnsNode, inner: frozenset[str]) -> JoinColumns | None:
         """How ``at`` reads the columns *columns* names, at an operand carrying *inner*.
@@ -777,6 +750,14 @@ def _undeclared_dim(context: str, operator: str, call: str, name: str, ns: Names
         f"Declare '{name}' under 'dimensions:', or fix the typo — an unknown "
         f'dimension makes {operator}() a silent no-op rather than an error.'
     )
+
+
+def _columns_over(shape: RelationDeclaration, dims: tuple[str, ...]) -> str:
+    """The columns of *shape* over each of *dims*, for the writer who named a dimension where a column was meant."""
+    over = {d: [r for r in shape.roles if shape.dim(r) == d] for d in dims}
+    if named := [f'the columns over {d!r} are {roles}' for d, roles in over.items() if roles]:
+        return ', '.join(named)
+    return f'its columns are {list(shape.roles)}, over {sorted(set(shape.dims))}'
 
 
 def _or_a_formal(formals: frozenset[str]) -> str:

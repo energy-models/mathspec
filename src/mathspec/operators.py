@@ -26,7 +26,9 @@ class Builtin:
     turns the value into: ``dimension_kwargs`` name a dimension or a list of
     them (``sum(x, over=generator)``); ``column_kwargs`` name columns of one
     relation, written ``relation[column, …]`` (``sum(x, over=generator,
-    by=gen_bus[bus])``); ``edge_kwargs`` take a closed keyword or a number;
+    by=gen_bus[bus])``), and beside one a ``dimension_kwargs`` name is a
+    column of that relation where it has one; ``edge_kwargs`` take a closed
+    keyword or a number;
     ``required_value_kwargs`` are ordinary values that must be present — a
     number, never a name to resolve (``shift(..., offset=1)``).
 
@@ -45,8 +47,8 @@ class Builtin:
     #: above — this says only that the operator has an answer without them.
     optional_kwargs: tuple[str, ...] = ()
     #: Kwargs required exactly when the call names columns. A sum through a
-    #: relation names the dims that leave, so the key columns it keeps are the
-    #: ones it does not name.
+    #: relation names the columns that leave, so the key columns it keeps are
+    #: the ones it does not name.
     with_columns: tuple[str, ...] = ()
 
     @property
@@ -77,7 +79,7 @@ class Builtin:
 #: says which rows are neighbours, not which group a term is added to.
 BUILTINS: dict[str, Builtin] = {
     'sum': Builtin(
-        'sum(<expr>), sum(<expr>, over=<dim>) or sum(<expr>, over=<dim>, by=<relation>[<column>])',
+        'sum(<expr>), sum(<expr>, over=<dim>) or sum(<expr>, over=<column>, by=<relation>[<column>])',
         dimension_kwargs=('over',),
         column_kwargs=('by',),
         optional_kwargs=('over', 'by'),
@@ -169,7 +171,7 @@ def call_shape_error(name: str, positional: int, kwargs: Iterable[str]) -> str |
     if keys & set(builtin.column_kwargs) and (unsaid := sorted(frozenset(builtin.with_columns) - keys)):
         return (
             f'{name}() through a relation leaves {", ".join(f"{k}=" for k in unsaid)} unsaid.\n'
-            f'A sum through a relation names the dims that leave the frame, so the key columns it keeps are '
+            f'A sum through a relation names the columns that leave the frame, so the key columns it keeps are '
             f'the ones it does not name.\n'
             f'Write: {builtin.usage}'
         )

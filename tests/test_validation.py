@@ -126,9 +126,9 @@ class TestValidateExpressions:
         assert "Constraint 'c': 'also_nope' not found" in message, 'every declaration is read, whatever an entry did'
 
     def test_a_refused_call_is_not_read_by_the_call_around_it(self):
-        """`sum(sum(p, over=lk[g]))`: the inner call names a column with no `by=`, and the outer bare sum then said its operand was already a scalar, because the refused call was still built."""
+        """`sum(sum(p, over=lk[g]))`: the inner call writes a selection in `over=`, and the outer bare sum then said its operand was already a scalar, because the refused call was still built."""
         message = _refusal(objective={'expression': 'sum(sum(p, over=lk[g]))'})
-        assert 'which over= reads only beside by=' in message
+        assert 'over= takes the names bare: over=g' in message
         assert 'already a scalar' not in message, 'a refused call builds nothing for the call around it to read'
 
     @pytest.mark.parametrize(
@@ -1252,11 +1252,10 @@ class TestRulesDecidedWithoutData:
                     'objective': {'expression': 'sum(sum(p, over=g, by=bare[m]))'},
                 },
                 (
-                    "over=g matches 2 columns of 'bare', ['a', 'b']",
-                    "nothing says which one the operand's 'g' is joined on",
-                    'over=bare[a]',
+                    "over=g names no column of 'bare', so the sum reads nothing through 'bare'",
+                    "the columns over 'g' are ['a', 'b']",
                 ),
-                id='a-dimension-two-columns-are-over',
+                id='a-dimension-two-columns-are-over-is-no-column',
             ),
             pytest.param(
                 {
@@ -1264,7 +1263,7 @@ class TestRulesDecidedWithoutData:
                     'relations.lz': {'key': 'g', 'values': 'z'},
                     'objective': {'expression': 'sum(sum(q, over=h, by=lz[z]))'},
                 },
-                ("over=h names no dimension a column of 'lz' is over", "its columns are over ['g', 'z']"),
+                ("over=h names no column of 'lz', so the sum reads nothing through 'lz'", "its columns are ['g', 'z']"),
                 id='a-sum-reading-nothing-through-its-relation',
             ),
             pytest.param(
@@ -1273,13 +1272,18 @@ class TestRulesDecidedWithoutData:
                     'relations.lz': {'key': 'g', 'values': 'z'},
                     'objective': {'expression': 'sum(sum(p, over=lz[g], by=lk[h]))'},
                 },
-                ("over=lz[g] names columns of 'lz', and one call reads one table",),
-                id='over-and-by-naming-two-tables',
+                ('sum(over=lz[g]) writes the relation before its columns, and over= takes the names bare: over=g',),
+                id='a-selection-in-over-beside-by',
             ),
             pytest.param(
-                {'objective': {'expression': 'sum(sum(p, over=lk[h], by=lk[h]))'}},
+                {'objective': {'expression': 'sum(sum(p, over=h, by=lk[h]))'}},
                 ("over= and by= both name ['h']",),
                 id='over-and-by-the-same-column',
+            ),
+            pytest.param(
+                {'objective': {'expression': 'sum(sum(p, over=nope, by=lk[h]))'}},
+                ("over=nope names no column of 'lk', whose columns are ['g', 'h'], and no dimension",),
+                id='a-name-neither-a-column-nor-a-dimension',
             ),
             pytest.param(
                 {
@@ -1292,17 +1296,8 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {
-                    'dimensions.z': {},
-                    'relations.lz': {'key': 'g', 'values': ['h', 'z']},
-                    'objective': {'expression': 'sum(sum(p, over=[g, h], by=lz[h]))'},
-                },
-                ("over= names 'h', which the column this sum groups by, lz[h], brings in",),
-                id='summing-away-the-dim-a-sum-groups-onto',
-            ),
-            pytest.param(
-                {
                     'relations.lz': {'key': 'g', 'values': {'h0': 'h', 'h1': 'h'}},
-                    'objective': {'expression': 'sum(sum(p, over=lz[h0, h1], by=lz[g]))'},
+                    'objective': {'expression': 'sum(sum(p, over=[h0, h1], by=lz[g]))'},
                 },
                 ("['h0', 'h1'] are columns over one dimension, ['h'], and the operand carries each dimension once",),
                 id='a-from-list-naming-two-columns-over-one-dimension',
@@ -1331,12 +1326,12 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(sum(p, over=lk[g]))'}},
-                ('sum(over=lk[g]) names columns of a relation, which over= reads only beside by=',),
-                id='a-column-in-over-without-by',
+                ('sum(over=lk[g]) writes the relation before its columns, and over= takes the names bare: over=g',),
+                id='a-selection-in-over-without-by',
             ),
             pytest.param(
                 {'relations.rel': {'key': ['g', 'h']}, 'objective': {'expression': 'sum(sum(p, by=rel[h]))'}},
-                ('sum() through a relation leaves over= unsaid', 'names the dims that leave the frame'),
+                ('sum() through a relation leaves over= unsaid', 'names the columns that leave the frame'),
                 id='a-sum-through-a-relation-names-what-leaves',
             ),
             pytest.param(
@@ -1549,7 +1544,7 @@ class TestRulesDecidedWithoutData:
                     # only a bare relation may key two columns over one dimension: a key that
                     # determines a value is refused for it at the declaration
                     'relations.bare': {'key': {'k': 'g', 'j0': 'h', 'j1': 'h', 'm': 'z'}},
-                    'objective': {'expression': 'sum(sum(q, over=g, by=bare[m]))'},
+                    'objective': {'expression': 'sum(sum(q, over=k, by=bare[m]))'},
                 },
                 ("joins 'bare' on ['h'] through more than one column",),
                 id='a-call-joining-one-dimension-through-two-columns',

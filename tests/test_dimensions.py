@@ -224,6 +224,22 @@ def test_a_bare_relation_is_summed_between_its_key_columns(expr, expected):
     assert _dims_with(expr, **{'relations.connection': {'key': ['generator', 'bus']}}) == expected
 
 
+def test_a_value_column_added_to_a_relation_changes_no_call():
+    """A name in `over=` is a column of the relation, so `rep_of` gaining `alt` over `snapshot` leaves every call as it was.
+
+    `over=snapshot` read as a dimension would match two columns once `alt`
+    arrives, and the call that loaded would stop loading. Read as a column,
+    it is the key column either way, and the new column is named where it
+    is meant.
+    """
+    wider = {'relations.rep_of': {'key': 'snapshot', 'values': {'rep': 'snapshot', 'alt': 'snapshot'}}}
+    before = _dims('sum(p, over=snapshot, by=rep_of[rep])')
+    assert _dims_with('sum(p, over=snapshot, by=rep_of[rep])', **wider) == before == {'snapshot', 'generator'}
+    assert _dims_with('sum(p, over=snapshot, by=rep_of[alt])', **wider) == before, (
+        'the new column is grouped by where it is named'
+    )
+
+
 def test_a_lookup_carries_the_whole_key_and_what_the_operand_brings_beside_it():
     """A lookup groups by the key however the call splits it, and a dim the operand carries and the lookup does not join on rides along.
 
@@ -382,7 +398,7 @@ def test_an_ill_dimensioned_expression_is_rejected(expr, error, match):
     ('expr', 'diag'),
     [
         pytest.param(
-            'sum(p, over=diag[k], by=diag[z])',
+            'sum(p, over=k, by=diag[z])',
             {'key': {'k': 'generator', 'j': 'generator', 'z': 'zone'}},
             id='a-sum-summing-away-a-column-over-a-dimension-it-also-joins-on',
         ),

@@ -34,8 +34,11 @@ and the table is a **bare relation**.
 | `values`      | the columns the key determines. Omitted, the key is every column | default none   |
 | `description` | free text                                                        | default `null` |
 
-A column is named after its dimension. Where two columns share a dimension, the
-mapping form names them: `{bus0: bus, bus1: bus}`.
+A column is named after its dimension, or after no dimension. Where two columns
+share a dimension, the mapping form names them: `{bus0: bus, bus1: bus}`. A
+column named after a dimension it is not over, `{values: {period: zone}}`, is
+refused: a call reads such a name as the column, and the two readings have to
+agree.
 
 ### Cardinalities
 
@@ -93,19 +96,19 @@ Four rules hold for every use:
 
 ### Sums through a relation
 
-`sum(x, over=d, by=l[c])` sums `x` over the dimensions in `over=`, grouped by
+`sum(x, over=d, by=l[c])` sums `x` over the columns in `over=`, grouped by
 the columns in `by=`. As in `sum(x, over=d)`, `over=` names what leaves the
 result. `by=` names what arrives. Either may be a list.
 
 Each column of the relation is either **joined on** or not, and either
 **grouped by** or not. The call decides both:
 
-| column of the relation                 | joined on | grouped by | in the result |
-| -------------------------------------- | --------- | ---------- | ------------- |
-| the column over a dimension in `over=` | yes       | no         | leaves        |
-| a column in `by=`                      | no        | yes        | arrives       |
-| a key column the call does not name    | yes       | yes        | stays         |
-| a value column the call does not name  | no        | no         | is not read   |
+| column of the relation                | joined on | grouped by | in the result |
+| ------------------------------------- | --------- | ---------- | ------------- |
+| a column in `over=`                   | yes       | no         | leaves        |
+| a column in `by=`                     | no        | yes        | arrives       |
+| a key column the call does not name   | yes       | yes        | stays         |
+| a value column the call does not name | no        | no         | is not read   |
 
 With `zone_of: { key: [generator, period], values: zone }`, the bare
 `connection: { key: [generator, bus] }` and `p` over `[generator, period]`:
@@ -121,15 +124,16 @@ With `zone_of: { key: [generator, period], values: zone }`, the bare
   that the call groups by: a column the operand carries would be joined on,
   not grouped by. `sum(load * p, over=generator, by=gen_bus[bus])` is refused.
   Write `load * sum(p, over=generator, by=gen_bus[bus])`.
-- **A dimension in `over=` joins on the one column over it that `by=` does not
-  name.** With `rep_of: { key: snapshot, values: { rep: snapshot } }`,
+- **A name in `over=` is a column of the relation, or else a dimension.** With
+  `rep_of: { key: snapshot, values: { rep: snapshot } }`,
   `sum(x, over=snapshot, by=rep_of[rep])` joins on the key column `snapshot`
-  and groups by `rep`. Where two such columns are over the dimension, name the
-  one to join on: `sum(x, over=nbr[from], by=nbr[to])`.
-- **A dimension no column is over is summed away after the group-by.**
+  and groups by `rep`. Where two columns are over one dimension, the name says
+  which: `sum(x, over=from, by=nbr[to])`. Every column a call touches is
+  written in it, so a relation may gain a value column without changing what
+  any call means. A name in both `over=` and `by=` is refused.
+- **A dimension no column is named after is summed away after the group-by.**
   `sum(p, over=[generator, snapshot], by=gen_bus[bus])` adds up each bus over
-  every snapshot. A dimension in `over=` that only `by=` is over is refused,
-  because a sum cannot group onto a dimension and sum it away.
+  every snapshot.
 - **A sum adds up several rows per group.** Where the columns grouped by hold
   the whole key, every group is one row. That is a join with no group-by, which
   is `at`, and the sum is refused toward it:

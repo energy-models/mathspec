@@ -761,7 +761,7 @@ Generator_maint_window:
     maintenance status is at most one
   dims: [snapshot, generator]
   where: Generator_maintainable
-  expression: Generator_maintenance == sum(Generator_maintenance_start, over=Generator_maintenance_cover[start], by=Generator_maintenance_cover[covered])
+  expression: Generator_maintenance == sum(Generator_maintenance_start, over=start, by=Generator_maintenance_cover[covered])
 ```
 
 ```math

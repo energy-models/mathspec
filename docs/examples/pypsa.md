@@ -6316,7 +6316,7 @@ Generator_maint_window:
     maintenance status is at most one
   dims: [scenario, snapshot, generator]
   where: Generator_maintainable AND Generator_active
-  expression: Generator_maintenance == sum(Generator_maintenance_start, over=Generator_maintenance_cover[start], by=Generator_maintenance_cover[covered])
+  expression: Generator_maintenance == sum(Generator_maintenance_start, over=start, by=Generator_maintenance_cover[covered])
 ```
 
 ```math
@@ -7004,7 +7004,7 @@ Link_maint_window:
     maintenance status is at most one
   dims: [scenario, snapshot, link]
   where: Link_maintainable AND Link_active
-  expression: Link_maintenance == sum(Link_maintenance_start, over=Link_maintenance_cover[start], by=Link_maintenance_cover[covered])
+  expression: Link_maintenance == sum(Link_maintenance_start, over=start, by=Link_maintenance_cover[covered])
 ```
 
 ```math
@@ -7692,7 +7692,7 @@ Process_maint_window:
     maintenance status is at most one
   dims: [scenario, snapshot, process]
   where: Process_maintainable AND Process_active
-  expression: Process_maintenance == sum(Process_maintenance_start, over=Process_maintenance_cover[start], by=Process_maintenance_cover[covered])
+  expression: Process_maintenance == sum(Process_maintenance_start, over=start, by=Process_maintenance_cover[covered])
 ```
 
 ```math

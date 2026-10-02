@@ -78,15 +78,15 @@ names both declarations, and nothing shadows anything.
 
 Position decides which kinds of name are legal:
 
-| Position                               | Legal kinds                                                                                                        |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| expression (`p * cost`)                | a variable, or a parameter whose values are numbers ([dtype](declarations.md#parameters))                          |
-| dimension argument (`over=`, `along=`) | a dimension. `over=` also takes a list of them                                                                     |
-| column argument (`by=`, `within=`)     | columns of one relation, written `relation[column]` or `relation[column, …]`                                       |
-| `where` string                         | a parameter, variable, dimension or relation ([where strings](#where-strings))                                     |
-| `bounds.lower` / `bounds.upper`        | a parameter name, or a number                                                                                      |
-| the `edge` key of `shift`              | `'wrap'` in quotes, or a bare number                                                                               |
-| `dual` argument (`dual(c)`)            | a constraint. It resolves against the constraints alone ([named expressions](named.md#reading-a-constraints-dual)) |
+| Position                               | Legal kinds                                                                                                              |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| expression (`p * cost`)                | a variable, or a parameter whose values are numbers ([dtype](declarations.md#parameters))                                |
+| dimension argument (`over=`, `along=`) | a dimension, or a list of them for `over=`. Beside `by=`, a name in `over=` is a column of the relation where it has one |
+| column argument (`by=`, `within=`)     | columns of one relation, written `relation[column]` or `relation[column, …]`                                             |
+| `where` string                         | a parameter, variable, dimension or relation ([where strings](#where-strings))                                           |
+| `bounds.lower` / `bounds.upper`        | a parameter name, or a number                                                                                            |
+| the `edge` key of `shift`              | `'wrap'` in quotes, or a bare number                                                                                     |
+| `dual` argument (`dual(c)`)            | a constraint. It resolves against the constraints alone ([named expressions](named.md#reading-a-constraints-dual))       |
 
 A bare word in the value of a keyword argument is a name to resolve. A
 keyword's key is never a name.
