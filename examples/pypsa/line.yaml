@@ -154,23 +154,31 @@ given:
     scenario_weight: { dims: [scenario] }
     transmission_losses: { dims: [], dtype: bool }
   expressions:
-    transmission_volume_expansion: { dims: [scenario, global_constraint], term: Line_transmission_volume_expansion }
-    transmission_expansion_cost: { dims: [scenario, global_constraint], term: Line_transmission_expansion_cost }
-    tech_capacity_expansion: { dims: [global_constraint], term: Line_tech_capacity_expansion }
-    Carrier_additions: { dims: [period, carrier], term: Line_additions }
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Line_injection }
-    Cycle_angle_sum: { dims: [scenario, snapshot, cycle], term: Line_angle_sum }
+    transmission_volume_expansion: { dims: [scenario, global_constraint] }
+    transmission_expansion_cost: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
 
 expressions:
   Line_transmission_volume_expansion:
     expression: sum(Line_s_nom_ext * Line_volume_weight, over=line)
+    adds_to: transmission_volume_expansion
   Line_transmission_expansion_cost:
     expression: sum(Line_s_nom_ext * Line_expansion_cost_weight, over=line)
+    adds_to: transmission_expansion_cost
   Line_tech_capacity_expansion:
     expression: sum(Line_s_nom_ext * Line_tech_capacity_weight, over=line)
+    adds_to: tech_capacity_expansion
+  Line_capex:
+    expression: sum(scenario_weight * Line_s_nom_ext * Line_capital_cost * Line_capital_weight)
+    adds_to: total_cost
   Line_additions:
     expression: >-
       sum(Line_s_nom_ext * Line_first_active, over=line, by=Line_carrier[carrier])
+    adds_to: Carrier_additions
   Line_s_monitored:
     description: >-
       the flow a line's post-contingency rows read — its flow where it stands,
@@ -186,7 +194,10 @@ expressions:
       + sum(Line_s, over=line, by=Line_bus1[bus])
       - (0.5 * sum(Line_loss, over=line, by=Line_bus0[bus]))
       - (0.5 * sum(Line_loss, over=line, by=Line_bus1[bus]))
-  Line_angle_sum: sum(Line_s * Line_cycle_weight, over=line)
+    adds_to: Bus_injection
+  Line_angle_sum:
+    expression: sum(Line_s * Line_cycle_weight, over=line)
+    adds_to: Cycle_angle_sum
 
 constraints:
   Line_fix_s_lower:
@@ -250,8 +261,3 @@ constraints:
     dims: [scenario, snapshot, line, segment]
     where: transmission_losses AND Line_active
     expression: Line_loss - Line_loss_slope * Line_s >= Line_loss_offset
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Line_s_nom_ext) * Line_capital_cost) * Line_capital_weight)

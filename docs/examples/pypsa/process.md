@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Processes
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Process`. It adds a term to `tech_capacity_expansion`, `scenario_opex`, `Carrier_additions`, `Bus_injection`. It reads `CVaR_omega`, `Process_committable`, `Process_maintenance`, `Process_maintenance_capacity`, `Process_maintenance_pu`, `period_weight_objective` and 2 more under [`given`](../../reference/language/declarations.md#given).
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Process`. It adds a term to `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection`. It reads `CVaR_omega`, `Process_committable`, `Process_maintenance`, `Process_maintenance_capacity`, `Process_maintenance_pu`, `period_weight_objective` and 2 more under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -184,10 +184,11 @@ given:
     Process_maintenance: { dims: [scenario, snapshot, process] }
     Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
   expressions:
-    tech_capacity_expansion: { dims: [global_constraint], term: Process_tech_capacity_expansion }
-    scenario_opex: { dims: [scenario], term: Process_opex }
-    Carrier_additions: { dims: [period, carrier], term: Process_additions }
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Process_injection }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Process_p_nom_effective:
@@ -221,16 +222,23 @@ expressions:
     otherwise: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge=0, within=snapshot_period[period]) * Process_rate
   Process_tech_capacity_expansion:
     expression: sum(Process_p_nom_ext * Process_tech_capacity_weight, over=process)
+    adds_to: tech_capacity_expansion
   Process_opex:
     expression: >-
       sum(sum(((Process_p * Process_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
       + sum(sum((((Process_p * Process_p) * Process_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
+    adds_to: scenario_opex
+  Process_capex:
+    expression: sum(scenario_weight * Process_p_nom_ext * Process_capital_cost * Process_capital_weight)
+    adds_to: total_cost
   Process_additions:
     expression: >-
       sum(Process_p_nom_ext * Process_first_active, over=process, by=Process_carrier[carrier])
+    adds_to: Carrier_additions
   Process_injection:
     expression: >-
       sum(Process_output_arrival, over=process_output, by=Process_output_bus[bus])
+    adds_to: Bus_injection
 
 constraints:
   Process_fix_p_lower:
@@ -288,11 +296,6 @@ assumptions:
       refuses quadratic costs under any risk preference
       (`optimize.py:467-474`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Process_p_nom_ext) * Process_capital_cost) * Process_capital_weight)
 ```
 
 #### Sets
@@ -356,6 +359,7 @@ objective:
 | $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression this file adds `Process_tech_capacity_expansion` to |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Process_opex` to |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Process_capex` to |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression this file adds `Process_additions` to |
 | $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Process_injection` to |
 
@@ -368,6 +372,7 @@ objective:
 | $`\overrightarrow{z}`$ | `Process_output_arrival` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — what a process transfers at a port at a snapshot — its internal power delayed by the port's `delay` within its investment period, times the port's rate at the snapshot the transfer arrives; where the port is `cyclic_delay` the delayed transfer wraps from the period's end, and where it is not the energy still in transit at the period's first snapshots is lost. A port that does not delay (`delay` zero) transfers at once, cyclic or not |
 | $`\mathit{Process\_tech\_capacity\_expansion}`$ | `Process_tech_capacity_expansion` over $`\mathcal{G}`$ |
 | $`\mathit{Process\_opex}`$ | `Process_opex` over $`\Xi`$ |
+| $`\mathit{Process\_capex}`$ | `Process_capex` (scalar) |
 | $`\mathit{Process\_additions}`$ | `Process_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Process\_injection}`$ | `Process_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 
@@ -376,12 +381,6 @@ $`t \ominus k`$ denotes cyclic translation: index $`t-k`$ taken modulo the size 
 $`t \boxminus_{v} k`$ denotes translation with $`v`$ standing where index $`t-k`$ leaves the dimension (`shift(edge=v)`), so the row at that boundary is built and carries $`v`$ rather than being dropped.
 
 $`t \ominus^{\mathrm{relation}(t)} k`$ denotes a translation counted inside the group a relation puts $`t`$ in (`shift(within=relation[c])`), so a term never crosses out of its own group. The two modifiers take different slots — the group above, the fill below — so $`t \boxminus_{v}^{\mathrm{relation}(t)} k`$ is both at once.
-
-#### Objective
-
-```math
-\min \sum_{\xi \in \Xi,\ j \in \mathcal{J}} \pi_{\xi} \cdot Z_{j} \cdot \mathrm{c}^{\mathrm{cap},z}_{\xi,j} \cdot \mathrm{W}^{z}_{j}
-```
 
 #### Subject to
 
@@ -469,6 +468,12 @@ z_{\xi,t,j} = \mathrm{z}^{\mathrm{set}}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\
 
 ```math
 \mathit{Process\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{\xi,t,j} \cdot \mathrm{c}^{z}_{\xi,t,j} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{\xi,t,j} \cdot z_{\xi,t,j} \cdot \mathrm{c}^{z,(2)}_{\xi,t,j} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+```
+
+**`Process_capex`**
+
+```math
+\mathit{Process\_capex} = \sum_{\xi \in \Xi,\ j \in \mathcal{J}} \pi_{\xi} \cdot Z_{j} \cdot \mathrm{c}^{\mathrm{cap},z}_{\xi,j} \cdot \mathrm{W}^{z}_{j}
 ```
 
 **`Process_additions`**

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generators
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Generator`. It adds a term to `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `Carrier_additions`, `Bus_injection`. It reads `CVaR_omega`, `Generator_committable`, `Generator_maintenance`, `Generator_maintenance_capacity`, `Generator_maintenance_pu`, `GlobalConstraint_energy_weight` and 4 more under [`given`](../../reference/language/declarations.md#given).
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Generator`. It adds a term to `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection`. It reads `CVaR_omega`, `Generator_committable`, `Generator_maintenance`, `Generator_maintenance_capacity`, `Generator_maintenance_pu`, `GlobalConstraint_energy_weight` and 4 more under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -167,12 +167,13 @@ given:
     Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
   expressions:
     GlobalConstraint_energy_weight: { dims: [scenario, global_constraint, snapshot] }
-    primary_energy: { dims: [scenario, global_constraint], term: Generator_primary_energy }
-    operational_limit: { dims: [scenario, global_constraint], term: Generator_operational_limit }
-    tech_capacity_expansion: { dims: [global_constraint], term: Generator_tech_capacity_expansion }
-    scenario_opex: { dims: [scenario], term: Generator_opex }
-    Carrier_additions: { dims: [period, carrier], term: Generator_additions }
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Generator_injection }
+    primary_energy: { dims: [scenario, global_constraint] }
+    operational_limit: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Generator_p_nom_effective:
@@ -192,20 +193,29 @@ expressions:
   Generator_primary_energy:
     expression: >-
       sum(sum((Generator_p * GlobalConstraint_energy_weight) * Generator_primary_energy_weight, over=snapshot), over=generator)
+    adds_to: primary_energy
   Generator_operational_limit:
     expression: >-
       sum(sum((Generator_p * GlobalConstraint_energy_weight) * Generator_operational_limit_weight, over=snapshot), over=generator)
+    adds_to: operational_limit
   Generator_tech_capacity_expansion:
     expression: sum(Generator_p_nom_ext * Generator_tech_capacity_weight, over=generator)
+    adds_to: tech_capacity_expansion
   Generator_opex:
     expression: >-
       sum(sum(((Generator_p * Generator_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
       + sum(sum((((Generator_p * Generator_p) * Generator_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
+    adds_to: scenario_opex
+  Generator_capex:
+    expression: sum(scenario_weight * Generator_p_nom_ext * Generator_capital_cost * Generator_capital_weight)
+    adds_to: total_cost
   Generator_additions:
     expression: >-
       sum(Generator_p_nom_ext * Generator_first_active, over=generator, by=Generator_carrier[carrier])
+    adds_to: Carrier_additions
   Generator_injection:
     expression: sum(Generator_sign * Generator_p, over=generator, by=Generator_bus[bus])
+    adds_to: Bus_injection
 
 constraints:
   Generator_fix_p_lower:
@@ -273,11 +283,6 @@ assumptions:
       refuses quadratic costs under any risk preference
       (`optimize.py:467-474`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Generator_p_nom_ext) * Generator_capital_cost) * Generator_capital_weight)
 ```
 
 #### Sets
@@ -346,6 +351,7 @@ objective:
 | $`\mathit{operational\_limit}`$ | `operational_limit` over $`\Xi \times \mathcal{L}`$, an expression this file adds `Generator_operational_limit` to |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{L}`$, an expression this file adds `Generator_tech_capacity_expansion` to |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Generator_opex` to |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Generator_capex` to |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression this file adds `Generator_additions` to |
 | $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Generator_injection` to |
 
@@ -359,14 +365,9 @@ objective:
 | $`\mathit{Generator\_operational\_limit}`$ | `Generator_operational_limit` over $`\Xi \times \mathcal{L}`$ |
 | $`\mathit{Generator\_tech\_capacity\_expansion}`$ | `Generator_tech_capacity_expansion` over $`\mathcal{L}`$ |
 | $`\mathit{Generator\_opex}`$ | `Generator_opex` over $`\Xi`$ |
+| $`\mathit{Generator\_capex}`$ | `Generator_capex` (scalar) |
 | $`\mathit{Generator\_additions}`$ | `Generator_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Generator\_injection}`$ | `Generator_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
-
-#### Objective
-
-```math
-\min \sum_{\xi \in \Xi,\ g \in \mathcal{G}} \pi_{\xi} \cdot P_{g} \cdot \mathrm{c}^{\mathrm{cap}}_{\xi,g} \cdot \mathrm{W}_{g}
-```
 
 #### Subject to
 
@@ -472,6 +473,12 @@ p_{\xi,t,g} = \mathrm{p}^{\mathrm{set}}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\
 
 ```math
 \mathit{Generator\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} p_{\xi,t,g} \cdot \mathrm{c}_{\xi,t,g} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} p_{\xi,t,g} \cdot p_{\xi,t,g} \cdot \mathrm{c}^{(2)}_{\xi,t,g} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+```
+
+**`Generator_capex`**
+
+```math
+\mathit{Generator\_capex} = \sum_{\xi \in \Xi,\ g \in \mathcal{G}} \pi_{\xi} \cdot P_{g} \cdot \mathrm{c}^{\mathrm{cap}}_{\xi,g} \cdot \mathrm{W}_{g}
 ```
 
 **`Generator_additions`**

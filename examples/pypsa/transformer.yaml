@@ -165,10 +165,14 @@ given:
     scenario_weight: { dims: [scenario] }
     transmission_losses: { dims: [], dtype: bool }
   expressions:
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Transformer_injection }
-    Cycle_angle_sum: { dims: [scenario, snapshot, cycle], term: Transformer_angle_sum }
+    total_cost: { dims: [] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
 
 expressions:
+  Transformer_capex:
+    expression: sum(scenario_weight * Transformer_s_nom_ext * Transformer_capital_cost * Transformer_capital_weight)
+    adds_to: total_cost
   Transformer_s_monitored:
     description: the flow a transformer's post-contingency rows read, as a line's
     dims: [scenario, snapshot, transformer]
@@ -181,11 +185,13 @@ expressions:
       + sum(Transformer_s, over=transformer, by=Transformer_bus1[bus])
       - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus0[bus]))
       - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus1[bus]))
+    adds_to: Bus_injection
   Transformer_angle_sum:
     expression: >-
       sum(Transformer_s * Transformer_cycle_weight, over=transformer)
       + sum(Transformer_phase_shift_weight, over=transformer)
       + sum(Transformer_phase_shift * Transformer_phase_shift_cycle_weight, over=transformer)
+    adds_to: Cycle_angle_sum
 
 constraints:
   Transformer_fix_s_lower:
@@ -248,8 +254,3 @@ constraints:
     dims: [scenario, snapshot, transformer, segment]
     where: transmission_losses AND Transformer_active
     expression: Transformer_loss - Transformer_loss_slope * Transformer_s >= Transformer_loss_offset
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Transformer_s_nom_ext) * Transformer_capital_cost) * Transformer_capital_weight)

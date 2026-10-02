@@ -56,6 +56,7 @@ def _given(program: Program) -> list[Advice]:
     rather than by a host, so its note says that instead.
     """
     given = program.given
+    written = {entry.adds_to for entry in program.expressions.values()}
     return [
         *(Advice('given', name, _given_note('parameter', name)) for name in given.parameters),
         *(Advice('given', name, _given_note('variable', name)) for name in given.variables),
@@ -63,13 +64,9 @@ def _given(program: Program) -> list[Advice]:
             Advice(
                 'given',
                 name,
-                _sum_note(name)
-                if block.empty
-                else _term_note(name)
-                if block.term is not None
-                else _given_note('expression', name),
+                _term_note(name) if name in written else _given_note('expression', name),
             )
-            for name, block in given.expressions.items()
+            for name in given.expressions
         ),
         *(Advice('given', name, _given_note('row family', name)) for name in given.constraints),
     ]
@@ -80,22 +77,14 @@ def _given_note(kind: str, name: str) -> str:
         f"{kind} '{name}' is read here and declared elsewhere: the model this one is layered onto "
         f'provides it. A consumer checks that it does, on the same frame, and refuses the program where '
         f'it does not. A fragment is composed instead: merge() folds this declaration into the one a '
-        f'sibling introduces.'
-    )
-
-
-def _sum_note(name: str) -> str:
-    return (
-        f"expression '{name}' is a sum this file declares and other files add terms to: merge() writes its "
-        f'body from their terms. Until then, the program reads it and does not build it.'
+        f'sibling introduces{", or writes it from the terms siblings add" if kind == "expression" else ""}.'
     )
 
 
 def _term_note(name: str) -> str:
     return (
-        f"expression '{name}' is read here and declared elsewhere, and this file adds a term to it: merge() "
-        f'sums the term with what the other files declare under the name. Until then, the program reads it '
-        f'and does not build it.'
+        f"expression '{name}' is read here, and this file adds a term to it: merge() sums the term with what "
+        f'the other files write under the name. Until then, the program reads it and does not build it.'
     )
 
 

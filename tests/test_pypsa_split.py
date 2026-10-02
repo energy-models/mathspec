@@ -7,10 +7,10 @@
 Each fragment reads what another topic declares under `given:`. A sum every
 component adds to (the bus balance, the operating cost, the global
 constraints) is one each component adds a term to: a named expression of its
-own, such as `Generator_injection`, which the `term:` of its `given:` entry
-names. One fragment declares each sum as an empty sum, `empty: true` over its
-frame. So a component is a family of files, and leaving the family out leaves
-a whole model.
+own, such as `Generator_injection`, whose `adds_to:` names the sum its file
+reads under `given:`. One fragment reads each sum without adding to it, with
+its description. So a component is a family of files, and leaving the family
+out leaves a whole model.
 """
 
 from __future__ import annotations
@@ -18,10 +18,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import yaml
 
 from mathspec import FORMATS, LanguageError, merge, to_spec, typeset
 from mathspec.canonical import canonical_yaml
-from tools.pypsa_split import SOURCE, SUM_HOME, Model, fragments
+from tests.fixtures import BALANCE
+from tests.test_terms import DEMAND, FLEET
+from tools.gallery import split_index
+from tools.pypsa_split import SOURCE, SUM_HOME, Model, _term_block, fragments
 
 FOLDER = Path(__file__).resolve().parent.parent / 'examples' / 'pypsa'
 PATHS = {path.stem: path for path in sorted(FOLDER.glob('*.yaml'))}
@@ -60,8 +64,8 @@ def test_the_fragments_are_what_the_splitter_writes(model):
 
 #: What a model may leave out, as the fragment names or name prefixes it
 #: drops. A component comes as a family; security reads the branches. The
-#: owner of a sum no model goes without is not listed: leaving it out leaves
-#: its terms nowhere to land, which the test below holds.
+#: reader of a sum no model goes without is not listed: leaving it out leaves
+#: its terms with nothing else reading them, which the test below holds.
 OPTIONAL = [
     'carrier',
     'cost',
@@ -93,17 +97,19 @@ def test_leaving_a_topic_out_leaves_a_whole_model(dropped):
     assert not merge(list(kept.values())).program.given, f'nothing that stays reads what {dropped} declares'
 
 
-def test_every_sum_is_declared_empty_with_its_description_in_one_fragment(model):
-    declared = {
+def test_every_sum_is_read_with_its_description_in_one_fragment_that_adds_nothing(model):
+    described = {
         name: sorted(
             stem
             for stem, path in PATHS.items()
-            if (e := to_spec(path).expressions.get(name)) and e.empty and e.description
+            if (g := (spec := to_spec(path)).given.expressions.get(name))
+            and g.description
+            and all(e.adds_to != name for e in spec.expressions.values())
         )
         for name in model.sums
     }
-    assert declared == {name: [SUM_HOME.get(name, 'settings')] for name in model.sums}, (
-        'the reader of a sum no model goes without declares it, and settings declares the rest'
+    assert described == {name: [SUM_HOME.get(name, 'settings')] for name in model.sums}, (
+        'the reader of a sum no model goes without carries its description, and settings carries the rest'
     )
 
 
@@ -114,10 +120,10 @@ def test_every_sum_is_declared_empty_with_its_description_in_one_fragment(model)
         pytest.param('power_flow', 'Cycle_angle_sum', id='kirchhoff-with-the-branches-kept'),
     ],
 )
-def test_leaving_out_the_owner_of_a_sum_no_model_goes_without_is_refused(dropped, sum_name):
-    """Only the owner declares the sum, so without it the terms land on no name rather than define one."""
+def test_leaving_out_the_reader_of_a_sum_no_model_goes_without_is_refused(dropped, sum_name):
+    """Only the terms read the sum without its reader, so they write into a name nothing else reads."""
     kept = {name: path for name, path in PATHS.items() if name != dropped}
-    with pytest.raises(LanguageError, match=rf"add a term to '{sum_name}', which no fragment declares"):
+    with pytest.raises(LanguageError, match=rf"add a term to '{sum_name}', and no other fragment reads it"):
         merge(list(kept.values()))
 
 
@@ -125,3 +131,42 @@ def test_leaving_out_the_owner_of_a_sum_no_model_goes_without_is_refused(dropped
 def test_every_fragment_and_the_composition_print(fmt):
     assert all(typeset(path, fmt) for path in PATHS.values()), f'a fragment rendered nothing in {fmt}'
     assert typeset(merge(list(PATHS.values())), fmt)
+
+
+@pytest.mark.parametrize(
+    'block',
+    [
+        pytest.param('  Name: a + b', id='one-line'),
+        pytest.param('  Name: >-\n      a\n      + b', id='folded'),
+        pytest.param('  Name:\n    expression: a + b', id='mapping'),
+        pytest.param('  Name: {expression: a + b}', id='flow-mapping'),
+        pytest.param('  Name: a\n    + b', id='one-line-continued'),
+    ],
+)
+def test_a_term_block_carries_its_body_in_every_source_form(block):
+    """A body the head line does not hold whole was dropped or nested.
+
+    A folded body follows a `>-` on the head line, and a plain body may run on
+    to the next line; the splitter kept only the head line. A flow mapping was
+    nested under `expression:`.
+    """
+    assert yaml.safe_load(_term_block(block, 'hub')) == {'Name': {'expression': 'a + b', 'adds_to': 'hub'}}
+
+
+def test_the_split_index_names_a_hub_once_per_fragment_and_needs_a_described_reader():
+    """A fragment with two terms into one sum adds to it once, and a sum nobody reads with a description has no reader to name."""
+    twice = {
+        **FLEET,
+        'expressions': {
+            **FLEET['expressions'],
+            'curtailment': {'expression': 'sum(gen_p, over=generator, by=gen_bus[bus])', 'adds_to': 'injection'},
+        },
+    }
+    specs = {'balance': to_spec(BALANCE), 'fleet': to_spec(twice), 'demand': to_spec(DEMAND)}
+    index = split_index(specs)
+    assert '| [fleet](fleet.md) | 0 | 1 | 0 | 1 | `injection` |' in index, 'two terms into one sum, listed once'
+    assert '[`demand_injection`](demand.md), [`curtailment`](fleet.md), [`generator_injection`](fleet.md)' in index, (
+        'every term of the fragment, by fragment then by name'
+    )
+    with pytest.raises(ValueError, match=r"no fragment reads 'injection' with a description and adds nothing to it"):
+        split_index({'fleet': specs['fleet'], 'demand': specs['demand']})

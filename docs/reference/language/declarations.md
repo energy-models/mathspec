@@ -222,17 +222,17 @@ constraints:
     expression: injection == 0
 ```
 
-| Field         |                                                                                 |                |
-| ------------- | ------------------------------------------------------------------------------- | -------------- |
-| `dims`        | required. The dimensions the expression runs over                               |                |
-| `term`        | one expression: what this file adds to the name ([a term](#a-term-a-file-adds)) | default `null` |
-| `description` | free text                                                                       | default `null` |
+| Field         |                                                   |                |
+| ------------- | ------------------------------------------------- | -------------- |
+| `dims`        | required. The dimensions the expression runs over |                |
+| `description` | free text                                         | default `null` |
 
-There is no body but the term this file adds, if any. This file reads the name
-as it reads a given variable: a quantity over the frame, of degree one. A
-`where` does not read it, because a mask is built before any variable exists.
-A name declared under both `expressions:` and `given: expressions:` is
-refused. The typeset legend lists a given expression under _Given_.
+There is no body. A [term](#terms) of this file may add to the name. This
+file reads the name as it reads a given variable: a quantity over the frame, of
+degree one. A `where` does not read it, because a mask is built before any
+variable exists. A name declared under both `expressions:` and
+`given: expressions:` is refused. The typeset legend lists a given expression
+under _Given_.
 
 [`merge`](../../howto/compose.md#a-library-of-components) folds a given
 expression into the definition of another fragment. The `dims` are an upper
@@ -243,18 +243,14 @@ term carries it. The composed spec holds the body to the rules of every place
 this file reads it: a square of a given expression that is quadratic is
 refused once folded.
 
-#### A term a file adds
+#### Terms
 
-`term:` names the expression this file adds to the name. The term is an
-ordinary named expression of this file, so it takes `cases:`, a description
-and every other field a named expression takes. The file reads the name as
-the whole sum, alone and composed, and the term is its part of it. A file that
-only reads the name writes no term.
-
-The name is an `expressions:` block of one other file. Where that file has
-nothing of its own to put in, it declares the sum `empty: true` over a
-frame, an [empty sum](named.md#expressions), reads it as a column until the terms
-arrive, and prints its definition as `injection = ⋯`:
+`adds_to:` adds this expression as a **term** to the sum it names. The sum is
+a given expression of the same file: the given entry is the read, and
+`adds_to:` is the write. The term is an ordinary named expression, so it takes
+`cases:`, a description and every other field a named expression takes. The
+file reads the name as the whole sum, alone and composed, and the term is its
+part of it.
 
 ```yaml
 # fleet.yaml adds a term
@@ -266,57 +262,77 @@ relations:
   gen_bus: { key: generator, values: bus }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
+given:
+  expressions:
+    injection: { dims: [snapshot, bus] }
 expressions:
   generation:
     description: what the fleet puts into a bus
     expression: sum(gen_p, over=generator, by=gen_bus[bus])
+    adds_to: injection
+```
+
+```yaml
+# balance.yaml reads the sum, and adds nothing to it
+dimensions:
+  snapshot: { dtype: int }
+  bus: { dtype: str }
 given:
   expressions:
     injection:
       dims: [snapshot, bus]
-      term: generation
-```
-
-```yaml
-# balance.yaml declares the sum, and adds nothing to it
-dimensions:
-  snapshot: { dtype: int }
-  bus: { dtype: str }
-expressions:
-  injection:
-    dims: [snapshot, bus]
-    empty: true
-    description: what the components put into a bus
+      description: what the components put into a bus
 constraints:
   balance:
     dims: [snapshot, bus]
     expression: injection == 0
 ```
 
-Each file loads alone. The term names an expression the file declares, and
-that expression does not read the name it adds to, directly or through
-another name. It carries no dimension the entry does not state, and it is
-held to degree two, as what reads the sum is. All of this is checked at load.
-The typeset legend lists the entry under _Given_ and names the term, and the
-math prints the term under _Definitions_ as its own line.
+Each file loads alone, and the loader checks each term:
 
-[`merge`](../../howto/compose.md#a-library-of-components) writes the name's
-body as the owner's body, if it has one, plus every term by its name, in
-the order the files are given in, and keeps each term as a named expression of the
-composed spec. An empty sum keeps its frame, so the composed spec holds the
-terms to it. A term adds to whatever the owner wrote, as a fragment's
-objective adds to the objective, and a later merge adds to the composed body
-the same way. The owner does not opt in. A file with a body reads it alone,
-and the body plus every term once composed; whoever composes the files
-answers for that sum. A term has to land on an `expressions:` block another
-file declares. Terms alone are refused, with the near miss named, since
-`merge` fills or extends what a file declared and never invents a name. A
-body written as `cases:` is refused, since it is summed as written: name the
-cased body as its own expression, and define the name as that name. A cased
-term is added like any other, by its name. The block keeps the owner's
-description, or takes the first a reader wrote. Two files that both declare
-the name under `expressions:` are refused as a collision, and the message
-names `term:`.
+- **`adds_to:` names a `given: expressions:` entry of the same file.** A name
+  the file does not read there is refused, with the near miss. A name the file
+  defines is refused too: write the term into that body instead.
+- **A term does not read the sum it adds to**, directly or through another
+  name.
+- **A term carries no dimension the given entry does not state.**
+- **A term is held to degree two**, as what reads the sum is.
+
+The typeset legend lists the entry under _Given_ and names the term. The math
+prints the term under _Definitions_ as its own line.
+
+[`merge`](../../howto/compose.md#a-library-of-components) adds every term by
+its name, in the order the files are given in. Each term stays a named
+expression of the merged spec, without its `adds_to:`. A cased term is added
+like any other.
+
+- **One file may define the sum with one `expression:`.** The merged body is
+  that body followed by the terms. A file that defines `injection` as `slack`
+  gives `slack + generation` once it is merged with `fleet.yaml`. The body
+  keeps its `dims:` and its description. A second file that defines the sum
+  collides with the first.
+- **A merged spec takes further terms.** A merge defines every sum it has
+  terms for, and a later merge adds to that body. So the first merge that holds
+  the terms of a sum also holds a file that reads it.
+- **Where no file defines the sum, the terms are its body.** The sum runs over
+  the frame its readers state, and every reader writes the dims in the same
+  order. The sum takes the first description a reader wrote.
+- **Where no file defines the sum, some file reads it for more than adding to
+  it.** That file reads the sum and adds nothing, or uses it in its math.
+  Terms that only their own files read are refused, with the near miss, since
+  that is what a misspelt `given:` entry looks like. A sum that one file alone
+  reads is refused too, because that file can misspell the entry, the
+  `adds_to:` and its own use of the name alike.
+- **A definition written as `cases:` takes no term.** Name the cased body as
+  its own expression, and define the sum as that name.
+- **A name that a file declares as a variable, a parameter or a constraint
+  takes no term.**
+- **A term does not read its own sum through another file.** The merge refuses
+  it and names both files:
+
+  ```text
+  fragment '#2' adds 't' to 'injection', and 't' reads 'injection' back through 'x' of '#1', so the sum would define itself. A term may not read what reads its sum: write 't' from something else, or define 'x' without 'injection'.
+  ```
 
 ## `constraints`
 
@@ -383,3 +399,7 @@ state different objectives.
 
 There is one objective block. To pursue several goals, weight them into one
 expression.
+
+A spec composed from several files also has one objective, and one file sets
+it. [`merge`](../../howto/compose.md) refuses a second one. Each other file adds its part
+to a sum that the objective reads, with [`adds_to:`](#terms).

@@ -17,6 +17,8 @@ given:
     Port_p:
       dims: [snapshot, port]
       description: the surface introduces this flow, and this file pins it at its own ports
+  expressions:
+    total_cost: { dims: [] }
 parameters:
   Generator_p_nom: { dims: [generator], description: nominal power }
   Generator_marginal_cost: { dims: [generator], description: cost of one unit of output }
@@ -32,6 +34,7 @@ constraints:
       for this: PyPSA writes the generator into the balance instead
     dims: [snapshot, generator]
     expression: at(Port_p, by=Generator_port[port]) == Generator_p
-objective:
-  sense: minimize
-  expression: sum(Generator_p * Generator_marginal_cost)
+expressions:
+  Generator_cost:
+    expression: sum(Generator_p * Generator_marginal_cost)
+    adds_to: total_cost

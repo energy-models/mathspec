@@ -294,8 +294,8 @@ constraints:
     expression: shed >= load - ramp
 ```
 
-A [case `when:`](named.md#the-rules-that-keep-the-cases-apart) may not compare
-expressions. A comparison with a number on both sides, such as `2 < 1`, is
+A [case `when:`](named.md#the-rules-that-keep-the-cases-apart) may compare
+expressions only in a block with one case. A comparison with a number on both sides, such as `2 < 1`, is
 refused everywhere.
 
 ### `position()`

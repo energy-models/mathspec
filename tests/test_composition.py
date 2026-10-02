@@ -72,6 +72,29 @@ DEMAND = {
 
 LIBRARY = [SURFACE, SUPPLY, DEMAND]
 
+#: The objective of a composed cost model, set by one file and read off a sum
+#: the other files add a term each to (#801).
+OBJECTIVE = {
+    'given': {'expressions': {'total_cost': {'dims': [], 'description': 'what the system costs'}}},
+    'objective': {'sense': 'minimize', 'expression': 'total_cost'},
+}
+
+
+def _priced(name: str) -> dict[str, object]:
+    """A fragment that builds *name* and adds what it costs to `total_cost`."""
+    return {
+        'dimensions': {name: {'dtype': 'str'}},
+        'parameters': {f'{name}_cost': {'dims': [name]}},
+        'variables': {f'{name}_p': {'dims': [name], 'bounds': {'lower': 0}}},
+        'given': {'expressions': {'total_cost': {'dims': []}}},
+        'expressions': {
+            f'{name}_spend': {'expression': f'sum({name}_p * {name}_cost)', 'adds_to': 'total_cost'},
+        },
+    }
+
+
+GENERATOR, STORE = _priced('generator'), _priced('store')
+
 
 def test_a_fragment_reads_what_a_sibling_declares():
     """`supply` reads `flow` under `given:`, so it is a spec on its own and a piece of the composition."""
@@ -114,10 +137,7 @@ def test_the_balance_does_not_grow_when_a_component_type_is_added():
     'fragments',
     [
         pytest.param(LIBRARY, id='one-objective'),
-        pytest.param(
-            [SURFACE, SUPPLY, {**DEMAND, 'objective': {'sense': 'minimize', 'expression': 'sum(dem_load)'}}],
-            id='an-objective-in-two-fragments',
-        ),
+        pytest.param([OBJECTIVE, GENERATOR, STORE], id='an-objective-on-a-sum'),
     ],
 )
 def test_the_order_of_the_fragments_reaches_no_canonical_text(fragments):
@@ -143,11 +163,6 @@ def test_the_fragments_are_never_mutated():
             [SUPPLY, {**DEMAND, 'dimensions': {**DEMAND['dimensions'], 'snapshot': {'dtype': 'str'}}}],
             'give one of them a name of its own',
             id='one-dimension-described-two-ways',
-        ),
-        pytest.param(
-            [SUPPLY, {**DEMAND, 'objective': {'sense': 'maximize', 'expression': 'sum(dem_load)'}}],
-            'negate the terms',
-            id='objectives-that-run-opposite-ways',
         ),
     ],
 )
@@ -206,23 +221,49 @@ def test_a_reader_s_description_fills_a_declaration_that_has_none(owner, carried
     assert composed.variables['flow'].description == carried
 
 
-def test_the_objectives_are_summed_each_term_parenthesised():
-    """`a + b * k` reassociates, so an unparenthesised join composes a different objective."""
-    priced = {**DEMAND, 'objective': {'sense': 'minimize', 'expression': 'sum(dem_load) * 2'}}
-    composed = merge([SURFACE, SUPPLY, priced])
-    assert composed.objective is not None
-    assert composed.objective.expression == '(sum(gen_p * gen_cost)) + (sum(dem_load) * 2)', (
-        'the terms are summed in the order the fragments are given in'
+@pytest.mark.parametrize(
+    'composed',
+    [
+        pytest.param(lambda: merge([OBJECTIVE, GENERATOR, STORE]), id='in-one-list'),
+        pytest.param(lambda: merge([merge([OBJECTIVE, GENERATOR]), STORE]), id='in-steps'),
+    ],
+)
+def test_a_composed_objective_reads_the_sum_its_fragments_add_to(composed):
+    spec = composed()
+    assert spec.objective is not None
+    assert (spec.objective.sense, spec.objective.expression) == ('minimize', 'total_cost'), (
+        'the objective is carried as the one file that sets it wrote it'
+    )
+    assert spec.expressions['total_cost'].expression == 'generator_spend + store_spend', (
+        'each file adds its cost as a term of the sum the objective reads'
     )
 
 
-def test_a_composed_objective_keeps_the_first_description_a_fragment_gives_it():
-    """Prose, as on a shared dimension: the first fragment's wording is carried, and none is lost."""
-    said = {**SUPPLY, 'objective': {**SUPPLY['objective'], 'description': 'what running the fleet costs'}}
-    priced = {**DEMAND, 'objective': {'sense': 'minimize', 'expression': 'sum(dem_load) * 2'}}
-    composed = merge([SURFACE, said, priced])
-    assert composed.objective is not None
-    assert composed.objective.description == 'what running the fleet costs'
+@pytest.mark.parametrize(
+    'fragments',
+    [
+        pytest.param(
+            [SURFACE, SUPPLY, {**DEMAND, 'objective': {'sense': 'minimize', 'expression': 'sum(dem_load)'}}],
+            id='two-objectives',
+        ),
+        pytest.param(
+            [SUPPLY, {**DEMAND, 'objective': {'sense': 'maximize', 'expression': 'sum(dem_load)'}}],
+            id='two-objectives-that-run-opposite-ways',
+        ),
+        pytest.param(
+            [OBJECTIVE, GENERATOR, {**STORE, 'objective': {'sense': 'minimize', 'expression': 'total_cost'}}],
+            id='an-objective-on-a-sum-and-one-more',
+        ),
+    ],
+)
+def test_two_fragments_that_set_the_objective_are_refused(fragments):
+    """`merge` summed the objectives, by a rule that no other section has; a second objective now collides."""
+    with pytest.raises(LanguageError, match=r'both set the objective') as raised:
+        merge(fragments)
+    message = str(raised.value)
+    assert 'given: expressions:' in message and '`adds_to:`' in message, 'the refusal names the rewrite'
+    first, second = [i for i, f in enumerate(fragments, 1) if 'objective' in f]
+    assert f"'#{first}'" in message and f"'#{second}'" in message, 'both fragments that set it are named'
 
 
 def test_one_fragment_s_objective_is_carried_as_it_was_written():

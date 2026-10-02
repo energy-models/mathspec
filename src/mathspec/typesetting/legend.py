@@ -173,14 +173,13 @@ class Legend:
                     self.symbols.name[g],
                     f'{fmt.mono(g)}{self._over(list(block.dims))}, '
                     + (
-                        f'an expression this file adds {fmt.mono(block.term.name)} to'
-                        if block.term is not None
+                        f'an expression this file adds {", ".join(fmt.mono(t) for t in terms)} to'
+                        if (terms := [t for t, e in program.expressions.items() if e.adds_to == g])
                         else 'an expression another file defines'
                     ),
                     block.description,
                 )
                 for g, block in program.given.expressions.items()
-                if not block.empty
             ),
             *(
                 self._entry(
@@ -192,10 +191,9 @@ class Legend:
             ),
         ]
         shown = set(defined)
-        empty = {e: block for e, block in program.given.expressions.items() if block.empty}
         definitions = [
             self._entry(self.symbols.name[e], f'{fmt.mono(e)}{self._over(list(block.dims))}', block.description)
-            for e, block in {**program.expressions, **empty}.items()
+            for e, block in program.expressions.items()
             if e in shown
         ]
         groups = (

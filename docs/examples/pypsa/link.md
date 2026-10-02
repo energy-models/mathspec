@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Links
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Link`. It adds a term to `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `Carrier_additions`, `Bus_injection`. It reads `CVaR_omega`, `Link_committable`, `Link_maintenance`, `Link_maintenance_capacity`, `Link_maintenance_pu`, `period_weight_objective` and 2 more under [`given`](../../reference/language/declarations.md#given).
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Link`. It adds a term to `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection`. It reads `CVaR_omega`, `Link_committable`, `Link_maintenance`, `Link_maintenance_capacity`, `Link_maintenance_pu`, `period_weight_objective` and 2 more under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -205,12 +205,13 @@ given:
     Link_maintenance: { dims: [scenario, snapshot, link] }
     Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
   expressions:
-    transmission_volume_expansion: { dims: [scenario, global_constraint], term: Link_transmission_volume_expansion }
-    transmission_expansion_cost: { dims: [scenario, global_constraint], term: Link_transmission_expansion_cost }
-    tech_capacity_expansion: { dims: [global_constraint], term: Link_tech_capacity_expansion }
-    scenario_opex: { dims: [scenario], term: Link_opex }
-    Carrier_additions: { dims: [period, carrier], term: Link_additions }
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Link_injection }
+    transmission_volume_expansion: { dims: [scenario, global_constraint] }
+    transmission_expansion_cost: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Link_p_nom_effective:
@@ -244,21 +245,30 @@ expressions:
     otherwise: shift(at(Link_p, by=Link_output_link[link]), along=snapshot, offset=Link_output_delay, edge=0, within=snapshot_period[period]) * Link_efficiency
   Link_transmission_volume_expansion:
     expression: sum(Link_p_nom_ext * Link_volume_weight, over=link)
+    adds_to: transmission_volume_expansion
   Link_transmission_expansion_cost:
     expression: sum(Link_p_nom_ext * Link_expansion_cost_weight, over=link)
+    adds_to: transmission_expansion_cost
   Link_tech_capacity_expansion:
     expression: sum(Link_p_nom_ext * Link_tech_capacity_weight, over=link)
+    adds_to: tech_capacity_expansion
   Link_opex:
     expression: >-
       sum(sum(((Link_p * Link_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
       + sum(sum((((Link_p * Link_p) * Link_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
+    adds_to: scenario_opex
+  Link_capex:
+    expression: sum(scenario_weight * Link_p_nom_ext * Link_capital_cost * Link_capital_weight)
+    adds_to: total_cost
   Link_additions:
     expression: >-
       sum(Link_p_nom_ext * Link_first_active, over=link, by=Link_carrier[carrier])
+    adds_to: Carrier_additions
   Link_injection:
     expression: >-
       -sum(Link_p, over=link, by=Link_bus0[bus])
       + sum(Link_output_arrival, over=link_output, by=Link_output_bus[bus])
+    adds_to: Bus_injection
 
 constraints:
   Link_fix_p_lower:
@@ -316,11 +326,6 @@ assumptions:
       refuses quadratic costs under any risk preference
       (`optimize.py:467-474`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Link_p_nom_ext) * Link_capital_cost) * Link_capital_weight)
 ```
 
 #### Sets
@@ -388,6 +393,7 @@ objective:
 | $`\mathit{transmission\_expansion\_cost}`$ | `transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Link_transmission_expansion_cost` to |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression this file adds `Link_tech_capacity_expansion` to |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Link_opex` to |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Link_capex` to |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression this file adds `Link_additions` to |
 | $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Link_injection` to |
 
@@ -402,6 +408,7 @@ objective:
 | $`\mathit{Link\_transmission\_expansion\_cost}`$ | `Link_transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$ |
 | $`\mathit{Link\_tech\_capacity\_expansion}`$ | `Link_tech_capacity_expansion` over $`\mathcal{G}`$ |
 | $`\mathit{Link\_opex}`$ | `Link_opex` over $`\Xi`$ |
+| $`\mathit{Link\_capex}`$ | `Link_capex` (scalar) |
 | $`\mathit{Link\_additions}`$ | `Link_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Link\_injection}`$ | `Link_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 
@@ -410,12 +417,6 @@ $`t \ominus k`$ denotes cyclic translation: index $`t-k`$ taken modulo the size 
 $`t \boxminus_{v} k`$ denotes translation with $`v`$ standing where index $`t-k`$ leaves the dimension (`shift(edge=v)`), so the row at that boundary is built and carries $`v`$ rather than being dropped.
 
 $`t \ominus^{\mathrm{relation}(t)} k`$ denotes a translation counted inside the group a relation puts $`t`$ in (`shift(within=relation[c])`), so a term never crosses out of its own group. The two modifiers take different slots — the group above, the fill below — so $`t \boxminus_{v}^{\mathrm{relation}(t)} k`$ is both at once.
-
-#### Objective
-
-```math
-\min \sum_{\xi \in \Xi,\ l \in \mathcal{L}} \pi_{\xi} \cdot F_{l} \cdot \mathrm{c}^{\mathrm{cap},f}_{\xi,l} \cdot \mathrm{W}^{f}_{l}
-```
 
 #### Subject to
 
@@ -515,6 +516,12 @@ f_{\xi,t,l} = \mathrm{f}^{\mathrm{set}}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\
 
 ```math
 \mathit{Link\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} f_{\xi,t,l} \cdot \mathrm{c}^{f}_{\xi,t,l} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} f_{\xi,t,l} \cdot f_{\xi,t,l} \cdot \mathrm{c}^{f,(2)}_{\xi,t,l} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+```
+
+**`Link_capex`**
+
+```math
+\mathit{Link\_capex} = \sum_{\xi \in \Xi,\ l \in \mathcal{L}} \pi_{\xi} \cdot F_{l} \cdot \mathrm{c}^{\mathrm{cap},f}_{\xi,l} \cdot \mathrm{W}^{f}_{l}
 ```
 
 **`Link_additions`**

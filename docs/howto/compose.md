@@ -15,31 +15,40 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
 
 ## A library of components
 
-1. **Write the network as a spec.** It declares the injection at a bus as an
-   [empty sum](../reference/language/declarations.md#a-term-a-file-adds),
-   `empty: true` over its frame, and balances it. Nothing in it names a
-   component class.
+1. **Write the network as a spec.** It balances the injection at a bus, and
+   reads the injection under
+   [`given`](../reference/language/declarations.md#given): what the components
+   put in is theirs to say. It sets the objective on `total_cost`, which it
+   reads the same way: what each component costs is the component's to say.
+   Nothing in it names a component class.
 
    ```yaml title="network.yaml"
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
-   expressions:
-     Bus_injection:
-       dims: [snapshot, bus]
-       empty: true
-       description: what the components put into a bus
+   given:
+     expressions:
+       Bus_injection:
+         dims: [snapshot, bus]
+         description: what the components put into a bus
+       total_cost:
+         dims: []
+         description: what running the system costs
    constraints:
      Bus_balance:
        dims: [snapshot, bus]
        expression: Bus_injection == 0
+   objective:
+     sense: minimize
+     expression: total_cost
    ```
 
 2. **Write each component file against the network.** It declares its own
-   dimension and its own math. It says what it puts into a bus as a named
-   expression, and names that expression as the `term:` of a
-   [`given`](../reference/language/declarations.md#given) entry for
-   `Bus_injection`.
+   dimension and its own math. It reads `Bus_injection` too, and says what it
+   puts into a bus as a named expression, a
+   [term](../reference/language/declarations.md#terms) whose `adds_to:` names
+   `Bus_injection`. A component that costs something adds its cost to
+   `total_cost` the same way.
 
    ```yaml title="generator.yaml"
    dimensions:
@@ -53,14 +62,17 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      Generator_marginal_cost: { dims: [generator] }
    variables:
      Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
-   expressions:
-     Generator_injection: sum(Generator_p, over=generator, by=Generator_bus[bus])
    given:
      expressions:
-       Bus_injection: { dims: [snapshot, bus], term: Generator_injection }
-   objective:
-     sense: minimize
-     expression: sum(Generator_p * Generator_marginal_cost)
+       Bus_injection: { dims: [snapshot, bus] }
+       total_cost: { dims: [] }
+   expressions:
+     Generator_injection:
+       expression: sum(Generator_p, over=generator, by=Generator_bus[bus])
+       adds_to: Bus_injection
+     Generator_cost:
+       expression: sum(Generator_p * Generator_marginal_cost)
+       adds_to: total_cost
    ```
 
    ```yaml title="load.yaml"
@@ -72,14 +84,18 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      Load_bus: { key: load, values: bus }
    parameters:
      Load_p_set: { dims: [snapshot, load] }
-   expressions:
-     Load_injection: -sum(Load_p_set, over=load, by=Load_bus[bus])
    given:
      expressions:
-       Bus_injection: { dims: [snapshot, bus], term: Load_injection }
+       Bus_injection: { dims: [snapshot, bus] }
+   expressions:
+     Load_injection:
+       expression: -sum(Load_p_set, over=load, by=Load_bus[bus])
+       adds_to: Bus_injection
    ```
 
-   Each file loads on its own and prints as math on its own.
+   Each file loads on its own and prints as math on its own. Only the
+   network sets an objective, so `generator.yaml` on its own is a feasibility
+   problem.
 
 3. **Merge the files you need.** Give them as a list. A refusal names a file
    by its path as the list gives it, and a mapping or a loaded spec by its
@@ -91,11 +107,13 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    spec = ms.merge(['network.yaml', 'generator.yaml', 'load.yaml'])
    ```
 
-   `spec` writes `Bus_injection` as `Generator_injection + Load_injection`, and
-   keeps each term as a named expression. It carries no `given:`. The
-   objectives of the fragments are summed, each term in parentheses, in the
-   order of the list. The order changes no meaning:
-   [`canonical`](compare.md) writes the same text for every order.
+   `spec` defines `Bus_injection` as `Generator_injection + Load_injection`,
+   and keeps each term as a named expression. Nothing is left under `given:`,
+   so `spec` is fully defined. The objective is the network's, and
+   `total_cost` is `Generator_cost`. The order of the list changes no
+   meaning: [`canonical`](compare.md) writes the same text for every order.
+   A second file that sets an objective is refused: one fragment sets it,
+   and each other one adds its part to the sum it reads.
 
 4. **Add a component without touching the network.** A new file adds its own
    term, and `network.yaml` stays as it is.
@@ -116,15 +134,62 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      Store_energy_balance:
        dims: [snapshot, store]
        expression: Store_e == shift(Store_e, along=snapshot, offset=1, edge='wrap') - Store_p
-   expressions:
-     Store_injection: sum(Store_p, over=store, by=Store_bus[bus])
    given:
      expressions:
-       Bus_injection: { dims: [snapshot, bus], term: Store_injection }
+       Bus_injection: { dims: [snapshot, bus] }
+   expressions:
+     Store_injection:
+       expression: sum(Store_p, over=store, by=Store_bus[bus])
+       adds_to: Bus_injection
    ```
 
-   With `'store.yaml'` added to the list, `Bus_injection` is
-   `Generator_injection + Load_injection + Store_injection`.
+   Add the file to the list:
+
+   ```python
+   spec = ms.merge(['network.yaml', 'generator.yaml', 'load.yaml', 'store.yaml'])
+   ```
+
+   `Bus_injection` is `Generator_injection + Load_injection + Store_injection`.
+   A merged spec takes a further term the same way, so
+   `ms.merge([ms.merge(['network.yaml', 'generator.yaml', 'load.yaml']), 'store.yaml'])`
+   gives the same sum.
+
+5. **Give the network a part of its own.** Define the sum in one file instead
+   of reading it there. The body that file writes comes first, and every term
+   follows it. The component files stay as they are.
+
+   ```yaml title="network_slack.yaml"
+   dimensions:
+     snapshot: { dtype: int }
+     bus: { dtype: str }
+   variables:
+     Bus_slack: { dims: [snapshot, bus] }
+   expressions:
+     Bus_injection:
+       dims: [snapshot, bus]
+       expression: Bus_slack
+       description: what the components put into a bus
+   given:
+     expressions:
+       total_cost:
+         dims: []
+         description: what running the system costs
+   constraints:
+     Bus_balance:
+       dims: [snapshot, bus]
+       expression: Bus_injection == 0
+   objective:
+     sense: minimize
+     expression: total_cost
+   ```
+
+   ```python
+   spec = ms.merge(['network_slack.yaml', 'generator.yaml', 'load.yaml'])
+   ```
+
+   `Bus_injection` is `Bus_slack + Generator_injection + Load_injection`, over
+   the `dims:` and with the description of `network_slack.yaml`. One file at
+   most defines the sum. Each other file reads it under `given:`.
 
 A library can also couple its components through a flow variable per port,
 which each component pins at its own port.
@@ -132,18 +197,18 @@ which each component pins at its own port.
 
 ## What a fragment may share
 
-| The entry                                         | What happens                                                                                                                                                                                                                                          |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                                                                       |
-| a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                                                                         |
-| any other declaration                             | one fragment declares it, and a second is refused                                                                                                                                                                                                     |
-| an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the declaration where the introducer wrote none                                                                                               |
-| a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                                                                            |
-| a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                                                                                |
-| a given expression with a `term`                  | the name is an `expressions:` block of one fragment, empty or bodied; its body becomes that body, if any, plus every term by its name, in the order of the list. Each term stays a named expression. A term that names no fragment's block is refused |
-| `objective`                                       | the terms are summed in the order of the list, each in parentheses, and the senses agree. The first description in the list is carried                                                                                                                |
-| `version`                                         | every fragment is written against the same one                                                                                                                                                                                                        |
-| `description` at the top of a fragment            | it is about the fragment and is not carried. Pass the composed spec's as `description=`                                                                                                                                                               |
+| The entry                                         | What happens                                                                                                                                                                                        |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                     |
+| a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                       |
+| any other declaration                             | one fragment declares it, and a second is refused                                                                                                                                                   |
+| an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the declaration where the introducer wrote none                                             |
+| a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                          |
+| a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                              |
+| an expression with `adds_to:`                     | the sum it names is the body one fragment defines, if any, followed by every term by its name, in the order of the list. [Terms](../reference/language/declarations.md#terms) gives what is refused |
+| `objective`                                       | one fragment sets it, and a second is refused. Several fragments contribute to it as terms of a sum the objective reads                                                                             |
+| `version`                                         | every fragment is written against the same one                                                                                                                                                      |
+| `description` at the top of a fragment            | it is about the fragment and is not carried. Pass the composed spec's as `description=`                                                                                                             |
 
 ## A name two fragments declare
 
@@ -204,8 +269,11 @@ Given variable 'Generator_p' collides with the variable of the same name. Names 
 
 1. **Write the base as a spec**, and each patch as the change it makes. A
    patch names only the fields it changes. A declaration a patch does not name
-   stays as the base wrote it. The base loads on its own, and `override` loads
-   it first. A patch is not a spec, so it is laid over as written, and the
+   stays as the base wrote it. A named expression the patch writes on one line
+   replaces only the body, `expression:` or `cases:`. The entry keeps its
+   `dims:`, its description and its `adds_to:`, so the new body carries no
+   dimension outside the kept `dims:`. The base loads on its own, and
+   `override` loads it first. A patch is not a spec, so it is laid over as written, and the
    patched spec is loaded after.
 
    ```yaml title="base.yaml"
