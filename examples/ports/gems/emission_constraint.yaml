@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: >-
+  GEMS `emission_constraint`. A cap on the CO2 that the connected ports
+  release over the horizon, in each scenario.
+dimensions:
+  scenario: { dtype: int, description: scenarios of the data }
+  emission_limit: { description: "`emission_constraint` components: system-wide CO2 caps" }
+parameters:
+  Emission_limit: { dims: [emission_limit], description: largest CO2 release over the horizon }
+given:
+  expressions:
+    Emission_port_co2:
+      dims: [scenario, emission_limit]
+      description: "`sum_connections(emission_port.co2)`: what the connected ports release"
+constraints:
+  Emission_limit_co2_constraint:
+    dims: [scenario, emission_limit]
+    description: "`emission_constraint.co2_constraint`"
+    expression: Emission_port_co2 <= Emission_limit

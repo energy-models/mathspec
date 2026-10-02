@@ -1,0 +1,75 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: >-
+  GEMS `generator`. A dispatchable unit with three ports: its generation
+  through `balance_port`, its energy over the horizon through
+  `energy_port`, and its CO2 through `emission_port`.
+dimensions:
+  time: { dtype: int, description: "time steps of the horizon, counted from 0" }
+  scenario: { dtype: int, description: scenarios of the data }
+  bus: { description: "`bus` components: nodes where flows balance" }
+  generator: { description: "`generator` components: dispatchable units" }
+  emission_limit: { description: "`emission_constraint` components: system-wide CO2 caps" }
+  energy_limit_hard:
+    description: "`energy_limitation_hard_constraint_max` components: energy caps with no slack"
+  energy_limit_soft:
+    description: "`energy_limitation_soft_constraint_max` components: energy caps with a priced slack"
+relations:
+  Generator_balance_port:
+    key: [generator, bus]
+    description: "connections from a generator's `balance_port` to a bus"
+  Generator_emission_port:
+    key: [generator, emission_limit]
+    description: "connections from a generator's `emission_port` to an emission cap"
+  Generator_energy_port_hard:
+    key: [generator, energy_limit_hard]
+    description: "connections from a generator's `energy_port` to a hard energy cap"
+  Generator_energy_port_soft:
+    key: [generator, energy_limit_soft]
+    description: "connections from a generator's `energy_port` to a soft energy cap"
+parameters:
+  Generator_p_min: { dims: [time, scenario, generator], description: least generation }
+  Generator_p_max: { dims: [time, scenario, generator], description: most generation }
+  Generator_generation_cost: { dims: [generator], description: cost of one unit of generation }
+  Generator_co2_emission_factor: { dims: [generator], description: CO2 released by one unit of generation }
+variables:
+  Generator_generation:
+    dims: [time, scenario, generator]
+    bounds: { lower: Generator_p_min, upper: Generator_p_max }
+    description: generation
+given:
+  expressions:
+    Bus_balance_port_flow: { dims: [time, scenario, bus] }
+    Emission_port_co2: { dims: [scenario, emission_limit] }
+    Energy_limit_hard_port_energy: { dims: [scenario, energy_limit_hard] }
+    Energy_limit_soft_port_energy: { dims: [scenario, energy_limit_soft] }
+    total_cost: { dims: [scenario] }
+expressions:
+  Generator_balance_port_flow:
+    description: "`balance_port.flow` of a generator, `generation`"
+    expression: sum(Generator_generation, by=Generator_balance_port, over=generator, into=bus)
+    adds_to: Bus_balance_port_flow
+  Generator_emission_port_co2:
+    description: "`emission_port.co2` of a generator, `sum(generation * co2_emission_factor)`"
+    expression: >-
+      sum(sum(Generator_generation * Generator_co2_emission_factor, over=time),
+      by=Generator_emission_port, over=generator, into=emission_limit)
+    adds_to: Emission_port_co2
+  Generator_cumulative_energy_hard:
+    description: "`energy_port.cumulative_energy` of a generator, `sum(generation)`, at a hard cap"
+    expression: >-
+      sum(sum(Generator_generation, over=time),
+      by=Generator_energy_port_hard, over=generator, into=energy_limit_hard)
+    adds_to: Energy_limit_hard_port_energy
+  Generator_cumulative_energy_soft:
+    description: "`energy_port.cumulative_energy` of a generator, `sum(generation)`, at a soft cap"
+    expression: >-
+      sum(sum(Generator_generation, over=time),
+      by=Generator_energy_port_soft, over=generator, into=energy_limit_soft)
+    adds_to: Energy_limit_soft_port_energy
+  Generator_objective:
+    description: "`generator.objective`"
+    expression: sum(Generator_generation_cost * Generator_generation, over=[time, generator])
+    adds_to: total_cost
