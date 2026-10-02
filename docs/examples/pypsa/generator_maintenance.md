@@ -229,7 +229,7 @@ assumptions:
       the `maint-modstatus` rows bound the modules on in maintenance by
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
-      (`constraints.py:500-503`)
+      (`constraints.py:503-506`)
 ```
 
 #### Sets
