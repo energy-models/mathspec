@@ -74,9 +74,7 @@ variables:
       `Process-maintenance_capacity` — the chosen build while in maintenance, zero
       otherwise: the product the `maintcap` rows linearize
     dims: [scenario, snapshot, process]
-    where: >-
-      Process_maintainable AND Process_p_nom_extendable
-      AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active
+    where: Process_maint_ext
     absence: zero
     bounds:
       lower: 0
@@ -87,8 +85,9 @@ variables:
       maintenance may also be off
     dims: [scenario, snapshot, process]
     where: >-
-      Process_maintainable AND Process_committable
-      AND NOT (Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)) AND Process_active
+      Process_maintainable
+      AND Process_committed
+      AND NOT (Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
     absence: zero
     bounds:
       lower: 0
@@ -105,6 +104,20 @@ given:
   variables:
     Process_status: { dims: [scenario, snapshot, process], domain: integer }
     Process_p_nom_ext: { dims: [process] }
+  masks:
+    Process_committed: { dims: [snapshot, process] }
+
+masks:
+  Process_maint_ext:
+    description: >-
+      a maintainable process with an extendable build, unless it is
+      committable and modular, that stands in the snapshot's period — the
+      maintenance rows against the chosen build
+    where: >-
+      Process_maintainable
+      AND Process_p_nom_extendable
+      AND NOT (Process_committable AND Process_p_nom_mod > 0)
+      AND Process_active
 
 constraints:
   Process_maint_event_count:
@@ -130,54 +143,54 @@ constraints:
       `Process-maintcap_upper` — the build taken off is at most the chosen build in
       maintenance, and at most the build less its floor out of it
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_p_nom_extendable AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active
+    where: Process_maint_ext
     expression: Process_maintenance_capacity <= Process_p_nom_ext - Process_p_nom_min * (1 - Process_maintenance)
   Process_maintcap_upper_nommax:
     description: "`Process-maintcap_upper_nommax` — out of maintenance, no build is taken off"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_p_nom_extendable AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active
+    where: Process_maint_ext
     expression: Process_maintenance_capacity <= Process_p_nom_max * Process_maintenance
   Process_maintcap_lower_nommax:
     description: "`Process-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_p_nom_extendable AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active
+    where: Process_maint_ext
     expression: Process_maintenance_capacity >= Process_p_nom_ext - Process_p_nom_max * (1 - Process_maintenance)
   Process_maintcap_lower_nommin:
     description: "`Process-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_p_nom_extendable AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active AND Process_p_nom_min > 0
+    where: Process_maint_ext AND Process_p_nom_min > 0
     expression: Process_maintenance_capacity >= Process_p_nom_min * Process_maintenance
   Process_maint_status_le_status:
     description: "`Process-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_active
+    where: Process_maintainable AND Process_committed AND NOT Process_p_nom_extendable
     expression: Process_maintenance_status <= Process_status
   Process_maint_status_le_maint:
     description: "`Process-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_active
+    where: Process_maintainable AND Process_committed AND NOT Process_p_nom_extendable
     expression: Process_maintenance_status <= Process_maintenance
   Process_maint_status_lb:
     description: "`Process-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_active
+    where: Process_maintainable AND Process_committed AND NOT Process_p_nom_extendable
     expression: Process_maintenance_status >= Process_status + Process_maintenance - 1
   Process_maint_modstatus_le_status:
     description: "`Process-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND Process_p_nom_mod > 0 AND Process_active
+    where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
     expression: Process_maintenance_status <= Process_status
   Process_maint_modstatus_le_maint:
     description: >-
       `Process-maint-modstatus-le-maint` — out of maintenance, no module is on in
       maintenance; in it, at most the modules the build cap holds
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND Process_p_nom_mod > 0 AND Process_active
+    where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
     expression: Process_maintenance_status <= Process_p_nom_max / Process_p_nom_mod * Process_maintenance
   Process_maint_modstatus_lb:
     description: "`Process-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND Process_p_nom_mod > 0 AND Process_active
+    where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
     expression: Process_maintenance_status >= Process_status - Process_p_nom_max / Process_p_nom_mod * (1 - Process_maintenance)
 
 assumptions:
