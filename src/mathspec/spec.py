@@ -1111,14 +1111,11 @@ class Spec(_StrictBlock):
         constraint that named only fixed variables compares numbers now, so it
         becomes an assumption under its own name.
 
-        A masked variable with ``absence: undefined`` does not exist outside
-        its mask, and a row reading it there is not built; a parameter reads
-        ``0`` there instead. So every read of it that no summing operator
-        absorbs must stand under its mask: the row's ``where:`` or a case's
-        ``when`` holding every conjunct of it. A constraint that reads it
-        unguarded takes the mask into its own ``where:``, which drops the rows
-        the absence dropped. A reported expression reading it is not guarded:
-        where it read nothing, it now reads ``0``.
+        The parameter takes the variable's ``missing:``, so a coordinate the
+        variable's ``where:`` left out keeps its meaning as a missing row: under
+        ``absent`` a row that reads it there is still not built, and under
+        ``neutral`` it still reads ``0``. A variable with no ``where:`` existed
+        at every coordinate, so its parameter keeps the default, ``error``.
 
         Args:
             names: The variables to fix, each once. All are fixed in one
@@ -1132,8 +1129,7 @@ class Spec(_StrictBlock):
                 such as a given variable, or a name given twice.
             LanguageError: A variable a set or a curve still names, whose
                 fix [`expand`][mathspec.spec.Spec.expand] has to come
-                first; a read the variable's mask cannot be carried to,
-                named with the reader; an assumption ``<name>_within_bounds``
+                first; an assumption ``<name>_within_bounds``
                 the spec already declares; or a spec the rewrite leaves
                 outside the language.
         """

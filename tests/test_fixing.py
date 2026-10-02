@@ -124,9 +124,8 @@ def test_fixing_one_at_a_time_is_fixing_them_together():
     assert spec.fix('cap').fix('spare').to_dict() == spec.fix('cap', 'spare').to_dict()
 
 
-def test_two_masks_added_to_one_row_are_both_kept():
-    """Fixed in one call, the second variable's mask replaced the first one's,
-    so the rows where only the first was absent stood again with it read as 0."""
+def test_fixing_two_masked_variables_together_is_fixing_them_one_at_a_time():
+    """Each parameter keeps its own variable's reading, so no row's `where:` has two masks to merge."""
     spec = schema_of(
         MASKED,
         **{
@@ -135,49 +134,68 @@ def test_two_masks_added_to_one_row_are_both_kept():
             'constraints.within.expression': 'p <= cap + spare',
         },
     )
-    together = spec.fix('cap', 'spare').to_dict()
-    assert together['constraints']['within']['where'] == '(flag) AND (flag2)'
-    assert together == spec.fix('cap').fix('spare').to_dict()
+    together = spec.fix('cap', 'spare')
+    assert {name: together.program.parameters[name].missing for name in ('cap', 'spare')} == {
+        'cap': 'absent',
+        'spare': 'absent',
+    }, 'each masked variable is absent outside its own mask'
+    assert together.to_dict() == spec.fix('cap').fix('spare').to_dict()
 
 
 # ---------------------------------------------------------------------------
-# a masked variable: where it did not exist, it must still take the row
+# a masked variable: where it did not exist, its parameter has no row
 # ---------------------------------------------------------------------------
 
 
-def test_an_unguarded_read_takes_the_mask_into_the_row():
-    """`within` reads `cap` pointwise. Where `flag` is false there was no `cap`
-    and no row; as a parameter `cap` reads 0 there, and `p <= 0` would stand."""
-    spec = _fixed(MASKED, 'cap')
-    assert spec.to_dict()['constraints']['within']['where'] == 'flag'
-
-
-def test_the_mask_joins_a_where_the_row_already_has():
-    spec = _fixed(MASKED, 'cap', **{'constraints.within.where': 'c > 0'})
-    assert spec.to_dict()['constraints']['within']['where'] == '(c > 0) AND (flag)'
+@pytest.mark.parametrize(
+    ('model', 'patch', 'missing'),
+    [
+        pytest.param(BASE, {}, 'error', id='a-variable-at-every-coordinate-needs-every-row'),
+        pytest.param(MASKED, {}, 'absent', id='a-masked-variable-is-absent-outside-its-mask'),
+        pytest.param(MASKED, {'variables.cap.missing': 'neutral'}, 'neutral', id='a-neutral-variable-still-reads-zero'),
+    ],
+)
+def test_the_parameter_reads_a_missing_row_as_the_variable_read_its_mask(model, patch, missing):
+    assert _fixed(model, 'cap', **patch).program.parameters['cap'].missing == missing
 
 
 @pytest.mark.parametrize(
     'patch',
     [
-        pytest.param({'constraints.within.where': 'flag'}, id='the-row-is-already-masked'),
-        pytest.param({'constraints.within.where': 'c > 0 AND flag'}, id='the-row-mask-holds-it-among-others'),
+        pytest.param({}, id='pointwise'),
+        pytest.param({'constraints.within.where': 'c > 0'}, id='under-another-mask'),
+        pytest.param({'constraints.within.where': 'flag'}, id='under-its-own-mask'),
         pytest.param(
-            {'constraints.within': {'dims': [], 'expression': 'sum(p - cap, over=g) <= 0'}},
-            id='a-sum-absorbs-the-absence',
+            {'constraints.within': {'dims': [], 'expression': 'sum(p - cap, over=g) <= 0'}}, id='inside-a-sum'
         ),
-        pytest.param({'variables.cap.absence': 'zero'}, id='zero-outside-the-mask-is-what-a-missing-row-reads'),
+        pytest.param(
+            {
+                'expressions': {
+                    'room': {
+                        'dims': ['g'],
+                        'cases': {'built': {'when': 'c > 0', 'expression': 'cap'}},
+                        'otherwise': 0,
+                    }
+                },
+                'constraints.within.expression': 'p <= room',
+            },
+            id='in-a-case',
+        ),
     ],
 )
-def test_a_guarded_read_leaves_the_row_as_written(patch):
+def test_every_read_keeps_its_meaning_and_no_row_changes(patch):
+    """A parameter read `0` where the variable had been absent, so a read outside a sum took the variable's mask
+    into its row, and a read in a case was refused. Absent where the variable was, the parameter means what the
+    variable meant at every read, and the rows stay as the file wrote them."""
     written = schema_of(MASKED, **patch).to_dict()['constraints']['within'].get('where')
-    assert _fixed(MASKED, 'cap', **patch).to_dict()['constraints']['within'].get('where') == written
+    fixed = _fixed(MASKED, 'cap', **patch)
+    assert fixed.to_dict()['constraints']['within'].get('where') == written
+    assert fixed.program.parameters['cap'].missing == 'absent'
 
 
-def test_the_pypsa_capacities_are_guarded_where_they_are_read():
-    """Every pointwise read of an extendable capacity already stands under
-    `..._extendable`, so the fix adds no mask; what only decided capacity moves
-    to assumptions, and only the risk measure still shares a column across snapshots."""
+def test_the_pypsa_capacities_are_fixed_without_changing_a_row():
+    """Each capacity keeps its variable's `missing:`, so no constraint gains a mask; what only decided capacity
+    moves to assumptions, and only the risk measure still shares a column across snapshots."""
     spec = schema_of(EXAMPLES / 'pypsa.yaml')
     names = [name for name in spec.program.variables if name.endswith(('_nom_ext', '_n_mod'))]
     fixed = spec.fix(*names)
@@ -191,51 +209,15 @@ def test_the_pypsa_capacities_are_guarded_where_they_are_read():
 
 
 # ---------------------------------------------------------------------------
-# refused, with the reader named
+# refused, with the reason named
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    ('patch', 'says'),
-    [
-        pytest.param(
-            {'constraints.within.expression': 'p <= shift(cap, along=g, offset=1)'},
-            "constraint 'within' reads 'cap' outside a sum, through a shift",
-            id='through-a-shift',
-        ),
-        pytest.param(
-            {
-                'expressions': {
-                    'room': {
-                        'dims': ['g'],
-                        'cases': {'built': {'when': 'c > 0', 'expression': 'cap'}},
-                        'otherwise': 0,
-                    }
-                },
-                'constraints.within.expression': 'p <= room',
-            },
-            "constraint 'within' reads 'cap' outside a sum, in a case",
-            id='in-a-case-its-mask-does-not-guard',
-        ),
-    ],
-)
-def test_a_read_the_mask_cannot_reach_is_refused(patch, says):
-    with pytest.raises(LanguageError, match=says):
-        _fixed(MASKED, 'cap', **patch)
-
-
-def test_a_case_under_the_mask_is_guarded():
-    patch = {
-        'expressions': {
-            'room': {
-                'dims': ['g'],
-                'cases': {'built': {'when': 'flag', 'expression': 'cap'}},
-                'otherwise': 0,
-            }
-        },
-        'constraints.within.expression': 'p <= room',
-    }
-    assert 'where' not in _fixed(MASKED, 'cap', **patch).to_dict()['constraints']['within']
+def test_a_read_through_a_shift_is_refused_by_the_language():
+    """A shift over an expression with no variable needs `edge=`, so the fixed spec does not load, and the reload
+    names the rewrite."""
+    with pytest.raises(SchemaError, match=r'shift\(\) over a variable-free expression'):
+        _fixed(MASKED, 'cap', **{'constraints.within.expression': 'p <= shift(cap, along=g, offset=1)'})
 
 
 @pytest.mark.parametrize(

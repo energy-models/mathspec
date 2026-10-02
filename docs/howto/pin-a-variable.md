@@ -89,16 +89,11 @@ come from it, fix it with `spec.fix`.
    subproblem = ms.to_spec('plant.yaml').fix('size')
    ```
 
-   The spec it returns differs from the file in three places:
+   The spec it returns differs from the file in two places:
 
    ```yaml
    parameters:
-     size: { dims: [plant], dtype: float }
-   constraints:
-     capacity:
-       dims: [snapshot, plant]
-       where: candidate
-       expression: rate - relmax * size <= 0
+     size: { dims: [plant], dtype: float, missing: absent }
    assumptions:
      size_within_bounds:
        holds: size >= size_min AND size <= size_max
@@ -108,32 +103,15 @@ come from it, fix it with `spec.fix`.
    - **`size` is a parameter under the same name**, so every expression goes
      on reading it. A `binary` or `integer` variable becomes an `int`
      parameter.
+   - **`size` keeps what it meant outside its mask.** The variable did not
+     exist outside `candidate`, so `capacity` was not built there. The
+     parameter is [`missing: absent`](../reference/language/declarations.md#a-missing-row),
+     so a plant with no row is still not built, and every row stays as
+     written. A variable with no `where:` becomes a parameter that needs every
+     row.
    - **The bounds become an assumption** on the numbers you attach.
-   - **A row that reads `size` outside a sum takes its mask.** `size` did not
-     exist outside `candidate`, so `capacity` was not built there. As a
-     parameter, `size` would read `0` there, and the row would stand.
    - **A constraint that named only fixed variables becomes an assumption**
      under its own name, because it now compares numbers.
 
 3. **Attach `size` as data**, one value for each candidate plant, as for any
    parameter.
-
-4. **Where the call is refused, guard the read.** A read in a case, or through
-   a shift or a relation, does not take the mask. Here `capacity` reads `size`
-   through a case:
-
-   ```yaml
-   expressions:
-     room:
-       dims: [snapshot, plant]
-       cases:
-         running: { when: relmax > 0, expression: relmax * size }
-       otherwise: 0
-   ```
-
-   ```text
-   fix: constraint 'capacity' reads 'size' outside a sum, in a case. No mask there keeps out the rows where 'size' is absent, so as a parameter it would read 0 and those rows would stand. Guard the read with the variable's own where:, or declare absence: zero if it is zero there.
-   ```
-
-   Write the variable's mask into the case, `when: candidate AND relmax > 0`,
-   and the call succeeds.
