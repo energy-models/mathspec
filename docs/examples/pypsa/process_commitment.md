@@ -140,12 +140,12 @@ constraints:
   Process_com_p_lower:
     description: "`Process-com-p-lower` — a committed process runs at least its minimum; off, at least nothing"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND not Process_p_nom_extendable AND Process_active
+    where: Process_committable AND not Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
     expression: Process_p >= Process_p_min_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_p_upper:
     description: "`Process-com-p-upper` — a committed process runs at most what is available; off, at most nothing"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND not Process_p_nom_extendable AND Process_active
+    where: Process_committable AND not Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
     expression: Process_p <= Process_p_max_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_transition_start_up:
     description: "`Process-com-transition-start-up` — turning on is a start, counted against the state the process carried into the snapshot"
@@ -340,13 +340,13 @@ $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own ord
 **`Process_com_p_lower`**
 
 ```math
-z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j}
 ```
 
 **`Process_com_p_upper`**
 
 ```math
-z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j}
 ```
 
 **`Process_com_transition_start_up`**

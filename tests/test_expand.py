@@ -196,33 +196,33 @@ SMALL_CURVE = {
     ('points', 'missing'),
     [
         pytest.param({'piecewise.curve.points': 'bx'}, 'neutral', id='a-curve-that-says-how-far-it-runs'),
-        pytest.param({}, 'error', id='a-curve-over-every-breakpoint'),
+        pytest.param({}, 'refused', id='a-curve-over-every-breakpoint'),
     ],
 )
 def test_the_expansion_says_what_a_missing_breakpoint_means(points, missing):
     """A curve's own parameters answer for no `missing:`, because the block owns their shape. The expansion keeps
     no block: its weights stand on `points:` and its assumptions ask for a value only where the mask holds. Left
-    unwritten, lowering would report `error`, and a consumer attaching the rows would refuse the ragged curve the
+    unwritten, lowering would report `refused`, and a consumer attaching the rows would refuse the ragged curve the
     block admits; a curve with no `points:` reads every breakpoint."""
     rows = schema_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **points)).expand('piecewise').program
     assert {name: rows.parameters[name].missing for name in ('bx', 'by', 'c')} == {
         'bx': missing,
         'by': missing,
-        'c': 'error',
+        'c': 'refused',
     }, "the expansion reads the curve's tables as the block did, and every other parameter as declared"
 
 
 def test_a_parameter_a_curve_owns_answers_for_no_missing():
-    """The block's own parameters report `None`: reporting the unwritten `error` would tell a consumer to require
+    """The block's own parameters report `None`: reporting the unwritten `refused` would tell a consumer to require
     every coordinate the dims reach, which a ragged curve does not carry."""
     program = schema_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **{'piecewise.curve.points': 'bx'})).program
     missing = {name: p.missing for name, p in program.parameters.items()}
-    assert missing == {'c': 'error', 'k': 'error', 'flag': 'error', 'tag': 'error', 'bx': None, 'by': None}, (
+    assert missing == {'c': 'refused', 'k': 'refused', 'flag': 'refused', 'tag': 'refused', 'bx': None, 'by': None}, (
         "the parameters the block consumes answer for no missing; every other parameter's declaration is carried"
     )
 
 
-@pytest.mark.parametrize('missing', ['error', 'neutral', 0])
+@pytest.mark.parametrize('missing', ['refused', 'neutral', 0])
 def test_missing_on_a_parameter_a_curve_consumes_is_refused(missing):
     """`points:` already says how far the curve runs, so any `missing:` there claims what the block decided."""
     with pytest.raises(LanguageError) as caught:

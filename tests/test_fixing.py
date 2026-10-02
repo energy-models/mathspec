@@ -150,7 +150,7 @@ def test_fixing_two_masked_variables_together_is_fixing_them_one_at_a_time():
 @pytest.mark.parametrize(
     ('model', 'patch', 'missing'),
     [
-        pytest.param(BASE, {}, 'error', id='a-variable-at-every-coordinate-needs-every-row'),
+        pytest.param(BASE, {}, 'refused', id='a-variable-at-every-coordinate-needs-every-row'),
         pytest.param(MASKED, {}, 'absent', id='a-masked-variable-is-absent-outside-its-mask'),
         pytest.param(MASKED, {'variables.cap.missing': 'neutral'}, 'neutral', id='a-neutral-variable-still-reads-zero'),
     ],

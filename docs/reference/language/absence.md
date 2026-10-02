@@ -39,12 +39,12 @@ null or NaN value is [refused](declarations.md#parameters) when the data is
 attached. **The parameter's [`missing:`](declarations.md#a-missing-row) says
 what a missing row is:**
 
-| `missing:`          | A missing row                                                                               |
-| ------------------- | ------------------------------------------------------------------------------------------- |
-| `error`, by default | is refused when the data is attached                                                        |
-| `absent`            | is absence, by the rules on this page                                                       |
-| `neutral`           | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a `where` |
-| a value             | reads as that value                                                                         |
+| `missing:`            | A missing row                                                                               |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| `refused`, by default | is refused when the data is attached                                                        |
+| `absent`              | is absence, by the rules on this page                                                       |
+| `neutral`             | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a `where` |
+| a value               | reads as that value                                                                         |
 
 `neutral` has no value in three positions: a divisor, a `bounds:` entry, and
 the whole constant side of a comparison. A missing row there is refused when
