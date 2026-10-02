@@ -37,7 +37,7 @@ from mathspec._where_parser import (
     UnresolvedWhereNode,
 )
 from mathspec.dimensions import dims_of, pulled_back_dims
-from mathspec.errors import DimensionError, LanguageError, did_you_mean, prefixed
+from mathspec.errors import DimensionError, LanguageError, did_you_mean, prefixed, unordered
 from mathspec.expansion import expand
 from mathspec.operators import (
     PARTITION_NAMES_ITS_GROUP,
@@ -220,6 +220,9 @@ class WhereResolver:
                 f'{context}: shift(<predicate>, offset=) counts whole coordinates back along '
                 f"'{along.name}'. Write an integer."
             )
+            return node
+        if self.ns.unordered(along.name):
+            self.errors.append(unordered(context, f'shift(<predicate>, along={along.name})', along.name))
             return node
         mask = Mask(operand)
         if along.name not in mask.dims:
@@ -430,6 +433,9 @@ class WhereResolver:
                 f"'{dimension}' is {_declared_as(ns, dimension)}. "
                 f'{did_you_mean(dimension, ns.dimensions, label="Dimensions")}'
             )
+            return node
+        if ns.unordered(dimension):
+            self.errors.append(unordered(context, f'position({dimension})', dimension))
             return node
         if by is None:
             return DimensionPosition(dimension, node.op, position)

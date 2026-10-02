@@ -287,7 +287,7 @@ description: >-
   it would have fed is not built.
 
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
 
 variables:
   p:
@@ -314,7 +314,7 @@ description: >-
   reads the last and nothing is vacated.
 
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
 
 variables:
   p:
@@ -341,7 +341,7 @@ description: >-
   number instead of being absent, so the row survives.
 
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
 
 variables:
   p:
@@ -370,7 +370,7 @@ description: >-
 
 dimensions:
   technology: { dtype: str }
-  month: { dtype: int }
+  month: { dtype: int, ordered: true }
 
 parameters:
   lead: { dims: [technology], dtype: int }
@@ -401,7 +401,7 @@ description: >-
   snapshot reads that season's last and no level crosses the boundary.
 
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
   season: { dtype: str }
 
 relations:
@@ -433,7 +433,7 @@ description: >-
 
 dimensions:
   unit: { dtype: str }
-  hour: { dtype: int }
+  hour: { dtype: int, ordered: true }
 
 parameters:
   min_up: { dims: [unit], dtype: int }
@@ -467,7 +467,7 @@ description: >-
 
 dimensions:
   unit: { dtype: str }
-  hour: { dtype: int }
+  hour: { dtype: int, ordered: true }
 
 parameters:
   min_up: { dims: [unit], dtype: int }
@@ -501,7 +501,7 @@ description: >-
 
 dimensions:
   unit: { dtype: str }
-  hour: { dtype: int }
+  hour: { dtype: int, ordered: true }
 
 parameters:
   min_up: { dims: [unit], dtype: int }
@@ -536,7 +536,7 @@ description: >-
 
 dimensions:
   unit: { dtype: str }
-  hour: { dtype: int }
+  hour: { dtype: int, ordered: true }
   day: { dtype: str }
 
 relations:

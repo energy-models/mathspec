@@ -120,7 +120,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
 
    ```yaml title="store.yaml"
    dimensions:
-     snapshot: { dtype: int }
+     snapshot: { dtype: int, ordered: true }
      bus: { dtype: str }
      store: { dtype: str }
    relations:

@@ -31,7 +31,7 @@ from mathspec._expression_parser import (
     shown,
 )
 from mathspec.dimensions import dims_of
-from mathspec.errors import DimensionError, SchemaError, did_you_mean
+from mathspec.errors import DimensionError, SchemaError, did_you_mean, unordered
 from mathspec.operators import (
     AMOUNTS,
     BUILTINS,
@@ -298,6 +298,9 @@ class ExpressionResolver:
         named = dims['along']
         assert named is not None, 'a translation names the dimension it steps along'
         (along,) = named
+        if self.ns.unordered(along):
+            self.errors.append(unordered(self.context, f'{operator}(along={along})', along))
+            return None
         wrap, fill = edge if edge is not None else (False, None)
         if operator == 'shift':
             offset = amounts['offset']

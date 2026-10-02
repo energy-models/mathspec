@@ -28,8 +28,8 @@ if TYPE_CHECKING:
 #: over a dim `p` does not carry, so it is readable only through a `by=`.
 BASE = {
     'dimensions': {
-        'snapshot': {'dtype': 'int'},
-        'generator': {'dtype': 'str'},
+        'snapshot': {'dtype': 'int', 'ordered': True},
+        'generator': {'dtype': 'str', 'ordered': True},
         'bus': {'dtype': 'str'},
         'zone': {'dtype': 'str'},
     },
@@ -453,7 +453,7 @@ class TestTheEdgeRulesAreDecidedAtLoad:
     """
 
     BASE: ClassVar[dict[str, Any]] = {
-        'dimensions': {'t': {'dtype': 'int'}, 'g': {'dtype': 'str'}},
+        'dimensions': {'t': {'dtype': 'int', 'ordered': True}, 'g': {'dtype': 'str', 'ordered': True}},
         'parameters': {'cap': {'dims': ['g']}, 'lead': {'dims': ['g'], 'dtype': 'int'}},
         'variables': {'p': {'dims': ['t', 'g'], 'bounds': {'lower': 0, 'upper': 1}}},
         'constraints': {'k': {'dims': ['t', 'g'], 'expression': 'p <= 1'}},

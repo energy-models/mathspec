@@ -103,7 +103,7 @@ def test_a_named_constant_coefficient_carries_its_sign(objective, side):
         ),
         pytest.param(
             {
-                'dimensions.bp': {'dtype': 'int'},
+                'dimensions.bp': {'dtype': 'int', 'ordered': True},
                 'parameters.bp_x': {'dims': ['bp']},
                 'parameters.bp_y': {'dims': ['bp']},
                 'piecewise': {'curve': {'over': 'bp', 'links': [['v', 'bp_x'], ['w', 'bp_y']]}},
