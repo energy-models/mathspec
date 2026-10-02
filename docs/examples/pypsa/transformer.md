@@ -35,6 +35,7 @@ dimensions:
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
