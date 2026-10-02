@@ -99,21 +99,21 @@ def build():
 `n.optimize(linearized_unit_commitment=True)` builds the same commitment rows as
 the integer run, except the four tightening rows: the keyword only relaxes the
 status, start and stop to shares in [0, 1] (`variables.py:81-88`) and adds the
-tightening rows (`constraints.py:650`). So this file states each row that
+tightening rows (`constraints.py:656`). So this file states each row that
 [PyPSA in one file](pypsa.md) states for a fixed committable generator:
 
 - A unit still serving the down time it brought in stays off
-  (`constraints.py:622-628`).
+  (`constraints.py:625-631`).
 - A ramp row stands where a unit has a ramp limit or only a start-up or
   shut-down ramp, and a missing limit reads as the full build
-  (`constraints.py:1046-1055`). The earlier file built no row for a start-up
+  (`constraints.py:1052-1061`). The earlier file built no row for a start-up
   ramp alone, and read a missing start-up or shut-down ramp as `0`, which kept
   a unit that came in off from starting.
 - A maintainable unit is taken off for its events. The maintenance start stays
   a binary under the keyword (`variables.py:234-259`), and the product of
   status and maintenance enters the commitment rows through the `maint-status`
-  rows (`constraints.py:425-458`). A maintainable unit that is not committable
-  loses the same share of its fixed rows (`constraints.py:135-145`).
+  rows (`constraints.py:428-461`). A maintainable unit that is not committable
+  loses the same share of its fixed rows (`constraints.py:138-148`).
 
 The rung adds five cheap units under a swinging load. A start costs more than a
 stop, so PyPSA does not tighten them and the rung isolates these rows. Each
@@ -204,21 +204,21 @@ This rung brings five rows of [PyPSA in one file](pypsa.md) into this file,
 each on the fixed builds of this file's surface:
 
 - The four tightening rows read each ramp limit filled to the full build where
-  it is missing (`constraints.py:313-318`). They read `Generator_ramp_up_rate`
+  it is missing (`constraints.py:316-321`). They read `Generator_ramp_up_rate`
   and the other three rates. The earlier file read a missing limit as `0`.
 - A ramp limit is given per snapshot and read at the later of the two
-  snapshots (`constraints.py:1040-1041`). A row is absent at a snapshot where
+  snapshots (`constraints.py:1046-1047`). A row is absent at a snapshot where
   neither the limit nor the start-up or shut-down ramp has a value
-  (`constraints.py:1046-1047`, `1136`, `1154`).
+  (`constraints.py:1052-1053`, `1142`, `1160`).
 - A unit that came in running with a `p_init` ramps from it into the first
-  snapshot (`constraints.py:1091-1094`, `1102-1104`). Where `p_init` has no
+  snapshot (`constraints.py:1097-1100`, `1108-1110`). Where `p_init` has no
   value, the unit carries no ramp row at the first snapshot.
 - A unit that is not committable carries ramp rows with its status fixed at
-  `1` (`constraints.py:1073-1079`). The assumption
+  `1` (`constraints.py:1079-1085`). The assumption
   `Generator_came_in_running_unless_committable` refuses such a unit that came
   in off, as the integer file does.
 - Each generator and load term enters the bus balance with its component's
-  `sign` (`constraints.py:1428-1429`, `:1538`).
+  `sign` (`constraints.py:1434-1435`, `:1544`).
 
 The rung adds a relax bus with a tightened unit that has only start-up and
 shut-down ramps, a committable unit whose ramp limit lifts at the third
@@ -489,7 +489,7 @@ Bus_nodal_balance:
     `Bus-nodal_balance` — what is generated at a bus, less what the links
     take away, plus what arrives over them after losses, meets the load
     there. Each generator and load term enters with its component's `sign`
-    (`constraints.py:1428-1429`, `:1538`)
+    (`constraints.py:1434-1435`, `:1544`)
   dims: [snapshot, bus]
   expression: >-
     sum(Generator_sign * Generator_p, by=Generator_bus, over=generator, into=bus)
@@ -1125,7 +1125,7 @@ Generator_came_in_running_unless_committable:
     ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
     with nothing carried in, and caps the unit there at zero, or at its
     start-up ramp where another unit of the component is committable with a
-    fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+    fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
     the attribute as read only for a committable unit and does not check
     it. The spec does not state that row, so it refuses the data
 ```

@@ -230,7 +230,7 @@ parameters:
       share of the flow that arrives at an output port, PyPSA's `efficiency`,
       `efficiency2`, … read long — negative where that port consumes rather
       than delivers. Read at the snapshot the flow arrives, so a delayed port
-      delivers at its arrival snapshot's efficiency (`constraints.py:1522`)
+      delivers at its arrival snapshot's efficiency (`constraints.py:1528`)
     dims: [scenario, snapshot, link_output]
   Link_output_delay:
     description: >-
@@ -239,7 +239,7 @@ parameters:
       the file states as whole snapshots; zero for a port that delivers at once.
       Each scenario takes its own. PyPSA groups the ports by delay over
       all scenarios and shifts each group in every one, so a delay that differs
-      by scenario delivers the flow twice (`constraints.py:1269-1276`,
+      by scenario delivers the flow twice (`constraints.py:1275-1282`,
       PyPSA/PyPSA#1941)
     dims: [scenario, link_output]
     dtype: int
@@ -376,7 +376,7 @@ parameters:
       positive where it injects; a link is a process whose `bus0` rate is minus
       one and whose output rates are its efficiencies. Read at the snapshot the
       transfer arrives, so a delayed port transfers at its arrival snapshot's
-      rate (`constraints.py:1522`)
+      rate (`constraints.py:1528`)
     dims: [scenario, snapshot, process_output]
   Process_output_delay:
     description: >-
@@ -918,11 +918,24 @@ parameters:
   Line_s_set:
     description: a given flow schedule; a line without one has no row here
     dims: [scenario, snapshot, line]
+  Line_v_ang_max:
+    description: >-
+      the most the voltage angle difference across a line may be either way,
+      in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default.
+      A line whose carrier is not AC has no row either. The deprecated `v_ang_min` is
+      ignored, as PyPSA ignores it with a `DeprecationWarning`
+      (`constraints.py:1713-1720`)
+    dims: [scenario, line]
+  Line_x_pu_eff:
+    description: >-
+      the line's effective series reactance — PyPSA's `x_pu_eff`, `x` over
+      the square of its bus's nominal voltage, data prep
+    dims: [scenario, line]
   Line_cycle_weight:
     description: >-
       the line's series impedance, signed by its orientation in the cycle —
       the cycle basis, data prep; a line in no cycle has no row. PyPSA builds
-      the cycle basis from the first scenario only (`networks.py:1354-1361`)
+      the cycle basis from the first scenario only (`networks.py:1356-1363`)
     dims: [line, cycle]
   Line_BODF:
     description: >-
@@ -981,6 +994,18 @@ parameters:
   Transformer_s_set:
     description: a given flow schedule; a transformer without one has no row here
     dims: [scenario, snapshot, transformer]
+  Transformer_v_ang_max:
+    description: >-
+      the most the voltage angle difference across a transformer, its phase
+      shift included, may be either way, in degrees — PyPSA's `v_ang_max`;
+      infinite, and so no row, by default. The deprecated `v_ang_min` is
+      ignored, as a line's
+    dims: [scenario, transformer]
+  Transformer_x_pu_eff:
+    description: >-
+      the transformer's effective series reactance — PyPSA's `x_pu_eff`, `x`
+      over its `s_nom` times its tap ratio, data prep
+    dims: [scenario, transformer]
   Transformer_cycle_weight:
     description: >-
       the transformer's effective series reactance, `x` times its tap ratio,
@@ -1007,8 +1032,9 @@ parameters:
       whether a transformer's phase shift is a decision — PyPSA's
       `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a
       fixed shift carried by `phase_shift`. The shift parameters carry no
-      scenario: only a cycle row reads them, and PyPSA fails on a transformer in
-      a cycle on a network with scenarios (`constraints.py:1654`)
+      scenario: only a cycle row and an angle row read them, PyPSA fails on a
+      transformer in a cycle on a network with scenarios (`constraints.py:1660`),
+      and builds no angle row on one
     dims: [transformer]
     dtype: bool
   Transformer_phase_shift_min:
@@ -1022,6 +1048,12 @@ parameters:
       the most a varying transformer's phase shift may take, in degrees —
       PyPSA's `phase_shift_max`; equal to `phase_shift_min` for a fixed transformer
     dims: [transformer]
+  Transformer_phase_shift_fixed:
+    description: >-
+      a fixed transformer's phase shift at each snapshot, in degrees — PyPSA's
+      `phase_shift`, zero by default; a varying transformer's shift is a
+      decision instead
+    dims: [snapshot, transformer]
   Transformer_phase_shift_cycle_weight:
     description: >-
       the cycle sign for a varying transformer's phase shift, times π/180 so a
@@ -2200,7 +2232,7 @@ expressions:
       what a future costs to run — every operating term, weighted by the
       snapshot's hours and its period, before the scenario's own weight; a
       start and a stop cost what they cost, unweighted, as PyPSA adds them
-      (`optimize.py:414-429`)
+      (`optimize.py:415-432`)
   Generator_capex:
     expression: sum(scenario_weight * Generator_p_nom_ext * Generator_capital_cost * Generator_capital_weight)
   Link_capex:
@@ -2277,7 +2309,7 @@ expressions:
     description: >-
       what a load draws from its bus's balance — its demand times its sign
       where it is active, nothing where it is not, since PyPSA drops an
-      inactive load from the balance (`constraints.py:1537-1538`)
+      inactive load from the balance (`constraints.py:1543-1544`)
     dims: [scenario, snapshot, load]
     cases:
       active: { when: Load_active, expression: Load_sign * Load_p_set }
@@ -3358,6 +3390,21 @@ constraints:
     dims: [scenario, snapshot, line]
     where: Line_s_set AND Line_active
     expression: Line_s == Line_s_set
+  Line_v_ang_lower:
+    description: >-
+      `Line-v_ang-lower` — an AC line carries at least the flow at which the
+      voltage angle difference across it, `x_pu_eff` times the flow in
+      radians, is the negative of its limit
+    dims: [scenario, snapshot, line]
+    where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+    expression: Line_s >= -Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
+  Line_v_ang_upper:
+    description: >-
+      `Line-v_ang-upper` — an AC line carries at most the flow at which the
+      voltage angle difference across it reaches its limit
+    dims: [scenario, snapshot, line]
+    where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+    expression: Line_s <= Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
   Line_loss_upper:
     description: "`Line-loss_upper` — a line dissipates at most the loss at its rating"
     dims: [scenario, snapshot, line]
@@ -3419,6 +3466,38 @@ constraints:
     dims: [scenario, snapshot, transformer]
     where: Transformer_s_set AND Transformer_active
     expression: Transformer_s == Transformer_s_set
+  Transformer_v_ang_lower:
+    description: >-
+      `Transformer-v_ang-lower` — a transformer with a fixed shift carries at
+      least the flow at which the voltage angle difference across it,
+      `x_pu_eff` times the flow plus the shift, is the negative of its limit
+    dims: [scenario, snapshot, transformer]
+    where: Transformer_v_ang_max AND NOT Transformer_phase_shift_varying AND Transformer_active
+    expression: Transformer_s >= -(Transformer_v_ang_max + Transformer_phase_shift_fixed) * (3.141592653589793 / 180) / Transformer_x_pu_eff
+  Transformer_v_ang_upper:
+    description: >-
+      `Transformer-v_ang-upper` — a transformer with a fixed shift carries at
+      most the flow at which the voltage angle difference across it, the
+      shift included, reaches its limit
+    dims: [scenario, snapshot, transformer]
+    where: Transformer_v_ang_max AND NOT Transformer_phase_shift_varying AND Transformer_active
+    expression: Transformer_s <= (Transformer_v_ang_max - Transformer_phase_shift_fixed) * (3.141592653589793 / 180) / Transformer_x_pu_eff
+  Transformer_v_ang_var_lower:
+    description: >-
+      `Transformer-v_ang-var-lower` — for a transformer whose shift is a
+      decision, the flow plus the shift over `x_pu_eff` is at least the
+      negative of the limit over `x_pu_eff`
+    dims: [scenario, snapshot, transformer]
+    where: Transformer_v_ang_max AND Transformer_phase_shift_varying AND Transformer_active
+    expression: Transformer_s + Transformer_phase_shift * (3.141592653589793 / 180) / Transformer_x_pu_eff >= -Transformer_v_ang_max * (3.141592653589793 / 180) / Transformer_x_pu_eff
+  Transformer_v_ang_var_upper:
+    description: >-
+      `Transformer-v_ang-var-upper` — for a transformer whose shift is a
+      decision, the flow plus the shift over `x_pu_eff` is at most the limit
+      over `x_pu_eff`
+    dims: [scenario, snapshot, transformer]
+    where: Transformer_v_ang_max AND Transformer_phase_shift_varying AND Transformer_active
+    expression: Transformer_s + Transformer_phase_shift * (3.141592653589793 / 180) / Transformer_x_pu_eff <= Transformer_v_ang_max * (3.141592653589793 / 180) / Transformer_x_pu_eff
   Transformer_loss_upper:
     description: "`Transformer-loss_upper` — a transformer dissipates at most the loss at its rating"
     dims: [scenario, snapshot, transformer]
@@ -3857,7 +3936,7 @@ constraints:
       carrying its flow, meets the load there, less half of every incident
       line's and transformer's loss — PyPSA dissipates a branch's loss half at
       either end. Each generator, storage unit, store and load term enters
-      with its component's `sign` (`constraints.py:1428-1429`, `:1538`), and
+      with its component's `sign` (`constraints.py:1434-1435`, `:1544`), and
       an inactive load not at all. A bus nothing is attached to has no row; PyPSA refuses one that
       carries load, and this file does not yet.
     dims: [scenario, snapshot, bus]
@@ -3926,7 +4005,7 @@ assumptions:
       the `maint-modstatus` rows bound the modules on in maintenance by
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
-      (`constraints.py:500-503`)
+      (`constraints.py:503-506`)
   Link_maintenance_events_positive:
     holds: "Link_maintenance_events > 0"
     where: "Link_maintainable"
@@ -3967,7 +4046,7 @@ assumptions:
       the `maint-modstatus` rows bound the modules on in maintenance by
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
-      (`constraints.py:500-503`)
+      (`constraints.py:503-506`)
   Process_maintenance_events_positive:
     holds: "Process_maintenance_events > 0"
     where: "Process_maintainable"
@@ -4008,7 +4087,7 @@ assumptions:
       the `maint-modstatus` rows bound the modules on in maintenance by
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
-      (`constraints.py:500-503`)
+      (`constraints.py:503-506`)
   StorageUnit_stands_in_one_run:
     holds: "count(StorageUnit_active AND NOT shift(StorageUnit_active, along=snapshot, offset=1), over=snapshot) <= 1"
     description: >-
@@ -4097,7 +4176,7 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
   Link_marginal_cost_quadratic_without_risk_preference:
     holds: "Link_marginal_cost_quadratic == 0"
@@ -4105,7 +4184,7 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
   Process_marginal_cost_quadratic_without_risk_preference:
     holds: "Process_marginal_cost_quadratic == 0"
@@ -4113,7 +4192,7 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
   StorageUnit_marginal_cost_quadratic_without_risk_preference:
     holds: "StorageUnit_marginal_cost_quadratic == 0"
@@ -4121,7 +4200,7 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
   Store_marginal_cost_quadratic_without_risk_preference:
     holds: "Store_marginal_cost_quadratic == 0"
@@ -4129,7 +4208,7 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
   GlobalConstraint_tech_capacity_expansion_limit_without_scenarios:
     holds: "GlobalConstraint_type != 'tech_capacity_expansion_limit'"
@@ -4148,7 +4227,7 @@ assumptions:
       ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
       with nothing carried in, and caps the unit there at zero, or at its
       start-up ramp where another unit of the component is committable with a
-      fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+      fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
       the attribute as read only for a committable unit and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data
@@ -4160,7 +4239,7 @@ assumptions:
       ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
       with nothing carried in, and caps the link there at zero, or at its
       start-up ramp where another link of the component is committable with a
-      fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+      fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
       the attribute as read only for a committable link and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data
@@ -4172,7 +4251,7 @@ assumptions:
       ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
       with nothing carried in, and caps the process there at zero, or at its
       start-up ramp where another process of the component is committable with a
-      fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+      fixed build (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
       the attribute as read only for a committable process and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data
