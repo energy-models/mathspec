@@ -120,13 +120,14 @@ written  # "assumption 'cost_is_never_negative' does not hold for the data attac
 ```
 
 `program.parameters[name].missing` says what a missing row of that parameter
-means: `'error'`, `'absent'`, `'neutral'`, or the value it reads as. It is
+means: `'refused'`, `'absent'`, `'neutral'`, or the value it reads as. It is
 `None` for a parameter a `piecewise:` block reads, because the block owns its
 shape, and for a given parameter, whose declaring file says. The program of
 `spec.expand(...)` declares a curve's parameters `'neutral'` where the curve has
-`points:`. `program.relations[name].missing` is `'error'` or `'absent'`, and
-`None` for a bare relation. Under `'error'` the engine refuses a missing row and
-names the coordinate. A value is read wherever a value is read: an expression,
+`points:`. `program.relations[name].missing` is `'refused'` or `'absent'`, and
+`None` for a bare relation. Under `'refused'` the engine does not build the model from a
+table with a missing row, and names the coordinate; whether it raises at the
+first gap or lists them all is its own. A value is read wherever a value is read: an expression,
 a bound, and a comparison in a mask. A `ParameterDefined` on a numeric
 parameter asks whether the data has a row, so a value does not answer it. A
 `ParameterDefined` on a `bool` parameter reads the value. Under `'absent'`, a

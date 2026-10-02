@@ -109,7 +109,7 @@ _MISSING_SCHEMA: dict[str, object] = {
         {'type': 'boolean'},
         {'type': 'number'},
     ],
-    'default': 'error',
+    'default': 'refused',
 }
 
 #: The spellings of a missing row, for a refusal to list.
@@ -193,7 +193,7 @@ class RelationBlock(_StrictBlock):
         """A label is data, so no value fills a gap in a map, and neutral reads as absent wherever a map is read."""
         if v is not None and v not in get_args(RelationMissing):
             msg = (
-                f'missing: {v!r} on a relation, which takes error or absent. A label the map leaves out '
+                f'missing: {v!r} on a relation, which takes refused or absent. A label the map leaves out '
                 f'is refused, or belongs to no group.'
             )
             raise ValueError(msg)
@@ -212,10 +212,10 @@ class RelationBlock(_StrictBlock):
 
     @property
     def reading(self) -> RelationMissing | None:
-        """What a key the map leaves out means: ``error`` unless the file says, and ``None`` for a bare relation."""
+        """What a key the map leaves out means: ``refused`` unless the file says, and ``None`` for a bare relation."""
         if self.values is None:
             return None
-        return self.missing or 'error'
+        return self.missing or 'refused'
 
     @property
     def pairs(self) -> tuple[tuple[str, str], ...]:
@@ -277,7 +277,7 @@ class ParameterBlock(_StrictBlock):
         """``inf`` is a string to YAML and a number to the expression grammar, so it is taken as the number."""
         if v is None:
             raise _missing_null(
-                'a parameter', 'Write absent for a row that is not there, or leave the key out for error.'
+                'a parameter', 'Write absent for a row that is not there, or leave the key out for refused.'
             )
         if v in ('inf', '-inf'):
             return float(cast('str', v))
@@ -291,8 +291,8 @@ class ParameterBlock(_StrictBlock):
 
     @property
     def reading(self) -> Missing:
-        """What a missing row means: what the file wrote, or ``error`` where it wrote nothing."""
-        return 'error' if self.missing is None else self.missing
+        """What a missing row means: what the file wrote, or ``refused`` where it wrote nothing."""
+        return 'refused' if self.missing is None else self.missing
 
     @model_validator(mode='after')
     def _a_value_fits_the_dtype(self) -> ParameterBlock:
@@ -378,7 +378,7 @@ class VariableBlock(_StrictBlock):
         if v not in get_args(VariableMissing):
             msg = (
                 f'missing: {v!r} on a variable, which takes absent or neutral. A variable has no data: '
-                f'error and a value are readings of a parameter.'
+                f'refused and a value are readings of a parameter.'
             )
             raise ValueError(msg)
         return v

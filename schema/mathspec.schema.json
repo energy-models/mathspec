@@ -580,7 +580,7 @@
           "anyOf": [
             {
               "enum": [
-                "error",
+                "refused",
                 "absent",
                 "neutral",
                 "inf",
@@ -756,7 +756,7 @@
           "anyOf": [
             {
               "enum": [
-                "error",
+                "refused",
                 "absent"
               ],
               "type": "string"

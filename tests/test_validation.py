@@ -2313,7 +2313,7 @@ def test_an_infinite_bound_is_refused_with_the_null_that_opens_a_side(side, valu
 @pytest.mark.parametrize(
     ('dtype', 'written', 'read'),
     [
-        pytest.param('float', None, 'error', id='left-out-is-error'),
+        pytest.param('float', None, 'refused', id='left-out-is-refused'),
         pytest.param('float', 'absent', 'absent', id='absent'),
         pytest.param('str', 'neutral', 'neutral', id='neutral-on-a-label'),
         pytest.param('float', 1, 1, id='a-number'),
@@ -2345,7 +2345,7 @@ def test_inf_and_dot_inf_load_as_one_number():
     ('dtype', 'written', 'fragment'),
     [
         pytest.param('float', None, 'missing: null on a parameter names no reading', id='null'),
-        pytest.param('float', 'zero', "missing is the string 'zero'. It takes error, absent, neutral", id='a-word'),
+        pytest.param('float', 'zero', "missing is the string 'zero'. It takes refused, absent, neutral", id='a-word'),
         pytest.param('float', '1', "missing is the string '1'", id='a-quoted-number'),
         pytest.param('float', float('nan'), 'missing is nan', id='nan'),
         pytest.param(
@@ -2371,8 +2371,8 @@ def test_a_given_parameter_has_no_missing():
 @pytest.mark.parametrize(
     ('written', 'read'),
     [
-        pytest.param({}, 'error', id='left-out-is-error'),
-        pytest.param({'missing': 'error'}, 'error', id='error'),
+        pytest.param({}, 'refused', id='left-out-is-refused'),
+        pytest.param({'missing': 'refused'}, 'refused', id='refused'),
         pytest.param({'missing': 'absent'}, 'absent', id='absent'),
     ],
 )
@@ -2382,7 +2382,7 @@ def test_a_relation_says_what_a_label_it_leaves_out_means(written, read):
 
 
 def test_a_bare_relation_has_no_missing_rows():
-    """Its rows are its membership: a pair it leaves out is not a gap, so `error` would refuse every sparse set."""
+    """Its rows are its membership: a pair it leaves out is not a gap, so `refused` would refuse every sparse set."""
     spec = to_spec(varied(SMALL_MODEL, **{'relations.pair': {'key': ['g', 'h']}}))
     assert spec.program.relations['pair'].missing is None
 
@@ -2392,15 +2392,15 @@ def test_a_bare_relation_has_no_missing_rows():
     [
         pytest.param(
             {'key': 'g', 'values': 'h', 'missing': 'neutral'},
-            "missing: 'neutral' on a relation, which takes error or absent",
+            "missing: 'neutral' on a relation, which takes refused or absent",
             id='neutral',
         ),
         pytest.param(
             {'key': 'g', 'values': 'h', 'missing': 'h1'}, "missing: 'h1' on a relation", id='a-label-as-a-value'
         ),
         pytest.param(
-            {'key': ['g', 'h'], 'missing': 'error'},
-            'missing: error on a relation with no `values:`',
+            {'key': ['g', 'h'], 'missing': 'refused'},
+            'missing: refused on a relation with no `values:`',
             id='a-bare-relation',
         ),
     ],
@@ -2412,7 +2412,7 @@ def test_a_relation_missing_that_reads_nothing_is_refused(relation, fragment):
 @pytest.mark.parametrize(
     ('written', 'fragment'),
     [
-        pytest.param('error', "missing: 'error' on a variable, which takes absent or neutral", id='error'),
+        pytest.param('refused', "missing: 'refused' on a variable, which takes absent or neutral", id='refused'),
         pytest.param(0, 'missing: 0 on a variable, which takes absent or neutral', id='a-value'),
         pytest.param(None, 'missing: null on a variable names no reading', id='null'),
     ],

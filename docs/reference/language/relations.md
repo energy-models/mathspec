@@ -28,12 +28,12 @@ The **key** is the combination of dimensions that is unique per row:
 what that row determines: its bus. With no `values:`, the key is every column,
 and the table is a **bare relation**.
 
-| Field         |                                                                  |                 |
-| ------------- | ---------------------------------------------------------------- | --------------- |
-| `key`         | required. The columns that identify a row                        |                 |
-| `values`      | the columns the key determines. Omitted, the key is every column | default none    |
-| `missing`     | `error` or `absent`: what a key the map leaves out means         | default `error` |
-| `description` | free text                                                        | default `null`  |
+| Field         |                                                                  |                   |
+| ------------- | ---------------------------------------------------------------- | ----------------- |
+| `key`         | required. The columns that identify a row                        |                   |
+| `values`      | the columns the key determines. Omitted, the key is every column | default none      |
+| `missing`     | `refused` or `absent`: what a key the map leaves out means       | default `refused` |
+| `description` | free text                                                        | default `null`    |
 
 A column is named after its dimension. Where two columns share a dimension, the
 mapping form names them: `{bus0: bus, bus1: bus}`.
@@ -82,7 +82,7 @@ dimensions:
   bus: { dtype: str }
   line: { dtype: str }
 relations:
-  gen_bus: { key: generator, values: bus } # error: every generator is on a bus
+  gen_bus: { key: generator, values: bus } # refused: every generator is on a bus
   line_to: { key: line, values: bus, missing: absent } # an open end is meant
 ```
 

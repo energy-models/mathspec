@@ -345,7 +345,7 @@ def _curve_parameters_declare_no_missing(schema: Spec) -> Iterator[str]:
 
     ``points:`` already says how far a curve runs, and a breakpoint it leaves
     out is not asked for, so a values parameter is complete over the points
-    its block admits: neither ``error`` over every coordinate its dims reach
+    its block admits: neither ``refused`` over every coordinate its dims reach
     nor a gap any other reading fills.
     """
     for block_name, block in schema.piecewise.items():

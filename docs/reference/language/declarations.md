@@ -23,12 +23,12 @@ parameters:
     dims: [] # a scalar
 ```
 
-| Field         |                                                                |                 |
-| ------------- | -------------------------------------------------------------- | --------------- |
-| `dims`        | required. The dimensions it is indexed by. `[]` means a scalar |                 |
-| `dtype`       | `float`, `int`, `bool`, `str`                                  | default `float` |
-| `missing`     | what a missing row means ([a missing row](#a-missing-row))     | default `error` |
-| `description` | free text                                                      | default `null`  |
+| Field         |                                                                |                   |
+| ------------- | -------------------------------------------------------------- | ----------------- |
+| `dims`        | required. The dimensions it is indexed by. `[]` means a scalar |                   |
+| `dtype`       | `float`, `int`, `bool`, `str`                                  | default `float`   |
+| `missing`     | what a missing row means ([a missing row](#a-missing-row))     | default `refused` |
+| `description` | free text                                                      | default `null`    |
 
 The column has to match the `dtype`:
 
@@ -58,7 +58,7 @@ the data, so the file says which was meant.
 dimensions:
   generator: { dtype: str }
 parameters:
-  cost: { dims: [generator] } # error: every generator has a cost
+  cost: { dims: [generator] } # refused: every generator has a cost
   ramp_limit: { dims: [generator], missing: neutral } # no row means no limit
   p_set: { dims: [generator], missing: absent } # no row, no fixing row
   efficiency: { dims: [generator], missing: 1 }
@@ -66,12 +66,15 @@ parameters:
   active: { dims: [generator], dtype: bool, missing: true }
 ```
 
-| `missing:`          | A missing row                                                                                         |
-| ------------------- | ----------------------------------------------------------------------------------------------------- |
-| `error`, by default | is refused when the data is attached, and the refusal names the coordinate                            |
-| `absent`            | is [absence](absence.md): it takes the row of a term that reads it, and is one summand fewer in a sum |
-| `neutral`           | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a `where`           |
-| a value             | reads as that value, wherever a value is read                                                         |
+| `missing:`            | A missing row                                                                                         |
+| --------------------- | ----------------------------------------------------------------------------------------------------- |
+| `refused`, by default | is refused when the data is attached, and the refusal names the coordinate                            |
+| `absent`              | is [absence](absence.md): it takes the row of a term that reads it, and is one summand fewer in a sum |
+| `neutral`             | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a `where`           |
+| a value               | reads as that value, wherever a value is read                                                         |
+
+A consumer does not build the model from data with a refused row. How it says
+so is its own: it may raise at the first gap, or list every missing coordinate.
 
 A bare numeric name in a `where` asks whether the data has a row under every
 reading, so `where: p_nom_max` selects the rows the data gives. A comparison

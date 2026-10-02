@@ -494,7 +494,7 @@ def expand_piecewise(schema: Spec) -> Spec:
     mask holds, since the weights and the segment rows stand on it, so the
     expansion declares it ``missing: neutral``; the ``<block>_complete``
     assumption states where it must carry a row. A parameter a curve over
-    every breakpoint reads keeps the default, ``error``.
+    every breakpoint reads keeps the default, ``refused``.
     """
     if not schema.piecewise:
         return schema
