@@ -83,8 +83,9 @@ row that reads it is not built ([absence](language/absence.md)).
 
 **Missing row**
 : A coordinate that a parameter's or a relation's table has no row for. Its
-`missing:` says what it is: refused (`error`, the default), absence (`absent`),
-`0` in arithmetic and false in a `where` (`neutral`), or a value
+`missing:` says what it is: refused when the data is attached (`refused`, the
+default), absence (`absent`), `0` in arithmetic and false in a `where`
+(`neutral`), or a value
 ([a missing row](language/declarations.md#a-missing-row)).
 
 ## Kinds of construct

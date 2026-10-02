@@ -4,7 +4,7 @@
 
 """Rung 58: a committable unit takes its status rows in every scenario.
 
-PyPSA 1.3.0 raises on a committable component on a network with scenarios
+PyPSA raises on a committable component on a network with scenarios
 (PyPSA/PyPSA#1913). The two futures are identical, so the oracle is the same
 network without scenarios.
 """

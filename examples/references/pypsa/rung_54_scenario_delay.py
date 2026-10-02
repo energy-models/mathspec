@@ -4,7 +4,7 @@
 
 """Rung 54: each scenario delays a link's and a process's flow by its own `delay`.
 
-PyPSA 1.3.0 groups the ports by delay over all scenarios and shifts every group
+PyPSA groups the ports by delay over all scenarios and shifts every group
 in every scenario, so a port whose delay differs by scenario delivers twice
 (PyPSA/PyPSA#1941). Nothing is extendable, so the scenarios do not interact: the
 oracle is each future solved alone, weighted by its probability.

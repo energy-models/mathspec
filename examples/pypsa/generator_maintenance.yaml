@@ -151,17 +151,17 @@ constraints:
   Generator_maint_status_le_status:
     description: "`Generator-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
     expression: Generator_maintenance_status <= Generator_status
   Generator_maint_status_le_maint:
     description: "`Generator-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
     expression: Generator_maintenance_status <= Generator_maintenance
   Generator_maint_status_lb:
     description: "`Generator-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
     expression: Generator_maintenance_status >= Generator_status + Generator_maintenance - 1
   Generator_maint_modstatus_le_status:
     description: "`Generator-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
