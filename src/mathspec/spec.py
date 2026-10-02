@@ -347,8 +347,22 @@ class GivenExpressionBlock(_StrictBlock):
     description: str | None = None
 
 
+class GivenMaskBlock(_StrictBlock):
+    """A mask this file reads and another file defines.
+
+    The frame is all this file states, and it names the dims the definer's
+    predicate reads. A where reads the name as data over that frame, true or false at each coordinate, since a mask reads nothing
+    a solve decides: the predicate is the definer's.
+    """
+
+    _label: ClassVar[str] = 'a given mask declaration'
+
+    dims: list[str]
+    description: str | None = None
+
+
 class GivenBlock(_StrictBlock):
-    """What this file reads and does not build, by kind. Closed at the four kinds."""
+    """What this file reads and does not build, by kind. Closed at the five kinds."""
 
     _label: ClassVar[str] = 'a given block'
 
@@ -360,10 +374,12 @@ class GivenBlock(_StrictBlock):
     constraints: dict[str, GivenConstraintBlock] = {}
     #: Named expressions another file defines ([`GivenExpressionBlock`][]).
     expressions: dict[str, GivenExpressionBlock] = {}
+    #: Masks another file defines ([`GivenMaskBlock`][]).
+    masks: dict[str, GivenMaskBlock] = {}
 
     def __bool__(self) -> bool:
         """Whether the file reads anything it does not build."""
-        return bool(self.parameters or self.variables or self.constraints or self.expressions)
+        return bool(self.parameters or self.variables or self.constraints or self.expressions or self.masks)
 
 
 class ConstraintBlock(_StrictBlock):
@@ -551,6 +567,48 @@ class ExpressionBlock(_StrictBlock):
         if self.adds_to is not None:
             written['adds_to'] = self.adds_to
         return written
+
+
+class MaskBlock(_StrictBlock):
+    """A named predicate: one where string, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.
+
+    Written in YAML as a bare where string, or as a mapping once it carries a
+    ``description:``, and serialised back to whichever form it was written in::
+
+        masks:
+          committable: "Generator_committable AND Generator_active"
+          stands:
+            where: build_year <= period_year AND period_year < build_year + lifetime
+            description: the generator stands in this period
+
+    A bare mask name in a where string stands for its predicate, inside
+    ``count``, ``shift`` and ``at`` too. The mask's frame is the dims its
+    predicate reads, so it declares none. A mask is a predicate, so it is
+    never a value in an expression.
+    """
+
+    _label: ClassVar[str] = 'a mask declaration'
+
+    #: The predicate, in the where grammar.
+    where: str
+    description: str | None = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def _from_string(cls, data: object) -> object:
+        return {'where': data} if isinstance(data, str) else data
+
+    @classmethod
+    @override
+    def __get_pydantic_json_schema__(cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler) -> dict[str, object]:
+        """The published schema admits the bare string the one-line form is written as."""
+        return _also_written_as(core_schema, handler, {'type': 'string'})
+
+    @model_serializer
+    def _as_written(self) -> str | dict[str, object]:
+        if self.description is None:
+            return self.where
+        return {'where': self.where, 'description': self.description}
 
 
 class AssumptionBlock(_StrictBlock):
@@ -811,7 +869,7 @@ class Spec(_StrictBlock):
     [`LanguageError`][] on a spec the language refuses.
     Holding one is the proof, so nothing downstream checks it again.
 
-    The API is the twelve declaration sections plus ``version`` and
+    The API is the thirteen declaration sections plus ``version`` and
     ``description``, three ways back out — [`to_dict`][] for the spec as
     data, [`to_yaml`][] for the file a reviewer reads, [`expand`][] for the
     spec with its formulations written out as plain rows — and [`program`][], the
@@ -838,6 +896,7 @@ class Spec(_StrictBlock):
     constraints: dict[str, ConstraintBlock] = {}
     objective: ObjectiveBlock | None = None
     expressions: dict[str, ExpressionBlock] = {}
+    masks: dict[str, MaskBlock] = {}
     macros: dict[str, MacroBlock] = {}
     piecewise: dict[str, PiecewiseBlock] = {}
     sos: dict[str, SosBlock] = {}
@@ -981,7 +1040,7 @@ class Spec(_StrictBlock):
 
         Read off the spec's own mappings rather than a list of sections, so a
         section added later cannot be forgotten here — every mapping a Spec
-        carries is keyed by a declaration name. ``given:`` nests its four
+        carries is keyed by a declaration name. ``given:`` nests its five
         mappings one level down, so they are read off [`GivenBlock`][] the
         same way.
         """

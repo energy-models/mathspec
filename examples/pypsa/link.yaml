@@ -270,6 +270,13 @@ expressions:
       + sum(Link_output_arrival, by=Link_output_bus, over=link_output, into=bus)
     adds_to: Bus_injection
 
+masks:
+  Link_committed:
+    description: >-
+      a committable link that stands in the snapshot's period — every
+      unit-commitment row's set
+    where: Link_committable AND Link_active
+
 constraints:
   Link_fix_p_lower:
     description: "`Link-fix-p-lower` — a fixed link carries at least its minimum, negative for the other way"

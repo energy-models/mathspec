@@ -182,7 +182,7 @@ variables:
       a line does; absent, and zero in the balance, where the network is
       lossless
     dims: [scenario, snapshot, transformer]
-    where: transmission_losses AND Transformer_active
+    where: Transformer_lossy
     absence: zero
     bounds:
       lower: 0
@@ -244,6 +244,13 @@ expressions:
       + sum(Transformer_phase_shift_weight, over=transformer)
       + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot_period, over=period, into=snapshot), over=transformer)
     adds_to: Cycle_angle_sum
+
+masks:
+  Transformer_lossy:
+    description: >-
+      a transformer that stands in the snapshot's period, where the run models
+      transmission losses
+    where: transmission_losses AND Transformer_active
 
 constraints:
   Transformer_fix_s_lower:
@@ -326,7 +333,7 @@ constraints:
   Transformer_loss_upper:
     description: "`Transformer-loss_upper` — a transformer dissipates at most the loss at its rating"
     dims: [scenario, snapshot, transformer]
-    where: transmission_losses AND Transformer_active
+    where: Transformer_lossy
     expression: Transformer_loss <= Transformer_loss_max
   Transformer_loss_tangents_forward:
     description: >-
@@ -334,14 +341,14 @@ constraints:
       loss sits above every cut to its curve for flow one way, as a line's
       does, over the segment dimension
     dims: [scenario, snapshot, transformer, segment]
-    where: transmission_losses AND Transformer_active
+    where: Transformer_lossy
     expression: Transformer_loss + Transformer_loss_slope * Transformer_s >= Transformer_loss_offset
   Transformer_loss_tangents_reverse:
     description: >-
       `Transformer-loss_tangents-{k}--1`, `Transformer-loss_secants-neg` — the
       same fan mirrored, the loss depending on the flow's magnitude
     dims: [scenario, snapshot, transformer, segment]
-    where: transmission_losses AND Transformer_active
+    where: Transformer_lossy
     expression: Transformer_loss - Transformer_loss_slope * Transformer_s >= Transformer_loss_offset
 ```
 
@@ -413,6 +420,12 @@ constraints:
 | $`\check{\sigma}`$ | `Transformer_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — the flow a transformer's post-contingency rows read, as a line's |
 | $`\mathit{Transformer\_injection}`$ | `Transformer_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 | $`\mathit{Transformer\_angle\_sum}`$ | `Transformer_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ |
+
+#### Masks
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{\sigma,\mathrm{lossy}}`$ | `Transformer_lossy` over $`\mathcal{T} \times \mathcal{M}`$ — a transformer that stands in the snapshot's period, where the run models transmission losses |
 
 Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\_phase\_shift\_varying}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{Transformer\_phase\_shift}`$. An index is italic too, being what a quantifier chooses, and a set is script.
 
@@ -499,19 +512,19 @@ Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\
 **`Transformer_loss_upper`**
 
 ```math
-\ell^{\sigma}_{\xi,t,m} \le \overline{\ell}^{\sigma}_{\xi,t,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{lossy} \wedge \mathrm{on}^{\sigma}_{t,m}
+\ell^{\sigma}_{\xi,t,m} \le \overline{\ell}^{\sigma}_{\xi,t,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m}
 ```
 
 **`Transformer_loss_tangents_forward`**
 
 ```math
-\ell^{\sigma}_{\xi,t,m} + \mathrm{a}^{\sigma}_{\xi,t,m,s} \cdot \sigma_{\xi,t,m} \ge \mathrm{b}^{\sigma}_{\xi,t,m,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ s \in \mathcal{S} \,:\, \mathrm{lossy} \wedge \mathrm{on}^{\sigma}_{t,m}
+\ell^{\sigma}_{\xi,t,m} + \mathrm{a}^{\sigma}_{\xi,t,m,s} \cdot \sigma_{\xi,t,m} \ge \mathrm{b}^{\sigma}_{\xi,t,m,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ s \in \mathcal{S} \,:\, \mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m}
 ```
 
 **`Transformer_loss_tangents_reverse`**
 
 ```math
-\ell^{\sigma}_{\xi,t,m} - \mathrm{a}^{\sigma}_{\xi,t,m,s} \cdot \sigma_{\xi,t,m} \ge \mathrm{b}^{\sigma}_{\xi,t,m,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ s \in \mathcal{S} \,:\, \mathrm{lossy} \wedge \mathrm{on}^{\sigma}_{t,m}
+\ell^{\sigma}_{\xi,t,m} - \mathrm{a}^{\sigma}_{\xi,t,m,s} \cdot \sigma_{\xi,t,m} \ge \mathrm{b}^{\sigma}_{\xi,t,m,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ s \in \mathcal{S} \,:\, \mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m}
 ```
 
 #### Definitions
@@ -540,6 +553,14 @@ Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\
 \mathit{Transformer\_angle\_sum}_{\xi,t,c} = \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{\mathrm{snapshot\_period}(t),m,c} + \sum_{m \in \mathcal{M}} \vartheta_{t,m,c} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{\mathrm{snapshot\_period}(t),m,c} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
 ```
 
+#### Masks
+
+**`Transformer_lossy`**
+
+```math
+\mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m} \iff \mathrm{lossy} \wedge \mathrm{on}^{\sigma}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}
+```
+
 #### Variable domains
 
 **`Transformer_s`**
@@ -551,7 +572,7 @@ Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\
 **`Transformer_loss`**
 
 ```math
-\ell^{\sigma}_{\xi,t,m} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{lossy} \wedge \mathrm{on}^{\sigma}_{t,m}
+\ell^{\sigma}_{\xi,t,m} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m}
 ```
 
 **`Transformer_phase_shift`**

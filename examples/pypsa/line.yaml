@@ -169,7 +169,7 @@ variables:
       cost and held up by the cuts; absent, and zero in the balance, where
       the network is lossless
     dims: [scenario, snapshot, line]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     absence: zero
     bounds:
       lower: 0
@@ -237,6 +237,13 @@ expressions:
     expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period, over=period, into=snapshot), over=line)
     adds_to: Cycle_angle_sum
 
+masks:
+  Line_lossy:
+    description: >-
+      a line that stands in the snapshot's period, where the run models
+      transmission losses
+    where: transmission_losses AND Line_active
+
 constraints:
   Line_fix_s_lower:
     description: "`Line-fix-s-lower` — a fixed line carries at least the negative of its rating, the loss counted against it"
@@ -301,7 +308,7 @@ constraints:
   Line_loss_upper:
     description: "`Line-loss_upper` — a line dissipates at most the loss at its rating"
     dims: [scenario, snapshot, line]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     expression: Line_loss <= Line_loss_max
   Line_loss_tangents_forward:
     description: >-
@@ -310,12 +317,12 @@ constraints:
       `k`, or one row stacked over its `secant` axis, and this block states them
       all over the segment dimension
     dims: [scenario, snapshot, line, segment]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     expression: Line_loss + Line_loss_slope * Line_s >= Line_loss_offset
   Line_loss_tangents_reverse:
     description: >-
       `Line-loss_tangents-{k}--1`, `Line-loss_secants-neg` — the same fan
       mirrored, the loss depending on the flow's magnitude
     dims: [scenario, snapshot, line, segment]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     expression: Line_loss - Line_loss_slope * Line_s >= Line_loss_offset
