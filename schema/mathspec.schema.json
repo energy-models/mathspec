@@ -582,9 +582,7 @@
               "enum": [
                 "refused",
                 "absent",
-                "neutral",
-                "inf",
-                "-inf"
+                "neutral"
               ]
             },
             {
@@ -592,9 +590,15 @@
             },
             {
               "type": "number"
+            },
+            {
+              "enum": [
+                "inf",
+                "-inf"
+              ]
             }
           ],
-          "default": null,
+          "default": "refused",
           "title": "Missing"
         }
       },
@@ -753,19 +757,11 @@
           "title": "Key"
         },
         "missing": {
-          "anyOf": [
-            {
-              "enum": [
-                "refused",
-                "absent"
-              ],
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "default": "refused",
+          "enum": [
+            "refused",
+            "absent"
           ],
-          "default": null,
           "title": "Missing"
         },
         "values": {

@@ -60,6 +60,7 @@ def test_no_definition_refers_only_to_itself():
         pytest.param('VariableBlock', 'domain', spec.VariableDomain, id='domain'),
         pytest.param('VariableBlock', 'missing', spec.VariableMissing, id='variable-missing'),
         pytest.param('RelationBlock', 'missing', spec.RelationMissing, id='relation-missing'),
+        pytest.param('ParameterBlock', 'missing', spec.MissingReading, id='parameter-missing'),
         pytest.param('ParameterBlock', 'dtype', spec.ParameterDtype, id='parameter-dtype'),
         pytest.param('DimensionBlock', 'dtype', spec.DimensionDtype, id='dimension-dtype'),
         pytest.param('PiecewiseBlock', 'method', spec.PiecewiseMethod, id='method'),
@@ -73,6 +74,20 @@ def test_a_closed_vocabulary_is_published_as_an_enum(block, field, alias):
         (branch['enum'] for branch in published.get('anyOf', []) if 'enum' in branch), None
     )
     assert enum == list(get_args(alias)), f'{block}.{field} stopped publishing its closed vocabulary'
+
+
+@pytest.mark.parametrize(
+    ('block', 'default'),
+    [
+        pytest.param('ParameterBlock', 'refused', id='parameter'),
+        pytest.param('RelationBlock', 'refused', id='relation'),
+        pytest.param('VariableBlock', 'absent', id='variable'),
+    ],
+)
+def test_the_schema_publishes_the_reading_a_file_gets_by_leaving_missing_out(block, default):
+    """The parameter and the relation hold `None` until read, and the schema published that `null`, not `refused`."""
+    published = json.loads(schema.PATH.read_text())['$defs'][block]['properties']['missing']
+    assert published['default'] == default
 
 
 def test_the_piecewise_method_vocabulary_has_one_home():
