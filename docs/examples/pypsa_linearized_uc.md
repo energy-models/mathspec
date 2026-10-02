@@ -19,7 +19,7 @@ them for the integer run, and the keyword relaxes them in the same way.
 | PyPSA | status | note |
 | --- | --- | --- |
 | [`Generator-status`, `-start_up`, `-shut_down`](#variable-domains) | done | shares in [0, 1] |
-| [`Generator-com-p-before`](#generator-com-p-before) | done | where start and stop cost the same — a data-prep bool |
+| [`Generator-com-p-before`](#generator-com-p-before) | done | where start and stop cost the same in every snapshot — a `count` over `snapshot` |
 | [`Generator-com-p-current`](#generator-com-p-current) | done | |
 | [`Generator-com-partly-start-up`](#generator-com-partly-start-up) | done | |
 | [`Generator-com-partly-shut-down`](#generator-com-partly-shut-down) | done | |
@@ -320,7 +320,7 @@ def build():
 ## The file
 
 <!-- gallery:begin -->
-The relaxed class of a plain `n.optimize()`: `linearized_unit_commitment`, stated on rung 1's transport surface in a file of its own. The status, its starts and its stops are shares in \[0, 1\] rather than binaries — a domain is the spec's, not the data's — and four rows PyPSA adds only under the keyword tighten the relaxation where a unit's start and stop cost the same. The surface is generators, links and loads with a fixed build, in one scenario, every asset active in every snapshot, and only a generator committable. `examples/pypsa.yaml` stays the integer one, and states the rest: a committable link or process, an extendable build, scenarios and `active`.
+The relaxed class of a plain `n.optimize()`: `linearized_unit_commitment`, stated on rung 1's transport surface in a file of its own. The status, its starts and its stops are shares in \[0, 1\] rather than binaries — a domain is the spec's, not the data's — and four rows PyPSA adds only under the keyword tighten the relaxation where a unit's start and stop cost the same in every snapshot (`constraints.py:636-660`). The surface is generators, links and loads with a fixed build, in one scenario, every asset active in every snapshot, and only a generator committable. `examples/pypsa.yaml` stays the integer one, and states the rest: a committable link or process, an extendable build, scenarios and `active`.
 
 #### Sets
 
@@ -362,10 +362,9 @@ The relaxed class of a plain `n.optimize()`: `linearized_unit_commitment`, state
 | $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\mathcal{G}`$ — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot |
 | $`\mathrm{hold}`$ | `Generator_must_stay_up` over $`\mathcal{T} \times \mathcal{G}`$ — true while the up time a unit brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
 | $`\mathrm{rest}`$ | `Generator_must_stay_down` over $`\mathcal{T} \times \mathcal{G}`$ — true while the down time a unit brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
-| $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\mathcal{G}`$ — cost of one start |
-| $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\mathcal{G}`$ — cost of one stop |
+| $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\mathcal{T} \times \mathcal{G}`$ — cost of one start in this snapshot |
+| $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\mathcal{T} \times \mathcal{G}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
-| $`\mathrm{tight}`$ | `Generator_partly_tightened` over $`\mathcal{G}`$ — whether the four tightening rows below apply — PyPSA adds them only where a unit's start-up and shut-down costs are equal; two parameters cannot be compared in a `where`, so the equality is data prep |
 | $`\mathrm{mnt}`$ | `Generator_maintainable` over $`\mathcal{G}`$ — whether a generator must be taken off for maintenance within the horizon |
 | $`\gamma`$ | `Generator_maintenance_pu` over $`\mathcal{G}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{\mathrm{mnt}}`$ | `Generator_maintenance_events` over $`\mathcal{G}`$ — how many maintenance events the horizon holds |
@@ -415,7 +414,7 @@ objective:
 ```
 
 ```math
-\min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{t,g} \cdot \mathrm{w}_{t} + \sum_{t \in \mathcal{T},\ l \in \mathcal{L}} f_{t,l} \cdot \mathrm{c}^{f}_{t,l} \cdot \mathrm{w}_{t} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} u_{t,g} \cdot \mathrm{c}^{\mathrm{on}}_{t,g} \cdot \mathrm{w}_{t} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{up}_{t,g} \cdot \mathrm{c}^{\mathrm{up}}_{g} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dn}_{t,g} \cdot \mathrm{c}^{\mathrm{dn}}_{g}
+\min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{t,g} \cdot \mathrm{w}_{t} + \sum_{t \in \mathcal{T},\ l \in \mathcal{L}} f_{t,l} \cdot \mathrm{c}^{f}_{t,l} \cdot \mathrm{w}_{t} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} u_{t,g} \cdot \mathrm{c}^{\mathrm{on}}_{t,g} \cdot \mathrm{w}_{t} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{up}_{t,g} \cdot \mathrm{c}^{\mathrm{up}}_{t,g} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dn}_{t,g} \cdot \mathrm{c}^{\mathrm{dn}}_{t,g}
 ```
 
 ### `Generator-fix-p-lower`
@@ -844,7 +843,7 @@ Generator_com_p_before:
     the shut-down ramp. The translated term vacates the first snapshot, as
     PyPSA's `sns[1:]` does
   dims: [snapshot, generator]
-  where: Generator_committable AND Generator_partly_tightened
+  where: Generator_committable AND count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) == 0
   expression: >-
     shift(Generator_p, along=snapshot, offset=1)
     - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
@@ -853,7 +852,7 @@ Generator_com_p_before:
 ```
 
 ```math
-p_{t - 1,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t - 1,g} - \left( \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \left( u_{t,g} - \mathit{up}_{t,g} \right) \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{tight}_{g}
+p_{t - 1,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t - 1,g} - \left( \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \left( u_{t,g} - \mathit{up}_{t,g} \right) \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{t',g} \neq \mathrm{c}^{\mathrm{dn}}_{t',g} \} \rvert = 0
 ```
 
 ### `Generator-com-p-current`
@@ -864,14 +863,14 @@ p_{t - 1,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathr
 Generator_com_p_current:
   description: "`Generator-com-p-current` — output fits the share on, and the share starting up only up to the start-up ramp"
   dims: [snapshot, generator]
-  where: Generator_committable AND Generator_partly_tightened AND position(snapshot) > 0
+  where: Generator_committable AND count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) == 0 AND position(snapshot) > 0
   expression: >-
     Generator_p - Generator_p_max_pu * Generator_p_nom * Generator_status
     + (Generator_p_max_pu * Generator_p_nom - Generator_start_up_rate * Generator_p_nom) * Generator_start_up <= 0
 ```
 
 ```math
-p_{t,g} - \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t,g} + \left( \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{ru}}^{\mathrm{up}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \mathit{up}_{t,g} \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{tight}_{g} \wedge \mathrm{pos}(t) > 0
+p_{t,g} - \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t,g} + \left( \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{ru}}^{\mathrm{up}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \mathit{up}_{t,g} \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{t',g} \neq \mathrm{c}^{\mathrm{dn}}_{t',g} \} \rvert = 0 \wedge \mathrm{pos}(t) > 0
 ```
 
 ### `Generator-com-partly-start-up`
@@ -882,7 +881,7 @@ p_{t,g} - \overline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot 
 Generator_com_partly_start_up:
   description: "`Generator-com-partly-start-up` — raising output while a share is starting up is bounded by the ramp of the share on and the start-up ramp of the share coming on"
   dims: [snapshot, generator]
-  where: Generator_committable AND Generator_partly_tightened
+  where: Generator_committable AND count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) == 0
   expression: >-
     Generator_p - shift(Generator_p, along=snapshot, offset=1)
     - (Generator_p_min_pu * Generator_p_nom + Generator_ramp_up_rate * Generator_p_nom) * Generator_status
@@ -892,7 +891,7 @@ Generator_com_partly_start_up:
 ```
 
 ```math
-p_{t,g} - p_{t - 1,g} - \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} + \widetilde{\mathrm{ru}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot u_{t,g} + \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t - 1,g} + \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} + \widetilde{\mathrm{ru}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{ru}}^{\mathrm{up}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \mathit{up}_{t,g} \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{tight}_{g}
+p_{t,g} - p_{t - 1,g} - \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} + \widetilde{\mathrm{ru}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot u_{t,g} + \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t - 1,g} + \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} + \widetilde{\mathrm{ru}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{ru}}^{\mathrm{up}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \mathit{up}_{t,g} \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{t',g} \neq \mathrm{c}^{\mathrm{dn}}_{t',g} \} \rvert = 0
 ```
 
 ### `Generator-com-partly-shut-down`
@@ -903,7 +902,7 @@ p_{t,g} - p_{t - 1,g} - \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\m
 Generator_com_partly_shut_down:
   description: "`Generator-com-partly-shut-down` — lowering output while a share is shutting down is bounded likewise, by the shut-down ramp"
   dims: [snapshot, generator]
-  where: Generator_committable AND Generator_partly_tightened
+  where: Generator_committable AND count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) == 0
   expression: >-
     shift(Generator_p, along=snapshot, offset=1) - Generator_p
     - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
@@ -913,7 +912,7 @@ Generator_com_partly_shut_down:
 ```
 
 ```math
-p_{t - 1,g} - p_{t,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t - 1,g} + \left( \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{rd}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot u_{t,g} - \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} + \widetilde{\mathrm{rd}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \mathit{up}_{t,g} \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{tight}_{g}
+p_{t - 1,g} - p_{t,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t - 1,g} + \left( \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{rd}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot u_{t,g} - \left( \underline{\mathrm{p}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} + \widetilde{\mathrm{rd}}_{t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \right) \cdot \mathit{up}_{t,g} \le 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{t',g} \neq \mathrm{c}^{\mathrm{dn}}_{t',g} \} \rvert = 0
 ```
 
 ### `Generator_previous_status`
