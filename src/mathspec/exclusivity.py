@@ -74,7 +74,8 @@ def overlapping(
             block's ``otherwise`` is not among them: it claims what the rest
             leave, so it overlaps nothing by construction.
         dtypes: The declared dtype of every name a mask compares against.
-        defaults: The declared ``default:`` of every parameter that has one.
+        defaults: The value a missing row reads as, for every parameter whose
+            ``missing:`` names one.
 
     Yields:
         A sentence per pair, naming both cases and either a coordinate they
@@ -205,7 +206,7 @@ class _Grid:
             yield dict(zip(self.domains, combination, strict=True))
 
     def witness(self, cell: dict[Subject, Cell]) -> str:
-        return ', '.join(f'{subject} is {_shown(subject, value)}' for subject, value in cell.items())
+        return ', '.join(_clause(subject, value) for subject, value in cell.items())
 
 
 #: A comparator against its mirror, for a test written with its sides swapped.
@@ -469,13 +470,20 @@ def _rank_cells(subject: Subject, positions_seen: set[int]) -> list[Cell]:
     return cells
 
 
+def _clause(subject: Subject, value: Cell) -> str:
+    """*subject* in one cell, in words. A null cell says the data has no row, never a ``missing:`` reading's name."""
+    if value is Special.NULL:
+        return f'{subject} has no value' if subject.kind == 'expression' else f'{subject} has no row'
+    return f'{subject} is {_shown(subject, value)}'
+
+
 def _shown(subject: Subject, value: Cell) -> str:
     if subject.kind == 'rank':
         return str(value)
     if subject.kind == 'relation_pair':
         return 'equal' if value else 'different'
     if isinstance(value, Special):
-        return {Special.NULL: 'absent', Special.OTHER: 'anything else'}.get(value, value.value)
+        return 'anything else' if value is Special.OTHER else value.value
     if isinstance(value, bool):
         return 'true' if value else 'false'
     return f'{value!r}'
@@ -537,10 +545,10 @@ def _atom(node: TypedPredicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
 
 
 def _read(node: TypedPredicate, value: Cell, grid: _Grid) -> Cell:
-    """What *node* reads in a cell where its parameter has no row: the ``default:``, in a comparison.
+    """What *node* reads in a cell where its parameter has no row: in a comparison, the value ``missing:`` names.
 
     A bare name keeps the null. A numeric one asks whether the data has a row.
-    A ``bool`` one reads its default there, and the cell holding that value is
+    A ``bool`` one reads that value there, and the cell holding that value is
     already in the grid, so the null cell adds no witness either way.
     """
     if value is Special.NULL and isinstance(node, ParameterComparison):

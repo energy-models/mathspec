@@ -335,11 +335,14 @@ class TestAMissingRow:
         """Both cases claim a storage with no `efficiency` row: it is not given, and it reads 1.
 
         The prover read a missing row as false in every comparison, so it proved
-        the two apart, and a coordinate the data leaves out had two values.
+        the two apart, and a coordinate the data leaves out had two values. The
+        witness said `efficiency is absent`, the name of a reading this
+        parameter does not have.
         """
         schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': 1}}))
         [refusal] = refusals(schema, self.CASES)
-        assert 'efficiency is absent' in refusal, 'the witness is the missing row'
+        assert 'efficiency has no row' in refusal, 'the witness is the missing row'
+        assert 'absent' not in refusal, 'the witness does not use the name of a reading for a missing row'
 
     @pytest.mark.parametrize('reading', ['refused', 'absent', 'neutral'])
     def test_under_a_reading_a_missing_row_compares_false(self, reading: str):
