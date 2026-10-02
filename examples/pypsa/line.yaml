@@ -86,7 +86,7 @@ parameters:
     description: >-
       the line's series impedance, signed by its orientation in the cycle —
       the cycle basis, data prep; a line in no cycle has no row. PyPSA builds
-      the cycle basis from the first scenario only (`networks.py:1354-1361`)
+      the cycle basis from the first scenario only (`networks.py:1356-1363`)
     dims: [line, cycle]
   Line_loss_max:
     description: the loss at a line's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep
