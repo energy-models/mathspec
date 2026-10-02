@@ -153,7 +153,7 @@ class WhereResolver:
                     self.errors.append(
                         f"{context}: '{node.name}' has two columns over one dimension ({list(shape.roles)}), so a "
                         f'bare name cannot say which the frame supplies. Compare a column: '
-                        f'{node.name}.{shape.values[0] if shape.values else shape.roles[-1]} == ....'
+                        f'{node.name}[{shape.values[0] if shape.values else shape.roles[-1]}] == ....'
                     )
                     return node
                 return RelationDefined(node.name, dims)
@@ -519,7 +519,7 @@ class WhereResolver:
             if len(shape.values) != 1:
                 self.errors.append(
                     f"{context}: '{spelling}': '{name}' has {len(shape.values)} value columns ({list(shape.values)}), "
-                    f'so say which the comparison reads: {name}.{shape.values[0] if shape.values else "..."}.'
+                    f'so say which the comparison reads: {name}[{shape.values[0]}].'
                 )
                 return None
             return shape.values[0]

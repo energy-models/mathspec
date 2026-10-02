@@ -1396,7 +1396,7 @@ class TestRulesDecidedWithoutData:
                     'relations.pair': {'key': {'g0': 'g', 'g1': 'g'}},
                     'variables.q.where': 'pair',
                 },
-                ('has two columns over one dimension', 'Compare a column'),
+                ('has two columns over one dimension', 'Compare a column: pair[g1] =='),
                 id='where-bare-name-of-a-relation-with-two-columns-over-one-dim',
             ),
             pytest.param(
@@ -1626,7 +1626,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'dimensions.z': {}, 'relations.lk.values': ['h', 'z'], 'variables.p.where': "lk == 'x'"},
-                ("'lk' has 2 value columns (['h', 'z'])", 'say which the comparison reads: lk.h'),
+                ("'lk' has 2 value columns (['h', 'z'])", 'say which the comparison reads: lk[h]'),
                 id='where-a-relation-of-two-value-columns-read-bare',
             ),
             pytest.param(
@@ -1679,6 +1679,27 @@ class TestRulesDecidedWithoutData:
         assert named is not None, f'the refusal holds out no call to write instead: {message}'
         rewrite = named.group(1).replace('...', operand)
         _schema(**{'constraints.k': {'dims': ['g'], 'expression': f'{rewrite} >= 0'}}, **patch)
+
+    @pytest.mark.parametrize(
+        ('patch', 'where'),
+        [
+            pytest.param(
+                {'dimensions.z': {}, 'relations.lk.values': ['h', 'z']},
+                "lk == 'x'",
+                id='a-relation-of-two-value-columns-read-bare',
+            ),
+        ],
+    )
+    def test_the_column_a_bare_comparison_is_told_to_read_is_one_the_language_takes(self, patch, where):
+        """A refusal that names a column is holding out a rewrite, so the rewrite has to load.
+
+        Was: the message named the column as `lk.h`, which the where grammar
+        no longer parses. A column is written `lk[h]`.
+        """
+        message = _refusal(**{'variables.p.where': where}, **patch)
+        named = re.search(r'say which the comparison reads: (\S+)\.$', message)
+        assert named is not None, f'the refusal holds out no column to read instead: {message}'
+        _schema(**{'variables.p.where': where.replace('lk', named.group(1), 1)}, **patch)
 
 
 class TestAssumptions:
