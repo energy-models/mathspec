@@ -2511,12 +2511,12 @@ constraints:
   Generator_com_p_lower:
     description: "`Generator-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active
+    where: Generator_committable AND not Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
     expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
   Generator_com_p_upper:
     description: "`Generator-com-p-upper` — a committed unit outputs at most what is available; off, at most nothing"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active
+    where: Generator_committable AND not Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
     expression: Generator_p <= Generator_p_max_pu * Generator_p_nom * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
   Generator_com_transition_start_up:
     description: "`Generator-com-transition-start-up` — turning on is a start, counted against the state the unit carried into the snapshot"
@@ -2749,17 +2749,17 @@ constraints:
   Generator_maint_status_le_status:
     description: "`Generator-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
     expression: Generator_maintenance_status <= Generator_status
   Generator_maint_status_le_maint:
     description: "`Generator-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
     expression: Generator_maintenance_status <= Generator_maintenance
   Generator_maint_status_lb:
     description: "`Generator-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_active
+    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
     expression: Generator_maintenance_status >= Generator_status + Generator_maintenance - 1
   Generator_maint_modstatus_le_status:
     description: "`Generator-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
@@ -2781,12 +2781,12 @@ constraints:
   Link_com_p_lower:
     description: "`Link-com-p-lower` — a committed link flows at least its minimum; off, at least nothing"
     dims: [scenario, snapshot, link]
-    where: Link_committable AND not Link_p_nom_extendable AND Link_active
+    where: Link_committable AND not Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0) AND Link_active
     expression: Link_p >= Link_p_min_pu * Link_p_nom * (Link_status - Link_maintenance_pu * Link_maintenance_status)
   Link_com_p_upper:
     description: "`Link-com-p-upper` — a committed link flows at most what is available; off, at most nothing"
     dims: [scenario, snapshot, link]
-    where: Link_committable AND not Link_p_nom_extendable AND Link_active
+    where: Link_committable AND not Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0) AND Link_active
     expression: Link_p <= Link_p_max_pu * Link_p_nom * (Link_status - Link_maintenance_pu * Link_maintenance_status)
   Link_com_transition_start_up:
     description: "`Link-com-transition-start-up` — turning on is a start, counted against the state the link carried into the snapshot"
@@ -3019,17 +3019,17 @@ constraints:
   Link_maint_status_le_status:
     description: "`Link-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND Link_active
+    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0) AND Link_active
     expression: Link_maintenance_status <= Link_status
   Link_maint_status_le_maint:
     description: "`Link-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND Link_active
+    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0) AND Link_active
     expression: Link_maintenance_status <= Link_maintenance
   Link_maint_status_lb:
     description: "`Link-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND Link_active
+    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0) AND Link_active
     expression: Link_maintenance_status >= Link_status + Link_maintenance - 1
   Link_maint_modstatus_le_status:
     description: "`Link-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
@@ -3051,12 +3051,12 @@ constraints:
   Process_com_p_lower:
     description: "`Process-com-p-lower` — a committed process runs at least its minimum; off, at least nothing"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND not Process_p_nom_extendable AND Process_active
+    where: Process_committable AND not Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
     expression: Process_p >= Process_p_min_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_p_upper:
     description: "`Process-com-p-upper` — a committed process runs at most what is available; off, at most nothing"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND not Process_p_nom_extendable AND Process_active
+    where: Process_committable AND not Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
     expression: Process_p <= Process_p_max_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_transition_start_up:
     description: "`Process-com-transition-start-up` — turning on is a start, counted against the state the process carried into the snapshot"
@@ -3289,17 +3289,17 @@ constraints:
   Process_maint_status_le_status:
     description: "`Process-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_active
+    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
     expression: Process_maintenance_status <= Process_status
   Process_maint_status_le_maint:
     description: "`Process-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_active
+    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
     expression: Process_maintenance_status <= Process_maintenance
   Process_maint_status_lb:
     description: "`Process-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_active
+    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
     expression: Process_maintenance_status >= Process_status + Process_maintenance - 1
   Process_maint_modstatus_le_status:
     description: "`Process-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"

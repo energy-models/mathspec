@@ -14,12 +14,17 @@ import importlib
 import math
 import re
 import sys
+from typing import TYPE_CHECKING
 
 import pytest
 
 from mathspec import to_spec
+from mathspec.exclusivity import Subject, _evaluate, _Grid, _subject_of
 from tools import gallery
 from tools.gallery import DECLARED, RECORDED, REFERENCES, _names_for, _stands_for
+
+if TYPE_CHECKING:
+    from mathspec.program import Mask
 
 RUNGS = sorted(path.stem for path in REFERENCES.glob('rung_*.py'))
 SCRIPT = REFERENCES / 'reference.py'
@@ -154,6 +159,35 @@ def test_pypsa_builds_no_row_the_files_do_not_declare():
 def test_every_declared_row_is_built_by_some_reference():
     unbuilt = {name for name in ROWS_DECLARED - GC_TYPES if not any(_stated(name, row) for row in RECORDED_ROWS)}
     assert not unbuilt, f'no reference network builds these declared rows — extend a fixture: {sorted(unbuilt)}'
+
+
+def _admits(mask: Mask, component: str, unit: dict[str, bool | float]) -> bool:
+    """Whether a mask over one component's own parameters holds for a unit with those values, read by the exclusivity check."""
+    cell = {Subject('param', f'{component}_{name}'): value for name, value in unit.items()}
+    return _evaluate(mask.root, cell, _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}))
+
+
+@pytest.mark.parametrize('component', ['Generator', 'Link', 'Process'])
+def test_a_fixed_modular_committable_unit_gets_only_its_per_module_commitment_rows(component: str):
+    """PyPSA/PyPSA#1901: the file built `com-p-*` and `maint-status-*` for rung 8's `array`, which PyPSA master does not.
+
+    Those rows scale `p_nom` by a status that counts modules, which held rungs
+    25 and 26 above PyPSA's objective.
+    """
+    unit = {'committable': True, 'p_nom_extendable': False, 'p_nom_mod': 5.0, 'maintainable': True, 'active': True}
+    families = ('com_p_', 'com_mod_p_', 'maint_status_', 'maint_modstatus_')
+    admitted = {
+        name.removeprefix(f'{component}_')
+        for name, block in BASE.program.constraints.items()
+        if name.removeprefix(f'{component}_').startswith(families) and _admits(block.where, component, unit)
+    }
+    assert admitted == {
+        'com_mod_p_lower',
+        'com_mod_p_upper',
+        'maint_modstatus_le_status',
+        'maint_modstatus_le_maint',
+        'maint_modstatus_lb',
+    }, 'a fixed modular committable unit gets the per-module rows and no whole-unit ones'
 
 
 def test_the_spine_weightings_are_generic():
