@@ -71,21 +71,21 @@ variables:
       the rows below cap at one, or at the module count where the build is
       modular
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_active
+    where: Process_committed
     domain: integer
     bounds:
       lower: 0
   Process_start_up:
     description: "`Process-start_up` — how much of a committable process turns on this snapshot, capped as the status is"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_active
+    where: Process_committed
     domain: integer
     bounds:
       lower: 0
   Process_shut_down:
     description: "`Process-shut_down` — how much of a committable process turns off this snapshot, capped as the status is"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_active
+    where: Process_committed
     domain: integer
     bounds:
       lower: 0
@@ -111,6 +111,8 @@ given:
     Process_p_nom_ext: { dims: [process] }
   expressions:
     scenario_opex: { dims: [scenario] }
+  masks:
+    Process_committed: { dims: [snapshot, process] }
 
 expressions:
   Process_previous_status:
@@ -128,26 +130,38 @@ expressions:
       + sum(sum(Process_shut_down * Process_shut_down_cost, over=process), over=snapshot)
     adds_to: scenario_opex
 
+masks:
+  Process_com_ext:
+    description: >-
+      a committable process with an extendable, non-modular build that stands
+      in the snapshot's period — PyPSA's `com-ext` rows, whose status is
+      relaxed against the chosen build
+    where: >-
+      Process_committable
+      AND Process_p_nom_extendable
+      AND NOT (Process_p_nom_mod > 0)
+      AND Process_active
+
 constraints:
   Process_com_p_lower:
     description: "`Process-com-p-lower` — a committed process runs at least its minimum; off, at least nothing"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND not Process_p_nom_extendable AND Process_active
+    where: Process_committed AND NOT Process_p_nom_extendable
     expression: Process_p >= Process_p_min_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_p_upper:
     description: "`Process-com-p-upper` — a committed process runs at most what is available; off, at most nothing"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND not Process_p_nom_extendable AND Process_active
+    where: Process_committed AND NOT Process_p_nom_extendable
     expression: Process_p <= Process_p_max_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_transition_start_up:
     description: "`Process-com-transition-start-up` — turning on is a start, counted against the state the process carried into the snapshot"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_active
+    where: Process_committed
     expression: Process_start_up >= Process_status - Process_previous_status
   Process_com_transition_shut_down:
     description: "`Process-com-transition-shut-down` — turning off is a stop, counted against the state the process carried into the snapshot"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_active
+    where: Process_committed
     expression: Process_shut_down >= Process_previous_status - Process_status
   Process_com_up_time:
     description: >-
@@ -155,7 +169,7 @@ constraints:
       is still on. The first snapshot's share of the window is the brought-in
       up time's, which the must-stay-up mask carries
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_min_up_time > 0 AND position(snapshot) > 0 AND Process_active
+    where: Process_committed AND Process_min_up_time > 0 AND position(snapshot) > 0
     expression: sum_back(Process_start_up, along=snapshot, window=Process_min_up_time) <= Process_status
   Process_com_down_time:
     description: >-
@@ -163,38 +177,38 @@ constraints:
       time is still off. The first snapshot's share of the window is the
       brought-in down time's, which the must-stay-down mask carries
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_min_down_time > 0 AND position(snapshot) > 0 AND Process_active
+    where: Process_committed AND Process_min_down_time > 0 AND position(snapshot) > 0
     expression: sum_back(Process_shut_down, along=snapshot, window=Process_min_down_time) <= 1 - Process_status
   Process_com_status_must_stay_up:
     description: "`Process-com-status-min_up_time_must_stay_up` — a process still serving the up time it brought in stays on"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_must_stay_up AND Process_active
+    where: Process_committed AND Process_must_stay_up
     expression: Process_status == 1
   Process_com_status_must_stay_down:
     description: >-
       `Process-com-status-min_down_time_must_stay_up` — a process still serving
       the down time it brought in stays off; PyPSA names the row `_must_stay_up`
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_must_stay_down AND Process_active
+    where: Process_committed AND Process_must_stay_down
     expression: Process_status == 0
   Process_com_ext_p_upper_cap:
     description: >-
       `Process-com-ext-p-upper-cap` — a committed extendable process runs
       at most what is available of the chosen build, whatever its status
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
+    where: Process_com_ext
     expression: Process_p <= Process_p_max_pu * (Process_p_nom_ext - Process_maintenance_pu * Process_maintenance_capacity)
   Process_com_ext_p_upper_big_m:
     description: "`Process-com-ext-p-upper-bigM` — off, a process does not run; on, the big M is no bound"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
+    where: Process_com_ext
     expression: Process_p <= Process_big_m * Process_status
   Process_com_ext_p_lower:
     description: >-
       `Process-com-ext-p-lower` — a committed extendable process runs at
       least its minimum of the chosen build; off, the big M releases the row
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
+    where: Process_com_ext
     expression: >-
       Process_p >=
       Process_p_min_pu * (Process_p_nom_ext - Process_maintenance_pu * Process_maintenance_capacity)
@@ -205,23 +219,21 @@ constraints:
       negative, internal power is also plainly non-negative, a row the big-M lower
       cannot assert while the process is off
     dims: [scenario, snapshot, process]
-    where: >-
-      Process_committable AND Process_p_nom_extendable
-      AND Process_p_min_pu_nonneg AND NOT (Process_p_nom_mod > 0) AND Process_active
+    where: Process_com_ext AND Process_p_min_pu_nonneg
     expression: Process_p >= 0
   Process_com_mod_p_lower:
     description: >-
       `Process-com-mod-p-lower` — a committed modular process runs at least
       its minimum of one module, whether the build is fixed or a decision
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_p_nom_mod > 0 AND Process_active
+    where: Process_committed AND Process_p_nom_mod > 0
     expression: Process_p >= Process_p_min_pu * Process_p_nom_mod * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_mod_p_upper:
     description: >-
       `Process-com-mod-p-upper` — a committed modular process runs at most
       one module's share, whether the build is fixed or a decision
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_p_nom_mod > 0 AND Process_active
+    where: Process_committed AND Process_p_nom_mod > 0
     expression: Process_p <= Process_p_max_pu * Process_p_nom_mod * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_status_p_fixed_upper:
     description: >-
@@ -229,7 +241,7 @@ constraints:
       place, an explicit row as PyPSA writes it: one where the build is not
       modular, and the fixed build's whole count of modules where it is
     dims: [scenario, snapshot, process]
-    where: Process_committable AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0) AND Process_active
+    where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
     expression: Process_status <= Process_modules_installed
   Process_start_up_p_fixed_upper:
     description: >-
@@ -237,7 +249,7 @@ constraints:
       place, an explicit row as PyPSA writes it: one where the build is not
       modular, and the fixed build's whole count of modules where it is
     dims: [scenario, snapshot, process]
-    where: Process_committable AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0) AND Process_active
+    where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
     expression: Process_start_up <= Process_modules_installed
   Process_shut_down_p_fixed_upper:
     description: >-
@@ -245,20 +257,20 @@ constraints:
       place, an explicit row as PyPSA writes it: one where the build is not
       modular, and the fixed build's whole count of modules where it is
     dims: [scenario, snapshot, process]
-    where: Process_committable AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0) AND Process_active
+    where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
     expression: Process_shut_down <= Process_modules_installed
   Process_status_p_nom_variable_upper:
     description: "`Process-status-p_nom-variable-upper` — a modular process is on only where a module is built"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_p_nom_extendable AND Process_p_nom_mod > 0 AND Process_active
+    where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
     expression: Process_status <= Process_n_mod
   Process_start_up_p_nom_variable_upper:
     description: "`Process-start_up-p_nom-variable-upper` — a modular process starts only where a module is built"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_p_nom_extendable AND Process_p_nom_mod > 0 AND Process_active
+    where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
     expression: Process_start_up <= Process_n_mod
   Process_shut_down_p_nom_variable_upper:
     description: "`Process-shut_down-p_nom-variable-upper` — a modular process stops only where a module is built"
     dims: [scenario, snapshot, process]
-    where: Process_committable AND Process_p_nom_extendable AND Process_p_nom_mod > 0 AND Process_active
+    where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
     expression: Process_shut_down <= Process_n_mod

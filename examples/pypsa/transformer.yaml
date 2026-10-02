@@ -137,7 +137,7 @@ variables:
       a line does; absent, and zero in the balance, where the network is
       lossless
     dims: [scenario, snapshot, transformer]
-    where: transmission_losses AND Transformer_active
+    where: Transformer_lossy
     absence: zero
     bounds:
       lower: 0
@@ -193,6 +193,13 @@ expressions:
       + sum(Transformer_phase_shift * Transformer_phase_shift_cycle_weight, over=transformer)
     adds_to: Cycle_angle_sum
 
+masks:
+  Transformer_lossy:
+    description: >-
+      a transformer that stands in the snapshot's period, where the run models
+      transmission losses
+    where: transmission_losses AND Transformer_active
+
 constraints:
   Transformer_fix_s_lower:
     description: "`Transformer-fix-s-lower` — a fixed transformer carries at least the negative of its rating, the loss counted against it"
@@ -237,7 +244,7 @@ constraints:
   Transformer_loss_upper:
     description: "`Transformer-loss_upper` — a transformer dissipates at most the loss at its rating"
     dims: [scenario, snapshot, transformer]
-    where: transmission_losses AND Transformer_active
+    where: Transformer_lossy
     expression: Transformer_loss <= Transformer_loss_max
   Transformer_loss_tangents_forward:
     description: >-
@@ -245,12 +252,12 @@ constraints:
       loss sits above every cut to its curve for flow one way, as a line's
       does, over the segment dimension
     dims: [scenario, snapshot, transformer, segment]
-    where: transmission_losses AND Transformer_active
+    where: Transformer_lossy
     expression: Transformer_loss + Transformer_loss_slope * Transformer_s >= Transformer_loss_offset
   Transformer_loss_tangents_reverse:
     description: >-
       `Transformer-loss_tangents-{k}--1`, `Transformer-loss_secants-neg` — the
       same fan mirrored, the loss depending on the flow's magnitude
     dims: [scenario, snapshot, transformer, segment]
-    where: transmission_losses AND Transformer_active
+    where: Transformer_lossy
     expression: Transformer_loss - Transformer_loss_slope * Transformer_s >= Transformer_loss_offset

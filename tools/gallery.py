@@ -104,6 +104,8 @@ def symbols_for(model: Spec, table_path: Path = LIBRARY_SYMBOLS) -> dict[str, An
         *given.variables,
         *given.expressions,
         *given.constraints,
+        *model.masks,
+        *given.masks,
     }
     return {
         'notation': table['notation'],
