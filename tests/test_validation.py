@@ -2338,7 +2338,7 @@ def test_inf_and_dot_inf_load_as_one_number():
         .missing
         for spelling in ('inf', '.inf')
     ]
-    assert read == [float('inf'), float('inf')]
+    assert read == [float('inf'), float('inf')], 'the string `inf` and the number `.inf` read as the same infinity'
 
 
 @pytest.mark.parametrize(
