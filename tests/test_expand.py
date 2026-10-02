@@ -11,6 +11,7 @@ are about the verb rather than about either formulation — those are in
 
 from __future__ import annotations
 
+import copy
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -18,7 +19,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mathspec import piecewise, to_spec
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, schema_of, varied
+from mathspec.errors import LanguageError
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, schema_of, varied
 from tests.test_sos import CURVE
 from tools.render_tex import models
 
@@ -122,7 +124,9 @@ def test_an_expansion_declares_exactly_the_parameters_the_file_declared():
     schema = schema_of(MASKED)
     expanded = schema.expand()
 
-    assert expanded.parameters == schema.parameters, 'a curve emits no parameter, so the same data attaches to both'
+    assert {name: (p.dims, p.dtype) for name, p in expanded.parameters.items()} == {
+        name: (p.dims, p.dtype) for name, p in schema.parameters.items()
+    }, 'a curve emits no parameter, so the same data attaches to both'
     assert schema_of(expanded.to_yaml()).to_dict() == expanded.to_dict(), (
         'the expansion is a file like any other, and loading it back changes nothing'
     )
@@ -176,3 +180,54 @@ def test_a_model_with_no_formulation_expands_to_itself():
     spec = schema_of(DISPATCH_MODEL)
 
     assert spec.expand() is spec, 'nothing to write out returns the same object, not a copy'
+
+
+#: `fixtures.SMALL_MODEL` plus a two-link curve over its second dimension, so a
+#: block's own parameters stand beside ordinary ones in one model.
+SMALL_CURVE = {
+    'parameters.bx': {'dims': ['h']},
+    'parameters.by': {'dims': ['h']},
+    'variables.s': {'dims': ['g']},
+    'piecewise.curve': {'over': 'h', 'links': [['p', 'bx'], ['s', 'by']], 'method': 'convex'},
+}
+
+
+@pytest.mark.parametrize(
+    ('points', 'missing'),
+    [
+        pytest.param({'piecewise.curve.points': 'bx'}, 'neutral', id='a-curve-that-says-how-far-it-runs'),
+        pytest.param({}, 'refused', id='a-curve-over-every-breakpoint'),
+    ],
+)
+def test_the_expansion_says_what_a_missing_breakpoint_means(points, missing):
+    """A curve's own parameters answer for no `missing:`, because the block owns their shape. The expansion keeps
+    no block: its weights stand on `points:` and its assumptions ask for a value only where the mask holds. Left
+    unwritten, lowering would report `refused`, and a consumer attaching the rows would refuse the ragged curve the
+    block admits; a curve with no `points:` reads every breakpoint."""
+    rows = schema_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **points)).expand('piecewise').program
+    assert {name: rows.parameters[name].missing for name in ('bx', 'by', 'c')} == {
+        'bx': missing,
+        'by': missing,
+        'c': 'refused',
+    }, "the expansion reads the curve's tables as the block did, and every other parameter as declared"
+
+
+def test_a_parameter_a_curve_owns_answers_for_no_missing():
+    """The block's own parameters report `None`: reporting the unwritten `refused` would tell a consumer to require
+    every coordinate the dims reach, which a ragged curve does not carry."""
+    program = schema_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **{'piecewise.curve.points': 'bx'})).program
+    missing = {name: p.missing for name, p in program.parameters.items()}
+    assert missing == {'c': 'refused', 'k': 'refused', 'flag': 'refused', 'tag': 'refused', 'bx': None, 'by': None}, (
+        "the parameters the block consumes answer for no missing; every other parameter's declaration is carried"
+    )
+
+
+@pytest.mark.parametrize('missing', ['refused', 'neutral', 0])
+def test_missing_on_a_parameter_a_curve_consumes_is_refused(missing):
+    """`points:` already says how far the curve runs, so any `missing:` there claims what the block decided."""
+    with pytest.raises(LanguageError) as caught:
+        to_spec(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **{'parameters.bx.missing': missing}))
+    message = str(caught.value)
+    assert "parameter 'bx'" in message, 'the message names the parameter that has to change'
+    assert "'curve'" in message, 'and the block that already owns the answer'
+    assert "'points:'" in message, 'and names the rewrite'

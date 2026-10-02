@@ -302,9 +302,9 @@ def leaves_ungated(gate: VariableBlock | VariableDeclaration | None) -> bool:
     """Whether a curve gated by *gate* runs ungated where the gate does not exist, which takes a second convexity row.
 
     A masked gate is absent off its mask, and there the curve sums to 1;
-    ``absence: zero`` reads the gate as 0 there instead, which one row states.
+    ``missing: neutral`` reads the gate as 0 there instead, which one row states.
     """
-    return gate is not None and gate.where is not None and gate.absence != 'zero'
+    return gate is not None and gate.where is not None and gate.missing != 'neutral'
 
 
 def curve_frame(schema: Spec, name: str, pw: PiecewiseBlock, links: Iterable[Expression]) -> tuple[str, ...]:
@@ -441,7 +441,7 @@ class _Block:
         reduction, so the right-hand side would take the row with it and leave the
         weights without the convexity that makes them a curve at all (#1158).
 
-        ``absence: zero`` is the other reading and stays one row — the gate is 0
+        ``missing: neutral`` is the other reading and stays one row — the gate is 0
         where it does not exist, so the curve is pinned off there.
         """
         activity = self.pw.activity
@@ -489,6 +489,12 @@ def expand_piecewise(schema: Spec) -> Spec:
     binaries are what the method *is*, so the spec that comes back carries no
     set of its own ([`mathspec.sos.emit`][] is where they are spelled).
     Each block's frame and names are read off the program *schema* lowered to.
+
+    A parameter only curves with ``points:`` consume is read only where their
+    mask holds, since the weights and the segment rows stand on it, so the
+    expansion declares it ``missing: neutral``; the ``<block>_complete``
+    assumption states where it must carry a row. A parameter a curve over
+    every breakpoint reads keeps the default, ``refused``.
     """
     if not schema.piecewise:
         return schema
@@ -498,6 +504,10 @@ def expand_piecewise(schema: Spec) -> Spec:
     raw.setdefault('constraints', {})
     for name, pw in schema.piecewise.items():
         _Block(schema, raw, name, pw, program.piecewise[name]).expand()
+    ragged = {n for pw in schema.piecewise.values() if pw.points for n in pw.consumes}
+    ragged -= {n for pw in schema.piecewise.values() if not pw.points for n in pw.consumes}
+    for parameter in ragged:
+        raw['parameters'][parameter]['missing'] = 'neutral'
     raw['piecewise'].clear()
     for name, pw in schema.piecewise.items():
         if pw.method == 'adjacency':

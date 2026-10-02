@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language): `missing:` says what a missing row means, and a table is complete unless the file says otherwise ([#810](https://github.com/energy-models/mathspec/pull/810))
 - docs(pypsa): a line, a transformer, a storage unit and a store may be built in whole modules, and a unit that is not active counts no modules ([#815](https://github.com/energy-models/mathspec/pull/815))
 - docs(pypsa): the cycle rows read each investment period's own cycle basis ([#814](https://github.com/energy-models/mathspec/pull/814))
 - docs(pypsa): a start-up or shut-down cost may change from snapshot to snapshot, as in pypsa master ([#807](https://github.com/energy-models/mathspec/pull/807))

@@ -70,6 +70,7 @@ parameters:
   Link_big_m:
     description: a bound safely above any feasible flow — the build cap at full availability, data prep
     dims: [scenario, link]
+    missing: neutral
 
 variables:
   Link_status:

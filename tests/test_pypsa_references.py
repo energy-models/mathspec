@@ -164,7 +164,7 @@ def test_every_declared_row_is_built_by_some_reference():
 def _admits(mask: Mask, component: str, unit: dict[str, bool | float]) -> bool:
     """Whether a mask over one component's own parameters holds for a unit with those values, read by the exclusivity check."""
     cell = {Subject('param', f'{component}_{name}'): value for name, value in unit.items()}
-    return _evaluate(mask.root, cell, _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}))
+    return _evaluate(mask.root, cell, _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}, {}))
 
 
 @pytest.mark.parametrize('component', ['Generator', 'Link', 'Process'])

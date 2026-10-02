@@ -28,11 +28,12 @@ The **key** is the combination of dimensions that is unique per row:
 what that row determines: its bus. With no `values:`, the key is every column,
 and the table is a **bare relation**.
 
-| Field         |                                                                  |                |
-| ------------- | ---------------------------------------------------------------- | -------------- |
-| `key`         | required. The columns that identify a row                        |                |
-| `values`      | the columns the key determines. Omitted, the key is every column | default none   |
-| `description` | free text                                                        | default `null` |
+| Field         |                                                                  |                   |
+| ------------- | ---------------------------------------------------------------- | ----------------- |
+| `key`         | required. The columns that identify a row                        |                   |
+| `values`      | the columns the key determines. Omitted, the key is every column | default none      |
+| `missing`     | `refused` or `absent`: what a key the map leaves out means       | default `refused` |
+| `description` | free text                                                        | default `null`    |
 
 A column is named after its dimension. Where two columns share a dimension, the
 mapping form names them: `{bus0: bus, bus1: bus}`.
@@ -62,11 +63,32 @@ column per declared column, named after it.
   is attached.
 - **Every value is a label of its dimension.** A value that matches none is
   refused.
-- **A partial map is the rows it has.** A generator in no row sits on no bus,
-  which is [absence](absence.md).
+- **A relation with `values:` has a row for every key coordinate.** A
+  generator the table leaves out is refused when the data is attached, and the
+  refusal names it.
+- **Under `missing: absent`, a partial map is the rows it has.** A generator in
+  no row sits on no bus, which is [absence](absence.md): its terms land in no
+  group.
 - **A null in any column is refused.**
 - **Row order carries nothing.** The order is the
   [dimension's](dimensions.md).
+
+A generator on no bus and a port nobody wired look the same in the data, so
+`missing:` says which was meant:
+
+```yaml
+dimensions:
+  generator: { dtype: str }
+  bus: { dtype: str }
+  line: { dtype: str }
+relations:
+  gen_bus: { key: generator, values: bus } # refused: every generator is on a bus
+  line_to: { key: line, values: bus, missing: absent } # an open end is meant
+```
+
+A label is data, so no value fills a gap in a map, and `neutral` is refused. A
+bare relation takes no `missing:`: its rows are its membership, so a pair it
+leaves out is not missing.
 
 ## How a relation is used
 

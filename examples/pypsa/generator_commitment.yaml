@@ -63,6 +63,7 @@ parameters:
   Generator_big_m:
     description: a bound safely above any feasible output — the build cap at full availability, data prep
     dims: [scenario, generator]
+    missing: neutral
 
 variables:
   Generator_status:

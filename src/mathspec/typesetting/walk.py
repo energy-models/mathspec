@@ -56,7 +56,7 @@ from mathspec.program import (
     VariableDefined,
     WindowSum,
 )
-from mathspec.typesetting.format import Line, OperatorName
+from mathspec.typesetting.format import Line, OperatorName, number
 from mathspec.typesetting.legend import TranslationPolicy, policy_of
 
 if TYPE_CHECKING:
@@ -301,15 +301,7 @@ class Walk:
         return _Context(self, bound=tuple(frame))
 
     def _number(self, value: float) -> str:
-        if value == float('inf'):
-            return self._op('infinity')
-        if value == int(value):
-            return str(int(value))
-        mantissa, _, exponent = repr(value).partition('e')
-        if not exponent:
-            return mantissa
-        power = self.format.superscript('10', str(int(exponent)))
-        return power if mantissa == '1' else f'{mantissa} {self._op("times")} {power}'
+        return number(value, self.format)
 
     # -- arithmetic --------------------------------------------------------
 
@@ -938,7 +930,7 @@ class Walk:
         the curve is built for, the factor is the gate where it exists and 1
         where it does not — the two rows the expansion writes there, because a
         variable that does not exist takes its row with it and would leave the
-        curve unstated rather than ungated. ``absence: zero`` is the other
+        curve unstated rather than ungated. ``missing: neutral`` is the other
         reading and pins the curve off, which is the factor on its own.
         """
         if (activity := block.activity) is None:
@@ -946,7 +938,7 @@ class Walk:
         gate = self.program.variables[activity]
         symbol = ctx.indexed(self.symbols.name[activity], list(gate.dims))
         mask = gate.where
-        if mask is None or gate.absence == 'zero':
+        if mask is None or gate.missing == 'neutral':
             return symbol
         where = self._predicate(mask.root, ctx, need=_WHERE_PRECEDENCE['and'])
         return self.format.cases(

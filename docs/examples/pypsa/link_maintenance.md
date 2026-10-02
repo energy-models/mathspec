@@ -50,6 +50,7 @@ parameters:
       `Link_maintenance_cover` and `Link_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [scenario, link]
+    missing: neutral
   Link_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it
@@ -66,7 +67,7 @@ variables:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, link]
     where: Link_maintainable AND Link_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: 1
@@ -74,7 +75,7 @@ variables:
     description: "`Link-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, link]
     where: Link_maintainable AND Link_active
-    absence: zero
+    missing: neutral
     domain: binary
   Link_maintenance_capacity:
     description: >-
@@ -84,7 +85,7 @@ variables:
     where: >-
       Link_maintainable AND Link_p_nom_extendable
       AND NOT (Link_committable AND Link_p_nom_mod > 0) AND Link_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Link_maintenance_status:
@@ -96,7 +97,7 @@ variables:
     where: >-
       Link_maintainable AND Link_committable
       AND NOT (Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)) AND Link_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
 

@@ -25,12 +25,12 @@ from mathspec.program import (
     WindowSum,
     walk_regions,
 )
-from mathspec.typesetting.format import Entry
+from mathspec.typesetting.format import Entry, number
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from mathspec.program import Expression, Mask, Program, RelationDeclaration
+    from mathspec.program import Expression, Mask, Missing, Program, RelationDeclaration
     from mathspec.typesetting.format import Format, OperatorName
     from mathspec.typesetting.symbols import Symbols
 
@@ -148,7 +148,11 @@ class Legend:
             for d, block in program.dimensions.items()
         ]
         parameters = [
-            self._entry(self.symbols.name[p], f'{fmt.mono(p)}{self._over(list(block.dims))}', block.description)
+            self._entry(
+                self.symbols.name[p],
+                f'{fmt.mono(p)}{self._over(list(block.dims))}{self._default(block.missing)}',
+                block.description,
+            )
             for p, block in program.parameters.items()
         ]
         variables = [
@@ -214,6 +218,17 @@ class Legend:
             return ' (scalar)'
         product = self.format.joined([self.symbols.set[d] for d in dims], self._op('times'))
         return f' over {self.format.math(product)}'
+
+    def _default(self, value: Missing | None) -> str:
+        """The value a missing row reads as, where ``missing:`` names one; nothing for a reading."""
+        if value is None or isinstance(value, str):
+            return ''
+        shown = (
+            self.format.mono(str(value).lower())
+            if isinstance(value, bool)
+            else self.format.math(number(value, self.format))
+        )
+        return f', {shown} where the data has no row'
 
     def _signature(self, name: str, lk: RelationDeclaration) -> str:
         """A relation in the legend: a function from its key sets to its value sets, or a relation inside the product."""

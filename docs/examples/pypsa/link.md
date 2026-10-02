@@ -106,6 +106,7 @@ parameters:
   Link_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [link]
+    missing: neutral
   Link_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Link_p_nom
@@ -136,6 +137,7 @@ parameters:
   Link_p_set:
     description: a given flow schedule; a link without one has no row here
     dims: [scenario, snapshot, link]
+    missing: neutral
   Link_p_nom_min:
     description: least nominal power an extendable link may be built at
     dims: [scenario, link]
@@ -148,6 +150,7 @@ parameters:
   Link_p_nom_set:
     description: a given nominal power for an extendable link; one without a value has no row here
     dims: [scenario, link]
+    missing: neutral
   Link_volume_weight:
     description: >-
       the link's length where its carrier is in the row's set, the first
@@ -156,6 +159,7 @@ parameters:
       link outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [scenario, global_constraint, link]
+    missing: neutral
   Link_expansion_cost_weight:
     description: >-
       the link's capital cost where its carrier is in the row's set, times
@@ -164,12 +168,14 @@ parameters:
       link outside the set, or one that does not stand in the row's period,
       has no row
     dims: [scenario, global_constraint, link]
+    missing: neutral
   Link_tech_capacity_weight:
     description: >-
       one where the link is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, link]
+    missing: neutral
 
 variables:
   Link_p:
