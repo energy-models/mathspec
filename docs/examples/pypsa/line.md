@@ -89,6 +89,19 @@ parameters:
   Line_s_set:
     description: a given flow schedule; a line without one has no row here
     dims: [scenario, snapshot, line]
+  Line_v_ang_max:
+    description: >-
+      the most the voltage angle difference across a line may be either way,
+      in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default.
+      A line whose carrier is not AC has no row either. The deprecated `v_ang_min` is
+      ignored, as PyPSA ignores it with a `DeprecationWarning`
+      (`constraints.py:1713-1720`)
+    dims: [scenario, line]
+  Line_x_pu_eff:
+    description: >-
+      the line's effective series reactance — PyPSA's `x_pu_eff`, `x` over
+      the square of its bus's nominal voltage, data prep
+    dims: [scenario, line]
   Line_cycle_weight:
     description: >-
       the line's series impedance, signed by its orientation in the cycle —
@@ -247,6 +260,21 @@ constraints:
     dims: [scenario, snapshot, line]
     where: Line_s_set AND Line_active
     expression: Line_s == Line_s_set
+  Line_v_ang_lower:
+    description: >-
+      `Line-v_ang-lower` — an AC line carries at least the flow at which the
+      voltage angle difference across it, `x_pu_eff` times the flow in
+      radians, is the negative of its limit
+    dims: [scenario, snapshot, line]
+    where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+    expression: Line_s >= -Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
+  Line_v_ang_upper:
+    description: >-
+      `Line-v_ang-upper` — an AC line carries at most the flow at which the
+      voltage angle difference across it reaches its limit
+    dims: [scenario, snapshot, line]
+    where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+    expression: Line_s <= Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
   Line_loss_upper:
     description: "`Line-loss_upper` — a line dissipates at most the loss at its rating"
     dims: [scenario, snapshot, line]
@@ -299,6 +327,8 @@ constraints:
 | $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\Xi \times \mathcal{K}`$ — cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
 | $`\mathrm{s}^{\mathrm{nom,set}}`$ | `Line_s_nom_set` over $`\Xi \times \mathcal{K}`$ — a given nominal apparent power for an extendable line; one without a value has no row here |
 | $`\mathrm{s}^{\mathrm{set}}`$ | `Line_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — a given flow schedule; a line without one has no row here |
+| $`\overline{\delta}`$ | `Line_v_ang_max` over $`\Xi \times \mathcal{K}`$ — the most the voltage angle difference across a line may be either way, in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default. A line whose carrier is not AC has no row either. The deprecated `v_ang_min` is ignored, as PyPSA ignores it with a `DeprecationWarning` (`constraints.py:1713-1720`) |
+| $`\mathrm{x}^{\mathrm{eff}}`$ | `Line_x_pu_eff` over $`\Xi \times \mathcal{K}`$ — the line's effective series reactance — PyPSA's `x_pu_eff`, `x` over the square of its bus's nominal voltage, data prep |
 | $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{K} \times \mathcal{C}`$ — the line's series impedance, signed by its orientation in the cycle — the cycle basis, data prep; a line in no cycle has no row. PyPSA builds the cycle basis from the first scenario only (`networks.py:1356-1363`) |
 | $`\overline{\ell}`$ | `Line_loss_max` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the loss at a line's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep |
 | $`\mathrm{a}`$ | `Line_loss_slope` over $`\Xi \times \mathcal{T} \times \mathcal{K} \times \mathcal{E}`$ — the slope of a cut to the loss curve — a tangent's `2 * r_pu_eff * p_k` at its segment's flow, a secant's `r_pu_eff * (p_k + p_k+1)` between consecutive breakpoints, data prep |
@@ -390,6 +420,18 @@ S_{k} = \mathrm{s}^{\mathrm{nom,set}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \
 
 ```math
 s_{\xi,t,k} = \mathrm{s}^{\mathrm{set}}_{\xi,t,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{s}^{\mathrm{set}}_{\xi,t,k} \text{ is defined} \wedge \mathrm{on}^{s}_{t,k}
+```
+
+**`Line_v_ang_lower`**
+
+```math
+s_{\xi,t,k} \ge \frac{-\overline{\delta}_{\xi,k} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{\xi,k}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \overline{\delta}_{\xi,k} \text{ is defined} \wedge \mathrm{Line\_carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{t,k}
+```
+
+**`Line_v_ang_upper`**
+
+```math
+s_{\xi,t,k} \le \frac{\overline{\delta}_{\xi,k} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{\xi,k}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \overline{\delta}_{\xi,k} \text{ is defined} \wedge \mathrm{Line\_carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{t,k}
 ```
 
 **`Line_loss_upper`**
