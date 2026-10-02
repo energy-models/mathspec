@@ -85,10 +85,11 @@ def dims_of(node: Expression, schema: Spec, context: str) -> frozenset[str]:
     if isinstance(node, Negate | Add | Multiply | Power | Divide):
         return frozenset().union(*(dims_of(child, schema, context) for child in children(node)))
 
-    inner = dims_of(node.operand, schema, context)
     if isinstance(node, Sum):
-        return _sum_dims(node, inner, context)
+        return _sum_dims(node, schema, context)
+    inner = dims_of(node.operand, schema, context)
     if isinstance(node, Join):
+        assert not node.columns.axes, 'a join that opens axes is read only by the sum that closes them'
         return join_dims(node.columns, inner, context, 'the expression')
     if isinstance(node, Translate | WindowSum):
         return _translation_dims(node, inner, schema, context)
@@ -112,21 +113,28 @@ def _not_carried(context: str, call: str, inner: frozenset[str], rewrite: str) -
     )
 
 
-def _sum_dims(node: Sum, inner: frozenset[str], context: str) -> frozenset[str]:
-    """``sum`` reduces each named dim away, so the operand carries every one."""
+def _sum_dims(node: Sum, schema: Spec, context: str) -> frozenset[str]:
+    """``sum`` reduces each dim in ``over`` away, so the operand carries every one.
+
+    The axes a join opens never reach a frame: the sum over the join closes
+    every one, so its frame is the join's frame less them.
+    """
+    if isinstance(node.operand, Join) and node.operand.columns.axes:
+        join = node.operand
+        assert node.over == join.columns.axes, 'a sum through a relation closes exactly the axes its join opens'
+        return join_dims(join.columns, dims_of(join.operand, schema, context), context, 'the expression')
+    inner = dims_of(node.operand, schema, context)
     for summed in node.over:
-        if summed not in inner:
+        if summed.dimension not in inner:
             raise DimensionError(_not_carried(context, f'sum(over={summed})', inner, 'drop the sum, or fix the dim'))
-    return inner - frozenset(node.over)
+    return inner - {axis.dimension for axis in node.over}
 
 
 def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand: str) -> frozenset[str]:
     """The dims *inner* has once *columns* joins it, an expression's or a predicate's alike.
 
-    The dims joined on go, the dims grouped by arrive, and each column joined
-    on and not grouped by opens its own axis ([`JoinColumns.axes`][mathspec.program.JoinColumns.axes]), which
-    the [`Sum`][mathspec.program.Sum] over the join takes away. A column
-    both joined on and grouped by keeps its dim. The call a refusal quotes is
+    The dims joined on go and the dims grouped by arrive. A column both
+    joined on and grouped by keeps its dim. The call a refusal quotes is
     ``at`` where each group is one row, and ``sum`` otherwise.
 
     Raises:
@@ -155,7 +163,7 @@ def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand
             f'or group by a column over another dimension.'
         )
     _check_joined(call, columns, inner, context)
-    return (inner - set(columns.joined_dims)) | set(columns.grouped_dims) | set(columns.axes)
+    return (inner - set(columns.joined_dims)) | set(columns.grouped_dims)
 
 
 #: The verb a file writes each translation with, which its refusals quote.

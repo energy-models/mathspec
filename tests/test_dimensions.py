@@ -12,7 +12,7 @@ import pytest
 
 from mathspec.dimensions import DimensionError, _check_where_dims, dims_of
 from mathspec.errors import SchemaError
-from mathspec.program import Join, Mask, RelationPairComparison, Sum
+from mathspec.program import Axis, Column, Join, Mask, RelationPairComparison, Sum
 from mathspec.resolution import Namespace
 from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, expression_of, schema_of, varied, where_of
@@ -235,19 +235,16 @@ def test_a_lookup_carries_the_whole_key_and_what_the_operand_brings_beside_it():
 
 
 def test_a_join_opens_an_axis_for_the_column_it_drops_and_the_sum_over_it_closes_it():
-    """A map into its own dimension drops and adds one dimension, so the join names the dropped column for the relation.
+    """A map into its own dimension drops and adds one dimension, so the axis the join opens stands for the column.
 
-    Named for its dimension, the column the join drops and the column it
-    groups by are one name, and the sum over the join takes away the dim the
-    row keeps.
+    The dropped column's axis runs over `snapshot` and stands for
+    `rep_of[snapshot]`, so it is not the dimension's own axis. The sum over
+    the join closes it, and the frame keeps the `snapshot` the row groups by.
     """
     s = _schema()
     node = expression_of('sum(p, over=snapshot, by=rep_of[rep])', Namespace(s), 't')
     assert isinstance(node, Sum) and isinstance(node.operand, Join)
-    assert node.over == ('rep_of.snapshot',), 'the sum stands over the axis the join opens'
-    assert dims_of(node.operand, s, 't') == {'generator', 'snapshot', 'rep_of.snapshot'}, (
-        'the join keeps the dropped column beside the dimension it groups by'
-    )
+    assert node.over == (Axis('snapshot', Column('rep_of', 'snapshot')),), 'the sum stands over the axis the join opens'
     assert dims_of(node, s, 't') == {'generator', 'snapshot'}, 'and the sum over it leaves the frame the row keeps'
 
 
