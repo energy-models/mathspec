@@ -76,6 +76,10 @@ parameters:
     description: whether the nominal power is a decision
     dims: [storage_unit]
     dtype: bool
+  StorageUnit_p_nom_mod:
+    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    dims: [storage_unit]
+    missing: neutral
   StorageUnit_p_min_pu:
     description: most storing, per unit of nominal power and negated
     dims: [scenario, snapshot, storage_unit]
@@ -214,6 +218,13 @@ variables:
       parameter of the same PyPSA name carries the fixed regime
     dims: [storage_unit]
     where: StorageUnit_p_nom_extendable
+  StorageUnit_n_mod:
+    description: "`StorageUnit-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
+    dims: [storage_unit]
+    where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_mod > 0 AND count(StorageUnit_active, over=snapshot) > 0
+    domain: integer
+    bounds:
+      lower: 0
 
 given:
   parameters:
@@ -396,6 +407,11 @@ constraints:
     dims: [scenario, storage_unit]
     where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_set
     expression: StorageUnit_p_nom_ext == StorageUnit_p_nom_set
+  StorageUnit_p_nom_modularity:
+    description: "`StorageUnit-p_nom_modularity` — the chosen build is a whole number of modules"
+    dims: [storage_unit]
+    where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_mod > 0 AND count(StorageUnit_active, over=snapshot) > 0
+    expression: StorageUnit_p_nom_ext == StorageUnit_p_nom_mod * StorageUnit_n_mod
   StorageUnit_energy_balance:
     description: >-
       `StorageUnit-energy_balance` — the charge carried in, plus what is
@@ -478,7 +494,7 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive
 ```
 
@@ -507,6 +523,7 @@ assumptions:
 | $`\mathrm{h}^{\mathrm{nom,set}}`$ | `StorageUnit_p_nom_set` over $`\Xi \times \mathcal{S}`$ — a given nominal power for an extendable storage unit; one without a value has no row here |
 | $`\mathrm{h}^{\mathrm{nom}}`$ | `StorageUnit_p_nom` over $`\Xi \times \mathcal{S}`$ — nominal power |
 | $`\mathrm{ext}^{h}`$ | `StorageUnit_p_nom_extendable` over $`\mathcal{S}`$ — whether the nominal power is a decision |
+| $`\mathrm{h}^{\mathrm{mod}}`$ | `StorageUnit_p_nom_mod` over $`\mathcal{S}`$ — the module size a build comes in whole numbers of; no value means the build is continuous |
 | $`\underline{\mathrm{h}}`$ | `StorageUnit_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — most storing, per unit of nominal power and negated |
 | $`\overline{\mathrm{h}}`$ | `StorageUnit_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — most dispatch, per unit of nominal power |
 | $`\mathrm{T}^{h}`$ | `StorageUnit_max_hours` over $`\Xi \times \mathcal{S}`$ — energy capacity, as hours of dispatch at nominal power |
@@ -542,6 +559,7 @@ assumptions:
 | $`\mathit{soc}`$ | `StorageUnit_state_of_charge` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — `StorageUnit-state_of_charge` — energy held at the end of a snapshot |
 | $`\mathit{spill}`$ | `StorageUnit_spill` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — `StorageUnit-spill` — inflow passed on unused. Zero where there is no inflow, so the balance keeps its row there; the bounds are PyPSA's, on the variable rather than as rows |
 | $`H`$ | `StorageUnit_p_nom_ext` over $`\mathcal{S}`$ — `StorageUnit-p_nom` — nominal power where it is a decision; the parameter of the same PyPSA name carries the fixed regime |
+| $`N^{h}`$ | `StorageUnit_n_mod` over $`\mathcal{S}`$ — `StorageUnit-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot |
 
 #### Given
 
@@ -679,6 +697,12 @@ H_{s} \le \overline{\mathrm{h}}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in 
 H_{s} = \mathrm{h}^{\mathrm{nom,set}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{h}^{\mathrm{nom,set}}_{\xi,s} \text{ is defined}
 ```
 
+**`StorageUnit_p_nom_modularity`**
+
+```math
+H_{s} = \mathrm{h}^{\mathrm{mod}}_{s} \cdot N^{h}_{s} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{h}^{\mathrm{mod}}_{s} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{h}_{t,s} \} \rvert > 0
+```
+
 **`StorageUnit_energy_balance`**
 
 ```math
@@ -795,6 +819,12 @@ h^{-}_{\xi,t,s} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},
 
 ```math
 H_{s} \in \mathbb{R} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s}
+```
+
+**`StorageUnit_n_mod`**
+
+```math
+N^{h}_{s} \ge 0, N^{h}_{s} \in \mathbb{Z} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{h}^{\mathrm{mod}}_{s} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{h}_{t,s} \} \rvert > 0
 ```
 
 #### Assumptions
