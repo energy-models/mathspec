@@ -7,7 +7,7 @@
 The two grammars cache each text they parse, so a second load of the same file
 in one process skips most of the work. A benchmark that repeats a call without
 emptying them measures the cache: `examples/pypsa.yaml` loads in 0.14 s warm
-and 0.62 s cold. A user who runs `python -m mathspec` meets the cold cost.
+and 0.62 s cold (#838). A user who runs `python -m mathspec` meets the cold cost.
 """
 
 from __future__ import annotations
