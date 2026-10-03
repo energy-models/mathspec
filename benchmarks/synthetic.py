@@ -7,8 +7,10 @@
 The real examples stop at the 4,431 lines of `examples/pypsa.yaml`, so they
 cannot show whether a verb grows faster than the file. Each class here is one
 PyPSA-like component: a dimension of its own mapped to a bus, a capacity, an
-output bounded by it where the unit is active, a ramp row through `shift`, and
-two terms added to the shared balance and cost.
+output bounded by it where the unit is active, a ramp row up and one down
+through `shift`, and two terms added to the shared balance and cost. The two
+ramp rows share their `where:` text, as the rows of one PyPSA component do, so
+a load hits the parse cache as a real file does.
 """
 
 from __future__ import annotations
@@ -45,6 +47,10 @@ def component(k: int) -> dict[str, str]:
             f'    dims: [snapshot, {u}]\n'
             f'    where: {u}_active\n'
             f'    expression: {u}_p - shift({u}_p, along=snapshot, offset=1) <= {u}_ramp * {u}_cap\n'
+            f'  {u}_ramp_down:\n'
+            f'    dims: [snapshot, {u}]\n'
+            f'    where: {u}_active\n'
+            f'    expression: shift({u}_p, along=snapshot, offset=1) - {u}_p <= {u}_ramp * {u}_cap\n'
         ),
     }
 
