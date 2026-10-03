@@ -4,40 +4,47 @@
 
 """The export surface, pinned — because a consumer depends on it by name.
 
-`mathspec.__all__` is what another repository is allowed to import, so an
-addition to it is a decision, and the table below is where it is recorded.
+Four modules, one rule each: `mathspec` is what a consumer calls,
+`mathspec.spec` what the file says, `mathspec.program` what it means, and
+`mathspec.errors` what a consumer catches. An addition to any of them is a
+decision, and the tables below are where it is recorded.
 """
 
 from __future__ import annotations
 
 import ast
+import inspect
+import types
 from pathlib import Path
 
 import pytest
 
 import mathspec
-from mathspec import Spec, program, typesetting
+from mathspec import errors, program, spec
+from mathspec.spec import Spec
 
 #: Every name `mathspec` promises. Grouped as a reader meets them, not
 #: alphabetically: the alphabetical form is `__all__` itself, and repeating it
 #: here would make the two one list checked against itself.
 SURFACE = frozenset(
     {
-        # the two public states, and the door to both
-        'Spec', 'to_spec', 'program',
-        # the error tree, and the one wording a consumer's own refusals share
-        'MathSpecError', 'LanguageError', 'SchemaError', 'DimensionError',
-        'did_you_mean',
+        # the door to a file, and the three modules behind it
+        'to_spec', 'spec', 'program', 'errors',
         # the verdicts a consumer asks for rather than re-deriving
-        'advice', 'Advice', 'AdviceKind',
-        # the closed operator set, the one vocabulary with no Literal form, which a consumer pins its table against
-        'BUILTIN_NAMES',
-        # typesetting
-        'FORMATS', 'SymbolTable', 'typeset', 'typeset_declaration', 'to_latex', 'to_typst', 'to_markdown',
+        'advice',
+        # typesetting, and the two inputs it takes
+        'typeset', 'typeset_declaration', 'to_latex', 'to_typst', 'to_markdown', 'FormatName', 'SymbolTable',
         # the two file-level verbs: peers composed, and patches laid over a base
         'merge', 'override',
     }
 )  # fmt: skip
+
+#: What the top level holds besides functions: the three modules, and the two
+#: things a consumer builds or names to pass to `typeset`.
+NOT_CALLED = frozenset({'spec', 'program', 'errors', 'FormatName', 'SymbolTable'})
+
+#: The names `mathspec.spec` exports without defining them.
+SPEC_REEXPORTS = frozenset({'BUILTIN_NAMES'})
 
 #: What `Spec` promises beyond the sections a file declares: the two ways back
 #: out, the verb that writes a formulation out, and the program the file means.
@@ -47,8 +54,9 @@ SPEC_SURFACE = frozenset({'to_dict', 'to_yaml', 'expand', 'program'})
 #: The modules whose `__all__` a consumer imports from.
 MODULES = [
     pytest.param(mathspec, id='mathspec'),
-    pytest.param(typesetting, id='typesetting'),
+    pytest.param(spec, id='spec'),
     pytest.param(program, id='program'),
+    pytest.param(errors, id='errors'),
 ]
 
 
@@ -108,3 +116,29 @@ def test_the_program_module_exports_everything_it_defines():
     assert declared == defined, (
         f'only in __all__: {sorted(declared - defined)}; defined but unexported: {sorted(defined - declared)}'
     )
+
+
+def test_the_top_level_is_what_a_consumer_calls():
+    """A type a consumer receives lives in `spec` or `program`, and an error in `errors`."""
+    held = {n for n in mathspec.__all__ if n not in NOT_CALLED and not inspect.isfunction(getattr(mathspec, n))}
+    assert not held, f'not a function, so not top level: {sorted(held)}'
+    modules = {n for n in mathspec.__all__ if isinstance(getattr(mathspec, n), types.ModuleType)}
+    assert modules == {'spec', 'program', 'errors'}, f'the top level re-exports {sorted(modules)}'
+
+
+def test_the_spec_module_exports_every_class_it_defines():
+    """`Spec` hands out its blocks, so each one is public: a block class added without a decision fails here."""
+    declared = set(spec.__all__)
+    classes = {n for n, obj in vars(spec).items() if inspect.isclass(obj) and obj.__module__ == spec.__name__}
+    public = {n for n in classes if not n.startswith('_')}
+    assert public <= declared, f'defined but unexported: {sorted(public - declared)}'
+    stray = declared - _defined_by(spec) - SPEC_REEXPORTS
+    assert not stray, f'exported but neither defined nor a pinned re-export: {sorted(stray)}'
+
+
+def test_the_errors_module_exports_the_error_tree():
+    """Every exception class is one a consumer catches, so none is left out."""
+    raised = {n for n, obj in vars(errors).items() if inspect.isclass(obj) and issubclass(obj, Exception)}
+    assert raised <= set(errors.__all__), f'unexported errors: {sorted(raised - set(errors.__all__))}'
+    others = {n for n in errors.__all__ if not inspect.isclass(getattr(errors, n))}
+    assert others == {'did_you_mean'}, f'errors exports {sorted(others)} besides the error tree'

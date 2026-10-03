@@ -90,7 +90,7 @@ is one the file declared.
 ## Formulations written out
 
 A program holds each curve and each set as one declaration until
-[`Spec.expand()`](api.md#mathspec.Spec.expand) writes it out. An engine that
+[`Spec.expand()`](spec.md#mathspec.spec.Spec.expand) writes it out. An engine that
 builds rows reads the program of `spec.expand('piecewise')` if it takes a set,
 and the program of `spec.expand()` if it does not. The program of an expansion
 holds no curve:

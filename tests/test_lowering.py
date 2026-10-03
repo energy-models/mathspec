@@ -15,8 +15,9 @@ from typing import get_args
 
 import pytest
 
-from mathspec import LanguageError, Spec, to_spec
+from mathspec import to_spec
 from mathspec._where_parser import parse_where
+from mathspec.errors import LanguageError
 from mathspec.exclusivity import overlapping
 from mathspec.program import (
     Add,
@@ -62,6 +63,7 @@ from mathspec.program import (
     where_children,
 )
 from mathspec.resolution import Namespace
+from mathspec.spec import Spec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, expanded, expression_of, schema_of, varied, where_of
 
 DISPATCH_YAML = EXAMPLES / 'dispatch.yaml'

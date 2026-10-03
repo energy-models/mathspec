@@ -23,8 +23,9 @@ import pytest
 import yaml
 
 import mathspec.spec as spec_module
-from mathspec import LanguageError, merge, override, to_markdown, to_spec
+from mathspec import merge, override, to_markdown, to_spec
 from mathspec.canonical import canonical_yaml
+from mathspec.errors import LanguageError
 from tests.fixtures import DISPATCH_MODEL, varied
 
 if TYPE_CHECKING:
