@@ -4,21 +4,26 @@
 
 """The language: what a YAML file may say, and what it means.
 
-Two public states — a [`Spec`][] is what the file *says*,
-and its [`program`][mathspec.spec.Spec.program] is what it *means* — and
-[`to_spec`][], the one door to both. Everything between them — both grammars
-and the tree they build — is package-private, because a consumer reads a
-program instead.
+The top level is what a consumer calls: [`to_spec`][], the one door to a
+file, and the verbs over what it returns. The rest of the surface is three
+modules, each with one rule:
+
+- [`mathspec.spec`][] is what the file *says*: [`Spec`][mathspec.spec.Spec]
+  and the blocks it holds.
+- [`mathspec.program`][] is what the file *means*: the
+  [`Program`][mathspec.program.Program] a spec lowers to, its nodes, and the
+  [`Advice`][mathspec.program.Advice] the language gives about it.
+- [`mathspec.errors`][] is what a consumer catches.
+
+Everything between them — both grammars and the tree they build — is
+package-private, because a consumer reads a program instead.
 """
 
-from mathspec import program
+from mathspec import errors, program, spec
 from mathspec.advising import advice
 from mathspec.composition import merge, override
-from mathspec.errors import Advice, AdviceKind, DimensionError, LanguageError, MathSpecError, SchemaError, did_you_mean
-from mathspec.operators import BUILTIN_NAMES
-from mathspec.spec import Spec
 from mathspec.typesetting import (
-    FORMATS,
+    FormatName,
     SymbolTable,
     to_latex,
     to_markdown,
@@ -29,21 +34,14 @@ from mathspec.typesetting import (
 from mathspec.validation import to_spec
 
 __all__ = [
-    'BUILTIN_NAMES',
-    'FORMATS',
-    'Advice',
-    'AdviceKind',
-    'DimensionError',
-    'LanguageError',
-    'MathSpecError',
-    'SchemaError',
-    'Spec',
+    'FormatName',
     'SymbolTable',
     'advice',
-    'did_you_mean',
+    'errors',
     'merge',
     'override',
     'program',
+    'spec',
     'to_latex',
     'to_markdown',
     'to_spec',

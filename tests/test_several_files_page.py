@@ -20,8 +20,8 @@ from pathlib import Path
 
 import pytest
 
-from mathspec import LanguageError
 from mathspec.__main__ import main
+from mathspec.errors import LanguageError
 
 PAGE = Path(__file__).resolve().parent.parent / 'docs' / 'several-files.md'
 TEXT = PAGE.read_text()
