@@ -132,7 +132,7 @@ expressions:
     description: >-
       the commitment state a link carries into a snapshot — off at the
       first snapshot it stands in past the first of the horizon, as PyPSA
-      reads a status it did not build (`constraints.py:297`), and the state
+      reads a status it did not build (`constraints.py:298`), and the state
       carried over otherwise
     dims: [scenario, snapshot, link]
     cases:
@@ -347,7 +347,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the commitment state a link carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:297`), and the state carried over otherwise |
+| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the commitment state a link carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
 | $`\overleftarrow{u}^{\circ f}`$ | `Link_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the state a link carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Link\_commitment\_opex}`$ | `Link_commitment_opex` over $`\Xi`$ |
 

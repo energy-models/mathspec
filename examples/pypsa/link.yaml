@@ -69,26 +69,24 @@ parameters:
       share of the flow that arrives at an output port, PyPSA's `efficiency`,
       `efficiency2`, … read long — negative where that port consumes rather
       than delivers. Read at the snapshot the flow arrives, so a delayed port
-      delivers at its arrival snapshot's efficiency (`constraints.py:1528`)
+      delivers at its arrival snapshot's efficiency (`constraints.py:1498`)
     dims: [scenario, snapshot, link_output]
   Link_output_delay:
     description: >-
       snapshots a port's delivery lags its link's flow — PyPSA's `delay`,
       `delay2`, … read long, in `snapshot_weightings.generators` units, which
       the file states as whole snapshots; zero for a port that delivers at once.
-      Each scenario takes its own. PyPSA groups the ports by delay over
-      all scenarios and shifts each group in every one, so a delay that differs
-      by scenario delivers the flow twice (`constraints.py:1275-1282`,
-      PyPSA/PyPSA#1941)
-    dims: [scenario, link_output]
+      The same in every scenario: PyPSA refuses a delay that differs by
+      scenario (`constants.py:52`)
+    dims: [link_output]
     dtype: int
   Link_output_cyclic_delay:
     description: >-
       whether a delayed port's flow wraps from the end of its investment
       period — PyPSA's `cyclic_delay`, `cyclic_delay2`, …; where it does not,
-      the flow still in transit at each period's first snapshots is lost. Each
-      scenario takes its own, as the delay
-    dims: [scenario, link_output]
+      the flow still in transit at each period's first snapshots is lost. The
+      same in every scenario, as the delay
+    dims: [link_output]
     dtype: bool
   Link_marginal_cost:
     description: cost of one unit of flow
@@ -122,9 +120,7 @@ parameters:
   Link_first_active:
     description: >-
       one in the first period a link stands in, zero elsewhere, data prep.
-      PyPSA takes `active.cumsum() == 1`, which also counts a link
-      that has retired in every later period (`global_constraints.py:276`,
-      PyPSA/PyPSA#1938)
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
     dims: [period, link]
   Link_p_set:
     description: a given flow schedule; a link without one has no row here
@@ -145,12 +141,11 @@ parameters:
     dims: [scenario, link]
   Link_p_nom_set:
     description: a given nominal power for an extendable link; one without a value has no row here
-    dims: [scenario, link]
+    dims: [link]
   Link_volume_weight:
     description: >-
-      the link's length where its carrier is in the row's set, the first
-      scenario's length as PyPSA reads it (`global_constraints.py:835-836`) —
-      data prep; a
+      the link's length in each scenario where its carrier is in the row's
+      set (`global_constraints.py:847-848`) — data prep; a
       link outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [scenario, global_constraint, link]
@@ -162,7 +157,7 @@ parameters:
       link outside the set, or one that does not stand in the row's period,
       has no row. The capital cost is PyPSA's `capital_cost` property, which is
       `Link_capital_cost` without `fom_cost` (`components.py:1151-1169`,
-      `global_constraints.py:935`)
+      `global_constraints.py:870-879`)
     dims: [scenario, global_constraint, link]
   Link_tech_capacity_weight:
     description: >-
@@ -303,7 +298,7 @@ constraints:
     expression: Link_p_nom_ext <= Link_p_nom_max
   Link_p_nom_set:
     description: "`Link-p_nom_set` — the chosen build pinned, wherever a value is given"
-    dims: [scenario, link]
+    dims: [link]
     where: Link_p_nom_extendable AND Link_p_nom_set
     expression: Link_p_nom_ext == Link_p_nom_set
   Link_p_nom_modularity:
