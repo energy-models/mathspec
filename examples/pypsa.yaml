@@ -10,8 +10,8 @@ description: >-
   per scenario. Capacity is chosen once, before the future is known, and paid
   once per active period at its cost in expectation over the scenarios;
   operation is the expectation over the scenarios' weights, with a share priced
-  at the tail through the CVaR rows, which stand only where that share is
-  positive. A plain run feeds one scenario, one period, all-active masks and
+  at the tail through the CVaR rows, which stand only where a risk preference
+  is set. A plain run feeds one scenario, one period, all-active masks and
   unit weights, and the model collapses to the standard one. A
   security-constrained run copies each branch flow limit once per outage in an
   `outage` set that a plain run leaves empty. Which snapshots an asset is
@@ -573,7 +573,7 @@ parameters:
     description: PyPSA's `scenario_weightings.weight` — the probability of a future
     dims: [scenario]
   CVaR_omega:
-    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation; zero recovers the risk-neutral model
+    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. With none there are no CVaR variables or rows; with `omega = 0` PyPSA builds them, and the optimum is the risk-neutral one
     dims: []
   CVaR_alpha:
     description: PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability
@@ -1762,14 +1762,20 @@ variables:
   CVaR_a:
     description: "`CVaR-a` — how far a scenario's operating cost exceeds the tail's start; nothing where it does not"
     dims: [scenario]
+    where: CVaR_omega
+    absence: zero
     bounds:
       lower: 0
   CVaR_theta:
     description: "`CVaR-theta` — where the tail starts, the value at risk"
     dims: []
+    where: CVaR_omega
+    absence: zero
   CVaR:
     description: "`CVaR` — the tail's average cost, what the objective prices at `omega`"
     dims: []
+    where: CVaR_omega
+    absence: zero
 
 expressions:
   Generator_previous_status:
@@ -4214,12 +4220,12 @@ constraints:
   CVaR_excess:
     description: "`CVaR-excess-{s}` — a scenario's operating cost beyond the tail's start is its excess; PyPSA names one row per scenario"
     dims: [scenario]
-    where: CVaR_omega > 0
+    where: CVaR_omega
     expression: CVaR_a - scenario_opex + CVaR_theta >= 0
   CVaR_def:
     description: "`CVaR-def` — the tail's average is at least where it starts plus the expected excess over the tail's probability"
     dims: []
-    where: CVaR_omega > 0
+    where: CVaR_omega
     expression: CVaR_theta + 1 / (1 - CVaR_alpha) * sum(scenario_weight * CVaR_a, over=scenario) <= CVaR
 
 assumptions:
@@ -4430,44 +4436,44 @@ assumptions:
       PyPSA refuses it (`global_constraints.py:696`)
   Generator_marginal_cost_quadratic_without_risk_preference:
     holds: "Generator_marginal_cost_quadratic == 0"
-    where: "CVaR_omega > 0"
+    where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:470-477`). The spec cannot tell no risk preference from
-      one with `omega = 0`, so it refuses only where `omega` is positive
+      (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+      `CVaR_omega` row only where a risk preference is set
   Link_marginal_cost_quadratic_without_risk_preference:
     holds: "Link_marginal_cost_quadratic == 0"
-    where: "CVaR_omega > 0"
+    where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:470-477`). The spec cannot tell no risk preference from
-      one with `omega = 0`, so it refuses only where `omega` is positive
+      (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+      `CVaR_omega` row only where a risk preference is set
   Process_marginal_cost_quadratic_without_risk_preference:
     holds: "Process_marginal_cost_quadratic == 0"
-    where: "CVaR_omega > 0"
+    where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:470-477`). The spec cannot tell no risk preference from
-      one with `omega = 0`, so it refuses only where `omega` is positive
+      (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+      `CVaR_omega` row only where a risk preference is set
   StorageUnit_marginal_cost_quadratic_without_risk_preference:
     holds: "StorageUnit_marginal_cost_quadratic == 0"
-    where: "CVaR_omega > 0"
+    where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:470-477`). The spec cannot tell no risk preference from
-      one with `omega = 0`, so it refuses only where `omega` is positive
+      (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+      `CVaR_omega` row only where a risk preference is set
   Store_marginal_cost_quadratic_without_risk_preference:
     holds: "Store_marginal_cost_quadratic == 0"
-    where: "CVaR_omega > 0"
+    where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:470-477`). The spec cannot tell no risk preference from
-      one with `omega = 0`, so it refuses only where `omega` is positive
+      (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+      `CVaR_omega` row only where a risk preference is set
   GlobalConstraint_tech_capacity_expansion_limit_without_scenarios:
     holds: "GlobalConstraint_type != 'tech_capacity_expansion_limit'"
     where: "count(scenario_weight, over=scenario) > 1"

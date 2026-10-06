@@ -1309,9 +1309,10 @@ scenario as well. Capacity does not, because it is chosen once before the
 future is known. The operating cost is the expectation over the scenarios'
 weights. A risk preference adds the CVaR (conditional value at risk) rows: an
 excess per scenario and the tail's average, blended into the objective at
-`omega`. PyPSA builds neither row without a risk preference
-(`optimize.py:458`). The file builds them only where `omega` is positive, so a
-plain run, and a risk preference with `omega = 0`, has none.
+`omega`. PyPSA builds the CVaR columns and rows under any risk preference, and
+none without one (`optimize.py:461`). The file builds them only where
+`CVaR_omega` has a row, and data prep writes that row only where a risk
+preference is set. A plain run has none. Rung 70 sets `omega = 0`.
 
 A parameter spans `scenario` exactly when PyPSA reads it per scenario. PyPSA
 reads component data through `c.da`, one value per scenario
@@ -1336,8 +1337,8 @@ phase shift spans none, while PyPSA reads it per scenario
 | [`Generator-p`, `Link-p`](#variable-domains) | done | over `scenario`; `Generator-p_nom` is not — chosen once |
 | [`Generator-fix-p-*`, `-ext-p-*`, `Link-fix-p-*`, `Bus-nodal_balance`](#generator-fix-p-lower) | done | rungs 1 and 3, over `scenario` |
 | [`CVaR-a`, `CVaR-theta`, `CVaR`](#variable-domains) | done | |
-| [`CVaR-excess-{s}`](#cvar-excess-s) | split | PyPSA names a row per scenario; one block over the dimension; none where `omega` is zero |
-| [`CVaR-def`](#cvar-def) | done | `1 / (1 - alpha)` is data prep; none where `omega` is zero |
+| [`CVaR-excess-{s}`](#cvar-excess-s) | split | PyPSA names a row per scenario; one block over the dimension; none without a risk preference |
+| [`CVaR-def`](#cvar-def) | done | `1 / (1 - alpha)` is data prep; none without a risk preference |
 | [objective](#objective) | done | capacity once, at its capital cost in expectation over the scenarios; operation `(1 - omega)` in expectation, `omega` at the tail |
 | `Generator-p_max_pu` and other component data per scenario | done | every parameter PyPSA reads per scenario spans `scenario`; operating data in rung 41, first-stage bounds and capital cost in rung 42 |
 
@@ -5295,6 +5296,63 @@ def build():
 </details>
 <!-- reference:rung_69_storage_retires_before_close:end -->
 
+### Rung 70 — a risk preference of weight zero
+
+Rung 14 with `n.set_risk_preference(alpha=0.5, omega=0.0)`. PyPSA builds
+`CVaR-a`, `CVaR-theta`, `CVaR`, `CVaR-excess-{s}` and `CVaR-def` under any risk
+preference (`optimize.py:461`, `variables.py:488`), and refuses a quadratic
+cost (`optimize.py:470-477`). Without a risk preference it builds none of
+them. Both solve to `7946.733333333334`; the risk preference adds 3 rows (#849). The
+file stated the CVaR columns always, and the rows and the refusal only where
+`omega > 0`, so this rung got the columns and neither the rows nor the
+refusal. Now the columns, the rows and the refusal stand where `CVaR_omega`
+has a row, and `0.0` is a row. Data prep writes it only where a risk
+preference is set. The columns take `absence: zero`, so the objective term
+`CVaR_omega * CVaR` stands without them.
+
+| PyPSA | status | note |
+| --- | --- | --- |
+| [`CVaR-a`, `CVaR-theta`, `CVaR`](#variable-domains) at `omega = 0` | done | where `CVaR_omega` has a row |
+| [`CVaR-excess-{s}`](#cvar-excess-s), [`CVaR-def`](#cvar-def) at `omega = 0` | done | where `CVaR_omega` has a row |
+| a quadratic cost at `omega = 0` | refused, as PyPSA | [`Generator_marginal_cost_quadratic_without_risk_preference`](#generator_marginal_cost_quadratic_without_risk_preference) and the others |
+
+<!-- reference:rung_70_risk_preference_zero:begin -->
+> ✔ `pypsa 1.3.0.post1.dev41+g51986084b` solves this rung's network at objective `7946.733333333334`, 87 rows.
+
+<details markdown="1">
+<summary>The network, as PyPSA code</summary>
+
+`rung_70_risk_preference_zero.py`
+
+```python
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+"""Rung 70: rung 14 with a risk preference of weight zero — PyPSA builds the CVaR columns and rows all the same."""
+
+from __future__ import annotations
+
+import spine
+
+
+def build():
+    """Rung 14's calm and stormy futures, with `omega = 0`: the optimum is the risk-neutral one."""
+    n = spine.build()
+    n.add('Generator', 'wind70', bus='south', p_nom_extendable=True, p_nom_max=100, marginal_cost=1, capital_cost=20)
+    n.add('Load', 'port70', bus='south')
+    n.set_scenarios({'calm': 0.6, 'stormy': 0.4})
+    n.c.loads.dynamic.p_set[('calm', 'port70')] = [10, 20, 15, 10]
+    n.c.loads.dynamic.p_set[('stormy', 'port70')] = [40, 60, 50, 30]
+    n.c.generators.dynamic.p_max_pu[('calm', 'wind70')] = [0.9, 0.7, 0.8, 0.6]
+    n.c.generators.dynamic.p_max_pu[('stormy', 'wind70')] = [0.3, 0.2, 0.4, 0.1]
+    n.set_risk_preference(alpha=0.5, omega=0.0)
+    return n
+```
+
+</details>
+<!-- reference:rung_70_risk_preference_zero:end -->
+
 ## Refusals
 
 Where PyPSA refuses to build, parity means refusing too. None is a language
@@ -5305,7 +5363,7 @@ the records above are from PyPSA master at `51986084`.
 
 | PyPSA raises                                 | on                                                | here                    | note |
 | -------------------------------------------- | ------------------------------------------------- | ----------------------- | ---- |
-| `ValueError`, `optimize.py:467-474`          | a nonzero `marginal_cost_quadratic` on any Generator, Link, Process, StorageUnit or Store under a risk preference | assumed where `omega > 0`: [`Generator_marginal_cost_quadratic_without_risk_preference`](#generator_marginal_cost_quadratic_without_risk_preference), and the `Link`, `Process`, `StorageUnit` and `Store` ones. The file cannot tell no risk preference from `omega = 0`, which PyPSA also refuses | |
+| `ValueError`, `optimize.py:470-477`          | a nonzero `marginal_cost_quadratic` on any Generator, Link, Process, StorageUnit or Store under a risk preference, `omega = 0` included | assumed where `CVaR_omega` has a row: [`Generator_marginal_cost_quadratic_without_risk_preference`](#generator_marginal_cost_quadratic_without_risk_preference), and the `Link`, `Process`, `StorageUnit` and `Store` ones | |
 | `ValueError`, `constraints.py:1835`          | fixed modular `p_nom` not a multiple of `p_nom_mod` | a fractional module cap | X1   |
 | `ValueError`, `constraints.py:1527`          | load on a bus with nothing attached               | row not built, unserved | X2   |
 | `ValueError`, `optimize.py:436`              | no component carries a cost                       | feasibility problem     | X3   |
@@ -5375,6 +5433,11 @@ file.
   prep finds the sub-networks of each period's active branches and computes
   `Line_BODF` and `Transformer_BODF` there, with no row for a branch not
   active in the period, as PyPSA does (`abstract.py:534-546`, rung 68).
+- **`CVaR_omega` has a row only under a risk preference.** PyPSA builds the
+  CVaR columns and rows, and refuses a quadratic cost, whenever
+  `n.has_risk_preference` holds, `omega = 0` included (`optimize.py:461`).
+  Data prep writes `risk_preference['omega']` to `CVaR_omega` then, and no
+  row otherwise (rung 70).
 - **A global constraint with nothing to count has no row in PyPSA.** PyPSA
   skips a row whose set is empty (`global_constraints.py:99-100`, `:533-534`,
   `:731-732`, `:816-817`). The file builds that row as `0`
@@ -5384,7 +5447,7 @@ file.
 ## The file
 
 <!-- gallery:begin -->
-A plain `n.optimize()`, and its multi-period and stochastic classes, in one file. Every second-stage quantity spans a `scenario` (a future dispatch is chosen in) and every asset stands in the investment `period`s its build year and lifetime span. A parameter spans `scenario` exactly when PyPSA reads it per scenario. Capacity is chosen once, before the future is known, and paid once per active period at its cost in expectation over the scenarios; operation is the expectation over the scenarios' weights, with a share priced at the tail through the CVaR rows, which stand only where that share is positive. A plain run feeds one scenario, one period, all-active masks and unit weights, and the model collapses to the standard one. A security-constrained run copies each branch flow limit once per outage in an `outage` set that a plain run leaves empty. Which snapshots an asset is active in, a scenario's weight, and the outage factors are data prep.
+A plain `n.optimize()`, and its multi-period and stochastic classes, in one file. Every second-stage quantity spans a `scenario` (a future dispatch is chosen in) and every asset stands in the investment `period`s its build year and lifetime span. A parameter spans `scenario` exactly when PyPSA reads it per scenario. Capacity is chosen once, before the future is known, and paid once per active period at its cost in expectation over the scenarios; operation is the expectation over the scenarios' weights, with a share priced at the tail through the CVaR rows, which stand only where a risk preference is set. A plain run feeds one scenario, one period, all-active masks and unit weights, and the model collapses to the standard one. A security-constrained run copies each branch flow limit once per outage in an `outage` set that a plain run leaves empty. Which snapshots an asset is active in, a scenario's weight, and the outage factors are data prep.
 
 #### Sets
 
@@ -5518,7 +5581,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{sgn}^{\mathrm{load}}`$ | `Load_sign` over $`\mathcal{D}`$ — the sign a load's demand enters its bus's balance with — PyPSA's `sign`, `-1` unless given, `1` for a load that feeds its bus. PyPSA refuses one that differs by scenario (`constants.py:43`) |
 | $`\mathrm{on}^{\mathrm{load}}`$ | `Load_active` over $`\mathcal{D}`$ — whether a load stands in the model — PyPSA's `active`. A load has no build year and no lifetime, so the flag holds in every snapshot. PyPSA refuses one that differs by scenario (`constants.py:51`) |
 | $`\pi`$ | `scenario_weight` over $`\Xi`$ — PyPSA's `scenario_weightings.weight` — the probability of a future |
-| $`\omega`$ | `CVaR_omega` (scalar) — PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation; zero recovers the risk-neutral model |
+| $`\omega`$ | `CVaR_omega` (scalar) — PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. With none there are no CVaR variables or rows; with `omega = 0` PyPSA builds them, and the optimum is the risk-neutral one |
 | $`\alpha`$ | `CVaR_alpha` (scalar) — PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.objective` — what a period's cost weighs; PyPSA reads it only under `multi_investment_periods`, so data prep feeds one otherwise, whatever the column holds (`optimize.py:205-207`, `:264-266`) |
 | $`\mathrm{w}^{\mathrm{yr}}`$ | `period_weight_years` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.years` — what a period's energy weighs in a `primary_energy` or `operational_limit` row; PyPSA reads it only under `multi_investment_periods`, so data prep feeds one otherwise |
@@ -10020,12 +10083,12 @@ Carrier_growth_limit:
 CVaR_excess:
   description: "`CVaR-excess-{s}` — a scenario's operating cost beyond the tail's start is its excess; PyPSA names one row per scenario"
   dims: [scenario]
-  where: CVaR_omega > 0
+  where: CVaR_omega
   expression: CVaR_a - scenario_opex + CVaR_theta >= 0
 ```
 
 ```math
-a_{\xi} - \mathit{scenario\_opex}_{\xi} + \theta \ge 0 \qquad \forall\, \xi \in \Xi \,:\, \omega > 0
+a_{\xi} - \mathit{scenario\_opex}_{\xi} + \theta \ge 0 \qquad \forall\, \xi \in \Xi \,:\, \omega \text{ is defined}
 ```
 
 ### `CVaR-def`
@@ -10036,12 +10099,12 @@ a_{\xi} - \mathit{scenario\_opex}_{\xi} + \theta \ge 0 \qquad \forall\, \xi \in 
 CVaR_def:
   description: "`CVaR-def` — the tail's average is at least where it starts plus the expected excess over the tail's probability"
   dims: []
-  where: CVaR_omega > 0
+  where: CVaR_omega
   expression: CVaR_theta + 1 / (1 - CVaR_alpha) * sum(scenario_weight * CVaR_a, over=scenario) <= CVaR
 ```
 
 ```math
-\theta + \frac{1}{1 - \alpha} \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot a_{\xi} \right) \le CVaR \qquad \text{where } \omega > 0
+\theta + \frac{1}{1 - \alpha} \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot a_{\xi} \right) \le CVaR \qquad \text{where } \omega \text{ is defined}
 ```
 
 ### `Generator_previous_status`
@@ -12048,19 +12111,19 @@ N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:
 **`CVaR_a`**
 
 ```math
-a_{\xi} \ge 0 \qquad \forall\, \xi \in \Xi
+a_{\xi} \ge 0 \qquad \forall\, \xi \in \Xi \,:\, \omega \text{ is defined}
 ```
 
 **`CVaR_theta`**
 
 ```math
-\theta \in \mathbb{R}
+\theta \in \mathbb{R} \qquad \text{where } \omega \text{ is defined}
 ```
 
 **`CVaR`**
 
 ```math
-CVaR \in \mathbb{R}
+CVaR \in \mathbb{R} \qquad \text{where } \omega \text{ is defined}
 ```
 
 ### `Generator_maintenance_events_positive`
@@ -12543,16 +12606,16 @@ Store_operational_limit_carried_over_has_unit_years:
 ```yaml
 Generator_marginal_cost_quadratic_without_risk_preference:
   holds: "Generator_marginal_cost_quadratic == 0"
-  where: "CVaR_omega > 0"
+  where: "CVaR_omega"
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:470-477`). The spec cannot tell no risk preference from
-    one with `omega = 0`, so it refuses only where `omega` is positive
+    (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+    `CVaR_omega` row only where a risk preference is set
 ```
 
 ```math
-\mathrm{c}^{(2)}_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \omega > 0
+\mathrm{c}^{(2)}_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \omega \text{ is defined}
 ```
 
 ### `Link_marginal_cost_quadratic_without_risk_preference`
@@ -12560,16 +12623,16 @@ Generator_marginal_cost_quadratic_without_risk_preference:
 ```yaml
 Link_marginal_cost_quadratic_without_risk_preference:
   holds: "Link_marginal_cost_quadratic == 0"
-  where: "CVaR_omega > 0"
+  where: "CVaR_omega"
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:470-477`). The spec cannot tell no risk preference from
-    one with `omega = 0`, so it refuses only where `omega` is positive
+    (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+    `CVaR_omega` row only where a risk preference is set
 ```
 
 ```math
-\mathrm{c}^{f,(2)}_{\xi,t,l} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \omega > 0
+\mathrm{c}^{f,(2)}_{\xi,t,l} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \omega \text{ is defined}
 ```
 
 ### `Process_marginal_cost_quadratic_without_risk_preference`
@@ -12577,16 +12640,16 @@ Link_marginal_cost_quadratic_without_risk_preference:
 ```yaml
 Process_marginal_cost_quadratic_without_risk_preference:
   holds: "Process_marginal_cost_quadratic == 0"
-  where: "CVaR_omega > 0"
+  where: "CVaR_omega"
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:470-477`). The spec cannot tell no risk preference from
-    one with `omega = 0`, so it refuses only where `omega` is positive
+    (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+    `CVaR_omega` row only where a risk preference is set
 ```
 
 ```math
-\mathrm{c}^{z,(2)}_{\xi,t,j} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \omega > 0
+\mathrm{c}^{z,(2)}_{\xi,t,j} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \omega \text{ is defined}
 ```
 
 ### `StorageUnit_marginal_cost_quadratic_without_risk_preference`
@@ -12594,16 +12657,16 @@ Process_marginal_cost_quadratic_without_risk_preference:
 ```yaml
 StorageUnit_marginal_cost_quadratic_without_risk_preference:
   holds: "StorageUnit_marginal_cost_quadratic == 0"
-  where: "CVaR_omega > 0"
+  where: "CVaR_omega"
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:470-477`). The spec cannot tell no risk preference from
-    one with `omega = 0`, so it refuses only where `omega` is positive
+    (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+    `CVaR_omega` row only where a risk preference is set
 ```
 
 ```math
-\mathrm{c}^{h,(2)}_{\xi,t,s} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \omega > 0
+\mathrm{c}^{h,(2)}_{\xi,t,s} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \omega \text{ is defined}
 ```
 
 ### `Store_marginal_cost_quadratic_without_risk_preference`
@@ -12611,16 +12674,16 @@ StorageUnit_marginal_cost_quadratic_without_risk_preference:
 ```yaml
 Store_marginal_cost_quadratic_without_risk_preference:
   holds: "Store_marginal_cost_quadratic == 0"
-  where: "CVaR_omega > 0"
+  where: "CVaR_omega"
   description: >-
     a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
     refuses quadratic costs under any risk preference
-    (`optimize.py:470-477`). The spec cannot tell no risk preference from
-    one with `omega = 0`, so it refuses only where `omega` is positive
+    (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+    `CVaR_omega` row only where a risk preference is set
 ```
 
 ```math
-\mathrm{c}^{q,(2)}_{\xi,t,v} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \omega > 0
+\mathrm{c}^{q,(2)}_{\xi,t,v} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \omega \text{ is defined}
 ```
 
 ### `GlobalConstraint_tech_capacity_expansion_limit_without_scenarios`

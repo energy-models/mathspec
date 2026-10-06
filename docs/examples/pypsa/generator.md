@@ -289,12 +289,12 @@ constraints:
 assumptions:
   Generator_marginal_cost_quadratic_without_risk_preference:
     holds: "Generator_marginal_cost_quadratic == 0"
-    where: "CVaR_omega > 0"
+    where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:470-477`). The spec cannot tell no risk preference from
-      one with `omega = 0`, so it refuses only where `omega` is positive
+      (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+      `CVaR_omega` row only where a risk preference is set
 ```
 
 #### Sets
@@ -544,6 +544,6 @@ P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g}
 **`Generator_marginal_cost_quadratic_without_risk_preference`**
 
 ```math
-\mathrm{c}^{(2)}_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \omega > 0
+\mathrm{c}^{(2)}_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \omega \text{ is defined}
 ```
 <!-- gallery:end -->

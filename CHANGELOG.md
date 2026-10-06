@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(pypsa): a risk preference with weight zero builds the CVaR variables and refuses quadratic costs, as in PyPSA ([#849](https://github.com/energy-models/mathspec/pull/849))
 - docs(pypsa): storage that retires before the last counted snapshot closes a global limit at its last active level ([#850](https://github.com/energy-models/mathspec/pull/850))
 - refactor(program)!: the node a use of a named expression stands as is `NamedExpression`, beside `NamedMask`, and `Named` is gone ([#822](https://github.com/energy-models/mathspec/pull/822))
 - docs(pypsa): the pypsa spec names its repeated row conditions as masks, and its topic files read them under `given: masks:` ([#825](https://github.com/energy-models/mathspec/pull/825))
