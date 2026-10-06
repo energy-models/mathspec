@@ -365,9 +365,7 @@ def resolve_expression_text(
     if ast is None:
         return None
     if isinstance(ast, ComparisonNode):
-        errors.append(
-            f"{context}: the expression holds a comparison operator.\nGot: {text!r}\nMove it to 'constraints:'."
-        )
+        errors.append(f'{context}: the expression holds a comparison operator.\nGot: {text!r}\nRemove the comparison.')
         return None
     resolved = resolve_expression(ast, ns, context, errors)
     if resolved is None or ceiling is None:

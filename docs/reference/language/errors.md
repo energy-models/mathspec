@@ -19,9 +19,9 @@ would be held to. Everything the language refuses, `to_spec` refuses there.
 Every message names what went wrong and what to do about it:
 
 ```text
-Constraint 'balance', equation 0: 'p_charge' not found.
+Constraint 'balance': 'p_charge' not found.
   Variables: ['dispatch', 'soc']
-  Parameters: ['capacity', 'load', 'efficiency']
+  Parameters: ['capacity', 'efficiency', 'load']
 Check the spelling, or declare 'p_charge'.
 ```
 
