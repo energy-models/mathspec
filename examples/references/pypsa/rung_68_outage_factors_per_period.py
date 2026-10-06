@@ -4,11 +4,8 @@
 
 """Rung 68: outage factors per period — a security-constrained run outages a line that retires before the last period.
 
-PyPSA takes the outage factors of every period from the last period's
-network, so an outage of a line that is gone by then builds no rows
-(PyPSA/PyPSA#1971). The network has no build to decide, so each period
-solves on its own, and in a network of one period the last period is that
-period: the oracle is the network once per period.
+Each period takes the outage factors of the branches active in it, so the
+outage of the retired line binds in 2020 and builds no rows in 2030.
 """
 
 from __future__ import annotations
@@ -17,7 +14,6 @@ from datetime import datetime
 
 import pandas as pd
 
-ISSUE = 1971
 OPTIMIZE = {'multi_investment_periods': True}
 BRANCH_OUTAGES = ['ab_old68']
 PERIODS = {2020: (1.0, [2.0, 1.5], [80, 70]), 2030: (0.5, [2.5, 3.0], [90, 60])}
@@ -45,8 +41,3 @@ def network(periods: list[int]):
 def build():
     """Both periods: after the outage of `ab_old68`, `ab68` carries the whole import of 2020 alone."""
     return network(list(PERIODS))
-
-
-def oracle():
-    """Each period alone, whose last period is its own."""
-    return [(1.0, network([p])) for p in PERIODS]

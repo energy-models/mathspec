@@ -52,9 +52,7 @@ parameters:
   StorageUnit_first_active:
     description: >-
       one in the first period a storage unit stands in, zero elsewhere, data prep.
-      PyPSA takes `active.cumsum() == 1`, which also counts a storage unit
-      that has retired in every later period (`global_constraints.py:276`,
-      PyPSA/PyPSA#1938)
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
     dims: [period, storage_unit]
   StorageUnit_p_nom_min:
     description: least nominal power an extendable storage unit may be built at
@@ -72,7 +70,7 @@ parameters:
     dims: [scenario, storage_unit]
   StorageUnit_p_nom_set:
     description: a given nominal power for an extendable storage unit; one without a value has no row here
-    dims: [scenario, storage_unit]
+    dims: [storage_unit]
     missing: neutral
   StorageUnit_p_nom:
     description: nominal power
@@ -104,7 +102,7 @@ parameters:
     description: >-
       the sign net dispatch enters its bus's balance with — PyPSA's `sign`,
       `1` unless given. PyPSA refuses one that differs by scenario
-      (`consistency.py:1187`)
+      (`constants.py:43`)
     dims: [storage_unit]
   StorageUnit_retention:
     description: share of charge kept over a snapshot — PyPSA's `(1 - standing_loss) ** elapsed hours`, data prep
@@ -409,7 +407,7 @@ constraints:
     expression: StorageUnit_p_nom_ext <= StorageUnit_p_nom_max
   StorageUnit_p_nom_set:
     description: "`StorageUnit-p_nom_set` — the chosen build pinned, wherever a value is given"
-    dims: [scenario, storage_unit]
+    dims: [storage_unit]
     where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_set
     expression: StorageUnit_p_nom_ext == StorageUnit_p_nom_set
   StorageUnit_p_nom_modularity:
@@ -478,7 +476,7 @@ assumptions:
     description: >-
       PyPSA reads the closing charge of a unit that reopens per period at
       the last snapshot of every period, and fails on a `primary_energy` row
-      that names an `investment_period` (`global_constraints.py:474`)
+      that names an `investment_period` (`global_constraints.py:469`)
   StorageUnit_primary_energy_carried_over_has_unit_years:
     holds: "period_weight_years == 1"
     where: "StorageUnit_primary_energy_weight AND NOT StorageUnit_state_of_charge_initial_per_period"
@@ -486,13 +484,13 @@ assumptions:
       a unit that carries its charge from one period to the next closes
       once, at the last counted snapshot, and no period's years weighs that
       level — PyPSA refuses it where any period's years is not one
-      (`global_constraints.py:448`)
+      (`global_constraints.py:443`)
   StorageUnit_operational_limit_carried_over_has_unit_years:
     holds: "at(period_weight_years == 1, by=snapshot_period[period])"
     where: "StorageUnit_operational_limit_weight AND NOT StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot"
     description: >-
       the same for an `operational_limit` row, over the periods it counts —
-      PyPSA refuses it (`global_constraints.py:647`)
+      PyPSA refuses it (`global_constraints.py:648`)
   StorageUnit_marginal_cost_quadratic_without_risk_preference:
     holds: "StorageUnit_marginal_cost_quadratic == 0"
     where: "CVaR_omega > 0"
@@ -521,11 +519,11 @@ assumptions:
 |---|---|
 | $`\mathrm{on}^{h}`$ | `StorageUnit_active` over $`\mathcal{T} \times \mathcal{S}`$ — whether a storage unit stands in a snapshot's period — PyPSA's `active`, data prep |
 | $`\mathrm{W}^{h}`$ | `StorageUnit_capital_weight` over $`\mathcal{S}`$ — the sum of period weights a storage unit stands in — PyPSA's `active * period_weighting`, summed, data prep |
-| $`\mathrm{new}^{h}`$ | `StorageUnit_first_active` over $`\mathcal{Y} \times \mathcal{S}`$ — one in the first period a storage unit stands in, zero elsewhere, data prep. PyPSA takes `active.cumsum() == 1`, which also counts a storage unit that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
+| $`\mathrm{new}^{h}`$ | `StorageUnit_first_active` over $`\mathcal{Y} \times \mathcal{S}`$ — one in the first period a storage unit stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\underline{\mathrm{h}}^{\mathrm{nom}}`$ | `StorageUnit_p_nom_min` over $`\Xi \times \mathcal{S}`$ — least nominal power an extendable storage unit may be built at |
 | $`\overline{\mathrm{h}}^{\mathrm{nom}}`$ | `StorageUnit_p_nom_max` over $`\Xi \times \mathcal{S}`$ — most nominal power an extendable storage unit may be built at |
 | $`\mathrm{c}^{\mathrm{cap},h}`$ | `StorageUnit_capital_cost` over $`\Xi \times \mathcal{S}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
-| $`\mathrm{h}^{\mathrm{nom,set}}`$ | `StorageUnit_p_nom_set` over $`\Xi \times \mathcal{S}`$, `neutral` where the data has no row — a given nominal power for an extendable storage unit; one without a value has no row here |
+| $`\mathrm{h}^{\mathrm{nom,set}}`$ | `StorageUnit_p_nom_set` over $`\mathcal{S}`$, `neutral` where the data has no row — a given nominal power for an extendable storage unit; one without a value has no row here |
 | $`\mathrm{h}^{\mathrm{nom}}`$ | `StorageUnit_p_nom` over $`\Xi \times \mathcal{S}`$ — nominal power |
 | $`\mathrm{ext}^{h}`$ | `StorageUnit_p_nom_extendable` over $`\mathcal{S}`$ — whether the nominal power is a decision |
 | $`\mathrm{h}^{\mathrm{mod}}`$ | `StorageUnit_p_nom_mod` over $`\mathcal{S}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of; no value means the build is continuous |
@@ -534,7 +532,7 @@ assumptions:
 | $`\mathrm{T}^{h}`$ | `StorageUnit_max_hours` over $`\Xi \times \mathcal{S}`$ — energy capacity, as hours of dispatch at nominal power |
 | $`\eta^{-}`$ | `StorageUnit_efficiency_store` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — share of the power drawn from the bus that becomes charge |
 | $`\eta^{+}`$ | `StorageUnit_efficiency_dispatch` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — share of the charge drawn down that reaches the bus |
-| $`\mathrm{sgn}^{h}`$ | `StorageUnit_sign` over $`\mathcal{S}`$ — the sign net dispatch enters its bus's balance with — PyPSA's `sign`, `1` unless given. PyPSA refuses one that differs by scenario (`consistency.py:1187`) |
+| $`\mathrm{sgn}^{h}`$ | `StorageUnit_sign` over $`\mathcal{S}`$ — the sign net dispatch enters its bus's balance with — PyPSA's `sign`, `1` unless given. PyPSA refuses one that differs by scenario (`constants.py:43`) |
 | $`\rho`$ | `StorageUnit_retention` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — share of charge kept over a snapshot — PyPSA's `(1 - standing_loss) ** elapsed hours`, data prep |
 | $`\mathrm{inflow}`$ | `StorageUnit_inflow` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — energy arriving per hour, a river into a reservoir |
 | $`\mathrm{soc}^{0}`$ | `StorageUnit_state_of_charge_initial` over $`\Xi \times \mathcal{S}`$ — charge held before the first snapshot |
@@ -699,7 +697,7 @@ H_{s} \le \overline{\mathrm{h}}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in 
 **`StorageUnit_p_nom_set`**
 
 ```math
-H_{s} = \mathrm{h}^{\mathrm{nom,set}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{h}^{\mathrm{nom,set}}_{\xi,s} \text{ is defined}
+H_{s} = \mathrm{h}^{\mathrm{nom,set}}_{s} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{h}^{\mathrm{nom,set}}_{s} \text{ is defined}
 ```
 
 **`StorageUnit_p_nom_modularity`**

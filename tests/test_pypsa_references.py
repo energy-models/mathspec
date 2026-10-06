@@ -206,7 +206,7 @@ def test_a_fixed_modular_committable_unit_gets_only_its_per_module_commitment_ro
     ],
 )
 def test_a_modular_build_counts_modules_only_where_the_unit_stands(component: str, attr: str):
-    """PyPSA builds `{c}-n_mod` and `{c}-{attr}_modularity` over `c.active_assets` alone (`variables.py:379`, `constraints.py:1864`).
+    """PyPSA builds `{c}-n_mod` and `{c}-{attr}_modularity` over `c.active_assets` alone (`variables.py:379`, `constraints.py:1849`).
 
     The file built both for a Generator, Link or Process that is not active,
     and neither for a Line, Transformer, StorageUnit or Store. Rung 63.

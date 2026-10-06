@@ -40,7 +40,7 @@ constraints:
       constant where the shift is fixed, or the shift decision times its cycle
       weight where the shift is a phase-shifting transformer's to choose. A
       snapshot reads the cycles of its own period, of the branches that stand
-      in it (`constraints.py:1640-1652`); a cycle label that period's basis
+      in it (`constraints.py:1622-1638`); a cycle label that period's basis
       does not reach has no row
     dims: [scenario, snapshot, cycle]
     expression: Cycle_angle_sum == 0
