@@ -42,7 +42,7 @@ def test_a_dimension_index_never_steals_a_letter_a_variable_owns(name: FormatNam
     """With `plant` -> `p` and a variable `p`, the output was `p_{t,p}` and no
     reader could tell which `p` was which."""
     model = {
-        'dimensions': {'plant': {'dtype': 'str'}, 'snapshot': {'dtype': 'int'}},
+        'dimensions': {'plant': {'dtype': 'str'}, 'snapshot': {'dtype': 'int', 'ordered': True}},
         'parameters': {'cost': {'dims': ['plant']}},
         'variables': {'p': {'dims': ['snapshot', 'plant'], 'bounds': {'lower': 0}}},
         'objective': {'expression': 'sum(p * cost)'},
@@ -66,7 +66,7 @@ def test_a_where_lands_on_the_quantifier_not_in_the_equation(name: FormatName, f
 def _masked(dtype: str) -> dict[str, object]:
     """One model per mask dtype: a bare parameter atom is the whole `where`."""
     return {
-        'dimensions': {'g': {'dtype': 'str'}},
+        'dimensions': {'g': {'dtype': 'str', 'ordered': True}},
         'parameters': {'flag': {'dims': ['g'], 'dtype': dtype}},
         'variables': {
             'keep': {'dims': ['g'], 'where': 'flag', 'bounds': {'lower': 0, 'upper': 1}},
@@ -112,7 +112,7 @@ def _storage(shift: str) -> dict[str, object]:
     No parameter, so it is also the model the "given" convention has nothing to say about.
     """
     return {
-        'dimensions': {'snapshot': {'dtype': 'int'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}},
         'variables': {'soc': {'dims': ['snapshot'], 'bounds': {'lower': 0, 'upper': 100}}},
         'constraints': {'balance': {'dims': ['snapshot'], 'expression': f'soc == shift(soc, along=snapshot, {shift})'}},
     }
@@ -154,7 +154,7 @@ def test_a_fill_and_a_group_take_the_operators_two_slots(name: FormatName, fmt: 
     group the translation stays inside.
     """
     model = {
-        'dimensions': {'snapshot': {'dtype': 'int'}, 'season': {'dtype': 'str'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
         'relations': {'season_of': {'key': 'snapshot', 'values': 'season'}},
         'variables': {'p': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
@@ -179,7 +179,7 @@ def test_a_translation_by_nothing_takes_no_legend_note(name: FormatName):
     """A shift by 0 prints no operator, but the legend read every partitioned
     translation as printed and explained a grouped operator the page never shows."""
     model = {
-        'dimensions': {'snapshot': {'dtype': 'int'}, 'season': {'dtype': 'str'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
         'relations': {'season_of': {'key': 'snapshot', 'values': 'season'}},
         'variables': {'p': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
@@ -206,8 +206,8 @@ def test_a_translation_under_a_lookup_survives_it(name: FormatName, fmt: Format)
     """
     model = {
         'dimensions': {
-            'snapshot': {'dtype': 'int'},
-            'period': {'dtype': 'int'},
+            'snapshot': {'dtype': 'int', 'ordered': True},
+            'period': {'dtype': 'int', 'ordered': True},
         },
         'relations': {'period_of': {'key': 'snapshot', 'values': 'period'}},
         'parameters': {'cap': {'dims': ['period']}},
@@ -234,7 +234,7 @@ def test_translations_that_disagree_at_the_edge_do_not_merge(name: FormatName, f
     composition; only identical policies add.
     """
     model = {
-        'dimensions': {'snapshot': {'dtype': 'int'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}},
         'variables': {'soc': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
             'b': {
@@ -306,7 +306,7 @@ def test_a_negative_fill_prints(name: FormatName, fmt: Format):
     lowering did, the walk's step did not.
     """
     model = {
-        'dimensions': {'g': {}},
+        'dimensions': {'g': {'ordered': True}},
         'parameters': {'cap': {'dims': ['g']}},
         'variables': {'p': {'dims': ['g']}},
         'constraints': {'k': {'dims': ['g'], 'expression': 'p <= shift(cap, along=g, offset=1, edge=-1)'}},
@@ -317,7 +317,7 @@ def test_a_negative_fill_prints(name: FormatName, fmt: Format):
 def _selected(mask: str) -> dict[str, Any]:
     """One constraint carrying *mask*, over a dimension a relation groups."""
     return {
-        'dimensions': {'snapshot': {'dtype': 'int'}, 'season': {'dtype': 'str'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
         'relations': {'season_of': {'key': 'snapshot', 'values': 'season'}},
         'variables': {'soc': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {'seed': {'dims': ['snapshot'], 'where': mask, 'expression': 'soc == 0'}},
@@ -616,7 +616,7 @@ def test_a_dimension_is_not_a_head_a_qualifier_hangs_off(name: FormatName, fmt: 
 #: and a capital cost over (g) alone. No constraints, so every summation in the
 #: rendered document is one the objective asked for.
 MIXED = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'generator': {'dtype': 'str'}},
+    'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'generator': {'dtype': 'str', 'ordered': True}},
     'parameters': {'cost': {'dims': ['generator']}, 'capex': {'dims': ['generator']}},
     'variables': {
         'p': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}},
@@ -683,8 +683,8 @@ def test_every_operator_probe_renders(path, name: FormatName, fmt: Format):
 #: consumes one of `gen_bt`'s two value columns leaves the other one.
 UNREAD = {
     'dimensions': {
-        'snapshot': {'dtype': 'int'},
-        'generator': {'dtype': 'str'},
+        'snapshot': {'dtype': 'int', 'ordered': True},
+        'generator': {'dtype': 'str', 'ordered': True},
         'zone': {'dtype': 'str'},
         'bus': {'dtype': 'str'},
         'technology': {'dtype': 'str'},
@@ -747,7 +747,11 @@ def test_a_value_column_the_call_consumes_is_a_condition_like_a_produced_one():
 #: Two frames over generators, a relation onto buses and a boolean mask — what the
 #: scope and bracketing cases are written against.
 BUSES = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'generator': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
+    'dimensions': {
+        'snapshot': {'dtype': 'int', 'ordered': True},
+        'generator': {'dtype': 'str', 'ordered': True},
+        'bus': {'dtype': 'str'},
+    },
     'relations': {'bus_of': {'key': 'generator', 'values': 'bus'}},
     'parameters': {'load': {'dims': ['snapshot']}, 'k': {'dims': []}, 'flag': {'dims': ['snapshot'], 'dtype': 'bool'}},
     'variables': {'p': {'dims': ['snapshot', 'generator']}, 'q': {'dims': ['snapshot', 'generator']}},
@@ -977,7 +981,7 @@ def test_a_condition_a_method_states_is_a_line_that_may_be_asked_for_before_it_i
 
 #: One curve, varied per case: two links pinned to it, over one breakpoint dim.
 _CURVE = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'bp': {'dtype': 'int'}},
+    'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'bp': {'dtype': 'int', 'ordered': True}},
     'parameters': {
         'bp_x': {'dims': ['bp']},
         'bp_y': {'dims': ['bp']},

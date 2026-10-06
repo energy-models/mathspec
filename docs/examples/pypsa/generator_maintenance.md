@@ -28,6 +28,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   generator:
     description: generating units, each on one bus
 

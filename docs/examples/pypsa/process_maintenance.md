@@ -28,6 +28,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   process:
     description: generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate
 
