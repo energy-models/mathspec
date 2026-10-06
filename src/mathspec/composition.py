@@ -27,6 +27,9 @@ What that means for each section:
   descriptions of one dimension agree, and the first one given is carried.
   ``ordered`` is a claim about the space, not the space, so a dimension one
   fragment declares ordered is ordered.
+  A relation's ``missing:`` is a claim about the data, and the fragments
+  agree on it: ``absent`` and ``refused`` change the result differently, so
+  neither folds into the other. ``missing: refused`` is the same as none.
 * **Every other declaration is owned.** A name two fragments declare is refused,
   both named.
 * **One fragment sets the objective.** A second one is refused, both named.
@@ -80,6 +83,8 @@ What a patch may say, and what is refused:
   ``relations`` entry may be added or restated as the schema reads its base,
   never changed and never removed. A restated dimension may add
   ``ordered: true``, and may not write it false over a base that makes it.
+  A relation's ``missing:`` is a claim about the data, not the space: a
+  patch may change it as it changes a parameter's, and may name it alone.
 * ``null`` **makes what it names absent.** A declaration set to ``null`` is
   removed, and a removal of what the base does not declare is refused. A field
   set to ``null`` is dropped, and takes its default when the result loads:
@@ -842,7 +847,9 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
     reading of the coordinate space as one that names another value, and a
     field written at its default is no change. A dimension's ``ordered`` folds
     by [`_joined`][], so a patch may add the claim; writing it false over a
-    base that makes it is the one narrowing [`_joined`][] cannot see.
+    base that makes it is the one narrowing [`_joined`][] cannot see. A
+    relation's ``missing:`` is laid over as a field and left out of the
+    comparison, being a claim about the data.
     """
     out = dict(declared)
     singular = _singular(section)
@@ -856,6 +863,11 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
         if key not in out:
             out[key] = block
             continue
+        if section == 'relations' and 'missing' in _mapping(block):
+            out[key] = _reread(out[key], _mapping(block))
+            block = _without(block, 'missing')
+            if not block:
+                continue
         base, laid = _declared(section, out[key]), _declared(section, block)
         if base.get('ordered') and _mapping(block).get('ordered') is False:
             raise LanguageError(
@@ -863,7 +875,7 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
                 f'ordered. A construct in the base may step along it, and a patch adds the claim of order '
                 f'but never withdraws it: leave `ordered` out of the patch.'
             )
-        if (joined := _joined(section, base, laid, lambda written: written)) is None:
+        if (joined := _joined(section, base, laid, lambda written: _without(written, 'missing'))) is None:
             raise LanguageError(
                 f"patch '{name}' declares the {singular} '{key}' as {block!r}, where its base "
                 f'declares {out[key]!r}. A patch adjusts the math, not the coordinate space the math is '
@@ -872,6 +884,12 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
             )
         out[key] = joined
     return out
+
+
+def _reread(declared: object, patch: dict[str, object]) -> dict[str, object]:
+    """*declared* reading a missing key as *patch* says, where ``null`` puts back the default."""
+    kept = _mapping(_without(declared, 'missing'))
+    return kept if patch['missing'] is None else {**kept, 'missing': patch['missing']}
 
 
 def _owned(

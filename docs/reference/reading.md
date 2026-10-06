@@ -119,6 +119,18 @@ written = assumption_message('cost_is_never_negative', program.assumptions['cost
 written  # "assumption 'cost_is_never_negative' does not hold for the data attached to 'bp_y' — a negative cost is a gain the objective would chase"
 ```
 
+`program.parameters[name].missing` says what a missing row of that parameter
+means: `'refused'`, `'absent'`, `'neutral'`, or the value it reads as. It is
+`None` for a given parameter, whose declaring file says. The program of
+`spec.expand(...)` reports the same readings. `program.relations[name].missing` is `'refused'` or `'absent'`, and
+`None` for a bare relation. Under `'refused'` the engine does not build the model from a
+table with a missing row, and names the coordinate; whether it raises at the
+first gap or lists them all is its own. A value is read wherever a value is read: an expression,
+a bound, and a comparison in a mask. A `ParameterDefined` on a numeric
+parameter asks whether the data has a row, so a value does not answer it. A
+`ParameterDefined` on a `bool` parameter reads the value. Under `'absent'`, a
+bound that reads a missing row leaves that side open.
+
 ## Nodes and masks
 
 The node classes live in `mathspec.program`, for `isinstance` tests and field

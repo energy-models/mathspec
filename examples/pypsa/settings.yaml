@@ -34,6 +34,7 @@ parameters:
   CVaR_omega:
     description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. With none there are no CVaR variables or rows; with `omega = 0` PyPSA builds them, and the optimum is the risk-neutral one
     dims: []
+    missing: neutral
   period_weight_objective:
     description: >-
       PyPSA's `investment_period_weightings.objective` — what a period's cost
@@ -74,6 +75,7 @@ parameters:
       on a row that names a period without it (`global_constraints.py:364-369`)
     dims: [scenario, global_constraint, snapshot]
     dtype: bool
+    missing: neutral
 
 given:
   expressions:

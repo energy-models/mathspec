@@ -427,7 +427,7 @@
     },
     "GivenParameterBlock": {
       "additionalProperties": false,
-      "description": "Data this file reads and another file declares.\n\nIt says what a [`ParameterBlock`][] says, because the frame and the\ndtype are all a parameter declaration holds: a where compares against the\ndtype, and the dim rules read the frame.",
+      "description": "Data this file reads and another file declares.\n\nIt says the frame and the dtype of a [`ParameterBlock`][], which are what\nthis file reads: a where compares against the dtype, and the dim rules read\nthe frame. What a missing row means is the declaring file's ``missing:``.",
       "properties": {
         "description": {
           "anyOf": [
@@ -621,7 +621,7 @@
     },
     "ParameterBlock": {
       "additionalProperties": false,
-      "description": "A declared parameter with dims and dtype.",
+      "description": "A declared parameter with dims and dtype, and what a missing row of its data means.",
       "properties": {
         "description": {
           "anyOf": [
@@ -652,6 +652,31 @@
           ],
           "title": "Dtype",
           "type": "string"
+        },
+        "missing": {
+          "anyOf": [
+            {
+              "enum": [
+                "refused",
+                "absent",
+                "neutral"
+              ]
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "enum": [
+                "inf",
+                "-inf"
+              ]
+            }
+          ],
+          "default": "refused",
+          "title": "Missing"
         }
       },
       "required": [
@@ -808,6 +833,14 @@
           ],
           "title": "Key"
         },
+        "missing": {
+          "default": "refused",
+          "enum": [
+            "refused",
+            "absent"
+          ],
+          "title": "Missing"
+        },
         "values": {
           "anyOf": [
             {
@@ -884,15 +917,6 @@
       "additionalProperties": false,
       "description": "A declared decision variable.",
       "properties": {
-        "absence": {
-          "default": "undefined",
-          "enum": [
-            "undefined",
-            "zero"
-          ],
-          "title": "Absence",
-          "type": "string"
-        },
         "bounds": {
           "$ref": "#/$defs/BoundsBlock",
           "default": {
@@ -927,6 +951,15 @@
             "binary"
           ],
           "title": "Domain",
+          "type": "string"
+        },
+        "missing": {
+          "default": "absent",
+          "enum": [
+            "absent",
+            "neutral"
+          ],
+          "title": "Missing",
           "type": "string"
         },
         "where": {
