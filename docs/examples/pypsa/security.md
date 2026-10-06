@@ -15,6 +15,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   line:
     description: passive branches, each between two buses, their flow set by impedance
   transformer:
@@ -27,6 +28,7 @@ dimensions:
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
 
 relations:
   snapshot_period:

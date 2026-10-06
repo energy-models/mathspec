@@ -29,7 +29,7 @@ PICKED = varied(
 
 #: The curve of `examples/sos.yaml`, as a dict a test can vary.
 CURVE = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'bp': {'dtype': 'int'}},
+    'dimensions': {'snapshot': {'dtype': 'int'}, 'bp': {'dtype': 'int', 'ordered': True}},
     'parameters': {'load': {'dims': ['snapshot']}, 'bp_x': {'dims': ['bp']}, 'bp_y': {'dims': ['bp']}},
     'variables': {
         'p': {'dims': ['snapshot'], 'bounds': {'lower': 0, 'upper': 100}},

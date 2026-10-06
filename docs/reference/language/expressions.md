@@ -281,7 +281,7 @@ is one fewer. A comparison against the previous row gives its `shift` an
 
 ```yaml
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
 parameters:
   load: { dims: [snapshot] }
   ramp: { dims: [] }
@@ -304,7 +304,7 @@ refused everywhere.
 
 ```yaml
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
 parameters:
   soc_initial: { dims: [] }
 variables:
@@ -323,7 +323,7 @@ makes, so each period gets one seeded row:
 
 ```yaml
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
   period: { dtype: int }
 relations:
   period_of: { key: snapshot, values: period }

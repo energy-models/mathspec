@@ -80,7 +80,7 @@ The dimension **survives**, and a width of `1` is `x` itself.
 ```yaml
 dimensions:
   unit: { dtype: str }
-  hour: { dtype: int }
+  hour: { dtype: int, ordered: true }
 
 parameters:
   min_up: { dims: [unit], dtype: int }
@@ -107,12 +107,13 @@ window that reaches past the start of the axis is **short**, and no row is lost.
 
 ## `shift`
 
-`shift` counts positions in the dimension's **declared order**. `edge=` says
+`shift` counts positions in the order of an [ordered](dimensions.md#order)
+dimension. `edge=` says
 what stands where nothing moved in.
 
 ```yaml
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
   storage: { dtype: str }
 parameters:
   eta: { dims: [storage] }
@@ -144,7 +145,7 @@ coordinate is the one before it in its own group, such as a season:
 
 ```yaml
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
   season: { dtype: str }
 relations:
   season_of: { key: snapshot, values: season }
@@ -170,7 +171,7 @@ the data carries as a column:
 ```yaml
 dimensions:
   technology: { dtype: str }
-  month: { dtype: int }
+  month: { dtype: int, ordered: true }
 parameters:
   lead: { dims: [technology], dtype: int }
   demand: { dims: [technology, month] }

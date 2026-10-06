@@ -202,6 +202,10 @@ class Namespace:
         names = (n.name for n in nodes(*arithmetic) if isinstance(n, NameNode) and n.name in self.bodies)
         return tuple(dict.fromkeys(names))
 
+    def unordered(self, name: str) -> bool:
+        """Whether the declared dimension *name* is one whose order the file does not declare part of the model."""
+        return not self.schema.dimensions[name].ordered
+
     def kind(self, name: str) -> DeclarationKind | None:
         """What *name* was declared as, or ``None`` where the file declares it nowhere."""
         if name in self.variables:

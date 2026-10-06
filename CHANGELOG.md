@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language)!: a construct that reads the order of a dimension needs the dimension declared ordered ([#793](https://github.com/energy-models/mathspec/pull/793))
 - docs(pypsa): the pypsa reference targets master at 51986084, where the eight rungs that diverged now match ([#844](https://github.com/energy-models/mathspec/pull/844))
 - feat(language)!: a call names the columns of a relation as relation[column], and a sum through a relation is a sum over the axes its join opens ([#664](https://github.com/energy-models/mathspec/pull/664))
 - docs(pypsa): the linearized unit commitment is a patch over pypsa.yaml, and relaxes a committable link and process too ([#835](https://github.com/energy-models/mathspec/pull/835))
