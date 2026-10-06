@@ -14,9 +14,9 @@
 
 A rung is a `rung_*.py` beside this file whose `build()` returns the network:
 the spine (`spine.py`) plus that rung's own `n.add` calls, data inline, so
-the PyPSA model under review is the script itself. A rung stated by a file of
-its own names it as `MODEL`; one that needs `n.optimize` keywords names them
-as `OPTIMIZE`; one that names `BRANCH_OUTAGES` is solved by
+the PyPSA model under review is the script itself. A rung stated by a patch
+over `pypsa.yaml` names it as `PATCH`; one that needs `n.optimize` keywords
+names them as `OPTIMIZE`; one that names `BRANCH_OUTAGES` is solved by
 `n.optimize.optimize_security_constrained` over them.
 
 A rung that names `ISSUE` records a PyPSA bug: the network the pinned PyPSA gets

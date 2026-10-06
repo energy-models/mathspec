@@ -76,7 +76,16 @@ COMPOSED = {
 #: the declaration's own description.
 DECLARED = {
     'pypsa.md': ROOT / 'examples' / 'pypsa.yaml',
-    'pypsa_linearized_uc.md': ROOT / 'examples' / 'pypsa_linearized_uc.yaml',
+}
+
+#: Page -> the base and the patch laid over it, shown one declaration of the
+#: patch at a time — its YAML, then the line it prints in the patched spec.
+#: The rest of the patched spec is the base's page.
+PATCHED = {
+    'pypsa_linearized_uc.md': (
+        ROOT / 'examples' / 'pypsa.yaml',
+        ROOT / 'examples' / 'variants' / 'pypsa_linearized_uc.yaml',
+    ),
 }
 
 #: One PyPSA reference network per rung, run out of band with the versions
@@ -286,6 +295,29 @@ def declared_block(path: Path) -> str:
     return '\n\n'.join(parts)
 
 
+def patched_block(base: Path, patch: Path) -> str:
+    """The patch's description, then every declaration it writes as YAML beside the line it prints once laid over *base*."""
+    text = without_header(patch)
+    model = override(base, [patch])
+    written = yaml.safe_load(text)
+    headings = {
+        'variables': {name: _stands_for(name, block.description) for name, block in model.variables.items()},
+        'constraints': {name: _stands_for(name, block.description) for name, block in model.constraints.items()},
+        'assumptions': {name: name for name in model.assumptions},
+    }
+    parts = [model.description]
+    for section, heading_of in headings.items():
+        for name in written.get(section, {}):
+            line = typeset_declaration(model, name, 'markdown', symbols=sidecar_for(base), inline_expressions=False)
+            parts.append(
+                f'### `{heading_of[name]}`\n\n'
+                f'`{name}`\n\n'
+                f'```yaml\n{declaration(text, section, name)}\n```\n\n'
+                f'```math\n{line}\n```'
+            )
+    return '\n\n'.join(parts)
+
+
 def _summands(node: object) -> list[object]:
     """The terms of *node* read as a flat sum."""
     return [*_summands(node.left), *_summands(node.right)] if isinstance(node, Add) else [node]
@@ -377,6 +409,8 @@ def block(page: str) -> str:
         return probe_block()
     if page in DECLARED:
         return declared_block(DECLARED[page])
+    if page in PATCHED:
+        return patched_block(*PATCHED[page])
     if page in COMPOSED:
         return composed_block(*COMPOSED[page])
     if page == SPLIT_INDEX:
@@ -390,13 +424,13 @@ def block(page: str) -> str:
 
 def rendered(page: str, text: str) -> str:
     text = splice(text, BEGIN, END, block(page))
-    if page in DECLARED:
+    if page in DECLARED or page in PATCHED:
         text = with_references(text)
     return text
 
 
 def pages() -> list[str]:
-    return [*MODELS, *COMPOSED, *DECLARED, 'operators.md', SPLIT_INDEX]
+    return [*MODELS, *COMPOSED, *DECLARED, *PATCHED, 'operators.md', SPLIT_INDEX]
 
 
 def main(argv: list[str] | None = None) -> int:

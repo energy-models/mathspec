@@ -223,26 +223,26 @@ expressions:
     cases:
       wrapping:
         when: Process_output_cyclic_delay
-        expression: shift(at(Process_p, by=Process_output_process, over=process, into=process_output), along=snapshot, offset=Process_output_delay, edge='wrap', by=snapshot_period, within=period) * Process_rate
-    otherwise: shift(at(Process_p, by=Process_output_process, over=process, into=process_output), along=snapshot, offset=Process_output_delay, edge=0, by=snapshot_period, within=period) * Process_rate
+        expression: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge='wrap', within=snapshot_period[period]) * Process_rate
+    otherwise: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge=0, within=snapshot_period[period]) * Process_rate
   Process_tech_capacity_expansion:
     expression: sum(Process_p_nom_ext * Process_tech_capacity_weight, over=process)
     adds_to: tech_capacity_expansion
   Process_opex:
     expression: >-
-      sum(sum(((Process_p * Process_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=process), over=snapshot)
-      + sum(sum((((Process_p * Process_p) * Process_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=process), over=snapshot)
+      sum(sum(((Process_p * Process_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
+      + sum(sum((((Process_p * Process_p) * Process_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
     adds_to: scenario_opex
   Process_capex:
     expression: sum(scenario_weight * Process_p_nom_ext * Process_capital_cost * Process_capital_weight)
     adds_to: total_cost
   Process_additions:
     expression: >-
-      sum(Process_p_nom_ext * Process_first_active, by=Process_carrier, over=process, into=carrier)
+      sum(Process_p_nom_ext * Process_first_active, over=process, by=Process_carrier[carrier])
     adds_to: Carrier_additions
   Process_injection:
     expression: >-
-      sum(Process_output_arrival, by=Process_output_bus, over=process_output, into=bus)
+      sum(Process_output_arrival, over=process_output, by=Process_output_bus[bus])
     adds_to: Bus_injection
 
 masks:
@@ -398,7 +398,7 @@ $`t \ominus k`$ denotes cyclic translation: index $`t-k`$ taken modulo the size 
 
 $`t \boxminus_{v} k`$ denotes translation with $`v`$ standing where index $`t-k`$ leaves the dimension (`shift(edge=v)`), so the row at that boundary is built and carries $`v`$ rather than being dropped.
 
-$`t \ominus^{\mathrm{relation}(t)} k`$ denotes a translation counted inside the group a relation puts $`t`$ in (`shift(by=relation)`), so a term never crosses out of its own group. The two modifiers take different slots — the group above, the fill below — so $`t \boxminus_{v}^{\mathrm{relation}(t)} k`$ is both at once.
+$`t \ominus^{\mathrm{relation}(t)} k`$ denotes a translation counted inside the group a relation puts $`t`$ in (`shift(within=relation[c])`), so a term never crosses out of its own group. The two modifiers take different slots — the group above, the fill below — so $`t \boxminus_{v}^{\mathrm{relation}(t)} k`$ is both at once.
 
 #### Subject to
 
