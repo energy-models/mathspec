@@ -88,7 +88,7 @@ parameters:
     dims: [scenario, transformer]
   Transformer_s_nom_set:
     description: a given nominal apparent power for an extendable transformer; one without a value has no row here
-    dims: [scenario, transformer]
+    dims: [transformer]
   Transformer_s_set:
     description: a given flow schedule; a transformer without one has no row here
     dims: [scenario, snapshot, transformer]
@@ -124,9 +124,8 @@ parameters:
       whether a transformer's phase shift is a decision — PyPSA's
       `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a
       fixed shift carried by `phase_shift`. The shift parameters carry no
-      scenario: only a cycle row and an angle row read them, PyPSA fails on a
-      transformer in a cycle on a network with scenarios (`constraints.py:1660`),
-      and builds no angle row on one
+      scenario, while PyPSA reads them per scenario (`variables.py:433-443`,
+      `constraints.py:1652`, `:1735`): a parity gap (#783)
     dims: [transformer]
     dtype: bool
   Transformer_phase_shift_min:
@@ -271,7 +270,7 @@ constraints:
     expression: Transformer_s_nom_ext <= Transformer_s_nom_max
   Transformer_s_nom_set:
     description: "`Transformer-s_nom_set` — the chosen build pinned, wherever a value is given"
-    dims: [scenario, transformer]
+    dims: [transformer]
     where: Transformer_s_nom_extendable AND Transformer_s_nom_set
     expression: Transformer_s_nom_ext == Transformer_s_nom_set
   Transformer_s_nom_modularity:
