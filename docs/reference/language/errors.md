@@ -24,7 +24,7 @@ Check for typos, or ensure 'p_charge' is declared.
 
 ## What `advice` warns about
 
-`ms.advice(spec)` returns a tuple of `ms.Advice`, one per warning, and
+`ms.advice(spec)` returns a tuple of `mathspec.program.Advice`, one per warning, and
 `python -m mathspec check spec.yaml` prints them. Advice is a warning: the file
 loads.
 

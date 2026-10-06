@@ -2,6 +2,25 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    Process_committable: { dims: [process], dtype: bool }
+    Process_maintenance_pu: { dims: [scenario, process] }
+    scenario_weight: { dims: [scenario] }
+    CVaR_omega: { dims: [] }
+    period_weight_objective: { dims: [period] }
+    snapshot_weightings_generators: { dims: [snapshot] }
+  variables:
+    Process_maintenance: { dims: [scenario, snapshot, process] }
+    Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
+  expressions:
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -74,9 +93,9 @@ parameters:
   Process_output_delay:
     description: >-
       snapshots a port's transfer lags its process's internal power — PyPSA's
-      `delay0`, `delay1`, … read long, in `snapshot_weightings.generators`
-      units, which the file states as whole snapshots; zero for a port that
-      transfers at once. The same in every scenario, as a link's
+      `delay0`, `delay1`, … read long, over the `snapshot_weightings.generators`
+      value and rounded up, as data prep; zero for a port that transfers at
+      once. The same in every scenario, as a link's
     dims: [process_output]
     dtype: int
   Process_output_cyclic_delay:
@@ -96,6 +115,7 @@ parameters:
   Process_p_set:
     description: a given internal power schedule; a process without one has no row here
     dims: [scenario, snapshot, process]
+    missing: neutral
   Process_p_nom_min:
     description: least nominal power an extendable process may be built at
     dims: [scenario, process]
@@ -113,9 +133,11 @@ parameters:
   Process_p_nom_set:
     description: a given nominal power for an extendable process; one without a value has no row here
     dims: [process]
+    missing: neutral
   Process_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [process]
+    missing: neutral
   Process_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Process_p_nom
@@ -147,6 +169,7 @@ parameters:
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, process]
+    missing: neutral
 
 variables:
   Process_p:
@@ -169,24 +192,6 @@ variables:
       parameter of the same PyPSA name carries the fixed regime
     dims: [process]
     where: Process_p_nom_extendable
-
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    Process_committable: { dims: [process], dtype: bool }
-    Process_maintenance_pu: { dims: [scenario, process] }
-    scenario_weight: { dims: [scenario] }
-    CVaR_omega: { dims: [] }
-    period_weight_objective: { dims: [period] }
-  variables:
-    Process_maintenance: { dims: [scenario, snapshot, process] }
-    Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
-  expressions:
-    tech_capacity_expansion: { dims: [global_constraint] }
-    scenario_opex: { dims: [scenario] }
-    total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Process_p_nom_effective:
@@ -293,11 +298,16 @@ constraints:
     expression: Process_p == Process_p_set
 
 assumptions:
+  Process_output_delay_under_uniform_weighting:
+    holds: "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
+    where: "Process_output_delay > 0"
+    description: >-
+      the same for a delayed process port (#299)
   Process_marginal_cost_quadratic_without_risk_preference:
     holds: "Process_marginal_cost_quadratic == 0"
-    where: "CVaR_omega > 0"
+    where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:470-477`). The spec cannot tell no risk preference from
-      one with `omega = 0`, so it refuses only where `omega` is positive
+      (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+      `CVaR_omega` row only where a risk preference is set

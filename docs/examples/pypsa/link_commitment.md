@@ -9,6 +9,30 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Link`, th
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    Link_p_nom: { dims: [scenario, link] }
+    Link_p_nom_extendable: { dims: [link], dtype: bool }
+    Link_p_min_pu: { dims: [scenario, snapshot, link] }
+    Link_p_max_pu: { dims: [scenario, snapshot, link] }
+    Link_p_nom_mod: { dims: [link] }
+    Link_modules_installed: { dims: [scenario, link] }
+    Link_p_min_pu_nonneg: { dims: [link], dtype: bool }
+    Link_maintenance_pu: { dims: [scenario, link] }
+    period_weight_objective: { dims: [period] }
+    Link_active: { dims: [snapshot, link], dtype: bool }
+  variables:
+    Link_p: { dims: [scenario, snapshot, link] }
+    Link_n_mod: { dims: [link], domain: integer }
+    Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
+    Link_maintenance_status: { dims: [scenario, snapshot, link] }
+    Link_p_nom_ext: { dims: [link] }
+  expressions:
+    scenario_opex: { dims: [scenario] }
+  masks:
+    Link_committed: { dims: [snapshot, link] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -80,6 +104,7 @@ parameters:
       (`components.py:1050-1121`). Below the flow a solve wants, it caps that
       flow; data prep
     dims: [scenario, link]
+    missing: neutral
 
 variables:
   Link_status:
@@ -106,30 +131,6 @@ variables:
     domain: integer
     bounds:
       lower: 0
-
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    Link_p_nom: { dims: [scenario, link] }
-    Link_p_nom_extendable: { dims: [link], dtype: bool }
-    Link_p_min_pu: { dims: [scenario, snapshot, link] }
-    Link_p_max_pu: { dims: [scenario, snapshot, link] }
-    Link_p_nom_mod: { dims: [link] }
-    Link_modules_installed: { dims: [scenario, link] }
-    Link_p_min_pu_nonneg: { dims: [link], dtype: bool }
-    Link_maintenance_pu: { dims: [scenario, link] }
-    period_weight_objective: { dims: [period] }
-    Link_active: { dims: [snapshot, link], dtype: bool }
-  variables:
-    Link_p: { dims: [scenario, snapshot, link] }
-    Link_n_mod: { dims: [link], domain: integer }
-    Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
-    Link_maintenance_status: { dims: [scenario, snapshot, link] }
-    Link_p_nom_ext: { dims: [link] }
-  expressions:
-    scenario_opex: { dims: [scenario] }
-  masks:
-    Link_committed: { dims: [snapshot, link] }
 
 expressions:
   Link_previous_status:
@@ -325,7 +326,7 @@ constraints:
 | $`\mathrm{c}^{f,\mathrm{up}}`$ | `Link_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{f,\mathrm{dn}}`$ | `Link_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{f,\mathrm{on}}`$ | `Link_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\Xi \times \mathcal{L}`$ — the bound a committed extendable link's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the flow a solve wants, it caps that flow; data prep |
+| $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the bound a committed extendable link's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the flow a solve wants, it caps that flow; data prep |
 
 #### Variables
 

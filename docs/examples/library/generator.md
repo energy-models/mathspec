@@ -32,12 +32,6 @@ description: >-
   PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut
   to what a dispatch spec needs: a fixed build, no availability profile, no
   ramp limits.
-dimensions:
-  snapshot: { dtype: datetime, description: dispatch periods }
-  port: { dtype: str, description: "the connections components make, one label per connection" }
-  generator: { dtype: str, description: "generating units, each on one port" }
-relations:
-  Generator_port: { key: generator, values: port }
 given:
   variables:
     Port_p:
@@ -45,6 +39,12 @@ given:
       description: the surface introduces this flow, and this file pins it at its own ports
   expressions:
     total_cost: { dims: [] }
+dimensions:
+  snapshot: { dtype: datetime, description: dispatch periods }
+  port: { dtype: str, description: "the connections components make, one label per connection" }
+  generator: { dtype: str, description: "generating units, each on one port" }
+relations:
+  Generator_port: { key: generator, values: port }
 parameters:
   Generator_p_nom: { dims: [generator], description: nominal power }
   Generator_marginal_cost: { dims: [generator], description: cost of one unit of output }

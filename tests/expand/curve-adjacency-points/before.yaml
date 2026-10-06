@@ -2,8 +2,8 @@ dimensions:
   bp: { dtype: int, ordered: true }
 
 parameters:
-  x_bp: { dims: [bp] }
-  y_bp: { dims: [bp] }
+  x_bp: { dims: [bp], missing: neutral }
+  y_bp: { dims: [bp], missing: neutral }
 
 variables:
   x: { dims: [], bounds: { lower: 0 } }

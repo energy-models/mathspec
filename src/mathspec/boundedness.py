@@ -15,9 +15,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, assert_never
 
-from mathspec.errors import Advice
 from mathspec.program import (
     Add,
+    Advice,
     Cases,
     Constant,
     Divide,

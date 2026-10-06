@@ -2,6 +2,27 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    Link_committable: { dims: [link], dtype: bool }
+    Link_maintenance_pu: { dims: [scenario, link] }
+    scenario_weight: { dims: [scenario] }
+    CVaR_omega: { dims: [] }
+    period_weight_objective: { dims: [period] }
+    snapshot_weightings_generators: { dims: [snapshot] }
+  variables:
+    Link_maintenance: { dims: [scenario, snapshot, link] }
+    Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
+  expressions:
+    transmission_volume_expansion: { dims: [scenario, global_constraint] }
+    transmission_expansion_cost: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -76,8 +97,8 @@ parameters:
   Link_output_delay:
     description: >-
       snapshots a port's delivery lags its link's flow — PyPSA's `delay`,
-      `delay2`, … read long, in `snapshot_weightings.generators` units, which
-      the file states as whole snapshots; zero for a port that delivers at once.
+      `delay2`, … read long, over the `snapshot_weightings.generators` value
+      and rounded up, as data prep; zero for a port that delivers at once.
       The same in every scenario: PyPSA refuses a delay that differs by
       scenario (`constants.py:52`)
     dims: [link_output]
@@ -99,6 +120,7 @@ parameters:
   Link_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [link]
+    missing: neutral
   Link_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Link_p_nom
@@ -127,6 +149,7 @@ parameters:
   Link_p_set:
     description: a given flow schedule; a link without one has no row here
     dims: [scenario, snapshot, link]
+    missing: neutral
   Link_p_nom_min:
     description: least nominal power an extendable link may be built at
     dims: [scenario, link]
@@ -144,6 +167,7 @@ parameters:
   Link_p_nom_set:
     description: a given nominal power for an extendable link; one without a value has no row here
     dims: [link]
+    missing: neutral
   Link_volume_weight:
     description: >-
       the link's length in each scenario where its carrier is in the row's
@@ -151,6 +175,7 @@ parameters:
       link outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [scenario, global_constraint, link]
+    missing: neutral
   Link_expansion_cost_weight:
     description: >-
       the link's capital cost where its carrier is in the row's set, times
@@ -161,12 +186,14 @@ parameters:
       `Link_capital_cost` without `fom_cost` (`components.py:1151-1169`,
       `global_constraints.py:870-879`)
     dims: [scenario, global_constraint, link]
+    missing: neutral
   Link_tech_capacity_weight:
     description: >-
       one where the link is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, link]
+    missing: neutral
 
 variables:
   Link_p:
@@ -189,26 +216,6 @@ variables:
       the same PyPSA name carries the fixed regime
     dims: [link]
     where: Link_p_nom_extendable
-
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    Link_committable: { dims: [link], dtype: bool }
-    Link_maintenance_pu: { dims: [scenario, link] }
-    scenario_weight: { dims: [scenario] }
-    CVaR_omega: { dims: [] }
-    period_weight_objective: { dims: [period] }
-  variables:
-    Link_maintenance: { dims: [scenario, snapshot, link] }
-    Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
-  expressions:
-    transmission_volume_expansion: { dims: [scenario, global_constraint] }
-    transmission_expansion_cost: { dims: [scenario, global_constraint] }
-    tech_capacity_expansion: { dims: [global_constraint] }
-    scenario_opex: { dims: [scenario] }
-    total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Link_p_nom_effective:
@@ -322,11 +329,21 @@ constraints:
     expression: Link_p == Link_p_set
 
 assumptions:
+  Link_output_delay_under_uniform_weighting:
+    holds: "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
+    where: "Link_output_delay > 0"
+    description: >-
+      a delayed port lags by the same whole number of snapshots in every
+      period. PyPSA lags by elapsed time in `generators` weighting and
+      rounds the source down to a snapshot start (`multiports.py:100-133`),
+      so the two agree only where that weighting is one value over the
+      horizon. PyPSA does not refuse an uneven weighting, so the file does
+      (#299)
   Link_marginal_cost_quadratic_without_risk_preference:
     holds: "Link_marginal_cost_quadratic == 0"
-    where: "CVaR_omega > 0"
+    where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:470-477`). The spec cannot tell no risk preference from
-      one with `omega = 0`, so it refuses only where `omega` is positive
+      (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+      `CVaR_omega` row only where a risk preference is set

@@ -21,10 +21,6 @@ component costs is a term of its own.
 ```yaml title="network.yaml"
 description: Every bus is balanced in every snapshot.
 
-dimensions:
-  snapshot: { dtype: int, description: dispatch periods }
-  bus: { description: network nodes }
-
 given:
   expressions:
     injection:
@@ -33,6 +29,10 @@ given:
     total_cost:
       dims: []
       description: what running the system costs
+
+dimensions:
+  snapshot: { dtype: int, description: dispatch periods }
+  bus: { description: network nodes }
 
 constraints:
   balance:
@@ -70,6 +70,11 @@ a claim, and `merge` carries the network's.
 ```yaml title="generators.yaml"
 description: A generator fleet, each unit on one bus.
 
+given:
+  expressions:
+    injection: { dims: [snapshot, bus] }
+    total_cost: { dims: [] }
+
 dimensions:
   snapshot: { dtype: int }
   bus: { dtype: str }
@@ -87,11 +92,6 @@ variables:
     description: output of a generator in a snapshot
     dims: [snapshot, generator]
     bounds: { lower: 0, upper: capacity }
-
-given:
-  expressions:
-    injection: { dims: [snapshot, bus] }
-    total_cost: { dims: [] }
 
 expressions:
   generation:
@@ -163,16 +163,16 @@ bus:
 ```yaml title="loads.yaml"
 description: The demand at every bus.
 
+given:
+  expressions:
+    injection: { dims: [snapshot, bus] }
+
 dimensions:
   snapshot: { dtype: int }
   bus: { dtype: str }
 
 parameters:
   demand: { dims: [snapshot, bus], description: demand to be met }
-
-given:
-  expressions:
-    injection: { dims: [snapshot, bus] }
 
 expressions:
   consumption:
@@ -282,6 +282,11 @@ term, `import_cost`, to the total cost:
 ```yaml title="imports.yaml"
 description: Power bought from outside the network, at a price.
 
+given:
+  expressions:
+    injection: { dims: [snapshot, bus] }
+    total_cost: { dims: [] }
+
 dimensions:
   snapshot: { dtype: int }
   bus: { dtype: str }
@@ -295,11 +300,6 @@ variables:
     description: power a bus imports in a snapshot
     dims: [snapshot, bus]
     bounds: { lower: 0, upper: import_limit }
-
-given:
-  expressions:
-    injection: { dims: [snapshot, bus] }
-    total_cost: { dims: [] }
 
 expressions:
   purchase:
@@ -340,13 +340,13 @@ Make a file `emissions.yaml`. It caps what the fleet emits, and it reads
 ```yaml title="emissions.yaml"
 description: A cap on what the fleet emits over the horizon.
 
-dimensions:
-  snapshot: { dtype: int }
-  generator: { dtype: str }
-
 given:
   variables:
     dispatch: { dims: [snapshot, generator] }
+
+dimensions:
+  snapshot: { dtype: int }
+  generator: { dtype: str }
 
 parameters:
   emission_rate: { dims: [generator], description: emissions per unit of output }

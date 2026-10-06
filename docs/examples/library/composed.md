@@ -67,13 +67,13 @@ variables:
   Port_p:
     dims: [snapshot, port]
     domain: continuous
-    absence: undefined
+    missing: absent
     description: what a port puts into its bus in a snapshot, negative for a withdrawal
   Generator_p:
     dims: [snapshot, generator]
     bounds: {lower: 0.0, upper: Generator_p_nom}
     domain: continuous
-    absence: undefined
+    missing: absent
     description: '`Generator-p` — what a generator produces in a snapshot'
 objective: {sense: minimize, expression: total_cost}
 constraints:

@@ -13,7 +13,14 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(spec)!: a spec written back out puts the objective before the constraints, sos and piecewise after them, and macros before expressions ([#848](https://github.com/energy-models/mathspec/pull/848))
+- docs(pypsa): a delayed port under uneven snapshot weights is refused, where PyPSA counts weighted time ([#852](https://github.com/energy-models/mathspec/pull/852))
+- docs: limits.md names that a count compares only against a whole-number literal ([#851](https://github.com/energy-models/mathspec/pull/851))
+- docs: every spec in the docs and examples opens with its given block ([#813](https://github.com/energy-models/mathspec/pull/813))
 - feat(spec)!: a spec written back out puts its given block first ([#818](https://github.com/energy-models/mathspec/pull/818))
+- feat(language)!: `missing:` says what a missing row means, a table short of a row is refused unless the file says otherwise, and a variable's `absence:` is now `missing:` ([#810](https://github.com/energy-models/mathspec/pull/810))
+- docs(pypsa): a risk preference with weight zero builds the CVaR variables and refuses quadratic costs, as in PyPSA ([#849](https://github.com/energy-models/mathspec/pull/849))
+- docs(pypsa): storage that retires before the last counted snapshot closes a global limit at its last active level ([#850](https://github.com/energy-models/mathspec/pull/850))
+- refactor(api): the top level holds what you call, and spec, program and errors hold what you get back or catch ([#837](https://github.com/energy-models/mathspec/pull/837))
 - refactor(program)!: the node a use of a named expression stands as is `NamedExpression`, beside `NamedMask`, and `Named` is gone ([#822](https://github.com/energy-models/mathspec/pull/822))
 - docs(pypsa): the pypsa spec names its repeated row conditions as masks, and its topic files read them under `given: masks:` ([#825](https://github.com/energy-models/mathspec/pull/825))
 - feat(language): a where predicate is named once under `masks:`, and another file reads it under `given: masks:` ([#821](https://github.com/energy-models/mathspec/pull/821))

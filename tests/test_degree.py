@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec import LanguageError
 from mathspec.degree import calls_dual, check_binary, check_expression
+from mathspec.errors import LanguageError
 from mathspec.program import carries_variable
 from mathspec.resolution import Namespace
 from tests.fixtures import SMALL_MODEL, expression_of, schema_of

@@ -23,11 +23,12 @@ parameters:
     dims: [] # a scalar
 ```
 
-| Field         |                                                                |                 |
-| ------------- | -------------------------------------------------------------- | --------------- |
-| `dims`        | required. The dimensions it is indexed by. `[]` means a scalar |                 |
-| `dtype`       | `float`, `int`, `bool`, `str`                                  | default `float` |
-| `description` | free text                                                      | default `null`  |
+| Field         |                                                                |                   |
+| ------------- | -------------------------------------------------------------- | ----------------- |
+| `dims`        | required. The dimensions it is indexed by. `[]` means a scalar |                   |
+| `dtype`       | `float`, `int`, `bool`, `str`                                  | default `float`   |
+| `missing`     | what a missing row means ([a missing row](#a-missing-row))     | default `refused` |
+| `description` | free text                                                      | default `null`    |
 
 The column has to match the `dtype`:
 
@@ -46,6 +47,59 @@ parameter is a mask: each selects rows in a
 [`where`](expressions.md#where-strings), and writing either as a coefficient,
 a term or a divisor is a load error. A `0` or `1` that is meant to be
 multiplied by is declared `dtype: int`.
+
+### A missing row
+
+`missing:` says what a coordinate the `dims` reach with no row means. A table
+that lost a row in preparation and a table that never had one look the same in
+the data, so the file says which was meant.
+
+```yaml
+dimensions:
+  generator: { dtype: str }
+parameters:
+  cost: { dims: [generator] } # refused: every generator has a cost
+  ramp_limit: { dims: [generator], missing: neutral } # no row means no limit
+  p_set: { dims: [generator], missing: absent } # no row, no fixing row
+  efficiency: { dims: [generator], missing: 1 }
+  p_nom_max: { dims: [generator], missing: .inf }
+  active: { dims: [generator], dtype: bool, missing: true }
+```
+
+| `missing:`            | A missing row                                                                                         |
+| --------------------- | ----------------------------------------------------------------------------------------------------- |
+| `refused`, by default | is refused when the data is attached, and the refusal names the coordinate                            |
+| `absent`              | is [absence](absence.md): it takes the row of a term that reads it, and is one summand fewer in a sum |
+| `neutral`             | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a `where`           |
+| a value               | reads as that value, wherever a value is read                                                         |
+
+A consumer does not build the model from data with a refused row. How it says
+so is its own: it may raise at the first gap, or list every missing coordinate.
+
+A bare numeric name in a `where` asks whether the data has a row under every
+reading, so `where: p_nom_max` selects the rows the data gives. Under `refused`, every coordinate has a row, so a bare `float` name asks only "is it finite?", and a bare `int` or `str` name is a load error. A comparison
+reads the value: `where: efficiency <= 1` is true at a missing row of
+`efficiency` above, which reads `1` there. Under `absent` and `neutral`, a
+comparison at a missing row is false. A bare `bool` name reads its value, so
+`where: active` reads `true` there.
+
+A value has the parameter's dtype:
+
+| `dtype` | a value                                                  |
+| ------- | -------------------------------------------------------- |
+| `float` | a number. `.inf`, `inf`, `-.inf` and `-inf` are numbers  |
+| `int`   | an integer. An integer column cannot hold `inf`          |
+| `bool`  | `true` or `false`                                        |
+| `str`   | none. A label has no value to fill, and no `neutral` one |
+
+A NaN, a quoted number and `missing: null` are refused. A `given:` parameter
+has no `missing:`. The file that declares the parameter owns it. A parameter a
+[`piecewise:`](piecewise.md#missing-breakpoints) block reads takes `missing:`
+too. A values parameter of a curve with `points:` declares one other than
+`refused`.
+
+The typeset legend prints what a missing row means beside the parameter, such
+as `` `neutral` where the data has no row ``. It prints nothing for `refused`.
 
 ## `variables`
 
@@ -73,7 +127,7 @@ variables:
 | `where`                         | which coordinates exist ([absence](absence.md))                                                                   | default `null`       |
 | `bounds.lower` / `bounds.upper` | a finite number, or the name of a `float` or `int` parameter. `null` leaves that side open                        | default `null`       |
 | `domain`                        | `continuous`, `integer` or `binary`. `binary` carries fixed 0/1 bounds                                            | default `continuous` |
-| `absence`                       | `undefined` or `zero`: what a masked-out coordinate means ([absence](absence.md#what-a-missing-coordinate-means)) | default `undefined`  |
+| `missing`                       | `absent` or `neutral`: what a masked-out coordinate means ([absence](absence.md#what-a-missing-coordinate-means)) | default `absent`     |
 | `description`                   | free text                                                                                                         | default `null`       |
 
 An open side is `null`. A bound is never infinite: `.inf` and `-.inf` are
@@ -97,15 +151,15 @@ takes those five keys and no other. A file with a `given:` block loads and print
 A given parameter is data this file reads and another file declares.
 
 ```yaml
-dimensions:
-  snapshot: { dtype: int }
-  generator: { dtype: str }
 given:
   parameters:
     gen_cost: { dims: [generator], description: what one unit of output costs }
     gen_on: { dims: [generator], dtype: bool }
   variables:
     gen_p: { dims: [snapshot, generator] }
+dimensions:
+  snapshot: { dtype: int }
+  generator: { dtype: str }
 constraints:
   off_units_idle:
     dims: [snapshot, generator]
@@ -132,6 +186,11 @@ under _Given_.
 A given variable is a column this file reads and another file introduces.
 
 ```yaml
+given:
+  variables:
+    flow:
+      dims: [snapshot, port]
+      description: what a port puts into its bus
 dimensions:
   snapshot: { dtype: int }
   port: { dtype: str }
@@ -140,11 +199,6 @@ relations:
   gen_port: { key: generator, values: port }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
-given:
-  variables:
-    flow:
-      dims: [snapshot, port]
-      description: what a port puts into its bus
 constraints:
   gen_injects:
     dims: [snapshot, generator]
@@ -179,14 +233,14 @@ A given constraint is a row family that another model builds. This file reads
 its dual.
 
 ```yaml
-dimensions:
-  snapshot: { dtype: int }
-  bus: { dtype: str }
 given:
   constraints:
     balance:
       dims: [snapshot, bus]
       description: the host model clears each bus
+dimensions:
+  snapshot: { dtype: int }
+  bus: { dtype: str }
 expressions:
   price:
     expression: dual(balance)
@@ -208,14 +262,14 @@ A given expression is a named expression this file reads and another file
 defines.
 
 ```yaml
-dimensions:
-  snapshot: { dtype: int }
-  bus: { dtype: str }
 given:
   expressions:
     injection:
       dims: [snapshot, bus]
       description: what the components put into a bus
+dimensions:
+  snapshot: { dtype: int }
+  bus: { dtype: str }
 constraints:
   balance:
     dims: [snapshot, bus]
@@ -255,6 +309,9 @@ part of it.
 
 ```yaml
 # fleet.yaml adds a term
+given:
+  expressions:
+    injection: { dims: [snapshot, bus] }
 dimensions:
   snapshot: { dtype: int }
   bus: { dtype: str }
@@ -263,9 +320,6 @@ relations:
   gen_bus: { key: generator, values: bus }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
-given:
-  expressions:
-    injection: { dims: [snapshot, bus] }
 expressions:
   generation:
     description: what the fleet puts into a bus
@@ -275,14 +329,14 @@ expressions:
 
 ```yaml
 # balance.yaml reads the sum, and adds nothing to it
-dimensions:
-  snapshot: { dtype: int }
-  bus: { dtype: str }
 given:
   expressions:
     injection:
       dims: [snapshot, bus]
       description: what the components put into a bus
+dimensions:
+  snapshot: { dtype: int }
+  bus: { dtype: str }
 constraints:
   balance:
     dims: [snapshot, bus]
@@ -341,9 +395,6 @@ A given mask is a [mask](named.md#masks) this file reads and another file
 defines.
 
 ```yaml
-dimensions:
-  period: { dtype: int, ordered: true }
-  generator: { dtype: str }
 given:
   variables:
     p: { dims: [period, generator] }
@@ -351,6 +402,9 @@ given:
     stands:
       dims: [period, generator]
       description: the generator stands in this period
+dimensions:
+  period: { dtype: int, ordered: true }
+  generator: { dtype: str }
 parameters:
   ramp: { dims: [generator] }
 constraints:

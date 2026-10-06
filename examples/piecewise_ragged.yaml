@@ -6,9 +6,8 @@ description: >-
   The same least-cost dispatch as `piecewise_lp.yaml`, with curves of different
   lengths. A large unit is metered at every breakpoint and a small one at the
   first few, so the breakpoint table is ragged. `points:` is what says how far
-  each curve runs: without it every curve claims the whole axis, and a
-  breakpoint with no row is read as a zero rather than as a shorter curve —
-  which sits the curve on the origin instead of ending it.
+  each curve runs: without it every curve claims the whole axis, and the data
+  is refused at a breakpoint with no row.
 
 dimensions:
   snapshot:
@@ -38,9 +37,11 @@ parameters:
   bp_x:
     description: breakpoint dispatch levels, bound where `metered` is true
     dims: [generator, bp]
+    missing: neutral
   bp_y:
     description: cost at each breakpoint, bound where `metered` is true
     dims: [generator, bp]
+    missing: neutral
 
 variables:
   dispatch:
