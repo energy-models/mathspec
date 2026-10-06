@@ -9,7 +9,7 @@ constraint both take ``variable * variable``; a *bound* and a ``piecewise:``
 link do not — each of those is read affinely. An ``expressions:`` entry is not
 degree-checked at declaration at all: the math reading it is checked where it
 reads, at that position's own ceiling, and an entry the math never reads
-(``ExpressionDeclaration.in_math``) is held to no degree.
+(``NamedExpression.in_math``) is held to no degree.
 
 A degree-2 product has a second rule: **at most one factor may be a sum of
 terms**. ``sum(x, over=i) * sum(y, over=j)`` is a cross join whose size the
@@ -28,7 +28,7 @@ from mathspec.program import (
     Multiply,
     Power,
     Sum,
-    Variable,
+    VariableReference,
     WindowSum,
     carries_variable,
     children,
@@ -82,7 +82,7 @@ def _degree(node: Expression) -> int:
     what stops a cubic from reaching a consumer to be refused by whichever one
     happens to notice.
     """
-    if isinstance(node, Variable):
+    if isinstance(node, VariableReference):
         return 1
     if isinstance(node, Multiply):
         return _degree(node.left) + _degree(node.right)

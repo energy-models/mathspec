@@ -82,14 +82,14 @@ dimension, parameter and variable.
 
 ## Printing one declaration on its own
 
-`typeset_declaration` returns the line the document prints for one named
+`typeset_line` returns the line the document prints for one named
 expression, mask, constraint, assumption, curve or variable, with its
 quantifier and without a document, a label, a number or math delimiters:
 
 ```python
-ms.typeset_declaration('spec.yaml', 'spend', 'latex')
+ms.typeset_line('spec.yaml', 'spend', 'latex')
 # \mathit{spend}_{t} = \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
-ms.typeset_declaration('spec.yaml', 'balance', 'latex')
+ms.typeset_line('spec.yaml', 'balance', 'latex')
 # \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
@@ -98,7 +98,7 @@ optional `symbols` table. A Markdown line arrives without delimiters too, so put
 it inside the inline pair:
 
 ```python
-line = ms.typeset_declaration('spec.yaml', 'balance', 'markdown')
+line = ms.typeset_line('spec.yaml', 'balance', 'markdown')
 print(f'The balance holds: $`{line}`$')
 ```
 

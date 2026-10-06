@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec import advice, merge, override, to_markdown, to_spec, typeset, typeset_declaration
+from mathspec import advice, merge, override, to_markdown, to_spec, typeset, typeset_line
 from mathspec.canonical import canonical_yaml
 from mathspec.errors import LanguageError
 from mathspec.typesetting import FORMATS
@@ -624,12 +624,12 @@ def test_a_given_expression_prints_no_line_of_its_own(spec):
     with pytest.raises(
         LanguageError, match=r"'injection' is a given expression, and a given declaration prints no line"
     ):
-        typeset_declaration(spec, 'injection', 'latex')
+        typeset_line(spec, 'injection', 'latex')
 
 
 def test_the_composed_sum_prints_its_terms_by_name():
     composed = merge([FLEET, DEMAND, BALANCE])
-    assert typeset_declaration(composed, 'injection', 'typst', inline_expressions=False) == (
+    assert typeset_line(composed, 'injection', 'typst', inline_expressions=False) == (
         'italic("injection")_(t,b) = italic("generator_injection")_(t,b) + upright("demand_injection")_(t,b) '
         'quad forall t in cal(T), b in cal(B)'
     )

@@ -25,22 +25,22 @@ from mathspec.program import (
     Assumption,
     BooleanLiteral,
     Constant,
-    ConstraintDeclaration,
-    DimensionDeclaration,
-    ExpressionDeclaration,
-    GivenDeclaration,
+    Constraint,
+    Dimension,
+    ExpressionReference,
+    Given,
     GivenTargets,
     Link,
     Mask,
-    MaskDeclaration,
     NamedExpression,
-    ObjectiveDeclaration,
+    NamedMask,
+    Objective,
     Parameter,
-    ParameterDeclaration,
-    PiecewiseDeclaration,
+    ParameterReference,
+    Piecewise,
     Program,
-    SosDeclaration,
-    VariableDeclaration,
+    Sos,
+    Variable,
     VariableDefined,
     variables_of,
     walk,
@@ -60,7 +60,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
     from mathspec.program import Expression
-    from mathspec.spec import AssumptionBlock, Spec
+    from mathspec.spec import AssumptionSpec, Spec
 
 
 def lower(schema: Spec) -> Program:
@@ -121,7 +121,7 @@ def lower(schema: Spec) -> Program:
         )
         resolve_expression(body_ast, ns, context, errors, formals=formals)
 
-    entries: dict[str, NamedExpression] = {}
+    entries: dict[str, ExpressionReference] = {}
     for ename in schema.expressions:
         node, refusals = ns.named_entry(ename)
         errors.extend(refusals)
@@ -130,14 +130,14 @@ def lower(schema: Spec) -> Program:
 
     terms = _terms(entries, schema, ns, errors)
 
-    masks: dict[str, MaskDeclaration] = {}
+    masks: dict[str, NamedMask] = {}
     for mname, mdef in schema.masks.items():
         named_mask, refusals = ns.mask_entry(mname)
         errors.extend(refusals)
         if named_mask is not None:
             body = Mask(named_mask.body)
             frame = tuple(d for d in schema.dimensions if d in body.dims)
-            masks[mname] = MaskDeclaration(body, frame, mdef.description)
+            masks[mname] = NamedMask(body, frame, mdef.description)
 
     variables = {}
     for vname, vdef in schema.variables.items():
@@ -148,7 +148,7 @@ def lower(schema: Spec) -> Program:
             lower_bound, upper_bound = Constant(0.0), Constant(1.0)
         else:
             lower_bound, upper_bound = _bound(vdef.bounds.lower), _bound(vdef.bounds.upper)
-        variables[vname] = VariableDeclaration(
+        variables[vname] = Variable(
             tuple(vdef.dims),
             where=mask_of(where),
             lower=lower_bound,
@@ -158,13 +158,13 @@ def lower(schema: Spec) -> Program:
             description=vdef.description,
         )
 
-    constraints: dict[str, ConstraintDeclaration] = {}
+    constraints: dict[str, Constraint] = {}
     for cname, cdef in schema.constraints.items():
         context = f"Constraint '{cname}'"
         where = resolve_where_text(cdef.where, ns, context, errors)
         if (sides := resolve_constraint_text(cdef.expression, ns, context, errors)) is not None:
             lhs, sense, rhs = sides
-            constraints[cname] = ConstraintDeclaration(
+            constraints[cname] = Constraint(
                 tuple(cdef.dims), lhs, sense, rhs, mask_of(where), description=cdef.description
             )
 
@@ -172,7 +172,7 @@ def lower(schema: Spec) -> Program:
     if schema.objective is not None:
         expression = resolve_expression_text(schema.objective.expression, ns, 'The objective', errors, ceiling=2)
         if expression is not None:
-            objective = ObjectiveDeclaration(schema.objective.sense, expression, schema.objective.description)
+            objective = Objective(schema.objective.sense, expression, schema.objective.description)
 
     assumptions: dict[str, Assumption] = {}
     for aname, adef in schema.assumptions.items():
@@ -196,12 +196,12 @@ def lower(schema: Spec) -> Program:
         roots.append(objective.expression)
     roots.extend(link for links in curves.values() for link in links)
     roots.extend(terms)
-    in_math = frozenset(node.name for node in walk(*roots) if isinstance(node, NamedExpression))
+    in_math = frozenset(node.name for node in walk(*roots) if isinstance(node, ExpressionReference))
 
     piecewise = {}
     for pname, links in curves.items():
         pdef = schema.piecewise[pname]
-        piecewise[pname] = PiecewiseDeclaration(
+        piecewise[pname] = Piecewise(
             over=pdef.over,
             links=tuple(Link(node, link.values, link.sign) for node, link in zip(links, pdef.links, strict=True)),
             method=pdef.method,
@@ -217,25 +217,25 @@ def lower(schema: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: ParameterDeclaration(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description)
+            name: Parameter(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description)
             for name, pdef in schema.parameters.items()
         },
         variables=variables,
         constraints=constraints,
         objective=objective,
         dimensions={
-            name: DimensionDeclaration(dtype=ddef.dtype, ordered=ddef.ordered, description=ddef.description)
+            name: Dimension(dtype=ddef.dtype, ordered=ddef.ordered, description=ddef.description)
             for name, ddef in schema.dimensions.items()
         },
         relations=ns.relations,
         sos={
-            name: SosDeclaration(sdef.variable, sdef.along, sos_type=sdef.type, description=sdef.description)
+            name: Sos(sdef.variable, sdef.along, sos_type=sdef.type, description=sdef.description)
             for name, sdef in schema.sos.items()
         },
         piecewise=piecewise,
         assumptions=assumptions,
         expressions={
-            name: ExpressionDeclaration(
+            name: NamedExpression(
                 entry.body,
                 _frame_of(name, entry, schema),
                 in_math=name in in_math,
@@ -247,19 +247,13 @@ def lower(schema: Spec) -> Program:
         masks=masks,
         given=GivenTargets(
             parameters={
-                name: ParameterDeclaration(tuple(g.dims), g.dtype, None, g.description)
+                name: Parameter(tuple(g.dims), g.dtype, None, g.description)
                 for name, g in schema.given.parameters.items()
             },
-            variables={
-                name: GivenDeclaration(tuple(g.dims), g.description) for name, g in schema.given.variables.items()
-            },
-            constraints={
-                name: GivenDeclaration(tuple(g.dims), g.description) for name, g in schema.given.constraints.items()
-            },
-            expressions={
-                name: GivenDeclaration(tuple(g.dims), g.description) for name, g in schema.given.expressions.items()
-            },
-            masks={name: GivenDeclaration(tuple(g.dims), g.description) for name, g in schema.given.masks.items()},
+            variables={name: Given(tuple(g.dims), g.description) for name, g in schema.given.variables.items()},
+            constraints={name: Given(tuple(g.dims), g.description) for name, g in schema.given.constraints.items()},
+            expressions={name: Given(tuple(g.dims), g.description) for name, g in schema.given.expressions.items()},
+            masks={name: Given(tuple(g.dims), g.description) for name, g in schema.given.masks.items()},
         ),
         description=schema.description,
     )
@@ -269,7 +263,7 @@ def lower(schema: Spec) -> Program:
     return program
 
 
-def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str]) -> list[NamedExpression]:
+def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str]) -> list[ExpressionReference]:
     """Every entry with ``adds_to:`` that loads as a term, with a refusal in *errors* for each other.
 
     A term that reads its own sum, directly or through the sums the file's
@@ -282,7 +276,7 @@ def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str
         if (target := schema.expressions[name].adds_to) is not None
         and (entry := _term(name, target, schema, ns, errors)) is not None
     }
-    sums: dict[str, list[NamedExpression]] = {}
+    sums: dict[str, list[ExpressionReference]] = {}
     for target, entry in resolved.values():
         sums.setdefault(target, []).append(entry)
     terms = []
@@ -299,7 +293,7 @@ def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str
     return terms
 
 
-def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]) -> NamedExpression | None:
+def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]) -> ExpressionReference | None:
     """Named expression *name* as the term it writes into a given expression of its file, or ``None``.
 
     The given entry is what makes a misspelt target a refusal in the file that
@@ -325,11 +319,11 @@ def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]
     entry = resolve_expression_text(name, ns, context, errors, ceiling=2)
     if entry is None:
         return None
-    assert isinstance(entry, NamedExpression), 'a term is a name, and a name resolves to the entry it names'
+    assert isinstance(entry, ExpressionReference), 'a term is a name, and a name resolves to the entry it names'
     return entry
 
 
-def _loop(target: str, entry: NamedExpression, sums: Mapping[str, list[NamedExpression]]) -> list[str] | None:
+def _loop(target: str, entry: ExpressionReference, sums: Mapping[str, list[ExpressionReference]]) -> list[str] | None:
     """The sums *entry* reads *target* through, by the terms in *sums*, or ``None`` where it does not read it.
 
     ``[]`` is a term that reads its own sum.
@@ -347,7 +341,7 @@ def _loop(target: str, entry: NamedExpression, sums: Mapping[str, list[NamedExpr
     return None
 
 
-def _frame_of(name: str, entry: NamedExpression, schema: Spec) -> tuple[str, ...]:
+def _frame_of(name: str, entry: ExpressionReference, schema: Spec) -> tuple[str, ...]:
     """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's in declaration order."""
     declared = schema.expressions[name].dims
     if declared is not None:
@@ -356,15 +350,15 @@ def _frame_of(name: str, entry: NamedExpression, schema: Spec) -> tuple[str, ...
     return tuple(d for d in schema.dimensions if d in carried)
 
 
-def _bound(value: float | str | None) -> Constant | Parameter | None:
+def _bound(value: float | str | None) -> Constant | ParameterReference | None:
     if value is None:
         return None
     if isinstance(value, str):
-        return Parameter(value)
+        return ParameterReference(value)
     return Constant(value)
 
 
-def _assumption(name: str, block: AssumptionBlock, ns: Namespace, errors: list[str]) -> Assumption | None:
+def _assumption(name: str, block: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:
     """One ``assumptions:`` entry typed, or ``None`` once anything in it failed.
 
     A predicate the connectives decide is refused: one that folds to true

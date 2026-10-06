@@ -21,8 +21,8 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
-from mathspec import merge, override, to_spec, typeset_declaration
-from mathspec.program import Add, Constant, NamedExpression
+from mathspec import merge, override, to_spec, typeset_line
+from mathspec.program import Add, Constant, ExpressionReference
 from mathspec.typesetting import to_markdown
 from tools._page import ROOT, sidecar_for, splice, tab, without_header
 from tools._page import main as page_main
@@ -275,7 +275,7 @@ def declared_block(path: Path) -> str:
     for name, block in model.constraints.items():
         printed = equation[name]
         if _reads_a_sum(model, name):
-            line = typeset_declaration(model, name, 'markdown', symbols=sidecar_for(path), inline_expressions=True)
+            line = typeset_line(model, name, 'markdown', symbols=sidecar_for(path), inline_expressions=True)
             printed = f'```math\n{line}\n```'
         parts.append(
             f'### `{_stands_for(name, block.description)}`\n\n'
@@ -308,7 +308,7 @@ def patched_block(base: Path, patch: Path) -> str:
     parts = [model.description]
     for section, heading_of in headings.items():
         for name in written.get(section, {}):
-            line = typeset_declaration(model, name, 'markdown', symbols=sidecar_for(base), inline_expressions=False)
+            line = typeset_line(model, name, 'markdown', symbols=sidecar_for(base), inline_expressions=False)
             parts.append(
                 f'### `{heading_of[name]}`\n\n'
                 f'`{name}`\n\n'
@@ -333,10 +333,10 @@ def _reads_a_sum(model: Spec, name: str) -> bool:
     row = model.program.constraints[name]
     lhs, rhs = row.lhs, row.rhs
     return (
-        isinstance(lhs, NamedExpression)
+        isinstance(lhs, ExpressionReference)
         and isinstance(rhs, Constant)
         and rhs.value == 0
-        and all(isinstance(term, NamedExpression) for term in _summands(lhs.body))
+        and all(isinstance(term, ExpressionReference) for term in _summands(lhs.body))
         and len(_summands(lhs.body)) > 1
     )
 

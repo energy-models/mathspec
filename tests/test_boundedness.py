@@ -73,7 +73,7 @@ def test_a_variable_the_objective_drives_unopposed_is_named_with_its_side(patch,
 )
 def test_a_named_constant_coefficient_carries_its_sign(objective, side):
     """A coefficient written as an ``expressions:`` entry reaches the pass as a
-    ``NamedExpression`` node over its constant. The sign was read off the node alone, so a
+    ``ExpressionReference`` node over its constant. The sign was read off the node alone, so a
     named ``2`` claimed nothing and the unbounded variable went unnamed."""
     notes = _notes(
         **{

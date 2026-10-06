@@ -52,13 +52,13 @@ from mathspec.program import (
     JoinColumns,
     Multiply,
     Negate,
-    Parameter,
+    ParameterReference,
     Partition,
     Power,
-    RelationDeclaration,
+    Relation,
     Sum,
     Translate,
-    Variable,
+    VariableReference,
     WindowSum,
     carries_variable,
     children,
@@ -186,7 +186,7 @@ class ExpressionResolver:
 
         A named expression arrives as the one node [`Namespace.named`][]
         built for it; the cast is the one place a
-        [`NamedExpression`][mathspec.program.NamedExpression] enters a tree typed as a program's,
+        [`ExpressionReference`][mathspec.program.ExpressionReference] enters a tree typed as a program's,
         which lowering makes true.
         """
         if node.name in self.formals:
@@ -202,13 +202,13 @@ class ExpressionResolver:
                 return None
         match self.ns.kind(node.name):
             case 'variable':
-                return Variable(node.name)
+                return VariableReference(node.name)
             case 'parameter':
                 dtype = self.ns.dtypes.get(node.name)
                 if dtype is not None and dtype not in NUMERIC_DTYPES:
                     self.errors.append(not_a_number(node.name, dtype, self.context))
                     return None
-                return Parameter(node.name)
+                return ParameterReference(node.name)
             case 'dimension':
                 self.errors.append(
                     f"{self.context}: '{node.name}' is a dimension, and a dimension is "
@@ -764,7 +764,7 @@ def _lookup_rewrite(name: str, columns: tuple[str, ...], plain: tuple[str, ...])
     return f'sum({lookup}, over={shown(plain)})' if plain else lookup
 
 
-def _columns_over(shape: RelationDeclaration, dims: tuple[str, ...]) -> str:
+def _columns_over(shape: Relation, dims: tuple[str, ...]) -> str:
     """The columns of *shape* over each of *dims*, for the writer who named a dimension where a column was meant."""
     over = {d: [r for r in shape.roles if shape.dim(r) == d] for d in dims}
     if named := [f'the columns over {d!r} are {roles}' for d, roles in over.items() if roles]:

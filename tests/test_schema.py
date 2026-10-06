@@ -29,7 +29,7 @@ def test_the_checked_in_json_schema_has_not_drifted():
     ('definition', 'shorthand', 'spelling'),
     [
         pytest.param('PiecewiseLink', 'array', '`[expression, values, sign?]`', id='link-shorthand'),
-        pytest.param('ExpressionBlock', 'string', 'bare-string', id='bare-string-expression'),
+        pytest.param('ExpressionSpec', 'string', 'bare-string', id='bare-string-expression'),
     ],
 )
 def test_the_json_schema_admits_the_shorthand_the_loader_admits(definition, shorthand, spelling):
@@ -56,15 +56,15 @@ def test_no_definition_refers_only_to_itself():
 @pytest.mark.parametrize(
     ('block', 'field', 'alias'),
     [
-        pytest.param('ObjectiveBlock', 'sense', spec.ObjectiveSense, id='sense'),
-        pytest.param('VariableBlock', 'domain', spec.VariableDomain, id='domain'),
-        pytest.param('VariableBlock', 'missing', spec.VariableMissing, id='variable-missing'),
-        pytest.param('RelationBlock', 'missing', spec.RelationMissing, id='relation-missing'),
-        pytest.param('ParameterBlock', 'missing', spec.MissingReading, id='parameter-missing'),
-        pytest.param('ParameterBlock', 'dtype', spec.ParameterDtype, id='parameter-dtype'),
-        pytest.param('DimensionBlock', 'dtype', spec.DimensionDtype, id='dimension-dtype'),
-        pytest.param('PiecewiseBlock', 'method', spec.PiecewiseMethod, id='method'),
-        pytest.param('SosBlock', 'type', spec.SosType, id='sos-type'),
+        pytest.param('ObjectiveSpec', 'sense', spec.ObjectiveSense, id='sense'),
+        pytest.param('VariableSpec', 'domain', spec.VariableDomain, id='domain'),
+        pytest.param('VariableSpec', 'missing', spec.VariableMissing, id='variable-missing'),
+        pytest.param('RelationSpec', 'missing', spec.RelationMissing, id='relation-missing'),
+        pytest.param('ParameterSpec', 'missing', spec.MissingReading, id='parameter-missing'),
+        pytest.param('ParameterSpec', 'dtype', spec.ParameterDtype, id='parameter-dtype'),
+        pytest.param('DimensionSpec', 'dtype', spec.DimensionDtype, id='dimension-dtype'),
+        pytest.param('PiecewiseSpec', 'method', spec.PiecewiseMethod, id='method'),
+        pytest.param('SosSpec', 'type', spec.SosType, id='sos-type'),
     ],
 )
 def test_a_closed_vocabulary_is_published_as_an_enum(block, field, alias):
@@ -79,9 +79,9 @@ def test_a_closed_vocabulary_is_published_as_an_enum(block, field, alias):
 @pytest.mark.parametrize(
     ('block', 'default'),
     [
-        pytest.param('ParameterBlock', 'refused', id='parameter'),
-        pytest.param('RelationBlock', 'refused', id='relation'),
-        pytest.param('VariableBlock', 'absent', id='variable'),
+        pytest.param('ParameterSpec', 'refused', id='parameter'),
+        pytest.param('RelationSpec', 'refused', id='relation'),
+        pytest.param('VariableSpec', 'absent', id='variable'),
     ],
 )
 def test_the_schema_publishes_the_reading_a_file_gets_by_leaving_missing_out(block, default):

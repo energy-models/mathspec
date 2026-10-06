@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from mathspec.errors import LanguageError
-from mathspec.typesetting import FORMATS, SymbolTable, to_latex, to_markdown, typeset, typeset_declaration
+from mathspec.typesetting import FORMATS, SymbolTable, to_latex, to_markdown, typeset, typeset_line
 from mathspec.typesetting.format import OPERATOR_NAMES
 from mathspec.typesetting.symbols import _derive_name_symbol, chosen_expressions, symbols_for
 from mathspec.validation import to_spec
@@ -920,7 +920,7 @@ def test_a_count_along_a_dim_the_frame_carries_takes_a_primed_dummy():
             }
         },
     )
-    line = typeset_declaration(model, 'balance', 'latex')
+    line = typeset_line(model, 'balance', 'latex')
     assert r"g' \in \mathcal{G}" in line, 'the counted dimension is quantified already, so the set takes a fresh index'
 
 
@@ -956,9 +956,9 @@ def test_a_curve_prints_what_its_method_assumes_of_the_breakpoints(name: FormatN
 
 
 def test_an_assumption_is_a_declaration_a_line_may_be_asked_for():
-    """`typeset_declaration` prints one line for a name; an assumption is now one of the names it takes."""
+    """`typeset_line` prints one line for a name; an assumption is now one of the names it takes."""
     model = varied(DISPATCH_MODEL, assumptions={'costs_are_positive': 'cost > 0'})
-    assert typeset_declaration(model, 'costs_are_positive', 'latex') == (
+    assert typeset_line(model, 'costs_are_positive', 'latex') == (
         r'\mathrm{cost}_{g} > 0 \qquad \forall\, g \in \mathcal{G}'
     )
 
@@ -971,10 +971,10 @@ def test_a_condition_a_method_states_is_a_line_that_may_be_asked_for_before_it_i
     there, and the page shows a line no caller can reach.
     """
     curve = to_spec(EXAMPLES / 'piecewise_lp.yaml')
-    line = typeset_declaration(curve, 'cost_curve_increasing', 'latex')
+    line = typeset_line(curve, 'cost_curve_increasing', 'latex')
 
     assert 'is defined' not in line, 'the increasing condition is a comparison, not a definedness test'
-    assert line == typeset_declaration(curve.expand('piecewise'), 'cost_curve_increasing', 'latex'), (
+    assert line == typeset_line(curve.expand('piecewise'), 'cost_curve_increasing', 'latex'), (
         'and it prints the same line whether or not the curve has been written out'
     )
 
@@ -1037,7 +1037,7 @@ _CURVE = {
 )
 def test_a_curve_prints_as_the_curve_it_states(patch: dict[str, Any], expected: str):
     """The block, not the rows it stands for: `typeset(spec.expand())` prints those."""
-    assert expected in typeset_declaration(varied(_CURVE, **patch), 'curve', 'latex')
+    assert expected in typeset_line(varied(_CURVE, **patch), 'curve', 'latex')
 
 
 def test_a_gate_that_does_not_exist_everywhere_prints_the_two_arms_the_expansion_writes_two_rows_for():
@@ -1051,7 +1051,7 @@ def test_a_gate_that_does_not_exist_everywhere_prints_the_two_arms_the_expansion
     assert (
         r'\begin{cases} \mathit{warm}_{t} & \text{if } \mathrm{committable}_{t} \\ 1 '
         r'& \text{otherwise} \end{cases} \cdot \mathrm{pwl}'
-    ) in typeset_declaration(spec, 'curve', 'latex'), 'and the factor on the curve carries the same two arms'
+    ) in typeset_line(spec, 'curve', 'latex'), 'and the factor on the curve carries the same two arms'
 
 
 def test_a_curve_prints_over_the_frame_its_expansion_builds_one_per_coordinate_of():
@@ -1070,7 +1070,7 @@ def test_a_curve_prints_over_the_frame_its_expansion_builds_one_per_coordinate_o
     spec = to_spec(model)
     emitted = spec.expand('piecewise').constraints['curve_link0'].dims
 
-    printed = typeset_declaration(spec, 'curve', 'latex')
+    printed = typeset_line(spec, 'curve', 'latex')
     assert printed.endswith(r'\forall\, t \in \mathcal{T},\ g \in \mathcal{G}')
     assert emitted == ['snapshot', 'generator'], 'the quantifier above is that frame, in that order'
 

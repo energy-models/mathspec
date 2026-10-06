@@ -48,28 +48,28 @@ __all__ = [
     'Column',
     'Connective',
     'Constant',
-    'ConstraintDeclaration',
+    'Constraint',
     'ConstraintSense',
     'CountComparison',
     'DeclaredDtype',
+    'Dimension',
     'DimensionComparison',
-    'DimensionDeclaration',
     'DimensionDtype',
     'DimensionPosition',
     'Divide',
     'Dual',
     'Expression',
     'ExpressionComparison',
-    'ExpressionDeclaration',
+    'ExpressionReference',
     'Footprint',
-    'GivenDeclaration',
+    'Given',
     'GivenTargets',
     'Join',
     'JoinColumns',
     'JoinedPredicate',
     'Link',
     'Mask',
-    'MaskDeclaration',
+    'MaskReference',
     'Missing',
     'MissingReading',
     'Multiply',
@@ -77,16 +77,16 @@ __all__ = [
     'NamedMask',
     'Negate',
     'Not',
-    'ObjectiveDeclaration',
+    'Objective',
     'ObjectiveSense',
     'Or',
     'Parameter',
     'ParameterComparison',
-    'ParameterDeclaration',
     'ParameterDefined',
     'ParameterDtype',
+    'ParameterReference',
     'Partition',
-    'PiecewiseDeclaration',
+    'Piecewise',
     'PiecewiseMethod',
     'Power',
     'Predicate',
@@ -95,23 +95,23 @@ __all__ = [
     'QuadraticPosition',
     'Reach',
     'Region',
+    'Relation',
     'RelationComparison',
-    'RelationDeclaration',
     'RelationDefined',
     'RelationMissing',
     'RelationPairComparison',
     'Separability',
-    'SosDeclaration',
+    'Sos',
     'SosType',
     'Sum',
     'Translate',
     'TranslatedPredicate',
     'TypedPredicate',
     'Variable',
-    'VariableDeclaration',
     'VariableDefined',
     'VariableDomain',
     'VariableMissing',
+    'VariableReference',
     'WindowSum',
     'assumption_message',
     'carries_variable',
@@ -193,14 +193,14 @@ class Constant:
 
 
 @dataclass(frozen=True)
-class Parameter:
+class ParameterReference:
     """A parameter reference — contributes to the constant part."""
 
     name: str
 
 
 @dataclass(frozen=True)
-class Variable:
+class VariableReference:
     """A variable reference — one term per existing variable row."""
 
     name: str
@@ -212,7 +212,7 @@ class Dual:
 
     Of ``lhs <= rhs`` it is the rate in ``d`` of ``lhs <= rhs + d``, for every
     comparator and under either sense. Stands only under an
-    [`ExpressionDeclaration`][] the math never reads: the loader refuses
+    [`NamedExpression`][] the math never reads: the loader refuses
     ``dual()`` anywhere a solver ingests. One value per coordinate of the named
     constraint's own ``dims`` frame: the leaf reshapes nothing, like a
     parameter.
@@ -412,14 +412,14 @@ class Cases:
 
 
 @dataclass(frozen=True)
-class NamedExpression:
+class ExpressionReference:
     """A use of an ``expressions:`` entry, standing where its name was written, with the entry's body under it.
 
     Its value is its body's: a consumer building rows steps through it, as
     [`children`][] does. It is kept as a node rather than written in so the
     typesetter can print the symbol where the name stood and define it once.
     Every use of one entry holds the one node resolution built for it, whose
-    [`body`][] is the [`ExpressionDeclaration.expression`][] of that entry.
+    [`body`][] is the [`NamedExpression.expression`][] of that entry.
     """
 
     name: str
@@ -434,12 +434,12 @@ class NamedExpression:
 #: tree the math reads — [`Program.roots`][], a bound, and a named expression
 #: that is ``in_math`` — affine but where a [`QuadraticPosition`][] admits a
 #: [`Multiply`][] of two variable-carrying operands. A
-#: [`ExpressionDeclaration`][] the math never reads is held to none of them.
+#: [`NamedExpression`][] the math never reads is held to none of them.
 #: No node records which tree it stands in.
 Expression = (
     Constant
-    | Parameter
-    | Variable
+    | ParameterReference
+    | VariableReference
     | Dual
     | Negate
     | Add
@@ -451,13 +451,13 @@ Expression = (
     | Translate
     | WindowSum
     | Cases
-    | NamedExpression
+    | ExpressionReference
 )
 
 
 def children(expression: Expression) -> tuple[Expression, ...]:
     """The sub-expressions of *expression* — what every walk recurses through."""
-    if isinstance(expression, NamedExpression):
+    if isinstance(expression, ExpressionReference):
         return (expression.body,)
     if isinstance(expression, Negate):
         return (expression.operand,)
@@ -471,7 +471,7 @@ def children(expression: Expression) -> tuple[Expression, ...]:
         return (expression.operand,)
     if isinstance(expression, Cases):
         return tuple(region.value for region in expression.regions)
-    if isinstance(expression, (Constant, Parameter, Variable, Dual)):
+    if isinstance(expression, (Constant, ParameterReference, VariableReference, Dual)):
         return ()
     assert_never(expression)
 
@@ -482,7 +482,7 @@ def children(expression: Expression) -> tuple[Expression, ...]:
 
 
 @dataclass(frozen=True)
-class RelationDeclaration:
+class Relation:
     """One declared relation: a table over its ``columns``, single-valued per ``key``.
 
     ``columns`` maps each role to its dimension in the order the table
@@ -545,7 +545,7 @@ class JoinColumns:
     """
 
     name: str
-    relation: RelationDeclaration
+    relation: Relation
     joined: tuple[str, ...]
     grouped: tuple[str, ...]
 
@@ -618,7 +618,7 @@ class Partition:
     """
 
     name: str
-    relation: RelationDeclaration
+    relation: Relation
     along: str
     grouped: tuple[str, ...]
     joined: tuple[str, ...]
@@ -637,12 +637,12 @@ class Partition:
 
 
 @dataclass(frozen=True)
-class DimensionDeclaration:
+class Dimension:
     """A dimension, as the file declares it."""
 
     #: What the labels are, as the file declares them. A dimension is read from
     #: whatever table carries it, so the declared type is what that column is
-    #: checked against — the same claim ``ParameterDeclaration.dtype`` makes
+    #: checked against — the same claim ``Parameter.dtype`` makes
     #: about a value column, one axis over.
     dtype: DimensionDtype = 'str'
     #: Whether the order of the labels is part of the model, so a consumer
@@ -685,7 +685,7 @@ def assumption_message(name: str, assumption: Assumption) -> str:
 
 
 @dataclass(frozen=True)
-class ParameterDeclaration:
+class Parameter:
     """Shape declaration; data is attached at execution time by name.
 
     ``dtype`` is what the declaration claims the values are, and a consumer
@@ -705,7 +705,7 @@ class ParameterDeclaration:
 
 
 @dataclass(frozen=True)
-class VariableDeclaration:
+class Variable:
     dims: tuple[str, ...]
     where: Mask | None = None
     #: A number or a parameter, or ``None`` where that side is open. What stands
@@ -719,7 +719,7 @@ class VariableDeclaration:
 
 
 @dataclass(frozen=True)
-class GivenDeclaration:
+class Given:
     """A column or a row family this program reads and does not build.
 
     The frame is the whole declaration. A consumer looks the name up in the
@@ -740,16 +740,16 @@ class GivenTargets:
     """
 
     #: Data another file declares, by name, with the dtype a where compares against.
-    parameters: Mapping[str, ParameterDeclaration] = Sealed({})
+    parameters: Mapping[str, Parameter] = Sealed({})
     #: Columns the host model provides, by name.
-    variables: Mapping[str, GivenDeclaration] = Sealed({})
+    variables: Mapping[str, Given] = Sealed({})
     #: Row families the host model provides, by name, read back after the solve.
-    constraints: Mapping[str, GivenDeclaration] = Sealed({})
+    constraints: Mapping[str, Given] = Sealed({})
     #: Named expressions the host model defines, by name.
-    expressions: Mapping[str, GivenDeclaration] = Sealed({})
+    expressions: Mapping[str, Given] = Sealed({})
     #: Masks the host model defines, by name. A where reads one as the data it
     #: is: a [`ParameterDefined`][] of a boolean over its frame.
-    masks: Mapping[str, GivenDeclaration] = Sealed({})
+    masks: Mapping[str, Given] = Sealed({})
 
     def __post_init__(self) -> None:
         for f in fields(self):
@@ -761,7 +761,7 @@ class GivenTargets:
 
 
 @dataclass(frozen=True)
-class ConstraintDeclaration:
+class Constraint:
     """``lhs sense rhs`` for each coord combination of ``dims``.
 
     Either side may carry variables and constants alike; which side a
@@ -778,7 +778,7 @@ class ConstraintDeclaration:
 
 
 @dataclass(frozen=True)
-class SosDeclaration:
+class Sos:
     """One special-ordered set per coordinate of the variable's ``dims`` minus ``along``.
 
     The only declaration that adds neither a column nor a row: it names
@@ -795,7 +795,7 @@ class SosDeclaration:
 
 
 @dataclass(frozen=True)
-class ObjectiveDeclaration:
+class Objective:
     """Objective — scalar, every reduction in it one the file wrote."""
 
     sense: ObjectiveSense
@@ -804,7 +804,7 @@ class ObjectiveDeclaration:
 
 
 @dataclass(frozen=True)
-class ExpressionDeclaration:
+class NamedExpression:
     """A named quantity — one the math reads, or one only read back after a solve.
 
     ``in_math`` where the objective, a constraint or a term of a given
@@ -827,10 +827,10 @@ class ExpressionDeclaration:
 
 
 @dataclass(frozen=True)
-class MaskDeclaration:
+class NamedMask:
     """A named predicate — a ``masks:`` entry, read wherever a ``where``, a ``when`` or a ``holds`` names it.
 
-    It builds nothing of its own: every use stands as a [`NamedMask`][] with
+    It builds nothing of its own: every use stands as a [`MaskReference`][] with
     this predicate under it, so a consumer reading a mask never looks the
     name up here.
     """
@@ -856,7 +856,7 @@ class Link:
 
 
 @dataclass(frozen=True)
-class PiecewiseDeclaration:
+class Piecewise:
     """A ``piecewise:`` block as the curve it states, which [`expand`][mathspec.spec.Spec.expand] writes out as rows.
 
     A program of a spec that still declares one carries it here, typed; a
@@ -1043,18 +1043,18 @@ class Program:
     inside it are, which is what dedup and memoisation ask for.
     """
 
-    parameters: Mapping[str, ParameterDeclaration]
-    variables: Mapping[str, VariableDeclaration]
-    constraints: Mapping[str, ConstraintDeclaration]
+    parameters: Mapping[str, Parameter]
+    variables: Mapping[str, Variable]
+    constraints: Mapping[str, Constraint]
     #: ``None`` where the file declares no objective — a feasibility problem,
     #: whose answer is whether the constraints can be met at all.
-    objective: ObjectiveDeclaration | None
-    dimensions: Mapping[str, DimensionDeclaration] = Sealed({})
-    relations: Mapping[str, RelationDeclaration] = Sealed({})
-    sos: Mapping[str, SosDeclaration] = Sealed({})
+    objective: Objective | None
+    dimensions: Mapping[str, Dimension] = Sealed({})
+    relations: Mapping[str, Relation] = Sealed({})
+    sos: Mapping[str, Sos] = Sealed({})
     #: Each ``piecewise:`` block the spec still declares, as the curve it
     #: states; empty on a program of a spec whose curves are written out.
-    piecewise: Mapping[str, PiecewiseDeclaration] = Sealed({})
+    piecewise: Mapping[str, Piecewise] = Sealed({})
     #: What the data has to satisfy for the answer to mean anything, by the
     #: name a refusal quotes: every ``assumptions:`` entry the file wrote, then
     #: what each ``piecewise:`` block's method assumes of its breakpoints. The
@@ -1062,14 +1062,14 @@ class Program:
     #: each and refuses with [`assumption_message`][].
     assumptions: Mapping[str, Assumption] = Sealed({})
     #: Declared ``expressions:``, each saying whether the math reads it. None
-    #: builds a row of its own — one the math reads stands as a [`NamedExpression`][]
+    #: builds a row of its own — one the math reads stands as a [`ExpressionReference`][]
     #: where it is read — but all are lowered with the program, so a file whose
     #: named expression is outside the language is refused by every verb that
     #: reads the file rather than only by the one that reads the expression.
-    expressions: Mapping[str, ExpressionDeclaration] = Sealed({})
-    #: Declared ``masks:``. Each use stands as a [`NamedMask`][] where it is
+    expressions: Mapping[str, NamedExpression] = Sealed({})
+    #: Declared ``masks:``. Each use stands as a [`MaskReference`][] where it is
     #: read, so a consumer building rows needs nothing from this group.
-    masks: Mapping[str, MaskDeclaration] = Sealed({})
+    masks: Mapping[str, NamedMask] = Sealed({})
     #: What this program reads and does not build ([`GivenTargets`][]), for a host model to provide.
     given: GivenTargets = GivenTargets()
     #: What the file as a whole is, as its ``description:`` says.
@@ -1087,7 +1087,7 @@ class Program:
         yield 'objective', (self.objective.expression,) if self.objective is not None else ()
         yield 'constraint', tuple(side for c in self.constraints.values() for side in (c.lhs, c.rhs))
 
-    def relations_of(self, dimension: str) -> Mapping[str, RelationDeclaration]:
+    def relations_of(self, dimension: str) -> Mapping[str, Relation]:
         """The relations with a column over *dimension*, by name."""
         return Sealed({n: lk for n, lk in self.relations.items() if dimension in lk.dims})
 
@@ -1223,17 +1223,17 @@ def is_quadratic(expression: Expression) -> bool:
 
 def carries_variable(expression: Expression) -> bool:
     """Whether a variable appears anywhere under *expression*."""
-    return any(isinstance(node, Variable) for node in walk(expression))
+    return any(isinstance(node, VariableReference) for node in walk(expression))
 
 
 def parameters_of(*expressions: Expression) -> frozenset[str]:
     """Every parameter named anywhere under *expressions*."""
-    return frozenset(node.name for node in walk(*expressions) if isinstance(node, Parameter))
+    return frozenset(node.name for node in walk(*expressions) if isinstance(node, ParameterReference))
 
 
 def variables_of(*expressions: Expression) -> frozenset[str]:
     """Every variable named anywhere under *expressions*."""
-    return frozenset(node.name for node in walk(*expressions) if isinstance(node, Variable))
+    return frozenset(node.name for node in walk(*expressions) if isinstance(node, VariableReference))
 
 
 # ---------------------------------------------------------------------------
@@ -1433,13 +1433,13 @@ class Or:
 
 
 @dataclass(frozen=True)
-class NamedMask:
+class MaskReference:
     """A use of a ``masks:`` entry, standing where its name was written, with the entry's predicate under it.
 
     Its truth is its body's: a consumer steps through it, as
     [`where_children`][] does. It is kept as a node rather than written in so
     the typesetter can print the symbol where the name stood and define it
-    once, as [`NamedExpression`][] does for an expression.
+    once, as [`ExpressionReference`][] does for an expression.
     """
 
     name: str
@@ -1464,7 +1464,7 @@ TypedPredicate = (
     | JoinedPredicate
 )
 
-#: The boolean connectives — with [`NamedMask`][], the only where nodes
+#: The boolean connectives — with [`MaskReference`][], the only where nodes
 #: carrying other where nodes, and so the places a walk over a predicate
 #: recurses. The grammar builds these classes directly, over leaves still
 #: unresolved, so a pre-resolution tree shares them — the transient impurity
@@ -1474,7 +1474,7 @@ Connective = Not | And | Or
 #: Every resolved predicate node. The parser's ``Unresolved*`` nodes are not members: they live with the
 #: grammar in [`mathspec._where_parser`][], and resolution rewrites them away
 #: before anything here is asked.
-Predicate = BooleanLiteral | TypedPredicate | Connective | NamedMask
+Predicate = BooleanLiteral | TypedPredicate | Connective | MaskReference
 
 
 def where_children(where: Predicate) -> tuple[Predicate, ...]:
@@ -1488,7 +1488,7 @@ def where_children(where: Predicate) -> tuple[Predicate, ...]:
         return (where.operand,)
     if isinstance(where, (And, Or)):
         return (where.left, where.right)
-    if isinstance(where, NamedMask):
+    if isinstance(where, MaskReference):
         return (where.body,)
     return ()
 
@@ -1503,7 +1503,7 @@ def _atoms(where: Predicate) -> Iterator[TypedPredicate]:
     """
     if isinstance(where, TypedPredicate):
         yield where
-    elif isinstance(where, BooleanLiteral | Connective | NamedMask):
+    elif isinstance(where, BooleanLiteral | Connective | MaskReference):
         for child in where_children(where):
             yield from _atoms(child)
     else:
@@ -1620,7 +1620,7 @@ def _fold(node: Predicate) -> Predicate:
     none, ``NOT True`` is ``False`` and ``NOT NOT X`` is ``X``. What survives
     is a predicate over data, or the one literal the whole mask reduces to —
     the invariant [`Mask`][] applies at construction, so it holds wherever
-    a mask is built. A [`NamedMask`][] is left whole: its body was folded
+    a mask is built. A [`MaskReference`][] is left whole: its body was folded
     when the entry was read, and refused there where it folded to a literal.
     """
     if isinstance(node, Not):

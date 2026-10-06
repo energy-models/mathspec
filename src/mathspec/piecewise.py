@@ -21,9 +21,9 @@ from typing import TYPE_CHECKING, Literal
 import mathspec.sos as sos
 from mathspec.dimensions import dims_of
 from mathspec.errors import DimensionError
-from mathspec.program import PiecewiseDeclaration, PiecewiseMethod, VariableDeclaration, carries_variable
+from mathspec.program import Piecewise, PiecewiseMethod, Variable, carries_variable
 from mathspec.resolution import resolve_expression_text
-from mathspec.spec import AssumptionBlock, Curvature, PiecewiseBlock, Spec, VariableBlock
+from mathspec.spec import AssumptionSpec, Curvature, PiecewiseSpec, Spec, VariableSpec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 _UNGATED = '_ungated'
 
 
-def _curvature_required(pw: PiecewiseDeclaration) -> Curvature | None:
+def _curvature_required(pw: Piecewise) -> Curvature | None:
     """The curvature *pw*'s method is only exact for, or ``None`` if any shape works.
 
     A bounded link binds from one side, and that side is the hull boundary the
@@ -58,7 +58,7 @@ def _curvature_required(pw: PiecewiseDeclaration) -> Curvature | None:
     return 'convex' if sign == '>=' else 'concave'
 
 
-def resolve_links(name: str, pw: PiecewiseBlock, ns: Namespace, errors: list[str]) -> tuple[Expression, ...] | None:
+def resolve_links(name: str, pw: PiecewiseSpec, ns: Namespace, errors: list[str]) -> tuple[Expression, ...] | None:
     """Block *name*'s link expressions typed, in link order, or ``None`` once one failed, its refusal appended.
 
     A link is read affinely, so it is held to degree 1 where it is read.
@@ -72,7 +72,7 @@ def resolve_links(name: str, pw: PiecewiseBlock, ns: Namespace, errors: list[str
     return tuple(link for link in links if link is not None)
 
 
-def lp_domain_refusal(name: str, pw: PiecewiseBlock, links: tuple[Expression, ...]) -> str | None:
+def lp_domain_refusal(name: str, pw: PiecewiseSpec, links: tuple[Expression, ...]) -> str | None:
     """The refusal for a ``method: lp`` curve whose x-link carries no variable, or ``None``.
 
     The method bounds the curve's domain with two rows comparing the x-link
@@ -92,7 +92,7 @@ def lp_domain_refusal(name: str, pw: PiecewiseBlock, links: tuple[Expression, ..
     )
 
 
-def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, AssumptionBlock]:
+def assumptions_of(block: str, pw: Piecewise) -> dict[str, AssumptionSpec]:
     """What *block* assumes of its numbers, by the name the document prints and a refusal quotes.
 
     Every curve assumes its breakpoints are there, because a missing row does
@@ -111,8 +111,8 @@ def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, Assumption
     declares the block resolves the same entries at load.
     """
     d, mask = pw.over, pw.points
-    assumed: dict[str, AssumptionBlock] = {}
-    assumed[f'{block}_complete'] = AssumptionBlock(
+    assumed: dict[str, AssumptionSpec] = {}
+    assumed[f'{block}_complete'] = AssumptionSpec(
         holds=' AND '.join(dict.fromkeys(link.values for link in pw.links)),
         where=mask,
         description=f"piecewise '{block}': every breakpoint the curve runs through needs a row in "
@@ -126,21 +126,21 @@ def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, Assumption
     curvature = _curvature_required(pw)
     if curvature is not None:
         x, y = (link.values for link in pw.curve)
-        assumed[f'{block}_increasing'] = AssumptionBlock(
+        assumed[f'{block}_increasing'] = AssumptionSpec(
             holds=f'{_back(x, d, 1)} < {x}',
             where=_neighbours(d, mask),
             description=f"piecewise '{block}': method: {pw.method} requires strictly increasing breakpoints in '{x}' along '{d}'",
         )
         assumed[f'{block}_curvature'] = _bends(block, pw, x, y, curvature)
     if pw.method == 'lp':
-        assumed[f'{block}_breakpoints'] = AssumptionBlock(
+        assumed[f'{block}_breakpoints'] = AssumptionSpec(
             holds=f'count({mask or pw.curve[0].values}, over={d}) >= 2',
             description=f"piecewise '{block}': method: lp needs at least two breakpoints per curve — the method *is* its "
             f'segment lines, so a curve with no segment states nothing and leaves the bounded link on its own '
             f'bound. Use method: adjacency, sos2 or convex, which pin it to the points it does have.',
         )
     if mask is not None:
-        assumed[f'{block}_contiguous'] = AssumptionBlock(
+        assumed[f'{block}_contiguous'] = AssumptionSpec(
             holds=f'count({_edge(d, mask, "first")}, over={d}) == 1',
             description=f"piecewise '{block}': points: '{mask}' must mark a consecutive run of at least one breakpoint per "
             f'curve — {_GAP[pw.method]}.',
@@ -197,7 +197,7 @@ def _interior(over: str, mask: str | None) -> str:
     return f'{mask} AND shift({mask}, along={over}, offset=1) AND shift({mask}, along={over}, offset=-1)'
 
 
-def _bends(block: str, pw: PiecewiseDeclaration, x: str, y: str, curvature: Curvature) -> AssumptionBlock:
+def _bends(block: str, pw: Piecewise, x: str, y: str, curvature: Curvature) -> AssumptionSpec:
     """The curve bends the way *curvature* says, as a comparison of the two slopes at each breakpoint.
 
     The slopes are compared as a cross-product rather than as two quotients,
@@ -219,11 +219,11 @@ def _bends(block: str, pw: PiecewiseDeclaration, x: str, y: str, curvature: Curv
     )
     if curvature == 'either':
         up, down = bend.format('>'), bend.format('<')
-        return AssumptionBlock(
+        return AssumptionSpec(
             holds=f'count({up} AND {interior}, over={d}) == 0 OR count({down} AND {interior}, over={d}) == 0',
             description=description,
         )
-    return AssumptionBlock(
+    return AssumptionSpec(
         holds=bend.format('<=' if curvature == 'convex' else '>='), where=interior, description=description
     )
 
@@ -248,7 +248,7 @@ class Emitted:
     assumptions: tuple[str, ...]
 
     @classmethod
-    def of(cls, name: str, pw: PiecewiseDeclaration) -> Emitted:
+    def of(cls, name: str, pw: Piecewise) -> Emitted:
         """The names block *name* writes."""
         return cls(
             name,
@@ -298,7 +298,7 @@ class Emitted:
         )
 
 
-def leaves_ungated(gate: VariableBlock | VariableDeclaration | None) -> bool:
+def leaves_ungated(gate: VariableSpec | Variable | None) -> bool:
     """Whether a curve gated by *gate* runs ungated where the gate does not exist, which takes a second convexity row.
 
     A masked gate is absent off its mask, and there the curve sums to 1;
@@ -307,7 +307,7 @@ def leaves_ungated(gate: VariableBlock | VariableDeclaration | None) -> bool:
     return gate is not None and gate.where is not None and gate.missing != 'neutral'
 
 
-def curve_frame(schema: Spec, name: str, pw: PiecewiseBlock, links: Iterable[Expression]) -> tuple[str, ...]:
+def curve_frame(schema: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expression]) -> tuple[str, ...]:
     """The dimensions block *name* builds one curve per coordinate of: every one its links and its gate carry.
 
     In declaration order, because iterating a set would vary the emitted
@@ -358,9 +358,7 @@ class _Block:
     *schema* loaded.
     """
 
-    def __init__(
-        self, schema: Spec, raw: dict[str, object], name: str, pw: PiecewiseBlock, curve: PiecewiseDeclaration
-    ) -> None:
+    def __init__(self, schema: Spec, raw: dict[str, object], name: str, pw: PiecewiseSpec, curve: Piecewise) -> None:
         self.schema = schema
         self.raw = raw
         self.name = name

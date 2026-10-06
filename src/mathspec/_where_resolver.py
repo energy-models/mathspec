@@ -50,8 +50,8 @@ from mathspec.program import (
     ExpressionComparison,
     JoinedPredicate,
     Mask,
+    MaskReference,
     Multiply,
-    NamedMask,
     Negate,
     Not,
     Or,
@@ -109,7 +109,7 @@ class WhereResolver:
 
     def where(self, node: Predicate | UnresolvedWhereNode) -> Predicate | UnresolvedWhereNode:
         """One predicate node typed, or returned unresolved with its refusal appended."""
-        if isinstance(node, BooleanLiteral | TypedPredicate | NamedMask):
+        if isinstance(node, BooleanLiteral | TypedPredicate | MaskReference):
             return node
         if isinstance(node, NameNode):
             return self._where_name(node)

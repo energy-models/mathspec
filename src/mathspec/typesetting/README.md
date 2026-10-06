@@ -9,16 +9,16 @@ This package is a consumer of the program. It builds no model and attaches no
 data. It walks a program, the one a loaded `Spec` holds or one handed to it,
 and prints it.
 
-| Module        | Role                                                                                                   |
-| ------------- | ------------------------------------------------------------------------------------------------------ |
-| `__init__.py` | `typeset` / `to_latex` / `to_markdown` / `to_typst`, `typeset_declaration`, and the `FORMATS` registry |
-| `walk.py`     | the program's trees to `Line`s. Every decision about the **math**, written once                        |
-| `legend.py`   | the notes under the equations, read off what the program uses                                          |
-| `format.py`   | the boundary: what a format must spell, and the operator vocabulary                                    |
-| `symbols.py`  | which symbol a name gets, and the `SymbolTable` sidecar that overrides it                              |
-| `latex.py`    | amsmath, the format that lands in a journal                                                            |
-| `typst.py`    | Typst, the format that compiles without a toolchain                                                    |
-| `markdown.py` | GitHub-flavoured Markdown: LaTeX math, with a Markdown document layer                                  |
+| Module        | Role                                                                                            |
+| ------------- | ----------------------------------------------------------------------------------------------- |
+| `__init__.py` | `typeset` / `to_latex` / `to_markdown` / `to_typst`, `typeset_line`, and the `FORMATS` registry |
+| `walk.py`     | the program's trees to `Line`s. Every decision about the **math**, written once                 |
+| `legend.py`   | the notes under the equations, read off what the program uses                                   |
+| `format.py`   | the boundary: what a format must spell, and the operator vocabulary                             |
+| `symbols.py`  | which symbol a name gets, and the `SymbolTable` sidecar that overrides it                       |
+| `latex.py`    | amsmath, the format that lands in a journal                                                     |
+| `typst.py`    | Typst, the format that compiles without a toolchain                                             |
+| `markdown.py` | GitHub-flavoured Markdown: LaTeX math, with a Markdown document layer                           |
 
 ## Why the walk and the formats are separate files
 

@@ -17,7 +17,7 @@ import pytest
 
 from mathspec.errors import LanguageError, SchemaError
 from mathspec.piecewise import expand_piecewise
-from mathspec.program import Assumption, Variable, assumption_message
+from mathspec.program import Assumption, VariableReference, assumption_message
 from mathspec.spec import Curvature
 from tests.fixtures import DISPATCH_MODEL, expanded, raw_of, schema_of, varied
 
@@ -167,7 +167,7 @@ def test_a_program_mirrors_the_model_it_was_lowered_from():
     assert [link.values for link in curve.links] == ['bp_x', 'bp_y'] and curve.frame == ('snapshot',), (
         'the curve as the file states it, with its links typed and its frame decided'
     )
-    assert curve.links[0].expression == Variable('p'), 'a link is the tree the file wrote'
+    assert curve.links[0].expression == VariableReference('p'), 'a link is the tree the file wrote'
     assert 'cost_curve_lam' not in program.variables, 'the rows are on the expansion'
     assert not rows.piecewise and {'cost_curve_lam', 'p', 'op_cost'} <= set(rows.variables), (
         'the expansion carries the rows and no curve'

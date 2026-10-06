@@ -33,7 +33,7 @@ SURFACE = frozenset(
         # the verdicts a consumer asks for rather than re-deriving
         'advice',
         # typesetting, and the two inputs it takes
-        'typeset', 'typeset_declaration', 'to_latex', 'to_typst', 'to_markdown', 'FormatName', 'SymbolTable',
+        'typeset', 'typeset_line', 'to_latex', 'to_typst', 'to_markdown', 'FormatName', 'SymbolTable',
         # the two file-level verbs: peers composed, and patches laid over a base
         'merge', 'override',
     }

@@ -53,7 +53,7 @@ __all__ = [
     'to_markdown',
     'to_typst',
     'typeset',
-    'typeset_declaration',
+    'typeset_line',
 ]
 
 #: A format by the name the CLI takes — what every renderer here is asked for.
@@ -165,7 +165,7 @@ def typeset(
     return format_.document([*blocks, *rendered], standalone=standalone)
 
 
-def typeset_declaration(
+def typeset_line(
     spec: str | Path | Mapping[str, object] | Spec | Program,
     name: str,
     fmt: FormatName,

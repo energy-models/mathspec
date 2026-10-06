@@ -139,12 +139,12 @@ node's operands, and `where_children()` walks a predicate's. `walk()` yields
 every node under an expression, parents first. `walk_regions()` yields each node
 with the `cases:` regions it stands inside, outermost first.
 
-A `NamedExpression` stands where an `expressions:` entry is used. Its `body` is the
+A `ExpressionReference` stands where an `expressions:` entry is used. Its `body` is the
 entry's expression, the same object that `program.expressions[name].expression`
 holds, and its value is the body's value. `children()` steps into the body, so
 a walk reads through it.
 
-A `NamedMask` stands where a `masks:` entry is read. Its `body` is the entry's
+A `MaskReference` stands where a `masks:` entry is read. Its `body` is the entry's
 predicate, the root of `program.masks[name].where`, and it is true where the
 body is true. `where_children()` steps into the body, so `.atoms`,
 `.names_read` and `.dims` read through it, and a consumer that builds rows
@@ -188,7 +188,7 @@ stands at a mask's root or nowhere. A `Region`'s `when` is a `Mask` too.
 `program.given.constraints` name what the spec reads and does not build
 ([given](language/declarations.md#given)). Every other group is a build
 instruction. These five are names to look up in the model this one is layered
-onto. An expression reads a given expression as a `Variable` of that name,
+onto. An expression reads a given expression as a `VariableReference` of that name,
 over the frame under `program.given.expressions`. A `where` reads a given mask
 as a `ParameterDefined` of that name: boolean data over the frame under
 `program.given.masks`.
@@ -234,7 +234,9 @@ footprint = rows.footprint
 sorted(footprint.quadratic)  # []
 sorted(footprint.domains)  # ['continuous']
 sorted(footprint.sos_types)  # []
-sorted(kind.__name__ for kind in footprint.kinds)  # ['Constant', 'Multiply', 'Parameter', 'Sum', 'Variable']
+sorted(
+    kind.__name__ for kind in footprint.kinds
+)  # ['Constant', 'Multiply', 'ParameterReference', 'Sum', 'VariableReference']
 ```
 
 Every field is a set, and an empty field means the program does not use the

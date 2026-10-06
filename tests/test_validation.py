@@ -17,7 +17,7 @@ from mathspec._yaml import parse_yaml, read_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
 from mathspec.program import DimensionPosition
 from mathspec.resolution import Namespace
-from mathspec.typesetting import FORMATS, to_markdown, typeset_declaration
+from mathspec.typesetting import FORMATS, to_markdown, typeset_line
 from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, OPERATOR_PROBES, SMALL_MODEL, varied, where_of
 
@@ -807,7 +807,7 @@ class TestAWhereSideIsReadInResolution:
             )
         )
         assert to_spec(spec.to_yaml()).program == spec.program, 'the when string reads back to the same mask'
-        printed = typeset_declaration(spec, 'e', fmt).replace('\\_', '_')
+        printed = typeset_line(spec, 'e', fmt).replace('\\_', '_')
         assert '> 2' in printed and 'otherwise' in printed, f'{fmt} prints the comparison and its otherwise'
 
 
@@ -882,7 +882,7 @@ class TestAPredicateIsAnOperand:
         assert mask.names_read == reads, 'a consumer attaches the relation as well as the operand'
         assert to_spec(spec.to_yaml()).program == spec.program, 'the where string reads back to the same mask'
         for fmt in ('markdown', 'latex', 'typst'):
-            printed = typeset_declaration(spec, 'k', fmt).replace('\\_', '_')
+            printed = typeset_line(spec, 'k', fmt).replace('\\_', '_')
             assert all(name in printed for name in reads), (
                 f'{fmt} prints the operand and the relation it is read through'
             )

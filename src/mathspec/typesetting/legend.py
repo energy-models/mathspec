@@ -30,7 +30,7 @@ from mathspec.typesetting.format import Entry, number
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from mathspec.program import Expression, Mask, Missing, Program, RelationDeclaration
+    from mathspec.program import Expression, Mask, Missing, Program, Relation
     from mathspec.typesetting.format import Format, OperatorName
     from mathspec.typesetting.symbols import Symbols
 
@@ -255,7 +255,7 @@ class Legend:
             shown = self.format.math(number(value, self.format))
         return f', {shown} {where}'
 
-    def _signature(self, name: str, lk: RelationDeclaration) -> str:
+    def _signature(self, name: str, lk: Relation) -> str:
         """A relation in the legend: a function from its key sets to its value sets, or a relation inside the product."""
 
         def product(roles: Iterable[str]) -> str:

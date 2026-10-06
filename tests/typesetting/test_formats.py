@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from mathspec import to_spec, typeset_declaration
+from mathspec import to_spec, typeset_line
 from mathspec.typesetting import FORMATS, to_latex, to_markdown, to_typst, typeset
 from mathspec.typesetting.format import OPERATOR_NAMES
 from tests.fixtures import DISPATCH_MODEL, varied
@@ -79,9 +79,7 @@ def test_markdown_prints_the_math_latex_prints(declaration: str):
     no longer agreed on. Delimiting the span out of the pass's reach retired
     them all, so this is the assertion that keeps them retired.
     """
-    assert typeset_declaration(golden.MODEL, declaration, 'markdown') == typeset_declaration(
-        golden.MODEL, declaration, 'latex'
-    )
+    assert typeset_line(golden.MODEL, declaration, 'markdown') == typeset_line(golden.MODEL, declaration, 'latex')
 
 
 def test_typst_standalone_adds_page_setup():

@@ -29,7 +29,7 @@ from mathspec.typesetting import (
     to_markdown,
     to_typst,
     typeset,
-    typeset_declaration,
+    typeset_line,
 )
 from mathspec.validation import to_spec
 
@@ -47,7 +47,7 @@ __all__ = [
     'to_spec',
     'to_typst',
     'typeset',
-    'typeset_declaration',
+    'typeset_line',
 ]
 
 import warnings as _warnings

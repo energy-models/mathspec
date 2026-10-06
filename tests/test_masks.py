@@ -4,7 +4,7 @@
 
 """A mask is a named predicate: written once under ``masks:``, read by name wherever a where string is (#803).
 
-A use stands as a `NamedMask` with the predicate under it, so every question
+A use stands as a `MaskReference` with the predicate under it, so every question
 asked of a mask is asked of the predicate, and the typesetter still prints the
 name. Another file reads a mask under ``given: masks:`` as the boolean data it
 is to that file, and `merge` folds the reading into the definition.
@@ -17,9 +17,9 @@ from typing import Any
 
 import pytest
 
-from mathspec import advice, merge, override, to_spec, typeset, typeset_declaration
+from mathspec import advice, merge, override, to_spec, typeset, typeset_line
 from mathspec.errors import LanguageError
-from mathspec.program import Mask, NamedMask, ParameterDefined, VariableDefined
+from mathspec.program import Mask, MaskReference, ParameterDefined, VariableDefined
 from mathspec.typesetting import FORMATS
 from tests.fixtures import SMALL_MODEL, varied
 
@@ -60,7 +60,7 @@ RAMPING: dict[str, Any] = {
 def test_a_mask_stands_where_its_name_is_written_with_its_predicate_under_it():
     program = to_spec(CORE).program
     where = program.constraints['cap'].where
-    assert where is not None and isinstance(where.root, NamedMask), 'the use keeps the name the file wrote'
+    assert where is not None and isinstance(where.root, MaskReference), 'the use keeps the name the file wrote'
     assert where.root.body == program.masks['stands'].where.root, 'and carries the predicate the entry declares'
     assert program.masks['stands'].dims == ('period', 'generator')
     assert where.names_read == {'build_year', 'lifetime', 'period_year'}, 'a mask reads what its predicate reads'
@@ -219,7 +219,9 @@ def test_merge_folds_the_reading_into_the_mask_another_fragment_defines(fragment
     program = merge(fragments).program
     assert not program.given, 'the reading is spent once the definer is in the composition'
     where = program.constraints['ramp_up'].where
-    assert where is not None and isinstance(where.conjuncts[0], NamedMask), 'the composed row reads the mask by name'
+    assert where is not None and isinstance(where.conjuncts[0], MaskReference), (
+        'the composed row reads the mask by name'
+    )
 
 
 @pytest.mark.parametrize(
@@ -282,7 +284,7 @@ def test_a_patch_rewrites_a_mask_s_predicate():
 @pytest.mark.parametrize('fmt', sorted(FORMATS))
 def test_a_mask_prints_its_symbol_where_it_is_read_and_its_predicate_once(fmt):
     printed = typeset(CORE, fmt)
-    defined = typeset_declaration(CORE, 'stands', fmt)
+    defined = typeset_line(CORE, 'stands', fmt)
     assert printed.count(FORMATS[fmt].operators['iff']) == 1, 'the predicate prints once, as the definition'
     assert defined.split()[0].replace('\\_', '_').count('stands') == 1, 'the definition opens with the symbol'
     assert FORMATS[fmt].operators['iff'] in defined, 'a predicate is defined with iff, not equated'
@@ -293,7 +295,7 @@ def test_a_mask_prints_its_symbol_where_it_is_read_and_its_predicate_once(fmt):
 def test_a_given_mask_prints_in_the_legend_and_no_line_of_its_own(fmt):
     assert 'a mask another file defines' in typeset(RAMPING, fmt)
     with pytest.raises(LanguageError, match=r"'stands' is a given mask, and a given declaration prints no line"):
-        typeset_declaration(RAMPING, 'stands', fmt)
+        typeset_line(RAMPING, 'stands', fmt)
 
 
 def test_the_fixtures_are_never_mutated():

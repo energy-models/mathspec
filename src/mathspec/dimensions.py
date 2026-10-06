@@ -27,16 +27,16 @@ from mathspec.program import (
     Dual,
     Expression,
     ExpressionComparison,
+    ExpressionReference,
     Join,
     JoinColumns,
     JoinedPredicate,
     Mask,
     Multiply,
-    NamedExpression,
     Negate,
-    Parameter,
     ParameterComparison,
     ParameterDefined,
+    ParameterReference,
     Partition,
     Power,
     RelationComparison,
@@ -45,8 +45,8 @@ from mathspec.program import (
     Sum,
     Translate,
     TranslatedPredicate,
-    Variable,
     VariableDefined,
+    VariableReference,
     WindowSum,
     children,
 )
@@ -65,17 +65,17 @@ def dims_of(node: Expression, schema: Spec, context: str) -> frozenset[str]:
     if isinstance(node, Constant):
         return frozenset()
 
-    if isinstance(node, Parameter):
+    if isinstance(node, ParameterReference):
         return frozenset({**schema.parameters, **schema.given.parameters}[node.name].dims)
 
-    if isinstance(node, Variable):
+    if isinstance(node, VariableReference):
         columns = {**schema.variables, **schema.given.variables, **schema.given.expressions}
         return frozenset(columns[node.name].dims or ())
 
     if isinstance(node, Dual):
         return frozenset({**schema.constraints, **schema.given.constraints}[node.constraint].dims)
 
-    if isinstance(node, NamedExpression):
+    if isinstance(node, ExpressionReference):
         return _named_dims(node, schema, context)
 
     if isinstance(node, Cases):
@@ -96,7 +96,7 @@ def dims_of(node: Expression, schema: Spec, context: str) -> frozenset[str]:
     assert_never(node)
 
 
-def _named_dims(node: NamedExpression, schema: Spec, context: str) -> frozenset[str]:
+def _named_dims(node: ExpressionReference, schema: Spec, context: str) -> frozenset[str]:
     """An entry's declared frame where it has one — a narrower arm or body broadcasts along the rest — else its body's."""
     declared = schema.expressions[node.name].dims
     if declared is not None:

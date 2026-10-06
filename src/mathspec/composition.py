@@ -106,7 +106,7 @@ from pydantic import BaseModel, ValidationError
 from mathspec._yaml import read_spec
 from mathspec.errors import LanguageError, did_you_mean, schema_error
 from mathspec.program import variables_of
-from mathspec.spec import GivenBlock, Spec
+from mathspec.spec import GivenSpec, Spec
 from mathspec.validation import to_spec
 
 if TYPE_CHECKING:
@@ -831,7 +831,7 @@ def _given(declared: dict[str, object], patch: dict[str, object], name: str) -> 
     out = dict(declared)
     for kind, block in patch.items():
         if kind in GIVEN_KINDS:
-            cls = _entry_class(GivenBlock, kind)
+            cls = _entry_class(GivenSpec, kind)
             entries = _section(block, f'given: {kind}:', name)
             out[kind] = _owned(_mapping(out.get(kind)), entries, GIVEN_KINDS[kind], cls, name)
         else:

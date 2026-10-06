@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, cast
 from mathspec._yaml import read_yaml
 from mathspec.errors import SchemaError, did_you_mean
 from mathspec.piecewise import Emitted, leaves_ungated
-from mathspec.program import Dual, Variable, walk
+from mathspec.program import Dual, VariableReference, walk
 from mathspec.sos import Emitted as EmittedSet
 from mathspec.typesetting.format import NOTATIONS
 
@@ -87,7 +87,7 @@ def chosen_expressions(program: Program) -> frozenset[str]:
     return frozenset(
         name
         for name, entry in program.expressions.items()
-        if any(isinstance(node, Variable | Dual) for node in walk(entry.expression))
+        if any(isinstance(node, VariableReference | Dual) for node in walk(entry.expression))
     )
 
 

@@ -66,7 +66,7 @@ task. The top level holds what you call. Three modules hold the rest:
       show_root_toc_entry: true
       heading_level: 3
 
-::: mathspec.typeset_declaration
+::: mathspec.typeset_line
     options:
       show_root_heading: true
       show_root_toc_entry: true

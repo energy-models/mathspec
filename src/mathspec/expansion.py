@@ -27,7 +27,7 @@ from mathspec.errors import SchemaError
 
 if TYPE_CHECKING:
     from mathspec.resolution import Namespace
-    from mathspec.spec import MacroBlock
+    from mathspec.spec import MacroSpec
 
 
 def parse_and_expand(text: str, ns: Namespace, context: str) -> ParsedNode:
@@ -60,13 +60,13 @@ def expand(node: ParsedNode, ns: Namespace, context: str) -> ParsedNode:
     return _expand(node, ns, context, ())
 
 
-def macro_signature(name: str, macro: MacroBlock) -> str:
+def macro_signature(name: str, macro: MacroSpec) -> str:
     """Human-readable call signature, for error messages."""
     parts = [*macro.args, *(f'{k}=...' for k in macro.kwargs)]
     return f'{name}({", ".join(parts)})'
 
 
-def parse_template(name: str, macro: MacroBlock, context: str) -> ArithmeticNode:
+def parse_template(name: str, macro: MacroSpec, context: str) -> ArithmeticNode:
     """Parse a macro template, rejecting comparisons."""
     body = parse_expression(macro.template)
     if isinstance(body, ComparisonNode):

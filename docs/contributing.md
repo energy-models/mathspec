@@ -102,9 +102,9 @@ suffix says which layer:
 
 | Layer                        | Suffix               | Example                                |
 | ---------------------------- | -------------------- | -------------------------------------- |
-| YAML block (`mathspec.spec`) | `Block`              | `VariableBlock`, `PiecewiseBlock`      |
+| YAML block (`mathspec.spec`) | `Block`              | `VariableSpec`, `PiecewiseSpec`        |
 | Syntax (`mathspec.*_parser`) | `Node`               | `NameNode`, `UnresolvedComparisonNode` |
-| Program (`mathspec.program`) | none / `Declaration` | `Variable`, `VariableDeclaration`      |
+| Program (`mathspec.program`) | none / `Declaration` | `Variable`, `Variable`                 |
 
 A node names the operation, not the verb a file writes. One verb can resolve
 to two nodes, so the file's spelling cannot decide the name.

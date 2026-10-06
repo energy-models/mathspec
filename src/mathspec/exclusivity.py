@@ -31,13 +31,13 @@ from mathspec.program import (
     ExpressionComparison,
     JoinedPredicate,
     Mask,
-    NamedMask,
+    MaskReference,
     Negate,
     Not,
     Or,
-    Parameter,
     ParameterComparison,
     ParameterDefined,
+    ParameterReference,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -232,7 +232,7 @@ def _expression_rewrite(node: ExpressionComparison) -> str:
     """
     left, right = node.left, node.right
     number = _signed_literal(left)
-    if number is not None and isinstance(right, Parameter):
+    if number is not None and isinstance(right, ParameterReference):
         return (
             f'the literal is on the left, and a comparison is read as arithmetic there — write it as '
             f'the same test the other way round, {right.name} {_FLIPPED[node.op]} '
@@ -508,7 +508,7 @@ def _evaluate(node: Predicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             return _evaluate(left, cell, grid) and _evaluate(right, cell, grid)
         case Or(left=left, right=right):
             return _evaluate(left, cell, grid) or _evaluate(right, cell, grid)
-        case NamedMask(body=body):
+        case MaskReference(body=body):
             return _evaluate(body, cell, grid)
         case _:
             assert_never(node)

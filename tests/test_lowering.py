@@ -29,8 +29,8 @@ from mathspec.program import (
     Column,
     Constant,
     CountComparison,
+    Dimension,
     DimensionComparison,
-    DimensionDeclaration,
     Divide,
     Dual,
     Expression,
@@ -43,18 +43,18 @@ from mathspec.program import (
     Multiply,
     Not,
     Or,
-    Parameter,
     ParameterComparison,
     ParameterDefined,
+    ParameterReference,
     Partition,
     Power,
     Program,
     QuadraticPosition,
     Region,
-    RelationDeclaration,
+    Relation,
     Sum,
     Translate,
-    Variable,
+    VariableReference,
     WindowSum,
     assumption_message,
     children,
@@ -83,10 +83,10 @@ TINY = {
 }
 
 #: `lk` as `sum` joins it: joined on the key, grouped by the value, no key column left unnamed.
-LK = RelationDeclaration((('g', 'g'), ('h', 'h')), ('g',))
-LK2 = RelationDeclaration((('g', 'g'), ('z', 'z')), ('g',))
+LK = Relation((('g', 'g'), ('h', 'h')), ('g',))
+LK2 = Relation((('g', 'g'), ('z', 'z')), ('g',))
 LK_JOIN = JoinColumns('lk', LK, ('g',), ('h',))
-AT_BUS = RelationDeclaration((('g', 'g'), ('bus', 'bus')), ('g',))
+AT_BUS = Relation((('g', 'g'), ('bus', 'bus')), ('g',))
 
 #: `fixtures.SMALL_MODEL` plus a second relation and a per-entity
 #: offset. Which node a construct becomes is mostly a claim about the dim it
@@ -137,18 +137,18 @@ def test_program_structure(dispatch_program):
     assert vname == 'dispatch'
     assert v.dims == ('snapshot', 'generator'), 'the frame is the dims, in the order the file wrote it'
     assert v.where == Mask(CAPACITY_POSITIVE)
-    assert v.upper == Parameter('capacity')
+    assert v.upper == ParameterReference('capacity')
 
     ((cname, c),) = dispatch_program.constraints.items()
     assert cname == 'power_balance'
     assert c.dims == ('snapshot',), 'the frame is the dims, in the order the file wrote it'
-    assert c.lhs == Sum(Variable('dispatch'), (Axis('generator'),))
+    assert c.lhs == Sum(VariableReference('dispatch'), (Axis('generator'),))
     assert c.sense == '==', "the comparison crosses as the file's own operator, untranslated"
-    assert c.rhs == Parameter('load')
+    assert c.rhs == ParameterReference('load')
 
     assert dispatch_program.objective.sense == 'minimize', "the program carries the language's spelling, untranslated"
     assert dispatch_program.objective.expression == Sum(
-        Multiply(Variable('dispatch'), Parameter('cost')), (Axis('generator'), Axis('snapshot'))
+        Multiply(VariableReference('dispatch'), ParameterReference('cost')), (Axis('generator'), Axis('snapshot'))
     ), 'the objective carries the sum the file wrote, over the dims it named none of'
 
 
@@ -413,9 +413,9 @@ def test_a_comparison_of_expressions_lowers_to_program_expressions_on_both_sides
     ).program
     where = program.variables['p'].where
     assert where is not None
-    assert where.root == ExpressionComparison(Parameter('c'), '<=', Multiply(Constant(0.5), Parameter('k')), ('g',)), (
-        'the sides are lowered as a constraint side is, and the dims are what either side carries'
-    )
+    assert where.root == ExpressionComparison(
+        ParameterReference('c'), '<=', Multiply(Constant(0.5), ParameterReference('k')), ('g',)
+    ), 'the sides are lowered as a constraint side is, and the dims are what either side carries'
     mask = program.constraints['w'].where
     assert mask is not None and isinstance(mask.root, ExpressionComparison)
     assert isinstance(mask.root.right, Add) and isinstance(mask.root.right.left, Join)
@@ -435,7 +435,7 @@ def test_a_predicate_a_leaf_carries_is_lowered_like_any_other_mask():
     mask = program.constraints['w'].where
     assert mask is not None and isinstance(mask.root, CountComparison)
     assert mask.root.predicate.root == ExpressionComparison(
-        Parameter('c'), '<=', Multiply(Constant(0.5), Parameter('k')), ('g',)
+        ParameterReference('c'), '<=', Multiply(Constant(0.5), ParameterReference('k')), ('g',)
     ), 'the counted predicate is rebuilt, not handed through with the resolved comparison still in it'
     assert mask.names_read == frozenset({'c', 'k'}), 'what the counted predicate reads is data the consumer attaches'
 
@@ -478,7 +478,7 @@ def test_a_predicate_read_through_a_relation_is_lowered_and_keeps_the_relation_i
     mask = program.constraints['w'].where
     assert mask is not None and isinstance(mask.root, JoinedPredicate)
     assert mask.root.operand.root == ExpressionComparison(
-        Parameter('zcap'), '<=', Multiply(Constant(0.5), Parameter('k')), ('z',)
+        ParameterReference('zcap'), '<=', Multiply(Constant(0.5), ParameterReference('k')), ('z',)
     ), 'the read predicate is rebuilt, not handed through with the resolved comparison still in it'
     assert mask.names_read == frozenset({'zcap', 'k', 'lk2'})
     assert sorted(mask.dims) == ['g'], 'z is read at lk2(g), so the mask is over g alone'
@@ -510,7 +510,11 @@ def test_an_assumption_lowers_both_of_its_masks():
     assumption = program.assumptions['sound']
 
     assert assumption == Assumption(
-        Mask(ExpressionComparison(Parameter('c'), '<=', Multiply(Constant(0.5), Parameter('k')), ('g',))),
+        Mask(
+            ExpressionComparison(
+                ParameterReference('c'), '<=', Multiply(Constant(0.5), ParameterReference('k')), ('g',)
+            )
+        ),
         Mask(ParameterDefined('flag', ('g',))),
     ), 'the arithmetic side is a program expression, and the where is the mask the file wrote'
     assert assumption_message('sound', assumption) == (
@@ -572,44 +576,46 @@ def test_a_power_resolves_to_a_node_of_its_own(dispatch_schema):
     [
         pytest.param(
             'sum(q)',
-            Sum(Variable('q'), (Axis('g'), Axis('h'))),
+            Sum(VariableReference('q'), (Axis('g'), Axis('h'))),
             id='a-bare-sum-sums-away-every-dim-the-operand-carries',
         ),
-        pytest.param('sum(q, over=h)', Sum(Variable('q'), (Axis('h'),)), id='an-over-sums-away-the-dim-it-names'),
+        pytest.param(
+            'sum(q, over=h)', Sum(VariableReference('q'), (Axis('h'),)), id='an-over-sums-away-the-dim-it-names'
+        ),
         pytest.param(
             'sum(p, over=g, by=lk[h])',
-            Sum(Join(Variable('p'), LK_JOIN), (Axis('g', Column('lk', 'g')),)),
+            Sum(Join(VariableReference('p'), LK_JOIN), (Axis('g', Column('lk', 'g')),)),
             id='a-grouped-sum-is-a-sum-over-the-axis-its-join-opens',
         ),
         pytest.param(
             'at(r, by=lk[h])',
-            Join(Variable('r'), JoinColumns('lk', LK, ('h',), ('g',))),
+            Join(VariableReference('r'), JoinColumns('lk', LK, ('h',), ('g',))),
             id='an-at-is-the-same-join-the-other-way-with-no-sum-over-it',
         ),
         pytest.param(
             "shift(p, along=g, offset=1, edge='wrap')",
-            Translate(Variable('p'), 'g', offset=1, wrap=True, fill=None),
+            Translate(VariableReference('p'), 'g', offset=1, wrap=True, fill=None),
             id='a-wrapping-translation-fills-nothing',
         ),
         pytest.param(
             'shift(p, along=g, offset=-2, edge=0)',
-            Translate(Variable('p'), 'g', offset=-2, wrap=False, fill=0.0),
+            Translate(VariableReference('p'), 'g', offset=-2, wrap=False, fill=0.0),
             id='a-lead-is-a-negative-offset-and-the-edge-is-what-it-fills-with',
         ),
         pytest.param(
             'shift(p, along=g, offset=lead, edge=0)',
-            Translate(Variable('p'), 'g', offset='lead', wrap=False, fill=0.0),
+            Translate(VariableReference('p'), 'g', offset='lead', wrap=False, fill=0.0),
             id='a-named-offset-crosses-as-the-parameter-name',
         ),
         pytest.param(
             "shift(p, along=g, offset=+lead, edge='wrap')",
-            Translate(Variable('p'), 'g', offset='lead', wrap=True, fill=None),
+            Translate(VariableReference('p'), 'g', offset='lead', wrap=True, fill=None),
             id='a-named-offset-written-with-a-plus-is-the-parameter',
         ),
         pytest.param(
             'shift(p, along=g, offset=1, within=lk[h], edge=0)',
             Translate(
-                Variable('p'),
+                VariableReference('p'),
                 'g',
                 offset=1,
                 wrap=False,
@@ -620,18 +626,18 @@ def test_a_power_resolves_to_a_node_of_its_own(dispatch_schema):
         ),
         pytest.param(
             'sum_back(p, along=g, window=3)',
-            WindowSum(Variable('p'), 'g', width=3, wrap=False),
+            WindowSum(VariableReference('p'), 'g', width=3, wrap=False),
             id='a-window-is-one-node-rather-than-a-fold-of-translations',
         ),
         pytest.param(
             'sum_back(p, along=g, window=lead)',
-            WindowSum(Variable('p'), 'g', width='lead', wrap=False),
+            WindowSum(VariableReference('p'), 'g', width='lead', wrap=False),
             id='a-named-width-crosses-as-the-parameter-name',
         ),
         pytest.param(
             'sum_back(p, along=g, window=2, within=lk[h])',
             WindowSum(
-                Variable('p'),
+                VariableReference('p'),
                 'g',
                 width=2,
                 wrap=False,
@@ -713,11 +719,11 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     ).program
 
     columns = (('generator', 'generator'), ('snapshot', 'snapshot'), ('zone', 'zone'))
-    declared = RelationDeclaration(columns, ('generator', 'snapshot'))
+    declared = Relation(columns, ('generator', 'snapshot'))
     assert program.relations == {'zone_of': declared}, 'the relation sits once in the program, under its name'
     zonal = program.constraints['zonal'].lhs
     columns = JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('zone', 'snapshot'))
-    assert zonal == Sum(Join(Variable('p'), columns), (Axis('generator', Column('zone_of', 'generator')),)), (
+    assert zonal == Sum(Join(VariableReference('p'), columns), (Axis('generator', Column('zone_of', 'generator')),)), (
         'a grouped sum is a sum over a join: the join names the column over the over= dim and the unnamed key '
         'column as joined on, the by= column and that key column as grouped by, and the sum stands over the axis '
         'the join opens for the column it drops'
@@ -732,12 +738,14 @@ def test_a_relation_lowers_with_the_join_each_call_names():
         'the join holds the one declaration the program holds, not an equal copy built again'
     )
     assert program.constraints['history'].lhs == Sum(
-        Join(Variable('p'), JoinColumns('zone_of', declared, ('snapshot', 'generator'), ('zone', 'generator'))),
+        Join(
+            VariableReference('p'), JoinColumns('zone_of', declared, ('snapshot', 'generator'), ('zone', 'generator'))
+        ),
         (Axis('snapshot', Column('zone_of', 'snapshot')),),
     ), 'the same table joined on its other key column'
     priced = program.constraints['priced'].rhs
     assert priced == Join(
-        Parameter('price'), JoinColumns('zone_of', declared, ('zone', 'snapshot'), ('generator', 'snapshot'))
+        ParameterReference('price'), JoinColumns('zone_of', declared, ('zone', 'snapshot'), ('generator', 'snapshot'))
     ), 'and an at is the bare join, on the value column, grouped by the key columns'
     assert isinstance(priced, Join)
     assert (priced.columns.dropped_dims, priced.columns.added_dims, priced.columns.kept) == (
@@ -765,8 +773,8 @@ def test_a_binary_variable_lowers_to_a_binary_domain():
 
 def test_a_divisor_under_a_join_is_still_named():
     """`children` has to descend through every node, or a refusal loses its name."""
-    quotient = Divide(Variable('x'), Parameter('rate'))
-    component_of = RelationDeclaration((('flow', 'flow'), ('component', 'component')), ('flow',))
+    quotient = Divide(VariableReference('x'), ParameterReference('rate'))
+    component_of = Relation((('flow', 'flow'), ('component', 'component')), ('flow',))
     looked_up = Join(quotient, JoinColumns('component_of', component_of, ('component',), ('flow',)))
 
     assert parameters_of(looked_up) == frozenset({'rate'}), 'the walk descends through `Join`'
@@ -776,20 +784,20 @@ def test_a_divisor_under_a_join_is_still_named():
 def test_a_divisor_under_a_power_is_still_named():
     """`children` had no branch for `Power`, so every walk stopped at it and a divisor written
     `d ** 2` was reported with no parameter at all (#403)."""
-    quotient = Divide(Variable('x'), Power(Parameter('d'), Constant(2.0)))
+    quotient = Divide(VariableReference('x'), Power(ParameterReference('d'), Constant(2.0)))
 
-    assert children(quotient.divisor) == (Parameter('d'), Constant(2.0)), 'the base first, then the exponent'
+    assert children(quotient.divisor) == (ParameterReference('d'), Constant(2.0)), 'the base first, then the exponent'
     assert parameters_of(quotient) == frozenset({'d'}), 'the walk descends through `Power`'
 
 
 OUTER = Mask(ParameterDefined('committable', ('g',)))
 INNER = Mask(ParameterDefined('flag', ('g',)))
 NESTED = Add(
-    Variable('x'),
+    VariableReference('x'),
     Cases(
         (
-            Region(OUTER, Cases((Region(INNER, Variable('p')), Region(~INNER, Constant(0.0))))),
-            Region(~OUTER, Parameter('q')),
+            Region(OUTER, Cases((Region(INNER, VariableReference('p')), Region(~INNER, Constant(0.0))))),
+            Region(~OUTER, ParameterReference('q')),
         )
     ),
 )
@@ -800,12 +808,12 @@ def test_walk_regions_carries_the_regions_a_node_stands_under():
     and every consumer recursed for it on its own (#473)."""
     assert list(walk_regions(NESTED)) == [
         (NESTED, ()),
-        (Variable('x'), ()),
+        (VariableReference('x'), ()),
         (NESTED.right, ()),
         (NESTED.right.regions[0].value, (OUTER,)),
-        (Variable('p'), (OUTER, INNER)),
+        (VariableReference('p'), (OUTER, INNER)),
         (Constant(0.0), (OUTER, ~INNER)),
-        (Parameter('q'), (~OUTER,)),
+        (ParameterReference('q'), (~OUTER,)),
     ], (
         'parents first; a node outside any block carries nothing; a `Cases` carries only the regions '
         'above it; a value under two blocks carries both, the outer one first'
@@ -831,11 +839,11 @@ def test_a_relation_is_declared_as_the_file_declares_it():
     ).program
 
     assert program.relations == {
-        'season_of': RelationDeclaration((('g', 'g'), ('season', 'season')), ('g',)),
-        'at_bus': RelationDeclaration((('g', 'g'), ('bus', 'bus')), ('g',)),
+        'season_of': Relation((('g', 'g'), ('season', 'season')), ('g',)),
+        'at_bus': Relation((('g', 'g'), ('bus', 'bus')), ('g',)),
     }, 'every relation under its own name, in declaration order'
     assert program.relations['season_of'].values == ('season',), 'and each says what its key determines'
-    assert program.dimensions['g'] == DimensionDeclaration(dtype='str'), 'a dimension carries its dtype and no relation'
+    assert program.dimensions['g'] == Dimension(dtype='str'), 'a dimension carries its dtype and no relation'
 
 
 @pytest.mark.parametrize('ordered', [pytest.param(True, id='ordered'), pytest.param(False, id='unordered')])
@@ -937,8 +945,8 @@ def test_a_named_expression_is_not_in_the_footprint():
     """It builds no row, so counting it would answer wrongly about what is solved."""
     program = to_spec(varied(TINY, expressions={'spend': 'sum(p * cost, over=g)'})).program
 
-    assert Parameter not in program.footprint.kinds, "the named expression's parameter reaches no row"
-    assert Parameter in {type(n) for n in walk(program.expressions['spend'].expression)}, (
+    assert ParameterReference not in program.footprint.kinds, "the named expression's parameter reaches no row"
+    assert ParameterReference in {type(n) for n in walk(program.expressions['spend'].expression)}, (
         'though it is in the expression'
     )
 
@@ -986,7 +994,7 @@ def test_a_cased_expression_lowers_to_one_region_per_case():
     cases = _cases_in(to_spec(CASED).program)
 
     assert len(cases.regions) == 3, 'one region per case, the `otherwise` among them'
-    assert [type(r.value).__name__ for r in cases.regions] == ['Constant', 'Parameter', 'Translate'], (
+    assert [type(r.value).__name__ for r in cases.regions] == ['Constant', 'ParameterReference', 'Translate'], (
         'each region carries its own value, lowered — a number, a parameter and a shift'
     )
 

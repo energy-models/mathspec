@@ -27,12 +27,12 @@ diff, the typesetter prints it, and an engine in another language reads it.
 The top level holds what you call. Every other public name lives in one of
 three modules, and the module follows from how you get the name:
 
-| You get it                  | It lives in        | Such as                                  |
-| --------------------------- | ------------------ | ---------------------------------------- |
-| by calling a function       | `mathspec`         | `to_spec`, `merge`, `typeset`, `advice`  |
-| from what a `Spec` holds    | `mathspec.spec`    | `Spec`, `VariableBlock`, `BUILTIN_NAMES` |
-| from what a `Program` holds | `mathspec.program` | `Program`, `Sum`, `Mask`, `Advice`       |
-| by catching it              | `mathspec.errors`  | `LanguageError`, `SchemaError`           |
+| You get it                  | It lives in        | Such as                                 |
+| --------------------------- | ------------------ | --------------------------------------- |
+| by calling a function       | `mathspec`         | `to_spec`, `merge`, `typeset`, `advice` |
+| from what a `Spec` holds    | `mathspec.spec`    | `Spec`, `VariableSpec`, `BUILTIN_NAMES` |
+| from what a `Program` holds | `mathspec.program` | `Program`, `Sum`, `Mask`, `Advice`      |
+| by catching it              | `mathspec.errors`  | `LanguageError`, `SchemaError`          |
 
 `SymbolTable` and `FormatName` are at the top level too: you build or name
 them to pass them to the typesetter. `tests/test_public_surface.py` holds each
