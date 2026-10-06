@@ -39,21 +39,21 @@ class Builtin:
     usage: str
     dimension_kwargs: tuple[str, ...] = ()
     relation_kwargs: tuple[str, ...] = ()
-    #: Kwargs naming a column of the relation ``by=`` names — ``over=`` and
-    #: ``into=`` — which resolution folds into the direction it is read in.
+    #: Keyword arguments that name a column of the relation ``by=`` names,
+    #: ``over=`` and ``into=``. Resolution folds them into the direction of the read.
     role_kwargs: tuple[str, ...] = ()
-    #: Kwargs naming a dimension on their own and a column of the relation where
-    #: ``by=`` names one. ``sum(x, over=generator)`` reduces the dimension
-    #: away; ``sum(x, by=l, over=c)`` names the column the call consumes.
-    #: One meaning — what leaves the frame — read in the namespace ``by=``
-    #: decides. Either reading takes a list, ``over=[a, b]``.
+    #: Keyword arguments that name a dimension on their own, and a column of the
+    #: relation where ``by=`` names one. ``sum(x, over=generator)`` sums the
+    #: dimension away; ``sum(x, by=l, over=c)`` names the column the call
+    #: consumes. Both readings name what the result loses, and both take a list,
+    #: ``over=[a, b]``.
     dimension_or_role_kwargs: tuple[str, ...] = ()
     edge_kwargs: tuple[str, ...] = ()
     required_value_kwargs: tuple[str, ...] = ()
-    #: Kwargs the call may omit. Their *kind* still comes from the tuples
-    #: above — this says only that the operator has an answer without them.
+    #: Keyword arguments the call may omit. Their *kind* still comes from the
+    #: tuples above. This says only that the operator has a result without them.
     optional_kwargs: tuple[str, ...] = ()
-    #: Kwargs required exactly when the call addresses a relation. A call
+    #: Keyword arguments required exactly when the call addresses a relation. A call
     #: names both of its ends and a partition names the columns it groups by,
     #: so that adding a value column to the relation cannot change what an
     #: existing call means.
@@ -91,8 +91,8 @@ class Builtin:
 
 
 #: The closed operator set. ``by=`` is the one keyword that addresses a relation,
-#: and a relation carries its own dimensions, so no sibling kwarg restates them.
-#: On ``shift`` and ``sum_back`` it partitions the axis the operator steps along: it
+#: and a relation carries its own dimensions, so no other keyword restates them.
+#: On ``shift`` and ``sum_back`` it partitions the dimension the operator steps along: it
 #: says which rows are neighbours, not which group a term lands in, and
 #: ``within=`` names the value columns the group is made of, on every call
 #: that names a ``by=``.
@@ -142,35 +142,27 @@ class Amount(NamedTuple):
 
     #: The word for the amount.
     noun: str
-    #: Why negating a named one at the call site is not what the caller means.
+    #: What to write instead of negating a named one at the call site.
     negated: str
-    #: What a named one that varies over the axis it steps along becomes.
-    varies: str
     #: The least whole number a literal may be.
     minimum: float
     #: What a literal must be written as, after ``operator(kwarg=...)``.
     form: str
 
 
-#: The amount each operator that steps along an axis takes, by operator name.
+#: The amount each operator that steps along a dimension takes, by operator name.
 AMOUNTS: dict[str, Amount] = {
     'shift': Amount(
         'offset',
-        'A named offset carries its sign in its values, so that one row pointing backwards says '
-        'so where the data is read — negate the column instead.',
-        'a permutation rather than a lag',
+        'Negate the values of the parameter instead.',
         -math.inf,
-        'must be a whole number, or the name of an integer parameter when the offset differs per '
-        'entity — a lead time, a transit time, a minimum up time.',
+        'must be a whole number, or the name of an integer parameter.',
     ),
     'sum_back': Amount(
         'width',
-        'A width counts positions and so has no direction; which way a window reaches is the '
-        "operator's own name rather than the sign of its width.",
-        'a different window at every position, which is no longer "the last n"',
+        'A width has no sign. Remove the minus.',
         1,
-        'needs a whole number of positions of at least 1, or the name of an integer parameter when '
-        'the window differs per entity. A width of 1 is the operand itself.',
+        'must be a whole number of at least 1, or the name of an integer parameter.',
     ),
 }
 
@@ -182,10 +174,8 @@ EDGE_WRAP = 'wrap'
 def edge_error(name: str, given: str) -> str:
     """Why an ``edge=`` value is not one the language has."""
     return (
-        f'{name}(edge={given}) is not an edge policy.\n'
-        f"Write edge='{EDGE_WRAP}' for a cyclic translation, a number for the "
-        f'value the vacated positions contribute, or omit it and they are '
-        f'absent — which drops the row.'
+        f'{name}(edge={given}) is not an edge value.\n'
+        f"Write edge='{EDGE_WRAP}', a number for the vacated positions, or omit edge= to drop their rows."
     )
 
 
@@ -203,26 +193,9 @@ def call_shape_error(name: str, positional: int, kwargs: Iterable[str]) -> str |
     return None if fits else f'{name}() expects {builtin.usage}'
 
 
-#: Why a partition writes ``within=`` whenever it writes ``by=``; ``position()``
-#: in a where string says the same, so the sentence has one home.
-PARTITION_NAMES_ITS_GROUP = (
-    'A partition names the value columns it groups by, so that a relation may gain a value '
-    'column without changing what this call means.'
-)
-
-
 def unsaid_ends_error(name: str, unsaid: list[str]) -> str:
     """Why a call through a relation has to write every column it reads: both ends of a read, the group of a partition."""
-    reason = (
-        PARTITION_NAMES_ITS_GROUP
-        if 'within' in BUILTINS[name].with_relation
-        else 'A call names both of its ends, so that a relation may gain a value column without changing what this call means.'
-    )
-    return (
-        f'{name}() through a relation leaves {", ".join(f"{k}=" for k in unsaid)} unsaid.\n'
-        f'{reason}\n'
-        f'Write: {BUILTINS[name].usage}'
-    )
+    return f'{name}() through a relation does not name {", ".join(f"{k}=" for k in unsaid)}.\nWrite: {BUILTINS[name].usage}'
 
 
 def unknown_operator_message(name: str) -> str:

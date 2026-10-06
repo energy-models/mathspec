@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
-#: What ``mathspec.program`` promises a consumer, sorted.
+#: The public names of ``mathspec.program``, sorted.
 __all__ = [
     'Add',
     'And',
@@ -124,28 +124,25 @@ ConstraintSense = ComparisonOperator
 QuadraticPosition = Literal['objective', 'constraint']
 
 #: The dtype a dimension index may declare (the declaration rules), and what
-#: its labels are. ``datetime`` is a dimension's alone — labels on a timeline
-#: order and compare, where a *value* of that type is a moment nothing
-#: computes with.
+#: its labels are. Only a dimension may declare ``datetime``, because labels
+#: on a timeline order and compare, but no expression computes with a moment.
 DimensionDtype = Literal['float', 'int', 'str', 'datetime']
 
 #: The dtype a parameter may declare (the declaration rules), and what its bound
-#: column must be. ``bool`` is a parameter's alone — a value column may be a
-#: flag a mask reads, where a label set of two members is a dimension nothing
-#: indexes by.
+#: column must be. Only a parameter may declare ``bool``, because a mask reads
+#: a flag column, and nothing indexes by a dimension of two labels.
 ParameterDtype = Literal['float', 'int', 'bool', 'str']
 
-#: What a *name* a where comparison tests may be — a parameter's dtype or a
-#: dimension's, since a relation's is its target's. The union rather than either
-#: half, because a mask names all three kinds and reads the dtype the same way.
+#: The dtype of a *name* that a where comparison tests: a parameter's or a
+#: dimension's, because a relation takes its target's dtype. It is the union of
+#: both, because a mask names all three kinds and reads the dtype the same way.
 DeclaredDtype = ParameterDtype | DimensionDtype
 
 #: The domain a variable may declare.
 VariableDomain = Literal['continuous', 'integer', 'binary']
 
 #: What a masked variable's non-existence *means* where it does not exist.
-#: ``undefined`` is the absence rules' default — a term carrying it takes its
-#: row. ``zero`` says the quantity *is* zero there, so the term contributes
+#: ``undefined`` is the default: a term that carries it removes its row. ``zero`` says the quantity *is* zero there, so the term contributes
 #: nothing and the row stands.
 VariableAbsence = Literal['undefined', 'zero']
 
@@ -376,7 +373,7 @@ class Named:
 
 
 #: Every expression node, as one type — what a walk takes. The set is
-#: *closed*: nothing registers into it, so a consumer that walks it ends in
+#: *closed*: nothing registers into it, so a tool that walks it ends in
 #: ``assert_never`` and a node added without a branch is a type error at the
 #: site that must grow one, rather than a ``LanguageError`` raised at the first
 #: spec that uses it. The degree rules (``mathspec.degree``) hold on every
@@ -546,8 +543,7 @@ class DimensionDeclaration:
 
     #: What the labels are, as the file declares them. A dimension is read from
     #: whatever table carries it, so the declared type is what that column is
-    #: checked against — the same claim ``ParameterDeclaration.dtype`` makes
-    #: about a value column, one axis over.
+    #: checked against, as ``ParameterDeclaration.dtype`` is for a value column.
     dtype: DimensionDtype = 'str'
     description: str | None = None
 
@@ -582,7 +578,7 @@ def assumption_message(name: str, assumption: Assumption) -> str:
     """
     read = ', '.join(f"'{n}'" for n in sorted(assumption.predicate.names_read))
     sentence = f"assumption '{name}' does not hold for the data attached to {read}"
-    return f'{sentence} — {assumption.description}' if assumption.description else sentence
+    return f'{sentence}: {assumption.description}' if assumption.description else sentence
 
 
 @dataclass(frozen=True)
@@ -606,7 +602,7 @@ class VariableDeclaration:
     dims: tuple[str, ...]
     where: Mask | None = None
     #: A number or a parameter, or ``None`` where that side is open. What stands
-    #: for an open side in a solve is the consumer's to choose.
+    #: for an open side in a solve is the engine's choice.
     lower: Expression | None = None
     #: As [`lower`][], for the other side.
     upper: Expression | None = None
@@ -902,7 +898,7 @@ class Separability:
         for name in least:
             if name not in waiting:
                 raise KeyError(
-                    f"'{name}' is not a parameter an undecided reach along '{self.dimension}' waits on. "
+                    f"'{name}' is not a parameter that an undecided reach along '{self.dimension}' waits on. "
                     + did_you_mean(name, sorted(waiting))
                 )
         folded = {reach for reach in self.undecided if reach.kind == 'offset' and reach.name in least}
@@ -924,8 +920,8 @@ class Program:
     parameters: Mapping[str, ParameterDeclaration]
     variables: Mapping[str, VariableDeclaration]
     constraints: Mapping[str, ConstraintDeclaration]
-    #: ``None`` where the file declares no objective — a feasibility problem,
-    #: whose answer is whether the constraints can be met at all.
+    #: ``None`` where the file declares no objective. The solve then only asks
+    #: whether the constraints can be met.
     objective: ObjectiveDeclaration | None
     dimensions: Mapping[str, DimensionDeclaration] = Sealed({})
     relations: Mapping[str, RelationDeclaration] = Sealed({})
@@ -936,12 +932,12 @@ class Program:
     #: What the data has to satisfy for the answer to mean anything, by the
     #: name a refusal quotes: every ``assumptions:`` entry the file wrote, then
     #: what each ``piecewise:`` block's method assumes of its breakpoints. The
-    #: language decides none of it, so the consumer attaching the data checks
+    #: language decides none of it, so the tool that attaches the data checks
     #: each and refuses with [`assumption_message`][].
     assumptions: Mapping[str, Assumption] = Sealed({})
     #: Declared ``expressions:``, each saying whether the math reads it. None
-    #: builds a row of its own — one the math reads stands as a [`Named`][]
-    #: where it is read — but all are lowered with the program, so a file whose
+    #: builds a row of its own, and one the math reads stands as a [`Named`][]
+    #: where it is read. All are lowered with the program, so a file whose
     #: named expression is outside the language is refused by every verb that
     #: reads the file rather than only by the one that reads the expression.
     expressions: Mapping[str, ExpressionDeclaration] = Sealed({})
@@ -1324,10 +1320,10 @@ TypedPredicate = (
     | PulledBackPredicate
 )
 
-#: The boolean connectives — the only where nodes carrying other where nodes,
-#: and so the only place a walk over a predicate recurses. The grammar builds
-#: these classes directly, over leaves still unresolved, so a pre-resolution
-#: tree shares them — the transient impurity resolution normalizes away.
+#: The boolean connectives, which are the only where nodes that carry other
+#: where nodes, so a walk over a predicate recurses only here. The grammar
+#: builds these classes directly over unresolved leaves, so a tree before
+#: resolution shares them, and resolution then replaces those leaves.
 Connective = Not | And | Or
 
 #: Every resolved predicate node. The parser's ``Unresolved*`` nodes are not members: they live with the

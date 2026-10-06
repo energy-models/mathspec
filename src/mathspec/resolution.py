@@ -83,9 +83,9 @@ class Namespace:
     )
 
     def __init__(self, schema: Spec) -> None:
-        #: The schema the names come from — what an expression is expanded and
-        #: dim-checked against, since macros, named expressions and the dim
-        #: rules read declarations the flat listing below does not carry.
+        #: The schema the names come from. Expressions are expanded and
+        #: dim-checked against it, because macros, named expressions and the dim
+        #: rules read declarations that the flat listing below does not carry.
         self.schema = schema
         variables = {**schema.variables, **schema.given.variables, **schema.given.expressions}
         parameters = {**schema.parameters, **schema.given.parameters}
@@ -107,8 +107,7 @@ class Namespace:
         self.relations: dict[str, RelationDeclaration] = {
             n: RelationDeclaration(lk.pairs, lk.key_roles, lk.description) for n, lk in schema.relations.items()
         }
-        #: parameter or variable name -> the dims it is read through —
-        #: parameters by their ``dims``, variables by their frame. Stamped onto
+        #: parameter or variable name -> the ``dims`` it is read through. Stamped onto
         #: each leaf a where names, the way a relation leaf carries ``over``.
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: tuple(pd.dims) for p, pd in parameters.items()},
@@ -117,8 +116,9 @@ class Namespace:
         #: named expression -> its resolved node, or ``None``, and its refusals;
         #: filled the first time anything reads the name.
         self._named: dict[str, tuple[Named | None, tuple[str, ...]]] = {}
-        #: The named expressions waiting to be resolved, the one asked for
-        #: first — each above the entries it reads, so it is a cycle's chain.
+        #: The named expressions waiting to be resolved, the first one asked for
+        #: at the bottom. Each sits above the entries it reads, so the list is a
+        #: cycle's chain.
         self._loading: list[str] = []
 
     def named(self, name: str, context: str) -> Named:
@@ -134,7 +134,7 @@ class Namespace:
             raise SchemaError(refusal)
         node, _ = self.named_entry(name)
         if node is None:
-            msg = f"{context}: named expression '{name}' does not load. Its refusal is listed with it."
+            msg = f"{context}: named expression '{name}' does not load. Fix the error listed for '{name}' first."
             raise SchemaError(msg)
         return node
 
@@ -143,7 +143,7 @@ class Namespace:
         if name not in self._loading:
             return None
         chain = ' -> '.join([*self._loading[self._loading.index(name) :], *through, name])
-        return f'{context}: circular expression reference: {chain}'
+        return f'{context}: circular expression reference: {chain}. Remove one reference.'
 
     def named_entry(self, name: str) -> tuple[Named | None, tuple[str, ...]]:
         """The ``expressions:`` entry *name* resolved, or ``None``, with every refusal it earned.
@@ -233,11 +233,11 @@ class Namespace:
             else [('Variables', self.variables), ('Parameters', self.parameters)]
         )
         listing = '\n'.join(f'  {kind}: {sorted(names)}' for kind, names in shown)
-        return f"{context}: '{name}' not found.\n{listing}\nCheck for typos, or ensure '{name}' is declared."
+        return f"{context}: '{name}' not found.\n{listing}\nCheck the spelling, or declare '{name}'."
 
     def unknown_constraint(self, name: str, context: str, *, formals: Iterable[str] = ()) -> str:
         """The refusal for a ``dual(name)`` naming no constraint — nor, inside a template, a formal."""
-        also = ' or a formal of this macro' if formals else ''
+        also = ' or a formal argument of this macro' if formals else ''
         return (
             f"{context}: dual({name}): '{name}' is not a declared constraint{also}.\n"
             f'  Constraints: {sorted(self.constraints)}\n'
@@ -247,7 +247,7 @@ class Namespace:
 
 
 # ---------------------------------------------------------------------------
-# the seam the rest of the package uses
+# the functions the rest of the package calls
 # ---------------------------------------------------------------------------
 
 
@@ -361,7 +361,9 @@ def resolve_expression_text(
     if ast is None:
         return None
     if isinstance(ast, ComparisonNode):
-        errors.append(f'{context}: expression must not contain a comparison operator.\nGot: {text!r}')
+        errors.append(
+            f"{context}: the expression holds a comparison operator.\nGot: {text!r}\nMove it to 'constraints:'."
+        )
         return None
     resolved = resolve_expression(ast, ns, context, errors)
     if resolved is None or ceiling is None:
@@ -383,7 +385,7 @@ def resolve_constraint_text(
         return None
     if not isinstance(ast, ComparisonNode):
         errors.append(
-            f'{context}: expression must contain exactly one comparison operator (<=, >=, ==).\nGot: {text!r}'
+            f'{context}: the constraint has no comparison operator.\nGot: {text!r}\nWrite <=, >= or == between two sides.'
         )
         return None
     found = len(errors)
@@ -397,9 +399,7 @@ def resolve_constraint_text(
         errors.append(
             f'{context}: neither side of the comparison carries a variable, so the row decides nothing.\n'
             f'Got: {text!r}\n'
-            f'A constraint is a claim about a decision, and a comparison of numbers and parameters '
-            f'is settled before the solve — no consumer builds a row for it. Name the variable it should '
-            f'bound, or state the fact under `assumptions:`, where the consumer attaching the data checks it.'
+            f'Name the variable it bounds, or state the fact under `assumptions:`.'
         )
         return None
     return left, ast.op, right

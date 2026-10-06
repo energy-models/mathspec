@@ -5,49 +5,50 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The limits of the language
 
-A spec can only say what the language has words for. This page says which words
-can be added, and which cannot. Read it before you ask for a new operator, block
-or keyword. For the rules a spec itself has to obey, read
-[the ten rules](../reference/language/index.md#the-ten-rules).
+Before you ask for a new operator, block or keyword, find out here whether the
+language can add it, and what to write instead if it cannot. For the rules a
+spec itself has to obey, read [the ten rules](../reference/language/index.md#the-ten-rules).
 
 ## How a new construct enters
 
-A request for something new is one of four kinds, and the kind decides what it
-costs to add.
+A request for something new is one of four kinds, and the kind decides how
+much work it is to add.
 
 - **A macro** is a template with arguments, written in the file under `macros:`.
   Adding one costs nothing: it uses only operators that exist, so no engine has
   to change ([macros](../reference/language/named.md#macros)).
 - **A primitive** is an operator built into the language: `sum`, `sum_back`,
-  `at`, `shift`, and the `where` comparisons. Adding one is the expensive kind:
+  `at`, `shift`, and the `where` comparisons. Adding one is the most work:
   every engine that builds models has to implement it, and the typesetter has
   to print it in LaTeX, Typst and Markdown.
-- **A formulation** is a block that states ordinary variables and constraints
-  rather than being one. `piecewise:` and `sos:` are the two. It costs as much as
-  a primitive to build, but composes as freely as a macro. It emits variables,
-  constraints and assumptions, and no parameter, so
+- **A formulation** is a block that expands into ordinary variables and
+  constraints before the model is built. `piecewise:` and `sos:` are the two
+  formulations. A formulation is as much work to build as a primitive, but a
+  file combines it with other constructs as freely as a macro. It emits
+  variables, constraints and assumptions, and no parameter, so
   [`spec.expand()`](../reference/language/piecewise.md#writing-a-formulation-out)
   writes it out with the data the spec already expects.
 - **A declaration section** is a block of declarations of one kind, such as
-  `variables:` or `given:`. One enters where it states something no section
-  states, where a file decides it without data, and where the typesetter prints
-  it. `given:` entered on all three. No other section says that a parameter,
-  a column, a named expression or a row family belongs to another file, and
-  that is what lets a component file load and print on its own.
+  `variables:` or `given:`. A new section enters when all three of these are
+  true: it states something no other section states, a file decides it without
+  data, and the typesetter prints it. `given:` met all three. It is the only
+  section that says a parameter, a column, a named expression or a row family
+  belongs to another file, which lets a component file load and print on its
+  own.
 
 A request that is none of the four is refused, and the
-[table of refusals](#deliberate-non-primitives) records it with what to write
+[table of refusals](#requests-the-language-refuses) records it with what to write
 instead.
 
 ### What a new primitive has to satisfy
 
-**A macro must be able to call it.** Everything a modeller might pass in goes in
-the value of a keyword argument, such as `over=snapshot`.
+A macro must be able to call a new primitive, so everything a modeller can pass
+in goes in the value of a keyword argument, such as `over=snapshot`.
 
-**An operator names its price in rows read.** `sum(p, over=g)` reads one row
-per generator, and `shift(p, along=t, offset=1)` reads the row before. Each
-reads a bounded number of rows per output row, so an engine builds the model
-one chunk of rows at a time. An operator that calls itself is refused, because
+An operator must say how many rows it reads for each output row.
+`sum(p, over=g)` reads one row per generator, and `shift(p, along=t, offset=1)`
+reads the row before. Each reads a bounded number of rows per output row, so an
+engine builds the model one chunk of rows at a time. An operator that calls itself is refused, because
 nothing bounds how far it expands.
 
 | The operator                                     | Allowed?                                        |
@@ -59,12 +60,13 @@ nothing bounds how far it expands.
 | reads every row                                  | yes, at one full pass before any chunk builds   |
 | calls itself                                     | no, and the message names what to write instead |
 
-Degree is not a test for a new primitive. The
+The degree of the result does not decide whether a new primitive is allowed,
+because the
 [product rule](../reference/language/expressions.md#where-a-product-of-two-variables-is-allowed)
 holds for every operator.
 
-A new primitive is finished when lowering builds it, the typesetter prints
-it in all three formats, and an engine's build of a spec that uses it matches
+A new primitive is finished when the loader lowers it into the program, the
+typesetter prints it in all three formats, and an engine's build of a spec that uses it matches
 its build of the same spec written out by hand.
 
 ### Three kinds of refusal
@@ -77,25 +79,24 @@ its build of the same spec written out by hand.
 
 ## What counts as data preparation
 
-A column computed in pandas and a column the language could derive look the
-same once attached. One sentence tells them apart:
+Once attached, a column computed in pandas looks the same as a column the
+language could derive. One rule tells them apart:
 
 > Data preparation computes what the spec cannot state. The language derives
 > what it can from the data the spec already expects.
 
-A cycle basis is the first kind. It needs the network's topology, which only the
-data has, so `cycle_incidence` arrives as a parameter. A minimum up time is the
-second kind. `min_up_time` is a column the spec already expects, so
-`sum_back(window=min_up_time)` reads the width off the column and you ship no
-window mask.
+A cycle basis is the first kind, because it needs the network's topology and
+only the data has that. So `cycle_incidence` arrives as a parameter. A minimum
+up time is the second kind, because `min_up_time` is a column the spec already
+expects. So `sum_back(window=min_up_time)` reads the width from the column, and
+you supply no window mask.
 
-Checking a column is neither. `p_min <= p_max` is a rule two consumers must not
-answer differently, so the rule is
-[language](../reference/language/assumptions.md) and the check is the
-consumer's. The file states the predicate, and whoever attaches the numbers runs
-it.
+Checking a column is neither kind. Two tools that read the spec must not
+answer `p_min <= p_max` differently, so the file states the check as
+[an assumption](../reference/language/assumptions.md), and the tool that
+attaches the numbers runs it.
 
-## Deliberate non-primitives
+## Requests the language refuses
 
 Each row is a request the language refuses, with the reason and what to write
 instead.

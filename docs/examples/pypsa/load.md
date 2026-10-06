@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Loads
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Load`. It adds a term to `Bus_injection`.
+This file states PyPSA's `Load`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to the sum `Bus_injection`.
 
 <!-- gallery:begin -->
 ```yaml

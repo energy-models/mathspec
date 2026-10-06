@@ -5,8 +5,8 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Expressions
 
-Every `expression:` in the file is written in one arithmetic grammar. That
-covers a constraint, the objective, a named expression and a macro template:
+You write every `expression:` in one arithmetic grammar: in a constraint, the
+objective, a named expression and a macro template.
 
 ```text
 expression  ::= arithmetic | arithmetic COMPARATOR arithmetic
@@ -31,23 +31,23 @@ NUMBER      ::= integer | float | "inf" | ".inf"
 
 ## Where a product of two variables is allowed
 
-The objective and the constraints take `variable * variable`. A quadratic cost is
-`sum(p * p * wear, over=g)`, and a quadratic row is `p * q >= floor`. Three rules
-bound it:
+The objective and the constraints take `variable * variable`. A quadratic cost
+is `sum(p * p * wear, over=g)`, and a quadratic row is `p * q >= floor`. Three
+rules limit it:
 
-- **At most one factor may be a sum of terms.** `sum(p, over=g) * sum(q, over=g)`
-  is refused. Multiply before you reduce, or constrain a variable to equal the
+- At most one factor may be a sum of terms, so
+  `sum(p, over=g) * sum(q, over=g)` is refused. Multiply before you reduce, or constrain a variable to equal the
   reduction. Factors on different dimensions are allowed: `x * y * link`
   broadcasts, and the table `link` says which pairs exist.
-- **Degree stops at 2.** `p * p * p` is refused.
-- **Everything beside the math stays affine.** A bound is one number per
-  column, and a `piecewise:` link is affine.
+- The degree stops at 2, so `p * p * p` is refused.
+- A bound and a `piecewise:` link stay affine. A bound is one number per
+  column.
 
 A [reported expression](named.md#reported-expressions) is not held to these.
 
-`/` needs a divisor that carries no variable. `**` needs a base and an exponent
-that carry no variable. Any arithmetic over numbers and parameters is allowed in
-those places, so a discount factor is written where it is used:
+`/` needs a divisor that carries no variable, and `**` needs a base and an
+exponent that carry no variable. Those places accept any arithmetic over numbers and
+parameters, so you write a discount factor where you use it:
 
 ```yaml
 dimensions:
@@ -72,10 +72,10 @@ a square.
 ## Name resolution
 
 One flat namespace covers dimensions, relations, parameters, variables, named
-expressions, macros and the built-in operators. A collision is a load error that
-names both declarations, and nothing shadows anything.
+expressions, macros and the built-in operators. Two declarations with one name
+are a load error, and the message names both, so no name hides another.
 
-Position decides which kinds of name are legal:
+The place where a name stands decides which kinds of name are legal:
 
 | Position                               | Legal kinds                                                                                                        |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -87,7 +87,7 @@ Position decides which kinds of name are legal:
 | the `edge` key of `shift`              | `'wrap'` in quotes, or a bare number                                                                               |
 | `dual` argument (`dual(c)`)            | a constraint. It resolves against the constraints alone ([named expressions](named.md#reading-a-constraints-dual)) |
 
-A bare word in the value of a keyword argument is a name to resolve. A
+A bare word in the value of a keyword argument is a name to resolve, but a
 keyword's key is never a name.
 
 Constraints and assumptions sit outside the flat namespace, so a constraint or
@@ -95,9 +95,10 @@ an assumption may share a variable's name.
 
 ## How dimensions combine
 
-The dimension set of every expression is known before any data is attached:
+`to_spec` knows the dimension set of every expression before any data is
+attached:
 
-| Node                             | Dim set                           | Error                                                                            |
+| Node                             | Dimension set                     | Error                                                                            |
 | -------------------------------- | --------------------------------- | -------------------------------------------------------------------------------- |
 | number                           | `{}`                              |                                                                                  |
 | parameter / variable             | its `dims`                        |                                                                                  |
@@ -110,11 +111,11 @@ The dimension set of every expression is known before any data is attached:
 | `shift(x, along=d, offset=n)`    | `dims(x)`                         | error if `d ∉ dims(x)`                                                           |
 | `sum_back(x, along=d, window=n)` | `dims(x)`                         | error if `d ∉ dims(x)`                                                           |
 
-An outer product is allowed. The declaration's own dimensions are its
+An outer product is allowed. The dimensions a declaration ranges over are its
 **frame**, and a declaration may not disagree with its expression:
 
 - A constraint requires `dims(lhs) ∪ dims(rhs)` to **equal** its `dims`.
-- An objective must carry **no dimensions**. Write the sums that reduce it.
+- An objective must carry **no dimensions**, so write the sums that reduce it.
 - A `where` predicate and a bound parameter must not **exceed** the frame they
   sit in.
 
@@ -208,11 +209,11 @@ it takes no `edge=`. With `count`, it names the start of a run:
 where: "count(points AND NOT shift(points, along=bp, offset=1), over=bp) == 1"
 ```
 
-That reads: the marked breakpoints are one consecutive run.
+That `where` is true when the marked breakpoints are one consecutive run.
 
-A negative `offset` reads forwards. `by=`, `within=` and `edge='wrap'` are not
-in this form; for a grouped or cyclic translation, compare the arithmetic
-`shift`.
+A negative `offset` reads forwards. This form takes no `by=`, `within=` or
+`edge='wrap'`, so for a grouped or cyclic translation, use the arithmetic
+[`shift`](operators.md#shift).
 
 ### Reading a predicate through a relation
 
@@ -243,14 +244,15 @@ objective:
 $$0 \le \mathit{rate}_{f} \le \mathrm{cap}_{f} \qquad \forall\thinspace f \in \mathcal{F} \thinspace : \thinspace \mathrm{has\_curve}_{\mathrm{converter\_of}(f)}$$
 
 The mask above is over `flow` alone. The rules are those of `at` in an
-expression: `by=`, `over=` and `into=` are all written, each of `over=` and
-`into=` names one column or a list of them, `[a, …]`, the read lands on the
-relation's key, and the predicate carries every dimension the read consumes.
+expression: you write all of `by=`, `over=` and `into=`, and each of `over=`
+and `into=` names one column or a list of them, `[a, …]`. The read lands on the
+key of the relation, and the predicate carries every dimension the read
+consumes.
 
 ### The right-hand side of a comparison
 
 A bare name on the right is read as a string label when the spec does not
-declare it. A declared name there is a load error.
+declare it, and a declared name there is a load error.
 
 Quote a label that is not an identifier, such as `'combined-cycle'`. A quoted
 word is never read as a declaration.
@@ -259,10 +261,10 @@ A comparison is checked against the declared `dtype`. A `datetime` dimension is
 compared against a quoted ISO date such as `'2030-01-01'` or
 `'2030-01-01T06:00'`, and a number against it is a load error.
 
-String labels compare bytewise, whatever the dimension's order. A label the
-dimension does not carry compares equal to nothing.
+String labels compare bytewise, whatever the dimension's order, and a label
+the dimension does not carry compares equal to nothing.
 
-Comparing two dimensions is not in the language. Precompute a boolean parameter
+The language cannot compare two dimensions, so precompute a boolean parameter
 instead.
 
 ### Arithmetic in a comparison
@@ -270,13 +272,13 @@ instead.
 Either side of a comparison may be an expression over parameters:
 `p_min <= 0.5 * p_max`, or
 `p_max <= at(bus_cap, by=bus_of, over=bus, into=generator)`. The side is read as
-an [expression](#expressions) is, macros and named expressions included. A
+an [expression](#expressions) is, macros and named expressions included, but a
 variable and a `dual()` are refused. A relation column and a quoted label are
 compared on their own, and are not read in arithmetic.
 
-A side absent at a coordinate compares false there, and under a summing operator the absent term
-is one fewer. A comparison against the previous row gives its `shift` an
-`edge=`, and a `position()` term keeps the first row out:
+A side absent at a coordinate compares false there, but under a summing
+operator the absent term is one summand fewer. To compare against the previous row, give
+the `shift` an `edge=`, and add a `position()` term to keep the first row out:
 
 ```yaml
 dimensions:
@@ -294,8 +296,8 @@ constraints:
 ```
 
 A [case `when:`](named.md#the-rules-that-keep-the-cases-apart) may compare
-expressions only in a block with one case. A comparison with a number on both sides, such as `2 < 1`, is
-refused everywhere.
+expressions only in a block with one case. A comparison with a number on both
+sides, such as `2 < 1`, is refused everywhere.
 
 ### `position()`
 

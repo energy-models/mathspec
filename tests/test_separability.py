@@ -145,7 +145,7 @@ def test_resolving_keeps_the_static_reach_and_what_a_relation_decides():
 
 
 def test_resolving_a_name_nothing_waits_on_is_refused():
-    with pytest.raises(KeyError, match="'depth' is not a parameter an undecided reach along 'h' waits on"):
+    with pytest.raises(KeyError, match="'depth' is not a parameter that an undecided reach along 'h' waits on"):
         _verdict(**_rows('p >= shift(p, along=h, offset=width, edge=0)')).resolved({'depth': 0})
 
 

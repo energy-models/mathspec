@@ -5,12 +5,12 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Loads
 
-PyPSA's `Load`, and the fragment that shows what a file may leave out. It
-declares no variable and no objective. `Load_p_set` is data, and the only thing
-the file says is what the load's port withdraws.
+This fragment states PyPSA's `Load`, and shows what a file may leave out: it
+declares no variable and no objective. `Load_p_set` is data, and the file states
+only what the port of the load withdraws.
 
-The minus sign is the whole of its relation to the sign convention. A
-withdrawal is a negative injection.
+The minus sign is the only link to the sign convention, under which a withdrawal
+is a negative injection.
 
 <!-- gallery:begin -->
 ```yaml

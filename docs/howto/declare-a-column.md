@@ -8,8 +8,8 @@ SPDX-License-Identifier: CC-BY-4.0
 Decide whether a column of your data is a
 [dimension](../reference/language/dimensions.md), a
 [relation](../reference/language/relations.md) or a
-[parameter](../reference/language/declarations.md#parameters). What decides is
-what the math does with the column.
+[parameter](../reference/language/declarations.md#parameters), from what the
+math does with the column.
 
 | The column…                                                                                                                           | is declared as                          |
 | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
@@ -24,5 +24,5 @@ what the math does with the column.
 
 Two rules decide the cases the table does not list:
 
-1. **If `b` has one value per `a`, declare `b` as a relation keyed by `a`.**
-2. **Two dimensions that depend on each other are one relation.**
+1. If `b` has one value per `a`, declare `b` as a relation keyed by `a`.
+2. Declare two dimensions that depend on each other as one relation.

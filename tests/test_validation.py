@@ -50,12 +50,12 @@ class TestValidateExpressions:
             ),
             pytest.param(
                 {'constraints': {'cap': {'dims': ['g'], 'expression': 'p + c'}}},
-                ('exactly one comparison',),
+                ('the constraint has no comparison operator',),
                 id='a-constraint-without-a-comparison',
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(p, over=g) <= 5'}},
-                ('must not contain a comparison',),
+                ('the expression holds a comparison operator',),
                 id='an-objective-with-a-comparison',
             ),
             pytest.param(
@@ -70,12 +70,12 @@ class TestValidateExpressions:
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(p ** 2, over=g)'}},
-                ('The objective', '`**` is not in the language over variables'),
+                ('The objective', '`**` has a variable in its base or exponent'),
                 id='a-variable-under-a-power',
             ),
             pytest.param(
                 {'constraints': {'cap': {'dims': ['g'], 'where': 'c >', 'expression': 'p <= c'}}},
-                ('Failed to parse where string',),
+                ('Cannot parse the where string',),
                 id='a-malformed-where-string',
             ),
             pytest.param(
@@ -110,7 +110,9 @@ class TestValidateExpressions:
             },
         )
         assert "'nope' not found" in message
-        assert 'exactly one comparison' in message, 'the second fault is reported beside the first, not behind it'
+        assert 'the constraint has no comparison operator' in message, (
+            'the second fault is reported beside the first, not behind it'
+        )
 
     @pytest.mark.parametrize(
         'patch',
@@ -242,7 +244,7 @@ class TestDual:
             ),
             pytest.param(
                 {'expressions': {'price': 'dual(1 + 1)'}},
-                ('dual() takes the name of a declared constraint, written bare', 'dual(<constraint>)'),
+                ('dual() takes the name of a declared constraint', 'dual(<constraint>)'),
                 id='a-non-name-argument-is-not-a-constraint-reference',
             ),
             pytest.param(
@@ -252,17 +254,17 @@ class TestDual:
             ),
             pytest.param(
                 {'macros': {'shadow': {'args': ['x'], 'template': 'dual(nope) + x'}}},
-                ("dual(nope): 'nope' is not a declared constraint", 'or a formal of this macro'),
+                ("dual(nope): 'nope' is not a declared constraint", 'or a formal argument of this macro'),
                 id='an-uncalled-macro-template-names-an-unknown-constraint',
             ),
             pytest.param(
                 {'constraints': {'lim': {'dims': ['g'], 'expression': 'dual(lim) <= c'}}},
-                ('a dual exists only after a solve', 'the math cannot read one'),
+                ('a dual exists only after a solve', 'so it cannot stand here'),
                 id='a-dual-written-inside-a-constraint',
             ),
             pytest.param(
                 {'objective': {'sense': 'minimize', 'expression': 'sum(p) + dual(lim)'}},
-                ('a dual exists only after a solve', 'the math cannot read one'),
+                ('a dual exists only after a solve', 'so it cannot stand here'),
                 id='a-dual-written-inside-the-objective',
             ),
             pytest.param(
@@ -270,7 +272,7 @@ class TestDual:
                     'macros': {'shadow': {'args': ['x'], 'template': 'dual(x)'}},
                     'constraints': {'lim': {'dims': ['g'], 'expression': 'shadow(lim) <= c'}},
                 },
-                ('a dual exists only after a solve', 'the math cannot read one'),
+                ('a dual exists only after a solve', 'so it cannot stand here'),
                 id='a-dual-smuggled-through-a-macro-into-a-constraint',
             ),
             pytest.param(
@@ -278,7 +280,7 @@ class TestDual:
                     'expressions': {'price': 'dual(lim)'},
                     'constraints': {'lim': {'dims': ['g'], 'expression': 'price <= c'}},
                 },
-                ('a dual exists only after a solve', 'keep the entry that carries it out of constraints'),
+                ('a dual exists only after a solve', 'Keep the entry that reads it out of constraints'),
                 id='a-dual-smuggled-through-an-entry-into-a-constraint',
             ),
         ],
@@ -300,10 +302,12 @@ class TestDimensionKwargs:
     @pytest.mark.parametrize(
         ('expression', 'fragments'),
         [
-            pytest.param('sum(p, over=snapshto) == load', ('silent no-op', 'sum(over=snapshto)'), id='sum-over-typo'),
+            pytest.param(
+                'sum(p, over=snapshto) == load', ('correct the spelling', 'sum(over=snapshto)'), id='sum-over-typo'
+            ),
             pytest.param(
                 'sum(p, over=[generator, snapshto]) == 1',
-                ('silent no-op', 'sum(over=snapshto)'),
+                ('correct the spelling', 'sum(over=snapshto)'),
                 id='sum-over-a-list-with-a-typo',
             ),
             pytest.param(
@@ -347,10 +351,14 @@ class TestDimensionKwargs:
     @pytest.mark.parametrize(
         ('expression', 'fragment'),
         [
-            pytest.param('sum(p, over=1)', 'sum(over=...) must name a dimension', id='a-number-as-a-dimension'),
+            pytest.param(
+                'sum(p, over=1)',
+                'sum(over=...) is not a name. Write the name of a declared dimension',
+                id='a-number-as-a-dimension',
+            ),
             pytest.param(
                 'shift(p, along=[snapshot, generator], offset=1)',
-                'shift(along=...) must name a dimension',
+                'shift(along=...) is not a name. Write the name of a declared dimension',
                 id='a-list-where-one-dimension-steps',
             ),
             pytest.param(
@@ -358,10 +366,14 @@ class TestDimensionKwargs:
                 "sum(over=[generator, snapshot, generator]) names 'generator' twice",
                 id='a-dimension-named-twice',
             ),
-            pytest.param("sum(p, by='lk', over=g, into=h)", 'sum(by=...) must name a relation', id='a-quoted-relation'),
+            pytest.param(
+                "sum(p, by='lk', over=g, into=h)",
+                'sum(by=...) is not a name. Write the name of a declared relation',
+                id='a-quoted-relation',
+            ),
             pytest.param(
                 'sum(p, by=lk, over=1, into=h)',
-                'sum(over=...) names columns of the relation',
+                'sum(over=...) is not a column name',
                 id='a-number-as-a-column',
             ),
         ],
@@ -386,7 +398,7 @@ class TestDimensionKwargs:
     @pytest.mark.parametrize(
         ('dtype', 'where', 'match'),
         [
-            ('datetime', 'g > 0', 'compares against the epoch'),
+            ('datetime', 'g > 0', 'compares against 1970-01-01'),
             ('str', 'g > 3', 'matches no label'),
             ('int', "g > 'x'", 'matches nothing'),
             ('datetime', "g > 'not-a-date'", 'is not an ISO date'),
@@ -602,7 +614,7 @@ class TestPositionResolves:
             ),
             (
                 'position(snapshot, by=starts_at, within=snapshot) == 0',
-                ["no key column over 'snapshot'", "its key is ['period']"],
+                ["no key column over 'snapshot'", "Its key is ['period']"],
             ),
         ],
         ids=['a parameter', 'undeclared', 'by= is not a relation', 'by= is over another dim'],
@@ -626,23 +638,25 @@ class TestAWhereSideIsReadInResolution:
         [
             pytest.param(
                 'position(g) == 1.5',
-                ('compared against an integer index', 'position(g) == <integer>'),
+                ('compared against a value that is not an integer', 'position(g) == <integer>'),
                 id='a-position-against-a-fraction',
             ),
-            pytest.param('position(g) == c', ('compared against an integer index',), id='a-position-against-a-name'),
+            pytest.param(
+                'position(g) == c', ('compared against a value that is not an integer',), id='a-position-against-a-name'
+            ),
             pytest.param(
                 'position(g, h) == 0',
-                ('position() is written position(<dim>[, by=<relation>, within=<column>])',),
+                ('is not of the form position(<dim>[, by=<relation>, within=<column>])',),
                 id='a-position-with-two-dimensions',
             ),
             pytest.param(
                 'position(g, edge=1) == 0',
-                ('position() is written position(<dim>[, by=<relation>, within=<column>])',),
+                ('is not of the form position(<dim>[, by=<relation>, within=<column>])',),
                 id='a-position-with-a-kwarg-it-lacks',
             ),
             pytest.param(
                 'position(g, by=[lk, lk2]) == 0',
-                ('position() is written position(<dim>[, by=<relation>, within=<column>])',),
+                ('is not of the form position(<dim>[, by=<relation>, within=<column>])',),
                 id='a-position-by-a-list',
             ),
         ],
@@ -693,27 +707,27 @@ class TestAWhereSideIsReadInResolution:
         [
             pytest.param(
                 {'variables.p.where': 'c > 2 * q'},
-                ('one side names a variable', 'built before variables exist'),
+                ('one side names a variable', 'Test only parameters and dimension coordinates'),
                 id='a-variable-inside-arithmetic',
             ),
             pytest.param(
                 {'constraints': {'x': {'dims': ['g'], 'expression': 'p <= c'}}, 'variables.p.where': 'dual(x) * 2 > 0'},
-                ('one side reads a dual', 'test the data instead'),
+                ('one side reads a dual', 'Test only parameters and dimension coordinates'),
                 id='a-dual-inside-arithmetic',
             ),
             pytest.param(
                 {'variables.p.where': 'tag * 2 > 0'},
-                ("'tag' is declared dtype: str, and an expression is arithmetic",),
+                ("'tag' is declared dtype: str, and an expression reads only float and int",),
                 id='a-label-inside-arithmetic',
             ),
             pytest.param(
                 {'variables.p.where': 'c > flag'},
-                ("'flag' is declared dtype: bool, and an expression is arithmetic",),
+                ("'flag' is declared dtype: bool, and an expression reads only float and int",),
                 id='a-flag-against-a-parameter',
             ),
             pytest.param(
                 {'variables.p.where': 'shift(c, along=g, offset=1) <= k'},
-                ('shift() over a variable-free expression leaves vacated positions with no value',),
+                ('shift() over an expression with no variable leaves the vacated positions with no value',),
                 id='a-translation-with-no-edge',
             ),
             pytest.param(
@@ -723,12 +737,12 @@ class TestAWhereSideIsReadInResolution:
             ),
             pytest.param(
                 {'parameters.d': {'dims': ['h']}, 'variables.p.where': 'c > d * 2'},
-                ("a where-comparison of expressions reads dims ['h'] outside the frame ['g']",),
+                ("a where-comparison of expressions reads dims ['h'] outside the declared dims ['g']",),
                 id='a-side-outside-the-frame',
             ),
             pytest.param(
                 {'variables.p.where': 'lk.h > 2 * k'},
-                ("'lk.h' is a column of a relation", 'not read in arithmetic'),
+                ("'lk.h' is a relation column in arithmetic", 'carry the value in a parameter'),
                 id='a-relation-column-inside-arithmetic',
             ),
             pytest.param(
@@ -743,7 +757,7 @@ class TestAWhereSideIsReadInResolution:
             ),
             pytest.param(
                 {'variables.p.where': '2 < 1 AND c > 0'},
-                ("'2 < 1' compares two numbers", 'decided before any data arrives'),
+                ("'2 < 1' compares two numbers", 'remove the comparison'),
                 id='two-numbers',
             ),
             pytest.param(
@@ -899,7 +913,7 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'count(flag, over=g, by=lk) >= 2',
-                ("does not take 'by='", "It takes 'over=', and nothing else."),
+                ("does not take 'by='", "It takes only 'over='."),
                 id='a-count-with-a-keyword-it-lacks',
             ),
             pytest.param(
@@ -914,27 +928,27 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 '2 <= count(flag, over=g)',
-                ('count() stands on the left of its comparison',),
+                ('count() is inside arithmetic',),
                 id='a-count-on-the-right',
             ),
             pytest.param(
                 'count(flag, over=c) >= 2',
-                ('names the dimension the coordinates are counted along',),
+                ('count(<predicate>, over=) is not a declared dimension',),
                 id='a-count-over-a-parameter',
             ),
             pytest.param(
                 'count(flag, over=h) >= 2',
-                ('counts along a dimension the predicate does not carry', "it reads 'g'"),
+                ('counts along a dimension the predicate does not read', "Count along one of 'g'"),
                 id='a-count-over-a-dim-the-predicate-lacks',
             ),
             pytest.param(
                 'count(flag, over=g) >= 2.5',
-                ('a count is a whole number of coordinates',),
+                ('a count is compared against a value that is not a whole number',),
                 id='a-count-against-a-fraction',
             ),
             pytest.param(
                 'count(flag, over=g) >= k',
-                ('a count is a whole number of coordinates',),
+                ('a count is compared against a value that is not a whole number',),
                 id='a-count-against-a-parameter',
             ),
             pytest.param(
@@ -954,7 +968,7 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'shift(flag, along=g, offset=1, edge=0)',
-                ("does not take 'edge='", 'A predicate is false where a translation vacates'),
+                ("does not take 'edge='", "It takes only 'along=' and 'offset='"),
                 id='a-translated-predicate-with-an-edge',
             ),
             pytest.param(
@@ -969,12 +983,12 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'shift(flag, along=h, offset=1)',
-                ('reads the predicate back along a dimension it does not carry',),
+                ('steps along a dimension the predicate does not read',),
                 id='a-translation-along-a-dim-the-predicate-lacks',
             ),
             pytest.param(
                 'shift(flag, along=g, offset=0.5)',
-                ('counts whole coordinates back',),
+                ('shift(<predicate>, offset=) is not a whole number',),
                 id='a-translation-by-a-fraction',
             ),
             pytest.param(
@@ -984,12 +998,12 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'at(r, by=lk, over=h, into=g, edge=0)',
-                ("does not take 'edge='", "It takes 'by=', 'over=' and 'into=', and nothing else."),
+                ("does not take 'edge='", "It takes only 'by=', 'over=' and 'into='."),
                 id='a-read-with-a-keyword-it-lacks',
             ),
             pytest.param(
                 'at(flag, by=lk, over=h, into=g)',
-                ("at(by=lk) reads through ['h'], which the predicate does not carry",),
+                ("at(by=lk) reads from ['h'], which the predicate does not carry",),
                 id='a-read-through-a-dim-the-predicate-lacks',
             ),
             pytest.param(
@@ -999,7 +1013,7 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'at(flag, by=lk, over=g, into=h)',
-                ("into=['h'] names ['h'], which the key of 'lk' does not hold",),
+                ("into=['h'] names ['h'], which is not in the key of 'lk'",),
                 id='a-read-landing-off-the-key',
             ),
             pytest.param(
@@ -1009,7 +1023,7 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'sum_back(flag, along=g, window=2)',
-                ("'sum_back()' does not read a predicate", '`count` reads one and answers a number'),
+                ("'sum_back()' does not read a predicate", 'only shift(), at() and count() do'),
                 id='an-operator-that-reads-arithmetic',
             ),
         ],
@@ -1070,14 +1084,14 @@ class TestAPredicateIsAnOperand:
             },
             constraints={'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
         )
-        assert "it reads a predicate through 'lk', and which rows that admits only the data decides" in message
+        assert "it reads a predicate through 'lk', which only the data decides" in message
 
     def test_a_read_landing_outside_the_frame_names_the_relation(self):
         """The read adds the dims it lands on, so a mask over the coarse side cannot carry the fine one."""
         message = _refusal(
             constraints={'cap': {'dims': ['h'], 'where': 'at(r, by=lk, over=h, into=g)', 'expression': 'r <= 1'}}
         )
-        assert "a where-predicate read through 'lk' reads dims ['g'] outside the frame ['h']" in message
+        assert "a where-predicate read through 'lk' reads dims ['g'] outside the declared dims ['h']" in message
 
     def test_a_read_given_an_edge_is_not_told_about_translations(self):
         """The edge sentence explains a shift; under a read it would explain an operator the file did not write."""
@@ -1113,12 +1127,12 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'constraints': {'cap': {'dims': ['g'], 'expression': 'p + c'}}},
-                ('exactly one comparison',),
+                ('the constraint has no comparison operator',),
                 id='a-constraint-without-a-comparison',
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(p, over=g) <= 5'}},
-                ('must not contain a comparison',),
+                ('the expression holds a comparison operator',),
                 id='an-objective-with-a-comparison',
             ),
             pytest.param(
@@ -1133,12 +1147,12 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(p ** 2, over=g)'}},
-                ('The objective', '`**` is not in the language over variables'),
+                ('The objective', '`**` has a variable in its base or exponent'),
                 id='a-variable-under-a-power',
             ),
             pytest.param(
                 {'constraints': {'cap': {'dims': ['g'], 'where': 'c >', 'expression': 'p <= c'}}},
-                ('Failed to parse where string',),
+                ('Cannot parse the where string',),
                 id='a-malformed-where-string',
             ),
             pytest.param(
@@ -1173,7 +1187,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'sos': {'s': {'variable': 'p', 'along': 'g', 'type': 3}}},
-                ('sos type must be 1 or 2, got 3',),
+                ('sos type is 3. Write type: 1 or 2.',),
                 id='sos-of-order-three',
             ),
             pytest.param(
@@ -1211,12 +1225,12 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'relations.lk': {'key': [], 'values': ['g', 'h']}},
-                ('names no key column', "name them under 'key:'"),
+                ('names no key column', "Name the columns that identify a row under 'key:'"),
                 id='relation-with-an-empty-key',
             ),
             pytest.param(
                 {'relations.pair': {'key': {'g0': 'g', 'g1': 'g'}, 'values': 'h'}},
-                ("has two key columns over 'g' (['g0', 'g1'])", 'no frame carries a dimension twice'),
+                ("has two key columns over 'g' (['g0', 'g1'])", 'Key the table by one column over each dimension'),
                 id='relation-keyed-twice-over-one-dimension',
             ),
             pytest.param(
@@ -1283,7 +1297,7 @@ class TestRulesDecidedWithoutData:
                     'relations.lz': {'key': 'g', 'values': {'h0': 'h', 'h1': 'h'}},
                     'objective': {'expression': 'sum(sum(p, by=lz, over=[h0, h1], into=g))'},
                 },
-                ("over=['h0', 'h1'] names two columns over ['h'], and the operand carries each dimension once",),
+                ("over=['h0', 'h1'] names two columns over ['h']",),
                 id='a-from-list-naming-two-columns-over-one-dimension',
             ),
             pytest.param(
@@ -1300,7 +1314,7 @@ class TestRulesDecidedWithoutData:
                     'relations.lz': {'key': 'g', 'values': ['h', 'z']},
                     'objective': {'expression': 'sum(shift(p, along=g, offset=1, edge=0, by=lz, within=g))'},
                 },
-                ("within=['g'] names a key column of 'lz', and a partition groups by value columns",),
+                ("within=['g'] names a key column of 'lz'. Name one of its value columns",),
                 id='a-partition-grouped-within-a-key-column',
             ),
             pytest.param(
@@ -1315,29 +1329,28 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'relations.rel': {'key': ['g', 'h']}, 'objective': {'expression': 'sum(sum(p, by=rel))'}},
-                ('sum() through a relation leaves into=, over= unsaid',),
+                ('sum() through a relation does not name into=, over=',),
                 id='a-bare-relation-needs-both-ends-named',
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(shift(p, along=g, offset=1, edge=0, by=lk))'}},
                 (
-                    'shift() through a relation leaves within= unsaid',
-                    'A partition names the value columns it groups by, so that a relation may gain a value column',
+                    'shift() through a relation does not name within=',
+                    'by=<relation>, within=<column>',
                 ),
                 id='a-partition-names-the-columns-it-groups-by',
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(sum_back(p, along=g, window=2, by=lk))'}},
-                ('sum_back() through a relation leaves within= unsaid',),
+                ('sum_back() through a relation does not name within=',),
                 id='a-window-names-the-columns-it-groups-by',
             ),
             pytest.param(
                 {'variables.q.where': 'position(g, by=lk) == 0'},
                 (
-                    'position(g, by=lk) leaves within= unsaid',
-                    'A partition names the value columns it groups by',
+                    'position(g, by=lk) does not name within=',
                     'position(g, by=lk, within=<column>)',
-                    "value columns of 'lk' are ['h']",
+                    "with a value column of 'lk': ['h']",
                 ),
                 id='a-position-names-the-columns-it-counts-within',
             ),
@@ -1346,10 +1359,7 @@ class TestRulesDecidedWithoutData:
                     'relations.rel': {'key': ['g', 'h']},
                     'objective': {'expression': 'sum(at(r, by=rel, over=h, into=g))'},
                 },
-                (
-                    "at reads one value per coordinate, and 'rel' is not single-valued in ['h'] at the columns "
-                    "the call lands on (['g'])",
-                ),
+                ("'rel' has more than one value of ['h'] at the columns the call lands on (['g'])",),
                 id='at-through-a-bare-relation',
             ),
             pytest.param(
@@ -1359,9 +1369,8 @@ class TestRulesDecidedWithoutData:
                     'objective': {'expression': 'sum(at(r, by=lz, over=h, into=z))'},
                 },
                 (
-                    "into=['z'] names ['z'], which the key of 'lz' does not hold",
-                    "A read lands on the key it reads at, ['g']",
-                    "Land on the key, or sum toward ['z']",
+                    "into=['z'] names ['z'], which is not in the key of 'lz'",
+                    "Name key columns in into=, here ['g'], or sum toward ['z']",
                 ),
                 id='a-read-landing-on-a-value-column',
             ),
@@ -1371,14 +1380,14 @@ class TestRulesDecidedWithoutData:
                     'relations.lz': {'key': 'g', 'values': ['h', 'z']},
                     'objective': {'expression': 'sum(at(r, by=lz, over=h, into=[g, z]))'},
                 },
-                ("into=['g', 'z'] names ['z'], which the key of 'lz' does not hold",),
+                ("into=['g', 'z'] names ['z'], which is not in the key of 'lz'",),
                 id='a-read-landing-on-the-key-and-a-value-column',
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(sum(q, by=lk, over=h, into=g))'}},
                 (
                     "this sum lands on the key ['g']",
-                    'that is a read, which is',
+                    'so it adds nothing',
                     "at(..., by=lk, over=['h'], into=['g'])",
                 ),
                 id='a-sum-that-lands-on-the-key-is-a-read',
@@ -1388,18 +1397,18 @@ class TestRulesDecidedWithoutData:
                     'relations.rel': {'key': ['g', 'h']},
                     'objective': {'expression': 'sum(shift(p, along=g, offset=1, edge=0, by=rel, within=h))'},
                 },
-                ("'rel' is a bare relation", 'it makes no groups and no coordinate is in exactly one'),
+                ("'rel' has every column in its key", 'so it makes no groups'),
                 id='a-partition-through-a-bare-relation',
             ),
             pytest.param(
                 {'relations.rel': {'key': ['g', 'h']}, 'variables.q.where': "rel == 'x'"},
-                ("compares a column of 'rel', a bare relation", 'no one value per coordinate to compare'),
+                ("compares a column of 'rel', which has every column in its key", 'Declare that column under values:'),
                 id='where-compares-a-bare-relation',
             ),
             pytest.param(
                 {'variables.q.where': "lk.g == 'x'"},
                 (
-                    "'g' is a key column of 'lk', which the frame supplies rather than reads",
+                    "'g' is a key column of 'lk'. Compare the coordinate itself",
                     'g == ...',
                 ),
                 id='where-compares-a-key-column',
@@ -1442,7 +1451,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'variables.p.bounds.upper': 'flag'},
-                ("bounds.upper: 'flag' is a bool parameter, and a bound is a number",),
+                ("bounds.upper: 'flag' is a bool parameter. Declare it dtype: float or int",),
                 id='a-bound-naming-a-flag',
             ),
             pytest.param({'variables.p.bounds.lower': float('nan')}, ('bounds.lower is nan',), id='a-nan-bound'),
@@ -1467,22 +1476,22 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'variables.p.where': 'p'},
-                ('asks whether it exists in its own where',),
+                ('tests itself in its own where',),
                 id='a-mask-naming-its-own-variable',
             ),
             pytest.param(
                 {'sos': {'s': {'variable': 'p', 'along': 'g', 'type': [1]}}},
-                ('sos type must be 1 or 2, got [1]',),
+                ('sos type is [1]. Write type: 1 or 2.',),
                 id='sos-type-a-list',
             ),
             pytest.param(
                 {'sos': {'s': {'variable': 'p', 'along': 'g', 'type': True}}},
-                ('sos type must be 1 or 2, got True',),
+                ('sos type is True. Write type: 1 or 2.',),
                 id='sos-type-a-boolean',
             ),
             pytest.param(
                 {'sos': {'s': {'variable': 'p', 'along': 'g', 'type': 1.0}}},
-                ('sos type must be 1 or 2, got 1.0',),
+                ('sos type is 1.0. Write type: 1 or 2.',),
                 id='sos-type-a-float',
             ),
             pytest.param(
@@ -1506,17 +1515,17 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(lk + p, over=g)'}},
-                ("'lk' is a relation, and a relation is structure",),
+                ("'lk' is a relation, and a relation is not a value",),
                 id='a-relation-as-a-value',
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(shift(p, along=g, offset=1, edge=wrap), over=g)'}},
-                ('is a bare name where a keyword belongs',),
+                ("shift(edge=wrap) has no quotes. Write edge='wrap'",),
                 id='a-bare-edge-keyword',
             ),
             pytest.param(
                 {'objective': {'expression': "sum(shift(p, along=g, offset=1, edge='foo'), over=g)"}},
-                ("edge='foo') is not an edge policy",),
+                ("edge='foo') is not an edge value",),
                 id='an-edge-policy-that-is-not-one',
             ),
             pytest.param(
@@ -1534,7 +1543,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(shift(p, along=g, offset=1, edge=1 + 1), over=g)'}},
-                ('shift(edge=) is an expression, and an edge is the keyword',),
+                ('shift(edge=) holds an expression, and edge= takes the keyword',),
                 id='an-edge-that-is-an-expression',
             ),
             pytest.param(
@@ -1548,7 +1557,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(at(c, by=lk, over=h, into=g))'}},
-                ("at(by=lk) reads through ['h'], which the expression does not carry (dims ['g'])",),
+                ("at(by=lk) reads from ['h'], which the expression does not carry (dims ['g'])",),
                 id='a-read-whose-operand-lacks-the-column-it-reads-through',
             ),
             pytest.param(
@@ -1573,17 +1582,17 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'variables.p.where': 'c > q'},
-                ('compares against variable', 'built before variables exist'),
+                ('compares against variable', 'Test only parameters and dimension coordinates'),
                 id='where-against-a-variable',
             ),
             pytest.param(
                 {'variables.p.where': 'c > lk'},
-                ('against relation', 'structure rather than data'),
+                ('against relation', 'Compare against a literal'),
                 id='where-against-a-relation',
             ),
             pytest.param(
                 {'variables.p.where': 'c > h'},
-                ("compares against dimension 'h'", 'masks everything out'),
+                ("compares against dimension 'h'", 'two dimensions cannot be compared'),
                 id='where-against-a-dimension',
             ),
             pytest.param(
@@ -1596,7 +1605,7 @@ class TestRulesDecidedWithoutData:
                     'macros.scaled': {'args': ['x'], 'kwargs': ['n'], 'template': 'x * n'},
                     'constraints': {'cap': {'dims': ['g'], 'expression': "scaled(p, n='wrap') <= c"}},
                 },
-                ("'wrap' is a quoted keyword", 'In an expression, quote nothing'),
+                ("'wrap' is a quoted keyword", 'Write names and numbers without quotes'),
                 id='a-quoted-keyword-as-an-operand',
             ),
             pytest.param(
@@ -1604,7 +1613,7 @@ class TestRulesDecidedWithoutData:
                     'macros.scaled': {'args': ['x'], 'kwargs': ['n'], 'template': 'x * n'},
                     'constraints': {'cap': {'dims': ['g'], 'expression': 'scaled(p, n=[c, k]) <= c'}},
                 },
-                ('[c, k] is a list of names', 'write the terms out and add them'),
+                ('[c, k] is a list of names', 'Write the terms out and add them'),
                 id='a-name-list-as-an-operand',
             ),
             pytest.param(
@@ -1614,17 +1623,17 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'constraints': {'cap': {'dims': ['g'], 'expression': 'shift(p, along=g, offset=1, edge=clip) <= c'}}},
-                ('shift(edge=clip) is not an edge policy', "Write edge='wrap'"),
+                ('shift(edge=clip) is not an edge value', "Write edge='wrap'"),
                 id='an-edge-that-is-a-bare-name-other-than-wrap',
             ),
             pytest.param(
                 {'variables.p.where': 'shift(flag, along=c, offset=1)'},
-                ('shift(<predicate>, along=) names the dimension', 'Name a declared dimension'),
+                ('shift(<predicate>, along=) is not a declared dimension', 'Name a declared dimension'),
                 id='where-a-shifted-predicate-along-a-parameter',
             ),
             pytest.param(
                 {'macros.half': {'args': ['x'], 'template': 'x / 2'}, 'variables.p.where': 'c > half(k, k)'},
-                ("Variable 'p': macro 'half' expects 1 positional argument(s), got 2",),
+                ("Variable 'p': macro 'half' expects 1 positional argument(s), and the call passes 2",),
                 id='where-a-side-whose-macro-call-does-not-expand',
             ),
             pytest.param(
@@ -1634,12 +1643,12 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'variables.p.where': 'r > 0'},
-                ("where references variable 'r'", 'built before variables exist'),
+                ("where references variable 'r'", 'Test only parameters and dimension coordinates'),
                 id='where-a-variable-on-the-left',
             ),
             pytest.param(
                 {'dimensions.z': {}, 'relations.lk.values': ['h', 'z'], 'variables.p.where': "lk == 'x'"},
-                ("'lk' has 2 value columns (['h', 'z'])", 'say which the comparison reads: lk.h'),
+                ("'lk' has 2 value columns (['h', 'z'])", 'so name one: lk.h'),
                 id='where-a-relation-of-two-value-columns-read-bare',
             ),
             pytest.param(
@@ -1649,7 +1658,10 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'dimensions.z': {}, 'relations.lz': {'key': 'g', 'values': 'z'}, 'variables.p.where': 'lk == lz'},
-                ("compares 'lk' (a column over 'h') with 'lz' (a column over 'z')", 'can only mask everything out'),
+                (
+                    "compares 'lk' (a column over 'h') with 'lz' (a column over 'z')",
+                    'Compare two columns over the same dimension',
+                ),
                 id='where-two-relations-whose-columns-are-over-different-dimensions',
             ),
         ],
@@ -1704,12 +1716,12 @@ class TestAssumptions:
             ),
             pytest.param(
                 'p',
-                ("variable 'p' stands in what the assumption assumes",),
+                ("variable 'p' appears in 'holds:'",),
                 id='a-variable-in-the-predicate',
             ),
             pytest.param(
                 {'holds': 'c > 0', 'where': 'p'},
-                ("variable 'p' stands in what the assumption is checked where",),
+                ("variable 'p' appears in 'where:'",),
                 id='a-variable-in-the-where',
             ),
             pytest.param(
@@ -1729,7 +1741,7 @@ class TestAssumptions:
             ),
             pytest.param(
                 'c > tag',
-                ("'tag' is declared dtype: str, and an expression is arithmetic",),
+                ("'tag' is declared dtype: str, and an expression reads only float and int",),
                 id='a-label-parameter-on-a-side',
             ),
             pytest.param('nope > 0', ("'nope' not found",), id='an-unknown-name'),
@@ -1772,7 +1784,7 @@ class TestAssumptions:
 class TestTheFrontDoor:
     def test_a_list_of_models_is_not_a_model(self):
         """Composition is Python's, not the file's (#30) — and the refusal is the package's own, so the CLI's one except catches it."""
-        with pytest.raises(SchemaError, match='one file, one dict or one Spec, never a list'):
+        with pytest.raises(SchemaError, match='to_spec takes one file, one dict or one Spec, not a list'):
             to_spec([DISPATCH_MODEL, DISPATCH_MODEL])
 
     def test_a_loaded_model_passes_through_as_itself(self):
@@ -1795,11 +1807,11 @@ class TestTheFrontDoor:
 
     def test_a_one_line_text_is_told_to_end_with_a_newline(self):
         """A str with no newline is a path, so a one-line flow mapping is a file that does not exist — and the message says why."""
-        with pytest.raises(FileNotFoundError, match='end the text with a newline'):
+        with pytest.raises(FileNotFoundError, match='End YAML text with a newline'):
             to_spec('{dimensions: {t: {dtype: int}}}')
 
     def test_a_text_that_is_not_a_model_says_how_a_string_was_read(self):
-        with pytest.raises(SchemaError, match='YAML text: a spec file must be a mapping of sections'):
+        with pytest.raises(SchemaError, match=r'YAML text: the file holds a .*, not a mapping of sections'):
             to_spec('- dimensions\n- variables\n')
 
     @pytest.mark.parametrize('probe', OPERATOR_PROBES, ids=[p.stem for p in OPERATOR_PROBES])
@@ -1901,10 +1913,10 @@ class TestExpressionCases:
         [
             pytest.param(
                 {'expression': 'load', 'dims': ['snapshot'], 'cases': OPENING, 'otherwise': 0},
-                'this has both',
+                'has both `expression:` and `cases:`',
                 id='both',
             ),
-            pytest.param({'description': 'nothing at all'}, 'this has neither', id='neither'),
+            pytest.param({'description': 'nothing at all'}, 'has neither `expression:` nor `cases:`', id='neither'),
             pytest.param({'cases': OPENING, 'otherwise': 0}, '`cases:` needs a `dims:`', id='no-dims'),
             pytest.param(
                 {'dims': ['snapshot', 'generator'], 'cases': OPENING},
@@ -1913,7 +1925,7 @@ class TestExpressionCases:
             ),
             pytest.param(
                 {'expression': 'load', 'otherwise': 0},
-                '`otherwise:` is what is left once the `cases:` have taken their regions',
+                '`otherwise:` needs a `cases:` block',
                 id='otherwise-alone',
             ),
         ],
@@ -1983,7 +1995,7 @@ class TestExpressionCases:
     def test_a_when_may_not_test_a_dim_outside_the_frame(self):
         """The same rule a variable's or a constraint's mask is held to."""
         with pytest.raises(
-            DimensionError, match=r"where-dimension 'snapshot' reads dims \['snapshot'\] outside the frame"
+            DimensionError, match=r"where-dimension 'snapshot' reads dims \['snapshot'\] outside the declared dims"
         ):
             to_spec(_cased(dims=['generator']))
 
@@ -1993,7 +2005,7 @@ class TestExpressionCases:
 
     def test_a_case_may_not_compare(self):
         cases = {'opening': {'when': 'position(snapshot) == 0', 'expression': 'p_max >= 0'}}
-        with pytest.raises(SchemaError, match='must not contain a comparison operator'):
+        with pytest.raises(SchemaError, match='the expression holds a comparison operator'):
             to_spec(_cased(cases))
 
     def test_a_constraint_naming_it_carries_the_declared_frame(self):
@@ -2176,12 +2188,12 @@ def test_a_chain_of_named_expressions_is_held_to_the_resolved_depth_and_costs_no
     spec = to_spec(varied(DISPATCH_MODEL, expressions=chain, **{'constraints.c': constraint}))
     to_markdown(spec.program and spec)
 
-    with pytest.raises(LanguageError, match='nests 301 deep with every named expression it reads written in') as caught:
+    with pytest.raises(LanguageError, match='nests 301 levels deep, with its named expressions written in') as caught:
         to_spec(varied(DISPATCH_MODEL, expressions=_chain(151, deepest_first=deepest_first)))
-    assert 'past the 300 levels' in str(caught.value)
+    assert 'the limit is 300' in str(caught.value)
     assert "Named expression 'e150'" in str(caught.value), 'refused at the first entry past the depth, by name'
 
-    with pytest.raises(LanguageError, match='past the 300 levels'):
+    with pytest.raises(LanguageError, match='the limit is 300'):
         to_spec(varied(DISPATCH_MODEL, expressions=_chain(400, deepest_first=deepest_first)))
 
 
@@ -2306,5 +2318,5 @@ def test_an_infinite_bound_is_refused_with_the_null_that_opens_a_side(side, valu
     A lone `lower: .inf` loaded: only two literal bounds that cross were refused.
     """
     message = _refusal(DISPATCH_MODEL, **{f'variables.p.bounds.{side}': value})
-    assert f'bounds.{side} is {value}, and a bound is finite' in message
+    assert f'bounds.{side} is {value}.' in message
     assert f'{side}: null' in message, 'the refusal names the spelling of an open side'

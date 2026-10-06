@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Settings
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the weightings, the risk preference and the flags every topic reads. It reads the eight totals whose readers may be left out, `total_cost`, `scenario_opex`, `Carrier_additions` and the five global-constraint sums, under `given:`, so the terms the components add to them always have a reader. It sets the objective, which reads `total_cost`.
+This file states the weightings, the risk preference and the flags that every topic reads. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It also reads eight totals under `given:`: `total_cost`, `scenario_opex`, `Carrier_additions` and the five global-constraint sums. A model may leave out the other readers of these totals, so this file makes sure that the terms the components add always have a reader. It sets the objective, which reads `total_cost`.
 
 <!-- gallery:begin -->
 ```yaml

@@ -5,13 +5,14 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Your first spec
 
-In this lesson you write a least-cost dispatch spec one block at a time, check
-it, and print it as math. [Install mathspec](howto/installation.md) first.
+Write a least-cost dispatch spec one block at a time, check it, and print it
+as math. [Install mathspec](howto/installation.md) first.
 
 ## Dimensions
 
 Make a file `dispatch.yaml` with a description and two
-[dimensions](reference/language/dimensions.md), the axes the spec runs over:
+[dimensions](reference/language/dimensions.md), the sets the spec is indexed
+over:
 
 ```yaml title="dispatch.yaml"
 description: Least-cost dispatch of a generator fleet against an hourly load.
@@ -27,11 +28,11 @@ Check the file:
 python -m mathspec check dispatch.yaml
 ```
 
-The check accepts the file, and advises that nothing uses the dimensions yet:
+The check accepts the file, but advises that nothing uses the dimensions yet:
 
 ```text
-dimension 'snapshot' is never used: nothing is indexed by it, nothing aggregates into it, and no relation has a column over it. Remove it — or keep it knowingly, if the declarations that use it are still to be written.
-dimension 'generator' is never used: nothing is indexed by it, nothing aggregates into it, and no relation has a column over it. Remove it — or keep it knowingly, if the declarations that use it are still to be written.
+dimension 'snapshot' is never used: nothing is indexed by it, nothing sums into it, and no relation has a column over it. Remove it, or keep it if the declarations that use it are still to be written.
+dimension 'generator' is never used: nothing is indexed by it, nothing sums into it, and no relation has a column over it. Remove it, or keep it if the declarations that use it are still to be written.
 ```
 
 ## Parameters and a variable
@@ -55,7 +56,7 @@ variables:
     bounds: { lower: 0, upper: capacity }
 ```
 
-Print the math. `--no-legend` leaves out the tables of symbols:
+Print the math, with `--no-legend` to leave out the tables of symbols:
 
 ```bash
 python -m mathspec markdown --no-legend dispatch.yaml
@@ -90,7 +91,8 @@ objective:
   expression: sum(dispatch * cost)
 ```
 
-Check the file again. The check prints nothing and exits with status 0.
+Check the file again. This time the check prints nothing and exits with
+status 0.
 
 ??? note "The whole file"
 
@@ -132,7 +134,7 @@ refuses it and exits with status 1:
 Constraint 'power_balance': 'loads' not found.
   Variables: ['dispatch']
   Parameters: ['capacity', 'cost', 'load']
-Check for typos, or ensure 'loads' is declared.
+Check the spelling, or declare 'loads'.
 ```
 
 Change `loads` back to `load`.

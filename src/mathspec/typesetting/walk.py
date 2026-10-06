@@ -100,7 +100,7 @@ _PREDICATES: dict[PredicateOperator, OperatorName] = {
 }
 
 
-#: Edge policy -> the operator pair that renders it, backward then forward —
+#: Edge policy -> the operator pair that renders it, backward then forward:
 #: the vacated row dropped, wrapped, or filled.
 _TRANSLATIONS: dict[TranslationPolicy, tuple[OperatorName, OperatorName]] = {
     'plain': ('minus', 'plus'),
@@ -154,8 +154,8 @@ class _Context:
     offsets: dict[str, tuple[_Step, ...]] = field(default_factory=dict)
     #: dim -> the rendered subscript that replaces its index, as ``at`` re-indexes a leaf.
     pullbacks: dict[str, str] = field(default_factory=dict)
-    #: Every dimension whose index is in use here — the frame, then one entry
-    #: per reduction entered — so a reduction over one takes a fresh dummy.
+    #: Every dimension whose index is in use here: the declared dims, then one
+    #: entry per reduction entered. A reduction over one of them takes a fresh dummy.
     bound: tuple[str, ...] = ()
 
     def translated(self, dim: str, step: _Step) -> _Context:
@@ -780,7 +780,7 @@ class Walk:
             )
             raise SchemaError(msg)
         if len(found) > 1:
-            msg = f"'{name}' is declared twice, as {found[0]} and as {found[1]}, and one line prints one of them — rename one."
+            msg = f"'{name}' is declared twice, as {found[0]} and as {found[1]}. Rename one."
             raise SchemaError(msg)
         return kinds[found[0]][1](name)
 

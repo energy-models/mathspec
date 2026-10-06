@@ -204,14 +204,14 @@ def test_an_entry_naming_nothing_is_an_error_with_the_near_miss(symbols, match):
         pytest.param(
             to_typst,
             {'notation': 'latex', 'names': {'p_max': r'\bar p'}},
-            'written in latex, but this is a typst render',
+            'written in latex, but this render is typst',
             id='a-latex-table-into-typst',
         ),
-        pytest.param(to_latex, TYPST_SYMBOLS, 'written in typst, but this is a latex render', id='typst-table-latex'),
+        pytest.param(to_latex, TYPST_SYMBOLS, 'written in typst, but this render is latex', id='typst-table-latex'),
         pytest.param(
-            to_markdown, TYPST_SYMBOLS, 'written in typst, but this is a latex render', id='typst-table-markdown'
+            to_markdown, TYPST_SYMBOLS, 'written in typst, but this render is latex', id='typst-table-markdown'
         ),
-        pytest.param(to_latex, {'names': {'p': 'x'}}, "'notation:' is required", id='a-table-that-does-not-say'),
+        pytest.param(to_latex, {'names': {'p': 'x'}}, "'notation:' is missing", id='a-table-that-does-not-say'),
         pytest.param(
             to_latex,
             {'notation': 'latx', 'names': {'p': 'x'}},

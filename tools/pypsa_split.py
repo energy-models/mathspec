@@ -318,7 +318,7 @@ def _fragment(
 
 
 #: The kinds a fragment reads under `given:`, and the fields of the source
-#: declaration each restates beside the frame.
+#: declaration each restates beside the dims.
 GIVEN_KINDS = {'parameters': ('dtype',), 'variables': ('domain',), 'expressions': ()}
 
 

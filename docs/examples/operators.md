@@ -5,10 +5,10 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # One construct per spec
 
-For each built-in [operator](../reference/language/operators.md), the smallest
-spec that declares it, beside the equation it prints. The reference page shows
-the same equations as one table. This page shows the **file** that produced each
-one.
+Each built-in [operator](../reference/language/operators.md) has a section here,
+which shows the smallest spec that uses the operator and the equation that the
+typesetter prints from it. The reference page shows the same equations in one
+table, without the files.
 
 <!-- gallery:begin -->
 ### `sum(array)`

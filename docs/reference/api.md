@@ -5,14 +5,14 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Python API
 
-This page documents every name that `import mathspec` exports, grouped by
-task.
+Look up the signature, the arguments and the errors of every name that
+`import mathspec` exports, grouped by task.
 
 <!-- prettier-ignore-start -->
 
 ## Loading
 
-The module `mathspec.program` holds the classes a `Program` is made of. The
+The classes that make up a `Program` are in `mathspec.program`, and the
 [Program API](program.md) documents them.
 
 ::: mathspec.to_spec

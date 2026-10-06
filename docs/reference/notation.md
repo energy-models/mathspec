@@ -5,16 +5,16 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Every construct, as math
 
-This page shows every construct of the language beside the math that
-[the typesetter](typeset.md) prints for it. Use it to find how a construct
-prints, or which construct printed a symbol.
+Look up any construct of the language to see the math that
+[the typesetter](typeset.md) prints for it. You can also start from a symbol and
+find the construct that printed it.
 
 Each section shows the YAML of one construct, then its equation. Most fragments
 come from one test spec,
 [`tests/typesetting/golden/model.yaml`](https://github.com/energy-models/mathspec/blob/main/tests/typesetting/golden/model.yaml),
-which holds every construct and is not a sensible spec. The curves come from
-the example specs that their section names. What each operator does is on
-[Operators](language/operators.md).
+which holds every construct and does not make sense as an optimisation
+problem. The curves come from the example specs that their section names.
+[Operators](language/operators.md) says what each operator does.
 
 The symbols are **derived** from the names in the file, so you see
 $\mathrm{load}_{t}$ rather than $\ell_t$. A
@@ -1103,7 +1103,7 @@ Written out by `spec.expand()`:
 
 #### Convex method
 
-`method: convex` — nothing — the weights range over the hull, which is a pure LP, in `examples/piecewise.yaml`.
+`method: convex` — nothing, so the weights range over the hull, which is a pure LP, in `examples/piecewise.yaml`.
 
 Rendered with the sidecar symbol table `examples/symbols/piecewise.yaml`, which is what the breakpoints print as:
 
@@ -1162,7 +1162,7 @@ Written out by `spec.expand()`:
 
 #### LP method
 
-`method: lp` — no weights at all — one row per segment line, plus the two rows holding the domain, in `examples/piecewise_lp.yaml`.
+`method: lp` — no weights, but one row per segment line, plus the two rows holding the domain, in `examples/piecewise_lp.yaml`.
 
 Rendered with the sidecar symbol table `examples/symbols/piecewise_lp.yaml`, which is what the breakpoints print as:
 

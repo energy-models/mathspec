@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from pydantic import ValidationError
 
 
-#: Which pass an [`Advice`][] comes from. Closed, like the operator set: a
-#: consumer filtering on it can enumerate every value.
+#: Which pass an [`Advice`][] comes from. The set is closed, like the operator
+#: set, so a tool that filters on it can list every value.
 AdviceKind = Literal['never-an-axis', 'given', 'unbounded']
 
 

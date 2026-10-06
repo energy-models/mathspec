@@ -5,16 +5,17 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Glossary
 
-This page defines the words these docs use in a fixed sense and that no single
-reference page owns. A construct, such as a parameter or a macro, is defined on
-its [language page](language/index.md).
+Look up a word that these docs use in one fixed sense, where no single
+reference page owns the word. A construct, such as a parameter or a macro, is
+defined on its [language page](language/index.md).
 
 ## The file and what reads it
 
 **Spec**
-: Short for specification. The optimisation problem a file states: its dimensions, the data it expects,
-its decisions and its rules. A spec holds no data. In Python it is a `Spec`,
-the file as written and checked, which `to_spec` returns
+: Short for specification. A spec is the optimisation problem that a file
+states: its dimensions, the data it expects, its decisions and its rules, but
+no data. In Python it is a `Spec`, the file as written and checked, which
+`to_spec` returns
 ([reading a spec and its program](reading.md#spec-and-program)).
 
 **Model**
@@ -30,15 +31,16 @@ every operator a node.
 data exists.
 
 **Attach**
-: What a consumer does when it puts data on a program. A rule about numbers can
-be checked only then, and the language checks none itself. The docs never say
-"bind" for it, so that **bound** means one thing: a lower or upper limit on a
-variable ([variables](language/declarations.md#variables)).
+: What a consumer does when it puts data on a program. A consumer can check a
+rule about numbers only then, and mathspec checks no such rule itself. The docs
+never say "bind" for it, so that **bound** means one thing: a lower or upper
+limit on a variable ([variables](language/declarations.md#variables)).
 
 **Provide**
-: What the host model, the model a file is layered onto, does for a name under
-`given:`. It holds a column or a row family of that name, on the same frame. A
-consumer checks that the host provides each given name
+: What the host model does for a name under `given:`, where the host model is
+the model that a file is layered onto. The host model holds a column or a row
+family of that name, on the same frame. A consumer checks that the host
+provides each given name
 ([what a program does not build](reading.md#what-a-program-does-not-build)).
 
 **Consumer**
@@ -93,16 +95,16 @@ reads as `0` in arithmetic and as false in a `where`
 typesetter prints: the operators and the `where` comparisons.
 
 **Formulation**
-: A block that states ordinary variables and constraints rather than being
-one: `piecewise:` and `sos:` ([piecewise curves and SOS](language/piecewise.md)).
+: A block that expands into ordinary variables and constraints: `piecewise:`
+and `sos:` ([piecewise curves and SOS](language/piecewise.md)).
 
 A request for a new construct is a macro, a primitive or a formulation, or it
 is refused ([how a new construct enters](../about/limits.md#how-a-new-construct-enters)).
 
 ## Words with two senses
 
-These words mean two things in these docs. The sentence around each one says
-which.
+These words mean two things in these docs, and the sentence around each one
+says which.
 
 | Word     | One sense                                               | The other sense                                               |
 | -------- | ------------------------------------------------------- | ------------------------------------------------------------- |

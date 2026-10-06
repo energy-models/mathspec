@@ -56,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
 
     found = models()
     if not found:
-        print('no specs matched; the corpus globs are stale', file=sys.stderr)
+        print('no specs match the corpus globs. Update the globs in tools/render_tex.py.', file=sys.stderr)
         return 1
 
     for model in found:

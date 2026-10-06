@@ -65,8 +65,8 @@ OperatorName = Literal[
 ]
 
 #: Every operator a walk can emit, by the name the walk uses for it, with its
-#: LaTeX spelling first and its Typst spelling second — one row per operator,
-#: so no format can be missing one. ``such_that`` is the colon in
+#: LaTeX spelling first and its Typst spelling second. One row per operator
+#: means no format can be missing one. ``such_that`` is the colon in
 #: "∀ t ∈ T : condition", ``times`` sits between sets in the legend,
 #: ``maps_to`` is the → in a coordinate map, ``curve`` and ``hull`` are the two
 #: sets a ``piecewise:`` block states its links lie on, and the three

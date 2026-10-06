@@ -275,7 +275,7 @@ def test_one_fragment_s_objective_is_carried_as_it_was_written():
 def test_fragments_written_against_two_language_versions_are_refused(monkeypatch):
     """This reader knows one version, so a second is stood up for the fragments to disagree about."""
     monkeypatch.setattr(spec_module, 'SUPPORTED_VERSIONS', (0, 1))
-    with pytest.raises(LanguageError, match=r'One spec has one version') as raised:
+    with pytest.raises(LanguageError, match=r'Write every fragment against the same version') as raised:
         merge([{**SUPPLY, 'version': 0}, {**DEMAND, 'version': 1}])
     assert "'#1' says 0" in str(raised.value) and "'#2' says 1" in str(raised.value), 'both are named'
 
@@ -386,7 +386,7 @@ def test_a_whole_declaration_is_created_and_the_model_loads():
         pytest.param({'parameters': {'co2': {'dtype': 'float'}}}, 'a parameter needs `dims`', id='short-of-its-frame'),
         pytest.param(
             {'expressions': {'spend': {'dims': ['snapshot']}}},
-            'one `expression:` or a set of `cases:`',
+            'has neither `expression:` nor `cases:`',
             id='short-of-what-it-says',
         ),
         pytest.param(
@@ -501,12 +501,12 @@ def test_a_patch_adds_a_dimension_and_may_restate_one_it_shares():
     [
         pytest.param(
             {'dimensions': {'snapshot': {'dtype': 'str'}}},
-            'adjusts the math, not the coordinate space',
+            'Restate the declaration word for word',
             id='declared-as-something-else',
         ),
         pytest.param(
             {'dimensions': {'snapshot': {}}},
-            'restate the declaration word for word',
+            'Restate the declaration word for word',
             id='restated-in-part',
         ),
         pytest.param(
@@ -559,7 +559,9 @@ def test_a_whole_objective_is_created_where_the_base_has_none():
 @pytest.mark.parametrize(
     ('patch', 'says'),
     [
-        pytest.param({'objective': None}, 'already the feasibility problem', id='removing-one-that-is-not-there'),
+        pytest.param(
+            {'objective': None}, "Delete 'objective: null' from the patch", id='removing-one-that-is-not-there'
+        ),
         pytest.param(
             {'objective': {'sense': 'maximize'}}, 'an objective needs `expression`', id='editing-one-that-is-not-there'
         ),

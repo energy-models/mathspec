@@ -89,12 +89,13 @@ Formulation = Literal['piecewise', 'sos']
 #: The shape a method needs a curve to have to be exact on it, which the
 #: ``<block>_curvature`` assumption states. ``convex`` and ``concave`` name the
 #: side a bounded link binds from; ``either`` is the weaker condition a block
-#: with both links pinned states — any single bend will do, and only a *mixed*
+#: with both links pinned states: any single bend passes, and only a *mixed*
 #: curve fails it.
 Curvature = Literal['convex', 'concave', 'either']
 
-#: The parameter dtypes that stand where a number belongs — a coefficient, a
-#: term, a divisor, a bound. A label selects and a flag masks; neither is one.
+#: The parameter dtypes that may stand where a number belongs, such as a
+#: coefficient, a term, a divisor or a bound. A label selects and a flag masks,
+#: so neither is a number.
 NUMERIC_DTYPES: frozenset[ParameterDtype] = frozenset({'float', 'int'})
 
 #: Every formulation, in the order [`Spec.expand`][] writes them out: a curve
@@ -233,16 +234,13 @@ class BoundsBlock(_StrictBlock):
     @classmethod
     def _a_number_or_a_name(cls, v: object, info: ValidationInfo[object]) -> object:
         if isinstance(v, bool):
-            msg = f'bounds.{info.field_name} is a boolean, and a bound is a number or a parameter name.'
+            msg = f'bounds.{info.field_name} is a boolean. Write a number or a parameter name.'
             raise ValueError(msg)
         if isinstance(v, float) and math.isnan(v):
             msg = f'bounds.{info.field_name} is nan, which no value compares to. Write a number, or omit the bound.'
             raise ValueError(msg)
         if isinstance(v, float | int) and math.isinf(v):
-            msg = (
-                f'bounds.{info.field_name} is {v}, and a bound is finite. An open side is null: '
-                f'write {info.field_name}: null, or leave it out.'
-            )
+            msg = f'bounds.{info.field_name} is {v}. For an open side, write {info.field_name}: null or leave it out.'
             raise ValueError(msg)
         return v
 
@@ -274,11 +272,7 @@ class VariableBlock(_StrictBlock):
     def _absence_needs_a_mask(self) -> VariableBlock:
         """``absence:`` says what a *missing* coordinate means, so one must be missable."""
         if self.absence != 'undefined' and self.where is None:
-            msg = (
-                f'absence: {self.absence} needs a `where:` — a variable with no mask exists at every '
-                f'coordinate of its dims, so there is no absence for it to describe. Add the mask, '
-                f'or drop the key.'
-            )
+            msg = f'absence: {self.absence} needs a `where:`. Add a `where:`, or delete `absence:`.'
             raise ValueError(msg)
         return self
 
@@ -406,7 +400,7 @@ class MacroBlock(_StrictBlock):
     def _check_formals(self) -> MacroBlock:
         formals = [*self.args, *self.kwargs]
         if len(set(formals)) != len(formals):
-            msg = f'duplicate formal names: {formals}'
+            msg = f'formal names repeat in {formals}. Give each formal its own name.'
             raise ValueError(msg)
         return self
 
@@ -473,8 +467,8 @@ class ExpressionBlock(_StrictBlock):
     _label: ClassVar[str] = 'a named expression'
 
     expression: Expression | None = None
-    #: The frame the quantity is read over — required with ``cases:``, and
-    #: the body's own dims where a plain entry leaves it out.
+    #: The dimensions the quantity ranges over. ``cases:`` needs it, and a plain
+    #: entry that leaves it out takes the dims of its body.
     dims: list[str] | None = None
     #: The regions, keyed by the name labelling the row each prints; every ``when`` is proved apart from the others.
     cases: Annotated[dict[str, ExpressionCase], Field(min_length=1)] = {}
@@ -493,37 +487,22 @@ class ExpressionBlock(_StrictBlock):
     def _one_form_or_the_other(self) -> Self:
         """One ``expression:``, or ``cases:`` with the ``otherwise:`` and ``dims:`` they need."""
         if self.cases and self.expression is not None:
-            msg = (
-                'a named expression is one `expression:` or a set of `cases:`, and this has both. '
-                'Cases are for a quantity whose value varies by region; one expression is everything else.'
-            )
+            msg = 'the named expression has both `expression:` and `cases:`. Keep one of them.'
             raise ValueError(msg)
         if not self.cases and self.expression is None:
             msg = (
-                'a named expression is one `expression:` or a set of `cases:`, and this has neither. '
-                'Cases are for a quantity whose value varies by region; one expression is everything else. '
-                "A sum other files add every term to is read under 'given: expressions:', and each file "
-                'names it with `adds_to:` on its term.'
+                'the named expression has neither `expression:` nor `cases:`. Write one of them, or declare '
+                "it under 'given: expressions:' if other files add terms to it with `adds_to:`."
             )
             raise ValueError(msg)
         if self.cases and self.dims is None:
-            msg = (
-                '`cases:` needs a `dims:` — it is the frame the cases are read over, and no one '
-                "case's body gives it, since a case may be a scalar while the condition selecting it is not."
-            )
+            msg = '`cases:` needs a `dims:`. Add `dims:` with the dimensions the cases range over.'
             raise ValueError(msg)
         if self.cases and self.otherwise is None:
-            msg = (
-                'a `cases:` block needs an `otherwise:` — the value wherever no `when` holds, and '
-                'the row that prints as "otherwise". Without it the quantity would have no value '
-                'there, and absence spreads to every constraint that names it.'
-            )
+            msg = 'a `cases:` block needs an `otherwise:`. Add `otherwise:` with the value where no `when` holds.'
             raise ValueError(msg)
         if self.otherwise is not None and not self.cases:
-            msg = (
-                '`otherwise:` is what is left once the `cases:` have taken their regions, and there '
-                'are none here. A value that holds everywhere is a plain `expression:`.'
-            )
+            msg = '`otherwise:` needs a `cases:` block. For one value everywhere, write `expression:` instead.'
             raise ValueError(msg)
         return self
 
@@ -574,12 +553,12 @@ class AssumptionBlock(_StrictBlock):
     _label: ClassVar[str] = 'an assumption declaration'
 
     #: The predicate, in the where grammar. It holds at every coordinate of
-    #: its own frame that ``where`` admits.
+    #: its own dims that ``where`` admits.
     holds: str
     #: Which coordinates it is checked at, in the same grammar; absent means every one.
     where: str | None = None
-    #: Why the rule is there, in the author's words. The sentence a consumer
-    #: refuses with quotes it.
+    #: Why the rule is there, in the author's words. The refusal an engine
+    #: prints quotes it.
     description: str | None = None
 
     @model_validator(mode='before')
@@ -624,7 +603,7 @@ class PiecewiseLink(_StrictBlock):
     def _from_list(cls, data: object) -> object:
         if isinstance(data, list):
             if not 2 <= len(data) <= 3:
-                msg = f'each link must be [expression, values] or [expression, values, sign], got {data!r}'
+                msg = f'each link is [expression, values] or [expression, values, sign], got {data!r}.'
                 raise ValueError(msg)
             return dict(zip(('expression', 'values', 'sign'), data, strict=False))
         return data
@@ -650,8 +629,8 @@ class PiecewiseLink(_StrictBlock):
 PIECEWISE_METHODS = {
     'adjacency': 'a binary per segment, and a row making the two nonzero weights neighbours',
     'sos2': 'the same weights, restricted by a set the solver branches on (the sos rules)',
-    'convex': 'nothing — the weights range over the hull, which is a pure LP',
-    'lp': 'no weights at all — one row per segment line, plus the two rows holding the domain',
+    'convex': 'nothing, so the weights range over the hull, which is a pure LP',
+    'lp': 'no weights, but one row per segment line, plus the two rows holding the domain',
 }
 
 
@@ -673,7 +652,7 @@ class PiecewiseBlock(_StrictBlock):
     links: list[PiecewiseLink]
     #: Which of [`PIECEWISE_METHODS`][] restricts the weights.
     method: PiecewiseMethod = 'adjacency'
-    #: What the weights sum to — 1 where absent, or a binary that pins the formulation to 0 when it is 0.
+    #: What the weights sum to: 1 where absent, or a binary that pins the formulation to 0 when it is 0.
     activity: str | None = None
     #: A boolean parameter saying how far each curve runs, for curves of unequal length.
     points: str | None = None
@@ -706,19 +685,13 @@ class PiecewiseBlock(_StrictBlock):
     @model_validator(mode='after')
     def _check_method_shape(self) -> PiecewiseBlock:
         if self.method == 'convex' and len(self.links) != 2:
-            msg = (
-                'method: convex requires exactly two links (the hull relaxation '
-                'is only well-defined for a single y=f(x) curve).'
-            )
+            msg = 'method: convex takes exactly two links. Write two links, or choose another method.'
             raise ValueError(msg)
         if self.method == 'lp' and sum(link.sign != '==' for link in self.links) != 1:
-            msg = (
-                "method: lp needs exactly one link bounded by the curve — a '<=' or '>=' third "
-                'element on it. With every link pinned the segment lines have nothing to bound.'
-            )
+            msg = "method: lp needs exactly one link with a '<=' or '>=' sign. Add the sign to one link."
             raise ValueError(msg)
         if self.activity is not None and self.method in ('convex', 'lp'):
-            msg = f'activity is not supported with method: {self.method}.'
+            msg = f'activity: does not work with method: {self.method}. Delete activity:, or choose another method.'
             raise ValueError(msg)
         return self
 
@@ -730,16 +703,15 @@ class PiecewiseBlock(_StrictBlock):
             raise ValueError(msg)
         non_eq = [link.sign for link in v if link.sign != '==']
         if len(non_eq) > 1:
-            msg = "at most one link may carry a non-'==' sign."
+            msg = "only one link may carry '<=' or '>='. Write '==' on the others."
             raise ValueError(msg)
         if non_eq and len(v) != 2:
-            msg = "a non-'==' sign is only supported with exactly two links."
+            msg = "a '<=' or '>=' sign needs exactly two links. Write two links, or use '==' on every link."
             raise ValueError(msg)
         return v
 
 
-#: The orders of special ordered set — nothing else is a construct solvers
-#: have.
+#: The orders of special ordered set that solvers have.
 SOS_TYPES = frozenset(get_args(SosType))
 
 
@@ -768,7 +740,7 @@ class SosBlock(_StrictBlock):
     @classmethod
     def _check_type(cls, v: object, handler: ValidatorFunctionWrapHandler) -> SosType:
         orders = ' or '.join(str(t) for t in sorted(SOS_TYPES))
-        msg = f'sos type must be {orders}, got {v!r}. A set of any other order is not a construct solvers carry.'
+        msg = f'sos type is {v!r}. Write type: {orders}.'
         if type(v) is not int:  # True == 1 == 1.0, and a set of order True is nothing
             raise ValueError(msg)
         try:
@@ -777,10 +749,10 @@ class SosBlock(_StrictBlock):
             raise ValueError(msg) from None
 
 
-#: The language surfaces this reader understands. A **language** version, not a
-#: package one: it moves when the accepted YAML surface moves, which most
-#: releases do not, so deriving it from the package version would be automatic
-#: and wrong. `0` is the unstable surface — no compatibility promise, per
+#: The language versions this reader can read. A **language** version, not a
+#: package one: it changes when the YAML the language accepts changes, which
+#: most releases do not, so deriving it from the package version would be
+#: automatic and wrong. `0` is unstable, with no compatibility promise, per
 #: *breaking changes are free* in CONTRIBUTING.
 SUPPORTED_VERSIONS: tuple[int, ...] = (0,)
 
@@ -821,10 +793,10 @@ class Spec(_StrictBlock):
 
     _label: ClassVar[str] = 'the top level of the file'
 
-    #: Which language surface this file is written against. Absent means 0, so
-    #: the field is additive. **0 means unstable** — the surface may change in
-    #: any release — and declaring it is what lets a later reader refuse a file
-    #: it cannot read rather than misinterpret it.
+    #: Which language version this file is written against. Absent means 0, so
+    #: the field is additive. **0 means unstable**, so the YAML it accepts may
+    #: change in any release. Declaring it lets a later reader refuse a file it
+    #: cannot read rather than misinterpret it.
     version: int = 0
     #: What the file as a whole is, in the same plain prose a declaration's
     #: ``description:`` takes. The typeset document opens with it.
@@ -901,7 +873,7 @@ class Spec(_StrictBlock):
         supported = ', '.join(str(s) for s in SUPPORTED_VERSIONS)
         msg = (
             f'the spec declares version {v}, and mathspec {installed} understands [{supported}]. '
-            f'Upgrade mathspec, or write the version this file actually targets.'
+            f'Upgrade mathspec, or write the version this file targets.'
         )
         raise ValueError(msg)
 
@@ -987,9 +959,8 @@ class Spec(_StrictBlock):
         """
         sections = [*self, *((f'given: {kind}', group) for kind, group in self.given)]
         errors = [
-            f'{section}: {name!r} is not a name. A declaration is named the way an expression '
-            f'writes it — a letter or an underscore, then letters, digits or underscores — so '
-            f'nothing can refer to this one. Rename it.'
+            f'{section}: {name!r} is not a name. Start it with a letter or an underscore, '
+            f'then use only letters, digits or underscores.'
             for section, value in sections
             if isinstance(value, dict)
             for name in value

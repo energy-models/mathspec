@@ -85,10 +85,8 @@ def lp_domain_refusal(name: str, pw: PiecewiseBlock, links: tuple[Expression, ..
     if carries_variable(links[i]):
         return None
     return (
-        f"piecewise '{name}' link {i}: method: lp bounds the curve's domain by rows comparing this link's expression "
-        f'against its first and last breakpoint, and {x.expression!r} carries no variable, so those rows decide '
-        f'nothing. Name a variable in the link, or use method: convex, sos2 or adjacency, whose weights pin the '
-        f'domain themselves.'
+        f"piecewise '{name}' link {i}: method: lp bounds the domain with rows on {x.expression!r}, which "
+        f'carries no variable. Name a variable in the link, or use method: convex, sos2 or adjacency.'
     )
 
 
@@ -115,8 +113,8 @@ def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, Assumption
         holds=' AND '.join(dict.fromkeys(link.values for link in pw.links)),
         where=mask,
         description=f"piecewise '{block}': every breakpoint the curve runs through needs a row in "
-        f'{_quoted(link.values for link in pw.links)} — a missing row is read as a zero rather than as a '
-        f'shorter curve, so it sits the curve on the origin. '
+        f'{_quoted(link.values for link in pw.links)}. A missing row reads as a zero, so the curve passes '
+        f'through the origin. '
         + (
             f"Attach the rows, or narrow points: '{mask}' to where the curve runs."
             if mask is not None
@@ -135,15 +133,14 @@ def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, Assumption
     if pw.method == 'lp':
         assumed[f'{block}_breakpoints'] = AssumptionBlock(
             holds=f'count({mask or pw.curve[0].values}, over={d}) >= 2',
-            description=f"piecewise '{block}': method: lp needs at least two breakpoints per curve — the method *is* its "
-            f'segment lines, so a curve with no segment states nothing and leaves the bounded link on its own '
-            f'bound. Use method: adjacency, sos2 or convex, which pin it to the points it does have.',
+            description=f"piecewise '{block}': method: lp needs at least two breakpoints per curve. Use method: "
+            f'adjacency, sos2 or convex, which hold the link to the points the curve does have.',
         )
     if mask is not None:
         assumed[f'{block}_contiguous'] = AssumptionBlock(
             holds=f'count({_edge(d, mask, "first")}, over={d}) == 1',
-            description=f"piecewise '{block}': points: '{mask}' must mark a consecutive run of at least one breakpoint per "
-            f'curve — {_GAP[pw.method]}.',
+            description=f"piecewise '{block}': points: '{mask}' must mark a consecutive run of at least one "
+            f'breakpoint per curve, because {_GAP[pw.method]}.',
         )
     return assumed
 
@@ -327,23 +324,25 @@ def curve_frame(schema: Spec, name: str, pw: PiecewiseBlock, links: Iterable[Exp
     for what, found in carried:
         for d in (d for d in schema.dimensions if d in found):
             if d == pw.over:
-                raise DimensionError(f"{context}: {what} already carries the breakpoint dim '{pw.over}'")
+                raise DimensionError(
+                    f"{context}: {what} already carries the breakpoint dimension '{pw.over}'. "
+                    f'Write the {what} without it.'
+                )
             if d not in frame:
                 frame.append(d)
     for i, link in enumerate(pw.links):
         if stray := [d for d in schema.parameters[link.values].dims if d != pw.over and d not in frame]:
             raise DimensionError(
                 f"{context}: link {i} values parameter '{link.values}' carries {stray}, which no link "
-                f'expression does — the block builds one curve per coordinate of {frame}, so a curve '
-                f'varying along {stray} has nothing to vary against. Declare a link expression over '
-                f"it, or drop it from '{link.values}'."
+                f'expression does: the links range over {frame}. Declare a link expression over it, or drop it '
+                f"from '{link.values}'."
             )
     if pw.points is not None and pw.nominated is None:
         mask = schema.parameters[pw.points].dims
         if stray := [d for d in mask if d != pw.over and d not in frame]:
             raise DimensionError(
-                f"{context}: points parameter '{pw.points}' carries {stray}, which the links do not — "
-                f"a mask says which of the block's own coordinates exist, and cannot add coordinates"
+                f"{context}: points parameter '{pw.points}' carries {stray}, which the links do not. "
+                f"Drop {stray} from '{pw.points}', or declare a link expression over it."
             )
     return tuple(frame)
 

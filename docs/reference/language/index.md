@@ -5,8 +5,9 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The language
 
-A spec is one YAML file. It declares the axes the spec runs over, the data it
-expects, the decisions the solver makes, and the rules those decisions obey.
+You write a spec as one YAML file. The file declares the dimensions the spec
+runs over, the data it expects, the decisions the solver makes, and the rules
+those decisions obey.
 
 ```yaml title="dispatch.yaml"
 description: Least-cost dispatch of a generator fleet against an hourly load.
@@ -36,8 +37,8 @@ objective:
   expression: sum(dispatch * cost) # an objective is one number, so the sum is written
 ```
 
-That file is a complete spec. The pages of this section give the exact rules,
-and the [glossary](../glossary.md) defines each word they use in a fixed sense.
+That file is a complete spec. The pages below give the exact rules, and the
+[glossary](../glossary.md) defines each word they use in a fixed sense.
 
 ## The ten rules
 
@@ -47,9 +48,9 @@ names the fix.
 | #   | Rule                                                                                                                                                                  |                                                                 |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | 1   | A file has twelve declaration keys, plus `version` and `description`. An unknown key is refused, with the nearest valid key named.                                    | [File shape](file.md)                                           |
-| 2   | Everything that can be checked without data is checked when the file loads.                                                                                           | [Errors](errors.md)                                             |
+| 2   | `to_spec` checks everything it can check without data when the file loads.                                                                                            | [Errors](errors.md)                                             |
 | 3   | Every name is declared once. A parameter and a dimension both called `snapshot` is refused.                                                                           | [Names](expressions.md#name-resolution)                         |
-| 4   | Where a name may stand depends on what it is. A dimension follows `over=` or `along=`, and is never multiplied.                                                       | [Names](expressions.md#name-resolution)                         |
+| 4   | The kind of a name decides where it may stand. A dimension follows `over=` or `along=`, and is never multiplied.                                                      | [Names](expressions.md#name-resolution)                         |
 | 5   | `a + b` carries the dimensions of `a` and of `b` together. A constraint's expression carries exactly its `dims`, and the objective carries none.                      | [How dimensions combine](expressions.md#how-dimensions-combine) |
 | 6   | A variable's `where:` deletes the variable at the masked coordinates. A constraint's `where:` deletes the row.                                                        | [Absence](absence.md)                                           |
 | 7   | A deleted variable takes its row with it. Inside a `sum` it is one term fewer, and the row stays.                                                                     | [Absence](absence.md#how-absence-travels)                       |

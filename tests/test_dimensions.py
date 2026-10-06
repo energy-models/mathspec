@@ -254,43 +254,43 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
         pytest.param(
             'sum(p, over=bus)',
             DimensionError,
-            r'sum\(over=bus\) but the expression has dims',
+            r'sum\(over=bus\) but the expression has only the dims',
             id='sum-consuming-an-absent-dim-is-an-error-not-a-noop',
         ),
         pytest.param(
             'sum(p, over=[generator, bus])',
             DimensionError,
-            r'sum\(over=bus\) but the expression has dims',
+            r'sum\(over=bus\) but the expression has only the dims',
             id='and-so-is-one-absent-dim-in-a-list',
         ),
         pytest.param(
             'sum(sum(p))',
             SchemaError,
-            r'the expression is already a scalar',
+            r'its operand has no dimensions to sum over',
             id='a-bare-sum-of-a-scalar-is-an-error-not-a-noop',
         ),
         pytest.param(
             'sum(sum(p, over=bus))',
             SchemaError,
-            r'sum\(over=bus\) but the expression has dims',
+            r'sum\(over=bus\) but the expression has only the dims',
             id='a-dim-fault-under-a-bare-sum-is-met-while-the-sum-is-built',
         ),
         pytest.param(
             'sum(sum(p, over=bus), over=generator)',
             DimensionError,
-            r'sum\(over=bus\) but the expression has dims',
+            r'sum\(over=bus\) but the expression has only the dims',
             id='and-the-same-fault-under-a-sum-over-a-named-dim-is-the-dim-rules',
         ),
         pytest.param(
             'sum(load, by=gen_bus, over=generator, into=bus)',
             DimensionError,
-            r"sum\(by=gen_bus\) consumes \['generator'\], the dims it reads from",
+            r"sum\(by=gen_bus\) reads from \['generator'\]",
             id='sum-requires-the-grouped-dim',
         ),
         pytest.param(
             "shift(cost, along=snapshot, offset=1, edge='wrap')",
             DimensionError,
-            r'shift\(along=snapshot\) but the expression has dims',
+            r'shift\(along=snapshot\) but the expression has only the dims',
             id='shift-requires-the-dim',
         ),
         pytest.param(
@@ -302,7 +302,7 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
         pytest.param(
             "shift(p, along=snapshot, offset=horizon, edge='wrap')",
             DimensionError,
-            r'varies over the axis it steps along is a permutation rather than a lag',
+            r"Declare 'horizon' over dims without 'snapshot'",
             id='a-named-offset-does-not-span-the-axis-it-steps-along',
         ),
         pytest.param(
@@ -314,7 +314,7 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
         pytest.param(
             'sum_back(p, along=snapshot, window=horizon)',
             DimensionError,
-            r'no longer "the last n"',
+            r"sum_back\(window=horizon\) steps along 'snapshot'",
             id='a-named-width-does-not-span-the-summed-axis',
         ),
         pytest.param(
@@ -326,13 +326,13 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
         pytest.param(
             'sum_back(p, along=snapshot, window=-spinup)',
             SchemaError,
-            r'which way a window reaches is the operator',
+            r'A width has no sign',
             id='a-named-width-has-no-direction-to-negate',
         ),
         pytest.param(
             "shift(p, along=snapshot, offset=bus_lead, edge='wrap')",
             DimensionError,
-            r"varies over \['bus'\], which that coordinate does not carry",
+            r"varies over \['bus'\], which the expression does not carry",
             id='a-named-offset-is-read-where-the-expression-has-a-coordinate',
         ),
         pytest.param(
@@ -471,17 +471,17 @@ class TestTheEdgeRulesAreDecidedAtLoad:
         [
             pytest.param(
                 'p <= shift(cap, along=g, offset=1)',
-                'leaves vacated positions with no value',
+                'leaves the vacated positions with no value',
                 id='a-shift-over-data-with-no-edge',
             ),
             pytest.param(
                 'p <= shift(p, along=t, offset=lead)',
-                'per-entity offset cannot say yet',
+                'a named offset cannot leave its vacated positions absent yet',
                 id='a-named-offset-with-no-edge',
             ),
             pytest.param(
                 'p <= shift(p, along=t, offset=1, edge=2)',
-                'only fill=0 is representable',
+                'over a variable only edge=0 is allowed',
                 id='a-nonzero-edge-over-a-variable',
             ),
             pytest.param(
@@ -649,5 +649,5 @@ def test_a_declared_frame_is_read_at_every_coordinate_where_the_body_is_narrower
     row = {'constraints.capped': {'dims': ['snapshot', 'generator'], 'expression': 'limit <= 10'}}
     assert to_spec(varied(FRAMED, **row)).program.constraints['capped'].dims == ('snapshot', 'generator')
     undeclared = varied(FRAMED, **row, **{'expressions.limit': 'build * p_max'})
-    with pytest.raises(DimensionError, match=r"would be repeated across \['snapshot'\]"):
+    with pytest.raises(DimensionError, match=r"does not carry \['snapshot'\], which its dims: declares"):
         to_spec(undeclared)

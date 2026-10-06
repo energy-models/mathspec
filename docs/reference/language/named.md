@@ -6,8 +6,8 @@ SPDX-License-Identifier: CC-BY-4.0
 # Named expressions and macros
 
 An `expressions:` entry names a quantity once, for the math to read or for a
-solve to report. A `macros:` entry is a template with arguments, substituted
-before anything reads it.
+solve to report. A `macros:` entry is a template that takes arguments, which
+the loader substitutes into an expression before anything reads it.
 
 ## `expressions`
 
@@ -28,12 +28,12 @@ expressions:
     description: CO2 released, the quantity a cap would bound
 ```
 
-It is a bare string, or a mapping with a `description:` and a `dims:`. The
-`dims:` are the **frame**, the dimensions the quantity is read over. Left out,
-the body decides the frame. Declared, the body may carry no dimension the
-frame does not name, which the loader checks, and it may carry fewer: the
-quantity is then constant along the rest, and a constraint over the whole frame
-reads it at every coordinate.
+An entry is a bare string, or a mapping with a `description:` and a `dims:`.
+The `dims:` are the **frame**, the dimensions the quantity is read over. When
+`dims:` is left out, the body decides the frame. When `dims:` is declared, the
+loader refuses a body that carries a dimension the frame does not name. The
+body may carry fewer dimensions, and then the quantity is constant along the
+rest, so a constraint over the whole frame reads it at every coordinate.
 
 ```yaml
 expressions:
@@ -48,15 +48,15 @@ it names. The sum is a [given expression](declarations.md#given-expressions)
 of the same file, and [`merge`](../../howto/compose.md#a-library-of-components)
 adds the entry to it by its own name.
 
-Where the objective or a constraint names it, the body is substituted there,
-and the [degree limit](expressions.md#where-a-product-of-two-variables-is-allowed)
+Where the objective or a constraint names it, the body is substituted there, and
+the [degree limit](expressions.md#where-a-product-of-two-variables-is-allowed)
 applies where it is read. Where nothing in the math names it, the entry is
 [reported](#reported-expressions).
 
 ## `cases`
 
-A quantity with several regimes is written as cases, and the rule that reads it
-is written once. The commitment state a unit carries into a snapshot is `1`
+Write a quantity with several regimes as `cases:`, and write the rule that
+reads it once. The commitment state a unit carries into a snapshot is `1`
 for a unit that is never switched off, an initial condition at the first
 snapshot, and the previous snapshot's status everywhere else:
 
@@ -95,44 +95,43 @@ A named expression carries **exactly one** of `expression:` and `cases:`.
 
 ### The rules that keep the cases apart
 
-- **No two cases may claim one coordinate.** If two `when:` masks can hold at
-  once, the file is refused at load:
+- No two cases may claim one coordinate. `to_spec` refuses the file when two
+  `when:` masks can be true at once:
 
   > `Named expression 'previous_status'`: cases `always_on` and `boundary` both
-  > claim the value where committable is false, the position of snapshot is 0. A
-  > coordinate two cases claim has two values, so it has none — narrow one of the
-  > two `when:` strings by the negation of the other, or drop the wider one and
-  > let `otherwise:` carry that region.
+  > claim the value where committable is false, the position of snapshot is 0.
+  > Narrow one of the two `when:` strings by the negation of the other, or drop
+  > the wider one and let `otherwise:` cover that region.
 
   The cases carry no order.
 
-- **A `when:` must be a question the data answers.** `True`, `False`, and a mask
+- A `when:` must be a question the data answers. `True`, `False`, and a mask
   that folds to one of them, such as `committable OR True`, are refused.
 
-- **A pair the check cannot decide is refused.** `position(snapshot) == 0`
-  against `position(snapshot) == -1` pick the same row on an axis with one
-  member. Count from one end only.
+- A pair the check cannot decide is refused. For example,
+  `position(snapshot) == 0` and `position(snapshot) == -1` pick the same row on
+  a dimension with one member, so count from one end only.
 
-- **In a block of two or more cases, a `when:` may not compare expressions**,
-  such as `c > 2 * k`. Nothing proves such a case apart from the others before
-  the data arrives. Precompute the test as a boolean parameter. A block with one
-  case may compare expressions: its `otherwise:` claims only what the case
-  leaves.
+- In a block of two or more cases, a `when:` may not compare expressions, such
+  as `c > 2 * k`, because the loader cannot prove such a case apart from the
+  others before the data arrives. Precompute the test as a boolean parameter. A
+  block with one case may compare expressions, because its `otherwise:` claims
+  only what the case leaves.
 
-- **Each `when:` and each value sits inside the frame.** A narrower case
+- Each `when:` and each value sits inside the frame, and a narrower case
   broadcasts as a parameter with fewer dimensions does.
 
-A claimed coordinate can still have no value: the `otherwise:` above has none
-at the first snapshot, where a case claims every unit. To close such a hole,
-widen a `when`, give the `shift` an `edge=`, or set `absence: zero` on the
-masked variable.
+A claimed coordinate can still have no value: the `otherwise:` above has none at
+the first snapshot, where a case claims every unit. To give such a coordinate a
+value, widen a `when`, give the `shift` an `edge=`, or set `absence: zero` on
+the masked variable.
 
 `cases:` is not accepted inside a `macros:` template.
 
 ## Reported expressions
 
-A named expression is either **in the math** or **reported**. The objective
-and the constraints decide which:
+A named expression is either **in the math** or **reported**, and the
+objective and the constraints decide which:
 
 ```yaml
 dimensions:
@@ -149,33 +148,33 @@ expressions:
 objective: { sense: minimize, expression: system_cost }
 ```
 
-`system_cost` is in the math. `delivered` and `lcoe` are reported.
+`system_cost` is in the math, while `delivered` and `lcoe` are reported.
 
 An entry is in the math when the objective, a constraint or a `piecewise:`
 link reaches it, directly or through another entry or a macro. A bound and a
 `where` name no entry.
 
-**No degree limit applies to a reported entry**: it may divide by a variable,
-raise one to a power, and multiply two sums. A comparison stays out. A
+A reported entry has **no** degree limit, so it may divide by a variable, raise
+one to a power, and multiply two sums. It may not hold a comparison. A
 constraint that names such an entry is refused under the constraint's own name.
 
 ### Reading a constraint's dual
 
 `dual(c)` reads the **row dual** of the constraint `c`: the shadow price a solve
-puts on that row, over `c`'s own `dims`. Only a reported entry may call it. In a
-constraint, the objective, a piecewise link, or an entry one of those inlines,
-it is refused:
+puts on that row, over the `dims` of `c`. Only a reported entry may call it.
+`to_spec` refuses it in a constraint, the objective, a `piecewise:` link, or an
+entry that one of those inlines:
 
 ```text
-Constraint 'd': a dual exists only after a solve; the math cannot read one —
-keep the entry that carries it out of constraints, the objective, bounds and where.
+Constraint 'd': a dual exists only after a solve, so it cannot stand here. Keep the entry
+that reads it out of constraints, the objective, bounds and where.
 ```
 
 `dual(c)` is the rate at which the optimal objective rises as the right side
 of `c` rises. Read `lhs <= rhs` as `lhs <= rhs + d`: the dual is the rate in `d`
 at `d = 0`. The rule is the same for `<=`, `>=` and `==`, and under `minimize`
-and `maximize`, so an equality has a dual with a sign too. Which side a term is
-written on decides the sign: `p <= cap` and `-p >= -cap` state one row, and their
+and `maximize`, so an equality has a dual with a sign too. The side you write a
+term on decides the sign: `p <= cap` and `-p >= -cap` state one row, and their
 duals are opposite.
 
 | Under `minimize`, a binding row | Its dual                             |
@@ -188,8 +187,7 @@ A row that `c`'s `where:` deletes has no dual.
 
 ## `macros`
 
-A macro is a template that takes arguments and is substituted into an expression
-before anything reads it:
+A macro declares its arguments and its template:
 
 ```yaml
 macros:
@@ -201,15 +199,16 @@ macros:
 
 - A template holds arithmetic, and no comparison.
 - An argument may itself use macros and named expressions.
-- Inside a template, the formal parameters shadow the names the spec
-  declares. A formal may not collide with a declared dimension.
-- The number of arguments is checked at each call site. A cycle is reported with
-  its reference chain.
-- Every template is held at load to every rule a call site is, whether or not it
-  is called. A formal is left for the call site to bind.
+- The formal arguments are the names under `args` and `kwargs`. Inside a
+  template, a formal hides a name the spec declares, but a formal may not
+  collide with a declared dimension.
+- The loader checks the number of arguments at each call site. It reports a
+  cycle of macros with the chain of names that forms it.
+- `to_spec` checks every template against every rule a call site is held to,
+  whether or not anything calls it. A formal is left for the call site to bind.
 - A formal may stand in a list, as in `sum(x, over=[d, snapshot])`. There the
   call binds it to a name, or to a list of names that is spliced in.
 
-A composition of the [built-in operators](operators.md) belongs here. What
-the language will not express is in
-[the limits](../../about/limits.md#deliberate-non-primitives).
+Write a composition of the [built-in operators](operators.md) as a macro.
+[The limits](../../about/limits.md#requests-the-language-refuses) list what the
+language will not express.

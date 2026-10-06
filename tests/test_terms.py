@@ -160,8 +160,7 @@ def test_a_contributor_reads_the_name_as_the_whole_sum():
         ),
         pytest.param(
             {**_demand(target='total'), 'expressions': {**_demand(target='total')['expressions'], 'total': '-load'}},
-            r"it adds to 'total', which this file defines\. A file writes its own body in one place, so a term fills only "
-            r"a name read under 'given: expressions:': write the term into the body of 'total'",
+            r"it adds to 'total', which this file defines\. Write the term into the body of 'total'",
             id='a-target-this-file-defines',
         ),
         pytest.param(
@@ -192,7 +191,9 @@ def test_what_a_term_may_not_be_is_refused_at_load(spec, message):
 def test_a_frame_with_no_body_names_where_a_sum_is_read():
     """A sum no file defines is read under `given:`, so a bodiless entry is refused with that rewrite."""
     spec = {**BALANCE, 'given': {}, 'expressions': {'injection': {'dims': BUS_FRAME}}}
-    with pytest.raises(LanguageError, match=r"this has neither.*read under 'given: expressions:'.*`adds_to:`"):
+    with pytest.raises(
+        LanguageError, match=r"has neither `expression:` nor `cases:`.*'given: expressions:'.*`adds_to:`"
+    ):
         to_spec(spec)
 
 
@@ -330,7 +331,7 @@ def test_a_term_on_a_cased_definition_is_refused():
     with pytest.raises(
         LanguageError,
         match=r"fragment '#1' defines 'injection' as `cases:`, and fragment '#2' adds a term to it\. "
-        r".*name the cased body as its own expression, and define 'injection' as that name\.",
+        r".*Declare the cased body as an expression of its own, and define 'injection' as that name\.",
     ):
         merge([cased, STORAGE])
 
@@ -431,7 +432,7 @@ def test_a_cased_term_is_added_like_any_other():
     [
         pytest.param(
             [FLEET, DEMAND],
-            r"fragments '#1' and '#2' add a term to 'injection', and no other fragment reads it: .*"
+            r"fragments '#1' and '#2' add a term to 'injection', and no other fragment reads it\. .*"
             r"or fix the spelling under 'given:'\.$",
             id='terms-and-nothing-else-with-no-near-miss',
         ),
@@ -516,7 +517,7 @@ def test_a_sum_a_sibling_declares_as_another_kind_names_that_kind():
     with pytest.raises(
         LanguageError,
         match=r"fragment '#1' declares 'injection' as a variable, and fragment '#2' adds a term to it\. "
-        r'A term adds to a named expression',
+        r'Give the sum a name of its own',
     ):
         merge([network, DEMAND])
 
@@ -553,7 +554,7 @@ def test_two_definitions_collide_and_the_message_names_adds_to():
         merge([SLACKED, other])
     message = str(raised.value)
     assert "both declare the expression 'injection'" in message
-    assert "defined by one of them at most: each other reads it under 'given: expressions:'" in message
+    assert "At most one fragment defines a sum: the others read it under 'given: expressions:'" in message
 
 
 def test_two_terms_of_one_name_collide():
@@ -562,7 +563,7 @@ def test_two_terms_of_one_name_collide():
     with pytest.raises(
         LanguageError,
         match=r"both declare the expression 'demand_injection', which a fragment adds to 'injection' as a term\. "
-        r"A term shares one namespace.*name each fragment's term apart",
+        r"Give each fragment's term a name of its own",
     ):
         merge([BALANCE, DEMAND, twin])
 
@@ -629,9 +630,7 @@ def test_inlining_keeps_the_definition_of_a_term():
 @pytest.mark.parametrize('spec', [BALANCE, FLEET], ids=['a-reader', 'a-contributor'])
 def test_a_given_expression_prints_no_line_of_its_own(spec):
     """The term prints as the definition it is; the name it adds to prints in the legend."""
-    with pytest.raises(
-        LanguageError, match=r"'injection' is a given expression, and a given declaration prints no line"
-    ):
+    with pytest.raises(LanguageError, match=r"'injection' is a given expression, which prints no line of its own"):
         typeset_declaration(spec, 'injection', 'latex')
 
 
