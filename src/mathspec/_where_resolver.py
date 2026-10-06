@@ -215,15 +215,15 @@ class WhereResolver:
                 f"'{along.name}'. Write an integer."
             )
             return node
-        if self.ns.unordered(along.name):
-            self.errors.append(unordered(context, f'shift(<predicate>, along={along.name})', along.name))
-            return node
         mask = Mask(operand)
         if along.name not in mask.dims:
             self.errors.append(
                 f"{context}: shift(<predicate>, along='{along.name}') reads the predicate back along a dimension "
                 f'it does not carry — it reads {_listed(sorted(mask.dims))}. Translate it along one of those.'
             )
+            return node
+        if self.ns.unordered(along.name):
+            self.errors.append(unordered(context, f'shift(<predicate>, along={along.name})', along.name))
             return node
         return TranslatedPredicate(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
 

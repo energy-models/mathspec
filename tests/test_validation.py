@@ -2392,6 +2392,14 @@ def test_the_same_construct_along_an_ordered_dimension_loads(patch, dimension):
     to_spec(varied(ordered, **patch))
 
 
+def test_a_where_shift_along_a_dimension_its_predicate_lacks_is_refused_for_that_first():
+    """The order refusal came first, so a file that declared ``bp`` ordered met a second refusal after it."""
+    where = {'constraints.c': {'dims': ['t'], 'where': 'shift(on, along=bp, offset=1)', 'expression': 'x <= 0'}}
+    message = _refusal(UNORDERED, **where)
+    assert 'reads the predicate back along a dimension it does not carry' in message
+    assert 'not declared ordered' not in message, 'the predicate cannot be read along bp, ordered or not'
+
+
 def test_a_type_1_set_reads_no_order():
     """At most one member is nonzero, whichever it is, so the set says nothing about neighbours."""
     to_spec(varied(UNORDERED, **{'sos.s': {'variable': 'z', 'along': 'bp', 'type': 1}}))

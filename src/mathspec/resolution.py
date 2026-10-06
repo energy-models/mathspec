@@ -203,14 +203,8 @@ class Namespace:
         return tuple(dict.fromkeys(names))
 
     def unordered(self, name: str) -> bool:
-        """Whether *name* is a declared dimension whose order the file does not declare part of the model.
-
-        A name no dimension declares is not one: it is a macro's formal, whose
-        dimension is checked where the macro is called, or a name refused
-        elsewhere.
-        """
-        declared = self.schema.dimensions.get(name)
-        return declared is not None and not declared.ordered
+        """Whether the declared dimension *name* is one whose order the file does not declare part of the model."""
+        return not self.schema.dimensions[name].ordered
 
     def kind(self, name: str) -> DeclarationKind | None:
         """What *name* was declared as, or ``None`` where the file declares it nowhere."""
