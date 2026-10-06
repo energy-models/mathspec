@@ -12,6 +12,8 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(pypsa): the linearized unit commitment is a patch over pypsa.yaml, and relaxes a committable link and process too ([#835](https://github.com/energy-models/mathspec/pull/835))
+- docs(pypsa): the outage factors of a security-constrained run come from each investment period's own branches ([#834](https://github.com/energy-models/mathspec/pull/834))
 - docs(pypsa): the pypsa page lists six more refusals and eight data-prep steps, and a capital cost says where fom_cost and overnight_cost enter ([#816](https://github.com/energy-models/mathspec/pull/816))
 - docs(pypsa): a committable unit built in a later period starts from off, and the big M follows pypsa for an infinite build cap ([#817](https://github.com/energy-models/mathspec/pull/817))
 - docs(pypsa): a line, a transformer, a storage unit and a store may be built in whole modules, and a unit that is not active counts no modules ([#815](https://github.com/energy-models/mathspec/pull/815))

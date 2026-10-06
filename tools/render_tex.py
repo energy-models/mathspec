@@ -23,9 +23,9 @@ from tools._page import ROOT, sidecar_for
 CORPUS = ('examples/**/*.yaml', 'tests/typesetting/golden/*.yaml')
 
 #: Inside that glob and not specs: the symbol tables `sidecar_for` looks up,
-#: and the patches a library's variants are written as, which `override` lays
-#: over a spec rather than anything loading them on their own.
-NOT_MODELS = ('examples/symbols', 'examples/library/variants')
+#: and the patches under a `variants` folder, which `override` lays over a
+#: spec rather than anything loading them on their own.
+NOT_MODELS = ('examples/symbols', 'examples/library/variants', 'examples/variants')
 
 
 def models() -> list[Path]:
