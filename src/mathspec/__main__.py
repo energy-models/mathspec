@@ -6,10 +6,12 @@
 
 ``check`` loads the file and prints the language's advice; ``canonical``
 writes the spec in the form two files that state the same spec share, or with
-``--check`` asks whether the file is already in that form; one further verb per
-typeset format, read off [`mathspec.typesetting.FORMATS`][]. Every verb reads
-the file as written, and nothing here writes a formulation out unasked.
-The typeset verbs take ``--expand``, because a shell cannot compose
+``--check`` asks whether the file is already in that form; ``program`` prints
+the program as JSON ([`Program.to_dict`][mathspec.program.Program.to_dict]);
+one further verb per typeset format, read off
+[`mathspec.typesetting.FORMATS`][]. Every verb reads the file as written, and
+nothing here writes a formulation out unasked. ``program`` and the typeset
+verbs take ``--expand``, because a shell cannot compose
 [`expand`][mathspec.spec.Spec.expand] the way a caller does and the rows are a
 different document; ``check`` has no such flag, because advice reads a block
 as the rows it states.
@@ -18,6 +20,7 @@ as the rows it states.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -41,6 +44,13 @@ def parser() -> argparse.ArgumentParser:
     target.add_argument('-o', '--out', help='write here instead of stdout')
     target.add_argument('--write', action='store_true', help='rewrite the file in the form, dropping its comments')
     target.add_argument('--check', action='store_true', help='exit 1 if the file is not in the form, writing nothing')
+
+    program = verbs.add_parser('program', help='print the program a spec means, as JSON')
+    program.add_argument('spec', help='path to a mathspec YAML file')
+    program.add_argument('-o', '--out', help='write here instead of stdout')
+    program.add_argument(
+        '--expand', action='store_true', help='write the piecewise: and sos: blocks out as variables and constraints'
+    )
 
     for name in FORMATS:
         verb = verbs.add_parser(name, help=f'render a spec as {name}')
@@ -102,6 +112,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.write:
             Path(args.spec).write_text(text, encoding='utf-8')
             return 0
+    elif args.verb == 'program':
+        try:
+            spec = to_spec(args.spec)
+        except MathSpecError as e:
+            sys.stderr.write(f'{e}\n')
+            return 1
+        program = (spec.expand() if args.expand else spec).program
+        text = json.dumps(program.to_dict(), indent=2, allow_nan=False) + '\n'
     else:
         spec = to_spec(args.spec).expand() if args.expand else args.spec
         text = typeset(

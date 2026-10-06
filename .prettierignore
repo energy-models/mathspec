@@ -50,3 +50,8 @@ docs/reference/notation.md
 # generated part is a block among hand-written prose wants — the pages above
 # are generated nearly end to end, so listing them is the shorter answer.
 docs/reference/language/operators.md
+
+# `tools/program_schema.py` writes this schema, and `tests/test_docs.py` holds
+# it to the generator byte for byte. Prettier would reflow what `json.dumps`
+# writes.
+schema/mathspec.program.schema.json
