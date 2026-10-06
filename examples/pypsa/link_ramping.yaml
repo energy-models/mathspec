@@ -139,7 +139,7 @@ masks:
       period's first, and the horizon's first where the link comes in off or
       carries an initial output
     where: >-
-      position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND
+      position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
       (Link_status_initial == 0 OR Link_p_init))
 
 constraints:

@@ -146,7 +146,7 @@ masks:
       period's first, and the horizon's first where the generator comes in off
       or carries an initial output
     where: >-
-      position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND
+      position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
       (Generator_status_initial == 0 OR Generator_p_init))
 
 constraints:
