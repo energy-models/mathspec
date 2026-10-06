@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 A spec can only say what the language has words for. This page says which words
 can be added, and which cannot. Read it before you ask for a new operator, block
 or keyword. For the rules a spec itself has to obey, read
-[the ten rules](../reference/language/index.md#the-ten-rules).
+[the eleven rules](../reference/language/index.md#the-eleven-rules).
 
 ## How a new construct enters
 

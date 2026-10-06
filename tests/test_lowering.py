@@ -74,7 +74,7 @@ CAPACITY_POSITIVE = ParameterComparison('capacity', '>', 0.0, ('generator',))
 #: the smallest model that loads, for a claim about the plan's record rather
 #: than about the math in it. A test adds what it judges with :func:`varied`.
 TINY = {
-    'dimensions': {'g': {}},
+    'dimensions': {'g': {'ordered': True}},
     'parameters': {'cost': {'dims': ['g']}},
     'variables': {'p': {'dims': ['g'], 'bounds': {'lower': 0, 'upper': 1}}},
     'constraints': {'c': {'dims': [], 'expression': 'sum(p, over=g) >= 1'}},
@@ -164,9 +164,9 @@ def test_a_file_with_no_objective_lowers_to_no_sense():
     assert program.objective is None, 'no objective declared is no objective, not a minimisation of nothing'
 
 
-def test_a_literal_amount_resolves_to_one_signed_number(dispatch_schema):
+def test_a_literal_amount_resolves_to_one_signed_number():
     """`offset=-1` parses as a unary minus over `1`; after resolution it is `-1`, for every reader alike."""
-    ns = Namespace(dispatch_schema)
+    ns = Namespace(schema_of(DISPATCH_YAML, **{'dimensions.snapshot': {'dtype': 'int', 'ordered': True}}))
     node = expression_of('shift(dispatch, along=snapshot, offset=-1, edge=+0)', ns, 't')
     assert isinstance(node, Translate)
     assert (node.offset, node.fill) == (-1, 0.0)
@@ -655,7 +655,7 @@ def test_a_partition_keeps_its_group_when_the_relation_gains_a_value_column():
     for values in ('day', ['day', 'week']):
         program = to_spec(
             {
-                'dimensions': {'hour': {'dtype': 'int'}, 'day': {}, 'week': {}},
+                'dimensions': {'hour': {'dtype': 'int', 'ordered': True}, 'day': {}, 'week': {}},
                 'relations': {'cal': {'key': 'hour', 'values': values}},
                 'variables': {'p': {'dims': ['hour']}},
                 'constraints': {
@@ -683,7 +683,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     """Every node reading a relation carries its columns, its key and the join, so a consumer joins on the right columns."""
     program = to_spec(
         {
-            'dimensions': {'snapshot': {'dtype': 'int'}, 'generator': {}, 'zone': {}},
+            'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'generator': {'ordered': True}, 'zone': {}},
             'relations': {'zone_of': {'key': ['generator', 'snapshot'], 'values': 'zone'}},
             'parameters': {'price': {'dims': ['snapshot', 'zone']}},
             'variables': {
@@ -836,6 +836,14 @@ def test_a_relation_is_declared_as_the_file_declares_it():
     assert program.dimensions['g'] == DimensionDeclaration(dtype='str'), 'a dimension carries its dtype and no relation'
 
 
+@pytest.mark.parametrize('ordered', [pytest.param(True, id='ordered'), pytest.param(False, id='unordered')])
+def test_a_program_reports_whether_a_dimension_is_ordered(ordered: bool):
+    """The program dropped ``ordered``, so a consumer of it read every dimension as unordered."""
+    program = to_spec(varied(TINY, dimensions={'g': {'ordered': ordered}})).program
+
+    assert program.dimensions['g'].ordered is ordered
+
+
 def test_a_program_is_built_by_keyword_so_a_field_added_later_cannot_reorder_an_old_call():
     """Positional construction made every field's *position* part of the contract."""
     with pytest.raises(TypeError, match='positional'):
@@ -946,7 +954,7 @@ def test_a_dimension_carries_the_dtype_its_labels_are_checked_against():
 
 
 CASED = {
-    'dimensions': {'t': {'dtype': 'int'}, 'g': {'dtype': 'str'}},
+    'dimensions': {'t': {'dtype': 'int', 'ordered': True}, 'g': {'dtype': 'str', 'ordered': True}},
     'parameters': {'committable': {'dims': ['g'], 'dtype': 'bool'}, 'initial': {'dims': ['g']}},
     'variables': {'status': {'dims': ['t', 'g'], 'domain': 'binary'}},
     'expressions': {
@@ -1124,7 +1132,7 @@ def test_a_lowered_spec_still_pickles_and_lowers_to_the_same_program():
 
     spec = Spec.model_validate(
         {
-            'dimensions': {'t': {'dtype': 'int'}, 'g': {'dtype': 'str'}},
+            'dimensions': {'t': {'dtype': 'int', 'ordered': True}, 'g': {'dtype': 'str', 'ordered': True}},
             'parameters': {'load': {'dims': ['t']}, 'cost': {'dims': ['g']}},
             'variables': {'p': {'dims': ['t', 'g'], 'bounds': {'lower': 0}}},
             'constraints': {'balance': {'dims': ['t'], 'expression': 'sum(p, over=g) >= load'}},
@@ -1152,7 +1160,7 @@ def test_a_lowered_program_pickles_and_is_the_same_program():
 
     program = to_spec(
         {
-            'dimensions': {'t': {'dtype': 'int'}, 'g': {'dtype': 'str'}},
+            'dimensions': {'t': {'dtype': 'int', 'ordered': True}, 'g': {'dtype': 'str', 'ordered': True}},
             'parameters': {'load': {'dims': ['t']}, 'cost': {'dims': ['g']}},
             'variables': {'p': {'dims': ['t', 'g'], 'bounds': {'lower': 0}}},
             'constraints': {'balance': {'dims': ['t'], 'expression': 'sum(p, over=g) >= load'}},
@@ -1176,7 +1184,7 @@ def test_two_groups_of_a_program_merge_with_or_as_they_did_behind_the_proxy():
     where the seal answered `|` with a `TypeError`."""
     program = to_spec(
         {
-            'dimensions': {'t': {'dtype': 'int'}},
+            'dimensions': {'t': {'dtype': 'int', 'ordered': True}},
             'parameters': {'load': {'dims': ['t']}},
             'variables': {'p': {'dims': ['t'], 'bounds': {'lower': 0}}},
             'constraints': {'meet': {'dims': ['t'], 'expression': 'p >= load'}},

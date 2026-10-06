@@ -7,7 +7,7 @@ description: >-
   it would have fed is not built.
 
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
 
 variables:
   p:

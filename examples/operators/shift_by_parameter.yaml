@@ -9,7 +9,7 @@ description: >-
 
 dimensions:
   technology: { dtype: str }
-  month: { dtype: int }
+  month: { dtype: int, ordered: true }
 
 parameters:
   lead: { dims: [technology], dtype: int }
