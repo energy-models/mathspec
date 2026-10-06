@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from mathspec.boundedness import unbounded_notes
 from mathspec.errors import Advice
-from mathspec.program import GroupSum, Program, Pullback, walk
+from mathspec.program import Join, Program, walk
 from mathspec.validation import to_spec
 
 if TYPE_CHECKING:
@@ -69,6 +69,7 @@ def _given(program: Program) -> list[Advice]:
             for name in given.expressions
         ),
         *(Advice('given', name, _given_note('row family', name)) for name in given.constraints),
+        *(Advice('given', name, _given_note('mask', name)) for name in given.masks),
     ]
 
 
@@ -108,7 +109,7 @@ def _never_an_axis(program: Program) -> list[Advice]:
         *program.given.constraints.values(),
     ):
         reached.update(declaration.dims)
-    reached |= _produced_axes(program)
+    reached |= _grouped_axes(program)
     reached |= {dim for lk in program.relations.values() for dim in lk.dims}
 
     return [
@@ -124,14 +125,14 @@ def _never_an_axis(program: Program) -> list[Advice]:
     ]
 
 
-def _produced_axes(program: Program) -> set[str]:
+def _grouped_axes(program: Program) -> set[str]:
     """The axes the expressions create beyond what any declaration indexes.
 
-    ``sum(by=)`` lands on its target and ``at()`` spreads onto its fine
-    dimension: either way, the dims the direction produces.
+    ``sum(by=)`` groups onto its target and ``at()`` spreads onto its fine
+    dimension: either way, the dims the join groups by and did not join on.
     """
     axes: set[str] = set()
     for node in walk(*program.roots):
-        if isinstance(node, GroupSum | Pullback):
-            axes.update(node.direction.produced_dims)
+        if isinstance(node, Join):
+            axes.update(node.columns.added_dims)
     return axes

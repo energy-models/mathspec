@@ -19,7 +19,7 @@ from mathspec.program import (
     DimensionComparison,
     DimensionPosition,
     ExpressionComparison,
-    PulledBackPredicate,
+    JoinedPredicate,
     Translate,
     TranslatedPredicate,
     WindowSum,
@@ -103,7 +103,7 @@ def notice(program: Program) -> Noticed:
                 expressions(atom.left, atom.right)
             elif isinstance(atom, CountComparison):
                 masks(atom.predicate)
-            elif isinstance(atom, TranslatedPredicate | PulledBackPredicate):
+            elif isinstance(atom, TranslatedPredicate | JoinedPredicate):
                 masks(atom.operand)
 
     expressions(*program.roots)
@@ -111,6 +111,8 @@ def notice(program: Program) -> Noticed:
         expressions(entry.expression)
     for curve in program.piecewise.values():
         expressions(*(link.expression for link in curve.links))
+    for mask in program.masks.values():
+        masks(mask.where)
     for declaration in (*program.constraints.values(), *program.variables.values()):
         if declaration.where is not None:
             masks(declaration.where)
@@ -133,7 +135,7 @@ class Legend:
         return self.format.operators[name]
 
     def glossaries(self, noticed: Noticed, defined: Iterable[str]) -> list[tuple[str, list[Entry]]]:
-        """The sets, parameters, variables, given declarations and definitions, each with its symbol, its dims and its description.
+        """The sets, parameters, variables, given declarations, definitions and masks, each with its symbol, its dims and its description.
 
         *defined* names the expressions that print under their own symbol, so
         a legend row stands exactly where a symbol does.
@@ -189,6 +191,14 @@ class Legend:
                 )
                 for g, block in program.given.constraints.items()
             ),
+            *(
+                self._entry(
+                    self.symbols.name[g],
+                    f'{fmt.mono(g)}{self._over(list(block.dims))}, a mask another file defines',
+                    block.description,
+                )
+                for g, block in program.given.masks.items()
+            ),
         ]
         shown = set(defined)
         definitions = [
@@ -196,12 +206,17 @@ class Legend:
             for e, block in program.expressions.items()
             if e in shown
         ]
+        masks = [
+            self._entry(self.symbols.name[m], f'{fmt.mono(m)}{self._over(list(block.dims))}', block.description)
+            for m, block in program.masks.items()
+        ]
         groups = (
             ('Sets', sets),
             ('Parameters', parameters),
             ('Variables', variables),
             ('Given', given),
             ('Definitions', definitions),
+            ('Masks', masks),
         )
         return [(title, entries) for title, entries in groups if entries]
 
@@ -284,7 +299,7 @@ class Legend:
             counted = self.format.math(f't {self.format.superscript(self._op("cyclic_minus"), applied)} k')
             note = (
                 f'{counted} denotes a translation counted inside the group a relation puts {self.format.math("t")} '
-                f'in ({self.format.mono("shift(by=relation)")}), so a term never crosses out of its own group.'
+                f'in ({self.format.mono("shift(within=relation[c])")}), so a term never crosses out of its own group.'
             )
             if 'edge' in noticed.policies:
                 both = self.format.superscript(self.format.subscript(self._op('edge_minus'), ['v']), applied)

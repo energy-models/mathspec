@@ -31,7 +31,7 @@ SUPPLY = {
     'constraints': {
         'gen_injects': {
             'dims': ['snapshot', 'generator'],
-            'expression': 'at(flow, by=gen_port, over=port, into=generator) == gen_p',
+            'expression': 'at(flow, by=gen_port[port]) == gen_p',
         }
     },
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p * gen_cost)'},
@@ -43,16 +43,16 @@ SURFACE = {
     'relations': {'port_bus': {'key': 'port', 'values': 'bus'}},
     'variables': {'flow': {'dims': ['snapshot', 'port'], 'bounds': {'lower': -1000, 'upper': 1000}}},
     'constraints': {
-        'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, by=port_bus, over=port, into=bus) == 0'}
+        'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, over=port, by=port_bus[bus]) == 0'}
     },
 }
 
 
-def test_given_holds_four_kinds_and_refuses_a_fifth():
+def test_given_holds_five_kinds_and_refuses_a_sixth():
     """The section is closed, so a kind nobody has admitted yet is the schema's own refusal."""
     with pytest.raises(LanguageError) as raised:
         to_spec({**SUPPLY, 'given': {'macros': {'twice': {'params': ['x'], 'template': '2 * x'}}}})
-    assert 'Valid keys: constraints, expressions, parameters, variables' in str(raised.value), (
+    assert 'Valid keys: constraints, expressions, masks, parameters, variables' in str(raised.value), (
         'the refusal names what the block takes'
     )
 
@@ -480,7 +480,7 @@ INJECTOR = {
     'relations': {'gen_bus': {'key': 'generator', 'values': 'bus'}},
     'parameters': {'load': {'dims': ['snapshot', 'bus']}},
     'variables': {'gen_p': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}}},
-    'expressions': {'injection': {'expression': 'sum(gen_p, by=gen_bus, over=generator, into=bus) - load'}},
+    'expressions': {'injection': {'expression': 'sum(gen_p, over=generator, by=gen_bus[bus]) - load'}},
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p)'},
 }
 
@@ -544,7 +544,7 @@ FLAT_INJECTOR = {
     'dimensions': {'bus': {'dtype': 'str'}, 'generator': {'dtype': 'str'}},
     'relations': {'gen_bus': {'key': 'generator', 'values': 'bus'}},
     'variables': {'gen_p': {'dims': ['generator'], 'bounds': {'lower': 0}}},
-    'expressions': {'injection': {'expression': 'sum(gen_p, by=gen_bus, over=generator, into=bus)'}},
+    'expressions': {'injection': {'expression': 'sum(gen_p, over=generator, by=gen_bus[bus])'}},
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p)'},
 }
 
@@ -587,7 +587,7 @@ def test_the_composed_model_holds_a_definition_to_the_rules_of_where_it_is_read(
     }
     squared = {
         **INJECTOR,
-        'expressions': {'injection': {'expression': 'sum(gen_p * gen_p, by=gen_bus, over=generator, into=bus)'}},
+        'expressions': {'injection': {'expression': 'sum(gen_p * gen_p, over=generator, by=gen_bus[bus])'}},
     }
     assert to_spec(squares) and to_spec(squared), 'each file loads on its own'
     with pytest.raises(LanguageError, match='degree'):

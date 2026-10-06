@@ -8,6 +8,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   bus:
     description: network nodes
   store:
@@ -17,6 +18,7 @@ dimensions:
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
 
@@ -45,9 +47,7 @@ parameters:
   Store_first_active:
     description: >-
       one in the first period a store stands in, zero elsewhere, data prep.
-      PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a store
-      that has retired in every later period (`global_constraints.py:276`,
-      PyPSA/PyPSA#1938)
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
     dims: [period, store]
   Store_e_nom_min:
     description: least nominal capacity an extendable store may be built at
@@ -56,11 +56,16 @@ parameters:
     description: most nominal capacity an extendable store may be built at
     dims: [scenario, store]
   Store_capital_cost:
-    description: cost of one unit of nominal capacity — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal capacity for the modelled horizon —
+      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
+      `capital_cost` where it is not, plus `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`), data prep
     dims: [scenario, store]
   Store_e_nom_set:
     description: a given nominal capacity for an extendable store; one without a value has no row here
-    dims: [scenario, store]
+    dims: [store]
   Store_e_nom:
     description: nominal energy capacity
     dims: [scenario, store]
@@ -68,6 +73,9 @@ parameters:
     description: whether the nominal energy capacity is a decision
     dims: [store]
     dtype: bool
+  Store_e_nom_mod:
+    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    dims: [store]
   Store_e_min_pu:
     description: least energy held, per unit of nominal capacity — negative for a store that may go short
     dims: [scenario, snapshot, store]
@@ -78,7 +86,7 @@ parameters:
     description: >-
       the sign the power a store delivers enters its bus's balance with —
       PyPSA's `sign`, `1` unless given. PyPSA refuses one that differs by
-      scenario (`consistency.py:1187`)
+      scenario (`constants.py:43`)
     dims: [store]
   Store_retention:
     description: share of energy kept over a snapshot — PyPSA's `(1 - standing_loss) ** elapsed hours`, data prep
@@ -163,6 +171,13 @@ variables:
       of the same PyPSA name carries the fixed regime
     dims: [store]
     where: Store_e_nom_extendable
+  Store_n_mod:
+    description: "`Store-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
+    dims: [store]
+    where: Store_e_nom_extendable AND Store_e_nom_mod > 0 AND count(Store_active, over=snapshot) > 0
+    domain: integer
+    bounds:
+      lower: 0
 
 given:
   parameters:
@@ -209,9 +224,9 @@ expressions:
         expression: Store_e_initial
       period_cyclic:
         when: Store_e_cyclic_per_period
-        expression: Store_retention * shift(Store_e, along=snapshot, offset=1, edge='wrap', by=snapshot_period, within=period)
+        expression: Store_retention * shift(Store_e, along=snapshot, offset=1, edge='wrap', within=snapshot_period[period])
       period_opening:
-        when: Store_e_initial_per_period AND NOT Store_e_cyclic_per_period AND position(snapshot, by=snapshot_period, within=period) == 0
+        when: Store_e_initial_per_period AND NOT Store_e_cyclic_per_period AND position(snapshot, within=snapshot_period[period]) == 0
         expression: Store_e_initial
     otherwise: Store_retention * shift(Store_e, along=snapshot, offset=1)
   Store_closing_weight:
@@ -223,8 +238,8 @@ expressions:
     dims: [scenario, global_constraint, snapshot, store]
     cases:
       per_period:
-        when: Store_e_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, by=snapshot_period, within=period) == -1
-        expression: at(period_weight_years, by=snapshot_period, over=period, into=snapshot)
+        when: Store_e_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, within=snapshot_period[period]) == -1
+        expression: at(period_weight_years, by=snapshot_period[period])
       carried_over:
         when: NOT Store_e_initial_per_period
         expression: GlobalConstraint_snapshot_closes
@@ -242,19 +257,19 @@ expressions:
     adds_to: tech_capacity_expansion
   Store_opex:
     expression: >-
-      sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
-      + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
-      + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
+      sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
+      + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
+      + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
     adds_to: scenario_opex
   Store_capex:
     expression: sum(scenario_weight * Store_e_nom_ext * Store_capital_cost * Store_capital_weight)
     adds_to: total_cost
   Store_additions:
     expression: >-
-      sum(Store_e_nom_ext * Store_first_active, by=Store_carrier, over=store, into=carrier)
+      sum(Store_e_nom_ext * Store_first_active, over=store, by=Store_carrier[carrier])
     adds_to: Carrier_additions
   Store_injection:
-    expression: sum(Store_sign * Store_p, by=Store_bus, over=store, into=bus)
+    expression: sum(Store_sign * Store_p, over=store, by=Store_bus[bus])
     adds_to: Bus_injection
 
 constraints:
@@ -290,9 +305,14 @@ constraints:
     expression: Store_e_nom_ext <= Store_e_nom_max
   Store_e_nom_set:
     description: "`Store-e_nom_set` — the chosen build pinned, wherever a value is given"
-    dims: [scenario, store]
+    dims: [store]
     where: Store_e_nom_extendable AND Store_e_nom_set
     expression: Store_e_nom_ext == Store_e_nom_set
+  Store_e_nom_modularity:
+    description: "`Store-e_nom_modularity` — the chosen build is a whole number of modules"
+    dims: [store]
+    where: Store_e_nom_extendable AND Store_e_nom_mod > 0 AND count(Store_active, over=snapshot) > 0
+    expression: Store_e_nom_ext == Store_e_nom_mod * Store_n_mod
   Store_energy_balance:
     description: "`Store-energy_balance` — the energy carried in, less what is delivered to the bus"
     dims: [scenario, snapshot, store]
@@ -339,7 +359,7 @@ assumptions:
     description: >-
       PyPSA reads the closing energy of a store that reopens per period at
       the last snapshot of every period, and fails on a `primary_energy` row
-      that names an `investment_period` (`global_constraints.py:526`)
+      that names an `investment_period` (`global_constraints.py:521`)
   Store_primary_energy_carried_over_has_unit_years:
     holds: "period_weight_years == 1"
     where: "Store_primary_energy_weight AND NOT Store_e_initial_per_period"
@@ -347,18 +367,18 @@ assumptions:
       a store that carries its energy from one period to the next closes
       once, at the last counted snapshot, and no period's years weighs that
       level — PyPSA refuses it where any period's years is not one
-      (`global_constraints.py:500`)
+      (`global_constraints.py:495`)
   Store_operational_limit_carried_over_has_unit_years:
-    holds: "at(period_weight_years == 1, by=snapshot_period, over=period, into=snapshot)"
+    holds: "at(period_weight_years == 1, by=snapshot_period[period])"
     where: "Store_operational_limit_weight AND NOT Store_e_initial_per_period AND GlobalConstraint_counts_snapshot"
     description: >-
       the same for an `operational_limit` row, over the periods it counts —
-      PyPSA refuses it (`global_constraints.py:695`)
+      PyPSA refuses it (`global_constraints.py:696`)
   Store_marginal_cost_quadratic_without_risk_preference:
     holds: "Store_marginal_cost_quadratic == 0"
     where: "CVaR_omega > 0"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:467-474`). The spec cannot tell no risk preference from
+      (`optimize.py:470-477`). The spec cannot tell no risk preference from
       one with `omega = 0`, so it refuses only where `omega` is positive

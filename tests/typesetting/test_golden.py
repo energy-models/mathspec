@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, get_args
 import pytest
 
 from mathspec.operators import BUILTIN_NAMES
-from mathspec.program import Dual, Expression, GroupSum, Named, Predicate, Pullback, Sum, Translate, WindowSum
+from mathspec.program import Dual, Expression, Join, NamedExpression, Predicate, Sum, Translate, WindowSum
 from mathspec.typesetting import FORMATS, legend, to_latex, typeset, walk
 from mathspec.typesetting.format import OPERATOR_NAMES
 from mathspec.validation import to_spec
@@ -149,12 +149,12 @@ def _rendered_trees() -> Iterator[object]:
 
 
 #: A dataclass the walk steps *through* rather than renders: a region has no
-#: branch of its own — its ``when`` and ``value`` do — a direction and the
-#: relation it reads are the facts a node carries rather than nodes, and a
-#: ``Mask`` is the wrapper a leaf carries a predicate in. None is a member of
-#: any node union, so they are subtracted from what the tree walk finds rather
-#: than added to what the vocabulary declares.
-CARRIERS = {'Region', 'Direction', 'Mask', 'Partition', 'RelationDeclaration'}
+#: branch of its own — its ``when`` and ``value`` do — the columns a join
+#: names, the axes a sum is over and the relation it reads are the facts a
+#: node carries rather than nodes, and a ``Mask`` is the wrapper a leaf carries a predicate in. None is a
+#: member of any node union, so they are subtracted from what the tree walk
+#: finds rather than added to what the vocabulary declares.
+CARRIERS = {'Axis', 'Column', 'Region', 'JoinColumns', 'Mask', 'Partition', 'RelationDeclaration'}
 
 
 def test_the_golden_model_carries_every_node_kind_the_walk_renders():
@@ -166,7 +166,7 @@ def test_the_golden_model_carries_every_node_kind_the_walk_renders():
     `coverage` installed, and its failure names the construct rather than a line.
     """
     kinds = {type(node).__name__ for tree in _rendered_trees() for node in _nodes(tree)} - CARRIERS
-    declared = {node.__name__ for node in (*get_args(Predicate), *get_args(Expression), Named)}
+    declared = {node.__name__ for node in (*get_args(Predicate), *get_args(Expression), NamedExpression)}
     assert kinds == declared, (
         f'tests/typesetting/golden/model.yaml reaches {sorted(kinds - declared)} and misses '
         f'{sorted(declared - kinds)}. Every node the walk renders needs a case here, '
@@ -180,9 +180,10 @@ def test_the_golden_model_calls_every_operator_in_the_language():
     Each operator resolves to the node it is, so the census counts the nodes
     by the verb the file writes them with.
     """
-    verbs = {Sum: 'sum', GroupSum: 'sum', Pullback: 'at', Translate: 'shift', WindowSum: 'sum_back', Dual: 'dual'}
+    verbs = {Sum: 'sum', Translate: 'shift', WindowSum: 'sum_back', Dual: 'dual'}
     nodes = [node for tree in _rendered_trees() for node in _nodes(tree)]
     calls = {verb for node in nodes for kind, verb in verbs.items() if isinstance(node, kind)}
+    calls |= {'at' for node in nodes if isinstance(node, Join) and not node.columns.axes}
     assert calls == BUILTIN_NAMES, (
         f'tests/typesetting/golden/model.yaml never calls {sorted(BUILTIN_NAMES - calls)}. '
         f'An operator with no case here renders untested.'
@@ -190,7 +191,7 @@ def test_the_golden_model_calls_every_operator_in_the_language():
 
 
 #: What the fixture cannot reach, by module and the source text of the line.
-#: A bare ``Cases`` stands under the ``Named`` node resolution builds for its
+#: A bare ``Cases`` stands under the ``NamedExpression`` node resolution builds for its
 #: entry and nowhere else, so the arm that would print one in place is the
 #: type's closure rather than a case. The absent objective is the arm a
 #: *different* model takes — a file declares at most one — and

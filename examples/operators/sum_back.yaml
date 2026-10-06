@@ -8,7 +8,7 @@ description: >-
 
 dimensions:
   unit: { dtype: str }
-  hour: { dtype: int }
+  hour: { dtype: int, ordered: true }
 
 parameters:
   min_up: { dims: [unit], dtype: int }

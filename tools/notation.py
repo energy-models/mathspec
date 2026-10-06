@@ -51,7 +51,7 @@ BEGIN, END = '<!-- notation:begin -->', '<!-- notation:end -->'
 #: and ``parameters`` are absent on purpose: they declare no equation, and what
 #: they print is the legend, which the page shows once rather than a row at a
 #: time.
-BLOCKS = ('objective', 'constraints', 'expressions', 'variables', 'piecewise', 'sos', 'assumptions')
+BLOCKS = ('objective', 'constraints', 'expressions', 'masks', 'variables', 'piecewise', 'sos', 'assumptions')
 
 #: The page's sections in the order of the language reference, and in each the
 #: fixture's declarations under the construct they show. The declaration name
@@ -83,9 +83,9 @@ FAMILIES: dict[str, dict[str, str]] = {
     'Relations': {
         'balance': 'Sum through a relation',
         'total': 'Sum over every dimension',
-        'pullback': '`at` through a relation',
+        'lookup': '`at` through a relation',
         'grouped_once': 'Sum into two value columns',
-        'pulled_back_once': '`at` through two value columns',
+        'looked_up_once': '`at` through two value columns',
         'within_bus': 'Shift within one value column',
         'relational': 'Sum through a bare relation',
         'connected': 'Bare relation as a condition',
@@ -93,7 +93,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         'zonal': 'Sum through a two-key map',
         'zonal_history': 'Sum over the other key of a two-key map',
         'zonal_membership': 'Sum between the two keys of a map',
-        'zonal_pullback': '`at` through a two-key map',
+        'zonal_lookup': '`at` through a two-key map',
     },
     'Arithmetic and literals': {
         'arithmetic': 'Signs, division and number literals',
@@ -113,6 +113,11 @@ FAMILIES: dict[str, dict[str, str]] = {
         'capped': 'Named expression in a condition',
         'lcoe': 'Reported expression',
         'marginal_price': 'Dual of a constraint',
+    },
+    'Named masks': {
+        'dispatchable': 'Named mask',
+        'priced_dispatch': 'Mask that reads a mask',
+        'masked': 'Mask in a condition',
     },
     'Shifts': {
         'ramp': 'Cyclic and acyclic shift',
@@ -154,7 +159,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         'redundant': 'Constant true inside a condition',
         'never': 'Constant false condition',
         'margin': 'Comparison of two expressions',
-        'ramped': 'Shift and pullback in a condition',
+        'ramped': 'Shift and lookup in a condition',
         'covered': 'Reduction in a scalar condition',
         'counted': 'Count over a dimension',
         'counted_here': 'Count along a dimension of the frame',

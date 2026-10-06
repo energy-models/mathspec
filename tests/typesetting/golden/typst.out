@@ -55,13 +55,17 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $italic("marginal_price")$: `marginal_price` over $cal(T) times cal(B)$
 / $upright("startup_cost")$: `startup_cost` over $cal(T) times cal(G)$ --- what starting a unit in this snapshot costs, which the horizon's edge changes
 
+== Masks
+/ $upright("dispatchable")$: `dispatchable` over $cal(G)$ --- a unit that dispatches and cannot be turned down
+/ $upright("priced_dispatch")$: `priced_dispatch` over $cal(G)$
+
 Upright is what the data supplies --- a parameter such as $upright("p")^(upright("max"))$, a coordinate map, a label --- and italic is what the solver chooses, such as $p$. An index is italic too, being what a quantifier chooses, and a set is script.
 
 $t minus.o k$ denotes cyclic translation: index $t-k$ taken modulo the size of the dimension (`roll`). Plain $t-k$ (`shift`) has no wraparound --- terms translated past the edge are simply absent.
 
 $t minus.square_(v) k$ denotes translation with $v$ standing where index $t-k$ leaves the dimension (`shift(edge=v)`), so the row at that boundary is built and carries $v$ rather than being dropped.
 
-$t minus.o^(upright("relation")(t)) k$ denotes a translation counted inside the group a relation puts $t$ in (`shift(by=relation)`), so a term never crosses out of its own group. The two modifiers take different slots --- the group above, the fill below --- so $t minus.square_(v)^(upright("relation")(t)) k$ is both at once.
+$t minus.o^(upright("relation")(t)) k$ denotes a translation counted inside the group a relation puts $t$ in (`shift(within=relation[c])`), so a term never crosses out of its own group. The two modifiers take different slots --- the group above, the fill below --- so $t minus.square_(v)^(upright("relation")(t)) k$ is both at once.
 
 $upright("pos")(t)$ denotes where index $t$ sits along its dimension's own order --- the order `shift` steps along, not the order labels sort in --- counted from $0$. The index itself stays the coordinate, so $t$ compares against labels and $upright("pos")(t)$ against positions.
 
@@ -92,9 +96,9 @@ $ upright("budgeted") & italic("spend")_(t) & <= upright("budget") & forall t in
   upright("window") & sum_(t' in cal(T) colon 0 <= t - t' < 3) italic("on")_(t',g) & <= italic("units")_(g) & forall t in cal(T), g in cal(G) \
   upright("history") & sum_(t' in cal(T) colon 0 <= t minus.o t' < upright("min_up")) italic("on")_(t',g) & <= italic("units")_(g) & forall t in cal(T), g in cal(G) \
   upright("seasonal_window") & sum_(t' in cal(T) colon 0 <= t -^(upright("season_of")(t)) t' < 3) italic("on")_(t',g) & <= italic("units")_(g) & forall t in cal(T), g in cal(G) \
-  upright("pullback") & italic("spill")_(t) & <= upright("zone_cap")_(upright("zone_of")(b)) & forall t in cal(T), b in cal(B) \
+  upright("lookup") & italic("spill")_(t) & <= upright("zone_cap")_(upright("zone_of")(b)) & forall t in cal(T), b in cal(B) \
   upright("grouped_once") & sum_(g in cal(G) colon upright("gen_bt.bus")(g) = b and upright("gen_bt.technology")(g) = e) p_(t,g) & <= upright("tech_cap")_(b,e) & forall t in cal(T), b in cal(B), e in cal(E) \
-  upright("pulled_back_once") & italic("units")_(g) & <= upright("tech_cap")_(upright("gen_bt.bus")(g),upright("gen_bt.technology")(g)) & forall g in cal(G) \
+  upright("looked_up_once") & italic("units")_(g) & <= upright("tech_cap")_(upright("gen_bt.bus")(g),upright("gen_bt.technology")(g)) & forall g in cal(G) \
   upright("within_bus") & italic("units")_(g) & <= italic("units")_(g minus.square_(0)^(upright("gen_bt.bus")(g)) 1) & forall g in cal(G) colon upright("pos")_((upright("gen_bt.bus")(g), upright("gen_bt.technology")(g)))(g) = 0 \
   upright("relational") & sum_(g in cal(G) colon (g, b) in upright("connection")) p_(t,g) & <= upright("load")_(t,b) & forall t in cal(T), b in cal(B) \
   upright("connected") & p_(t,g) & <= upright("load")_(t,b) & forall t in cal(T), g in cal(G), b in cal(B) colon (g, b) in upright("connection") \
@@ -102,7 +106,7 @@ $ upright("budgeted") & italic("spend")_(t) & <= upright("budget") & forall t in
   upright("zonal") & sum_(g in cal(G) colon upright("gen_zone")(g, t) = z) p_(t,g) & <= upright("zone_cap")_(z) & forall t in cal(T), z in cal(Z) \
   upright("zonal_history") & sum_(t in cal(T) colon upright("gen_zone")(g, t) = z) p_(t,g) & <= upright("zone_cap")_(z) & forall g in cal(G), z in cal(Z) \
   upright("zonal_membership") & sum_(g in cal(G) colon upright("gen_zone")(g, t) upright(" is defined")) italic("units")_(g) & <= upright("budget") & forall t in cal(T) \
-  upright("zonal_pullback") & p_(t,g) & <= italic("spill")_(t) dot upright("zone_cap")_(upright("gen_zone")(g, t)) & forall t in cal(T), g in cal(G) colon upright("gen_zone")(g, t) = upright("'north'") and upright("pos")_(upright("gen_zone")(g, t))(g) = 0 \
+  upright("zonal_lookup") & p_(t,g) & <= italic("spill")_(t) dot upright("zone_cap")_(upright("gen_zone")(g, t)) & forall t in cal(T), g in cal(G) colon upright("gen_zone")(g, t) = upright("'north'") and upright("pos")_(upright("gen_zone")(g, t))(g) = 0 \
   upright("arithmetic") & sum_(g in cal(G)) (frac(p_(t,g), 2) - upright("cost")_(g) + 10^(-5) dot p_(t,g) + 2.5 times 10^(-7) dot upright("cost")_(g) + 0.5 dot p_(t,g)) & >= -(sum_(g in cal(G)) p_(t,g)) dot (-3) & forall t in cal(T) \
   upright("total") & sum_(t in cal(T), g in cal(G)) p_(t,g) & <= upright("budget") \
   upright("scalar") & italic("units")_(g) & <= upright("budget") & forall g in cal(G) colon upright("cost")_(g) upright(" is defined") \
@@ -123,6 +127,7 @@ $ upright("budgeted") & italic("spend")_(t) & <= upright("budget") & forall t in
   upright("run_start") & italic("slack")_(t) & <= upright("load")_(t,b) & forall t in cal(T), b in cal(B) colon upright("load")_(t,b) upright(" is defined") and not (upright("load")_(t - 1,b) upright(" is defined")) \
   upright("zoned") & theta_(b) & <= upright("budget") & forall b in cal(B) colon upright("zone_cap")_(upright("zone_of")(b)) upright(" is defined") \
   upright("capped") & p_(t,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) colon upright("spend")^(upright("cap"))_(g) > 0 or not upright("is_flexible")_(g) \
+  upright("masked") & p_(t,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) colon upright("priced_dispatch")_(g) and upright("pos")(t) > 0 \
   upright("fuel_curve") & (p_(t,g), italic("fuel")_(t,g), italic("heat")_(t,g)) & in italic("on")_(t,g) dot upright("pwl")_(a in cal(A))(upright("bp_x")_(g,a), upright("bp_y")_(g,a), upright("bp_heat")_(g,a)) & forall t in cal(T), g in cal(G) \
   upright("cost_curve") & italic("op_cost")_(t,g) & >= cases(italic("warm")_(t,g) & upright("if ") upright("is_flexible")_(g), 1 & upright("otherwise")) dot upright("pwl")_(a in cal(A) colon upright("bp_run")_(g,a))(upright("bp_x")_(g,a), upright("bp_y")_(g,a))(p_(t,g)) & forall t in cal(T), g in cal(G) \
   upright("hull_curve") & (p_(t,g), italic("fuel")_(t,g)) & in upright("conv")_(a in cal(A))(upright("bp_x")_(g,a), upright("bp_heat")_(g,a)) & forall t in cal(T), g in cal(G) \
@@ -138,6 +143,11 @@ $ upright("spend_cap") & upright("spend")^(upright("cap"))_(g) & = upright("cost
   upright("net") & italic("net")_(t) & = -italic("spill")_(t) + italic("slack")_(t) & forall t in cal(T) \
   upright("marginal_price") & italic("marginal_price")_(t,b) & = lambda_(upright("balance"),t,b) & forall t in cal(T), b in cal(B) \
   upright("startup_cost") & upright("startup_cost")_(t,g) & = cases(upright("cost")_(g) & upright("if ") upright("pos")(t) = 0, upright("cost")_(g) dot 2 & upright("if ") upright("pos")(t) > 0 and upright("season_of")(t) = upright("'winter'"), 0 & upright("otherwise")) & forall t in cal(T), g in cal(G) $
+
+== Masks
+#set math.equation(numbering: "(1)")
+$ upright("dispatchable") & upright("dispatchable")_(g) & arrow.l.r.double.long upright("p")^(upright("max"))_(g) > 0 and not upright("is_flexible")_(g) & forall g in cal(G) \
+  upright("priced_dispatch") & upright("priced_dispatch")_(g) & arrow.l.r.double.long upright("dispatchable")_(g) and upright("spend")^(upright("cap"))_(g) > 0 & forall g in cal(G) $
 
 == Variable domains
 #set math.equation(numbering: "(1)")

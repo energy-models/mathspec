@@ -13,6 +13,23 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - docs(examples): the GEMS basic models library is written as one fragment per GEMS model ([#819](https://github.com/energy-models/mathspec/pull/819))
+- refactor(program)!: the node a use of a named expression stands as is `NamedExpression`, beside `NamedMask`, and `Named` is gone ([#822](https://github.com/energy-models/mathspec/pull/822))
+- docs(pypsa): the pypsa spec names its repeated row conditions as masks, and its topic files read them under `given: masks:` ([#825](https://github.com/energy-models/mathspec/pull/825))
+- feat(language): a where predicate is named once under `masks:`, and another file reads it under `given: masks:` ([#821](https://github.com/energy-models/mathspec/pull/821))
+- feat(language)!: a construct that reads the order of a dimension needs the dimension declared ordered ([#793](https://github.com/energy-models/mathspec/pull/793))
+- docs(pypsa): the pypsa reference targets master at 51986084, where the eight rungs that diverged now match ([#844](https://github.com/energy-models/mathspec/pull/844))
+- feat(language)!: a call names the columns of a relation as relation[column], and a sum through a relation is a sum over the axes its join opens ([#664](https://github.com/energy-models/mathspec/pull/664))
+- docs(pypsa): the linearized unit commitment is a patch over pypsa.yaml, and relaxes a committable link and process too ([#835](https://github.com/energy-models/mathspec/pull/835))
+- docs(pypsa): the outage factors of a security-constrained run come from each investment period's own branches ([#834](https://github.com/energy-models/mathspec/pull/834))
+- docs(pypsa): the pypsa page lists six more refusals and eight data-prep steps, and a capital cost says where fom_cost and overnight_cost enter ([#816](https://github.com/energy-models/mathspec/pull/816))
+- docs(pypsa): a committable unit built in a later period starts from off, and the big M follows pypsa for an infinite build cap ([#817](https://github.com/energy-models/mathspec/pull/817))
+- docs(pypsa): a line, a transformer, a storage unit and a store may be built in whole modules, and a unit that is not active counts no modules ([#815](https://github.com/energy-models/mathspec/pull/815))
+- docs(pypsa): the cycle rows read each investment period's own cycle basis ([#814](https://github.com/energy-models/mathspec/pull/814))
+- docs(pypsa): a start-up or shut-down cost may change from snapshot to snapshot, as in pypsa master ([#807](https://github.com/energy-models/mathspec/pull/807))
+- docs(pypsa): a line or transformer limits its voltage angle difference, as in pypsa master ([#808](https://github.com/energy-models/mathspec/pull/808))
+- docs(pypsa): the pypsa line references point at pypsa master ([#806](https://github.com/energy-models/mathspec/pull/806))
+- docs(pypsa): a fixed modular committable unit gets only its per-module commitment rows, as in pypsa master ([#787](https://github.com/energy-models/mathspec/pull/787))
+- docs(pypsa): the pypsa references are recorded against pypsa master ([#786](https://github.com/energy-models/mathspec/pull/786))
 
 ## 0.2.1 (2026-10-01)
 

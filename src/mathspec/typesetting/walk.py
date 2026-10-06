@@ -25,15 +25,17 @@ from mathspec.program import (
     CountComparison,
     DimensionComparison,
     DimensionPosition,
-    Direction,
     Divide,
     Dual,
     Expression,
     ExpressionComparison,
-    GroupSum,
+    Join,
+    JoinColumns,
+    JoinedPredicate,
     Mask,
     Multiply,
-    Named,
+    NamedExpression,
+    NamedMask,
     Negate,
     Not,
     Or,
@@ -44,8 +46,6 @@ from mathspec.program import (
     Power,
     Predicate,
     PredicateOperator,
-    Pullback,
-    PulledBackPredicate,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -152,8 +152,8 @@ class _Context:
 
     walk: Walk
     offsets: dict[str, tuple[_Step, ...]] = field(default_factory=dict)
-    #: dim -> the rendered subscript that replaces its index, as ``at`` re-indexes a leaf.
-    pullbacks: dict[str, str] = field(default_factory=dict)
+    #: dim -> the rendered subscript that replaces its index, as ``at`` looks a leaf up through a relation.
+    lookups: dict[str, str] = field(default_factory=dict)
     #: Every dimension whose index is in use here — the frame, then one entry
     #: per reduction entered — so a reduction over one takes a fresh dummy.
     bound: tuple[str, ...] = ()
@@ -162,32 +162,32 @@ class _Context:
         steps = self.offsets.get(dim, ())
         merged = steps[-1].merged(step) if steps else None
         steps = (*steps[:-1], merged) if merged is not None else (*steps, step)
-        return _Context(self.walk, {**self.offsets, dim: steps}, self.pullbacks, self.bound)
+        return _Context(self.walk, {**self.offsets, dim: steps}, self.lookups, self.bound)
 
-    def pulled_back(self, dim: str, rendered: str) -> _Context:
-        return _Context(self.walk, self.offsets, {**self.pullbacks, dim: rendered}, self.bound)
+    def looked_up(self, dim: str, rendered: str) -> _Context:
+        return _Context(self.walk, self.offsets, {**self.lookups, dim: rendered}, self.bound)
 
     def reducing(self, dim: str) -> tuple[str, _Context]:
         """A dummy index for a reduction over *dim*, and the context its body reads under.
 
         The plain index where nothing outside the reduction uses it; primed
-        once per enclosing use of the same dimension, so ``sum(q, by=bus_of)``
+        once per enclosing use of the same dimension, so ``sum(q, over=generator, by=bus_of[bus])``
         under ``∀ g`` sums over ``g'`` and its condition can still name ``g``.
         """
         primes = "'" * self.bound.count(dim)
         dummy = f'{self.walk.symbols.index[dim]}{primes}'
-        body = _Context(self.walk, self.offsets, {**self.pullbacks, dim: dummy}, (*self.bound, dim))
+        body = _Context(self.walk, self.offsets, {**self.lookups, dim: dummy}, (*self.bound, dim))
         return dummy, body
 
     def subscript(self, dim: str) -> str:
-        """The index for *dim* here: its pullback if it has one, then every translation.
+        """The index for *dim* here: its lookup if it has one, then every translation.
 
-        A pullback is a base like any other rather than a stopping point.
+        A lookup is a base like any other rather than a stopping point.
         ``at`` and ``shift`` both re-index the leaf and the leaf has one
         subscript, so a reading that showed only whichever ran last dropped the
         other operator out of the equation.
         """
-        text = self.pullbacks.get(dim, self.walk.symbols.index[dim])
+        text = self.lookups.get(dim, self.walk.symbols.index[dim])
         translated = False
         for step in self.offsets.get(dim, ()):
             if step.by == 0:
@@ -319,7 +319,7 @@ class Walk:
 
     def _arithmetic(self, node: Expression, ctx: _Context) -> tuple[str, int]:
         """Render *node*, returning the text and the precedence it binds at."""
-        if isinstance(node, Named):
+        if isinstance(node, NamedExpression):
             if self.inline_expressions and not isinstance(node.body, Cases):
                 return self._arithmetic(node.body, ctx)
             return ctx.indexed(self.symbols.name[node.name], self._frame_of(node.name)), _ATOM
@@ -345,11 +345,8 @@ class Walk:
         if isinstance(node, Sum):
             return self._sum(node, ctx)
 
-        if isinstance(node, GroupSum):
-            return self._group_sum(node, ctx)
-
-        if isinstance(node, Pullback):
-            return self._pullback(node, ctx)
+        if isinstance(node, Join):
+            return self._join(node, ctx)
 
         if isinstance(node, Translate):
             return self._translate(node, ctx)
@@ -412,37 +409,39 @@ class Walk:
 
         [`_binary`][] folds the sign of the result, so a substituted term prints as its body written out.
         """
-        while self.inline_expressions and isinstance(node, Named) and not isinstance(node.body, Cases):
+        while self.inline_expressions and isinstance(node, NamedExpression) and not isinstance(node.body, Cases):
             node = node.body
         return node
 
     def _sum(self, node: Sum, ctx: _Context) -> tuple[str, int]:
-        """A reduction over named dims: one dummy index per dim, in declaration order."""
+        """A reduction over named dims: one dummy index per dim, in declaration order, or the group-by over a join."""
+        if isinstance(node.operand, Join) and node.operand.columns.axes:
+            return self._grouped_sum(node.operand, ctx)
         memberships = []
         inner = ctx
-        for d in self._sorted(frozenset(node.over)):
+        for d in self._sorted(frozenset(axis.dimension for axis in node.over)):
             dummy, inner = inner.reducing(d)
             memberships.append(self._membership(d, dummy))
         domain = self.format.joined(memberships, '')
         return self.format.summation(domain, self._reduction_body(node.operand, inner)), _PRECEDENCE['+']
 
-    def _group_sum(self, node: GroupSum, ctx: _Context) -> tuple[str, int]:
-        """A sum through a relation: a dummy per consumed dim, and the row it joins on as the domain's condition."""
-        direction = node.direction
+    def _grouped_sum(self, join: Join, ctx: _Context) -> tuple[str, int]:
+        """A sum over the axes a join opens: a dummy per dim it drops, and the row it joins on as the domain's condition."""
+        columns = join.columns
         dummies: dict[str, str] = {}
         inner = ctx
-        for d in direction.consumed_dims:
+        for d in columns.dropped_dims:
             dummies[d], inner = inner.reducing(d)
-        conditions = list(self._grouping(direction, dummies, ctx))
+        conditions = list(self._grouping(columns, dummies, ctx))
         domain = (
-            f'{self.format.joined([self._membership(d, dummies[d]) for d in direction.consumed_dims], "")} '
+            f'{self.format.joined([self._membership(d, dummies[d]) for d in columns.dropped_dims], "")} '
             f'{self._op("such_that")} {self.format.joined(conditions, self._op("and"))}'
         )
-        return self.format.summation(domain, self._reduction_body(node.operand, inner)), _PRECEDENCE['+']
+        return self.format.summation(domain, self._reduction_body(join.operand, inner)), _PRECEDENCE['+']
 
-    def _pullback(self, node: Pullback, ctx: _Context) -> tuple[str, int]:
-        """``at`` emits no operator of its own: it re-indexes the operand, so the read shows at the leaves."""
-        return self._arithmetic(node.operand, self._pulled_back(node.direction, ctx))
+    def _join(self, node: Join, ctx: _Context) -> tuple[str, int]:
+        """``at`` emits no operator of its own: it re-indexes the operand, so the lookup shows at the leaves."""
+        return self._arithmetic(node.operand, self._looked_up(node.columns, ctx))
 
     def _translate(self, node: Translate, ctx: _Context) -> tuple[str, int]:
         """``shift`` emits no operator of its own: it re-indexes the operand, so the translation shows at the leaves.
@@ -467,33 +466,33 @@ class Walk:
         body = self._reduction_body(node.operand, inner)
         return self.format.summation(domain, body), _PRECEDENCE['+']
 
-    def _pulled_back(self, direction: Direction, ctx: _Context) -> _Context:
-        """*ctx* with each dimension *direction* consumes read at the relation, as ``at`` re-indexes a leaf."""
-        at = {r: ctx.subscript(direction.dim(r)) for r in (*direction.produced, *direction.joined)}
-        for read in direction.consumed:
-            ctx = ctx.pulled_back(direction.dim(read), self._relation_read(direction.name, at, read))
+    def _looked_up(self, columns: JoinColumns, ctx: _Context) -> _Context:
+        """*ctx* with each dimension *columns* drops read at the relation, as ``at`` re-indexes a leaf."""
+        at = {r: ctx.subscript(columns.dim(r)) for r in columns.grouped}
+        for read in columns.dropped:
+            ctx = ctx.looked_up(columns.dim(read), self._relation_read(columns.name, at, read))
         return ctx
 
-    def _grouping(self, direction: Direction, dummies: Mapping[str, str], ctx: _Context) -> list[str]:
-        """The conditions a grouped sum's domain carries for one direction: what it fixes of the row it joins on.
+    def _grouping(self, join: JoinColumns, dummies: Mapping[str, str], ctx: _Context) -> list[str]:
+        """The conditions a grouped sum's domain carries for one join: what it fixes of the row it joins on.
 
-        A direction fixes its relation's key either way, so each value column
-        it fixes — consumed or produced, one lookup at the key either way — is
+        A join fixes its relation's key either way, so each value column it
+        names — joined on or grouped by, one read at the key either way — is
         that column read there. One that fixes none of them asks only that the
         row is there, because a value column it does not touch is not read,
         and a bare relation has no value column to read at all.
         """
         at = {
-            **{r: dummies[direction.dim(r)] for r in direction.consumed},
-            **{r: ctx.subscript(direction.dim(r)) for r in (*direction.joined, *direction.produced)},
+            **{r: dummies[join.dim(r)] for r in join.dropped},
+            **{r: ctx.subscript(join.dim(r)) for r in join.grouped},
         }
-        fixed = [r for r in self.program.relations[direction.name].values if r in at]
+        fixed = [r for r in self.program.relations[join.name].values if r in at]
         if not fixed:
-            return [self._relation_row(direction.name, at)]
-        return [f'{self._relation_read(direction.name, at, r)} {self._op("equal")} {at[r]}' for r in fixed]
+            return [self._relation_row(join.name, at)]
+        return [f'{self._relation_read(join.name, at, r)} {self._op("equal")} {at[r]}' for r in fixed]
 
     def _group(self, partition: Partition | None) -> str:
-        """A ``by=`` as the superscript its translation operator carries.
+        """A ``within=`` as the superscript its translation operator carries.
 
         The bare index, not the subscript in force: the group is a property of
         the row being written, and a window whose operand is itself translated
@@ -502,7 +501,7 @@ class Walk:
         if partition is None:
             return ''
         at = {r: self.symbols.index[partition.dim(r)] for r in (partition.along, *partition.joined)}
-        return self._tuple([self._relation_read(partition.name, at, r) for r in partition.group])
+        return self._tuple([self._relation_read(partition.name, at, r) for r in partition.grouped])
 
     def _width(self, width: int | str) -> str:
         """``sum_back``'s ``window=``: a number, or a parameter's own symbol.
@@ -541,9 +540,12 @@ class Walk:
             assert not node.value, 'an always-true mask is folded away or refused before anything prints it'
             return self._op('false'), _ATOM
 
+        if isinstance(node, NamedMask):
+            return ctx.indexed(self.symbols.name[node.name], list(self.program.masks[node.name].dims)), _ATOM
+
         if isinstance(node, ParameterDefined):
             indexed = ctx.indexed(self.symbols.name[node.name], list(node.dims))
-            if self._parameters[node.name].dtype == 'bool':
+            if node.name in self.program.given.masks or self._parameters[node.name].dtype == 'bool':
                 return indexed, _ATOM
             return f'{indexed} {self.format.prose(" is defined")}', comparison
 
@@ -561,8 +563,8 @@ class Walk:
             moved = ctx.translated(node.along, _Step(node.offset, 'plain'))
             return self._where(node.operand.root, moved)
 
-        if isinstance(node, PulledBackPredicate):
-            return self._where(node.operand.root, self._pulled_back(node.direction, ctx))
+        if isinstance(node, JoinedPredicate):
+            return self._where(node.operand.root, self._looked_up(node.columns, ctx))
 
         if isinstance(node, RelationDefined):
             return self._relation_row(node.name, self._frame_key(node.name, ctx)), comparison
@@ -601,7 +603,7 @@ class Walk:
             grouping = (
                 None
                 if node.partition is None
-                else self._tuple([self._value_read(node.partition.name, c, ctx) for c in node.partition.group])
+                else self._tuple([self._value_read(node.partition.name, c, ctx) for c in node.partition.grouped])
             )
             left = self._position(ctx.subscript(node.name), grouping)
             right = self._ordinal(node.name, node.position, grouping)
@@ -666,6 +668,7 @@ class Walk:
             ('Objective', self._objective()),
             ('Subject to', self._constraints()),
             ('Definitions', self._definitions()),
+            ('Masks', [self.mask(name) for name in self.program.masks]),
             ('Variable domains', self._variables()),
             ('Assumptions', self._assumptions()),
         ]
@@ -751,21 +754,38 @@ class Walk:
             condition=self._quantifier(frame, ''),
         )
 
+    def mask(self, name: str) -> Line:
+        """The line defining one mask, ``symbol ⟺ predicate`` over its frame.
+
+        A mask is a predicate rather than a value, so it is defined with ⟺
+        where an expression is defined with =; every use prints the symbol.
+        """
+        entry = self.program.masks[name]
+        frame = list(entry.dims)
+        ctx = self._context(frame)
+        return Line(
+            label=name,
+            left=ctx.indexed(self.symbols.name[name], frame),
+            right=f'{self._op("iff")} {self._predicate(entry.where.root, ctx)}',
+            condition=self._quantifier(frame, ''),
+        )
+
     def line(self, name: str) -> Line:
-        """The one line *name* prints as: a named expression, a constraint, an assumption, a curve, or a variable's domain.
+        """The one line *name* prints as: a named expression, a mask, a constraint, an assumption, a curve, or a variable's domain.
 
         An assumption is looked up where the document prints it from, so a
         condition a curve's method states is a line a reader can ask for
         before the curve is written out.
 
         Raises:
-            SchemaError: *name* is declared as none of the five, or as two — a
+            SchemaError: *name* is declared as none of the six, or as two — a
                 constraint may share a variable's name, and one line prints
                 one of them.
         """
         program = self.program
         kinds = {
             'named expression': (program.expressions, self.definition),
+            'mask': (program.masks, self.mask),
             'constraint': (program.constraints, self._constraint),
             'assumption': (program.assumptions, self._assumption),
             'curve': (program.piecewise, self._piecewise),
@@ -775,7 +795,7 @@ class Walk:
         if not found:
             everything = {n for group, _ in kinds.values() for n in group}
             msg = (
-                f"'{name}' is not a named expression, constraint, assumption, curve or variable. "
+                f"'{name}' is not a named expression, mask, constraint, assumption, curve or variable. "
                 f'{did_you_mean(name, everything)}'
             )
             raise SchemaError(msg)

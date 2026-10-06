@@ -38,7 +38,7 @@ SURFACE = {
     'relations': {'port_bus': {'key': 'port', 'values': 'bus'}},
     'variables': {'flow': {'dims': ['snapshot', 'port']}},
     'constraints': {
-        'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, by=port_bus, over=port, into=bus) == 0'}
+        'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, over=port, by=port_bus[bus]) == 0'}
     },
 }
 
@@ -51,7 +51,7 @@ SUPPLY = {
     'constraints': {
         'gen_injects': {
             'dims': ['snapshot', 'generator'],
-            'expression': 'at(flow, by=gen_port, over=port, into=generator) == gen_p',
+            'expression': 'at(flow, by=gen_port[port]) == gen_p',
         }
     },
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p * gen_cost)'},
@@ -65,7 +65,7 @@ DEMAND = {
     'constraints': {
         'dem_withdraws': {
             'dims': ['snapshot', 'demand'],
-            'expression': 'at(flow, by=dem_port, over=port, into=demand) == -dem_load',
+            'expression': 'at(flow, by=dem_port[port]) == -dem_load',
         }
     },
 }
@@ -125,7 +125,7 @@ def test_the_balance_does_not_grow_when_a_component_type_is_added():
         'constraints': {
             'st_injects': {
                 'dims': ['snapshot', 'store'],
-                'expression': 'at(flow, by=st_port, over=port, into=store) == st_p',
+                'expression': 'at(flow, by=st_port[port]) == st_p',
             }
         },
     }
@@ -204,6 +204,23 @@ def test_a_peer_s_description_is_carried_where_the_first_one_given_has_none():
     assert merge([DEMAND, supply]).dimensions['snapshot'].description == 'an hour', (
         'the first fragment says nothing, so the wording of the second is carried'
     )
+
+
+def _ordered(fragment: dict[str, object]) -> dict[str, object]:
+    """*fragment* with ``snapshot`` declared ordered."""
+    return {**fragment, 'dimensions': {**fragment['dimensions'], 'snapshot': {'dtype': 'int', 'ordered': True}}}
+
+
+@pytest.mark.parametrize(
+    'fragments',
+    [
+        pytest.param([SUPPLY, _ordered(DEMAND)], id='the-second-says-ordered'),
+        pytest.param([_ordered(SUPPLY), DEMAND], id='the-first-says-ordered'),
+    ],
+)
+def test_a_dimension_one_fragment_declares_ordered_is_ordered_in_the_composition(fragments):
+    """Each fragment loads alone, and two that differed only in ``ordered`` were refused as saying different things."""
+    assert merge(fragments).dimensions['snapshot'].ordered, 'ordered is a claim one fragment adds to the space'
 
 
 @pytest.mark.parametrize(
@@ -489,11 +506,31 @@ def test_a_later_patch_is_laid_on_what_the_earlier_ones_make(patches, field, val
 def test_a_patch_adds_a_dimension_and_may_restate_one_it_shares():
     laid = override(
         DISPATCH_MODEL,
-        [{'dimensions': {'snapshot': {'dtype': 'int'}, 'investment_period': {'dtype': 'int'}}}],
+        [{'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'investment_period': {'dtype': 'int'}}}],
     )
     assert sorted(laid.dimensions) == ['generator', 'investment_period', 'snapshot'], (
         'the dimension the patch adds joins the two the base declares, and the restated one is not doubled'
     )
+
+
+@pytest.mark.parametrize(
+    ('dimension', 'restated', 'ordered'),
+    [
+        pytest.param('generator', {'dtype': 'str', 'ordered': False}, False, id='false-written-out'),
+        pytest.param('generator', {'dtype': 'str', 'ordered': True}, True, id='widened-to-ordered'),
+        pytest.param('snapshot', {'dtype': 'int'}, True, id='ordered-left-out'),
+    ],
+)
+def test_a_patch_restates_a_dimension_as_the_schema_reads_it(dimension, restated, ordered):
+    """A written ``ordered: false`` differed from the omitted one, and a patch could not add the claim."""
+    laid = override(DISPATCH_MODEL, [{'dimensions': {dimension: restated}}])
+    assert laid.dimensions[dimension].ordered is ordered
+
+
+def test_a_patch_that_withdraws_ordered_is_refused():
+    with pytest.raises(LanguageError, match=r"says the dimension 'snapshot' is not ordered") as raised:
+        override(DISPATCH_MODEL, [{'dimensions': {'snapshot': {'dtype': 'int', 'ordered': False}}}])
+    assert 'leave `ordered` out of the patch' in str(raised.value), 'the refusal names the rewrite'
 
 
 @pytest.mark.parametrize(

@@ -14,18 +14,26 @@ import importlib
 import math
 import re
 import sys
+from typing import TYPE_CHECKING
 
 import pytest
 
-from mathspec import to_spec
+from mathspec import override, to_spec
+from mathspec.exclusivity import Subject, _evaluate, _Grid, _subject_of
 from tools import gallery
-from tools.gallery import DECLARED, RECORDED, REFERENCES, _names_for, _stands_for
+from tools.gallery import DECLARED, PATCHED, RECORDED, REFERENCES, _names_for, _stands_for
+
+if TYPE_CHECKING:
+    from mathspec.program import Mask
 
 RUNGS = sorted(path.stem for path in REFERENCES.glob('rung_*.py'))
 SCRIPT = REFERENCES / 'reference.py'
-PAGE_TEXTS = [(gallery.PAGES / page).read_text() for page in DECLARED]
+PAGE_TEXTS = [(gallery.PAGES / page).read_text() for page in [*DECLARED, *PATCHED]]
 
-SPECS = {page: to_spec(path) for page, path in DECLARED.items()}
+SPECS = {
+    **{page: to_spec(path) for page, path in DECLARED.items()},
+    **{page: override(base, [patch]) for page, (base, patch) in PATCHED.items()},
+}
 MODELS = list(SPECS.values())
 BASE = SPECS['pypsa.md']
 ROWS_DECLARED = {
@@ -85,9 +93,10 @@ def test_every_rung_script_has_a_recorded_solve():
 
 @pytest.mark.parametrize('stem', sorted(RECORDED), ids=sorted(RECORDED))
 def test_the_record_is_from_the_pinned_pypsa(stem: str):
-    pinned = re.search(r'"pypsa==([^"]+)"', SCRIPT.read_text())
-    assert pinned is not None, 'reference.py pins pypsa in its PEP 723 block'
-    assert RECORDED[stem]['pypsa'] == pinned.group(1), (
+    pinned = re.search(r'"pypsa @ git\+https://github\.com/PyPSA/PyPSA@([0-9a-f]{40})"', SCRIPT.read_text())
+    assert pinned is not None, 'reference.py pins pypsa to a commit in its PEP 723 block'
+    built = re.search(r'\+g([0-9a-f]+)$', RECORDED[stem]['pypsa'])
+    assert built is not None and pinned.group(1).startswith(built.group(1)), (
         'the recorded solve is from another pypsa than the script pins — re-run it in the pinned environment'
     )
 
@@ -129,9 +138,9 @@ def _stated(name: str, row: str) -> bool:
     return re.fullmatch(re.sub(r'\\\{[a-z]\\\}', '.+', re.escape(name)), row) is not None
 
 
-@pytest.mark.parametrize('page', [page for page in DECLARED if page != 'pypsa.md'])
-def test_a_file_of_its_own_shares_its_declarations_with_the_base(page: str):
-    """A keyword file restates the base surface; a shared name keeps its PyPSA name and its dtype, or it has drifted."""
+@pytest.mark.parametrize('page', sorted(PATCHED))
+def test_a_patch_keeps_the_pypsa_name_of_what_it_changes(page: str):
+    """A patch rewrites declarations of the base; a rewritten name keeps its PyPSA name and its dtype, or it has drifted."""
     own = SPECS[page]
     drifted = []
     for section in ('parameters', 'relations', 'variables', 'constraints'):
@@ -153,6 +162,63 @@ def test_pypsa_builds_no_row_the_files_do_not_declare():
 def test_every_declared_row_is_built_by_some_reference():
     unbuilt = {name for name in ROWS_DECLARED - GC_TYPES if not any(_stated(name, row) for row in RECORDED_ROWS)}
     assert not unbuilt, f'no reference network builds these declared rows — extend a fixture: {sorted(unbuilt)}'
+
+
+def _admits(mask: Mask, component: str, unit: dict[str, bool | float]) -> bool:
+    """Whether a mask over one component's own parameters holds for a unit with those values, read by the exclusivity check."""
+    cell = {Subject('param', f'{component}_{name}'): value for name, value in unit.items()}
+    return _evaluate(mask.root, cell, _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}))
+
+
+@pytest.mark.parametrize('component', ['Generator', 'Link', 'Process'])
+def test_a_fixed_modular_committable_unit_gets_only_its_per_module_commitment_rows(component: str):
+    """PyPSA/PyPSA#1901: the file built `com-p-*` and `maint-status-*` for rung 8's `array`, which PyPSA master does not.
+
+    Those rows scale `p_nom` by a status that counts modules, which held rungs
+    25 and 26 above PyPSA's objective.
+    """
+    unit = {'committable': True, 'p_nom_extendable': False, 'p_nom_mod': 5.0, 'maintainable': True, 'active': True}
+    families = ('com_p_', 'com_mod_p_', 'maint_status_', 'maint_modstatus_')
+    admitted = {
+        name.removeprefix(f'{component}_')
+        for name, block in BASE.program.constraints.items()
+        if name.removeprefix(f'{component}_').startswith(families) and _admits(block.where, component, unit)
+    }
+    assert admitted == {
+        'com_mod_p_lower',
+        'com_mod_p_upper',
+        'maint_modstatus_le_status',
+        'maint_modstatus_le_maint',
+        'maint_modstatus_lb',
+    }, 'a fixed modular committable unit gets the per-module rows and no whole-unit ones'
+
+
+@pytest.mark.parametrize(
+    ('component', 'attr'),
+    [
+        ('Generator', 'p_nom'),
+        ('Link', 'p_nom'),
+        ('Process', 'p_nom'),
+        ('Line', 's_nom'),
+        ('Transformer', 's_nom'),
+        ('StorageUnit', 'p_nom'),
+        ('Store', 'e_nom'),
+    ],
+)
+def test_a_modular_build_counts_modules_only_where_the_unit_stands(component: str, attr: str):
+    """PyPSA builds `{c}-n_mod` and `{c}-{attr}_modularity` over `c.active_assets` alone (`variables.py:379`, `constraints.py:1849`).
+
+    The file built both for a Generator, Link or Process that is not active,
+    and neither for a Line, Transformer, StorageUnit or Store. Rung 63.
+    """
+    stands = (
+        f'{component}_{attr}_extendable AND {component}_{attr}_mod > 0 AND count({component}_active, over=snapshot) > 0'
+    )
+    column = BASE.variables[f'{component}_n_mod'].where
+    row = BASE.constraints[f'{component}_{attr}_modularity'].where
+    assert column == row == stands, (
+        'the module count and its row stand for an extendable modular unit that stands in at least one snapshot'
+    )
 
 
 def test_the_spine_weightings_are_generic():

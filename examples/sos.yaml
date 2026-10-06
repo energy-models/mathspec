@@ -16,6 +16,7 @@ dimensions:
   bp:
     description: breakpoints of the cost curve
     dtype: int
+    ordered: true
 
 parameters:
   capacity:
