@@ -75,6 +75,7 @@ variables:
     domain: continuous
     absence: undefined
     description: '`Generator-p` — what a generator produces in a snapshot'
+objective: {sense: minimize, expression: total_cost}
 constraints:
   Bus_nodal_balance:
     dims: [snapshot, bus]
@@ -90,7 +91,6 @@ constraints:
     expression: at(Port_p, by=Load_port[port]) == -Load_p_set
     description: 'what a load takes is what its port withdraws. No PyPSA row stands for this: PyPSA writes
       the load into the balance instead'
-objective: {sense: minimize, expression: total_cost}
 expressions:
   Generator_cost: sum(Generator_p * Generator_marginal_cost)
   total_cost:

@@ -907,10 +907,10 @@ class Spec(_StrictBlock):
     relations: dict[str, RelationBlock] = {}
     parameters: dict[str, ParameterBlock] = {}
     variables: dict[str, VariableBlock] = {}
+    objective: ObjectiveBlock | None = None
     constraints: dict[str, ConstraintBlock] = {}
     sos: dict[str, SosBlock] = {}
     piecewise: dict[str, PiecewiseBlock] = {}
-    objective: ObjectiveBlock | None = None
     macros: dict[str, MacroBlock] = {}
     expressions: dict[str, ExpressionBlock] = {}
     masks: dict[str, MaskBlock] = {}
