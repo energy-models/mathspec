@@ -66,6 +66,7 @@ parameters:
   StorageUnit_p_nom_set:
     description: a given nominal power for an extendable storage unit; one without a value has no row here
     dims: [storage_unit]
+    missing: neutral
   StorageUnit_p_nom:
     description: nominal power
     dims: [scenario, storage_unit]
@@ -76,6 +77,7 @@ parameters:
   StorageUnit_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [storage_unit]
+    missing: neutral
   StorageUnit_p_min_pu:
     description: most storing, per unit of nominal power and negated
     dims: [scenario, snapshot, storage_unit]
@@ -155,27 +157,34 @@ parameters:
   StorageUnit_p_set:
     description: a given net dispatch schedule; a unit without one has no row here
     dims: [scenario, snapshot, storage_unit]
+    missing: neutral
   StorageUnit_p_dispatch_set:
     description: a given dispatch schedule; a unit without one has no row here
     dims: [scenario, snapshot, storage_unit]
+    missing: neutral
   StorageUnit_p_store_set:
     description: a given charging schedule; a unit without one has no row here
     dims: [scenario, snapshot, storage_unit]
+    missing: neutral
   StorageUnit_state_of_charge_set:
     description: a given charge schedule; a unit without one has no row here
     dims: [scenario, snapshot, storage_unit]
+    missing: neutral
   StorageUnit_primary_energy_weight:
     description: the constrained attribute per unit of charge depleted — data prep; an unweighted unit has no row
     dims: [scenario, global_constraint, storage_unit]
+    missing: neutral
   StorageUnit_operational_limit_weight:
     description: one where the storage unit is in the row's set — data prep; one outside it has no row
     dims: [scenario, global_constraint, storage_unit]
+    missing: neutral
   StorageUnit_tech_capacity_weight:
     description: >-
       one where the storage unit is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, storage_unit]
+    missing: neutral
 
 variables:
   StorageUnit_p_dispatch:
@@ -197,7 +206,7 @@ variables:
       the variable rather than as rows
     dims: [scenario, snapshot, storage_unit]
     where: "StorageUnit_inflow > 0 AND StorageUnit_active"
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: StorageUnit_inflow
@@ -225,7 +234,6 @@ given:
     snapshot_weightings_stores: { dims: [snapshot] }
     GlobalConstraint_counts_snapshot: { dims: [scenario, global_constraint, snapshot], dtype: bool }
   expressions:
-    GlobalConstraint_snapshot_closes: { dims: [scenario, global_constraint, snapshot] }
     primary_energy: { dims: [scenario, global_constraint] }
     operational_limit: { dims: [scenario, global_constraint] }
     tech_capacity_expansion: { dims: [global_constraint] }
@@ -271,12 +279,26 @@ expressions:
           AND position(snapshot, within=snapshot_period[period]) == 0
         expression: StorageUnit_state_of_charge_initial
     otherwise: StorageUnit_retention * shift(StorageUnit_state_of_charge, along=snapshot, offset=1)
+  StorageUnit_last_counted_active:
+    description: >-
+      one at the last snapshot a row counts where a unit stands, and zero
+      elsewhere — a unit that retires before the last counted snapshot closes
+      on its last active level, as PyPSA forward-fills the level over the
+      counted snapshots (`global_constraints.py:455-458`)
+    dims: [scenario, global_constraint, snapshot, storage_unit]
+    cases:
+      last:
+        when: >-
+          GlobalConstraint_counts_snapshot AND StorageUnit_active
+          AND NOT shift(GlobalConstraint_counts_snapshot AND StorageUnit_active, along=snapshot, offset=-1)
+        expression: 1
+    otherwise: 0
   StorageUnit_closing_weight:
     description: >-
       what the charge a unit holds at a snapshot counts for in a row as its
       closing level — the years of the period at the last snapshot of each
       counted period where the unit reopens per period, one at the last
-      counted snapshot where it does not, and nothing elsewhere
+      counted snapshot it stands in where it does not, and nothing elsewhere
     dims: [scenario, global_constraint, snapshot, storage_unit]
     cases:
       per_period:
@@ -284,7 +306,7 @@ expressions:
         expression: at(period_weight_years, by=snapshot_period[period])
       carried_over:
         when: NOT StorageUnit_state_of_charge_initial_per_period
-        expression: GlobalConstraint_snapshot_closes
+        expression: StorageUnit_last_counted_active
     otherwise: 0
   StorageUnit_primary_energy:
     expression: >-
@@ -491,9 +513,9 @@ assumptions:
       PyPSA refuses it (`global_constraints.py:648`)
   StorageUnit_marginal_cost_quadratic_without_risk_preference:
     holds: "StorageUnit_marginal_cost_quadratic == 0"
-    where: "CVaR_omega > 0"
+    where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:470-477`). The spec cannot tell no risk preference from
-      one with `omega = 0`, so it refuses only where `omega` is positive
+      (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+      `CVaR_omega` row only where a risk preference is set

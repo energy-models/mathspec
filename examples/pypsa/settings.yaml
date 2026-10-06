@@ -32,8 +32,9 @@ parameters:
     description: PyPSA's `scenario_weightings.weight` — the probability of a future
     dims: [scenario]
   CVaR_omega:
-    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation; zero recovers the risk-neutral model
+    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. With none there are no CVaR variables or rows; with `omega = 0` PyPSA builds them, and the optimum is the risk-neutral one
     dims: []
+    missing: neutral
   period_weight_objective:
     description: >-
       PyPSA's `investment_period_weightings.objective` — what a period's cost
@@ -74,6 +75,7 @@ parameters:
       on a row that names a period without it (`global_constraints.py:364-369`)
     dims: [scenario, global_constraint, snapshot]
     dtype: bool
+    missing: neutral
 
 given:
   expressions:
@@ -138,14 +140,6 @@ expressions:
       counted:
         when: GlobalConstraint_counts_snapshot
         expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
-    otherwise: 0
-  GlobalConstraint_snapshot_closes:
-    description: one at the last snapshot a row counts, and zero elsewhere
-    dims: [scenario, global_constraint, snapshot]
-    cases:
-      last_counted:
-        when: GlobalConstraint_counts_snapshot AND NOT shift(GlobalConstraint_counts_snapshot, along=snapshot, offset=-1)
-        expression: 1
     otherwise: 0
 
 objective:

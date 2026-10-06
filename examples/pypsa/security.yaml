@@ -32,10 +32,12 @@ relations:
     description: the line an outage takes out; an outage of a transformer has no row
     key: outage
     values: line
+    missing: absent
   Outage_transformer:
     description: the transformer an outage takes out; an outage of a line has no row
     key: outage
     values: transformer
+    missing: absent
 
 parameters:
   Line_BODF:
@@ -47,12 +49,14 @@ parameters:
       the outaged line itself. The same in every scenario: PyPSA takes the
       factors of the first scenario (`abstract.py:534`)
     dims: [period, line, outage]
+    missing: neutral
   Transformer_BODF:
     description: >-
       the share of an outaged branch's flow a transformer takes on when that
       branch goes out, as a line's; a row only where the transformer and the
       outage are active in the period and share a sub-network
     dims: [period, transformer, outage]
+    missing: neutral
 
 given:
   parameters:
