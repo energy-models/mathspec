@@ -201,7 +201,7 @@ given:
 constraints:
   gen_injects:
     dims: [snapshot, generator]
-    expression: at(flow, by=gen_port, over=port, into=generator) == gen_p
+    expression: at(flow, by=gen_port[port]) == gen_p
 ```
 
 | Field         |                                                   |                      |
@@ -321,7 +321,7 @@ given:
 expressions:
   generation:
     description: what the fleet puts into a bus
-    expression: sum(gen_p, by=gen_bus, over=generator, into=bus)
+    expression: sum(gen_p, over=generator, by=gen_bus[bus])
     adds_to: injection
 ```
 

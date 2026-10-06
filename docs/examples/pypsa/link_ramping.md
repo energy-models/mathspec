@@ -152,7 +152,7 @@ constraints:
     where: >-
       Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
       AND (Link_ramp_limit_up OR Link_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
       AND Link_active
     expression: >-
       Link_p - Link_previous_p <=
@@ -167,7 +167,7 @@ constraints:
     where: >-
       Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
       AND (Link_ramp_limit_up OR Link_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
       AND Link_active
     expression: >-
       Link_p - Link_previous_p <=
@@ -182,7 +182,7 @@ constraints:
     where: >-
       Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
       AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
       AND Link_active
     expression: >-
       Link_previous_p - Link_p <=
@@ -197,7 +197,7 @@ constraints:
     where: >-
       Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
       AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
       AND Link_active
     expression: >-
       Link_previous_p - Link_p <=
@@ -215,7 +215,7 @@ constraints:
     where: >-
       (Link_ramp_limit_up OR Link_ramp_limit_start_up)
       AND NOT (Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
       AND Link_active
     expression: Link_p - Link_previous_p <= Link_ramp_up_allowance
   Link_p_ramp_limit_down:
@@ -230,7 +230,7 @@ constraints:
     where: >-
       (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
       AND NOT (Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
       AND Link_active
     expression: Link_previous_p - Link_p <= Link_ramp_down_allowance
 

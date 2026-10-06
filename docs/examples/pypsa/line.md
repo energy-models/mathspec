@@ -230,7 +230,7 @@ expressions:
     adds_to: total_cost
   Line_additions:
     expression: >-
-      sum(Line_s_nom_ext * Line_first_active, by=Line_carrier, over=line, into=carrier)
+      sum(Line_s_nom_ext * Line_first_active, over=line, by=Line_carrier[carrier])
     adds_to: Carrier_additions
   Line_s_monitored:
     description: >-
@@ -243,13 +243,13 @@ expressions:
     otherwise: 0
   Line_injection:
     expression: >-
-      -sum(Line_s, by=Line_bus0, over=line, into=bus)
-      + sum(Line_s, by=Line_bus1, over=line, into=bus)
-      - (0.5 * sum(Line_loss, by=Line_bus0, over=line, into=bus))
-      - (0.5 * sum(Line_loss, by=Line_bus1, over=line, into=bus))
+      -sum(Line_s, over=line, by=Line_bus0[bus])
+      + sum(Line_s, over=line, by=Line_bus1[bus])
+      - (0.5 * sum(Line_loss, over=line, by=Line_bus0[bus]))
+      - (0.5 * sum(Line_loss, over=line, by=Line_bus1[bus]))
     adds_to: Bus_injection
   Line_angle_sum:
-    expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period, over=period, into=snapshot), over=line)
+    expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period[period]), over=line)
     adds_to: Cycle_angle_sum
 
 constraints:

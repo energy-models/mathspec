@@ -68,7 +68,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
        total_cost: { dims: [] }
    expressions:
      Generator_injection:
-       expression: sum(Generator_p, by=Generator_bus, over=generator, into=bus)
+       expression: sum(Generator_p, over=generator, by=Generator_bus[bus])
        adds_to: Bus_injection
      Generator_cost:
        expression: sum(Generator_p * Generator_marginal_cost)
@@ -89,7 +89,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
        Bus_injection: { dims: [snapshot, bus] }
    expressions:
      Load_injection:
-       expression: -sum(Load_p_set, by=Load_bus, over=load, into=bus)
+       expression: -sum(Load_p_set, over=load, by=Load_bus[bus])
        adds_to: Bus_injection
    ```
 
@@ -139,7 +139,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
        Bus_injection: { dims: [snapshot, bus] }
    expressions:
      Store_injection:
-       expression: sum(Store_p, by=Store_bus, over=store, into=bus)
+       expression: sum(Store_p, over=store, by=Store_bus[bus])
        adds_to: Bus_injection
    ```
 

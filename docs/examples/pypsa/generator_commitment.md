@@ -149,7 +149,7 @@ expressions:
     otherwise: shift(Generator_status, along=snapshot, offset=1)
   Generator_commitment_opex:
     expression: >-
-      sum(sum(((Generator_status * Generator_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=generator), over=snapshot)
+      sum(sum(((Generator_status * Generator_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
       + sum(sum(Generator_start_up * Generator_start_up_cost, over=generator), over=snapshot)
       + sum(sum(Generator_shut_down * Generator_shut_down_cost, over=generator), over=snapshot)
     adds_to: scenario_opex
