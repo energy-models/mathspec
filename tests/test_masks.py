@@ -17,8 +17,10 @@ from typing import Any
 
 import pytest
 
-from mathspec import FORMATS, LanguageError, advice, merge, override, to_spec, typeset, typeset_declaration
+from mathspec import advice, merge, override, to_spec, typeset, typeset_declaration
+from mathspec.errors import LanguageError
 from mathspec.program import Mask, NamedMask, ParameterDefined, VariableDefined
+from mathspec.typesetting import FORMATS
 from tests.fixtures import SMALL_MODEL, varied
 
 #: A unit stands in a period between its build year and its retirement, and

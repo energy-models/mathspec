@@ -1020,7 +1020,11 @@ _CURVE = {
             id='a-bounded-link-states-one-side-of-the-curve',
         ),
         pytest.param(
-            {'piecewise.curve.points': 'reaches'},
+            {
+                'piecewise.curve.points': 'reaches',
+                'parameters.bp_x.missing': 'neutral',
+                'parameters.bp_y.missing': 'neutral',
+            },
             r'\mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{reaches}_{b}}',
             id='points-narrows-the-breakpoints-to-the-ones-it-admits',
         ),

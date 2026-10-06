@@ -46,7 +46,7 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
 - The spec's `description:` opens the document.
 - A `piecewise:` block prints as one line: the curve it states, over the frame
   it states one curve per coordinate of. To print its rows, print
-  [`spec.expand()`](api.md#mathspec.Spec.expand) or pass `--expand`
+  [`spec.expand()`](spec.md#mathspec.spec.Spec.expand) or pass `--expand`
   ([see an expansion](../howto/see-an-expansion.md)).
 - An [`assumptions:`](language/assumptions.md) entry prints under an
   **Assumptions** heading, last, beside what each curve assumes of its
