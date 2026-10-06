@@ -87,15 +87,15 @@ Each operator is one query shape. In the SQL column, `rest` stands for every key
 column of the operand that the operator does not name, and `x` holds the
 operand's value.
 
-| Operator                              | SQL                                                                                     | polars                                                                                          |
-| ------------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `sum(x, over=d)`                      | `SELECT rest, SUM(value) FROM x GROUP BY rest`                                          | `x.group_by(rest).agg(pl.col('value').sum())`                                                   |
-| `sum(x)`                              | `SELECT SUM(value) FROM x`                                                              | `x.select(pl.col('value').sum())`                                                               |
-| `sum(x, over=d, by=R[c])`             | `SELECT rest, R.c, SUM(value) FROM x JOIN R ON x.d = R.d GROUP BY rest, R.c`            | `x.join(R, on=d).group_by([*rest, c]).agg(pl.col('value').sum())`                               |
-| `at(x, by=R[c])`                      | `SELECT R.key, value FROM R JOIN x ON R.c = x.c`                                        | `R.join(x, on=c)`                                                                               |
-| `shift(x, along=d, offset=n)`         | `LAG(value, n) OVER (PARTITION BY rest ORDER BY d)`, and the first `n` rows are dropped | `pl.col('value').shift(n).over(rest, order_by=d)`, then drop the nulls                          |
-| `shift(…, edge=v)`                    | `LAG(value, n, v) OVER (PARTITION BY rest ORDER BY d)`                                  | `pl.col('value').shift(n, fill_value=v).over(rest, order_by=d)`                                 |
-| `sum_back(x, along=d, window=n)`      | `SUM(value) OVER (PARTITION BY rest ORDER BY d ROWS BETWEEN n - 1 PRECEDING AND CURRENT ROW)` | `pl.col('value').rolling_sum(n, min_samples=1).over(rest, order_by=d)`                    |
+| Operator                         | SQL                                                                                           | polars                                                                 |
+| -------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `sum(x, over=d)`                 | `SELECT rest, SUM(value) FROM x GROUP BY rest`                                                | `x.group_by(rest).agg(pl.col('value').sum())`                          |
+| `sum(x)`                         | `SELECT SUM(value) FROM x`                                                                    | `x.select(pl.col('value').sum())`                                      |
+| `sum(x, over=d, by=R[c])`        | `SELECT rest, R.c, SUM(value) FROM x JOIN R ON x.d = R.d GROUP BY rest, R.c`                  | `x.join(R, on=d).group_by([*rest, c]).agg(pl.col('value').sum())`      |
+| `at(x, by=R[c])`                 | `SELECT R.key, value FROM R JOIN x ON R.c = x.c`                                              | `R.join(x, on=c)`                                                      |
+| `shift(x, along=d, offset=n)`    | `LAG(value, n) OVER (PARTITION BY rest ORDER BY d)`, and the first `n` rows are dropped       | `pl.col('value').shift(n).over(rest, order_by=d)`, then drop the nulls |
+| `shift(…, edge=v)`               | `LAG(value, n, v) OVER (PARTITION BY rest ORDER BY d)`                                        | `pl.col('value').shift(n, fill_value=v).over(rest, order_by=d)`        |
+| `sum_back(x, along=d, window=n)` | `SUM(value) OVER (PARTITION BY rest ORDER BY d ROWS BETWEEN n - 1 PRECEDING AND CURRENT ROW)` | `pl.col('value').rolling_sum(n, min_samples=1).over(rest, order_by=d)` |
 
 The SQL is a reading aid, not a lowering. Four points differ from the literal
 query:
