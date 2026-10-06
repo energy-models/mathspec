@@ -323,70 +323,82 @@ expressions:
       sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), over=storage_unit, by=StorageUnit_bus[bus])
     adds_to: Bus_injection
 
+masks:
+  StorageUnit_fix:
+    description: >-
+      a storage unit with a fixed build that stands in the snapshot's period —
+      PyPSA's `fix` rows
+    where: NOT StorageUnit_p_nom_extendable AND StorageUnit_active
+  StorageUnit_ext:
+    description: >-
+      a storage unit with an extendable build that stands in the snapshot's
+      period — PyPSA's `ext` rows
+    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+
 constraints:
   StorageUnit_fix_p_dispatch_lower:
     description: "`StorageUnit-fix-p_dispatch-lower` — dispatch is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_dispatch >= 0
   StorageUnit_fix_p_dispatch_upper:
     description: "`StorageUnit-fix-p_dispatch-upper` — a fixed unit dispatches at most its nominal power"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_dispatch <= StorageUnit_p_max_pu * StorageUnit_p_nom
   StorageUnit_fix_p_store_lower:
     description: "`StorageUnit-fix-p_store-lower` — storing is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_store >= 0
   StorageUnit_fix_p_store_upper:
     description: >-
       `StorageUnit-fix-p_store-upper` — a fixed unit stores at most its
       nominal power, the minimum-per-unit column carrying that cap negated
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_store <= -StorageUnit_p_min_pu * StorageUnit_p_nom
   StorageUnit_fix_state_of_charge_lower:
     description: "`StorageUnit-fix-state_of_charge-lower` — charge is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_state_of_charge >= 0
   StorageUnit_fix_state_of_charge_upper:
     description: "`StorageUnit-fix-state_of_charge-upper` — a fixed unit holds at most its hours at nominal power"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_state_of_charge <= StorageUnit_max_hours * StorageUnit_p_nom
   StorageUnit_ext_p_dispatch_lower:
     description: "`StorageUnit-ext-p_dispatch-lower` — dispatch is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_dispatch >= 0
   StorageUnit_ext_p_dispatch_upper:
     description: "`StorageUnit-ext-p_dispatch-upper` — an extendable unit dispatches at most the chosen build"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_dispatch <= StorageUnit_p_max_pu * StorageUnit_p_nom_ext
   StorageUnit_ext_p_store_lower:
     description: "`StorageUnit-ext-p_store-lower` — storing is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_store >= 0
   StorageUnit_ext_p_store_upper:
     description: >-
       `StorageUnit-ext-p_store-upper` — an extendable unit stores at most the
       chosen build, the minimum-per-unit column carrying that cap negated
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_store <= -StorageUnit_p_min_pu * StorageUnit_p_nom_ext
   StorageUnit_ext_state_of_charge_lower:
     description: "`StorageUnit-ext-state_of_charge-lower` — charge is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_state_of_charge >= 0
   StorageUnit_ext_state_of_charge_upper:
     description: "`StorageUnit-ext-state_of_charge-upper` — an extendable unit holds at most its hours at the chosen build"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_state_of_charge <= StorageUnit_max_hours * StorageUnit_p_nom_ext
   StorageUnit_ext_p_nom_lower:
     description: "`StorageUnit-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
@@ -591,6 +603,13 @@ assumptions:
 | $`\mathit{StorageUnit\_additions}`$ | `StorageUnit_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{StorageUnit\_injection}`$ | `StorageUnit_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 
+#### Masks
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{h,\mathrm{fix}}`$ | `StorageUnit_fix` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with a fixed build that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{h,\mathrm{ext}}`$ | `StorageUnit_ext` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with an extendable build that stands in the snapshot's period — PyPSA's `ext` rows |
+
 $`t \ominus k`$ denotes cyclic translation: index $`t-k`$ taken modulo the size of the dimension (`roll`). Plain $`t-k`$ (`shift`) has no wraparound — terms translated past the edge are simply absent.
 
 $`t \ominus^{\mathrm{relation}(t)} k`$ denotes a translation counted inside the group a relation puts $`t`$ in (`shift(within=relation[c])`), so a term never crosses out of its own group.
@@ -606,73 +625,73 @@ $`\lvert \mathcal{T} \rvert`$ denotes the size of the set being counted along, a
 **`StorageUnit_fix_p_dispatch_lower`**
 
 ```math
-h^{+}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{+}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{fix}}_{t,s}
 ```
 
 **`StorageUnit_fix_p_dispatch_upper`**
 
 ```math
-h^{+}_{\xi,t,s} \le \overline{\mathrm{h}}_{\xi,t,s} \cdot \mathrm{h}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{+}_{\xi,t,s} \le \overline{\mathrm{h}}_{\xi,t,s} \cdot \mathrm{h}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{fix}}_{t,s}
 ```
 
 **`StorageUnit_fix_p_store_lower`**
 
 ```math
-h^{-}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{-}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{fix}}_{t,s}
 ```
 
 **`StorageUnit_fix_p_store_upper`**
 
 ```math
-h^{-}_{\xi,t,s} \le -\underline{\mathrm{h}}_{\xi,t,s} \cdot \mathrm{h}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{-}_{\xi,t,s} \le -\underline{\mathrm{h}}_{\xi,t,s} \cdot \mathrm{h}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{fix}}_{t,s}
 ```
 
 **`StorageUnit_fix_state_of_charge_lower`**
 
 ```math
-\mathit{soc}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+\mathit{soc}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{fix}}_{t,s}
 ```
 
 **`StorageUnit_fix_state_of_charge_upper`**
 
 ```math
-\mathit{soc}_{\xi,t,s} \le \mathrm{T}^{h}_{\xi,s} \cdot \mathrm{h}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+\mathit{soc}_{\xi,t,s} \le \mathrm{T}^{h}_{\xi,s} \cdot \mathrm{h}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{fix}}_{t,s}
 ```
 
 **`StorageUnit_ext_p_dispatch_lower`**
 
 ```math
-h^{+}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{+}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{ext}}_{t,s}
 ```
 
 **`StorageUnit_ext_p_dispatch_upper`**
 
 ```math
-h^{+}_{\xi,t,s} \le \overline{\mathrm{h}}_{\xi,t,s} \cdot H_{s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{+}_{\xi,t,s} \le \overline{\mathrm{h}}_{\xi,t,s} \cdot H_{s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{ext}}_{t,s}
 ```
 
 **`StorageUnit_ext_p_store_lower`**
 
 ```math
-h^{-}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{-}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{ext}}_{t,s}
 ```
 
 **`StorageUnit_ext_p_store_upper`**
 
 ```math
-h^{-}_{\xi,t,s} \le -\underline{\mathrm{h}}_{\xi,t,s} \cdot H_{s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{-}_{\xi,t,s} \le -\underline{\mathrm{h}}_{\xi,t,s} \cdot H_{s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{ext}}_{t,s}
 ```
 
 **`StorageUnit_ext_state_of_charge_lower`**
 
 ```math
-\mathit{soc}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+\mathit{soc}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{ext}}_{t,s}
 ```
 
 **`StorageUnit_ext_state_of_charge_upper`**
 
 ```math
-\mathit{soc}_{\xi,t,s} \le \mathrm{T}^{h}_{\xi,s} \cdot H_{s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+\mathit{soc}_{\xi,t,s} \le \mathrm{T}^{h}_{\xi,s} \cdot H_{s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{ext}}_{t,s}
 ```
 
 **`StorageUnit_ext_p_nom_lower`**
@@ -783,6 +802,20 @@ h^{-}_{\xi,t,s} = \mathrm{h}^{-,\mathrm{set}}_{\xi,t,s} \qquad \forall\, \xi \in
 
 ```math
 \mathit{StorageUnit\_injection}_{\xi,t,n} = \sum_{s \in \mathcal{S} \,:\, \mathrm{StorageUnit\_bus}(s) = n} \mathrm{sgn}^{h}_{s} \cdot \left( h^{+}_{\xi,t,s} - h^{-}_{\xi,t,s} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+```
+
+#### Masks
+
+**`StorageUnit_fix`**
+
+```math
+\mathrm{on}^{h,\mathrm{fix}}_{t,s} \iff \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S}
+```
+
+**`StorageUnit_ext`**
+
+```math
+\mathrm{on}^{h,\mathrm{ext}}_{t,s} \iff \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
 #### Variable domains

@@ -191,6 +191,9 @@ class ExpressionResolver:
         """
         if node.name in self.formals:
             return None
+        if node.name in self.ns.masks or node.name in self.ns.given_masks:
+            self.errors.append(mask_compared(node.name, self.context))
+            return None
         if node.name in self.ns.bodies:
             try:
                 return cast('Expression', self.ns.named(node.name, self.context))
@@ -788,6 +791,14 @@ def _vacates(offset: int | str) -> bool:
     known here, so it vacates until proved otherwise.
     """
     return offset != 0
+
+
+def mask_compared(name: str, context: str) -> str:
+    """The refusal for a mask written where a number goes: a side of a comparison, or arithmetic."""
+    return (
+        f"{context}: '{name}' is a mask, which is true or false where it is read, and not a number. "
+        f'Write it bare in the where — {name}, or NOT {name} — rather than comparing it or computing with it.'
+    )
 
 
 def _named_offset_edge_message(name: str) -> str:

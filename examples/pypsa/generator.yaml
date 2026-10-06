@@ -215,6 +215,13 @@ expressions:
     expression: sum(Generator_sign * Generator_p, over=generator, by=Generator_bus[bus])
     adds_to: Bus_injection
 
+masks:
+  Generator_committed:
+    description: >-
+      a committable generator that stands in the snapshot's period — every
+      unit-commitment row's set
+    where: Generator_committable AND Generator_active
+
 constraints:
   Generator_fix_p_lower:
     description: "`Generator-fix-p-lower` — a fixed generator outputs at least its minimum"
