@@ -2,6 +2,24 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    scenario_weight: { dims: [scenario] }
+    CVaR_omega: { dims: [] }
+    period_weight_objective: { dims: [period] }
+    period_weight_years: { dims: [period] }
+    snapshot_weightings_stores: { dims: [snapshot] }
+    GlobalConstraint_counts_snapshot: { dims: [scenario, global_constraint, snapshot], dtype: bool }
+  expressions:
+    primary_energy: { dims: [scenario, global_constraint] }
+    operational_limit: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -66,6 +84,7 @@ parameters:
   StorageUnit_p_nom_set:
     description: a given nominal power for an extendable storage unit; one without a value has no row here
     dims: [storage_unit]
+    missing: neutral
   StorageUnit_p_nom:
     description: nominal power
     dims: [scenario, storage_unit]
@@ -76,6 +95,7 @@ parameters:
   StorageUnit_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [storage_unit]
+    missing: neutral
   StorageUnit_p_min_pu:
     description: most storing, per unit of nominal power and negated
     dims: [scenario, snapshot, storage_unit]
@@ -155,27 +175,34 @@ parameters:
   StorageUnit_p_set:
     description: a given net dispatch schedule; a unit without one has no row here
     dims: [scenario, snapshot, storage_unit]
+    missing: neutral
   StorageUnit_p_dispatch_set:
     description: a given dispatch schedule; a unit without one has no row here
     dims: [scenario, snapshot, storage_unit]
+    missing: neutral
   StorageUnit_p_store_set:
     description: a given charging schedule; a unit without one has no row here
     dims: [scenario, snapshot, storage_unit]
+    missing: neutral
   StorageUnit_state_of_charge_set:
     description: a given charge schedule; a unit without one has no row here
     dims: [scenario, snapshot, storage_unit]
+    missing: neutral
   StorageUnit_primary_energy_weight:
     description: the constrained attribute per unit of charge depleted — data prep; an unweighted unit has no row
     dims: [scenario, global_constraint, storage_unit]
+    missing: neutral
   StorageUnit_operational_limit_weight:
     description: one where the storage unit is in the row's set — data prep; one outside it has no row
     dims: [scenario, global_constraint, storage_unit]
+    missing: neutral
   StorageUnit_tech_capacity_weight:
     description: >-
       one where the storage unit is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, storage_unit]
+    missing: neutral
 
 variables:
   StorageUnit_p_dispatch:
@@ -197,7 +224,7 @@ variables:
       the variable rather than as rows
     dims: [scenario, snapshot, storage_unit]
     where: "StorageUnit_inflow > 0 AND StorageUnit_active"
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: StorageUnit_inflow
@@ -214,24 +241,6 @@ variables:
     domain: integer
     bounds:
       lower: 0
-
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    scenario_weight: { dims: [scenario] }
-    CVaR_omega: { dims: [] }
-    period_weight_objective: { dims: [period] }
-    period_weight_years: { dims: [period] }
-    snapshot_weightings_stores: { dims: [snapshot] }
-    GlobalConstraint_counts_snapshot: { dims: [scenario, global_constraint, snapshot], dtype: bool }
-  expressions:
-    primary_energy: { dims: [scenario, global_constraint] }
-    operational_limit: { dims: [scenario, global_constraint] }
-    tech_capacity_expansion: { dims: [global_constraint] }
-    scenario_opex: { dims: [scenario] }
-    total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   StorageUnit_charge_carried_in:

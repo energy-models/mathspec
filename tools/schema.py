@@ -21,7 +21,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-from mathspec import Spec
+from mathspec.spec import Spec
 
 PATH = Path(__file__).resolve().parent.parent / 'schema' / 'mathspec.schema.json'
 DIALECT = 'https://json-schema.org/draft/2020-12/schema'

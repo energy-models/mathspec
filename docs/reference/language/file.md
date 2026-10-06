@@ -10,11 +10,11 @@ A spec file is a YAML mapping with **thirteen declaration keys**, plus
 
 | Key           |                                                                                                   |
 | ------------- | ------------------------------------------------------------------------------------------------- |
+| `given`       | what this file reads but does not build ([given](declarations.md#given))                          |
 | `dimensions`  | the axes ([dimensions](dimensions.md))                                                            |
 | `relations`   | named relations between dimensions ([relations](relations.md))                                    |
 | `parameters`  | the data the spec expects ([declarations](declarations.md))                                       |
 | `variables`   | what the solver decides                                                                           |
-| `given`       | what this file reads but does not build ([given](declarations.md#given))                          |
 | `constraints` | the rules those decisions obey                                                                    |
 | `objective`   | what is minimised or maximised                                                                    |
 | `expressions` | named quantities, reusable in the math and readable after a solve ([named expressions](named.md)) |

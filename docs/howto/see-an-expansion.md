@@ -245,8 +245,8 @@ the set out too.
             holds: x_bp AND y_bp
             description: >-
               piecewise 'curve': every breakpoint the curve runs through needs a row in
-              'x_bp', 'y_bp' — a missing row is read as a zero rather than as a shorter
-              curve, so it sits the curve on the origin. Attach the rows, or declare
+              'x_bp', 'y_bp' — a missing row does not shorten the
+              curve. Attach the rows, or declare
               points: to say how far the curve runs.
         ```
 
@@ -352,8 +352,8 @@ the set out too.
             holds: x_bp AND y_bp
             description: >-
               piecewise 'curve': every breakpoint the curve runs through needs a row in
-              'x_bp', 'y_bp' — a missing row is read as a zero rather than as a shorter
-              curve, so it sits the curve on the origin. Attach the rows, or declare
+              'x_bp', 'y_bp' — a missing row does not shorten the
+              curve. Attach the rows, or declare
               points: to say how far the curve runs.
         ```
 
@@ -428,7 +428,7 @@ the set out too.
 <!-- expansion:curve:end -->
 <!-- prettier-ignore-end -->
 
-[`Spec.expand()`](../reference/api.md#mathspec.Spec.expand) lists what
+[`Spec.expand()`](../reference/spec.md#mathspec.spec.Spec.expand) lists what
 the call accepts, and
 [writing a formulation out](../reference/language/piecewise.md#writing-a-formulation-out)
 says what each block emits.

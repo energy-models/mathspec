@@ -2,6 +2,27 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    Link_committable: { dims: [link], dtype: bool }
+    Link_maintenance_pu: { dims: [scenario, link] }
+    scenario_weight: { dims: [scenario] }
+    CVaR_omega: { dims: [] }
+    period_weight_objective: { dims: [period] }
+    snapshot_weightings_generators: { dims: [snapshot] }
+  variables:
+    Link_maintenance: { dims: [scenario, snapshot, link] }
+    Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
+  expressions:
+    transmission_volume_expansion: { dims: [scenario, global_constraint] }
+    transmission_expansion_cost: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -99,6 +120,7 @@ parameters:
   Link_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [link]
+    missing: neutral
   Link_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Link_p_nom
@@ -127,6 +149,7 @@ parameters:
   Link_p_set:
     description: a given flow schedule; a link without one has no row here
     dims: [scenario, snapshot, link]
+    missing: neutral
   Link_p_nom_min:
     description: least nominal power an extendable link may be built at
     dims: [scenario, link]
@@ -144,6 +167,7 @@ parameters:
   Link_p_nom_set:
     description: a given nominal power for an extendable link; one without a value has no row here
     dims: [link]
+    missing: neutral
   Link_volume_weight:
     description: >-
       the link's length in each scenario where its carrier is in the row's
@@ -151,6 +175,7 @@ parameters:
       link outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [scenario, global_constraint, link]
+    missing: neutral
   Link_expansion_cost_weight:
     description: >-
       the link's capital cost where its carrier is in the row's set, times
@@ -161,12 +186,14 @@ parameters:
       `Link_capital_cost` without `fom_cost` (`components.py:1151-1169`,
       `global_constraints.py:870-879`)
     dims: [scenario, global_constraint, link]
+    missing: neutral
   Link_tech_capacity_weight:
     description: >-
       one where the link is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, link]
+    missing: neutral
 
 variables:
   Link_p:
@@ -189,27 +216,6 @@ variables:
       the same PyPSA name carries the fixed regime
     dims: [link]
     where: Link_p_nom_extendable
-
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    Link_committable: { dims: [link], dtype: bool }
-    Link_maintenance_pu: { dims: [scenario, link] }
-    scenario_weight: { dims: [scenario] }
-    CVaR_omega: { dims: [] }
-    period_weight_objective: { dims: [period] }
-    snapshot_weightings_generators: { dims: [snapshot] }
-  variables:
-    Link_maintenance: { dims: [scenario, snapshot, link] }
-    Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
-  expressions:
-    transmission_volume_expansion: { dims: [scenario, global_constraint] }
-    transmission_expansion_cost: { dims: [scenario, global_constraint] }
-    tech_capacity_expansion: { dims: [global_constraint] }
-    scenario_opex: { dims: [scenario] }
-    total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Link_p_nom_effective:
