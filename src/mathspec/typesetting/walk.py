@@ -64,7 +64,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
     from mathspec._expression_parser import BinaryOperator
-    from mathspec.program import PiecewiseDeclaration, Program, SosDeclaration
+    from mathspec.program import PiecewiseDeclaration, Program
     from mathspec.typesetting.format import Format
     from mathspec.typesetting.symbols import Symbols
 
@@ -659,9 +659,9 @@ class Walk:
         return [
             ('Objective', self._objective()),
             ('Subject to', self._constraints()),
+            ('Variable domains', [self._variable(name) for name in self.program.variables]),
             ('Definitions', self._definitions()),
             ('Masks', [self.mask(name) for name in self.program.masks]),
-            ('Variable domains', self._variables()),
             ('Assumptions', self._assumptions()),
         ]
 
@@ -679,14 +679,15 @@ class Walk:
         return [Line(label='', left=sense, right=self._expression(objective.expression, self._context()))]
 
     def _constraints(self) -> list[Line]:
-        """Every constraint, then every curve.
+        """Every constraint, then every set, then every curve: the order of the file's sections.
 
-        A ``piecewise:`` block restricts what its link expressions may be
-        together, which is what a row does, so it prints here rather than among
-        the domains — where a set prints, being a property of one variable.
+        A ``sos:`` block restricts which members of a family may be nonzero at
+        once, and a ``piecewise:`` block what its link expressions may be
+        together. A solver holds both as constraints, so both print here.
         """
         return [
             *(self._constraint(name) for name in self.program.constraints),
+            *(self._sos(key) for key in self.program.sos),
             *(self._piecewise(name) for name in self.program.piecewise),
         ]
 
@@ -811,22 +812,6 @@ class Walk:
     def _arm_condition(self, when: Mask, ctx: _Context) -> str:
         return f'{self.format.prose("if ")} {self._predicate(when.root, ctx, need=_WHERE_PRECEDENCE["and"])}'
 
-    def _variables(self) -> list[Line]:
-        """One line per variable, and one more for a set the variable carries.
-
-        A ``sos:`` block restricts the *domain* — which members of a family may
-        be nonzero at once — so it prints under this heading, beside the
-        variable it is a property of, rather than among the constraints, where
-        it would read as a row a solver holds.
-        """
-        sets = {block.variable: (key, block) for key, block in self.program.sos.items()}
-        lines = []
-        for name, block in self.program.variables.items():
-            lines.append(self._variable(name))
-            if name in sets:
-                lines.append(self._sos(name, *sets[name], self._context(frame=block.dims)))
-        return lines
-
     def _variable(self, name: str) -> Line:
         block = self.program.variables[name]
         ctx = self._context(frame=block.dims)
@@ -851,10 +836,12 @@ class Walk:
                 right = f'{right}, {symbol} {self._op("in")} {self._op("integers")}'
         return Line(label=name, left=left, right=right, condition=condition)
 
-    def _sos(self, name: str, key: str, block: SosDeclaration, ctx: _Context) -> Line:
+    def _sos(self, key: str) -> Line:
         """The variable's family along the set's dim, as one member of the SOS set, quantified over the other dims."""
-        dims = self.program.variables[name].dims
-        family = self.format.parenthesise(ctx.indexed(self.symbols.name[name], list(dims)))
+        block = self.program.sos[key]
+        dims = self.program.variables[block.variable].dims
+        ctx = self._context(frame=dims)
+        family = self.format.parenthesise(ctx.indexed(self.symbols.name[block.variable], list(dims)))
         return Line(
             label=key,
             left=self.format.subscript(family, [self._membership(block.along)]),

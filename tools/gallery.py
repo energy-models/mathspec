@@ -261,7 +261,7 @@ def _stands_for(name: str, description: str | None) -> str:
 
 
 def declared_block(path: Path) -> str:
-    """The legend, the objective, then every constraint and every named expression as YAML beside its equation."""
+    """The legend, the objective, every constraint, the domains, then every named expression as YAML beside its equation."""
     text = without_header(path)
     model = to_spec(path)
     page = to_markdown(model, symbols=sidecar_for(path), numbered=False)
@@ -283,11 +283,11 @@ def declared_block(path: Path) -> str:
             f'```yaml\n{declaration(text, "constraints", name)}\n```\n\n'
             f'{printed}'
         )
+    parts.append(domains)
     parts.extend(
         f'### `{name}`\n\n```yaml\n{declaration(text, "expressions", name)}\n```\n\n{definition[name]}'
         for name in model.expressions
     )
-    parts.append(domains)
     parts.extend(
         f'### `{name}`\n\n```yaml\n{declaration(text, "assumptions", name)}\n```\n\n{assumption[name]}'
         for name in model.assumptions

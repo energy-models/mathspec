@@ -133,6 +133,14 @@ feasibility problem:
 
     A generator fleet, each unit on one bus.
 
+    #### Variable domains
+
+    **`dispatch`**
+
+    ```math
+    0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    ```
+
     #### Definitions
 
     **`generation`**
@@ -145,14 +153,6 @@ feasibility problem:
 
     ```math
     \mathit{generation}^{\mathrm{cost}} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g}
-    ```
-
-    #### Variable domains
-
-    **`dispatch`**
-
-    ```math
-    0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
     ```
 
 ## The loads
@@ -234,6 +234,14 @@ print(ms.to_markdown(spec, legend=False))
     \mathit{injection}_{t,b} = 0 \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
     ```
 
+    #### Variable domains
+
+    **`dispatch`**
+
+    ```math
+    0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    ```
+
     #### Definitions
 
     **`generation`**
@@ -264,14 +272,6 @@ print(ms.to_markdown(spec, legend=False))
 
     ```math
     \mathit{total\_cost} = \mathit{generation}^{\mathrm{cost}}
-    ```
-
-    #### Variable domains
-
-    **`dispatch`**
-
-    ```math
-    0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
     ```
 
 ## Add a component

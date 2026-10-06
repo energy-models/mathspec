@@ -63,6 +63,12 @@ constraints:
       <= Carrier_max_growth
 ```
 
+#### Given
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression another file defines |
+
 #### Sets
 
 | Symbol | Meaning |
@@ -76,12 +82,6 @@ constraints:
 |---|---|
 | $`\overline{\Delta}`$ | `Carrier_max_growth` over $`\mathcal{I}`$, `neutral` where the data has no row — most capacity of a carrier that may be added in a period; no value means no limit. The least over the scenarios, as PyPSA takes it (`global_constraints.py:227-231`), data prep. PyPSA reads it only under `multi_investment_periods` (`global_constraints.py:220-221`), so data prep feeds no value otherwise |
 | $`\mathrm{r}`$ | `Carrier_max_relative_growth` over $`\mathcal{I}`$ — share of the previous period's additions that may be added on top — the least over the scenarios, as PyPSA takes it, data prep |
-
-#### Given
-
-| Symbol | Meaning |
-|---|---|
-| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression another file defines |
 
 #### Definitions
 

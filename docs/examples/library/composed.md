@@ -159,20 +159,6 @@ expressions:
     f_{t,\mathrm{Load\_port}(d)} = -\mathrm{load}_{t,d} \qquad \forall\, t \in \mathcal{T},\ d \in \mathcal{D}
     ```
 
-    #### Definitions
-
-    **`Generator_cost`**
-
-    ```math
-    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
-    ```
-
-    **`total_cost`**
-
-    ```math
-    \mathit{total\_cost} = \mathit{Generator\_cost}
-    ```
-
     #### Variable domains
 
     **`Port_p`**
@@ -185,6 +171,20 @@ expressions:
 
     ```math
     0 \le p_{t,g} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    ```
+
+    #### Definitions
+
+    **`Generator_cost`**
+
+    ```math
+    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+    ```
+
+    **`total_cost`**
+
+    ```math
+    \mathit{total\_cost} = \mathit{Generator\_cost}
     ```
 
 === "With commitment"
@@ -281,20 +281,6 @@ expressions:
     p_{t,g} \ge \underline{\mathrm{p}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
     ```
 
-    #### Definitions
-
-    **`Generator_cost`**
-
-    ```math
-    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
-    ```
-
-    **`total_cost`**
-
-    ```math
-    \mathit{total\_cost} = \mathit{Generator\_cost}
-    ```
-
     #### Variable domains
 
     **`Port_p`**
@@ -313,5 +299,19 @@ expressions:
 
     ```math
     u_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    ```
+
+    #### Definitions
+
+    **`Generator_cost`**
+
+    ```math
+    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+    ```
+
+    **`total_cost`**
+
+    ```math
+    \mathit{total\_cost} = \mathit{Generator\_cost}
     ```
 <!-- gallery:end -->

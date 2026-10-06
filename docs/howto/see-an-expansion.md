@@ -64,18 +64,20 @@ names each row the expansion adds.
 
     === "Math"
 
+        _Subject to_
+
+        **`pick`**
+
+        ```math
+        \left( p_{g} \right)_{g \in \mathcal{G}} \in \mathrm{SOS}1
+        ```
+
         _Variable domains_
 
         **`p`**
 
         ```math
         0 \le p_{g} \le 10 \qquad \forall\, g \in \mathcal{G}
-        ```
-
-        **`pick`**
-
-        ```math
-        \left( p_{g} \right)_{g \in \mathcal{G}} \in \mathrm{SOS}1
         ```
 
 === "`expand()`"
@@ -272,6 +274,12 @@ the set out too.
         y = \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} \cdot \mathrm{y}^{\mathrm{bp}}_{b}
         ```
 
+        **`curve`**
+
+        ```math
+        \left( \mathit{curve\_lam}_{b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2
+        ```
+
         _Variable domains_
 
         **`x`**
@@ -290,12 +298,6 @@ the set out too.
 
         ```math
         0 \le \mathit{curve\_lam}_{b} \le 1 \qquad \forall\, b \in \mathcal{B}
-        ```
-
-        **`curve`**
-
-        ```math
-        \left( \mathit{curve\_lam}_{b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2
         ```
 
         _Assumptions_

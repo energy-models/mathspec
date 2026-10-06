@@ -158,6 +158,6 @@ def test_the_definitions_print_in_declaration_order():
     """
     declared = ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot']
     tex = to_latex(varied(CASED, **{f'expressions.{n}': BY_REGION for n in declared}), legend=False)
-    section = tex[tex.index('Definitions') : tex.index('Variable domains')]
+    section = tex[tex.index('Definitions') :]
     labels = re.findall(r'^\\text\{(\w+)\} &&', section, flags=re.MULTILINE)
     assert labels == ['headroom', *declared], "declaration order, the file's own"

@@ -335,8 +335,8 @@ def block() -> str:
             continue
         if family == 'Special ordered sets':
             parts.append(
-                'A set prints beside the variable it restricts, because it restricts that variable rather than '
-                'adding a row of its own. Under it are the rows it is written out as.'
+                'A set prints under Subject to, after the constraints and before the curves, because a solver '
+                'holds it as a constraint. Under it are the rows it is written out as.'
             )
             parts += [
                 f'{_row(found[name], heading, printed)}\n\n{_written_out(name, written)}'

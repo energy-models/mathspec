@@ -55,6 +55,12 @@ objective:
 
 The coupling surface every component in this library is written against: one flow per port, one balance per bus, and one cost to minimise. A component is wired to a port, the port to a bus, and the balance names no component class. A flow is positive where the port injects into its bus. A component that costs something adds its cost to `total_cost`.
 
+#### Given
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression another file defines — what running the system costs |
+
 #### Sets
 
 | Symbol | Meaning |
@@ -68,12 +74,6 @@ The coupling surface every component in this library is written against: one flo
 | Symbol | Meaning |
 |---|---|
 | $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — what a port puts into its bus in a snapshot, negative for a withdrawal |
-
-#### Given
-
-| Symbol | Meaning |
-|---|---|
-| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression another file defines — what running the system costs |
 
 #### Objective
 
