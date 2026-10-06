@@ -9,6 +9,27 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Link`, th
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    Link_p_nom_extendable: { dims: [link], dtype: bool }
+    Link_committable: { dims: [link], dtype: bool }
+    Link_status_initial: { dims: [scenario, link], dtype: int }
+    Link_p_nom_mod: { dims: [link] }
+    Link_big_m: { dims: [scenario, link] }
+    Link_active: { dims: [snapshot, link], dtype: bool }
+  variables:
+    Link_p: { dims: [scenario, snapshot, link] }
+    Link_status: { dims: [scenario, snapshot, link], domain: integer }
+    Link_start_up: { dims: [scenario, snapshot, link], domain: integer }
+    Link_shut_down: { dims: [scenario, snapshot, link], domain: integer }
+    Link_p_nom_ext: { dims: [link] }
+  expressions:
+    Link_p_nom_effective: { dims: [scenario, link] }
+    Link_previous_status: { dims: [scenario, snapshot, link] }
+    Link_p_nom_committed: { dims: [scenario, link] }
+  masks:
+    Link_com_ext: { dims: [snapshot, link] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -53,27 +74,6 @@ parameters:
       the link carries no ramp row at the first snapshot
     dims: [scenario, link]
     missing: neutral
-
-given:
-  parameters:
-    Link_p_nom_extendable: { dims: [link], dtype: bool }
-    Link_committable: { dims: [link], dtype: bool }
-    Link_status_initial: { dims: [scenario, link], dtype: int }
-    Link_p_nom_mod: { dims: [link] }
-    Link_big_m: { dims: [scenario, link] }
-    Link_active: { dims: [snapshot, link], dtype: bool }
-  variables:
-    Link_p: { dims: [scenario, snapshot, link] }
-    Link_status: { dims: [scenario, snapshot, link], domain: integer }
-    Link_start_up: { dims: [scenario, snapshot, link], domain: integer }
-    Link_shut_down: { dims: [scenario, snapshot, link], domain: integer }
-    Link_p_nom_ext: { dims: [link] }
-  expressions:
-    Link_p_nom_effective: { dims: [scenario, link] }
-    Link_previous_status: { dims: [scenario, snapshot, link] }
-    Link_p_nom_committed: { dims: [scenario, link] }
-  masks:
-    Link_com_ext: { dims: [snapshot, link] }
 
 expressions:
   Link_previous_p:

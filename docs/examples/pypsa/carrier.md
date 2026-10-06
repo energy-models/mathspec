@@ -9,6 +9,10 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the growth limits 
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  expressions:
+    Carrier_additions: { dims: [period, carrier] }
+
 dimensions:
   period:
     description: investment periods — PyPSA's `investment_periods`
@@ -32,10 +36,6 @@ parameters:
       share of the previous period's additions that may be added on top — the
       least over the scenarios, as PyPSA takes it, data prep
     dims: [carrier]
-
-given:
-  expressions:
-    Carrier_additions: { dims: [period, carrier] }
 
 expressions:
   Carrier_relative_growth:

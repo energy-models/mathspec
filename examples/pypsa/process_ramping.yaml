@@ -2,6 +2,27 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    Process_p_nom_extendable: { dims: [process], dtype: bool }
+    Process_committable: { dims: [process], dtype: bool }
+    Process_status_initial: { dims: [scenario, process], dtype: int }
+    Process_p_nom_mod: { dims: [process] }
+    Process_big_m: { dims: [scenario, process] }
+    Process_active: { dims: [snapshot, process], dtype: bool }
+  variables:
+    Process_p: { dims: [scenario, snapshot, process] }
+    Process_status: { dims: [scenario, snapshot, process], domain: integer }
+    Process_start_up: { dims: [scenario, snapshot, process], domain: integer }
+    Process_shut_down: { dims: [scenario, snapshot, process], domain: integer }
+    Process_p_nom_ext: { dims: [process] }
+  expressions:
+    Process_p_nom_effective: { dims: [scenario, process] }
+    Process_previous_status: { dims: [scenario, snapshot, process] }
+    Process_p_nom_committed: { dims: [scenario, process] }
+  masks:
+    Process_com_ext: { dims: [snapshot, process] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -46,27 +67,6 @@ parameters:
       the process carries no ramp row at the first snapshot
     dims: [scenario, process]
     missing: neutral
-
-given:
-  parameters:
-    Process_p_nom_extendable: { dims: [process], dtype: bool }
-    Process_committable: { dims: [process], dtype: bool }
-    Process_status_initial: { dims: [scenario, process], dtype: int }
-    Process_p_nom_mod: { dims: [process] }
-    Process_big_m: { dims: [scenario, process] }
-    Process_active: { dims: [snapshot, process], dtype: bool }
-  variables:
-    Process_p: { dims: [scenario, snapshot, process] }
-    Process_status: { dims: [scenario, snapshot, process], domain: integer }
-    Process_start_up: { dims: [scenario, snapshot, process], domain: integer }
-    Process_shut_down: { dims: [scenario, snapshot, process], domain: integer }
-    Process_p_nom_ext: { dims: [process] }
-  expressions:
-    Process_p_nom_effective: { dims: [scenario, process] }
-    Process_previous_status: { dims: [scenario, snapshot, process] }
-    Process_p_nom_committed: { dims: [scenario, process] }
-  masks:
-    Process_com_ext: { dims: [snapshot, process] }
 
 expressions:
   Process_previous_p:

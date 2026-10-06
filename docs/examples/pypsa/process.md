@@ -9,6 +9,24 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Process`.
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    Process_committable: { dims: [process], dtype: bool }
+    Process_maintenance_pu: { dims: [scenario, process] }
+    scenario_weight: { dims: [scenario] }
+    CVaR_omega: { dims: [] }
+    period_weight_objective: { dims: [period] }
+  variables:
+    Process_maintenance: { dims: [scenario, snapshot, process] }
+    Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
+  expressions:
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -180,24 +198,6 @@ variables:
       parameter of the same PyPSA name carries the fixed regime
     dims: [process]
     where: Process_p_nom_extendable
-
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    Process_committable: { dims: [process], dtype: bool }
-    Process_maintenance_pu: { dims: [scenario, process] }
-    scenario_weight: { dims: [scenario] }
-    CVaR_omega: { dims: [] }
-    period_weight_objective: { dims: [period] }
-  variables:
-    Process_maintenance: { dims: [scenario, snapshot, process] }
-    Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
-  expressions:
-    tech_capacity_expansion: { dims: [global_constraint] }
-    scenario_opex: { dims: [scenario] }
-    total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Process_p_nom_effective:

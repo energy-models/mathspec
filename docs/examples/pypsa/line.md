@@ -9,6 +9,19 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Line`. It
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    scenario_weight: { dims: [scenario] }
+    transmission_losses: { dims: [], dtype: bool }
+  expressions:
+    transmission_volume_expansion: { dims: [scenario, global_constraint] }
+    transmission_expansion_cost: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -200,19 +213,6 @@ variables:
     domain: integer
     bounds:
       lower: 0
-
-given:
-  parameters:
-    scenario_weight: { dims: [scenario] }
-    transmission_losses: { dims: [], dtype: bool }
-  expressions:
-    transmission_volume_expansion: { dims: [scenario, global_constraint] }
-    transmission_expansion_cost: { dims: [scenario, global_constraint] }
-    tech_capacity_expansion: { dims: [global_constraint] }
-    total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
-    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
 
 expressions:
   Line_transmission_volume_expansion:

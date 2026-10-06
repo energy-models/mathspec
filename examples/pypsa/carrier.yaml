@@ -2,6 +2,10 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  expressions:
+    Carrier_additions: { dims: [period, carrier] }
+
 dimensions:
   period:
     description: investment periods — PyPSA's `investment_periods`
@@ -25,10 +29,6 @@ parameters:
       share of the previous period's additions that may be added on top — the
       least over the scenarios, as PyPSA takes it, data prep
     dims: [carrier]
-
-given:
-  expressions:
-    Carrier_additions: { dims: [period, carrier] }
 
 expressions:
   Carrier_relative_growth:
