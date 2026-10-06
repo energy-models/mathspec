@@ -601,9 +601,11 @@ parameters:
   CVaR_omega:
     description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. With none there are no CVaR variables or rows; with `omega = 0` PyPSA builds them, and the optimum is the risk-neutral one
     dims: []
+    missing: neutral
   CVaR_alpha:
-    description: PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability
+    description: PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega`
     dims: []
+    missing: neutral
   period_weight_objective:
     description: >-
       PyPSA's `investment_period_weightings.objective` — what a period's cost
@@ -1836,19 +1838,19 @@ variables:
     description: "`CVaR-a` — how far a scenario's operating cost exceeds the tail's start; nothing where it does not"
     dims: [scenario]
     where: CVaR_omega
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   CVaR_theta:
     description: "`CVaR-theta` — where the tail starts, the value at risk"
     dims: []
     where: CVaR_omega
-    absence: zero
+    missing: neutral
   CVaR:
     description: "`CVaR` — the tail's average cost, what the objective prices at `omega`"
     dims: []
     where: CVaR_omega
-    absence: zero
+    missing: neutral
 
 expressions:
   Generator_previous_status:
