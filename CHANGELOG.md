@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(spec)!: a spec written back out puts sos and piecewise after constraints, and macros before expressions ([#848](https://github.com/energy-models/mathspec/pull/848))
 - feat(spec)!: a spec written back out puts its given block first ([#818](https://github.com/energy-models/mathspec/pull/818))
 - refactor(program)!: the node a use of a named expression stands as is `NamedExpression`, beside `NamedMask`, and `Named` is gone ([#822](https://github.com/energy-models/mathspec/pull/822))
 - docs(pypsa): the pypsa spec names its repeated row conditions as masks, and its topic files read them under `given: masks:` ([#825](https://github.com/energy-models/mathspec/pull/825))
