@@ -139,14 +139,6 @@ expressions:
         when: GlobalConstraint_counts_snapshot
         expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
     otherwise: 0
-  GlobalConstraint_snapshot_closes:
-    description: one at the last snapshot a row counts, and zero elsewhere
-    dims: [scenario, global_constraint, snapshot]
-    cases:
-      last_counted:
-        when: GlobalConstraint_counts_snapshot AND NOT shift(GlobalConstraint_counts_snapshot, along=snapshot, offset=-1)
-        expression: 1
-    otherwise: 0
 
 objective:
   sense: minimize
