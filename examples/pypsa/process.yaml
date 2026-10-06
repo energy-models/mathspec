@@ -238,6 +238,13 @@ expressions:
       sum(Process_output_arrival, over=process_output, by=Process_output_bus[bus])
     adds_to: Bus_injection
 
+masks:
+  Process_committed:
+    description: >-
+      a committable process that stands in the snapshot's period — every
+      unit-commitment row's set
+    where: Process_committable AND Process_active
+
 constraints:
   Process_fix_p_lower:
     description: "`Process-fix-p-lower` — a fixed process runs at least its minimum, negative for the other way"

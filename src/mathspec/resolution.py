@@ -40,10 +40,12 @@ from mathspec.program import (
     Cases,
     Expression,
     Mask,
-    Named,
+    NamedExpression,
+    NamedMask,
     Predicate,
     Region,
     RelationDeclaration,
+    VariableDefined,
     carries_variable,
 )
 
@@ -53,7 +55,7 @@ if TYPE_CHECKING:
     from mathspec._expression_parser import ComparisonOperator, ParsedNode
     from mathspec._where_parser import ParsedWhere
     from mathspec.program import DeclaredDtype
-    from mathspec.spec import ExpressionBlock, Spec
+    from mathspec.spec import ExpressionBlock, MaskBlock, Spec
 
 
 #: What a name a file may write turns out to be. Answered by
@@ -70,12 +72,15 @@ class Namespace:
 
     __slots__ = (
         '_loading',
+        '_masks',
         '_named',
         'bodies',
         'constraints',
         'dimensions',
         'dtypes',
+        'given_masks',
         'leaf_dims',
+        'masks',
         'parameters',
         'relations',
         'schema',
@@ -91,7 +96,12 @@ class Namespace:
         parameters = {**schema.parameters, **schema.given.parameters}
         self.variables = frozenset(variables)
         self.bodies = frozenset(schema.expressions)
-        self.parameters = frozenset(parameters)
+        #: The declared masks, read by name wherever a where string is.
+        self.masks = frozenset(schema.masks)
+        #: The masks this file reads under ``given:``. A where reads each as
+        #: the boolean data it is to this file, so each is a parameter here too.
+        self.given_masks = frozenset(schema.given.masks)
+        self.parameters = frozenset(parameters) | self.given_masks
         self.dimensions = frozenset(schema.dimensions)
         #: The declared constraint names, off the flat namespace: a bare name
         #: never reaches them, so a spec may name a constraint after a variable.
@@ -101,6 +111,7 @@ class Namespace:
         #: what a where comparison checks its literal against.
         self.dtypes: dict[str, DeclaredDtype] = {
             **{p: pd.dtype for p, pd in parameters.items()},
+            **{m: cast('DeclaredDtype', 'bool') for m in schema.given.masks},
             **{d: dd.dtype for d, dd in schema.dimensions.items()},
         }
         #: relation name -> its columns and key, as declared.
@@ -112,16 +123,20 @@ class Namespace:
         #: each leaf a where names, the way a relation leaf carries ``over``.
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: tuple(pd.dims) for p, pd in parameters.items()},
+            **{m: tuple(md.dims) for m, md in schema.given.masks.items()},
             **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
         }
         #: named expression -> its resolved node, or ``None``, and its refusals;
         #: filled the first time anything reads the name.
-        self._named: dict[str, tuple[Named | None, tuple[str, ...]]] = {}
-        #: The named expressions waiting to be resolved, the one asked for
-        #: first — each above the entries it reads, so it is a cycle's chain.
+        self._named: dict[str, tuple[NamedExpression | None, tuple[str, ...]]] = {}
+        #: The named expressions and masks waiting to be resolved, the one
+        #: asked for first — each above the entries it reads, so it is a cycle's chain.
         self._loading: list[str] = []
+        #: mask -> its resolved node, or ``None``, and its refusals; filled
+        #: the first time anything reads the name.
+        self._masks: dict[str, tuple[NamedMask | None, tuple[str, ...]]] = {}
 
-    def named(self, name: str, context: str) -> Named:
+    def named(self, name: str, context: str) -> NamedExpression:
         """The ``expressions:`` entry *name* as the node that stands where its name is written.
 
         Resolved under the entry's own context the first time it is asked
@@ -138,14 +153,41 @@ class Namespace:
             raise SchemaError(msg)
         return node
 
-    def cycle(self, name: str, context: str, through: Iterable[str] = ()) -> str | None:
+    def cycle(self, name: str, context: str, through: Iterable[str] = (), *, noun: str = 'expression') -> str | None:
         """The refusal for reading *name* while it is being resolved, or ``None``; *through* names the macros the read went through."""
         if name not in self._loading:
             return None
         chain = ' -> '.join([*self._loading[self._loading.index(name) :], *through, name])
-        return f'{context}: circular expression reference: {chain}'
+        return f'{context}: circular {noun} reference: {chain}'
 
-    def named_entry(self, name: str) -> tuple[Named | None, tuple[str, ...]]:
+    def mask(self, name: str, context: str) -> NamedMask:
+        """The ``masks:`` entry *name* as the node that stands where its name is written.
+
+        Resolved under the entry's own context the first time it is asked
+        for, and read from then on, so a fault in it is reported once.
+
+        Raises:
+            SchemaError: The entry reads itself, or does not load.
+        """
+        if (refusal := self.cycle(name, context, noun='mask')) is not None:
+            raise SchemaError(refusal)
+        node, _ = self.mask_entry(name)
+        if node is None:
+            msg = f"{context}: mask '{name}' does not load. Its refusal is listed with it."
+            raise SchemaError(msg)
+        return node
+
+    def mask_entry(self, name: str) -> tuple[NamedMask | None, tuple[str, ...]]:
+        """The ``masks:`` entry *name* resolved, or ``None``, with every refusal it earned."""
+        if name not in self._masks:
+            self._loading.append(name)
+            errors: list[str] = []
+            node = _mask(name, self.schema.masks[name], self, errors)
+            self._loading.pop()
+            self._masks[name] = (node, tuple(errors))
+        return self._masks[name]
+
+    def named_entry(self, name: str) -> tuple[NamedExpression | None, tuple[str, ...]]:
         """The ``expressions:`` entry *name* resolved, or ``None``, with every refusal it earned.
 
         The entries it reads are resolved before it, walked from a stack that
@@ -232,7 +274,12 @@ class Namespace:
         """
         shown: list[tuple[str, Iterable[str]]] = [('Formals', formals)] if formals else []
         shown += (
-            [('Parameters', self.parameters), ('Dimensions', self.dimensions), ('Relations', self.relations)]
+            [
+                ('Parameters', self.parameters),
+                ('Dimensions', self.dimensions),
+                ('Relations', self.relations),
+                *([('Masks', self.masks)] if self.masks else []),
+            ]
             if allow_dims
             else [('Variables', self.variables), ('Parameters', self.parameters)]
         )
@@ -428,7 +475,7 @@ def _over_the_ceiling(node: Expression, context: str, errors: list[str], *, ceil
     return False
 
 
-def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) -> Named | None:
+def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) -> NamedExpression | None:
     """One ``expressions:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
 
     A cased entry's arms are checked one by one, so every fault is collected
@@ -441,7 +488,7 @@ def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) 
     if not block.cases:
         assert block.expression is not None
         body = resolve_expression_text(block.expression, ns, context, errors, ceiling=None)
-        return None if body is None else Named(name, body)
+        return None if body is None else NamedExpression(name, body)
 
     found = len(errors)
     regions: list[Region] = []
@@ -464,7 +511,43 @@ def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) 
     if len(errors) > found:
         return None
     left_over = Region(remainder(region.when for region in regions), fallback)
-    return Named(name, Cases((*regions, left_over)))
+    return NamedExpression(name, Cases((*regions, left_over)))
+
+
+def _mask(name: str, block: MaskBlock, ns: Namespace, errors: list[str]) -> NamedMask | None:
+    """One ``masks:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
+
+    A predicate the connectives decide is refused, since a name for every row
+    or for none narrows nothing a where could not say plainly.
+    """
+    context = f"Mask '{name}'"
+    body = resolve_where_text(block.where, ns, context, errors)
+    if body is None:
+        return None
+    if isinstance(body, BooleanLiteral):
+        errors.append(
+            f'{context}: the predicate {block.where!r} folds to {str(body.value).lower()}, so the mask '
+            f'{"admits every row" if body.value else "admits no row"} and names nothing a where needs. '
+            f'Delete it, or write the predicate over the data.'
+        )
+        return None
+    return NamedMask(name, body)
+
+
+def self_existence(where: Predicate, variable: str, context: str) -> str | None:
+    """The refusal for a variable whose own where asks, through a mask, whether it exists — or ``None``.
+
+    The where resolver refuses the bare name; a mask's predicate is resolved
+    under its own name, so the check runs again on the tree with every mask's
+    predicate in it.
+    """
+    if not any(isinstance(atom, VariableDefined) and atom.name == variable for atom in Mask(where).atoms):
+        return None
+    return (
+        f"{context}: variable '{variable}' asks whether it exists in its own where, through a mask, which "
+        f'nothing can answer — the mask is what decides where it exists. Test a parameter, or another '
+        f'variable declared before it.'
+    )
 
 
 def _constant_arm(context: str, *, value: bool) -> str:
