@@ -5219,7 +5219,7 @@ Rung 14 with `n.set_risk_preference(alpha=0.5, omega=0.0)`. PyPSA builds
 `CVaR-a`, `CVaR-theta`, `CVaR`, `CVaR-excess-{s}` and `CVaR-def` under any risk
 preference (`optimize.py:461`, `variables.py:488`), and refuses a quadratic
 cost (`optimize.py:470-477`). Without a risk preference it builds none of
-them. Both solve to `7946.733333333334`; the risk preference adds 3 rows. The
+them. Both solve to `7946.733333333334`; the risk preference adds 3 rows (#849). The
 file stated the CVaR columns always, and the rows and the refusal only where
 `omega > 0`, so this rung got the columns and neither the rows nor the
 refusal. Now the columns, the rows and the refusal stand where `CVaR_omega`
