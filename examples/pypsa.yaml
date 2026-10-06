@@ -2188,12 +2188,18 @@ expressions:
         when: GlobalConstraint_counts_snapshot
         expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
     otherwise: 0
-  GlobalConstraint_snapshot_closes:
-    description: one at the last snapshot a row counts, and zero elsewhere
-    dims: [scenario, global_constraint, snapshot]
+  StorageUnit_last_counted_active:
+    description: >-
+      one at the last snapshot a row counts where a unit stands, and zero
+      elsewhere — a unit that retires before the last counted snapshot closes
+      on its last active level, as PyPSA forward-fills the level over the
+      counted snapshots (`global_constraints.py:455-458`)
+    dims: [scenario, global_constraint, snapshot, storage_unit]
     cases:
-      last_counted:
-        when: GlobalConstraint_counts_snapshot AND NOT shift(GlobalConstraint_counts_snapshot, along=snapshot, offset=-1)
+      last:
+        when: >-
+          GlobalConstraint_counts_snapshot AND StorageUnit_active
+          AND NOT shift(GlobalConstraint_counts_snapshot AND StorageUnit_active, along=snapshot, offset=-1)
         expression: 1
     otherwise: 0
   StorageUnit_closing_weight:
@@ -2201,7 +2207,7 @@ expressions:
       what the charge a unit holds at a snapshot counts for in a row as its
       closing level — the years of the period at the last snapshot of each
       counted period where the unit reopens per period, one at the last
-      counted snapshot where it does not, and nothing elsewhere
+      counted snapshot it stands in where it does not, and nothing elsewhere
     dims: [scenario, global_constraint, snapshot, storage_unit]
     cases:
       per_period:
@@ -2209,14 +2215,28 @@ expressions:
         expression: at(period_weight_years, by=snapshot_period[period])
       carried_over:
         when: NOT StorageUnit_state_of_charge_initial_per_period
-        expression: GlobalConstraint_snapshot_closes
+        expression: StorageUnit_last_counted_active
+    otherwise: 0
+  Store_last_counted_active:
+    description: >-
+      one at the last snapshot a row counts where a store stands, and zero
+      elsewhere — a store that retires before the last counted snapshot closes
+      on its last active level, as PyPSA forward-fills the level over the
+      counted snapshots (`global_constraints.py:507-510`)
+    dims: [scenario, global_constraint, snapshot, store]
+    cases:
+      last:
+        when: >-
+          GlobalConstraint_counts_snapshot AND Store_active
+          AND NOT shift(GlobalConstraint_counts_snapshot AND Store_active, along=snapshot, offset=-1)
+        expression: 1
     otherwise: 0
   Store_closing_weight:
     description: >-
       what the energy a store holds at a snapshot counts for in a row as its
       closing level — the years of the period at the last snapshot of each
       counted period where the store reopens per period, one at the last
-      counted snapshot where it does not, and nothing elsewhere
+      counted snapshot it stands in where it does not, and nothing elsewhere
     dims: [scenario, global_constraint, snapshot, store]
     cases:
       per_period:
@@ -2224,7 +2244,7 @@ expressions:
         expression: at(period_weight_years, by=snapshot_period[period])
       carried_over:
         when: NOT Store_e_initial_per_period
-        expression: GlobalConstraint_snapshot_closes
+        expression: Store_last_counted_active
     otherwise: 0
   Generator_primary_energy:
     expression: >-

@@ -146,14 +146,6 @@ expressions:
         when: GlobalConstraint_counts_snapshot
         expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
     otherwise: 0
-  GlobalConstraint_snapshot_closes:
-    description: one at the last snapshot a row counts, and zero elsewhere
-    dims: [scenario, global_constraint, snapshot]
-    cases:
-      last_counted:
-        when: GlobalConstraint_counts_snapshot AND NOT shift(GlobalConstraint_counts_snapshot, along=snapshot, offset=-1)
-        expression: 1
-    otherwise: 0
 
 objective:
   sense: minimize
@@ -202,7 +194,6 @@ objective:
 | Symbol | Meaning |
 |---|---|
 | $`\mathit{w}^{\mathrm{gc}}`$ | `GlobalConstraint_energy_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — what one unit of power at a snapshot counts for in a row — the generator weighting times the years of the snapshot's period, where the row counts the snapshot, and nothing where it does not |
-| $`\mathit{last}`$ | `GlobalConstraint_snapshot_closes` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — one at the last snapshot a row counts, and zero elsewhere |
 
 #### Objective
 
@@ -216,11 +207,5 @@ objective:
 
 ```math
 \mathit{w}^{\mathrm{gc}}_{\xi,g,t} = \begin{cases} \mathrm{w}^{\mathrm{gen}}_{t} \cdot \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{in}_{\xi,g,t} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T}
-```
-
-**`GlobalConstraint_snapshot_closes`**
-
-```math
-\mathit{last}_{\xi,g,t} = \begin{cases} 1 & \text{if } \mathrm{in}_{\xi,g,t} \wedge \neg \mathrm{in}_{\xi,g,t + 1} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->

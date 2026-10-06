@@ -2977,7 +2977,8 @@ counts with its generator weighting times the `years` weighting of its period
 (`:315`, `:616`). A storage unit or store that reopens per period closes at the
 last snapshot of each counted period, weighted by that period's years
 (`:469-472`, `:674-677`). One that carries its level across periods closes
-once, at the last counted snapshot (`:454-465`, `:659-669`). The file states
+once, at the last counted snapshot it stands in (`:455-458`, `:660-663`, rung
+69). The file states
 the counted snapshots as `GlobalConstraint_counts_snapshot`, data prep, and
 the years as `period_weight_years`. A plain run feeds all true and one, so the
 rows collapse to the standard ones.
@@ -2990,7 +2991,7 @@ PyPSA solves to `10675.0`.
 | PyPSA | status | note |
 | --- | --- | --- |
 | [`primary_energy`](#primary_energy), [`operational_limit`](#operational_limit) over one investment period | done | `GlobalConstraint_energy_weight` is zero outside the counted snapshots, and the years weigh each snapshot |
-| the closing level of storage in those rows | done | `StorageUnit_closing_weight`, `Store_closing_weight`: each counted period's last snapshot where the storage reopens per period, the last counted snapshot otherwise |
+| the closing level of storage in those rows | done | `StorageUnit_closing_weight`, `Store_closing_weight`: each counted period's last snapshot where the storage reopens per period, the last counted snapshot it stands in otherwise |
 | a `primary_energy` row for one period over storage that reopens per period | refused, as PyPSA | assumed: [`StorageUnit_primary_energy_per_period_closes_over_the_horizon`](#storageunit_primary_energy_per_period_closes_over_the_horizon), and the `Store` one |
 
 <!-- reference:rung_35_period_global_constraints:begin -->
@@ -5213,6 +5214,88 @@ def build():
 </details>
 <!-- reference:rung_68_outage_factors_per_period:end -->
 
+### Rung 69 — storage that retires before the close
+
+`n.optimize(multi_investment_periods=True)` with a `primary_energy` row over
+storage that carries its level across periods and retires before the last
+counted snapshot. PyPSA forward-fills the level over the counted snapshots and
+takes the last value (`global_constraints.py:455-458`, `:507-510`, and
+`:660-663`, `:708-711` for `operational_limit`). The level exists only where
+the storage stands in, so the row reads the level of the last counted snapshot
+it stands in. The file states that snapshot as
+[`StorageUnit_last_counted_active`](#storageunit_last_counted_active) and
+[`Store_last_counted_active`](#store_last_counted_active). The counted
+snapshots are the whole horizon or one period, and a storage stands in one run
+of periods, so the snapshot is the last one of the overlap.
+
+The rung builds a store and a storage unit of an emitting carrier, each with an
+initial level of 20, that retire after 2020, and caps CO2 at `5` over the
+horizon. The row keeps at least `35` of the two levels at the last snapshot of
+2020. The earlier file read the level at the last snapshot of 2030, where
+neither storage stands in, so its row had no variable and read `0 <= -35`.
+
+| PyPSA | status | note |
+| --- | --- | --- |
+| the closing level of storage that retires before the last counted snapshot | done | `StorageUnit_last_counted_active`, `Store_last_counted_active`: the last counted snapshot where the storage stands in |
+
+<!-- reference:rung_69_storage_retires_before_close:begin -->
+> ✔ `pypsa 1.3.0.post1.dev41+g51986084b` solves this rung's network at objective `350.0`, 33 rows.
+
+<details markdown="1">
+<summary>The network, as PyPSA code</summary>
+
+`rung_69_storage_retires_before_close.py`
+
+```python
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+"""Rung 69: storage that retires before the last counted snapshot closes a `primary_energy` row at the last level it holds."""
+
+from __future__ import annotations
+
+from datetime import datetime
+
+import pandas as pd
+
+OPTIMIZE = {'multi_investment_periods': True}
+
+
+def build():
+    """A whole network, not the spine: four snapshots over two periods, a store and a storage unit of an emitting carrier that retire after 2020, and a CO2 cap over the horizon."""
+    import pypsa
+
+    n = pypsa.Network()
+    n.snapshots = pd.MultiIndex.from_tuples(
+        [(2020, datetime(2020, 1, 1, t)) for t in range(2)] + [(2030, datetime(2030, 1, 1, t)) for t in range(2)]
+    )
+    n.investment_periods = [2020, 2030]
+    n.add('Carrier', 'gas', co2_emissions=1.0)
+    n.add('Bus', 'hub')
+    n.add('Generator', 'base69', bus='hub', p_nom=100, marginal_cost=10)
+    n.add('Load', 'hub_load', bus='hub', p_set=10)
+    n.add('Store', 'e_retire', bus='hub', carrier='gas', e_nom=30, e_initial=20, build_year=2020, lifetime=10)
+    n.add(
+        'StorageUnit',
+        'su_retire',
+        bus='hub',
+        carrier='gas',
+        p_nom=10,
+        max_hours=3,
+        state_of_charge_initial=20,
+        build_year=2020,
+        lifetime=10,
+    )
+    n.add(
+        'GlobalConstraint', 'co2_cap', type='primary_energy', carrier_attribute='co2_emissions', sense='<=', constant=5
+    )
+    return n
+```
+
+</details>
+<!-- reference:rung_69_storage_retires_before_close:end -->
+
 ### Rung 70 — a risk preference of weight zero
 
 Rung 14 with `n.set_risk_preference(alpha=0.5, omega=0.0)`. PyPSA builds
@@ -5748,9 +5831,10 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\overrightarrow{f}`$ | `Link_output_arrival` over $`\Xi \times \mathcal{T} \times \mathcal{O}`$ — what a link delivers to an output port at a snapshot — its flow delayed by the port's `delay` within its investment period, times the port's efficiency at the snapshot the flow arrives; where the port is `cyclic_delay` the delayed flow wraps from the period's end, and where it is not the flow still in transit at the period's first snapshots is lost. A port that does not delay (`delay` zero) delivers its flow unshifted, cyclic or not |
 | $`\overrightarrow{z}`$ | `Process_output_arrival` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — what a process transfers at a port at a snapshot — its internal power delayed by the port's `delay` within its investment period, times the port's rate at the snapshot the transfer arrives; where the port is `cyclic_delay` the delayed transfer wraps from the period's end, and where it is not the energy still in transit at the period's first snapshots is lost. A port that does not delay (`delay` zero) transfers at once, cyclic or not |
 | $`\mathit{w}^{\mathrm{gc}}`$ | `GlobalConstraint_energy_weight` over $`\Xi \times \mathcal{I} \times \mathcal{T}`$ — what one unit of power at a snapshot counts for in a row — the generator weighting times the years of the snapshot's period, where the row counts the snapshot, and nothing where it does not |
-| $`\mathit{last}`$ | `GlobalConstraint_snapshot_closes` over $`\Xi \times \mathcal{I} \times \mathcal{T}`$ — one at the last snapshot a row counts, and zero elsewhere |
-| $`\mathit{w}^{h}`$ | `StorageUnit_closing_weight` over $`\Xi \times \mathcal{I} \times \mathcal{T} \times \mathcal{S}`$ — what the charge a unit holds at a snapshot counts for in a row as its closing level — the years of the period at the last snapshot of each counted period where the unit reopens per period, one at the last counted snapshot where it does not, and nothing elsewhere |
-| $`\mathit{w}^{e}`$ | `Store_closing_weight` over $`\Xi \times \mathcal{I} \times \mathcal{T} \times \mathcal{V}`$ — what the energy a store holds at a snapshot counts for in a row as its closing level — the years of the period at the last snapshot of each counted period where the store reopens per period, one at the last counted snapshot where it does not, and nothing elsewhere |
+| $`\mathit{last}^{h}`$ | `StorageUnit_last_counted_active` over $`\Xi \times \mathcal{I} \times \mathcal{T} \times \mathcal{S}`$ — one at the last snapshot a row counts where a unit stands, and zero elsewhere — a unit that retires before the last counted snapshot closes on its last active level, as PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:455-458`) |
+| $`\mathit{w}^{h}`$ | `StorageUnit_closing_weight` over $`\Xi \times \mathcal{I} \times \mathcal{T} \times \mathcal{S}`$ — what the charge a unit holds at a snapshot counts for in a row as its closing level — the years of the period at the last snapshot of each counted period where the unit reopens per period, one at the last counted snapshot it stands in where it does not, and nothing elsewhere |
+| $`\mathit{last}^{e}`$ | `Store_last_counted_active` over $`\Xi \times \mathcal{I} \times \mathcal{T} \times \mathcal{V}`$ — one at the last snapshot a row counts where a store stands, and zero elsewhere — a store that retires before the last counted snapshot closes on its last active level, as PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:507-510`) |
+| $`\mathit{w}^{e}`$ | `Store_closing_weight` over $`\Xi \times \mathcal{I} \times \mathcal{T} \times \mathcal{V}`$ — what the energy a store holds at a snapshot counts for in a row as its closing level — the years of the period at the last snapshot of each counted period where the store reopens per period, one at the last counted snapshot it stands in where it does not, and nothing elsewhere |
 | $`\mathit{Generator\_primary\_energy}`$ | `Generator_primary_energy` over $`\Xi \times \mathcal{I}`$ |
 | $`\mathit{StorageUnit\_primary\_energy}`$ | `StorageUnit_primary_energy` over $`\Xi \times \mathcal{I}`$ |
 | $`\mathit{Store\_primary\_energy}`$ | `Store_primary_energy` over $`\Xi \times \mathcal{I}`$ |
@@ -10775,21 +10859,27 @@ GlobalConstraint_energy_weight:
 \mathit{w}^{\mathrm{gc}}_{\xi,i,t} = \begin{cases} \mathrm{w}^{\mathrm{gen}}_{t} \cdot \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{in}_{\xi,i,t} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ i \in \mathcal{I},\ t \in \mathcal{T}
 ```
 
-### `GlobalConstraint_snapshot_closes`
+### `StorageUnit_last_counted_active`
 
 ```yaml
-GlobalConstraint_snapshot_closes:
-  description: one at the last snapshot a row counts, and zero elsewhere
-  dims: [scenario, global_constraint, snapshot]
+StorageUnit_last_counted_active:
+  description: >-
+    one at the last snapshot a row counts where a unit stands, and zero
+    elsewhere — a unit that retires before the last counted snapshot closes
+    on its last active level, as PyPSA forward-fills the level over the
+    counted snapshots (`global_constraints.py:455-458`)
+  dims: [scenario, global_constraint, snapshot, storage_unit]
   cases:
-    last_counted:
-      when: GlobalConstraint_counts_snapshot AND NOT shift(GlobalConstraint_counts_snapshot, along=snapshot, offset=-1)
+    last:
+      when: >-
+        GlobalConstraint_counts_snapshot AND StorageUnit_active
+        AND NOT shift(GlobalConstraint_counts_snapshot AND StorageUnit_active, along=snapshot, offset=-1)
       expression: 1
   otherwise: 0
 ```
 
 ```math
-\mathit{last}_{\xi,i,t} = \begin{cases} 1 & \text{if } \mathrm{in}_{\xi,i,t} \wedge \neg \mathrm{in}_{\xi,i,t + 1} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ i \in \mathcal{I},\ t \in \mathcal{T}
+\mathit{last}^{h}_{\xi,i,t,s} = \begin{cases} 1 & \text{if } \mathrm{in}_{\xi,i,t} \wedge \mathrm{on}^{h}_{t,s} \wedge \neg \left( \mathrm{in}_{\xi,i,t + 1} \wedge \mathrm{on}^{h}_{t + 1,s} \right) \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ i \in \mathcal{I},\ t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
 ### `StorageUnit_closing_weight`
@@ -10800,7 +10890,7 @@ StorageUnit_closing_weight:
     what the charge a unit holds at a snapshot counts for in a row as its
     closing level — the years of the period at the last snapshot of each
     counted period where the unit reopens per period, one at the last
-    counted snapshot where it does not, and nothing elsewhere
+    counted snapshot it stands in where it does not, and nothing elsewhere
   dims: [scenario, global_constraint, snapshot, storage_unit]
   cases:
     per_period:
@@ -10808,12 +10898,35 @@ StorageUnit_closing_weight:
       expression: at(period_weight_years, by=snapshot_period[period])
     carried_over:
       when: NOT StorageUnit_state_of_charge_initial_per_period
-      expression: GlobalConstraint_snapshot_closes
+      expression: StorageUnit_last_counted_active
   otherwise: 0
 ```
 
 ```math
-\mathit{w}^{h}_{\xi,i,t,s} = \begin{cases} \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{\xi,i,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ \mathit{last}_{\xi,i,t} & \text{if } \neg \mathrm{reset}_{\xi,s} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ i \in \mathcal{I},\ t \in \mathcal{T},\ s \in \mathcal{S}
+\mathit{w}^{h}_{\xi,i,t,s} = \begin{cases} \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{\xi,i,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ \mathit{last}^{h}_{\xi,i,t,s} & \text{if } \neg \mathrm{reset}_{\xi,s} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ i \in \mathcal{I},\ t \in \mathcal{T},\ s \in \mathcal{S}
+```
+
+### `Store_last_counted_active`
+
+```yaml
+Store_last_counted_active:
+  description: >-
+    one at the last snapshot a row counts where a store stands, and zero
+    elsewhere — a store that retires before the last counted snapshot closes
+    on its last active level, as PyPSA forward-fills the level over the
+    counted snapshots (`global_constraints.py:507-510`)
+  dims: [scenario, global_constraint, snapshot, store]
+  cases:
+    last:
+      when: >-
+        GlobalConstraint_counts_snapshot AND Store_active
+        AND NOT shift(GlobalConstraint_counts_snapshot AND Store_active, along=snapshot, offset=-1)
+      expression: 1
+  otherwise: 0
+```
+
+```math
+\mathit{last}^{e}_{\xi,i,t,v} = \begin{cases} 1 & \text{if } \mathrm{in}_{\xi,i,t} \wedge \mathrm{on}^{e}_{t,v} \wedge \neg \left( \mathrm{in}_{\xi,i,t + 1} \wedge \mathrm{on}^{e}_{t + 1,v} \right) \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ i \in \mathcal{I},\ t \in \mathcal{T},\ v \in \mathcal{V}
 ```
 
 ### `Store_closing_weight`
@@ -10824,7 +10937,7 @@ Store_closing_weight:
     what the energy a store holds at a snapshot counts for in a row as its
     closing level — the years of the period at the last snapshot of each
     counted period where the store reopens per period, one at the last
-    counted snapshot where it does not, and nothing elsewhere
+    counted snapshot it stands in where it does not, and nothing elsewhere
   dims: [scenario, global_constraint, snapshot, store]
   cases:
     per_period:
@@ -10832,12 +10945,12 @@ Store_closing_weight:
       expression: at(period_weight_years, by=snapshot_period[period])
     carried_over:
       when: NOT Store_e_initial_per_period
-      expression: GlobalConstraint_snapshot_closes
+      expression: Store_last_counted_active
   otherwise: 0
 ```
 
 ```math
-\mathit{w}^{e}_{\xi,i,t,v} = \begin{cases} \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{\xi,i,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ \mathit{last}_{\xi,i,t} & \text{if } \neg \mathrm{reset}^{e}_{\xi,v} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ i \in \mathcal{I},\ t \in \mathcal{T},\ v \in \mathcal{V}
+\mathit{w}^{e}_{\xi,i,t,v} = \begin{cases} \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{\xi,i,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ \mathit{last}^{e}_{\xi,i,t,v} & \text{if } \neg \mathrm{reset}^{e}_{\xi,v} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ i \in \mathcal{I},\ t \in \mathcal{T},\ v \in \mathcal{V}
 ```
 
 ### `Generator_primary_energy`
