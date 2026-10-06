@@ -245,8 +245,8 @@ the set out too.
             holds: x_bp AND y_bp
             description: >-
               piecewise 'curve': every breakpoint the curve runs through needs a row in
-              'x_bp', 'y_bp' — a missing row is read as a zero rather than as a shorter
-              curve, so it sits the curve on the origin. Attach the rows, or declare
+              'x_bp', 'y_bp' — a missing row does not shorten the
+              curve. Attach the rows, or declare
               points: to say how far the curve runs.
         ```
 
@@ -352,8 +352,8 @@ the set out too.
             holds: x_bp AND y_bp
             description: >-
               piecewise 'curve': every breakpoint the curve runs through needs a row in
-              'x_bp', 'y_bp' — a missing row is read as a zero rather than as a shorter
-              curve, so it sits the curve on the origin. Attach the rows, or declare
+              'x_bp', 'y_bp' — a missing row does not shorten the
+              curve. Attach the rows, or declare
               points: to say how far the curve runs.
         ```
 

@@ -125,7 +125,7 @@ A named expression carries **exactly one** of `expression:` and `cases:`.
 
 A claimed coordinate can still have no value: the `otherwise:` above has none
 at the first snapshot, where a case claims every unit. To close such a hole,
-widen a `when`, give the `shift` an `edge=`, or set `absence: zero` on the
+widen a `when`, give the `shift` an `edge=`, or set `missing: neutral` on the
 masked variable.
 
 `cases:` is not accepted inside a `macros:` template.

@@ -71,13 +71,13 @@ variables:
 ```
 
 Where the gate does not exist, the curve is ungated. To have no curve there
-instead, put `absence: zero` on the gate.
+instead, put `missing: neutral` on the gate.
 
 ### `points`
 
-A values parameter short of a row does not build a shorter curve: the missing
-row reads as a breakpoint at the origin. A curve with fewer breakpoints than the
-dimension holds says so with `points:`. Name one of the block's own values
+A values parameter short of a row does not build a shorter curve: the block's
+[assumption](assumptions.md#what-a-curve-assumes) refuses the data. A curve with
+fewer breakpoints than the dimension holds says so with `points:`. Name one of the block's own values
 parameters, and the curve is as long as that parameter has rows:
 
 ```yaml
@@ -90,9 +90,33 @@ piecewise:
       - [op_cost, bp_y]
 ```
 
-A row missing from `bp_y` is still refused. Where the length is its own data,
+Each values parameter declares `missing: neutral`, because its table stops
+where the curve stops ([below](#missing-breakpoints)). A row missing from `bp_y`
+where `bp_x` has one is still refused. Where the length is its own data,
 name a boolean parameter instead. The marked breakpoints are one consecutive
 run, anywhere on the axis.
+
+### Missing breakpoints
+
+A parameter a block reads takes [`missing:`](declarations.md#a-missing-row)
+like any other parameter, and reads it alike inside and outside the curve.
+**A values parameter of a curve with `points:` is not `refused`.** The curve
+stops where the mask stops, so the table has no rows past it by design.
+`refused` says that every row is there: the curve never runs short, and a
+mask that names the table marks every breakpoint. The load is refused:
+
+```text
+parameter 'bp_y' is refused where a row is missing, and piecewise 'cost_curve' reads it under points: 'bp_x', which stops the curve where its rows stop. Declare missing: neutral, absent, or a value of its dtype.
+```
+
+Declare `missing: neutral` or `absent` on each values parameter of the block.
+The two build the same curve: the curve reads a table only inside the mask,
+and there the `<block>_complete` assumption still refuses a missing row. They
+differ where an expression outside the curve reads the table: `neutral` reads
+`0` there, and `absent` drops the term. Use `absent` where no number stands
+for a breakpoint the curve does not have, and `neutral` where `0` does. A
+values parameter of a curve with no `points:`, and a boolean `points:` mask,
+read the default, `refused`.
 
 ### `method`
 
@@ -174,6 +198,6 @@ shows a spec before and after.
 - **Every name written out starts with the name of the block.** The weights of
   the curve `curve` are `curve_lam`.
 - **No formulation emits a parameter.** The same data attaches to a spec and its
-  expansion.
+  expansion, and reads alike in both.
 - **The assumptions a `method:` implies become `assumptions:` entries** with
   the same names.

@@ -79,7 +79,6 @@ NAME_TOPIC = {
     'CVaR_omega': 'settings',
     'GlobalConstraint_counts_snapshot': 'settings',
     'GlobalConstraint_energy_weight': 'settings',
-    'GlobalConstraint_snapshot_closes': 'settings',
     'scenario_opex': 'cost',
     'primary_energy': 'global_constraints',
     'operational_limit': 'global_constraints',
