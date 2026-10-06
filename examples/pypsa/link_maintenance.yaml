@@ -120,7 +120,7 @@ constraints:
       maintenance status is at most one
     dims: [scenario, snapshot, link]
     where: Link_maintainable AND Link_active
-    expression: Link_maintenance == sum(Link_maintenance_start, by=Link_maintenance_cover, over=start, into=covered)
+    expression: Link_maintenance == sum(Link_maintenance_start, over=start, by=Link_maintenance_cover[covered])
   Link_maint_start_horizon:
     description: "`Link-maint-start-horizon` — no event starts where it could not run its whole duration"
     dims: [scenario, snapshot, link]

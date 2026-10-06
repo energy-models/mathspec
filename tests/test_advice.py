@@ -56,7 +56,7 @@ def test_a_dimension_nothing_reaches_is_named():
     [
         pytest.param({}, id='targeted-by-a-relation'),
         pytest.param(
-            {'constraints': {'cap': {'dims': ['h'], 'expression': 'sum(p, by=lk, over=g, into=h) <= k'}}},
+            {'constraints': {'cap': {'dims': ['h'], 'expression': 'sum(p, over=g, by=lk[h]) <= k'}}},
             id='grouping-into-it',
         ),
         pytest.param({'variables.r': {'dims': ['h']}}, id='indexing-by-it'),
@@ -64,7 +64,7 @@ def test_a_dimension_nothing_reaches_is_named():
 )
 def test_a_dimension_something_reaches_is_in_use(patch):
     assert not advice(varied(TARGET_ONLY, **patch)), (
-        'a dimension a relation targets, a declaration indexes or a grouping lands on is in use'
+        'a dimension a relation targets, a declaration indexes or a grouping groups by is in use'
     )
 
 

@@ -38,7 +38,7 @@ SURFACE = {
     'relations': {'port_bus': {'key': 'port', 'values': 'bus'}},
     'variables': {'flow': {'dims': ['snapshot', 'port']}},
     'constraints': {
-        'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, by=port_bus, over=port, into=bus) == 0'}
+        'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, over=port, by=port_bus[bus]) == 0'}
     },
 }
 
@@ -51,7 +51,7 @@ SUPPLY = {
     'constraints': {
         'gen_injects': {
             'dims': ['snapshot', 'generator'],
-            'expression': 'at(flow, by=gen_port, over=port, into=generator) == gen_p',
+            'expression': 'at(flow, by=gen_port[port]) == gen_p',
         }
     },
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p * gen_cost)'},
@@ -65,7 +65,7 @@ DEMAND = {
     'constraints': {
         'dem_withdraws': {
             'dims': ['snapshot', 'demand'],
-            'expression': 'at(flow, by=dem_port, over=port, into=demand) == -dem_load',
+            'expression': 'at(flow, by=dem_port[port]) == -dem_load',
         }
     },
 }
@@ -125,7 +125,7 @@ def test_the_balance_does_not_grow_when_a_component_type_is_added():
         'constraints': {
             'st_injects': {
                 'dims': ['snapshot', 'store'],
-                'expression': 'at(flow, by=st_port, over=port, into=store) == st_p',
+                'expression': 'at(flow, by=st_port[port]) == st_p',
             }
         },
     }

@@ -235,16 +235,16 @@ expressions:
     otherwise: 0
   Transformer_injection:
     expression: >-
-      -sum(Transformer_s, by=Transformer_bus0, over=transformer, into=bus)
-      + sum(Transformer_s, by=Transformer_bus1, over=transformer, into=bus)
-      - (0.5 * sum(Transformer_loss, by=Transformer_bus0, over=transformer, into=bus))
-      - (0.5 * sum(Transformer_loss, by=Transformer_bus1, over=transformer, into=bus))
+      -sum(Transformer_s, over=transformer, by=Transformer_bus0[bus])
+      + sum(Transformer_s, over=transformer, by=Transformer_bus1[bus])
+      - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus0[bus]))
+      - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus1[bus]))
     adds_to: Bus_injection
   Transformer_angle_sum:
     expression: >-
-      sum(Transformer_s * at(Transformer_cycle_weight, by=snapshot_period, over=period, into=snapshot), over=transformer)
+      sum(Transformer_s * at(Transformer_cycle_weight, by=snapshot_period[period]), over=transformer)
       + sum(Transformer_phase_shift_weight, over=transformer)
-      + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot_period, over=period, into=snapshot), over=transformer)
+      + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot_period[period]), over=transformer)
     adds_to: Cycle_angle_sum
 
 constraints:
