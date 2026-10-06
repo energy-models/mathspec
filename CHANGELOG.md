@@ -14,6 +14,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 - docs(pypsa): the pypsa spec names its repeated row conditions as masks, and its topic files read them under `given: masks:` ([#825](https://github.com/energy-models/mathspec/pull/825))
 - feat(language): a where predicate is named once under `masks:`, and another file reads it under `given: masks:` ([#821](https://github.com/energy-models/mathspec/pull/821))
+- docs(pypsa): the pypsa reference targets master at 51986084, where the eight rungs that diverged now match ([#844](https://github.com/energy-models/mathspec/pull/844))
 - feat(language)!: a call names the columns of a relation as relation[column], and a sum through a relation is a sum over the axes its join opens ([#664](https://github.com/energy-models/mathspec/pull/664))
 - docs(pypsa): the linearized unit commitment is a patch over pypsa.yaml, and relaxes a committable link and process too ([#835](https://github.com/energy-models/mathspec/pull/835))
 - docs(pypsa): the outage factors of a security-constrained run come from each investment period's own branches ([#834](https://github.com/energy-models/mathspec/pull/834))
