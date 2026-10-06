@@ -4,8 +4,7 @@
 
 """Rung 56: a security-constrained run over scenarios copies its rows into every scenario.
 
-PyPSA raises on a security-constrained run on a network with scenarios
-(PyPSA/PyPSA#1942). The two futures are identical, so the oracle is the same
+The two futures are identical, so the expected cost is the cost of the same
 network without scenarios.
 """
 
@@ -13,7 +12,6 @@ from __future__ import annotations
 
 import spine
 
-ISSUE = 1942
 BRANCH_OUTAGES = ['l56', 'l56_2']
 
 
@@ -34,8 +32,3 @@ def build():
     n = network()
     n.set_scenarios({'calm': 0.6, 'stormy': 0.4})
     return n
-
-
-def oracle():
-    """The network without scenarios: the futures are identical, so the expected cost is its cost."""
-    return [(1.0, network())]

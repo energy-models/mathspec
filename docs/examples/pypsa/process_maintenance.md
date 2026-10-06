@@ -193,34 +193,34 @@ assumptions:
     where: "Process_maintainable"
     description: >-
       a maintainable process with no event schedules no maintenance —
-      PyPSA refuses it (`consistency.py:1516`)
+      PyPSA refuses it (`consistency.py:1493`)
   Process_maintenance_duration_positive:
     holds: "Process_maintenance_duration > 0"
     where: "Process_maintainable"
     description: >-
       an event that covers no hours is no maintenance window — PyPSA
-      refuses it (`consistency.py:1506`)
+      refuses it (`consistency.py:1483`)
   Process_maintenance_duration_fits_the_horizon:
     holds: "Process_maintenance_duration <= sum(snapshot_weightings_generators, over=snapshot)"
     where: "Process_maintainable"
     description: >-
       one event longer than the horizon, in generator weightings, blocks
       every start and makes the event count infeasible — PyPSA refuses it
-      (`consistency.py:1527`)
+      (`consistency.py:1504`)
   Process_maintenance_events_fit_the_horizon:
     holds: "Process_maintenance_duration * Process_maintenance_events <= sum(snapshot_weightings_generators, over=snapshot)"
     where: "Process_maintainable"
     description: >-
       the events together longer than the horizon, in generator
       weightings, cannot all be scheduled — PyPSA refuses it
-      (`consistency.py:1539`)
+      (`consistency.py:1516`)
   Process_maintenance_build_cap_is_finite:
     holds: "Process_p_nom_max < inf"
     where: "Process_maintainable AND Process_p_nom_extendable"
     description: >-
       the `maintcap` rows hold the chosen build in maintenance against
       `p_nom_max`, so an infinite cap is an infinite coefficient — PyPSA
-      refuses it (`consistency.py:1551`)
+      refuses it (`consistency.py:1528`)
   Process_maintenance_module_count_is_finite:
     holds: "Process_p_nom_max < inf"
     where: "Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_p_nom_mod > 0"
@@ -228,7 +228,7 @@ assumptions:
       the `maint-modstatus` rows bound the modules on in maintenance by
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
-      (`constraints.py:503-506`)
+      (`constraints.py:504-507`)
 ```
 
 #### Sets
