@@ -9,6 +9,21 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the security-const
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    Line_s_nom: { dims: [scenario, line] }
+    Line_s_nom_extendable: { dims: [line], dtype: bool }
+    Line_s_max_pu: { dims: [scenario, snapshot, line] }
+    Transformer_s_nom: { dims: [scenario, transformer] }
+    Transformer_s_nom_extendable: { dims: [transformer], dtype: bool }
+    Transformer_s_max_pu: { dims: [scenario, snapshot, transformer] }
+  variables:
+    Line_s_nom_ext: { dims: [line] }
+    Transformer_s_nom_ext: { dims: [transformer] }
+  expressions:
+    Line_s_monitored: { dims: [scenario, snapshot, line] }
+    Transformer_s_monitored: { dims: [scenario, snapshot, transformer] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -64,21 +79,6 @@ parameters:
       outage are active in the period and share a sub-network
     dims: [period, transformer, outage]
     missing: neutral
-
-given:
-  parameters:
-    Line_s_nom: { dims: [scenario, line] }
-    Line_s_nom_extendable: { dims: [line], dtype: bool }
-    Line_s_max_pu: { dims: [scenario, snapshot, line] }
-    Transformer_s_nom: { dims: [scenario, transformer] }
-    Transformer_s_nom_extendable: { dims: [transformer], dtype: bool }
-    Transformer_s_max_pu: { dims: [scenario, snapshot, transformer] }
-  variables:
-    Line_s_nom_ext: { dims: [line] }
-    Transformer_s_nom_ext: { dims: [transformer] }
-  expressions:
-    Line_s_monitored: { dims: [scenario, snapshot, line] }
-    Transformer_s_monitored: { dims: [scenario, snapshot, transformer] }
 
 expressions:
   Outage_s:

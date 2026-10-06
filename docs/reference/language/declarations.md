@@ -151,15 +151,15 @@ takes those five keys and no other. A file with a `given:` block loads and print
 A given parameter is data this file reads and another file declares.
 
 ```yaml
-dimensions:
-  snapshot: { dtype: int }
-  generator: { dtype: str }
 given:
   parameters:
     gen_cost: { dims: [generator], description: what one unit of output costs }
     gen_on: { dims: [generator], dtype: bool }
   variables:
     gen_p: { dims: [snapshot, generator] }
+dimensions:
+  snapshot: { dtype: int }
+  generator: { dtype: str }
 constraints:
   off_units_idle:
     dims: [snapshot, generator]
@@ -186,6 +186,11 @@ under _Given_.
 A given variable is a column this file reads and another file introduces.
 
 ```yaml
+given:
+  variables:
+    flow:
+      dims: [snapshot, port]
+      description: what a port puts into its bus
 dimensions:
   snapshot: { dtype: int }
   port: { dtype: str }
@@ -194,11 +199,6 @@ relations:
   gen_port: { key: generator, values: port }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
-given:
-  variables:
-    flow:
-      dims: [snapshot, port]
-      description: what a port puts into its bus
 constraints:
   gen_injects:
     dims: [snapshot, generator]
@@ -233,14 +233,14 @@ A given constraint is a row family that another model builds. This file reads
 its dual.
 
 ```yaml
-dimensions:
-  snapshot: { dtype: int }
-  bus: { dtype: str }
 given:
   constraints:
     balance:
       dims: [snapshot, bus]
       description: the host model clears each bus
+dimensions:
+  snapshot: { dtype: int }
+  bus: { dtype: str }
 expressions:
   price:
     expression: dual(balance)
@@ -262,14 +262,14 @@ A given expression is a named expression this file reads and another file
 defines.
 
 ```yaml
-dimensions:
-  snapshot: { dtype: int }
-  bus: { dtype: str }
 given:
   expressions:
     injection:
       dims: [snapshot, bus]
       description: what the components put into a bus
+dimensions:
+  snapshot: { dtype: int }
+  bus: { dtype: str }
 constraints:
   balance:
     dims: [snapshot, bus]
@@ -309,6 +309,9 @@ part of it.
 
 ```yaml
 # fleet.yaml adds a term
+given:
+  expressions:
+    injection: { dims: [snapshot, bus] }
 dimensions:
   snapshot: { dtype: int }
   bus: { dtype: str }
@@ -317,9 +320,6 @@ relations:
   gen_bus: { key: generator, values: bus }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
-given:
-  expressions:
-    injection: { dims: [snapshot, bus] }
 expressions:
   generation:
     description: what the fleet puts into a bus
@@ -329,14 +329,14 @@ expressions:
 
 ```yaml
 # balance.yaml reads the sum, and adds nothing to it
-dimensions:
-  snapshot: { dtype: int }
-  bus: { dtype: str }
 given:
   expressions:
     injection:
       dims: [snapshot, bus]
       description: what the components put into a bus
+dimensions:
+  snapshot: { dtype: int }
+  bus: { dtype: str }
 constraints:
   balance:
     dims: [snapshot, bus]
@@ -395,9 +395,6 @@ A given mask is a [mask](named.md#masks) this file reads and another file
 defines.
 
 ```yaml
-dimensions:
-  period: { dtype: int, ordered: true }
-  generator: { dtype: str }
 given:
   variables:
     p: { dims: [period, generator] }
@@ -405,6 +402,9 @@ given:
     stands:
       dims: [period, generator]
       description: the generator stands in this period
+dimensions:
+  period: { dtype: int, ordered: true }
+  generator: { dtype: str }
 parameters:
   ramp: { dims: [generator] }
 constraints:

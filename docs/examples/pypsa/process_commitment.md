@@ -9,6 +9,30 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Process`,
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    Process_p_nom: { dims: [scenario, process] }
+    Process_p_nom_extendable: { dims: [process], dtype: bool }
+    Process_p_min_pu: { dims: [scenario, snapshot, process] }
+    Process_p_max_pu: { dims: [scenario, snapshot, process] }
+    Process_p_nom_mod: { dims: [process] }
+    Process_modules_installed: { dims: [scenario, process] }
+    Process_p_min_pu_nonneg: { dims: [process], dtype: bool }
+    Process_maintenance_pu: { dims: [scenario, process] }
+    period_weight_objective: { dims: [period] }
+    Process_active: { dims: [snapshot, process], dtype: bool }
+  variables:
+    Process_p: { dims: [scenario, snapshot, process] }
+    Process_n_mod: { dims: [process], domain: integer }
+    Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
+    Process_maintenance_status: { dims: [scenario, snapshot, process] }
+    Process_p_nom_ext: { dims: [process] }
+  expressions:
+    scenario_opex: { dims: [scenario] }
+  masks:
+    Process_committed: { dims: [snapshot, process] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -107,30 +131,6 @@ variables:
     domain: integer
     bounds:
       lower: 0
-
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    Process_p_nom: { dims: [scenario, process] }
-    Process_p_nom_extendable: { dims: [process], dtype: bool }
-    Process_p_min_pu: { dims: [scenario, snapshot, process] }
-    Process_p_max_pu: { dims: [scenario, snapshot, process] }
-    Process_p_nom_mod: { dims: [process] }
-    Process_modules_installed: { dims: [scenario, process] }
-    Process_p_min_pu_nonneg: { dims: [process], dtype: bool }
-    Process_maintenance_pu: { dims: [scenario, process] }
-    period_weight_objective: { dims: [period] }
-    Process_active: { dims: [snapshot, process], dtype: bool }
-  variables:
-    Process_p: { dims: [scenario, snapshot, process] }
-    Process_n_mod: { dims: [process], domain: integer }
-    Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
-    Process_maintenance_status: { dims: [scenario, snapshot, process] }
-    Process_p_nom_ext: { dims: [process] }
-  expressions:
-    scenario_opex: { dims: [scenario] }
-  masks:
-    Process_committed: { dims: [snapshot, process] }
 
 expressions:
   Process_previous_status:

@@ -2,6 +2,27 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
+    Generator_committable: { dims: [generator], dtype: bool }
+    Generator_status_initial: { dims: [scenario, generator], dtype: int }
+    Generator_p_nom_mod: { dims: [generator] }
+    Generator_big_m: { dims: [scenario, generator] }
+    Generator_active: { dims: [snapshot, generator], dtype: bool }
+  variables:
+    Generator_p: { dims: [scenario, snapshot, generator] }
+    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_start_up: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_shut_down: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_p_nom_ext: { dims: [generator] }
+  expressions:
+    Generator_previous_status: { dims: [scenario, snapshot, generator] }
+    Generator_p_nom_effective: { dims: [scenario, generator] }
+    Generator_p_nom_committed: { dims: [scenario, generator] }
+  masks:
+    Generator_com_ext: { dims: [snapshot, generator] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -46,27 +67,6 @@ parameters:
       the unit carries no ramp row at the first snapshot
     dims: [scenario, generator]
     missing: neutral
-
-given:
-  parameters:
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
-    Generator_committable: { dims: [generator], dtype: bool }
-    Generator_status_initial: { dims: [scenario, generator], dtype: int }
-    Generator_p_nom_mod: { dims: [generator] }
-    Generator_big_m: { dims: [scenario, generator] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
-  variables:
-    Generator_p: { dims: [scenario, snapshot, generator] }
-    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_start_up: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_shut_down: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_p_nom_ext: { dims: [generator] }
-  expressions:
-    Generator_previous_status: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom_effective: { dims: [scenario, generator] }
-    Generator_p_nom_committed: { dims: [scenario, generator] }
-  masks:
-    Generator_com_ext: { dims: [snapshot, generator] }
 
 expressions:
   Generator_previous_p:

@@ -9,6 +9,14 @@ One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the expected opera
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    scenario_weight: { dims: [scenario] }
+    CVaR_omega: { dims: [] }
+  expressions:
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -37,14 +45,6 @@ variables:
     dims: []
     where: CVaR_omega
     missing: neutral
-
-given:
-  parameters:
-    scenario_weight: { dims: [scenario] }
-    CVaR_omega: { dims: [] }
-  expressions:
-    scenario_opex: { dims: [scenario] }
-    total_cost: { dims: [] }
 
 expressions:
   risk_weighted_opex:
