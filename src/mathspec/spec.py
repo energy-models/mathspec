@@ -150,10 +150,12 @@ class RelationBlock(_StrictBlock):
           ends: {key: line, values: {bus0: bus, bus1: bus}}
           connection: {key: [generator, bus]}
 
-    An operator reads the table in the direction the call names
-    (``over=``, ``into=``), joining on the other key columns; the
-    declaration fixes no direction. The map itself is data, and arrives with the rest of it,
-    under the relation's name, one column per role.
+    A sum joins the table on the columns ``over=`` names and every other key
+    column, and groups by the columns ``by=relation[...]`` names; a lookup
+    joins on the columns it names. The declaration fixes no direction, and a
+    column is named after its own dimension or after none, so a name in a
+    call reads the same as a column and as a dimension. The map itself is data, and arrives with the rest of it, under
+    the relation's name, one column per role.
     """
 
     _label: ClassVar[str] = 'a relation declaration'
