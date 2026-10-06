@@ -20,8 +20,10 @@ from pathlib import Path
 import pytest
 import yaml
 
-from mathspec import FORMATS, LanguageError, merge, to_spec, typeset
+from mathspec import merge, to_spec, typeset
 from mathspec.canonical import canonical_yaml
+from mathspec.errors import LanguageError
+from mathspec.typesetting import FORMATS
 from tests.fixtures import BALANCE
 from tests.test_terms import DEMAND, FLEET
 from tools.gallery import split_index

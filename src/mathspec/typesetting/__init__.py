@@ -120,7 +120,7 @@ def typeset(
             reads and checks the file once rather than once per format, and a
             curve prints as the curve it states. Pass ``spec.expand()`` for the rows a solver holds
             instead.
-        fmt: What spells the math — a key of [`FORMATS`][].
+        fmt: What spells the math — a [`FormatName`][].
         symbols: How names print, as a [`SymbolTable`][], a path or a
             mapping. Names it does not carry are derived, and it must be
             written in *fmt*'s notation.
@@ -188,7 +188,7 @@ def typeset_declaration(
         spec: Anything [`mathspec.to_spec`][] accepts, or a [`Program`][].
         name: A named expression, mask, constraint, assumption,
             ``piecewise:`` block or variable the spec declares.
-        fmt: What spells the math — a key of [`FORMATS`][].
+        fmt: What spells the math — a [`FormatName`][].
         symbols: How names print; see [`typeset`][].
         inline_expressions: Substitute the plain named expressions the line uses, so it
             stands on its own; ``False`` prints their symbols, as the document

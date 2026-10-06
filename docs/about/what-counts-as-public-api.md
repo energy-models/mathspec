@@ -22,6 +22,22 @@ A function may join the public API when both of these hold:
 Wherever a feature can be a key in the file, it is one: a key shows up in a git
 diff, the typesetter prints it, and an engine in another language reads it.
 
+## Where a name lives
+
+The top level holds what you call. Every other public name lives in one of
+three modules, and the module follows from how you get the name:
+
+| You get it                  | It lives in        | Such as                                  |
+| --------------------------- | ------------------ | ---------------------------------------- |
+| by calling a function       | `mathspec`         | `to_spec`, `merge`, `typeset`, `advice`  |
+| from what a `Spec` holds    | `mathspec.spec`    | `Spec`, `VariableBlock`, `BUILTIN_NAMES` |
+| from what a `Program` holds | `mathspec.program` | `Program`, `Sum`, `Mask`, `Advice`       |
+| by catching it              | `mathspec.errors`  | `LanguageError`, `SchemaError`           |
+
+`SymbolTable` and `FormatName` are at the top level too: you build or name
+them to pass them to the typesetter. `tests/test_public_surface.py` holds each
+module to its rule.
+
 ## What every function keeps
 
 - **No state.** No registry, no plugin, and no setting that changes what a
@@ -32,7 +48,7 @@ diff, the typesetter prints it, and an engine in another language reads it.
   talks about a file the language accepts, and changes nothing.
 - **Nothing is written out unasked.** A `piecewise:` or `sos:` block stays the
   block until a caller calls
-  [`spec.expand()`](../reference/api.md#mathspec.Spec.expand).
+  [`spec.expand()`](../reference/spec.md#mathspec.spec.Spec.expand).
 
 What a solver or file format can take, how the numbers attach to the names, and
 which solver runs are each engine's to decide

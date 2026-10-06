@@ -2,9 +2,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The YAML surface's types — every block a file may contain, rooted at [`Spec`][].
+"""The file: what it says, as every block it may contain, rooted at [`Spec`][].
 
-Nothing here has seen data.
+The first public state. A [`Spec`][] holds one file's sections as the blocks
+below, and [`BUILTIN_NAMES`][] is the closed set of operators an expression in
+one may call. Nothing here has seen data; what the file means is its
+[`program`][mathspec.spec.Spec.program].
 """
 
 from __future__ import annotations
@@ -30,6 +33,7 @@ from pydantic import (
 
 from mathspec._expression_parser import NAME, ComparisonOperator
 from mathspec.errors import did_you_mean, schema_error
+from mathspec.operators import BUILTIN_NAMES
 from mathspec.program import (
     DimensionDtype,
     MissingReading,
@@ -49,6 +53,36 @@ if TYPE_CHECKING:
     from pydantic import GetJsonSchemaHandler, SerializerFunctionWrapHandler
     from pydantic.config import ExtraValues
     from pydantic_core import CoreSchema
+
+
+#: What ``mathspec.spec`` promises a consumer, sorted.
+__all__ = [
+    'BUILTIN_NAMES',
+    'AssumptionBlock',
+    'BoundsBlock',
+    'ConstraintBlock',
+    'Curvature',
+    'DimensionBlock',
+    'ExpressionBlock',
+    'ExpressionCase',
+    'Formulation',
+    'GivenBlock',
+    'GivenConstraintBlock',
+    'GivenExpressionBlock',
+    'GivenMaskBlock',
+    'GivenParameterBlock',
+    'GivenVariableBlock',
+    'MacroBlock',
+    'MaskBlock',
+    'ObjectiveBlock',
+    'ParameterBlock',
+    'PiecewiseBlock',
+    'PiecewiseLink',
+    'RelationBlock',
+    'SosBlock',
+    'Spec',
+    'VariableBlock',
+]
 
 
 class _StrictBlock(BaseModel):
@@ -1024,7 +1058,7 @@ class Spec(_StrictBlock):
     A ``Spec`` that exists has passed the whole language: constructing one by
     any route — ``to_spec``, [`model_validate`][], the constructor — runs
     every load-time check, expression pass included, and raises
-    [`LanguageError`][] on a spec the language refuses.
+    [`LanguageError`][mathspec.errors.LanguageError] on a spec the language refuses.
     Holding one is the proof, so nothing downstream checks it again.
 
     The API is the thirteen declaration sections plus ``version`` and

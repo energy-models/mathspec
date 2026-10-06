@@ -7,13 +7,14 @@
 The second public state, and the one a consumer reads. A [`Program`][] is
 the file typed, section for section: every declaration it makes, with names
 resolved, shapes fixed and every rule decidable without data checked, and no
-data at all. Lowering, as a [`Spec`][] loads, is the only
+data at all. Lowering, as a [`Spec`][mathspec.spec.Spec] loads, is the only
 thing that builds one, so nothing here re-checks a hand-built one.
 
 Node and declaration classes are matched with ``isinstance``. The rules a
 node's structure does not show is [`children`][]; the questions over the walk
 are [`walk_regions`][], [`walk`][] and the filters beside them. A
-resolved ``where`` arrives as a [`Mask`][]. Frozen dataclasses only — no
+resolved ``where`` arrives as a [`Mask`][], and what
+[`advice`][mathspec.advice] says about a program as [`Advice`][]. Frozen dataclasses only — no
 execution logic, and nothing imported from a consumer. How a consumer reads
 one: ``docs/reference/reading.md``.
 """
@@ -37,6 +38,8 @@ if TYPE_CHECKING:
 #: What ``mathspec.program`` promises a consumer, sorted.
 __all__ = [
     'Add',
+    'Advice',
+    'AdviceKind',
     'And',
     'Assumption',
     'Axis',
@@ -1703,3 +1706,35 @@ class Mask:
     def __or__(self, other: Mask) -> Mask:
         """Either mask — construction absorbs a literal side rather than burying it."""
         return Mask(Or(self.root, other.root))
+
+
+# --------------------------------------------------------------------------
+# Advice
+# --------------------------------------------------------------------------
+
+
+#: Which pass an [`Advice`][] comes from. Closed, like the operator set: a
+#: consumer filtering on it can enumerate every value.
+AdviceKind = Literal['never-an-axis', 'given', 'unbounded']
+
+
+@dataclass(frozen=True)
+class Advice:
+    """One thing the language advises about a file it accepts.
+
+    Never an error: each is what a half-written spec looks like too. A
+    consumer prints it, or filters on ``kind`` and ``subject``; the text is the
+    language's, so no consumer writes its own.
+
+    Attributes:
+        kind: The pass that said it.
+        subject: The declaration it is about — a dimension name, a variable name.
+        text: The sentence, naming the rewrite.
+    """
+
+    kind: AdviceKind
+    subject: str
+    text: str
+
+    def __str__(self) -> str:
+        return self.text
