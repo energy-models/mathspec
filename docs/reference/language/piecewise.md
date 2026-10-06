@@ -109,8 +109,12 @@ mask that names the table marks every breakpoint. The load is refused:
 parameter 'bp_y' is refused where a row is missing, and piecewise 'cost_curve' reads it under points: 'bp_x', which stops the curve where its rows stop. Declare missing: neutral, absent, or a value of its dtype.
 ```
 
-Declare `missing: neutral` on each values parameter of the block. The
-`<block>_complete` assumption still refuses a missing row inside the mask. A
+Declare `missing: neutral` or `absent` on each values parameter of the block.
+The two build the same curve: the curve reads a table only inside the mask,
+and there the `<block>_complete` assumption still refuses a missing row. They
+differ where an expression outside the curve reads the table: `neutral` reads
+`0` there, and `absent` drops the term. Use `absent` where no number stands
+for a breakpoint the curve does not have, and `neutral` where `0` does. A
 values parameter of a curve with no `points:`, and a boolean `points:` mask,
 read the default, `refused`.
 

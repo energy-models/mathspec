@@ -122,6 +122,11 @@ def _without_refused(written: dict[str, object]) -> dict[str, object]:
     return written
 
 
+def _as_yaml(v: object) -> str:
+    """*v* as the file spells it, so a refusal quotes the line the author wrote."""
+    return str(v).lower() if isinstance(v, bool) else str(v)
+
+
 def _missing_null(kind: str, rewrite: str) -> ValueError:
     """``missing: null`` reads as either the default or an absent row, so it is refused for the word that says which."""
     return ValueError(f'missing: null on {kind} names no reading. {rewrite}')
@@ -209,7 +214,7 @@ class RelationBlock(_StrictBlock):
             )
         if v not in get_args(RelationMissing):
             msg = (
-                f'missing: {v!r} on a relation, which takes refused or absent. A label the map leaves out '
+                f'missing: {_as_yaml(v)} on a relation, which takes refused or absent. A label the map leaves out '
                 f'is refused, or belongs to no group.'
             )
             raise ValueError(msg)
@@ -332,20 +337,20 @@ class ParameterBlock(_StrictBlock):
         v = self.missing
         if self.dtype == 'str' and v not in ('refused', 'absent'):
             msg = (
-                f'missing: {v} on a str parameter, which takes refused or absent. A label has no value to fill, '
+                f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill, '
                 f'and no neutral one.'
             )
             raise ValueError(msg)
         if isinstance(v, str):
             return self
         if self.dtype == 'bool' and not isinstance(v, bool):
-            msg = f'missing: {v!r} on a bool parameter, which takes true or false.'
+            msg = f'missing: {_as_yaml(v)} on a bool parameter, which takes true or false.'
             raise ValueError(msg)
         if self.dtype != 'bool' and isinstance(v, bool):
-            msg = f'missing: {str(v).lower()} on a {self.dtype} parameter, which takes a number. Write 1 or 0.'
+            msg = f'missing: {_as_yaml(v)} on a {self.dtype} parameter, which takes a number. Write 1 or 0.'
             raise ValueError(msg)
         if self.dtype == 'int' and isinstance(v, float):
-            msg = f'missing: {v} on an int parameter, which takes an integer. Write one, or declare dtype: float.'
+            msg = f'missing: {_as_yaml(v)} on an int parameter, which takes an integer. Write one, or declare dtype: float.'
             raise ValueError(msg)
         return self
 
@@ -412,7 +417,7 @@ class VariableBlock(_StrictBlock):
             raise _missing_null('a variable', 'Write neutral, or leave the key out for absent.')
         if v not in get_args(VariableMissing):
             msg = (
-                f'missing: {v!r} on a variable, which takes absent or neutral. A variable has no data: '
+                f'missing: {_as_yaml(v)} on a variable, which takes absent or neutral. A variable has no data: '
                 f'refused and a value are readings of a parameter.'
             )
             raise ValueError(msg)

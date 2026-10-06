@@ -604,6 +604,7 @@ ABSENT_SURFACE = varied(SURFACE, **{'relations.port_bus.missing': 'absent'})
         pytest.param(SURFACE, {'missing': 'absent'}, 'absent', id='the-reading-alone'),
         pytest.param(SURFACE, {'key': 'port', 'values': 'bus', 'missing': 'absent'}, 'absent', id='restated-absent'),
         pytest.param(ABSENT_SURFACE, {'missing': 'refused'}, 'refused', id='back-to-the-default'),
+        pytest.param(ABSENT_SURFACE, {'missing': None}, 'refused', id='null-puts-back-the-default'),
         pytest.param(SURFACE, {'key': 'port', 'values': 'bus', 'missing': 'refused'}, 'refused', id='default-written'),
         pytest.param(ABSENT_SURFACE, {'key': 'port', 'values': 'bus'}, 'absent', id='restated-without-one'),
     ],
@@ -613,11 +614,20 @@ def test_a_patch_changes_what_a_key_the_map_leaves_out_means(base, relation, mis
     assert override(base, [{'relations': {'port_bus': relation}}]).relations['port_bus'].missing == missing
 
 
-def test_a_patch_changes_what_a_missing_row_of_a_parameter_means():
-    assert (
-        override(DISPATCH_MODEL, [{'parameters': {'cost': {'missing': 'neutral'}}}]).parameters['cost'].missing
-        == 'neutral'
-    )
+@pytest.mark.parametrize(
+    ('base', 'written', 'missing'),
+    [
+        pytest.param(DISPATCH_MODEL, 'neutral', 'neutral', id='a-reading'),
+        pytest.param(
+            varied(DISPATCH_MODEL, **{'parameters.cost.missing': 'absent'}),
+            None,
+            'refused',
+            id='null-puts-back-the-default',
+        ),
+    ],
+)
+def test_a_patch_changes_what_a_missing_row_of_a_parameter_means(base, written, missing):
+    assert override(base, [{'parameters': {'cost': {'missing': written}}}]).parameters['cost'].missing == missing
 
 
 @pytest.mark.parametrize(

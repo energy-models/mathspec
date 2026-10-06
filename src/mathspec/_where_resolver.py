@@ -151,6 +151,19 @@ class WhereResolver:
             return node
         match kind:
             case 'parameter':
+                declared = ns.schema.parameters.get(node.name)
+                if declared is not None and declared.missing == 'refused' and declared.dtype in ('int', 'str'):
+                    rewrite = (
+                        f'Declare `missing: absent`, or compare the label: where: "{node.name} == \'...\'".'
+                        if declared.dtype == 'str'
+                        else f'Declare `missing: neutral` or `absent`, or compare the value: where: "{node.name} > 0".'
+                    )
+                    self.errors.append(
+                        f"{context}: '{node.name}' is declared dtype: {declared.dtype} and missing: refused, so it "
+                        f'has a row at every coordinate and the bare name is true at every coordinate — the mask '
+                        f'has no effect. {rewrite}'
+                    )
+                    return node
                 return ParameterDefined(node.name, ns.leaf_dims[node.name])
             case 'dimension':
                 self.errors.append(

@@ -40,7 +40,7 @@ STORAGE: dict[str, Any] = {
     'parameters': {
         'cyclic': {'dims': ['storage'], 'dtype': 'bool'},
         'committable': {'dims': ['storage'], 'dtype': 'bool'},
-        'kind': {'dims': ['storage'], 'dtype': 'str'},
+        'kind': {'dims': ['storage'], 'dtype': 'str', 'missing': 'absent'},
         'soc_initial': {'dims': ['storage']},
         'capacity': {'dims': ['storage']},
         'age': {'dims': ['storage'], 'dtype': 'int'},
