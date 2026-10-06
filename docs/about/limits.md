@@ -9,10 +9,9 @@ Before you ask for a new operator, block or keyword, find out here whether the
 language can add it, and what to write instead if it cannot. For the rules a
 spec itself has to obey, read [the ten rules](../reference/language/index.md#the-ten-rules).
 
-## How a new construct enters
+## Adding a new construct
 
-A request for something new is one of four kinds, and the kind decides how
-much work it is to add.
+New constructs can be added, although the overhead to do so varies by kind.
 
 - **A macro** is a template with arguments, written in the file under `macros:`.
   Adding one costs nothing: it uses only operators that exist, so no engine has
@@ -36,9 +35,8 @@ much work it is to add.
   belongs to another file, which lets a component file load and print on its
   own.
 
-A request that is none of the four is refused, and the
-[table of refusals](#requests-the-language-refuses) records it with what to write
-instead.
+No other constructs are possible.
+See our [table of refusals](#requests-the-language-refuses) for our justification for this decision.
 
 ### What a new primitive has to satisfy
 
