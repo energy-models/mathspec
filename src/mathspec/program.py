@@ -626,6 +626,9 @@ class DimensionDeclaration:
     #: checked against — the same claim ``ParameterDeclaration.dtype`` makes
     #: about a value column, one axis over.
     dtype: DimensionDtype = 'str'
+    #: Whether the order of the labels is part of the model, so a consumer
+    #: must keep the order the data gives them in.
+    ordered: bool = False
     description: str | None = None
 
 

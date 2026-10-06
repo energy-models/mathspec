@@ -133,7 +133,7 @@
     },
     "DimensionBlock": {
       "additionalProperties": false,
-      "description": "A declared dimension, and the dtype its coordinates must be.\n\nA dimension is an axis and nothing else: it declares that the axis exists\nand what its coordinates are typed as, never which coordinates there are \u2014\nthose are data, and arrive when the data is attached. The maps its members carry \u2014 a\ngenerator's bus, a snapshot's period \u2014 are top-level ``relations:``\n([`RelationBlock`][]), keyed by their own name.",
+      "description": "A declared dimension, the dtype its coordinates must be, and whether their order means anything.\n\nA dimension is an axis and nothing else: it declares that the axis exists\nand what its coordinates are typed as, never which coordinates there are \u2014\nthose are data, and arrive when the data is attached. The maps its members carry \u2014 a\ngenerator's bus, a snapshot's period \u2014 are top-level ``relations:``\n([`RelationBlock`][]), keyed by their own name.",
       "properties": {
         "description": {
           "anyOf": [
@@ -157,6 +157,11 @@
           ],
           "title": "Dtype",
           "type": "string"
+        },
+        "ordered": {
+          "default": false,
+          "title": "Ordered",
+          "type": "boolean"
         }
       },
       "title": "DimensionBlock",

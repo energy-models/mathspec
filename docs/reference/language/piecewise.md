@@ -51,7 +51,8 @@ piecewise:
 
 A block states one weight per breakpoint in `[0, 1]`, a row making the weights
 sum to 1, and a row per link tying its expression to the weighted breakpoints.
-The breakpoint order is the declared order of `over`. What a block assumes of
+The breakpoint order is the order of `over`, which is an
+[ordered](dimensions.md#order) dimension. What a block assumes of
 its numbers is on [what a curve assumes](assumptions.md#what-a-curve-assumes).
 
 ### `activity`
@@ -139,7 +140,8 @@ A set is over **one** variable, and a variable holds **one** set. A second block
 naming the same variable is a load error.
 
 A member the variable's `where` masks out is not in the set. The order is the
-declared order of the `along` dimension.
+order of the `along` dimension, which is
+[ordered](dimensions.md#order) for `type: 2`.
 
 ### What a set is written out as
 

@@ -35,7 +35,7 @@ from mathspec._where_parser import (
     UnresolvedWhereNode,
 )
 from mathspec.dimensions import dims_of, join_dims
-from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed
+from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
 from mathspec.expansion import expand
 from mathspec.program import (
     Add,
@@ -233,6 +233,9 @@ class WhereResolver:
                 f"{context}: shift(<predicate>, along='{along.name}') reads the predicate back along a dimension "
                 f'it does not carry — it reads {_listed(sorted(mask.dims))}. Translate it along one of those.'
             )
+            return node
+        if self.ns.unordered(along.name):
+            self.errors.append(unordered(context, f'shift(<predicate>, along={along.name})', along.name))
             return node
         return TranslatedPredicate(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
 
@@ -439,6 +442,9 @@ class WhereResolver:
                 f"'{dimension}' is {_declared_as(ns, dimension)}. "
                 f'{did_you_mean(dimension, ns.dimensions, label="Dimensions")}'
             )
+            return node
+        if ns.unordered(dimension):
+            self.errors.append(unordered(context, f'position({dimension})', dimension))
             return node
         if within is None:
             return DimensionPosition(dimension, node.op, position)

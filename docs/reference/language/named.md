@@ -194,7 +194,7 @@ A mask names a [`where` predicate](expressions.md#where-strings) once. A
 
 ```yaml
 dimensions:
-  period: { dtype: int }
+  period: { dtype: int, ordered: true }
   generator: { dtype: str }
 parameters:
   build_year: { dims: [generator] }

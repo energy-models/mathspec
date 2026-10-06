@@ -342,7 +342,7 @@ defines.
 
 ```yaml
 dimensions:
-  period: { dtype: int }
+  period: { dtype: int, ordered: true }
   generator: { dtype: str }
 given:
   variables:
