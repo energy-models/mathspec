@@ -1,0 +1,2026 @@
+{
+  "$defs": {
+    "Add": {
+      "additionalProperties": false,
+      "properties": {
+        "left": {
+          "$ref": "#/$defs/Expression"
+        },
+        "node": {
+          "const": "Add"
+        },
+        "right": {
+          "$ref": "#/$defs/Expression"
+        }
+      },
+      "required": [
+        "node",
+        "left",
+        "right"
+      ],
+      "type": "object"
+    },
+    "And": {
+      "additionalProperties": false,
+      "properties": {
+        "left": {
+          "$ref": "#/$defs/Predicate"
+        },
+        "node": {
+          "const": "And"
+        },
+        "right": {
+          "$ref": "#/$defs/Predicate"
+        }
+      },
+      "required": [
+        "node",
+        "left",
+        "right"
+      ],
+      "type": "object"
+    },
+    "Assumption": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "node": {
+          "const": "Assumption"
+        },
+        "predicate": {
+          "$ref": "#/$defs/Mask"
+        },
+        "where": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Mask"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "node",
+        "predicate",
+        "where",
+        "description"
+      ],
+      "type": "object"
+    },
+    "BooleanLiteral": {
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "const": "BooleanLiteral"
+        },
+        "value": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "node",
+        "value"
+      ],
+      "type": "object"
+    },
+    "Cases": {
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "const": "Cases"
+        },
+        "regions": {
+          "items": {
+            "$ref": "#/$defs/Region"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "node",
+        "regions"
+      ],
+      "type": "object"
+    },
+    "Constant": {
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "const": "Constant"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/float"
+            }
+          ]
+        }
+      },
+      "required": [
+        "node",
+        "value"
+      ],
+      "type": "object"
+    },
+    "ConstraintDeclaration": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "lhs": {
+          "$ref": "#/$defs/Expression"
+        },
+        "node": {
+          "const": "ConstraintDeclaration"
+        },
+        "rhs": {
+          "$ref": "#/$defs/Expression"
+        },
+        "sense": {
+          "enum": [
+            "<=",
+            ">=",
+            "=="
+          ]
+        },
+        "where": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Mask"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "node",
+        "dims",
+        "lhs",
+        "sense",
+        "rhs",
+        "where",
+        "description"
+      ],
+      "type": "object"
+    },
+    "CountComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "node": {
+          "const": "CountComparison"
+        },
+        "op": {
+          "enum": [
+            "<=",
+            ">=",
+            "==",
+            "!=",
+            "<",
+            ">"
+          ]
+        },
+        "over": {
+          "type": "string"
+        },
+        "predicate": {
+          "$ref": "#/$defs/Mask"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/float"
+            }
+          ]
+        }
+      },
+      "required": [
+        "node",
+        "predicate",
+        "over",
+        "op",
+        "value",
+        "dims"
+      ],
+      "type": "object"
+    },
+    "DimensionComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "DimensionComparison"
+        },
+        "op": {
+          "enum": [
+            "<=",
+            ">=",
+            "==",
+            "!=",
+            "<",
+            ">"
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/float"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "$ref": "#/$defs/datetime"
+            }
+          ]
+        }
+      },
+      "required": [
+        "node",
+        "name",
+        "op",
+        "value"
+      ],
+      "type": "object"
+    },
+    "DimensionDeclaration": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dtype": {
+          "enum": [
+            "float",
+            "int",
+            "str",
+            "datetime"
+          ]
+        },
+        "node": {
+          "const": "DimensionDeclaration"
+        }
+      },
+      "required": [
+        "node",
+        "dtype",
+        "description"
+      ],
+      "type": "object"
+    },
+    "DimensionPosition": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "DimensionPosition"
+        },
+        "op": {
+          "enum": [
+            "<=",
+            ">=",
+            "==",
+            "!=",
+            "<",
+            ">"
+          ]
+        },
+        "partition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Partition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "node",
+        "name",
+        "op",
+        "position",
+        "partition"
+      ],
+      "type": "object"
+    },
+    "Direction": {
+      "additionalProperties": false,
+      "properties": {
+        "consumed": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "joined": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "Direction"
+        },
+        "produced": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "node",
+        "name",
+        "consumed",
+        "produced",
+        "joined"
+      ],
+      "type": "object"
+    },
+    "Divide": {
+      "additionalProperties": false,
+      "properties": {
+        "divisor": {
+          "$ref": "#/$defs/Expression"
+        },
+        "node": {
+          "const": "Divide"
+        },
+        "numerator": {
+          "$ref": "#/$defs/Expression"
+        }
+      },
+      "required": [
+        "node",
+        "numerator",
+        "divisor"
+      ],
+      "type": "object"
+    },
+    "Dual": {
+      "additionalProperties": false,
+      "properties": {
+        "constraint": {
+          "type": "string"
+        },
+        "node": {
+          "const": "Dual"
+        }
+      },
+      "required": [
+        "node",
+        "constraint"
+      ],
+      "type": "object"
+    },
+    "Expression": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Constant"
+        },
+        {
+          "$ref": "#/$defs/Parameter"
+        },
+        {
+          "$ref": "#/$defs/Variable"
+        },
+        {
+          "$ref": "#/$defs/Dual"
+        },
+        {
+          "$ref": "#/$defs/Negate"
+        },
+        {
+          "$ref": "#/$defs/Add"
+        },
+        {
+          "$ref": "#/$defs/Multiply"
+        },
+        {
+          "$ref": "#/$defs/Power"
+        },
+        {
+          "$ref": "#/$defs/Divide"
+        },
+        {
+          "$ref": "#/$defs/Sum"
+        },
+        {
+          "$ref": "#/$defs/GroupSum"
+        },
+        {
+          "$ref": "#/$defs/Pullback"
+        },
+        {
+          "$ref": "#/$defs/Translate"
+        },
+        {
+          "$ref": "#/$defs/WindowSum"
+        },
+        {
+          "$ref": "#/$defs/Cases"
+        },
+        {
+          "$ref": "#/$defs/Named"
+        }
+      ]
+    },
+    "ExpressionComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "left": {
+          "$ref": "#/$defs/Expression"
+        },
+        "node": {
+          "const": "ExpressionComparison"
+        },
+        "op": {
+          "enum": [
+            "<=",
+            ">=",
+            "==",
+            "!=",
+            "<",
+            ">"
+          ]
+        },
+        "right": {
+          "$ref": "#/$defs/Expression"
+        }
+      },
+      "required": [
+        "node",
+        "left",
+        "op",
+        "right",
+        "dims"
+      ],
+      "type": "object"
+    },
+    "ExpressionDeclaration": {
+      "additionalProperties": false,
+      "properties": {
+        "adds_to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "expression": {
+          "$ref": "#/$defs/Expression"
+        },
+        "in_math": {
+          "type": "boolean"
+        },
+        "node": {
+          "const": "ExpressionDeclaration"
+        }
+      },
+      "required": [
+        "node",
+        "expression",
+        "dims",
+        "in_math",
+        "description",
+        "adds_to"
+      ],
+      "type": "object"
+    },
+    "GivenDeclaration": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "node": {
+          "const": "GivenDeclaration"
+        }
+      },
+      "required": [
+        "node",
+        "dims",
+        "description"
+      ],
+      "type": "object"
+    },
+    "GivenTargets": {
+      "additionalProperties": false,
+      "properties": {
+        "constraints": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/GivenDeclaration"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        },
+        "expressions": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/GivenDeclaration"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        },
+        "node": {
+          "const": "GivenTargets"
+        },
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/ParameterDeclaration"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        },
+        "variables": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/GivenDeclaration"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "node",
+        "parameters",
+        "variables",
+        "constraints",
+        "expressions"
+      ],
+      "type": "object"
+    },
+    "GroupSum": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "$ref": "#/$defs/Direction"
+        },
+        "node": {
+          "const": "GroupSum"
+        },
+        "operand": {
+          "$ref": "#/$defs/Expression"
+        }
+      },
+      "required": [
+        "node",
+        "operand",
+        "direction"
+      ],
+      "type": "object"
+    },
+    "Link": {
+      "additionalProperties": false,
+      "properties": {
+        "expression": {
+          "$ref": "#/$defs/Expression"
+        },
+        "node": {
+          "const": "Link"
+        },
+        "sign": {
+          "enum": [
+            "<=",
+            ">=",
+            "=="
+          ]
+        },
+        "values": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "node",
+        "expression",
+        "values",
+        "sign"
+      ],
+      "type": "object"
+    },
+    "Mask": {
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "const": "Mask"
+        },
+        "root": {
+          "$ref": "#/$defs/Predicate"
+        }
+      },
+      "required": [
+        "node",
+        "root"
+      ],
+      "type": "object"
+    },
+    "Multiply": {
+      "additionalProperties": false,
+      "properties": {
+        "left": {
+          "$ref": "#/$defs/Expression"
+        },
+        "node": {
+          "const": "Multiply"
+        },
+        "right": {
+          "$ref": "#/$defs/Expression"
+        }
+      },
+      "required": [
+        "node",
+        "left",
+        "right"
+      ],
+      "type": "object"
+    },
+    "Named": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "$ref": "#/$defs/Expression"
+        },
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "Named"
+        }
+      },
+      "required": [
+        "node",
+        "name",
+        "body"
+      ],
+      "type": "object"
+    },
+    "Negate": {
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "const": "Negate"
+        },
+        "operand": {
+          "$ref": "#/$defs/Expression"
+        }
+      },
+      "required": [
+        "node",
+        "operand"
+      ],
+      "type": "object"
+    },
+    "Not": {
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "const": "Not"
+        },
+        "operand": {
+          "$ref": "#/$defs/Predicate"
+        }
+      },
+      "required": [
+        "node",
+        "operand"
+      ],
+      "type": "object"
+    },
+    "ObjectiveDeclaration": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expression": {
+          "$ref": "#/$defs/Expression"
+        },
+        "node": {
+          "const": "ObjectiveDeclaration"
+        },
+        "sense": {
+          "enum": [
+            "minimize",
+            "maximize"
+          ]
+        }
+      },
+      "required": [
+        "node",
+        "sense",
+        "expression",
+        "description"
+      ],
+      "type": "object"
+    },
+    "Or": {
+      "additionalProperties": false,
+      "properties": {
+        "left": {
+          "$ref": "#/$defs/Predicate"
+        },
+        "node": {
+          "const": "Or"
+        },
+        "right": {
+          "$ref": "#/$defs/Predicate"
+        }
+      },
+      "required": [
+        "node",
+        "left",
+        "right"
+      ],
+      "type": "object"
+    },
+    "Parameter": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "Parameter"
+        }
+      },
+      "required": [
+        "node",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ParameterComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "ParameterComparison"
+        },
+        "op": {
+          "enum": [
+            "<=",
+            ">=",
+            "==",
+            "!=",
+            "<",
+            ">"
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/float"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "node",
+        "name",
+        "op",
+        "value",
+        "dims"
+      ],
+      "type": "object"
+    },
+    "ParameterDeclaration": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "dtype": {
+          "enum": [
+            "float",
+            "int",
+            "bool",
+            "str"
+          ]
+        },
+        "node": {
+          "const": "ParameterDeclaration"
+        }
+      },
+      "required": [
+        "node",
+        "dims",
+        "dtype",
+        "description"
+      ],
+      "type": "object"
+    },
+    "ParameterDefined": {
+      "additionalProperties": false,
+      "properties": {
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "ParameterDefined"
+        }
+      },
+      "required": [
+        "node",
+        "name",
+        "dims"
+      ],
+      "type": "object"
+    },
+    "Partition": {
+      "additionalProperties": false,
+      "properties": {
+        "along": {
+          "type": "string"
+        },
+        "group": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "joined": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "Partition"
+        }
+      },
+      "required": [
+        "node",
+        "name",
+        "along",
+        "group",
+        "joined"
+      ],
+      "type": "object"
+    },
+    "PiecewiseDeclaration": {
+      "additionalProperties": false,
+      "properties": {
+        "activity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "frame": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "links": {
+          "items": {
+            "$ref": "#/$defs/Link"
+          },
+          "type": "array"
+        },
+        "method": {
+          "enum": [
+            "adjacency",
+            "sos2",
+            "convex",
+            "lp"
+          ]
+        },
+        "node": {
+          "const": "PiecewiseDeclaration"
+        },
+        "over": {
+          "type": "string"
+        },
+        "points": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "node",
+        "over",
+        "links",
+        "method",
+        "frame",
+        "activity",
+        "points",
+        "description"
+      ],
+      "type": "object"
+    },
+    "Power": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "$ref": "#/$defs/Expression"
+        },
+        "exponent": {
+          "$ref": "#/$defs/Expression"
+        },
+        "node": {
+          "const": "Power"
+        }
+      },
+      "required": [
+        "node",
+        "base",
+        "exponent"
+      ],
+      "type": "object"
+    },
+    "Predicate": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BooleanLiteral"
+        },
+        {
+          "$ref": "#/$defs/ParameterComparison"
+        },
+        {
+          "$ref": "#/$defs/ExpressionComparison"
+        },
+        {
+          "$ref": "#/$defs/ParameterDefined"
+        },
+        {
+          "$ref": "#/$defs/VariableDefined"
+        },
+        {
+          "$ref": "#/$defs/DimensionComparison"
+        },
+        {
+          "$ref": "#/$defs/DimensionPosition"
+        },
+        {
+          "$ref": "#/$defs/RelationComparison"
+        },
+        {
+          "$ref": "#/$defs/RelationPairComparison"
+        },
+        {
+          "$ref": "#/$defs/RelationDefined"
+        },
+        {
+          "$ref": "#/$defs/CountComparison"
+        },
+        {
+          "$ref": "#/$defs/TranslatedPredicate"
+        },
+        {
+          "$ref": "#/$defs/PulledBackPredicate"
+        },
+        {
+          "$ref": "#/$defs/Not"
+        },
+        {
+          "$ref": "#/$defs/And"
+        },
+        {
+          "$ref": "#/$defs/Or"
+        }
+      ]
+    },
+    "Program": {
+      "additionalProperties": false,
+      "properties": {
+        "assumptions": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/Assumption"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        },
+        "constraints": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/ConstraintDeclaration"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dimensions": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/DimensionDeclaration"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        },
+        "expressions": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/ExpressionDeclaration"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        },
+        "given": {
+          "$ref": "#/$defs/GivenTargets"
+        },
+        "node": {
+          "const": "Program"
+        },
+        "objective": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObjectiveDeclaration"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/ParameterDeclaration"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        },
+        "piecewise": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/PiecewiseDeclaration"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        },
+        "relations": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/RelationDeclaration"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        },
+        "sos": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/SosDeclaration"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        },
+        "variables": {
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "additionalProperties": {
+                "$ref": "#/$defs/VariableDeclaration"
+              },
+              "type": "object"
+            },
+            "node": {
+              "const": "Mapping"
+            }
+          },
+          "required": [
+            "node",
+            "entries"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "node",
+        "parameters",
+        "variables",
+        "constraints",
+        "objective",
+        "dimensions",
+        "relations",
+        "sos",
+        "piecewise",
+        "assumptions",
+        "expressions",
+        "given",
+        "description"
+      ],
+      "type": "object"
+    },
+    "Pullback": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "$ref": "#/$defs/Direction"
+        },
+        "node": {
+          "const": "Pullback"
+        },
+        "operand": {
+          "$ref": "#/$defs/Expression"
+        }
+      },
+      "required": [
+        "node",
+        "operand",
+        "direction"
+      ],
+      "type": "object"
+    },
+    "PulledBackPredicate": {
+      "additionalProperties": false,
+      "properties": {
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "direction": {
+          "$ref": "#/$defs/Direction"
+        },
+        "node": {
+          "const": "PulledBackPredicate"
+        },
+        "operand": {
+          "$ref": "#/$defs/Mask"
+        }
+      },
+      "required": [
+        "node",
+        "operand",
+        "direction",
+        "dims"
+      ],
+      "type": "object"
+    },
+    "Region": {
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "const": "Region"
+        },
+        "value": {
+          "$ref": "#/$defs/Expression"
+        },
+        "when": {
+          "$ref": "#/$defs/Mask"
+        }
+      },
+      "required": [
+        "node",
+        "when",
+        "value"
+      ],
+      "type": "object"
+    },
+    "RelationComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "column": {
+          "type": "string"
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "RelationComparison"
+        },
+        "op": {
+          "enum": [
+            "<=",
+            ">=",
+            "==",
+            "!=",
+            "<",
+            ">"
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/float"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "$ref": "#/$defs/datetime"
+            }
+          ]
+        }
+      },
+      "required": [
+        "node",
+        "name",
+        "column",
+        "op",
+        "value",
+        "dims"
+      ],
+      "type": "object"
+    },
+    "RelationDeclaration": {
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "key": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "node": {
+          "const": "RelationDeclaration"
+        }
+      },
+      "required": [
+        "node",
+        "columns",
+        "key",
+        "description"
+      ],
+      "type": "object"
+    },
+    "RelationDefined": {
+      "additionalProperties": false,
+      "properties": {
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "RelationDefined"
+        }
+      },
+      "required": [
+        "node",
+        "name",
+        "dims"
+      ],
+      "type": "object"
+    },
+    "RelationPairComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "column": {
+          "type": "string"
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "RelationPairComparison"
+        },
+        "op": {
+          "enum": [
+            "<=",
+            ">=",
+            "==",
+            "!=",
+            "<",
+            ">"
+          ]
+        },
+        "other": {
+          "type": "string"
+        },
+        "other_column": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "node",
+        "name",
+        "column",
+        "other",
+        "other_column",
+        "op",
+        "dims"
+      ],
+      "type": "object"
+    },
+    "SosDeclaration": {
+      "additionalProperties": false,
+      "properties": {
+        "along": {
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "node": {
+          "const": "SosDeclaration"
+        },
+        "sos_type": {
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "variable": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "node",
+        "variable",
+        "along",
+        "sos_type",
+        "description"
+      ],
+      "type": "object"
+    },
+    "Sum": {
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "const": "Sum"
+        },
+        "operand": {
+          "$ref": "#/$defs/Expression"
+        },
+        "over": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "node",
+        "operand",
+        "over"
+      ],
+      "type": "object"
+    },
+    "Translate": {
+      "additionalProperties": false,
+      "properties": {
+        "along": {
+          "type": "string"
+        },
+        "fill": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/float"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "node": {
+          "const": "Translate"
+        },
+        "offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "operand": {
+          "$ref": "#/$defs/Expression"
+        },
+        "partition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Partition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "wrap": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "node",
+        "operand",
+        "along",
+        "offset",
+        "wrap",
+        "fill",
+        "partition"
+      ],
+      "type": "object"
+    },
+    "TranslatedPredicate": {
+      "additionalProperties": false,
+      "properties": {
+        "along": {
+          "type": "string"
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "node": {
+          "const": "TranslatedPredicate"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "operand": {
+          "$ref": "#/$defs/Mask"
+        }
+      },
+      "required": [
+        "node",
+        "operand",
+        "along",
+        "offset",
+        "dims"
+      ],
+      "type": "object"
+    },
+    "Variable": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "Variable"
+        }
+      },
+      "required": [
+        "node",
+        "name"
+      ],
+      "type": "object"
+    },
+    "VariableDeclaration": {
+      "additionalProperties": false,
+      "properties": {
+        "absence": {
+          "enum": [
+            "undefined",
+            "zero"
+          ]
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "domain": {
+          "enum": [
+            "continuous",
+            "integer",
+            "binary"
+          ]
+        },
+        "lower": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Expression"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "node": {
+          "const": "VariableDeclaration"
+        },
+        "upper": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Expression"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "where": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Mask"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "node",
+        "dims",
+        "where",
+        "lower",
+        "upper",
+        "domain",
+        "absence",
+        "description"
+      ],
+      "type": "object"
+    },
+    "VariableDefined": {
+      "additionalProperties": false,
+      "properties": {
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "node": {
+          "const": "VariableDefined"
+        }
+      },
+      "required": [
+        "node",
+        "name",
+        "dims"
+      ],
+      "type": "object"
+    },
+    "WindowSum": {
+      "additionalProperties": false,
+      "properties": {
+        "along": {
+          "type": "string"
+        },
+        "node": {
+          "const": "WindowSum"
+        },
+        "operand": {
+          "$ref": "#/$defs/Expression"
+        },
+        "partition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Partition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "width": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "wrap": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "node",
+        "operand",
+        "along",
+        "width",
+        "wrap",
+        "partition"
+      ],
+      "type": "object"
+    },
+    "date": {
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "const": "date"
+        },
+        "value": {
+          "format": "date",
+          "type": "string"
+        }
+      },
+      "required": [
+        "node",
+        "value"
+      ],
+      "type": "object"
+    },
+    "datetime": {
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "const": "datetime"
+        },
+        "value": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "node",
+        "value"
+      ],
+      "type": "object"
+    },
+    "float": {
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "const": "float"
+        },
+        "value": {
+          "enum": [
+            "inf",
+            "-inf"
+          ]
+        }
+      },
+      "required": [
+        "node",
+        "value"
+      ],
+      "type": "object"
+    }
+  },
+  "$ref": "#/$defs/Program",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "What Program.to_dict() writes: every node is an object whose \"node\" key names its class.",
+  "title": "mathspec program"
+}

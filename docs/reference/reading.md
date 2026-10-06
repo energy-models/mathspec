@@ -260,6 +260,59 @@ introduced is named under the declaration the expansion emitted.
 A sum over the axis in the objective ties nothing. The report says nothing
 about whether the windowed answer equals the whole-horizon answer.
 
+## The program as JSON
+
+`program.to_dict()` returns the program as plain JSON types, so an engine in
+another language reads what the file means without lowering the file again.
+`python -m mathspec program spec.yaml` prints it, and `--expand` prints the
+program of `spec.expand()`. The file
+[`schema/mathspec.program.schema.json`](https://github.com/energy-models/mathspec/blob/main/schema/mathspec.program.schema.json)
+gives its shape, so a reader needs no Python class.
+
+The constraint `target` of the curve above exports as this object:
+
+```json
+{
+  "node": "ConstraintDeclaration",
+  "dims": [],
+  "lhs": {
+    "node": "Sum",
+    "operand": { "node": "Variable", "name": "p" },
+    "over": ["generator"]
+  },
+  "sense": ">=",
+  "rhs": { "node": "Constant", "value": 100.0 },
+  "where": null,
+  "description": null
+}
+```
+
+- **Every node is an object that names its class.** The key `"node"` holds the
+  class name from the [Program API](program.md), and the other keys are its
+  fields. Every field is written, `null` included.
+- **A tuple is an array.**
+- **A mapping is a `Mapping` node.** It is
+  `{"node": "Mapping", "entries": {...}}`, keyed by declaration name in the
+  order the file wrote, so a declaration called `node` does not read as a node.
+- **A mask is a `Mask` node.** It is `{"node": "Mask", "root": ...}`, so a mask
+  and a bare predicate do not look the same.
+- **A `Direction` or a `Partition` names its relation.** Its `name` is a key of
+  `relations`, and the relation is not copied.
+- **A value that JSON cannot spell is a tagged node.** An infinite float is
+  `{"node": "float", "value": "inf"}` or `"-inf"`. A date is
+  `{"node": "date", "value": "2030-01-02"}`, and a datetime is
+  `{"node": "datetime", "value": "2030-01-01T06:00:00"}`.
+- **Derived values are not written.** `footprint`, `separability` and the other
+  answers a program computes stay out. An engine computes them, or asks this
+  package.
+
+```python
+data = program.to_dict()
+data['node']  # 'Program'
+data['constraints']['entries']['target']['lhs']['node']  # 'Sum'
+data['assumptions']['entries']['cost_is_never_negative']['predicate']['node']  # 'Mask'
+```
+
 ## Writing a spec back out
 
 `spec.to_dict()` returns the spec as plain data, and `spec.to_yaml()` returns

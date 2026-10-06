@@ -1023,6 +1023,25 @@ class Program:
 
         return Sealed(separabilities(self))
 
+    def to_dict(self) -> dict[str, object]:
+        """The program as plain JSON types, so an engine in another language reads it without lowering the file again.
+
+        Every node is an object whose ``"node"`` key names its class and whose
+        other keys are its fields. A tuple is an array. A mapping is
+        ``{"node": "Mapping", "entries": {...}}``, a date or a datetime is
+        ``{"node": "date", "value": "<ISO>"}`` or ``"datetime"``, and an
+        infinite float is ``{"node": "float", "value": "inf"}`` or ``"-inf"``.
+        A [`Direction`][] or [`Partition`][] names its relation and does not
+        carry it. [`footprint`][], [`separability`][] and every other derived
+        value stay out. ``schema/mathspec.program.schema.json`` is the shape.
+
+        Raises:
+            ValueError: A NaN, which no node of the language holds.
+        """
+        from mathspec._program_json import to_dict
+
+        return to_dict(self)
+
 
 # --------------------------------------------------------------------------
 # Walks, and the questions asked through them
