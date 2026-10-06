@@ -83,8 +83,8 @@ parameters:
   Link_output_delay:
     description: >-
       snapshots a port's delivery lags its link's flow — PyPSA's `delay`,
-      `delay2`, … read long, in `snapshot_weightings.generators` units, which
-      the file states as whole snapshots; zero for a port that delivers at once.
+      `delay2`, … read long, over the `snapshot_weightings.generators` value
+      and rounded up, as data prep; zero for a port that delivers at once.
       The same in every scenario: PyPSA refuses a delay that differs by
       scenario (`constants.py:52`)
     dims: [link_output]
@@ -205,6 +205,7 @@ given:
     scenario_weight: { dims: [scenario] }
     CVaR_omega: { dims: [] }
     period_weight_objective: { dims: [period] }
+    snapshot_weightings_generators: { dims: [snapshot] }
   variables:
     Link_maintenance: { dims: [scenario, snapshot, link] }
     Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
@@ -329,6 +330,16 @@ constraints:
     expression: Link_p == Link_p_set
 
 assumptions:
+  Link_output_delay_under_uniform_weighting:
+    holds: "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
+    where: "Link_output_delay > 0"
+    description: >-
+      a delayed port lags by the same whole number of snapshots in every
+      period. PyPSA lags by elapsed time in `generators` weighting and
+      rounds the source down to a snapshot start (`multiports.py:100-133`),
+      so the two agree only where that weighting is one value over the
+      horizon. PyPSA does not refuse an uneven weighting, so the file does
+      (#299)
   Link_marginal_cost_quadratic_without_risk_preference:
     holds: "Link_marginal_cost_quadratic == 0"
     where: "CVaR_omega"
@@ -361,7 +372,7 @@ assumptions:
 | $`\underline{\mathrm{f}}`$ | `Link_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — least flow, per unit of nominal power — negative for a link that carries both ways |
 | $`\overline{\mathrm{f}}`$ | `Link_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — most flow, per unit of nominal power |
 | $`\eta`$ | `Link_efficiency` over $`\Xi \times \mathcal{T} \times \mathcal{O}`$ — share of the flow that arrives at an output port, PyPSA's `efficiency`, `efficiency2`, … read long — negative where that port consumes rather than delivers. Read at the snapshot the flow arrives, so a delayed port delivers at its arrival snapshot's efficiency (`constraints.py:1498`) |
-| $`\mathrm{d}^{f}`$ | `Link_output_delay` over $`\mathcal{O}`$ — snapshots a port's delivery lags its link's flow — PyPSA's `delay`, `delay2`, … read long, in `snapshot_weightings.generators` units, which the file states as whole snapshots; zero for a port that delivers at once. The same in every scenario: PyPSA refuses a delay that differs by scenario (`constants.py:52`) |
+| $`\mathrm{d}^{f}`$ | `Link_output_delay` over $`\mathcal{O}`$ — snapshots a port's delivery lags its link's flow — PyPSA's `delay`, `delay2`, … read long, over the `snapshot_weightings.generators` value and rounded up, as data prep; zero for a port that delivers at once. The same in every scenario: PyPSA refuses a delay that differs by scenario (`constants.py:52`) |
 | $`\mathrm{cyc}^{f}`$ | `Link_output_cyclic_delay` over $`\mathcal{O}`$ — whether a delayed port's flow wraps from the end of its investment period — PyPSA's `cyclic_delay`, `cyclic_delay2`, …; where it does not, the flow still in transit at each period's first snapshots is lost. The same in every scenario, as the delay |
 | $`\mathrm{c}^{f}`$ | `Link_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one unit of flow |
 | $`\mathrm{c}^{f,(2)}`$ | `Link_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of the square of one unit of flow |
@@ -398,6 +409,7 @@ assumptions:
 | $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
 | $`\omega`$ | `CVaR_omega` (scalar), data another file declares |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
+| $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
 | $`\mu^{f}`$ | `Link_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
 | $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
 | $`\mathit{transmission\_volume\_expansion}`$ | `transmission_volume_expansion` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Link_transmission_volume_expansion` to |
@@ -582,6 +594,12 @@ F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{
 ```
 
 #### Assumptions
+
+**`Link_output_delay_under_uniform_weighting`**
+
+```math
+\mathrm{w}^{\mathrm{gen}}_{t} = \mathrm{w}^{\mathrm{gen}}_{t \ominus 1} \qquad \forall\, t \in \mathcal{T},\ o \in \mathcal{O} \,:\, \mathrm{d}^{f}_{o} > 0
+```
 
 **`Link_marginal_cost_quadratic_without_risk_preference`**
 

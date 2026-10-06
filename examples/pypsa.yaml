@@ -249,8 +249,8 @@ parameters:
   Link_output_delay:
     description: >-
       snapshots a port's delivery lags its link's flow — PyPSA's `delay`,
-      `delay2`, … read long, in `snapshot_weightings.generators` units, which
-      the file states as whole snapshots; zero for a port that delivers at once.
+      `delay2`, … read long, over the `snapshot_weightings.generators` value
+      and rounded up, as data prep; zero for a port that delivers at once.
       The same in every scenario: PyPSA refuses a delay that differs by
       scenario (`constants.py:52`)
     dims: [link_output]
@@ -401,9 +401,9 @@ parameters:
   Process_output_delay:
     description: >-
       snapshots a port's transfer lags its process's internal power — PyPSA's
-      `delay0`, `delay1`, … read long, in `snapshot_weightings.generators`
-      units, which the file states as whole snapshots; zero for a port that
-      transfers at once. The same in every scenario, as a link's
+      `delay0`, `delay1`, … read long, over the `snapshot_weightings.generators`
+      value and rounded up, as data prep; zero for a port that transfers at
+      once. The same in every scenario, as a link's
     dims: [process_output]
     dtype: int
   Process_output_cyclic_delay:
@@ -4352,6 +4352,21 @@ assumptions:
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
       (`constraints.py:504-507`)
+  Link_output_delay_under_uniform_weighting:
+    holds: "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
+    where: "Link_output_delay > 0"
+    description: >-
+      a delayed port lags by the same whole number of snapshots in every
+      period. PyPSA lags by elapsed time in `generators` weighting and
+      rounds the source down to a snapshot start (`multiports.py:100-133`),
+      so the two agree only where that weighting is one value over the
+      horizon. PyPSA does not refuse an uneven weighting, so the file does
+      (#299)
+  Process_output_delay_under_uniform_weighting:
+    holds: "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
+    where: "Process_output_delay > 0"
+    description: >-
+      the same for a delayed process port (#299)
   StorageUnit_stands_in_one_run:
     holds: "count(StorageUnit_active AND NOT shift(StorageUnit_active, along=snapshot, offset=1), over=snapshot) <= 1"
     description: >-

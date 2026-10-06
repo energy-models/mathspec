@@ -1503,6 +1503,7 @@ This is the one rung whose `generators` weighting is uniform. PyPSA measures
 exactly `n` snapshot positions, which a positional `shift` reproduces. Under a
 non-uniform column PyPSA resamples by elapsed time rather than by position — a
 shift that varies along the snapshot axis, above what `shift` states (#299).
+The file refuses that case: see [Refusals](#refusals).
 
 | PyPSA                     | status | note                                            |
 | ------------------------- | ------ | ----------------------------------------------- |
@@ -3212,7 +3213,10 @@ a link's or a process's `delay` in each investment period on its own
 wraps from the end of its own period. A port that is not cyclic loses the flow
 still in transit at the first snapshots of every period. PyPSA measures the
 delay in `generators` weighting per period and rounds it down to a snapshot
-start (`multiports.py:106-123`). Scenarios do not change the source snapshot.
+start (`multiports.py:106-123`). The file shifts by one whole number of
+snapshots in every period, so it refuses a delayed port under a `generators`
+weighting that is not one value over the horizon (#299). Scenarios do not
+change the source snapshot.
 `Link_output_arrival` and `Process_output_arrival` therefore shift with
 `within=snapshot_period[period]`. A plain run has one period, so the shift
 is the flat one.
@@ -5383,6 +5387,7 @@ the records above are from PyPSA master at `51986084`.
 | `ValueError`, `constraints.py:1528-1533` | a loaded bus where every unit and branch has retired in some snapshot | the row stands with no variable: [`Bus-nodal_balance`](#bus-nodal_balance) asks the load alone to be zero, and no solution meets it | |
 | `ValueError`, `components/descriptors.py:141-144` | a `transmission_volume_expansion_limit`, `transmission_expansion_cost_limit` or `tech_capacity_expansion_limit` row that names an `investment_period` outside `n.investment_periods` | data prep, at `Line_volume_weight`, `Line_expansion_cost_weight`, `Line_tech_capacity_weight` and the other components' ones | |
 | a warning; `ConsistencyError` under `strict`, `consistency.py:231-283` | a transformer with `phase_shift_min > phase_shift_max`, or a decided phase shift with an infinite bound | built, as PyPSA: the first keeps its fixed `phase_shift`, the second leaves [`Transformer-phase_shift`](#variable-domains) unbounded on that side | |
+| nothing; PyPSA lags by elapsed time, `multiports.py:100-133` | a Link or Process port with `delay > 0` under a `generators` weighting that is not one value over the horizon | assumed: [`Link_output_delay_under_uniform_weighting`](#link_output_delay_under_uniform_weighting), and the `Process` one. The file shifts by whole snapshots, the same number in every period (#299) | |
 | nothing; PyPSA reads `0 * inf` as `0`, `constraints.py:121-126` | a fixed build of `inf` where its least or most per-unit output is zero | not handled: [`Generator-fix-p-lower`](#generator-fix-p-lower) and the other fixed bounds multiply as written, and `0 * inf` has no value | |
 
 Duals and solutions are read back by the harness on the specsolve side:
@@ -5438,6 +5443,10 @@ file.
   `n.has_risk_preference` holds, `omega = 0` included (`optimize.py:461`).
   Data prep writes `risk_preference['omega']` to `CVaR_omega` then, and no
   row otherwise (rung 70).
+- **A delay counts snapshots.** PyPSA's `delay` is elapsed time in
+  `generators` weighting, and its source rounds down to a snapshot start
+  (`multiports.py:100-133`). Data prep divides it by that weighting's one
+  value and rounds up, into `Link_output_delay` and `Process_output_delay`.
 - **A global constraint with nothing to count has no row in PyPSA.** PyPSA
   skips a row whose set is empty (`global_constraints.py:99-100`, `:533-534`,
   `:731-732`, `:816-817`). The file builds that row as `0`
@@ -5515,7 +5524,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\underline{\mathrm{f}}`$ | `Link_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — least flow, per unit of nominal power — negative for a link that carries both ways |
 | $`\overline{\mathrm{f}}`$ | `Link_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — most flow, per unit of nominal power |
 | $`\eta`$ | `Link_efficiency` over $`\Xi \times \mathcal{T} \times \mathcal{O}`$ — share of the flow that arrives at an output port, PyPSA's `efficiency`, `efficiency2`, … read long — negative where that port consumes rather than delivers. Read at the snapshot the flow arrives, so a delayed port delivers at its arrival snapshot's efficiency (`constraints.py:1498`) |
-| $`\mathrm{d}^{f}`$ | `Link_output_delay` over $`\mathcal{O}`$ — snapshots a port's delivery lags its link's flow — PyPSA's `delay`, `delay2`, … read long, in `snapshot_weightings.generators` units, which the file states as whole snapshots; zero for a port that delivers at once. The same in every scenario: PyPSA refuses a delay that differs by scenario (`constants.py:52`) |
+| $`\mathrm{d}^{f}`$ | `Link_output_delay` over $`\mathcal{O}`$ — snapshots a port's delivery lags its link's flow — PyPSA's `delay`, `delay2`, … read long, over the `snapshot_weightings.generators` value and rounded up, as data prep; zero for a port that delivers at once. The same in every scenario: PyPSA refuses a delay that differs by scenario (`constants.py:52`) |
 | $`\mathrm{cyc}^{f}`$ | `Link_output_cyclic_delay` over $`\mathcal{O}`$ — whether a delayed port's flow wraps from the end of its investment period — PyPSA's `cyclic_delay`, `cyclic_delay2`, …; where it does not, the flow still in transit at each period's first snapshots is lost. The same in every scenario, as the delay |
 | $`\mathrm{c}^{f}`$ | `Link_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one unit of flow |
 | $`\mathrm{c}^{f,(2)}`$ | `Link_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of the square of one unit of flow |
@@ -5545,7 +5554,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\underline{\mathrm{z}}`$ | `Process_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — least internal power, per unit of nominal power — negative for a process that runs both ways |
 | $`\overline{\mathrm{z}}`$ | `Process_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — most internal power, per unit of nominal power |
 | $`\alpha`$ | `Process_rate` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — the energy a port draws or delivers per unit of internal power, PyPSA's `rate0`, `rate1`, … read long — negative where the port withdraws, positive where it injects; a link is a process whose `bus0` rate is minus one and whose output rates are its efficiencies. Read at the snapshot the transfer arrives, so a delayed port transfers at its arrival snapshot's rate (`constraints.py:1498`) |
-| $`\mathrm{d}^{z}`$ | `Process_output_delay` over $`\mathcal{R}`$ — snapshots a port's transfer lags its process's internal power — PyPSA's `delay0`, `delay1`, … read long, in `snapshot_weightings.generators` units, which the file states as whole snapshots; zero for a port that transfers at once. The same in every scenario, as a link's |
+| $`\mathrm{d}^{z}`$ | `Process_output_delay` over $`\mathcal{R}`$ — snapshots a port's transfer lags its process's internal power — PyPSA's `delay0`, `delay1`, … read long, over the `snapshot_weightings.generators` value and rounded up, as data prep; zero for a port that transfers at once. The same in every scenario, as a link's |
 | $`\mathrm{cyc}^{z}`$ | `Process_output_cyclic_delay` over $`\mathcal{R}`$ — whether a delayed port's transfer wraps from the end of its investment period — PyPSA's `cyclic_delay0`, `cyclic_delay1`, …; where it does not, the energy still in transit at each period's first snapshots is lost. The same in every scenario, as the delay |
 | $`\mathrm{c}^{z}`$ | `Process_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one unit of internal power |
 | $`\mathrm{c}^{z,(2)}`$ | `Process_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of the square of one unit of internal power |
@@ -12409,6 +12418,39 @@ Process_maintenance_module_count_is_finite:
 
 ```math
 \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} < \infty \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+```
+
+### `Link_output_delay_under_uniform_weighting`
+
+```yaml
+Link_output_delay_under_uniform_weighting:
+  holds: "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
+  where: "Link_output_delay > 0"
+  description: >-
+    a delayed port lags by the same whole number of snapshots in every
+    period. PyPSA lags by elapsed time in `generators` weighting and
+    rounds the source down to a snapshot start (`multiports.py:100-133`),
+    so the two agree only where that weighting is one value over the
+    horizon. PyPSA does not refuse an uneven weighting, so the file does
+    (#299)
+```
+
+```math
+\mathrm{w}^{\mathrm{gen}}_{t} = \mathrm{w}^{\mathrm{gen}}_{t \ominus 1} \qquad \forall\, t \in \mathcal{T},\ o \in \mathcal{O} \,:\, \mathrm{d}^{f}_{o} > 0
+```
+
+### `Process_output_delay_under_uniform_weighting`
+
+```yaml
+Process_output_delay_under_uniform_weighting:
+  holds: "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
+  where: "Process_output_delay > 0"
+  description: >-
+    the same for a delayed process port (#299)
+```
+
+```math
+\mathrm{w}^{\mathrm{gen}}_{t} = \mathrm{w}^{\mathrm{gen}}_{t \ominus 1} \qquad \forall\, t \in \mathcal{T},\ r \in \mathcal{R} \,:\, \mathrm{d}^{z}_{r} > 0
 ```
 
 ### `StorageUnit_stands_in_one_run`
