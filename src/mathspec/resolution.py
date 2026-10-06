@@ -40,7 +40,7 @@ from mathspec.program import (
     Cases,
     Expression,
     Mask,
-    Named,
+    NamedExpression,
     NamedMask,
     Predicate,
     Region,
@@ -128,7 +128,7 @@ class Namespace:
         }
         #: named expression -> its resolved node, or ``None``, and its refusals;
         #: filled the first time anything reads the name.
-        self._named: dict[str, tuple[Named | None, tuple[str, ...]]] = {}
+        self._named: dict[str, tuple[NamedExpression | None, tuple[str, ...]]] = {}
         #: The named expressions and masks waiting to be resolved, the one
         #: asked for first — each above the entries it reads, so it is a cycle's chain.
         self._loading: list[str] = []
@@ -136,7 +136,7 @@ class Namespace:
         #: the first time anything reads the name.
         self._masks: dict[str, tuple[NamedMask | None, tuple[str, ...]]] = {}
 
-    def named(self, name: str, context: str) -> Named:
+    def named(self, name: str, context: str) -> NamedExpression:
         """The ``expressions:`` entry *name* as the node that stands where its name is written.
 
         Resolved under the entry's own context the first time it is asked
@@ -187,7 +187,7 @@ class Namespace:
             self._masks[name] = (node, tuple(errors))
         return self._masks[name]
 
-    def named_entry(self, name: str) -> tuple[Named | None, tuple[str, ...]]:
+    def named_entry(self, name: str) -> tuple[NamedExpression | None, tuple[str, ...]]:
         """The ``expressions:`` entry *name* resolved, or ``None``, with every refusal it earned.
 
         The entries it reads are resolved before it, walked from a stack that
@@ -475,7 +475,7 @@ def _over_the_ceiling(node: Expression, context: str, errors: list[str], *, ceil
     return False
 
 
-def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) -> Named | None:
+def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) -> NamedExpression | None:
     """One ``expressions:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
 
     A cased entry's arms are checked one by one, so every fault is collected
@@ -488,7 +488,7 @@ def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) 
     if not block.cases:
         assert block.expression is not None
         body = resolve_expression_text(block.expression, ns, context, errors, ceiling=None)
-        return None if body is None else Named(name, body)
+        return None if body is None else NamedExpression(name, body)
 
     found = len(errors)
     regions: list[Region] = []
@@ -511,7 +511,7 @@ def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) 
     if len(errors) > found:
         return None
     left_over = Region(remainder(region.when for region in regions), fallback)
-    return Named(name, Cases((*regions, left_over)))
+    return NamedExpression(name, Cases((*regions, left_over)))
 
 
 def _mask(name: str, block: MaskBlock, ns: Namespace, errors: list[str]) -> NamedMask | None:

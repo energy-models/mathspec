@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- refactor(program)!: the node a use of a named expression stands as is `NamedExpression`, beside `NamedMask`, and `Named` is gone ([#822](https://github.com/energy-models/mathspec/pull/822))
 - docs(pypsa): the pypsa spec names its repeated row conditions as masks, and its topic files read them under `given: masks:` ([#825](https://github.com/energy-models/mathspec/pull/825))
 - feat(language): a where predicate is named once under `masks:`, and another file reads it under `given: masks:` ([#821](https://github.com/energy-models/mathspec/pull/821))
 - feat(language)!: a construct that reads the order of a dimension needs the dimension declared ordered ([#793](https://github.com/energy-models/mathspec/pull/793))

@@ -34,7 +34,7 @@ from mathspec.program import (
     JoinedPredicate,
     Mask,
     Multiply,
-    Named,
+    NamedExpression,
     NamedMask,
     Negate,
     Not,
@@ -319,7 +319,7 @@ class Walk:
 
     def _arithmetic(self, node: Expression, ctx: _Context) -> tuple[str, int]:
         """Render *node*, returning the text and the precedence it binds at."""
-        if isinstance(node, Named):
+        if isinstance(node, NamedExpression):
             if self.inline_expressions and not isinstance(node.body, Cases):
                 return self._arithmetic(node.body, ctx)
             return ctx.indexed(self.symbols.name[node.name], self._frame_of(node.name)), _ATOM
@@ -409,7 +409,7 @@ class Walk:
 
         [`_binary`][] folds the sign of the result, so a substituted term prints as its body written out.
         """
-        while self.inline_expressions and isinstance(node, Named) and not isinstance(node.body, Cases):
+        while self.inline_expressions and isinstance(node, NamedExpression) and not isinstance(node.body, Cases):
             node = node.body
         return node
 
