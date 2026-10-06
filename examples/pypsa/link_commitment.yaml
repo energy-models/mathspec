@@ -141,7 +141,7 @@ expressions:
     otherwise: shift(Link_status, along=snapshot, offset=1)
   Link_commitment_opex:
     expression: >-
-      sum(sum(((Link_status * Link_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=link), over=snapshot)
+      sum(sum(((Link_status * Link_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
       + sum(sum(Link_start_up * Link_start_up_cost, over=link), over=snapshot)
       + sum(sum(Link_shut_down * Link_shut_down_cost, over=link), over=snapshot)
     adds_to: scenario_opex

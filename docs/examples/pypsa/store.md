@@ -231,9 +231,9 @@ expressions:
         expression: Store_e_initial
       period_cyclic:
         when: Store_e_cyclic_per_period
-        expression: Store_retention * shift(Store_e, along=snapshot, offset=1, edge='wrap', by=snapshot_period, within=period)
+        expression: Store_retention * shift(Store_e, along=snapshot, offset=1, edge='wrap', within=snapshot_period[period])
       period_opening:
-        when: Store_e_initial_per_period AND NOT Store_e_cyclic_per_period AND position(snapshot, by=snapshot_period, within=period) == 0
+        when: Store_e_initial_per_period AND NOT Store_e_cyclic_per_period AND position(snapshot, within=snapshot_period[period]) == 0
         expression: Store_e_initial
     otherwise: Store_retention * shift(Store_e, along=snapshot, offset=1)
   Store_closing_weight:
@@ -245,8 +245,8 @@ expressions:
     dims: [scenario, global_constraint, snapshot, store]
     cases:
       per_period:
-        when: Store_e_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, by=snapshot_period, within=period) == -1
-        expression: at(period_weight_years, by=snapshot_period, over=period, into=snapshot)
+        when: Store_e_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, within=snapshot_period[period]) == -1
+        expression: at(period_weight_years, by=snapshot_period[period])
       carried_over:
         when: NOT Store_e_initial_per_period
         expression: GlobalConstraint_snapshot_closes
@@ -264,19 +264,19 @@ expressions:
     adds_to: tech_capacity_expansion
   Store_opex:
     expression: >-
-      sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
-      + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
-      + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
+      sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
+      + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
+      + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
     adds_to: scenario_opex
   Store_capex:
     expression: sum(scenario_weight * Store_e_nom_ext * Store_capital_cost * Store_capital_weight)
     adds_to: total_cost
   Store_additions:
     expression: >-
-      sum(Store_e_nom_ext * Store_first_active, by=Store_carrier, over=store, into=carrier)
+      sum(Store_e_nom_ext * Store_first_active, over=store, by=Store_carrier[carrier])
     adds_to: Carrier_additions
   Store_injection:
-    expression: sum(Store_sign * Store_p, by=Store_bus, over=store, into=bus)
+    expression: sum(Store_sign * Store_p, over=store, by=Store_bus[bus])
     adds_to: Bus_injection
 
 constraints:
@@ -376,7 +376,7 @@ assumptions:
       level — PyPSA refuses it where any period's years is not one
       (`global_constraints.py:500`)
   Store_operational_limit_carried_over_has_unit_years:
-    holds: "at(period_weight_years == 1, by=snapshot_period, over=period, into=snapshot)"
+    holds: "at(period_weight_years == 1, by=snapshot_period[period])"
     where: "Store_operational_limit_weight AND NOT Store_e_initial_per_period AND GlobalConstraint_counts_snapshot"
     description: >-
       the same for an `operational_limit` row, over the periods it counts —
@@ -481,7 +481,7 @@ assumptions:
 
 $`t \ominus k`$ denotes cyclic translation: index $`t-k`$ taken modulo the size of the dimension (`roll`). Plain $`t-k`$ (`shift`) has no wraparound — terms translated past the edge are simply absent.
 
-$`t \ominus^{\mathrm{relation}(t)} k`$ denotes a translation counted inside the group a relation puts $`t`$ in (`shift(by=relation)`), so a term never crosses out of its own group.
+$`t \ominus^{\mathrm{relation}(t)} k`$ denotes a translation counted inside the group a relation puts $`t`$ in (`shift(within=relation[c])`), so a term never crosses out of its own group.
 
 $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own order — the order `shift` steps along, not the order labels sort in — counted from $`0`$. The index itself stays the coordinate, so $`t`$ compares against labels and $`\mathrm{pos}(t)`$ against positions.
 

@@ -147,7 +147,7 @@ constraints:
     where: >-
       Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
       AND (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
       AND Process_active
     expression: >-
       Process_p - Process_previous_p <=
@@ -162,7 +162,7 @@ constraints:
     where: >-
       Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
       AND (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
       AND Process_active
     expression: >-
       Process_p - Process_previous_p <=
@@ -177,7 +177,7 @@ constraints:
     where: >-
       Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
       AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
       AND Process_active
     expression: >-
       Process_previous_p - Process_p <=
@@ -192,7 +192,7 @@ constraints:
     where: >-
       Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
       AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
       AND Process_active
     expression: >-
       Process_previous_p - Process_p <=
@@ -210,7 +210,7 @@ constraints:
     where: >-
       (Process_ramp_limit_up OR Process_ramp_limit_start_up)
       AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
       AND Process_active
     expression: Process_p - Process_previous_p <= Process_ramp_up_allowance
   Process_p_ramp_limit_down:
@@ -225,7 +225,7 @@ constraints:
     where: >-
       (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
       AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
       AND Process_active
     expression: Process_previous_p - Process_p <= Process_ramp_down_allowance
 
