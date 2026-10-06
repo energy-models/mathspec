@@ -836,6 +836,14 @@ def test_a_relation_is_declared_as_the_file_declares_it():
     assert program.dimensions['g'] == DimensionDeclaration(dtype='str'), 'a dimension carries its dtype and no relation'
 
 
+@pytest.mark.parametrize('ordered', [pytest.param(True, id='ordered'), pytest.param(False, id='unordered')])
+def test_a_program_reports_whether_a_dimension_is_ordered(ordered: bool):
+    """The program dropped ``ordered``, so a consumer of it read every dimension as unordered."""
+    program = to_spec(varied(TINY, dimensions={'g': {'ordered': ordered}})).program
+
+    assert program.dimensions['g'].ordered is ordered
+
+
 def test_a_program_is_built_by_keyword_so_a_field_added_later_cannot_reorder_an_old_call():
     """Positional construction made every field's *position* part of the contract."""
     with pytest.raises(TypeError, match='positional'):
