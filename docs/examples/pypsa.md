@@ -5349,25 +5349,27 @@ def build():
 
 ### Rung 68 — outage factors per period
 
+This rung runs
 `n.optimize.optimize_security_constrained(multi_investment_periods=True)` with
 an outage of a line that retires before the last period. The file computes the
-outage factors of each period from the branches active in it, and builds the
-copies of a period over its snapshots only. PyPSA computes one set of factors
-after it builds the model, from the sub-networks the cycle loop of the last
-period leaves behind (`abstract.py:443-460`, `constraints.py:1641`). A branch
-not active in the last period is in no sub-network (`networks.py:1278-1281`),
-so its outage builds no copy in any period, and PyPSA raises no error
+outage factors of each period from the branches active in that period. It builds
+the copies of a period over the snapshots of that period only. PyPSA computes
+one set of factors after it builds the model, from the sub-networks that the
+cycle loop of the last period leaves behind (`abstract.py:443-460`,
+`constraints.py:1641`). A branch that is not active in the last period is in no
+sub-network (`networks.py:1278-1281`). So PyPSA builds no copy for its outage
+in any period, and raises no error
 ([PyPSA/PyPSA#1971](https://github.com/PyPSA/PyPSA/issues/1971)). The copies
-of an earlier period also take the factors of the last period's network.
+of an earlier period also take the factors of the network of the last period.
 
-The rung joins `a` and `b` over two lines rated `60`. `ab_old68` stands in
-2020 and retires in 2025, `ab68` stands in both periods. The run outages
-`ab_old68`. In 2020 its factor on `ab68` is `1`, so `ab68` carries the whole
-import alone after the outage, and the import is at most `60`. PyPSA builds no
-copy, imports up to `120` in 2020, and solves to `8050.0`. The network has no
-build to decide, so each period solves on its own. The oracle solves the
-network once per period, where that period is the last one, and the sum is the
-intended objective `13000.0`.
+The rung joins `a` and `b` over two lines rated `60`. `ab_old68` stands in 2020
+and retires in 2025, and `ab68` stands in both periods. The run lists `ab_old68`
+as an outage. In 2020 the factor of `ab_old68` on `ab68` is `1`, so `ab68`
+carries the whole import alone after the outage, and the import is at most
+`60`. PyPSA builds no copy, imports up to `120` in 2020, and solves to
+`8050.0`. The network has no build to decide, so each period solves on its own.
+The oracle solves the network once per period, as if that period were the last
+one. The sum of the two is the intended objective `13000.0`.
 
 | PyPSA | status | note |
 | --- | --- | --- |

@@ -335,19 +335,19 @@ def build():
 
 ## Rung 67 — a committable link and process, relaxed
 
-The keyword relaxes Link and Process as it relaxes Generator
-(`optimize.py:806-810`), and builds the four tightening rows for each
-(`constraints.py:656-733`). The rung adds an east bus that three committable
-units serve from the north: a link and a process, each with a fixed build and
-the same start and stop cost, and an extendable link. PyPSA does not tighten
-the extendable link, since the rows read the build as data
-(`constraints.py:652-654`). A dear backup on the east bus keeps the bus
+The keyword relaxes a link and a process as it relaxes a generator
+(`optimize.py:806-810`), and it builds the four tightening rows for each
+(`constraints.py:656-733`). The rung adds an east bus, which three committable
+units serve from the north. Two of them are a link and a process, each with a
+fixed build and the same start and stop cost. The third is an extendable link.
+PyPSA does not tighten the extendable link, because the rows read the build as
+data (`constraints.py:652-654`). A dear backup on the east bus keeps the bus
 balanced.
 
-Each tightening binds: PyPSA solves to `47777.33`. With the link's stop
-`1e-7` dearer than its start, so PyPSA does not tighten it, it solves to
-`46554.0`. With the process untightened in the same way, it solves to
-`47465.70`. Without the keyword, it solves to `54013.13`.
+Each tightening row binds, and PyPSA solves to `47777.33`. When the stop of the
+link costs `1e-7` more than its start, PyPSA does not tighten the link, and it
+solves to `46554.0`. When the process is left untightened in the same way, PyPSA
+solves to `47465.70`. Without the keyword, it solves to `54013.13`.
 
 | PyPSA | status | note |
 | --- | --- | --- |
