@@ -54,9 +54,7 @@ parameters:
   Store_first_active:
     description: >-
       one in the first period a store stands in, zero elsewhere, data prep.
-      PyPSA takes `active.cumsum() == 1`, which also counts a store
-      that has retired in every later period (`global_constraints.py:276`,
-      PyPSA/PyPSA#1938)
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
     dims: [period, store]
   Store_e_nom_min:
     description: least nominal capacity an extendable store may be built at
@@ -74,7 +72,7 @@ parameters:
     dims: [scenario, store]
   Store_e_nom_set:
     description: a given nominal capacity for an extendable store; one without a value has no row here
-    dims: [scenario, store]
+    dims: [store]
   Store_e_nom:
     description: nominal energy capacity
     dims: [scenario, store]
@@ -95,7 +93,7 @@ parameters:
     description: >-
       the sign the power a store delivers enters its bus's balance with —
       PyPSA's `sign`, `1` unless given. PyPSA refuses one that differs by
-      scenario (`consistency.py:1187`)
+      scenario (`constants.py:43`)
     dims: [store]
   Store_retention:
     description: share of energy kept over a snapshot — PyPSA's `(1 - standing_loss) ** elapsed hours`, data prep
@@ -314,7 +312,7 @@ constraints:
     expression: Store_e_nom_ext <= Store_e_nom_max
   Store_e_nom_set:
     description: "`Store-e_nom_set` — the chosen build pinned, wherever a value is given"
-    dims: [scenario, store]
+    dims: [store]
     where: Store_e_nom_extendable AND Store_e_nom_set
     expression: Store_e_nom_ext == Store_e_nom_set
   Store_e_nom_modularity:
@@ -368,7 +366,7 @@ assumptions:
     description: >-
       PyPSA reads the closing energy of a store that reopens per period at
       the last snapshot of every period, and fails on a `primary_energy` row
-      that names an `investment_period` (`global_constraints.py:526`)
+      that names an `investment_period` (`global_constraints.py:521`)
   Store_primary_energy_carried_over_has_unit_years:
     holds: "period_weight_years == 1"
     where: "Store_primary_energy_weight AND NOT Store_e_initial_per_period"
@@ -376,13 +374,13 @@ assumptions:
       a store that carries its energy from one period to the next closes
       once, at the last counted snapshot, and no period's years weighs that
       level — PyPSA refuses it where any period's years is not one
-      (`global_constraints.py:500`)
+      (`global_constraints.py:495`)
   Store_operational_limit_carried_over_has_unit_years:
     holds: "at(period_weight_years == 1, by=snapshot_period[period])"
     where: "Store_operational_limit_weight AND NOT Store_e_initial_per_period AND GlobalConstraint_counts_snapshot"
     description: >-
       the same for an `operational_limit` row, over the periods it counts —
-      PyPSA refuses it (`global_constraints.py:695`)
+      PyPSA refuses it (`global_constraints.py:696`)
   Store_marginal_cost_quadratic_without_risk_preference:
     holds: "Store_marginal_cost_quadratic == 0"
     where: "CVaR_omega > 0"
@@ -411,17 +409,17 @@ assumptions:
 |---|---|
 | $`\mathrm{on}^{e}`$ | `Store_active` over $`\mathcal{T} \times \mathcal{V}`$ — whether a store stands in a snapshot's period — PyPSA's `active`, data prep |
 | $`\mathrm{W}^{e}`$ | `Store_capital_weight` over $`\mathcal{V}`$ — the sum of period weights a store stands in — PyPSA's `active * period_weighting`, summed, data prep |
-| $`\mathrm{new}^{e}`$ | `Store_first_active` over $`\mathcal{Y} \times \mathcal{V}`$ — one in the first period a store stands in, zero elsewhere, data prep. PyPSA takes `active.cumsum() == 1`, which also counts a store that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
+| $`\mathrm{new}^{e}`$ | `Store_first_active` over $`\mathcal{Y} \times \mathcal{V}`$ — one in the first period a store stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\underline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_min` over $`\Xi \times \mathcal{V}`$ — least nominal capacity an extendable store may be built at |
 | $`\overline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_max` over $`\Xi \times \mathcal{V}`$ — most nominal capacity an extendable store may be built at |
 | $`\mathrm{c}^{\mathrm{cap},e}`$ | `Store_capital_cost` over $`\Xi \times \mathcal{V}`$ — cost of one unit of nominal capacity for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
-| $`\mathrm{e}^{\mathrm{nom,set}}`$ | `Store_e_nom_set` over $`\Xi \times \mathcal{V}`$ — a given nominal capacity for an extendable store; one without a value has no row here |
+| $`\mathrm{e}^{\mathrm{nom,set}}`$ | `Store_e_nom_set` over $`\mathcal{V}`$ — a given nominal capacity for an extendable store; one without a value has no row here |
 | $`\mathrm{e}^{\mathrm{nom}}`$ | `Store_e_nom` over $`\Xi \times \mathcal{V}`$ — nominal energy capacity |
 | $`\mathrm{ext}^{e}`$ | `Store_e_nom_extendable` over $`\mathcal{V}`$ — whether the nominal energy capacity is a decision |
 | $`\mathrm{e}^{\mathrm{mod}}`$ | `Store_e_nom_mod` over $`\mathcal{V}`$ — the module size a build comes in whole numbers of; no value means the build is continuous |
 | $`\underline{\mathrm{e}}`$ | `Store_e_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — least energy held, per unit of nominal capacity — negative for a store that may go short |
 | $`\overline{\mathrm{e}}`$ | `Store_e_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — most energy held, per unit of nominal capacity |
-| $`\mathrm{sgn}^{q}`$ | `Store_sign` over $`\mathcal{V}`$ — the sign the power a store delivers enters its bus's balance with — PyPSA's `sign`, `1` unless given. PyPSA refuses one that differs by scenario (`consistency.py:1187`) |
+| $`\mathrm{sgn}^{q}`$ | `Store_sign` over $`\mathcal{V}`$ — the sign the power a store delivers enters its bus's balance with — PyPSA's `sign`, `1` unless given. PyPSA refuses one that differs by scenario (`constants.py:43`) |
 | $`\rho^{e}`$ | `Store_retention` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — share of energy kept over a snapshot — PyPSA's `(1 - standing_loss) ** elapsed hours`, data prep |
 | $`\mathrm{e}^{0}`$ | `Store_e_initial` over $`\Xi \times \mathcal{V}`$ — energy held before the first snapshot |
 | $`\mathrm{cyc}^{e}`$ | `Store_e_cyclic` over $`\Xi \times \mathcal{V}`$ — whether the horizon closes on itself instead of opening on the initial energy |
@@ -532,7 +530,7 @@ E_{v} \le \overline{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in 
 **`Store_e_nom_set`**
 
 ```math
-E_{v} = \mathrm{e}^{\mathrm{nom,set}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{nom,set}}_{\xi,v} \text{ is defined}
+E_{v} = \mathrm{e}^{\mathrm{nom,set}}_{v} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{nom,set}}_{v} \text{ is defined}
 ```
 
 **`Store_e_nom_modularity`**

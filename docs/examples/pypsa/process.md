@@ -76,23 +76,23 @@ parameters:
       positive where it injects; a link is a process whose `bus0` rate is minus
       one and whose output rates are its efficiencies. Read at the snapshot the
       transfer arrives, so a delayed port transfers at its arrival snapshot's
-      rate (`constraints.py:1528`)
+      rate (`constraints.py:1498`)
     dims: [scenario, snapshot, process_output]
   Process_output_delay:
     description: >-
       snapshots a port's transfer lags its process's internal power — PyPSA's
       `delay0`, `delay1`, … read long, in `snapshot_weightings.generators`
       units, which the file states as whole snapshots; zero for a port that
-      transfers at once. Each scenario takes its own, as a link's
-    dims: [scenario, process_output]
+      transfers at once. The same in every scenario, as a link's
+    dims: [process_output]
     dtype: int
   Process_output_cyclic_delay:
     description: >-
       whether a delayed port's transfer wraps from the end of its investment
       period — PyPSA's `cyclic_delay0`, `cyclic_delay1`, …; where it does not,
       the energy still in transit at each period's first snapshots is lost.
-      Each scenario takes its own, as the delay
-    dims: [scenario, process_output]
+      The same in every scenario, as the delay
+    dims: [process_output]
     dtype: bool
   Process_marginal_cost:
     description: cost of one unit of internal power
@@ -119,7 +119,7 @@ parameters:
     dims: [scenario, process]
   Process_p_nom_set:
     description: a given nominal power for an extendable process; one without a value has no row here
-    dims: [scenario, process]
+    dims: [process]
   Process_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [process]
@@ -146,9 +146,7 @@ parameters:
   Process_first_active:
     description: >-
       one in the first period a process stands in, zero elsewhere, data prep.
-      PyPSA takes `active.cumsum() == 1`, which also counts a process
-      that has retired in every later period (`global_constraints.py:276`,
-      PyPSA/PyPSA#1938)
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
     dims: [period, process]
   Process_tech_capacity_weight:
     description: >-
@@ -280,7 +278,7 @@ constraints:
     expression: Process_p_nom_ext <= Process_p_nom_max
   Process_p_nom_set:
     description: "`Process-p_nom_set` — the chosen build pinned, wherever a value is given"
-    dims: [scenario, process]
+    dims: [process]
     where: Process_p_nom_extendable AND Process_p_nom_set
     expression: Process_p_nom_ext == Process_p_nom_set
   Process_p_nom_modularity:
@@ -326,22 +324,22 @@ assumptions:
 | $`\mathrm{ext}^{z}`$ | `Process_p_nom_extendable` over $`\mathcal{J}`$ — whether the nominal internal power is a decision |
 | $`\underline{\mathrm{z}}`$ | `Process_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — least internal power, per unit of nominal power — negative for a process that runs both ways |
 | $`\overline{\mathrm{z}}`$ | `Process_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — most internal power, per unit of nominal power |
-| $`\alpha`$ | `Process_rate` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — the energy a port draws or delivers per unit of internal power, PyPSA's `rate0`, `rate1`, … read long — negative where the port withdraws, positive where it injects; a link is a process whose `bus0` rate is minus one and whose output rates are its efficiencies. Read at the snapshot the transfer arrives, so a delayed port transfers at its arrival snapshot's rate (`constraints.py:1528`) |
-| $`\mathrm{d}^{z}`$ | `Process_output_delay` over $`\Xi \times \mathcal{R}`$ — snapshots a port's transfer lags its process's internal power — PyPSA's `delay0`, `delay1`, … read long, in `snapshot_weightings.generators` units, which the file states as whole snapshots; zero for a port that transfers at once. Each scenario takes its own, as a link's |
-| $`\mathrm{cyc}^{z}`$ | `Process_output_cyclic_delay` over $`\Xi \times \mathcal{R}`$ — whether a delayed port's transfer wraps from the end of its investment period — PyPSA's `cyclic_delay0`, `cyclic_delay1`, …; where it does not, the energy still in transit at each period's first snapshots is lost. Each scenario takes its own, as the delay |
+| $`\alpha`$ | `Process_rate` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — the energy a port draws or delivers per unit of internal power, PyPSA's `rate0`, `rate1`, … read long — negative where the port withdraws, positive where it injects; a link is a process whose `bus0` rate is minus one and whose output rates are its efficiencies. Read at the snapshot the transfer arrives, so a delayed port transfers at its arrival snapshot's rate (`constraints.py:1498`) |
+| $`\mathrm{d}^{z}`$ | `Process_output_delay` over $`\mathcal{R}`$ — snapshots a port's transfer lags its process's internal power — PyPSA's `delay0`, `delay1`, … read long, in `snapshot_weightings.generators` units, which the file states as whole snapshots; zero for a port that transfers at once. The same in every scenario, as a link's |
+| $`\mathrm{cyc}^{z}`$ | `Process_output_cyclic_delay` over $`\mathcal{R}`$ — whether a delayed port's transfer wraps from the end of its investment period — PyPSA's `cyclic_delay0`, `cyclic_delay1`, …; where it does not, the energy still in transit at each period's first snapshots is lost. The same in every scenario, as the delay |
 | $`\mathrm{c}^{z}`$ | `Process_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one unit of internal power |
 | $`\mathrm{c}^{z,(2)}`$ | `Process_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of the square of one unit of internal power |
 | $`\mathrm{z}^{\mathrm{set}}`$ | `Process_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — a given internal power schedule; a process without one has no row here |
 | $`\underline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_min` over $`\Xi \times \mathcal{J}`$ — least nominal power an extendable process may be built at |
 | $`\overline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_max` over $`\Xi \times \mathcal{J}`$ — most nominal power an extendable process may be built at |
 | $`\mathrm{c}^{\mathrm{cap},z}`$ | `Process_capital_cost` over $`\Xi \times \mathcal{J}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
-| $`\mathrm{z}^{\mathrm{nom,set}}`$ | `Process_p_nom_set` over $`\Xi \times \mathcal{J}`$ — a given nominal power for an extendable process; one without a value has no row here |
+| $`\mathrm{z}^{\mathrm{nom,set}}`$ | `Process_p_nom_set` over $`\mathcal{J}`$ — a given nominal power for an extendable process; one without a value has no row here |
 | $`\mathrm{z}^{\mathrm{mod}}`$ | `Process_p_nom_mod` over $`\mathcal{J}`$ — the module size a build comes in whole numbers of; no value means the build is continuous |
 | $`\mathrm{N}^{z,\mathrm{fix}}`$ | `Process_modules_installed` over $`\Xi \times \mathcal{J}`$ — how many whole modules a committable build has in place: `Process_p_nom / Process_p_nom_mod` where a fixed build is modular, one where it is not, data prep. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
 | $`\mathrm{nonneg}^{z}`$ | `Process_p_min_pu_nonneg` over $`\mathcal{J}`$ — true where none of the process's own minimums-per-unit is negative — PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and scenario, data prep |
 | $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{T} \times \mathcal{J}`$ — whether a process stands in a snapshot's period — PyPSA's `active`, data prep |
 | $`\mathrm{W}^{z}`$ | `Process_capital_weight` over $`\mathcal{J}`$ — the sum of period weights a process stands in — PyPSA's `active * period_weighting`, summed, data prep |
-| $`\mathrm{new}^{z}`$ | `Process_first_active` over $`\mathcal{Y} \times \mathcal{J}`$ — one in the first period a process stands in, zero elsewhere, data prep. PyPSA takes `active.cumsum() == 1`, which also counts a process that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
+| $`\mathrm{new}^{z}`$ | `Process_first_active` over $`\mathcal{Y} \times \mathcal{J}`$ — one in the first period a process stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\mathrm{m}^{z}`$ | `Process_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{J}`$ — one where the process is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
 #### Variables
@@ -430,7 +428,7 @@ Z_{j} \le \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \qquad \forall\, \xi \in 
 **`Process_p_nom_set`**
 
 ```math
-Z_{j} = \mathrm{z}^{\mathrm{nom,set}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{nom,set}}_{\xi,j} \text{ is defined}
+Z_{j} = \mathrm{z}^{\mathrm{nom,set}}_{j} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{nom,set}}_{j} \text{ is defined}
 ```
 
 **`Process_p_nom_modularity`**
@@ -462,7 +460,7 @@ z_{\xi,t,j} = \mathrm{z}^{\mathrm{set}}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\
 **`Process_output_arrival`**
 
 ```math
-\overrightarrow{z}_{\xi,t,r} = \begin{cases} z_{\xi,t \ominus^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{z},\mathrm{Process\_output\_process}(r)} \cdot \alpha_{\xi,t,r} & \text{if } \mathrm{cyc}^{z}_{\xi,r} \\ z_{\xi,t \boxminus_{0}^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{z},\mathrm{Process\_output\_process}(r)} \cdot \alpha_{\xi,t,r} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ r \in \mathcal{R}
+\overrightarrow{z}_{\xi,t,r} = \begin{cases} z_{\xi,t \ominus^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{z},\mathrm{Process\_output\_process}(r)} \cdot \alpha_{\xi,t,r} & \text{if } \mathrm{cyc}^{z}_{r} \\ z_{\xi,t \boxminus_{0}^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{z},\mathrm{Process\_output\_process}(r)} \cdot \alpha_{\xi,t,r} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ r \in \mathcal{R}
 ```
 
 **`Process_tech_capacity_expansion`**

@@ -63,9 +63,7 @@ parameters:
   Line_first_active:
     description: >-
       one in the first period a line stands in, zero elsewhere, data prep.
-      PyPSA takes `active.cumsum() == 1`, which also counts a line
-      that has retired in every later period (`global_constraints.py:276`,
-      PyPSA/PyPSA#1938)
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
     dims: [period, line]
   Line_s_nom:
     description: nominal apparent power
@@ -96,7 +94,7 @@ parameters:
     dims: [scenario, line]
   Line_s_nom_set:
     description: a given nominal apparent power for an extendable line; one without a value has no row here
-    dims: [scenario, line]
+    dims: [line]
   Line_s_set:
     description: a given flow schedule; a line without one has no row here
     dims: [scenario, snapshot, line]
@@ -106,7 +104,7 @@ parameters:
       in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default.
       A line whose carrier is not AC has no row either. The deprecated `v_ang_min` is
       ignored, as PyPSA ignores it with a `DeprecationWarning`
-      (`constraints.py:1713-1720`)
+      (`constraints.py:1702-1709`)
     dims: [scenario, line]
   Line_x_pu_eff:
     description: >-
@@ -117,7 +115,7 @@ parameters:
     description: >-
       the line's series impedance, signed by its orientation in the cycle —
       the cycle basis, data prep; a line in no cycle has no row. PyPSA builds
-      the cycle basis from the first scenario only (`networks.py:1356-1363`)
+      the cycle basis from the first scenario only (`networks.py:1430-1437`)
     dims: [period, line, cycle]
   Line_loss_max:
     description: the loss at a line's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep
@@ -135,9 +133,8 @@ parameters:
     dims: [scenario, snapshot, line, segment]
   Line_volume_weight:
     description: >-
-      the line's length where its carrier is in the row's set, the first
-      scenario's length as PyPSA reads it (`global_constraints.py:835-836`) —
-      data prep; a
+      the line's length in each scenario where its carrier is in the row's
+      set (`global_constraints.py:847-848`) — data prep; a
       line outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [scenario, global_constraint, line]
@@ -149,7 +146,7 @@ parameters:
       line outside the set, or one that does not stand in the row's period,
       has no row. The capital cost is PyPSA's `capital_cost` property, which is
       `Line_capital_cost` without `fom_cost` (`components.py:1151-1169`,
-      `global_constraints.py:935`)
+      `global_constraints.py:870-879`)
     dims: [scenario, global_constraint, line]
   Line_tech_capacity_weight:
     description: >-
@@ -272,7 +269,7 @@ constraints:
     expression: Line_s_nom_ext <= Line_s_nom_max
   Line_s_nom_set:
     description: "`Line-s_nom_set` — the chosen build pinned, wherever a value is given"
-    dims: [scenario, line]
+    dims: [line]
     where: Line_s_nom_extendable AND Line_s_nom_set
     expression: Line_s_nom_ext == Line_s_nom_set
   Line_s_nom_modularity:

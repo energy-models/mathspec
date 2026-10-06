@@ -134,7 +134,7 @@ expressions:
     description: >-
       the commitment state a generator carries into a snapshot — off at the
       first snapshot it stands in past the first of the horizon, as PyPSA
-      reads a status it did not build (`constraints.py:297`), and the state
+      reads a status it did not build (`constraints.py:298`), and the state
       carried over otherwise
     dims: [scenario, snapshot, generator]
     cases:
@@ -349,7 +349,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:297`), and the state carried over otherwise |
+| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
 | $`\overleftarrow{u}^{\circ}`$ | `Generator_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the state a generator carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Generator\_commitment\_opex}`$ | `Generator_commitment_opex` over $`\Xi`$ |
 
