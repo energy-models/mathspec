@@ -237,7 +237,7 @@ def _sos_shapes(schema: Spec) -> Iterator[str]:
             yield (
                 f"{context}: '{block.variable}' is not a declared variable.\n"
                 f'  Variables: {sorted(schema.variables)}\n'
-                f"Name a variable declared under 'variables:'."
+                "Name a variable declared under 'variables:'."
             )
         elif block.along not in schema.variables[block.variable].dims:
             yield (

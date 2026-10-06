@@ -143,8 +143,9 @@ DeclaredDtype = ParameterDtype | DimensionDtype
 VariableDomain = Literal['continuous', 'integer', 'binary']
 
 #: What a masked variable's non-existence *means* where it does not exist.
-#: ``undefined`` is the default: a term that carries it removes its row. ``zero`` says the quantity *is* zero there, so the term contributes
-#: nothing and the row stands.
+#: ``undefined`` is the default: a term that carries it removes its row.
+#: ``zero`` says the quantity *is* zero there, so the term contributes nothing
+#: and the row stands.
 VariableAbsence = Literal['undefined', 'zero']
 
 #: Which way an objective is optimised (the declaration rules).

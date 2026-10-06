@@ -207,7 +207,9 @@ class WhereResolver:
             )
             return node
         if offset is None or not offset.value.is_integer():
-            self.errors.append(f'{context}: shift(<predicate>, offset=) is not a whole number. Write an integer.')
+            self.errors.append(
+                f'{context}: shift(<predicate>, offset=) is not a literal whole number. Write an integer.'
+            )
             return node
         mask = Mask(operand)
         if along.name not in mask.dims:
@@ -266,7 +268,7 @@ class WhereResolver:
         value = literal_number(node.value)
         if value is None or not value.value.is_integer():
             self.errors.append(
-                f'{context}: a count is compared against a value that is not a whole number. '
+                f'{context}: a count is compared against a value that is not a literal whole number. '
                 f'Write count(…, over={over.name}) {node.op} <integer>.'
             )
             return node
@@ -343,8 +345,8 @@ class WhereResolver:
                 continue
             if any(isinstance(n, FunctionCallNode) and n.name == 'count' for n in nodes(side)):
                 self.errors.append(
-                    f'{context}: count() is inside arithmetic. Write count(<predicate>, over=<dimension>) <op> '
-                    f'<integer>.'
+                    f'{context}: count() is not alone on the left of its comparison. '
+                    f'Write count(<predicate>, over=<dimension>) <op> <integer>.'
                 )
                 continue
             try:
@@ -407,8 +409,8 @@ class WhereResolver:
         index = None if isinstance(node.right, ColumnNode | KeywordNode) else literal_number(node.right)
         if index is None or not index.value.is_integer():
             self.errors.append(
-                f'{context}: position({dimension}) is compared against a value that is not an integer. Write '
-                f'position({dimension}) {node.op} <integer>, where 0 is first and -1 is last.'
+                f'{context}: position({dimension}) is compared against a value that is not a literal integer. '
+                f'Write position({dimension}) {node.op} <integer>, where 0 is first and -1 is last.'
             )
             return node
         position = int(index.value)

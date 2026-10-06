@@ -55,7 +55,7 @@ class TestValidateExpressions:
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(p, over=g) <= 5'}},
-                ('the expression holds a comparison operator',),
+                ('the expression holds a comparison operator', 'Remove the comparison.'),
                 id='an-objective-with-a-comparison',
             ),
             pytest.param(
@@ -631,11 +631,13 @@ class TestAWhereSideIsReadInResolution:
         [
             pytest.param(
                 'position(g) == 1.5',
-                ('compared against a value that is not an integer', 'position(g) == <integer>'),
+                ('compared against a value that is not a literal integer', 'position(g) == <integer>'),
                 id='a-position-against-a-fraction',
             ),
             pytest.param(
-                'position(g) == c', ('compared against a value that is not an integer',), id='a-position-against-a-name'
+                'position(g) == c',
+                ('compared against a value that is not a literal integer',),
+                id='a-position-against-a-name',
             ),
             pytest.param(
                 'position(g, h) == 0',
@@ -921,8 +923,13 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 '2 <= count(flag, over=g)',
-                ('count() is inside arithmetic',),
+                ('count() is not alone on the left of its comparison',),
                 id='a-count-on-the-right',
+            ),
+            pytest.param(
+                'count(flag, over=g) + 1 >= 2',
+                ('count() is not alone on the left of its comparison',),
+                id='a-count-inside-arithmetic',
             ),
             pytest.param(
                 'count(flag, over=c) >= 2',
@@ -936,12 +943,12 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'count(flag, over=g) >= 2.5',
-                ('a count is compared against a value that is not a whole number',),
+                ('a count is compared against a value that is not a literal whole number',),
                 id='a-count-against-a-fraction',
             ),
             pytest.param(
                 'count(flag, over=g) >= k',
-                ('a count is compared against a value that is not a whole number',),
+                ('a count is compared against a value that is not a literal whole number',),
                 id='a-count-against-a-parameter',
             ),
             pytest.param(
@@ -981,8 +988,13 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'shift(flag, along=g, offset=0.5)',
-                ('shift(<predicate>, offset=) is not a whole number',),
+                ('shift(<predicate>, offset=) is not a literal whole number',),
                 id='a-translation-by-a-fraction',
+            ),
+            pytest.param(
+                'shift(flag, along=g, offset=k)',
+                ('shift(<predicate>, offset=) is not a literal whole number',),
+                id='a-translation-by-a-parameter',
             ),
             pytest.param(
                 'at(r, by=lk)',
@@ -1118,7 +1130,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'objective': {'expression': 'sum(p, over=g) <= 5'}},
-                ('the expression holds a comparison operator',),
+                ('the expression holds a comparison operator', 'Remove the comparison.'),
                 id='an-objective-with-a-comparison',
             ),
             pytest.param(
