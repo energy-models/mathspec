@@ -427,7 +427,7 @@
     },
     "GivenParameterBlock": {
       "additionalProperties": false,
-      "description": "Data this file reads and another file declares.\n\nIt says what a [`ParameterBlock`][] says, because the frame and the\ndtype are all a parameter declaration holds: a where compares against the\ndtype, and the dim rules read the frame.",
+      "description": "Data this file reads and another file declares.\n\nIt says the frame and the dtype of a [`ParameterBlock`][], which are what\nthis file reads: a where compares against the dtype, and the dim rules read\nthe frame. What a missing row means is the declaring file's ``missing:``.",
       "properties": {
         "description": {
           "anyOf": [

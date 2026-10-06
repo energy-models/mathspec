@@ -78,19 +78,19 @@ so is its own: it may raise at the first gap, or list every missing coordinate.
 
 A bare numeric name in a `where` asks whether the data has a row under every
 reading, so `where: p_nom_max` selects the rows the data gives. A comparison
-reads the value: `where: efficiency < 1` is true at a missing row of the
-parameter above. Under `absent` and `neutral`, a comparison at a missing row is
-false. A bare `bool` name reads its value, so `where: active` reads `true`
-there.
+reads the value: `where: efficiency <= 1` is true at a missing row of
+`efficiency` above, which reads `1` there. Under `absent` and `neutral`, a
+comparison at a missing row is false. A bare `bool` name reads its value, so
+`where: active` reads `true` there.
 
 A value has the parameter's dtype:
 
-| `dtype` | a value                                                 |
-| ------- | ------------------------------------------------------- |
-| `float` | a number. `.inf`, `inf`, `-.inf` and `-inf` are numbers |
-| `int`   | an integer. An integer column cannot hold `inf`         |
-| `bool`  | `true` or `false`                                       |
-| `str`   | none. A label has no value to fill                      |
+| `dtype` | a value                                                  |
+| ------- | -------------------------------------------------------- |
+| `float` | a number. `.inf`, `inf`, `-.inf` and `-inf` are numbers  |
+| `int`   | an integer. An integer column cannot hold `inf`          |
+| `bool`  | `true` or `false`                                        |
+| `str`   | none. A label has no value to fill, and no `neutral` one |
 
 A NaN, a quoted number and `missing: null` are refused. A `given:` parameter
 has no `missing:`. The file that declares the parameter owns it. A parameter a

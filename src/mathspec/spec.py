@@ -328,13 +328,16 @@ class ParameterBlock(_StrictBlock):
 
     @model_validator(mode='after')
     def _a_value_fits_the_dtype(self) -> ParameterBlock:
-        """A value fills rows of the column, so it has the column's dtype."""
+        """A value fills rows of the column, so it has the column's dtype, and a label has no neutral value."""
         v = self.missing
+        if self.dtype == 'str' and v not in ('refused', 'absent'):
+            msg = (
+                f'missing: {v} on a str parameter, which takes refused or absent. A label has no value to fill, '
+                f'and no neutral one.'
+            )
+            raise ValueError(msg)
         if isinstance(v, str):
             return self
-        if self.dtype == 'str':
-            msg = f'missing: {v!r} on a str parameter. A label has no value to fill: write {_READINGS}.'
-            raise ValueError(msg)
         if self.dtype == 'bool' and not isinstance(v, bool):
             msg = f'missing: {v!r} on a bool parameter, which takes true or false.'
             raise ValueError(msg)
@@ -431,9 +434,9 @@ class VariableBlock(_StrictBlock):
 class GivenParameterBlock(_StrictBlock):
     """Data this file reads and another file declares.
 
-    It says what a [`ParameterBlock`][] says, because the frame and the
-    dtype are all a parameter declaration holds: a where compares against the
-    dtype, and the dim rules read the frame.
+    It says the frame and the dtype of a [`ParameterBlock`][], which are what
+    this file reads: a where compares against the dtype, and the dim rules read
+    the frame. What a missing row means is the declaring file's ``missing:``.
     """
 
     _label: ClassVar[str] = 'a given parameter declaration'

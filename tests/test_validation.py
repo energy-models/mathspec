@@ -2338,7 +2338,7 @@ def test_an_infinite_bound_is_refused_with_the_null_that_opens_a_side(side, valu
     [
         pytest.param('float', None, 'refused', id='left-out-is-refused'),
         pytest.param('float', 'absent', 'absent', id='absent'),
-        pytest.param('str', 'neutral', 'neutral', id='neutral-on-a-label'),
+        pytest.param('str', 'absent', 'absent', id='absent-on-a-label'),
         pytest.param('float', 1, 1, id='a-number'),
         pytest.param('float', float('inf'), float('inf'), id='yaml-dot-inf'),
         pytest.param('float', 'inf', float('inf'), id='the-expression-spelling-of-inf'),
@@ -2378,6 +2378,12 @@ def test_inf_and_dot_inf_load_as_one_number():
         pytest.param('int', float('inf'), 'missing: inf on an int parameter', id='an-infinity-on-an-int'),
         pytest.param('bool', 1, 'missing: 1 on a bool parameter, which takes true or false', id='a-number-on-a-flag'),
         pytest.param('str', 1, 'A label has no value to fill', id='a-number-on-a-label'),
+        pytest.param(
+            'str',
+            'neutral',
+            'missing: neutral on a str parameter, which takes refused or absent',
+            id='neutral-on-a-label',
+        ),
     ],
 )
 def test_a_parameter_missing_that_reads_nothing_is_refused(dtype, written, fragment):
