@@ -78,15 +78,15 @@ are a load error, and the message names both, so no name hides another.
 
 The place where a name stands decides which kinds of name are legal:
 
-| Position                               | Legal kinds                                                                                                              |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| expression (`p * cost`)                | a variable, or a parameter whose values are numbers ([dtype](declarations.md#parameters))                                |
-| dimension argument (`over=`, `along=`) | a dimension, or a list of them for `over=`. Beside `by=`, a name in `over=` is a column of the relation where it has one |
-| column argument (`by=`, `within=`)     | columns of one relation, written `relation[column]` or `relation[column, …]`                                             |
-| `where` string                         | a parameter, variable, dimension or relation ([where strings](#where-strings))                                           |
-| `bounds.lower` / `bounds.upper`        | a parameter name, or a number                                                                                            |
-| the `edge` key of `shift`              | `'wrap'` in quotes, or a bare number                                                                                     |
-| `dual` argument (`dual(c)`)            | a constraint. It resolves against the constraints alone ([named expressions](named.md#reading-a-constraints-dual))       |
+| Position                               | Legal kinds                                                                                                          |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| expression (`p * cost`)                | a variable, or a parameter whose values are numbers ([dtype](declarations.md#parameters))                            |
+| dimension argument (`over=`, `along=`) | a dimension, or a list of them for `over=`. With `by=`, a name in `over=` is a column of the relation, if it has one |
+| column argument (`by=`, `within=`)     | columns of one relation, written `relation[column]` or `relation[column, …]`                                         |
+| `where` string                         | a parameter, variable, dimension or relation ([where strings](#where-strings))                                       |
+| `bounds.lower` / `bounds.upper`        | a parameter name, or a number                                                                                        |
+| the `edge` key of `shift`              | `'wrap'` in quotes, or a bare number                                                                                 |
+| `dual` argument (`dual(c)`)            | a constraint. It resolves against the constraints alone ([named expressions](named.md#reading-a-constraints-dual))   |
 
 A bare word in the value of a keyword argument is a name to resolve, but a
 keyword's key is never a name.
@@ -213,8 +213,9 @@ where: "count(points AND NOT shift(points, along=bp, offset=1), over=bp) == 1"
 
 That `where` is true when the marked breakpoints are one consecutive run.
 
-A negative `offset` reads forwards. `within=` and `edge='wrap'` are not in this
-form; for a grouped or cyclic translation, compare the arithmetic `shift`.
+A negative `offset` reads forwards. This form accepts neither `within=` nor
+`edge='wrap'`. For a grouped or cyclic translation, compare the arithmetic
+`shift`.
 
 ### Reading a predicate through a relation
 
@@ -244,10 +245,11 @@ objective:
 
 $$0 \le \mathit{rate}_{f} \le \mathrm{cap}_{f} \qquad \forall\thinspace f \in \mathcal{F} \thinspace : \thinspace \mathrm{has\_curve}_{\mathrm{converter\_of}(f)}$$
 
-The column read, `converter`, leaves, and the key, `flow`, arrives. So the mask
-above is over `flow` alone. The rules are those of [`at`](relations.md#lookups)
-in an expression: `by=` names a value column, or several as
-`relation[a, …]`, the read groups by the relation's key, and the predicate carries every dimension the read joins on.
+The read removes the column it reads, `converter`, and adds the key, `flow`,
+so the mask above is over `flow` alone. The rules are those of
+[`at`](relations.md#lookups) in an expression. `by=` names a value column, or
+several as `relation[a, …]`. The read groups by the key of the relation, and
+the predicate carries every dimension that the read joins on.
 
 ### The right-hand side of a comparison
 

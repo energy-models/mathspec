@@ -239,7 +239,7 @@ rows.separability['bp'].windowable  # False
 rows.separability['generator'].linking_rows  # ('target',)
 rows.separability['generator'].linking_columns  # ()
 tied = rows.separability['generator'].coupled["constraint 'target'"]
-tied.partition(' — ')[0]  # 'sums over generator'
+tied.partition(' (')[0]  # 'sums over generator'
 'sum_back(window=n)' in tied  # True
 ```
 

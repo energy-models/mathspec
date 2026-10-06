@@ -114,7 +114,7 @@ resolve to two nodes, so the spelling in the file cannot decide the name.
 | File verb          | Node                | What the node names                                  |
 | ------------------ | ------------------- | ---------------------------------------------------- |
 | `sum(over=)`       | `Sum`               | axes removed from the result                         |
-| `sum(by=)`         | `Sum` over a `Join` | a join, and the sum over the axes it opens           |
+| `sum(by=)`         | `Sum` over a `Join` | a join, and the sum over the axes that the join adds |
 | `at(by=)`          | `Join`              | a join whose groups are one row, with no sum over it |
 | `shift(along=)`    | `Translate`         | a re-index along one dimension                       |
 | `sum_back(along=)` | `WindowSum`         | a sum over a trailing window                         |

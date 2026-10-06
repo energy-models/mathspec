@@ -16,8 +16,8 @@ of them, and a file cannot add an operator. Write a composition of them as a [ma
 | `sum(array, over=dim)`                                     | `dim` collapses. `array` must carry `dim`                                                                                                                         |
 | `sum(array, over=[a, …])`                                  | Each dimension in the list collapses. `array` must carry each one, and the list names each one once                                                               |
 | `sum(array, over=dim, by=relation[c])`                     | `dim` collapses, and the result is grouped by the relation's column `c`. The other key columns are joined on, so the array carries them and the result keeps them |
-| `sum(array, over=[dim, …], by=relation[c, …])`             | The same with several dimensions and several columns of one relation: joined on together, grouped by a product                                                    |
-| `at(array, by=relation[c])`                                | `array` read at the value of the relation's column `c`, once per key of the relation. The key arrives in the result                                               |
+| `sum(array, over=[dim, …], by=relation[c, …])`             | The same with several dimensions and several columns of one relation. The call joins on them together, and groups by their product                                 |
+| `at(array, by=relation[c])`                                | `array` read at the value of the relation's column `c`, once per key of the relation. The result gains the key                                                     |
 | `shift(array, along=dim, offset=n)`                        | The value `n` positions earlier along `dim`. The vacated edge is **absent**                                                                                       |
 | `shift(array, along=dim, offset=n, edge='wrap')`           | The value `n` positions earlier, counted cyclically, so nothing is vacated                                                                                        |
 | `shift(array, along=dim, offset=n, edge=v)`                | The value `n` positions earlier, with the number `v` standing where the edge was vacated                                                                          |
@@ -110,8 +110,7 @@ and no row is lost.
 ## `shift`
 
 `shift` counts positions in the order of an [ordered](dimensions.md#order)
-dimension. `edge=` says
-what stands where nothing moved in.
+dimension. `edge=` says what stands where nothing moved in.
 
 ```yaml
 dimensions:

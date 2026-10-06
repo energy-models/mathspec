@@ -78,16 +78,16 @@ parameters:
       snapshots a port's delivery lags its link's flow — PyPSA's `delay`,
       `delay2`, … read long, in `snapshot_weightings.generators` units, which
       the file states as whole snapshots; zero for a port that delivers at once.
-      The same in every scenario: PyPSA refuses a delay that differs by
-      scenario (`constants.py:52`)
+      A port has the same delay in every scenario, because PyPSA refuses
+      a delay that differs by scenario (`constants.py:52`)
     dims: [link_output]
     dtype: int
   Link_output_cyclic_delay:
     description: >-
       whether a delayed port's flow wraps from the end of its investment
       period — PyPSA's `cyclic_delay`, `cyclic_delay2`, …; where it does not,
-      the flow still in transit at each period's first snapshots is lost. The
-      same in every scenario, as the delay
+      the flow still in transit at each period's first snapshots is lost.
+      The flag is the same in every scenario, as the delay is
     dims: [link_output]
     dtype: bool
   Link_marginal_cost:

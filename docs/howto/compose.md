@@ -204,7 +204,7 @@ which each component pins at its own port.
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                     |
 | a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                       |
-| `ordered: true` on a shared dimension             | it is a claim about the dimension rather than the dimension, so the dimension is ordered if one fragment says so                                                                                    |
+| `ordered: true` on a shared dimension             | it says that the members have an order and does not change them, so the dimension is ordered if one fragment says so                                                                                |
 | any other declaration                             | one fragment declares it, and a second is refused                                                                                                                                                   |
 | an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the declaration where the introducer wrote none                                             |
 | a given expression                                | the body of the definition carries no dimension that the `dims` of the reading fragment do not name                                                                                                 |
@@ -393,13 +393,13 @@ over it is refused, and so is removing one:
 patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. Restate the declaration word for word, leave it out, or give the patch a dimension of its own under a name of its own.
 ```
 
-`ordered` is a claim about the dimension, not the dimension. A patch may add
-it, so a patch that steps along `snapshot` declares it `ordered: true` over a
-base that does not. A patch may not take it back, because the base may
-already step along it:
+`ordered` says that the members of a dimension have an order, and it does not
+change the members. So a patch may add it: a patch that steps along `snapshot`
+declares it `ordered: true` over a base that does not. A patch may not remove
+it, because a construct in the base may already step along `snapshot`:
 
 ```text
-patch 'unordered.yaml' says the dimension 'snapshot' is not ordered, where its base declares it ordered. A construct in the base may step along it, and a patch adds the claim of order but never withdraws it: leave `ordered` out of the patch.
+patch 'unordered.yaml' says the dimension 'snapshot' is not ordered, where its base declares it ordered. A patch can add `ordered: true` but cannot remove it, because a construct in the base may step along it. Leave `ordered` out of the patch.
 ```
 
 ## A section set to `null`

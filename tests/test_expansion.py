@@ -286,7 +286,7 @@ def test_macro_collisions_rejected(patch, match):
         ),
         pytest.param(
             {'grouped': {'args': ['x'], 'template': 'sum(x, over=g, by=[nope, also])'}},
-            r"Macro 'grouped'.*sum\(by=\.\.\.\) takes columns of one relation, written relation\[column\]",
+            r"Macro 'grouped'.*sum\(by=\.\.\.\) takes columns of one relation. Write relation\[column\]",
             id='a-list-of-names-for-columns',
         ),
         pytest.param(
@@ -473,7 +473,7 @@ def test_a_selection_bound_into_arithmetic_is_refused():
         'constraints': {'k': {'dims': ['generator'], 'expression': 'plus(p, cols=gen_bus[bus]) <= 1'}},
     }
     with pytest.raises(
-        LanguageError, match=r'gen_bus\[bus\] names columns of a relation, which is only legal as an operator'
+        LanguageError, match=r'gen_bus\[bus\] names columns of a relation, which is allowed only as an operator'
     ):
         to_spec(model)
 
@@ -485,5 +485,5 @@ def test_a_formal_inside_a_selection_takes_a_name_and_nothing_else():
         },
         'constraints': {'k': {'dims': ['bus'], 'expression': 'grouped(p, col=2) <= cap'}},
     }
-    with pytest.raises(LanguageError, match=r"the formal 'col' stands inside gen_bus\[col\], where only a name fits"):
+    with pytest.raises(LanguageError, match=r"the formal 'col' is inside gen_bus\[col\], where only a name is allowed"):
         to_spec(model)

@@ -530,7 +530,7 @@ def test_a_patch_restates_a_dimension_as_the_schema_reads_it(dimension, restated
 def test_a_patch_that_withdraws_ordered_is_refused():
     with pytest.raises(LanguageError, match=r"says the dimension 'snapshot' is not ordered") as raised:
         override(DISPATCH_MODEL, [{'dimensions': {'snapshot': {'dtype': 'int', 'ordered': False}}}])
-    assert 'leave `ordered` out of the patch' in str(raised.value), 'the refusal names the rewrite'
+    assert 'Leave `ordered` out of the patch' in str(raised.value), 'the refusal names the rewrite'
 
 
 @pytest.mark.parametrize(

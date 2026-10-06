@@ -162,8 +162,8 @@ def _substitute_columns(node: ColumnsNode, bindings: dict[str, ArithmeticNode], 
         bound = bindings.get(name)
         if bound is not None and not isinstance(bound, NameNode):
             msg = (
-                f"{caller}: the formal '{name}' stands inside {node}, where only a name fits, and the call "
-                f'passes {bound}. Pass the bare name of a relation or of its column.'
+                f"{caller}: the formal '{name}' is inside {node}, where only a name is allowed, and the call "
+                f'passes {bound}. Pass the name of a relation or of one of its columns.'
             )
             raise SchemaError(msg)
         names.append(name if bound is None else bound.name)

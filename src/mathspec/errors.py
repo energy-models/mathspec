@@ -72,7 +72,7 @@ def unordered(context: str, construct: str, dimension: str) -> str:
     """The refusal for *construct* reading the order of *dimension*, which is not declared ordered."""
     return (
         f"{context}: {construct} reads the order of '{dimension}', which is not declared ordered, so the "
-        f'order it read would be the row order of the data. Declare the order part of the model with '
+        f'order would come from the row order of the data. Declare '
         f"'{dimension}: {{ordered: true}}' under dimensions:."
     )
 

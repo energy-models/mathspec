@@ -242,7 +242,7 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     if rest.startswith(('~', '!')) and not rest.startswith('!='):
         return f"'{rest[0]}' is not a where operator. Write NOT before the predicate."
     if rest.startswith('=') and not rest.startswith('=='):
-        return "'=' compares nothing — equality is written ==."
+        return "'=' is not a comparison. Write ==."
     if (listed := re.match(rf'\[\s*({NAME}(?:\s*,\s*{NAME})+)\s*\]', rest)) and (
         before := re.search(rf'({NAME})\s*$', text[:loc])
     ):

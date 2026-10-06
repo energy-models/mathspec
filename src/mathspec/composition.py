@@ -848,8 +848,8 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
         if base.get('ordered') and _mapping(block).get('ordered') is False:
             raise LanguageError(
                 f"patch '{name}' says the {singular} '{key}' is not ordered, where its base declares it "
-                f'ordered. A construct in the base may step along it, and a patch adds the claim of order '
-                f'but never withdraws it: leave `ordered` out of the patch.'
+                f'ordered. A patch can add `ordered: true` but cannot remove it, because a construct in the base '
+                f'may step along it. Leave `ordered` out of the patch.'
             )
         if (joined := _joined(section, base, laid, lambda written: written)) is None:
             raise LanguageError(

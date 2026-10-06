@@ -121,7 +121,9 @@ def _sum_dims(node: Sum, schema: Spec, context: str) -> frozenset[str]:
     inner = dims_of(node.operand, schema, context)
     for summed in node.over:
         if summed.dimension not in inner:
-            raise DimensionError(_not_carried(context, f'sum(over={summed})', inner, 'drop the sum, or fix the dim'))
+            raise DimensionError(
+                _not_carried(context, f'sum(over={summed})', inner, 'Remove the sum, or correct the dimension')
+            )
     return inner - {axis.dimension for axis in node.over}
 
 
@@ -143,19 +145,19 @@ def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand
         if lookup:
             raise DimensionError(
                 f'{context}: {call} joins on {missing}, which {operand} does not carry (dims '
-                f'{sorted(inner)}). A lookup joins the operand on the columns it reads at — '
-                f'sum is the call that groups by them.'
+                f'{sorted(inner)}). To group by those columns, use sum() instead.'
             )
         raise DimensionError(
-            _not_carried(context, f'{call} joins on {missing} to sum it away,', inner, 'drop the sum, or fix the dim')
+            _not_carried(
+                context, f'{call} joins on {missing} to sum it away,', inner, 'Remove the sum, or correct the dimension'
+            )
         )
     added, dropped = set(columns.added_dims), set(columns.dropped_dims)
     if clash := sorted((added & inner) - dropped):
         raise DimensionError(
             f'{context}: {call} groups by {clash}, which the expression already carries.\n'
-            f'A join on a column the operand carries matches it rather than grouping by it, so a '
-            f'call brings the dims it groups by. Move the factor carrying {clash} outside the operator, '
-            f'or group by a column over another dimension.'
+            f'Move the factor carrying {clash} outside the operator, or group by a column over another '
+            f'dimension.'
         )
     _check_joined(call, columns, inner, context)
     return (inner - set(columns.joined_dims)) | set(columns.grouped_dims)
@@ -196,15 +198,13 @@ def _check_joined(call: str, use: JoinColumns | Partition, inner: frozenset[str]
     if missing := sorted(set(dims) - inner):
         raise DimensionError(
             f'{context}: {call} joins on {missing} (columns {[r for r in use.joined if use.dim(r) in missing]} '
-            f"of '{use.name}'), which the expression does not carry (dims {sorted(inner)}). A join matches "
-            f'the operand on every key column the call does not name — index the operand by them, or '
-            f'name them in the call.'
+            f"of '{use.name}'), which the expression does not carry (dims {sorted(inner)}). Index the "
+            f'operand over them, or name them in the call.'
         )
     if twice := sorted({d for d in dims if dims.count(d) > 1}):
         raise DimensionError(
-            f"{context}: {call} joins '{use.name}' on {twice} through more than one column, and the operand "
-            f'carries each dimension once. Join on distinct dimensions, or use a relation whose key '
-            f'columns are over distinct dimensions.'
+            f"{context}: {call} joins '{use.name}' on {twice} through more than one column. Join on "
+            f'different dimensions, or use a relation whose key columns are over different dimensions.'
         )
 
 

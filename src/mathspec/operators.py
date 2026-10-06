@@ -160,9 +160,8 @@ def call_shape_error(name: str, positional: int, kwargs: Iterable[str]) -> str |
     optional = {*builtin.edge_kwargs, *builtin.optional_kwargs}
     if keys & set(builtin.column_kwargs) and (unsaid := sorted(frozenset(builtin.with_columns) - keys)):
         return (
-            f'{name}() through a relation leaves {", ".join(f"{k}=" for k in unsaid)} unsaid.\n'
-            f'A sum through a relation names the columns that leave the frame, so the key columns it keeps are '
-            f'the ones it does not name.\n'
+            f'{name}() through a relation does not name {", ".join(f"{k}=" for k in unsaid)}. A sum through a '
+            f'relation names in over= the columns it sums away.\n'
             f'Write: {builtin.usage}'
         )
     fits = positional == 1 and keys - optional == builtin.required

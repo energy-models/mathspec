@@ -413,7 +413,7 @@ def test_a_where_side_is_held_to_the_depth_an_expression_is():
         pytest.param('p_max > 0 || committable', r'Write OR', id='doubled-pipe'),
         pytest.param('~committable', r'Write NOT before the predicate', id='tilde'),
         pytest.param('!committable', r'Write NOT before the predicate', id='bang'),
-        pytest.param('status = 0', r'equality is written ==', id='a-lone-equals'),
+        pytest.param('status = 0', r'is not a comparison. Write ==', id='a-lone-equals'),
     ],
 )
 def test_a_where_parse_failure_names_the_rewrite(text, rewrite):

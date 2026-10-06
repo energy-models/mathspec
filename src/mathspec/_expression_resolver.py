@@ -147,16 +147,14 @@ class ExpressionResolver:
             return None
         if isinstance(node, NameListNode):
             self.errors.append(
-                f'{self.context}: {node} is a list of names, which is only legal as an operator '
-                f'kwarg value such as sum(x, over=[snapshot, generator]). In an expression, write the '
-                f'terms out and add them.'
+                f'{self.context}: {node} is a list of names, which is allowed only as an operator argument, '
+                f'such as over=[snapshot, generator]. Write the terms out and add them.'
             )
             return None
         if isinstance(node, ColumnsNode):
             self.errors.append(
-                f'{self.context}: {node} names columns of a relation, which is only legal as an operator '
-                f'kwarg value such as at(x, by={node}). A relation is structure rather than data, so it is '
-                f'not a value in an expression.'
+                f'{self.context}: {node} names columns of a relation, which is allowed only as an operator '
+                f'argument, such as at(x, by={node}). A relation is not a value.'
             )
             return None
         assert_never(node)
@@ -213,10 +211,9 @@ class ExpressionResolver:
                 return None
             case 'relation':
                 self.errors.append(
-                    f"{self.context}: '{node.name}' is a relation, and a relation is structure "
-                    f'rather than data, so it is not a value in an expression. Its columns '
-                    f'appear in an operator (sum(x, over=<column>, by={node.name}[<column>])) and in a '
-                    f'where — to carry numbers along this dimension, declare a parameter over it.'
+                    f"{self.context}: '{node.name}' is a relation, and a relation is not a value. Use its "
+                    f'columns as sum(x, over=<column>, by={node.name}[<column>]) or in a where, or declare a '
+                    f'parameter to carry numbers.'
                 )
                 return None
             case _:
@@ -489,14 +486,16 @@ class ExpressionResolver:
             return None
         if isinstance(value, ColumnsNode):
             self.errors.append(
-                f'{self.context}: {operator}(over={value}) writes the relation before its columns, and over= takes '
-                f'the names bare: over={shown(value.columns)}. Beside by={value.relation}[...], a name in over= is '
-                f"a column of '{value.relation}', or else a dimension."
+                f'{self.context}: {operator}(over={value}) names a relation, and over= takes bare names. Write '
+                f'over={shown(value.columns)}. Beside by={value.relation}[...], a name in over= is a column of '
+                f"'{value.relation}', or a dimension."
             )
             return None
         names = names_in(value)
         if not names:
-            self.errors.append(f'{self.context}: {operator}(over=...) must name a dimension, or a list of them.')
+            self.errors.append(
+                f'{self.context}: {operator}(over=...) is not a name. Write a declared dimension, or a list of them.'
+            )
             return None
         if any(n in self.formals for n in names):
             return None
@@ -532,13 +531,13 @@ class ExpressionResolver:
         if unknown := [c for c in value.columns if c not in shape.roles and c not in self.formals]:
             self.errors.append(
                 f'{self.context}: {operator}({key}={value}) names {unknown}, which is no column of '
-                f"'{value.relation}', whose columns are {list(shape.roles)}."
+                f"'{value.relation}'. Name one of its columns, {list(shape.roles)}."
             )
             return None
         if any(c in self.formals for c in value.columns):
             return None
         if len(set(value.columns)) < len(value.columns):
-            self.errors.append(f'{self.context}: {operator}({key}={value}) names a column twice.')
+            self.errors.append(f'{self.context}: {operator}({key}={value}) names a column twice. Name each once.')
             return None
         return value
 
@@ -548,7 +547,7 @@ class ExpressionResolver:
         if isinstance(value, NameNode) and value.name in ns.relations:
             return (
                 f'{context}: {operator}({key}={value.name}) names the relation and none of its columns. Write '
-                f"{key}={value.name}[<column>] — the columns of '{value.name}' are "
+                f"{key}={value.name}[<column>], with a column of '{value.name}': "
                 f'{list(ns.relations[value.name].roles)}.'
             )
         if isinstance(value, NameNode) and value.name in ns.dimensions:
@@ -565,7 +564,7 @@ class ExpressionResolver:
                 f'columns of a relation, written relation[column]. {hint}'
             )
         return (
-            f'{context}: {operator}({key}=...) takes columns of one relation, written relation[column] or '
+            f'{context}: {operator}({key}=...) takes columns of one relation. Write relation[column] or '
             f'relation[column, ...].'
         )
 
@@ -593,7 +592,8 @@ class ExpressionResolver:
         if not from_roles:
             self.errors.append(
                 f"{self.context}: {call}: over={shown(over)} names no column of '{name}', so the sum reads nothing "
-                f"through '{name}'. Name in over= the column the operand is joined on — {_columns_over(shape, plain)}."
+                f"through '{name}'. Name in over= the column that the operand is joined on: "
+                f'{_columns_over(shape, plain)}.'
             )
             return None
         join = self._checked_join(name, call, from_roles, into_roles)
@@ -602,9 +602,8 @@ class ExpressionResolver:
         if join.one_row_per_group:
             self.errors.append(
                 f'{self.context}: {call}: the columns this sum groups by, {list(join.grouped)}, hold the whole key '
-                f'{list(shape.key)}, so every group is one row and nothing is added up — that is a join with no '
-                f"group-by, which is at()'s. Write {_lookup_rewrite(name, from_roles, plain)}, or group by a "
-                f'value column.'
+                f'{list(shape.key)}, so every group is one row and the sum adds nothing. Write '
+                f'{_lookup_rewrite(name, from_roles, plain)}, or group by a value column.'
             )
             return None
         return join, plain
@@ -621,15 +620,14 @@ class ExpressionResolver:
         shape = self.ns.relations[name]
         if not shape.values:
             self.errors.append(
-                f"{self.context}: {call}: '{name}' is a bare relation — every column is in its key — so a key "
-                f'tuple may have several rows and there is no one value for at to read. Sum through it instead.'
+                f"{self.context}: {call}: '{name}' has every column in its key, so it has no value column for at() "
+                f'to read. Sum through it instead.'
             )
             return None
         if keyed := [r for r in columns.columns if r in shape.key]:
             self.errors.append(
                 f"{self.context}: {call} names {keyed}, a key column of '{name}'. A lookup reads value columns "
-                f'at the key, and the key arrives in the result — the value columns of {name!r} are '
-                f'{list(shape.values)}. Sum through a key column instead.'
+                f'at the key. Name one of the value columns, {list(shape.values)}, or sum through the key column.'
             )
             return None
         matched = inner - {shape.dim(r) for r in columns.columns}
@@ -643,17 +641,14 @@ class ExpressionResolver:
         context = self.context
         shape = self.ns.relations[name]
         if both := sorted(set(from_roles) & set(into_roles)):
-            self.errors.append(
-                f'{context}: {call}: over= and by= both name {both}, and a sum reads between two sets of columns.'
-            )
+            self.errors.append(f'{context}: {call}: over= and by= both name {both}. Name different columns in each.')
             return None
         for roles in (from_roles, into_roles):
             dims = [shape.dim(r) for r in roles]
             if shared := sorted({d for d in dims if dims.count(d) > 1}):
                 self.errors.append(
                     f'{context}: {call}: {list(roles)} are columns over one dimension, {shared}, and the operand '
-                    f'carries each dimension once, so nothing says which column its coordinate is read at. Read '
-                    f'one of them per call.'
+                    f'carries each dimension once. Read one of them per call.'
                 )
                 return None
         kept = tuple(r for r in shape.key if r not in from_roles and r not in into_roles)
@@ -685,8 +680,8 @@ class ExpressionResolver:
             return None
         if keyed := [r for r in within_roles if r in shape.key]:
             self.errors.append(
-                f"{context}: {call}: within= names {keyed}, a key column of '{name}', and a partition groups by "
-                f'value columns — its value columns are {list(shape.values)}.'
+                f"{context}: {call}: within= names {keyed}, a key column of '{name}'. Name one of its value "
+                f'columns, {list(shape.values)}.'
             )
             return None
         (along,) = over_keys
@@ -700,8 +695,8 @@ class ExpressionResolver:
             return None
         if name in ns.dimensions:
             return (
-                f"{context}: {operator}({key}={name}[...]): '{name}' is a dimension, and a column selection "
-                f'starts with the relation the columns belong to.'
+                f"{context}: {operator}({key}={name}[...]): '{name}' is a dimension, not a relation. Write the "
+                f'relation first and its columns after it: {key}=<relation>[<column>].'
             )
         return (
             f'{context}: {operator}({key}={name}[...]) does not name a relation{_or_a_formal(self.formals)}. '

@@ -257,8 +257,8 @@ def _observe(
         raise Undecidable(msg)
     if isinstance(node, JoinedPredicate):
         msg = (
-            f"it reads a predicate through '{node.columns.name}', and which rows that admits only the data "
-            'decides — test this row, or precompute the read as a boolean parameter and test that'
+            f"it reads a predicate through '{node.columns.name}', which only the data decides. "
+            'Test this row, or precompute the read as a boolean parameter and test that'
         )
         raise Undecidable(msg)
     if isinstance(node, DimensionPosition):

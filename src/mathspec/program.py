@@ -282,8 +282,7 @@ class Sum:
     An axis in ``over`` is a dimension's own, or one a [`Join`][] under it
     opens ([`JoinColumns.axes`][]): ``sum(x, over=a, by=relation[b])``
     lowers to a ``Sum`` over a ``Join``, over the axis of each column the join
-    does not group by. The join is the join, and this node is the group-by
-    that follows it.
+    does not group by. This node is the group-by that follows the join.
     """
 
     operand: Expression
@@ -506,13 +505,14 @@ class JoinColumns:
 
     The declaration fixes no direction; the call does, and this is the one it
     named. ``name`` is the relation's, as [`Program.relations`][] keys it.
-    ``joined`` and ``grouped`` are *roles* — column names of ``relation``,
-    which maps every role to its dimension and names the key. ``joined`` is
+    ``joined`` and ``grouped`` are *roles*, which are column names of
+    ``relation``. ``relation`` maps every role to its dimension and names the
+    key. ``joined`` is
     every column the join matches the operand on: the columns that leave the
     frame, then every key column the call does not name. ``grouped`` is every
     column of the relation the result keeps: the columns that arrive, then the
-    same unnamed key columns. A column in neither is not read, so a relation may gain a
-    value column without changing what a call means.
+    same unnamed key columns. A column in neither is not read, so a relation
+    may gain a value column without changing what a call means.
 
     A column both joined on and grouped by stays in the frame. One joined on
     and not grouped by is [`dropped`][], and one grouped by and not joined
@@ -581,11 +581,12 @@ class JoinColumns:
 
 @dataclass(frozen=True)
 class Partition:
-    """One relation as a partition steps along it — the key column stepped along, the columns partitioned by, and the key columns joined on.
+    """One relation as a partition steps along it: the key column it steps along, the columns it partitions by, and the key columns it joins on.
 
     ``name`` is the relation's, as [`Program.relations`][] keys it.
-    ``along``, ``grouped`` and ``joined`` are *roles* — column names of
-    ``relation``, which maps every role to its dimension and names the key.
+    ``along``, ``grouped`` and ``joined`` are *roles*, which are column names
+    of ``relation``. ``relation`` maps every role to its dimension and names
+    the key.
     ``along`` is the one key column over the dimension stepped along, and
     the frame keeps it. ``grouped`` is the value columns ``within=`` named,
     read at the row's key: the partition's group. ``joined`` is the other key
@@ -620,8 +621,8 @@ class DimensionDeclaration:
     #: whatever table carries it, so the declared type is what that column is
     #: checked against, as ``ParameterDeclaration.dtype`` is for a value column.
     dtype: DimensionDtype = 'str'
-    #: Whether the order of the labels is part of the model, so a consumer
-    #: must keep the order the data gives them in.
+    #: Whether the order of the labels is part of the model. Where it is, a
+    #: tool keeps the labels in the order the data gives them.
     ordered: bool = False
     description: str | None = None
 
@@ -1350,7 +1351,7 @@ class TranslatedPredicate:
 
 @dataclass(frozen=True)
 class JoinedPredicate:
-    """*operand* read through a relation — ``at(has_curve, by=converter_of[converter])``, the predicate's lookup [`Join`][].
+    """*operand* read through a relation, written ``at(has_curve, by=converter_of[converter])``: a lookup [`Join`][] of a predicate.
 
     True at a coordinate where the relation has a row and *operand* holds at
     the coordinate that row reads. False where the relation has no row, which
