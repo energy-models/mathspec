@@ -17,7 +17,8 @@ from typing import get_args
 
 import pytest
 
-from mathspec import AdviceKind, advice, to_spec
+from mathspec import advice, to_spec
+from mathspec.program import AdviceKind
 from tests.fixtures import SMALL_MODEL, raw_of, varied
 
 EXAMPLES = Path(__file__).resolve().parents[1] / 'examples'

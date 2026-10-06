@@ -16,18 +16,10 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec import (
-    FORMATS,
-    LanguageError,
-    advice,
-    merge,
-    override,
-    to_markdown,
-    to_spec,
-    typeset,
-    typeset_declaration,
-)
+from mathspec import advice, merge, override, to_markdown, to_spec, typeset, typeset_declaration
 from mathspec.canonical import canonical_yaml
+from mathspec.errors import LanguageError
+from mathspec.typesetting import FORMATS
 from tests.fixtures import BALANCE, BUS_DIMS, BUS_FRAME, INJECTION
 
 #: A generator fleet: what it puts in is its term.

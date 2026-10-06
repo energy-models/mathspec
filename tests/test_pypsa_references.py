@@ -167,7 +167,7 @@ def test_every_declared_row_is_built_by_some_reference():
 def _admits(mask: Mask, component: str, unit: dict[str, bool | float]) -> bool:
     """Whether a mask over one component's own parameters holds for a unit with those values, read by the exclusivity check."""
     cell = {Subject('param', f'{component}_{name}'): value for name, value in unit.items()}
-    return _evaluate(mask.root, cell, _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}))
+    return _evaluate(mask.root, cell, _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}, {}))
 
 
 @pytest.mark.parametrize('component', ['Generator', 'Link', 'Process'])
@@ -212,7 +212,7 @@ def test_the_cvar_blocks_stand_exactly_where_a_risk_preference_is_set(section: s
     """
     mask = getattr(BASE.program, section)[name].where
     assert mask is not None, 'the block stands only where a risk preference is set'
-    grid = _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms})
+    grid = _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}, {})
     stands = {
         omega: _evaluate(mask.root, {Subject('param', 'CVaR_omega'): omega}, grid) for omega in (Special.NULL, 0.0, 0.3)
     }

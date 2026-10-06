@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from mathspec import LanguageError, SchemaError, typeset_declaration
+from mathspec import typeset_declaration
+from mathspec.errors import LanguageError, SchemaError
 from tests.fixtures import DISPATCH_MODEL as DISPATCH
 from tests.fixtures import varied
 from tests.typesetting.fixtures import EVERY_FORMAT

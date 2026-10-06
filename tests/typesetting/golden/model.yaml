@@ -24,7 +24,7 @@ dimensions:
 relations:
   gen_bus: { key: generator, values: bus }
   zone_of: { key: bus, values: zone }
-  area_of: { key: bus, values: zone } # a second map into the same set, to compare against
+  area_of: { key: bus, values: zone, missing: absent } # a second map into the same set, to compare against; a bus may be in no area
   season_of: { key: snapshot, values: season }
   gen_zone: { key: [generator, snapshot], values: zone } # a map keyed by two dimensions: a call sums one away and joins on the other
   rep_of: { key: snapshot, values: { rep: snapshot } } # a map into its own dimension: the representative snapshot
@@ -32,20 +32,20 @@ relations:
   gen_bt: { key: generator, values: [bus, technology] } # one table with two value columns, read to both at once
 
 parameters:
-  p_max: { dims: [generator] }
+  p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
-  cost: { dims: [generator] }
+  cost: { dims: [generator], missing: neutral } # a reading: the legend names it
   load: { dims: [snapshot, bus] }
-  is_flexible: { dims: [generator], dtype: bool }
+  is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
-  tech_cap: { dims: [bus, technology] }
+  tech_cap: { dims: [bus, technology], missing: absent }
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }
   budget: { dims: [] } # scalar: the legend says so rather than printing an empty product
   growth: { dims: [] } # the base of a power; the exponent is `lead`, a column
-  bp_x: { dims: [generator, bp] } # the x-axis of every curve below, and what a derived mask is read from
-  bp_y: { dims: [generator, bp] }
+  bp_x: { dims: [generator, bp], missing: neutral } # the x-axis of every curve below, and what a derived mask is read from
+  bp_y: { dims: [generator, bp], missing: neutral }
   bp_heat: { dims: [generator, bp] }
   bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a block has a mask to print
 
@@ -75,9 +75,10 @@ variables:
   reserve: # an empty dims: a scalar declaration, whose line carries no quantifier
     dims: []
     bounds: { lower: 0 }
-  headroom: # scalar too, but masked, so the condition stands with no set beside it
+  headroom: # scalar too, but masked, so the condition stands with no set beside it; neutral, so the legend names the reading
     dims: []
     where: "budget"
+    missing: neutral
     bounds: { lower: 0 }
   weight: # the family a sos runs along
     dims: [snapshot, generator]

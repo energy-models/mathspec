@@ -15,27 +15,28 @@ dimensions:
 
 parameters:
   CVaR_alpha:
-    description: PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability
+    description: PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega`
     dims: []
+    missing: neutral
 
 variables:
   CVaR_a:
     description: "`CVaR-a` — how far a scenario's operating cost exceeds the tail's start; nothing where it does not"
     dims: [scenario]
     where: CVaR_omega
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   CVaR_theta:
     description: "`CVaR-theta` — where the tail starts, the value at risk"
     dims: []
     where: CVaR_omega
-    absence: zero
+    missing: neutral
   CVaR:
     description: "`CVaR` — the tail's average cost, what the objective prices at `omega`"
     dims: []
     where: CVaR_omega
-    absence: zero
+    missing: neutral
 
 given:
   parameters:
@@ -73,15 +74,15 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\alpha`$ | `CVaR_alpha` (scalar) — PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability |
+| $`\alpha`$ | `CVaR_alpha` (scalar), `neutral` where the data has no row — PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega` |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`a`$ | `CVaR_a` over $`\Xi`$ — `CVaR-a` — how far a scenario's operating cost exceeds the tail's start; nothing where it does not |
-| $`\theta`$ | `CVaR_theta` (scalar) — `CVaR-theta` — where the tail starts, the value at risk |
-| $`CVaR`$ | `CVaR` (scalar) — `CVaR` — the tail's average cost, what the objective prices at `omega` |
+| $`a`$ | `CVaR_a` over $`\Xi`$, `neutral` where the mask leaves it out — `CVaR-a` — how far a scenario's operating cost exceeds the tail's start; nothing where it does not |
+| $`\theta`$ | `CVaR_theta` (scalar), `neutral` where the mask leaves it out — `CVaR-theta` — where the tail starts, the value at risk |
+| $`CVaR`$ | `CVaR` (scalar), `neutral` where the mask leaves it out — `CVaR` — the tail's average cost, what the objective prices at `omega` |
 
 #### Given
 

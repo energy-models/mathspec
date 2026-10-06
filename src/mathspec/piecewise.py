@@ -26,7 +26,7 @@ from mathspec.resolution import resolve_expression_text
 from mathspec.spec import AssumptionBlock, Curvature, PiecewiseBlock, Spec, VariableBlock
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
 
     from mathspec.program import Expression
     from mathspec.resolution import Namespace
@@ -95,9 +95,10 @@ def lp_domain_refusal(name: str, pw: PiecewiseBlock, links: tuple[Expression, ..
 def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, AssumptionBlock]:
     """What *block* assumes of its numbers, by the name the document prints and a refusal quotes.
 
-    Every curve assumes its breakpoints are there: a missing parameter row is
-    not absence, it is a zero, so an undeclared breakpoint sits the curve on
-    the origin rather than shortening it. A curve has an x-axis only where two
+    Every curve assumes its breakpoints are there, because a missing row does
+    not shorten a curve. Under ``points:`` its tables are not ``refused``, so
+    a breakpoint missing inside the mask would read as their ``missing:`` and,
+    under ``neutral``, sit the curve on the origin. A curve has an x-axis only where two
     links tie it, so the increasing condition — and the shape it is checked
     with — exist only there; ``lp`` alone needs a segment to state a line for;
     a mask must be one run.
@@ -115,8 +116,7 @@ def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, Assumption
         holds=' AND '.join(dict.fromkeys(link.values for link in pw.links)),
         where=mask,
         description=f"piecewise '{block}': every breakpoint the curve runs through needs a row in "
-        f'{_quoted(link.values for link in pw.links)} — a missing row is read as a zero rather than as a '
-        f'shorter curve, so it sits the curve on the origin. '
+        f'{_quoted(link.values for link in pw.links)} — a missing row does not shorten the curve. '
         + (
             f"Attach the rows, or narrow points: '{mask}' to where the curve runs."
             if mask is not None
@@ -302,9 +302,9 @@ def leaves_ungated(gate: VariableBlock | VariableDeclaration | None) -> bool:
     """Whether a curve gated by *gate* runs ungated where the gate does not exist, which takes a second convexity row.
 
     A masked gate is absent off its mask, and there the curve sums to 1;
-    ``absence: zero`` reads the gate as 0 there instead, which one row states.
+    ``missing: neutral`` reads the gate as 0 there instead, which one row states.
     """
-    return gate is not None and gate.where is not None and gate.absence != 'zero'
+    return gate is not None and gate.where is not None and gate.missing != 'neutral'
 
 
 def curve_frame(schema: Spec, name: str, pw: PiecewiseBlock, links: Iterable[Expression]) -> tuple[str, ...]:
@@ -441,7 +441,7 @@ class _Block:
         reduction, so the right-hand side would take the row with it and leave the
         weights without the convexity that makes them a curve at all (#1158).
 
-        ``absence: zero`` is the other reading and stays one row — the gate is 0
+        ``missing: neutral`` is the other reading and stays one row — the gate is 0
         where it does not exist, so the curve is pinned off there.
         """
         activity = self.pw.activity
@@ -479,6 +479,26 @@ class _Block:
             self._constraint(
                 cname, [*self.frame, d], f'({x_link.expression}) {sense} {x_link.values}', _edge(d, self.mask, end)
             )
+
+
+def refused_under_points(schema: Spec) -> Iterator[str]:
+    """A refusal for each values parameter of a curve with ``points:`` that reads a missing row as ``refused``.
+
+    ``points:`` says the curve stops short of the dimension, so its tables
+    have no row past the mask by design. ``refused`` says every row is
+    there: the curve never runs short, and a mask that names the table marks
+    every breakpoint.
+    """
+    for block, pw in schema.piecewise.items():
+        if pw.points is None:
+            continue
+        for name in dict.fromkeys(link.values for link in pw.links):
+            if schema.parameters[name].missing == 'refused':
+                yield (
+                    f"parameter '{name}' is refused where a row is missing, and piecewise '{block}' reads it under "
+                    f"points: '{pw.points}', which stops the curve where its rows stop. Declare missing: neutral, "
+                    f'absent, or a value of its dtype.'
+                )
 
 
 def expand_piecewise(schema: Spec) -> Spec:

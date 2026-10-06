@@ -7,13 +7,14 @@
 The second public state, and the one a consumer reads. A [`Program`][] is
 the file typed, section for section: every declaration it makes, with names
 resolved, shapes fixed and every rule decidable without data checked, and no
-data at all. Lowering, as a [`Spec`][] loads, is the only
+data at all. Lowering, as a [`Spec`][mathspec.spec.Spec] loads, is the only
 thing that builds one, so nothing here re-checks a hand-built one.
 
 Node and declaration classes are matched with ``isinstance``. The rules a
 node's structure does not show is [`children`][]; the questions over the walk
 are [`walk_regions`][], [`walk`][] and the filters beside them. A
-resolved ``where`` arrives as a [`Mask`][]. Frozen dataclasses only — no
+resolved ``where`` arrives as a [`Mask`][], and what
+[`advice`][mathspec.advice] says about a program as [`Advice`][]. Frozen dataclasses only — no
 execution logic, and nothing imported from a consumer. How a consumer reads
 one: ``docs/reference/reading.md``.
 """
@@ -37,6 +38,8 @@ if TYPE_CHECKING:
 #: What ``mathspec.program`` promises a consumer, sorted.
 __all__ = [
     'Add',
+    'Advice',
+    'AdviceKind',
     'And',
     'Assumption',
     'Axis',
@@ -67,6 +70,8 @@ __all__ = [
     'Link',
     'Mask',
     'MaskDeclaration',
+    'Missing',
+    'MissingReading',
     'Multiply',
     'NamedExpression',
     'NamedMask',
@@ -93,6 +98,7 @@ __all__ = [
     'RelationComparison',
     'RelationDeclaration',
     'RelationDefined',
+    'RelationMissing',
     'RelationPairComparison',
     'Separability',
     'SosDeclaration',
@@ -102,10 +108,10 @@ __all__ = [
     'TranslatedPredicate',
     'TypedPredicate',
     'Variable',
-    'VariableAbsence',
     'VariableDeclaration',
     'VariableDefined',
     'VariableDomain',
+    'VariableMissing',
     'WindowSum',
     'assumption_message',
     'carries_variable',
@@ -146,11 +152,21 @@ DeclaredDtype = ParameterDtype | DimensionDtype
 #: The domain a variable may declare.
 VariableDomain = Literal['continuous', 'integer', 'binary']
 
-#: What a masked variable's non-existence *means* where it does not exist.
-#: ``undefined`` is the absence rules' default — a term carrying it takes its
-#: row. ``zero`` says the quantity *is* zero there, so the term contributes
-#: nothing and the row stands.
-VariableAbsence = Literal['undefined', 'zero']
+#: What a missing row means. ``refused`` refuses the data, ``absent`` takes the
+#: row of a term that reads it, and ``neutral`` reads the value that
+#: contributes nothing: ``0`` as a coefficient, ``false`` in a ``where``.
+MissingReading = Literal['refused', 'absent', 'neutral']
+
+#: A parameter's ``missing:``: a reading, or the value a missing row reads as.
+Missing = MissingReading | bool | float
+
+#: A relation's ``missing:``. A label the map leaves out is refused, or belongs to no group.
+RelationMissing = Literal['refused', 'absent']
+
+#: A variable's ``missing:``: what a coordinate its ``where`` masks out means.
+#: ``absent`` takes the row of a term that reads it; ``neutral`` says the
+#: quantity *is* zero there, so the term contributes nothing and the row stands.
+VariableMissing = Literal['absent', 'neutral']
 
 #: Which way an objective is optimised (the declaration rules).
 ObjectiveSense = Literal['minimize', 'maximize']
@@ -481,6 +497,9 @@ class RelationDeclaration:
 
     columns: tuple[tuple[str, str], ...]
     key: tuple[str, ...]
+    #: What a key the map leaves out means, or ``None`` for a bare relation,
+    #: whose rows are its membership and so have no gap.
+    missing: RelationMissing | None = 'refused'
     description: str | None = None
 
     @property
@@ -678,6 +697,10 @@ class ParameterDeclaration:
 
     dims: tuple[str, ...]
     dtype: ParameterDtype = 'float'
+    #: What a missing row means, or the value it reads as wherever a value is
+    #: read; ``None`` for a given parameter, whose declaring file says. A bare
+    #: numeric name in a ``where`` still asks whether the data has a row.
+    missing: Missing | None = 'refused'
     description: str | None = None
 
 
@@ -691,7 +714,7 @@ class VariableDeclaration:
     #: As [`lower`][], for the other side.
     upper: Expression | None = None
     domain: VariableDomain = 'continuous'
-    absence: VariableAbsence = 'undefined'
+    missing: VariableMissing = 'absent'
     description: str | None = None
 
 
@@ -1683,3 +1706,35 @@ class Mask:
     def __or__(self, other: Mask) -> Mask:
         """Either mask — construction absorbs a literal side rather than burying it."""
         return Mask(Or(self.root, other.root))
+
+
+# --------------------------------------------------------------------------
+# Advice
+# --------------------------------------------------------------------------
+
+
+#: Which pass an [`Advice`][] comes from. Closed, like the operator set: a
+#: consumer filtering on it can enumerate every value.
+AdviceKind = Literal['never-an-axis', 'given', 'unbounded']
+
+
+@dataclass(frozen=True)
+class Advice:
+    """One thing the language advises about a file it accepts.
+
+    Never an error: each is what a half-written spec looks like too. A
+    consumer prints it, or filters on ``kind`` and ``subject``; the text is the
+    language's, so no consumer writes its own.
+
+    Attributes:
+        kind: The pass that said it.
+        subject: The declaration it is about — a dimension name, a variable name.
+        text: The sentence, naming the rewrite.
+    """
+
+    kind: AdviceKind
+    subject: str
+    text: str
+
+    def __str__(self) -> str:
+        return self.text

@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from mathspec.dimensions import check_schema, dims_of
 from mathspec.errors import SchemaError, did_you_mean, prefixed
 from mathspec.expansion import expand, parse_template
-from mathspec.piecewise import assumptions_of, curve_frame, lp_domain_refusal, resolve_links
+from mathspec.piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec.program import (
     Assumption,
     BooleanLiteral,
@@ -154,7 +154,7 @@ def lower(schema: Spec) -> Program:
             lower=lower_bound,
             upper=upper_bound,
             domain=vdef.domain,
-            absence=vdef.absence,
+            missing=vdef.missing,
             description=vdef.description,
         )
 
@@ -217,7 +217,7 @@ def lower(schema: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: ParameterDeclaration(tuple(pdef.dims), pdef.dtype, pdef.description)
+            name: ParameterDeclaration(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description)
             for name, pdef in schema.parameters.items()
         },
         variables=variables,
@@ -247,7 +247,7 @@ def lower(schema: Spec) -> Program:
         masks=masks,
         given=GivenTargets(
             parameters={
-                name: ParameterDeclaration(tuple(g.dims), g.dtype, g.description)
+                name: ParameterDeclaration(tuple(g.dims), g.dtype, None, g.description)
                 for name, g in schema.given.parameters.items()
             },
             variables={
@@ -263,7 +263,7 @@ def lower(schema: Spec) -> Program:
         ),
         description=schema.description,
     )
-    if errors := emitted_name_errors(schema, program):
+    if errors := [*emitted_name_errors(schema, program), *refused_under_points(schema)]:
         raise SchemaError('\n'.join(errors))
     check_schema(schema, program)
     return program
