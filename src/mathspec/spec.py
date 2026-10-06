@@ -908,12 +908,12 @@ class Spec(_StrictBlock):
     parameters: dict[str, ParameterBlock] = {}
     variables: dict[str, VariableBlock] = {}
     constraints: dict[str, ConstraintBlock] = {}
+    sos: dict[str, SosBlock] = {}
+    piecewise: dict[str, PiecewiseBlock] = {}
     objective: ObjectiveBlock | None = None
+    macros: dict[str, MacroBlock] = {}
     expressions: dict[str, ExpressionBlock] = {}
     masks: dict[str, MaskBlock] = {}
-    macros: dict[str, MacroBlock] = {}
-    piecewise: dict[str, PiecewiseBlock] = {}
-    sos: dict[str, SosBlock] = {}
     assumptions: dict[str, AssumptionBlock] = {}
 
     @cached_property

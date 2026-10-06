@@ -291,9 +291,9 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 
 - **The sections come in one order**, whatever order the file wrote them in:
   `version`, `description`, `given`, `dimensions`, `relations`, `parameters`,
-  `variables`, `constraints`, `objective`, `expressions`, `macros`,
-  `piecewise`, `sos`, `assumptions`. The keys of a declaration also come in one
-  order.
+  `variables`, `constraints`, `sos`, `piecewise`, `objective`, `macros`,
+  `expressions`, `masks`, `assumptions`. The keys of a declaration also come in
+  one order.
 - **Declarations are sorted by name** within each section.
 - **Every expression is printed from its parsed tree**, so the spacing and the
   brackets are the printer's rather than the author's.

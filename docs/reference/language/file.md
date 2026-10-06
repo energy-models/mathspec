@@ -16,12 +16,12 @@ A spec file is a YAML mapping with **thirteen declaration keys**, plus
 | `parameters`  | the data the spec expects ([declarations](declarations.md))                                       |
 | `variables`   | what the solver decides                                                                           |
 | `constraints` | the rules those decisions obey                                                                    |
+| `sos`         | special-ordered sets ([sos](piecewise.md#sos))                                                    |
+| `piecewise`   | piecewise-linear curves ([piecewise](piecewise.md))                                               |
 | `objective`   | what is minimised or maximised                                                                    |
+| `macros`      | templates that take arguments ([macros](named.md#macros))                                         |
 | `expressions` | named quantities, reusable in the math and readable after a solve ([named expressions](named.md)) |
 | `masks`       | named `where` predicates, read by name wherever a `where` string is ([masks](named.md#masks))     |
-| `macros`      | templates that take arguments ([macros](named.md#macros))                                         |
-| `piecewise`   | piecewise-linear curves ([piecewise](piecewise.md))                                               |
-| `sos`         | special-ordered sets ([sos](piecewise.md#sos))                                                    |
 | `assumptions` | what the spec expects of its data ([assumptions](assumptions.md))                                 |
 
 A file with no `objective` is a **feasibility problem**: it asks whether the

@@ -147,12 +147,12 @@ SECTIONS = [
     'parameters',
     'variables',
     'constraints',
+    'sos',
+    'piecewise',
     'objective',
+    'macros',
     'expressions',
     'masks',
-    'macros',
-    'piecewise',
-    'sos',
     'assumptions',
 ]
 
