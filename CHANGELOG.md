@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(spec)!: a spec written back out puts its given block first ([#818](https://github.com/energy-models/mathspec/pull/818))
 - feat(language)!: `missing:` says what a missing row means, a table short of a row is refused unless the file says otherwise, and a variable's `absence:` is now `missing:` ([#810](https://github.com/energy-models/mathspec/pull/810))
 - docs(pypsa): a risk preference with weight zero builds the CVaR variables and refuses quadratic costs, as in PyPSA ([#849](https://github.com/energy-models/mathspec/pull/849))
 - docs(pypsa): storage that retires before the last counted snapshot closes a global limit at its last active level ([#850](https://github.com/energy-models/mathspec/pull/850))
