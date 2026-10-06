@@ -22,14 +22,20 @@ variables:
   CVaR_a:
     description: "`CVaR-a` — how far a scenario's operating cost exceeds the tail's start; nothing where it does not"
     dims: [scenario]
+    where: CVaR_omega
+    absence: zero
     bounds:
       lower: 0
   CVaR_theta:
     description: "`CVaR-theta` — where the tail starts, the value at risk"
     dims: []
+    where: CVaR_omega
+    absence: zero
   CVaR:
     description: "`CVaR` — the tail's average cost, what the objective prices at `omega`"
     dims: []
+    where: CVaR_omega
+    absence: zero
 
 given:
   parameters:
@@ -48,12 +54,12 @@ constraints:
   CVaR_excess:
     description: "`CVaR-excess-{s}` — a scenario's operating cost beyond the tail's start is its excess; PyPSA names one row per scenario"
     dims: [scenario]
-    where: CVaR_omega > 0
+    where: CVaR_omega
     expression: CVaR_a - scenario_opex + CVaR_theta >= 0
   CVaR_def:
     description: "`CVaR-def` — the tail's average is at least where it starts plus the expected excess over the tail's probability"
     dims: []
-    where: CVaR_omega > 0
+    where: CVaR_omega
     expression: CVaR_theta + 1 / (1 - CVaR_alpha) * sum(scenario_weight * CVaR_a, over=scenario) <= CVaR
 ```
 
@@ -97,13 +103,13 @@ constraints:
 **`CVaR_excess`**
 
 ```math
-a_{\xi} - \mathit{scenario\_opex}_{\xi} + \theta \ge 0 \qquad \forall\, \xi \in \Xi \,:\, \omega > 0
+a_{\xi} - \mathit{scenario\_opex}_{\xi} + \theta \ge 0 \qquad \forall\, \xi \in \Xi \,:\, \omega \text{ is defined}
 ```
 
 **`CVaR_def`**
 
 ```math
-\theta + \frac{1}{1 - \alpha} \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot a_{\xi} \right) \le CVaR \qquad \text{where } \omega > 0
+\theta + \frac{1}{1 - \alpha} \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot a_{\xi} \right) \le CVaR \qquad \text{where } \omega \text{ is defined}
 ```
 
 #### Definitions
@@ -119,18 +125,18 @@ a_{\xi} - \mathit{scenario\_opex}_{\xi} + \theta \ge 0 \qquad \forall\, \xi \in 
 **`CVaR_a`**
 
 ```math
-a_{\xi} \ge 0 \qquad \forall\, \xi \in \Xi
+a_{\xi} \ge 0 \qquad \forall\, \xi \in \Xi \,:\, \omega \text{ is defined}
 ```
 
 **`CVaR_theta`**
 
 ```math
-\theta \in \mathbb{R}
+\theta \in \mathbb{R} \qquad \text{where } \omega \text{ is defined}
 ```
 
 **`CVaR`**
 
 ```math
-CVaR \in \mathbb{R}
+CVaR \in \mathbb{R} \qquad \text{where } \omega \text{ is defined}
 ```
 <!-- gallery:end -->
