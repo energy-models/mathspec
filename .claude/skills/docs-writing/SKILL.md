@@ -192,7 +192,7 @@ not
 
 ## 6. Vocabulary
 
-- **Gloss house vocabulary at first use** — _spec_, _program_, _declaration_,
+- **Gloss house vocabulary at first use** — _spec_, _program_, _entry_,
   _dimension_, _coordinate_, _frame_, _relation_, _absence_, _macro_, _named
   expression_, _reported expression_. One clause with a concrete
   instance: "one point of it, one generator in one snapshot, is a coordinate".

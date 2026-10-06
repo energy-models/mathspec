@@ -123,7 +123,7 @@ def test_the_published_grammar_spells_a_name_the_way_the_code_reads_one():
 
     The EBNF on that page is the language's published definition, and
     `expression_parser.NAME` is the one the loader and the schema both apply —
-    `spec.py` validates every declaration name against it. A page that refuses
+    `spec.py` validates every entry name against it. A page that refuses
     what the language accepts is the drift this asks about; it went unnoticed
     because nothing compared the two.
     """

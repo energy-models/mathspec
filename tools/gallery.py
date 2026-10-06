@@ -71,14 +71,14 @@ COMPOSED = {
     ),
 }
 
-#: Page -> the spec it shows one declaration at a time — its YAML, then the
+#: Page -> the spec it shows one entry at a time — its YAML, then the
 #: equation it renders, headed by the name the other side gives it, read from
-#: the declaration's own description.
+#: the entry's own description.
 DECLARED = {
     'pypsa.md': ROOT / 'examples' / 'pypsa.yaml',
 }
 
-#: Page -> the base and the patch laid over it, shown one declaration of the
+#: Page -> the base and the patch laid over it, shown one entry of the
 #: patch at a time — its YAML, then the line it prints in the patched spec.
 #: The rest of the patched spec is the base's page.
 PATCHED = {
@@ -225,8 +225,8 @@ def probe_block() -> str:
     return '\n\n'.join(parts)
 
 
-def declaration(text: str, section: str, name: str | None = None) -> str:
-    """One declaration as written: ``section:`` itself, or ``name:`` under it."""
+def entry(text: str, section: str, name: str | None = None) -> str:
+    """One entry as written: ``section:`` itself, or ``name:`` under it."""
     lines = text.splitlines()
     i = lines.index(f'{section}:')
     if name is not None:
@@ -239,24 +239,22 @@ def declaration(text: str, section: str, name: str | None = None) -> str:
 
 
 def _names_for(name: str, description: str | None) -> list[str]:
-    """Every other-side name a declaration stands for: the backticked tokens before the ` — ` of its description.
+    """Every other-side name an entry stands for: the backticked tokens before the ` — ` of its description.
 
-    One declaration answers to one PyPSA name as a rule; a block whose rows PyPSA
+    One entry answers to one PyPSA name as a rule; a block whose rows PyPSA
     names differently by mode lists them all before the dash, the first canonical.
     """
     text = description or ''
     head = text.split(' — ', 1)[0] if ' — ' in text else (re.match(r'`[^`]+`', text) or [''])[0]
     names = re.findall(r'`([^`]+)`', head)
     if not names:
-        msg = (
-            f'{name}: a declaration on a declared page opens its description with the name it stands for, in backticks'
-        )
+        msg = f'{name}: an entry on a declared page opens its description with the name it stands for, in backticks'
         raise ValueError(msg)
     return names
 
 
 def _stands_for(name: str, description: str | None) -> str:
-    """The other side's canonical name for a declaration — the backticked opening of its description."""
+    """The other side's canonical name for an entry — the backticked opening of its description."""
     return _names_for(name, description)[0]
 
 
@@ -271,7 +269,7 @@ def declared_block(path: Path) -> str:
     definition = equations(_section(page[page.index('#### Objective') :], 'Definitions')) if model.expressions else {}
     domains = _section(page, 'Variable domains').strip()
     assumption = equations(_section(page, 'Assumptions')) if model.assumptions else {}
-    parts = [legend, f'### Objective\n\n```yaml\n{declaration(text, "objective")}\n```\n\n{objective}']
+    parts = [legend, f'### Objective\n\n```yaml\n{entry(text, "objective")}\n```\n\n{objective}']
     for name, block in model.constraints.items():
         printed = equation[name]
         if _reads_a_sum(model, name):
@@ -280,23 +278,23 @@ def declared_block(path: Path) -> str:
         parts.append(
             f'### `{_stands_for(name, block.description)}`\n\n'
             f'`{name}`\n\n'
-            f'```yaml\n{declaration(text, "constraints", name)}\n```\n\n'
+            f'```yaml\n{entry(text, "constraints", name)}\n```\n\n'
             f'{printed}'
         )
     parts.extend(
-        f'### `{name}`\n\n```yaml\n{declaration(text, "expressions", name)}\n```\n\n{definition[name]}'
+        f'### `{name}`\n\n```yaml\n{entry(text, "expressions", name)}\n```\n\n{definition[name]}'
         for name in model.expressions
     )
     parts.append(domains)
     parts.extend(
-        f'### `{name}`\n\n```yaml\n{declaration(text, "assumptions", name)}\n```\n\n{assumption[name]}'
+        f'### `{name}`\n\n```yaml\n{entry(text, "assumptions", name)}\n```\n\n{assumption[name]}'
         for name in model.assumptions
     )
     return '\n\n'.join(parts)
 
 
 def patched_block(base: Path, patch: Path) -> str:
-    """The patch's description, then every declaration it writes as YAML beside the line it prints once laid over *base*."""
+    """The patch's description, then every entry it writes as YAML beside the line it prints once laid over *base*."""
     text = without_header(patch)
     model = override(base, [patch])
     written = yaml.safe_load(text)
@@ -312,7 +310,7 @@ def patched_block(base: Path, patch: Path) -> str:
             parts.append(
                 f'### `{heading_of[name]}`\n\n'
                 f'`{name}`\n\n'
-                f'```yaml\n{declaration(text, section, name)}\n```\n\n'
+                f'```yaml\n{entry(text, section, name)}\n```\n\n'
                 f'```math\n{line}\n```'
             )
     return '\n\n'.join(parts)

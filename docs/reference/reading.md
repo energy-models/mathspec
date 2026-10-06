@@ -26,7 +26,7 @@ Each tool reads the object that holds what it needs:
 | An engine that builds rows | the program of an expansion                 |
 | A tool that rewrites files | the `Spec`, which alone holds the text      |
 
-The program keeps each curve as the one declaration the file states, so the
+The program keeps each curve as the one entry the file states, so the
 typesetter and `advice` read the spec the author wrote. A program does not
 hold its spec: a tool handed a bare `Program` has what the file means, not the
 file.
@@ -89,7 +89,7 @@ is one the file declared.
 
 ## Formulations written out
 
-A program holds each curve and each set as one declaration until
+A program holds each curve and each set as one entry until
 [`Spec.expand()`](spec.md#mathspec.spec.Spec.expand) writes it out. An engine that
 builds rows reads the program of `spec.expand('piecewise')` if it takes a set,
 and the program of `spec.expand()` if it does not. The program of an expansion
@@ -154,7 +154,7 @@ Every `where` arrives as a `Mask`. Its `.root` is the resolved predicate. The
 mask also answers four questions:
 
 - `.conjuncts` flattens the `AND` spine, and stops at an `OR` or a `NOT`.
-- `.names_read` gives the declarations the mask names.
+- `.names_read` gives the entries the mask names.
 - `.atoms` gives its leaves, with the connectives removed.
 - `.dims` gives the dimensions the mask is read at.
 
@@ -167,7 +167,7 @@ A name compared against a literal does not arrive this way. `p_max > 5` is a
 `ParameterComparison` and `1 * p_max > 5` is an `ExpressionComparison`, though
 both mask the same coordinates.
 
-Three predicates read another predicate rather than a declaration. A
+Three predicates read another predicate rather than an entry. A
 `CountComparison` carries the mask it counts and the dimension it counts away.
 A `TranslatedPredicate` carries the mask it reads at a neighbouring
 coordinate. A `JoinedPredicate` carries the mask it reads through a
@@ -186,7 +186,7 @@ stands at a mask's root or nowhere. A `Region`'s `when` is a `Mask` too.
 `program.given.parameters`, `program.given.variables`,
 `program.given.expressions`, `program.given.masks` and
 `program.given.constraints` name what the spec reads and does not build
-([given](language/declarations.md#given)). Every other group is a build
+([given](language/entries.md#given)). Every other group is a build
 instruction. These five are names to look up in the model this one is layered
 onto. An expression reads a given expression as a `VariableReference` of that name,
 over the frame under `program.given.expressions`. A `where` reads a given mask
@@ -234,9 +234,8 @@ footprint = rows.footprint
 sorted(footprint.quadratic)  # []
 sorted(footprint.domains)  # ['continuous']
 sorted(footprint.sos_types)  # []
-sorted(
-    kind.__name__ for kind in footprint.kinds
-)  # ['Constant', 'Multiply', 'ParameterReference', 'Sum', 'VariableReference']
+kinds = sorted(kind.__name__ for kind in footprint.kinds)
+kinds  # ['Constant', 'Multiply', 'ParameterReference', 'Sum', 'VariableReference']
 ```
 
 Every field is a set, and an empty field means the program does not use the
@@ -263,17 +262,17 @@ tied.partition(' — ')[0]  # 'sums over generator'
 ```
 
 Every declared axis has an entry. A coupling that a `piecewise:` expansion
-introduced is named under the declaration the expansion emitted.
+introduced is named under the entry the expansion emitted.
 
-- `coupled` names each declaration that ties the whole axis together: a sum
+- `coupled` names each entry that ties the whole axis together: a sum
   over the axis in a constraint, a grouping that sums the axis away, a wrapped
   shift, or a set. After the dash, each entry names the one change that would
   remove the tie.
 - `undecided` lists each read whose reach only the data can say, as a `Reach`:
-  the declaration, the parameter or relation it reads, and the kind of read. A
+  the entry, the parameter or relation it reads, and the kind of read. A
   caller that holds the data hands the smallest value of each named parameter
   to `resolved`, which returns the report with those reads decided.
-- `restarts` names each declaration that counts a `position()` along the axis.
+- `restarts` names each entry that counts a `position()` along the axis.
 - `linking_rows` names each constraint that no single window holds.
 - `linking_columns` names each variable the axis does not index, whose column
   every window reads.
@@ -291,7 +290,7 @@ that data as a file. Both round-trip, so `to_spec(spec.to_dict()) == spec`.
 
 `to_yaml()` writes every value and omits every absence. `domain: continuous` is
 written out. A `null` and an empty section are left out.
-`dims: []` is written, because it says the declaration is a scalar.
+`dims: []` is written, because it says the entry is a scalar.
 
 ## Comparing two specs
 
@@ -306,9 +305,9 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 - **The sections come in one order**, whatever order the file wrote them in:
   `version`, `description`, `given`, `dimensions`, `relations`, `parameters`,
   `variables`, `constraints`, `objective`, `expressions`, `macros`,
-  `piecewise`, `sos`, `assumptions`. The keys of a declaration also come in one
+  `piecewise`, `sos`, `assumptions`. The keys of an entry also come in one
   order.
-- **Declarations are sorted by name** within each section.
+- **Entries are sorted by name** within each section.
 - **Every expression is printed from its parsed tree**, so the spacing and the
   brackets are the printer's rather than the author's.
 - **The terms of a sum are sorted**, and so are the factors of a product and the
@@ -321,8 +320,8 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
   coefficient that changed is what a reviewer is looking for.
 
 Four things are left as the file wrote them. They are a predicate in the
-`where` grammar, the order of a `cases:` block's regions, the order of a
-declaration's `dims`, and the order of a piecewise block's links. A difference
+`where` grammar, the order of a `cases:` block's regions, the order of an
+entry's `dims`, and the order of a piecewise block's links. A difference
 in any of them is a difference in the text.
 
 Sorting `variables:` changes the order a

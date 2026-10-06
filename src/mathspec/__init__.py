@@ -9,7 +9,7 @@ file, and the verbs over what it returns. The rest of the surface is three
 modules, each with one rule:
 
 - [`mathspec.spec`][] is what the file *says*: [`Spec`][mathspec.spec.Spec]
-  and the blocks it holds.
+  and the `*Spec` parts it holds.
 - [`mathspec.program`][] is what the file *means*: the
   [`Program`][mathspec.program.Program] a spec lowers to, its nodes, and the
   [`Advice`][mathspec.program.Advice] the language gives about it.

@@ -30,14 +30,14 @@ python -m mathspec check dispatch.yaml
 The check accepts the file, and advises that nothing uses the dimensions yet:
 
 ```text
-dimension 'snapshot' is never used: nothing is indexed by it, nothing aggregates into it, and no relation has a column over it. Remove it — or keep it knowingly, if the declarations that use it are still to be written.
-dimension 'generator' is never used: nothing is indexed by it, nothing aggregates into it, and no relation has a column over it. Remove it — or keep it knowingly, if the declarations that use it are still to be written.
+dimension 'snapshot' is never used: nothing is indexed by it, nothing aggregates into it, and no relation has a column over it. Remove it — or keep it knowingly, if the entries that use it are still to be written.
+dimension 'generator' is never used: nothing is indexed by it, nothing aggregates into it, and no relation has a column over it. Remove it — or keep it knowingly, if the entries that use it are still to be written.
 ```
 
 ## Parameters and a variable
 
-Add three [parameters](reference/language/declarations.md#parameters), the data
-the spec expects, and one [variable](reference/language/declarations.md#variables),
+Add three [parameters](reference/language/entries.md#parameters), the data
+the spec expects, and one [variable](reference/language/entries.md#variables),
 the decision the solver makes. The `where:` line leaves out every generator with
 no capacity.
 
@@ -75,9 +75,9 @@ python -m mathspec markdown --no-legend dispatch.yaml
 
 ## Constraint and objective
 
-Add one [constraint](reference/language/declarations.md#constraints), which
+Add one [constraint](reference/language/entries.md#constraints), which
 meets the load in every snapshot, and the
-[objective](reference/language/declarations.md#objective):
+[objective](reference/language/entries.md#objective):
 
 ```yaml
 constraints:

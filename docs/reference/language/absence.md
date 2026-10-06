@@ -35,8 +35,8 @@ The [grammar](expressions.md#where-strings) says what a `where:` may hold.
 | a missing row of a `missing: absent` parameter    | the parameter, at that coordinate                                           |
 
 Nothing else creates absence. A missing row is the only gap a parameter has: a
-null or NaN value is [refused](declarations.md#parameters) when the data is
-attached. **The parameter's [`missing:`](declarations.md#a-missing-row) says
+null or NaN value is [refused](entries.md#parameters) when the data is
+attached. **The parameter's [`missing:`](entries.md#a-missing-row) says
 what a missing row is:**
 
 | `missing:`            | A missing row                                                                               |

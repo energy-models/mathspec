@@ -33,7 +33,7 @@ _INLINE = re.compile(r'\$`([^`\n]+)`\$')
 
 #: Every line the golden model can be asked for on its own — the constructs
 #: whose spelling the two formats have to agree on, all of them.
-_DECLARATIONS = [*to_spec(golden.MODEL).constraints, *to_spec(golden.MODEL).expressions]
+_ENTRIES = [*to_spec(golden.MODEL).constraints, *to_spec(golden.MODEL).expressions]
 
 
 def _math_spans(markdown: str) -> list[str]:
@@ -69,8 +69,8 @@ def test_markdown_delimits_math_the_one_way_github_hands_over_verbatim():
     assert r'\mathrm{gen\_bus}' in md, 'the escape TeX needs survives, because nothing is going to eat it'
 
 
-@pytest.mark.parametrize('declaration', sorted(_DECLARATIONS), ids=sorted(_DECLARATIONS))
-def test_markdown_prints_the_math_latex_prints(declaration: str):
+@pytest.mark.parametrize('entry', sorted(_ENTRIES), ids=sorted(_ENTRIES))
+def test_markdown_prints_the_math_latex_prints(entry: str):
     r"""Markdown's math *is* LaTeX's, and the delimiters are now the whole of the difference.
 
     Each escape the pass would eat used to be worked around by a spelling only
@@ -79,7 +79,7 @@ def test_markdown_prints_the_math_latex_prints(declaration: str):
     no longer agreed on. Delimiting the span out of the pass's reach retired
     them all, so this is the assertion that keeps them retired.
     """
-    assert typeset_line(golden.MODEL, declaration, 'markdown') == typeset_line(golden.MODEL, declaration, 'latex')
+    assert typeset_line(golden.MODEL, entry, 'markdown') == typeset_line(golden.MODEL, entry, 'latex')
 
 
 def test_typst_standalone_adds_page_setup():
@@ -157,13 +157,13 @@ ESCAPED = {
 
 
 @pytest.mark.parametrize('notation', sorted(ESCAPED), ids=sorted(ESCAPED))
-@pytest.mark.parametrize('position', ['file', 'declaration'], ids=['file-description', 'declaration-description'])
+@pytest.mark.parametrize('position', ['file', 'entry'], ids=['file-description', 'entry-description'])
 def test_a_description_sets_as_text_rather_than_as_markup(notation: str, position: str):
     """A `description:` is prose in no notation, so a special in it is a
     character rather than an instruction.
 
     Both places author prose reaches the page: the file's own description,
-    which opens the document, and a declaration's, which is the `Meaning` half
+    which opens the document, and an entry's, which is the `Meaning` half
     of its legend row. Left raw, `link_to` was a fatal `pdflatex` error instead
     of a document (#827), and the corpus could only avoid that by never writing
     one.
@@ -190,7 +190,7 @@ SPANNED_AS = {
 def test_a_backticked_name_in_a_description_sets_in_monospace(notation: str):
     """A backtick span is the one notation a description carries, and every format sets it the same way.
 
-    The corpus opens a declaration's description with the name the other
+    The corpus opens an entry's description with the name the other
     side gives it, in backticks, and the gallery reads that opening — so the
     span is part of the language's reading of prose rather than a Markdown
     habit that two formats printed as characters (#401).

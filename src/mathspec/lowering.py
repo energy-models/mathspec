@@ -7,7 +7,7 @@
 One lowering, on the language side, run when a [`Spec`][]
 loads: it reads every expression and where string into the program's own
 nodes, checks every rule decidable without data, and packages the
-declarations, section for section. The program mirrors the spec it was
+entries, section for section. The program mirrors the spec it was
 lowered from: a ``piecewise:`` block the spec still declares is a curve on
 the program, and [`expand`][mathspec.spec.Spec.expand] is what writes it out
 as rows.
@@ -64,11 +64,11 @@ if TYPE_CHECKING:
 
 
 def lower(schema: Spec) -> Program:
-    """Lower *schema*'s own declarations, checking every rule decidable without data.
+    """Lower *schema*'s own entries, checking every rule decidable without data.
 
     What is checked:
 
-    - every rule one declaration is held to against the others
+    - every rule one entry is held to against the others
       ([`reference_errors`][]), before any expression
       is read, since resolution assumes each of them;
     - the expression parses, and constraints hold exactly one comparison where
@@ -97,7 +97,7 @@ def lower(schema: Spec) -> Program:
         SchemaError: Listing every problem found, one per line. A name a set
             or curve writes that the file declares is listed once every other
             problem is gone, since it is read off the curve as lowered.
-        DimensionError: The first dim rule a declaration breaks, once every
+        DimensionError: The first dim rule an entry breaks, once every
             name resolves.
     """
     errors = reference_errors(schema)
@@ -342,7 +342,7 @@ def _loop(target: str, entry: ExpressionReference, sums: Mapping[str, list[Expre
 
 
 def _frame_of(name: str, entry: ExpressionReference, schema: Spec) -> tuple[str, ...]:
-    """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's in declaration order."""
+    """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's in file order."""
     declared = schema.expressions[name].dims
     if declared is not None:
         return tuple(declared)

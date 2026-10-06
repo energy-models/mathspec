@@ -17,8 +17,8 @@ spec = ms.merge(['surface.yaml', 'generator.yaml', 'load.yaml'])
 The file below is `spec`, the spec `merge` returns, written as YAML with
 every default spelled out. No
 fragment holds it, and nothing in the repository commits it. `Port_p` is one
-declaration here. Each component fragment read it under `given:`, and merging
-folded those readings into the surface's own declaration.
+entry here. Each component fragment read it under `given:`, and merging
+folded those readings into the surface's own entry.
 
 The objective is the surface's, and it reads `total_cost`. The generator is
 the one fragment that costs something, so `Generator_cost` is the one term of
@@ -33,7 +33,7 @@ generator a committed unit:
 committed = ms.override(spec, ['variants/commitment.yaml'])
 ```
 
-A patch is refused on its own, since it edits declarations it does not
+A patch is refused on its own, since it edits entries it does not
 declare. So the spec it lands on is the only place its math exists, and the
 tab prints the patch beside that math.
 

@@ -73,7 +73,7 @@ DESCRIBED = varied(
 
 @EVERY_FORMAT
 def test_a_description_reaches_the_legend_without_hiding_the_name(name: FormatName, fmt: Format):
-    """The declaration's own `description:` is what the legend reads — no
+    """The entry's own `description:` is what the legend reads — no
     sidecar involved, so a model carries its prose wherever it goes."""
     out = typeset(DESCRIBED, name)
     for text in (

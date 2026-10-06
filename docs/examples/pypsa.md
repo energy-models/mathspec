@@ -774,7 +774,7 @@ def build():
 
 | PyPSA                        | status | note                                          |
 | ---------------------------- | ------ | --------------------------------------------- |
-| [nodal balance, ports 1..n](#bus-nodal_balance) | done | one term over `link_output`, so a link of any number of output ports needs no further declaration (#124) |
+| [nodal balance, ports 1..n](#bus-nodal_balance) | done | one term over `link_output`, so a link of any number of output ports needs no further entry (#124) |
 
 <!-- reference:rung_09_multilink:begin -->
 > ✔ `pypsa 1.3.0.post1.dev41+g51986084b` solves this rung's network at objective `11714.4`, 92 rows.

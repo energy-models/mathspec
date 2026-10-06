@@ -10,7 +10,7 @@ task. The top level holds what you call. Three modules hold the rest:
 
 | Module             | Holds                                                   | Documented on             |
 | ------------------ | ------------------------------------------------------- | ------------------------- |
-| `mathspec.spec`    | what the file says: `Spec` and its blocks               | [Spec API](spec.md)       |
+| `mathspec.spec`    | what the file says: `Spec` and its parts                | [Spec API](spec.md)       |
 | `mathspec.program` | what the file means: `Program`, its nodes, and `Advice` | [Program API](program.md) |
 | `mathspec.errors`  | what you catch: the error tree, and `did_you_mean`      | [Errors](#errors) below   |
 

@@ -113,9 +113,9 @@ def notice(program: Program) -> Noticed:
         expressions(*(link.expression for link in curve.links))
     for mask in program.masks.values():
         masks(mask.where)
-    for declaration in (*program.constraints.values(), *program.variables.values()):
-        if declaration.where is not None:
-            masks(declaration.where)
+    for entry in (*program.constraints.values(), *program.variables.values()):
+        if entry.where is not None:
+            masks(entry.where)
     for assumption in program.assumptions.values():
         masks(assumption.predicate)
         if assumption.where is not None:
@@ -142,7 +142,7 @@ class Legend:
         return self.format.operators[name]
 
     def glossaries(self, noticed: Noticed, defined: Iterable[str]) -> list[tuple[str, list[Entry]]]:
-        """The sets, parameters, variables, given declarations, definitions and masks, each with its symbol, its dims and its description.
+        """The sets, parameters, variables, given entries, definitions and masks, each with its symbol, its dims and its description.
 
         *defined* names the expressions that print under their own symbol, so
         a legend row stands exactly where a symbol does.

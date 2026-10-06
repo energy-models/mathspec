@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 # Program API
 
 This page documents every name that `mathspec.program` exports: the
-declarations, the expression and predicate nodes, the reports a program
+entries, the expression and predicate nodes, the reports a program
 answers, and the `Advice` that [`advice`](api.md#mathspec.advice) returns. [Reading a spec and its program](reading.md) says how they fit together.
 
 <!-- prettier-ignore-start -->

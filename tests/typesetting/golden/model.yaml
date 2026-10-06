@@ -72,7 +72,7 @@ variables:
   spare: # integer with neither bound: the domain is the whole line
     dims: [generator]
     domain: integer
-  reserve: # an empty dims: a scalar declaration, whose line carries no quantifier
+  reserve: # an empty dims: a scalar entry, whose line carries no quantifier
     dims: []
     bounds: { lower: 0 }
   headroom: # scalar too, but masked, so the condition stands with no set beside it; neutral, so the legend names the reading

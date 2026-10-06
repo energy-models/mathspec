@@ -53,9 +53,9 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
   breakpoints. A spec that assumes nothing of its data prints no such
   heading.
 - A [named expression](language/named.md) prints its symbol where it is used
-  and its body once, under a **Definitions** heading, in declaration order. A
+  and its body once, under a **Definitions** heading, in file order. A
   `cases:` block, a [reported entry](language/named.md#reported-expressions)
-  and a [term](language/declarations.md#terms) keep their definition line
+  and a [term](language/entries.md#terms) keep their definition line
   under either `inline_expressions` setting.
 - A [mask](language/named.md#masks) prints its upright symbol where it is
   read and its predicate once, under a **Masks** heading, with ⟺. It prints
@@ -80,7 +80,7 @@ format. Everything else is text, and each format escapes whatever its own
 syntax would read as markup. The legend prints the description of every
 dimension, parameter and variable.
 
-## Printing one declaration on its own
+## Printing one entry on its own
 
 `typeset_line` returns the line the document prints for one named
 expression, mask, constraint, assumption, curve or variable, with its

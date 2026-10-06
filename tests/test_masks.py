@@ -116,7 +116,7 @@ def test_a_mask_declares_no_frame():
         'masks.young': {'dims': FRAME, 'where': 'lifetime > 10'},
         'constraints.total': {'dims': ['generator'], 'where': 'young', 'expression': 'sum(p, over=period) <= p_nom'},
     }
-    with pytest.raises(LanguageError, match=r"masks\.young: unknown key 'dims' in a mask declaration"):
+    with pytest.raises(LanguageError, match=r"masks\.young: unknown key 'dims' in a mask entry"):
         to_spec(varied(CORE, **young))
 
 
@@ -294,7 +294,7 @@ def test_a_mask_prints_its_symbol_where_it_is_read_and_its_predicate_once(fmt):
 @pytest.mark.parametrize('fmt', sorted(FORMATS))
 def test_a_given_mask_prints_in_the_legend_and_no_line_of_its_own(fmt):
     assert 'a mask another file defines' in typeset(RAMPING, fmt)
-    with pytest.raises(LanguageError, match=r"'stands' is a given mask, and a given declaration prints no line"):
+    with pytest.raises(LanguageError, match=r"'stands' is a given mask, and a given entry prints no line"):
         typeset_line(RAMPING, 'stands', fmt)
 
 

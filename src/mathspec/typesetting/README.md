@@ -71,7 +71,7 @@ or translates it. `notation` says which language the table is written in, and a
 format that reads the other language refuses the table. Everything past that
 comparison is the caller's business.
 
-The table carries **notation only**. What a declaration _is_, which is the prose
+The table carries **notation only**. What an entry _is_, which is the prose
 in the right-hand column of the legend, comes from the spec's own
 `description:`, read straight off the block. That is the spec talking about
 itself, rather than a reader choosing symbols.

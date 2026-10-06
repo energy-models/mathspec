@@ -34,8 +34,8 @@ def advice(spec: str | Path | Mapping[str, object] | Spec | Program) -> tuple[Ad
             nothing expanded.
 
     Returns:
-        The never-an-axis advice in declaration order, then one note per
-        declaration the program reads and does not build, then the
+        The never-an-axis advice in file order, then one note per
+        entry the program reads and does not build, then the
         unboundedness advice; ``str()`` of each is its sentence.
 
     Raises:
@@ -47,7 +47,7 @@ def advice(spec: str | Path | Mapping[str, object] | Spec | Program) -> tuple[Ad
 
 
 def _given(program: Program) -> list[Advice]:
-    """One note per declaration the program reads and does not build.
+    """One note per entry the program reads and does not build.
 
     A note rather than a refusal: the file is a spec somebody meant, and only
     the consumer can tell whether the model it is layered onto provides the
@@ -76,7 +76,7 @@ def _given_note(kind: str, name: str) -> str:
     return (
         f"{kind} '{name}' is read here and declared elsewhere: the model this one is layered onto "
         f'provides it. A consumer checks that it does, on the same frame, and refuses the program where '
-        f'it does not. A fragment is composed instead: merge() folds this declaration into the one a '
+        f'it does not. A fragment is composed instead: merge() folds this entry into the one a '
         f'sibling introduces{", or writes it from the terms siblings add" if kind == "expression" else ""}.'
     )
 
@@ -94,11 +94,11 @@ def _never_an_axis(program: Program) -> list[Advice]:
     A dimension a relation has a column over is reached: its members are the
     labels that column is checked against, and a ``where`` selects on them,
     so it is in use even where nothing is indexed by it. A dimension only a
-    given declaration indexes is reached too: the column exists, in another
+    given entry indexes is reached too: the column exists, in another
     file.
     """
     reached: set[str] = set()
-    for declaration in (
+    for entry in (
         *program.parameters.values(),
         *program.variables.values(),
         *program.constraints.values(),
@@ -107,7 +107,7 @@ def _never_an_axis(program: Program) -> list[Advice]:
         *program.given.expressions.values(),
         *program.given.constraints.values(),
     ):
-        reached.update(declaration.dims)
+        reached.update(entry.dims)
     reached |= _grouped_axes(program)
     reached |= {dim for lk in program.relations.values() for dim in lk.dims}
 
@@ -117,7 +117,7 @@ def _never_an_axis(program: Program) -> list[Advice]:
             name,
             f"dimension '{name}' is never used: nothing is indexed by it, nothing "
             f'aggregates into it, and no relation has a column over it. Remove it — or keep it '
-            f'knowingly, if the declarations that use it are still to be written.',
+            f'knowingly, if the entries that use it are still to be written.',
         )
         for name in program.dimensions
         if name not in reached
@@ -125,7 +125,7 @@ def _never_an_axis(program: Program) -> list[Advice]:
 
 
 def _grouped_axes(program: Program) -> set[str]:
-    """The axes the expressions create beyond what any declaration indexes.
+    """The axes the expressions create beyond what any entry indexes.
 
     ``sum(by=)`` groups onto its target and ``at()`` spreads onto its fine
     dimension: either way, the dims the join groups by and did not join on.

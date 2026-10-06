@@ -17,7 +17,7 @@ machine and in CI.
    A refusal prints its message on stderr and exits with status 1:
 
    ```text
-   variables.p: unknown key 'boundz' in a variable declaration. Did you mean 'bounds'?
+   variables.p: unknown key 'boundz' in a variable entry. Did you mean 'bounds'?
    ```
 
    Advice prints on stdout and exits with status 0. A spec the language

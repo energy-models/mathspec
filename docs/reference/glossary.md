@@ -33,7 +33,7 @@ data exists.
 : What a consumer does when it puts data on a program. A rule about numbers can
 be checked only then, and the language checks none itself. The docs never say
 "bind" for it, so that **bound** means one thing: a lower or upper limit on a
-variable ([variables](language/declarations.md#variables)).
+variable ([variables](language/entries.md#variables)).
 
 **Provide**
 : What the host model, the model a file is layered onto, does for a name under
@@ -46,8 +46,8 @@ consumer checks that the host provides each given name
 solver takes, a **renderer** such as the typesetter, or a **checker**
 ([what counts as language](../about/what-counts-as-language.md)).
 
-**Declaration**
-: One named entry under one of the top-level keys: one dimension, one
+**Entry**
+: One named item under one of the top-level keys: one dimension, one
 parameter, one constraint ([file shape](language/file.md)).
 
 ## Coordinates
@@ -57,12 +57,12 @@ parameter, one constraint ([file shape](language/file.md)).
 the order that `shift`, `sum_back` and `position()` count along.
 
 **Coordinate**
-: One point of a declaration's dimensions: one generator in one snapshot. A
+: One point of an entry's dimensions: one generator in one snapshot. A
 variable has one column at each coordinate it is built at, and a constraint
 has one row.
 
 **Frame**
-: A declaration's own dimensions. An expression, a mask and a bound parameter
+: An entry's own dimensions. An expression, a mask and a bound parameter
 must fit inside the frame they sit in
 ([how dimensions combine](language/expressions.md#how-dimensions-combine)).
 
@@ -75,7 +75,7 @@ must fit inside the frame they sit in
 **Mask** · **predicate**
 : A predicate is a true-or-false expression in the
 [where grammar](language/expressions.md#where-strings). A mask is a predicate
-on a declaration, and the coordinates it admits.
+on an entry, and the coordinates it admits.
 
 **Absence**
 : No value at a coordinate. A masked-out variable has no column there, and a
@@ -86,7 +86,7 @@ row that reads it is not built ([absence](language/absence.md)).
 `missing:` says what it is: refused when the data is attached (`refused`, the
 default), absence (`absent`), `0` in arithmetic and false in a `where`
 (`neutral`), or a value
-([a missing row](language/declarations.md#a-missing-row)).
+([a missing row](language/entries.md#a-missing-row)).
 
 ## Kinds of construct
 

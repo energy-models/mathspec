@@ -219,12 +219,12 @@ under both `variables:` and `given: variables:` is refused. The typeset legend
 lists a given variable under _Given_, and prints no domain line for it.
 
 [`merge`](../../howto/compose.md#a-library-of-components) folds a given
-declaration into the declaration of another fragment that introduces the name,
-so a composed library carries none of them. The folded declaration is the
+entry into the entry of another fragment that introduces the name,
+so a composed library carries none of them. The folded entry is the
 introducer's, and what the reader states has to say the same or less.
 
 Where nothing in this language introduces the column, the program carries the
-declaration until a host model provides it
+entry until a host model provides it
 ([what a program does not build](../reading.md#what-a-program-does-not-build)).
 
 ### `given: constraints`

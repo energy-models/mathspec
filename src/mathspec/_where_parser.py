@@ -257,7 +257,7 @@ def _named_rewrite(text: str, loc: int) -> str | None:
 #: answer before the general one.
 _DEEP_REWRITE = (
     'Declare a parameter or relation carrying part of the test and name that here, or split the '
-    'declaration into two, each masked by one half.'
+    'entry into two, each masked by one half.'
 )
 
 
@@ -281,7 +281,7 @@ def parse_where(text: str) -> Predicate | UnresolvedWhereNode:
     """Parse a where string into an AST, its leaves still unresolved.
 
     The connectives and literals are the resolved vocabulary's own; the leaves
-    naming declarations are a bare [`NameNode`][] or an ``Unresolved*``
+    naming entries are a bare [`NameNode`][] or an ``Unresolved*``
     node, which only [`resolve_where`][mathspec.resolution.resolve_where] takes.
 
     Raises:

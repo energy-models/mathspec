@@ -451,7 +451,7 @@ def test_an_outer_product_is_legal_and_carries_both_dim_sets():
 
 
 # ---------------------------------------------------------------------------
-# declaration-level rules
+# entry-level rules
 # ---------------------------------------------------------------------------
 
 
@@ -485,7 +485,7 @@ def test_an_outer_product_is_legal_and_carries_both_dim_sets():
         ),
     ],
 )
-def test_an_ill_dimensioned_declaration_is_rejected(patch, match):
+def test_an_ill_dimensioned_entry_is_rejected(patch, match):
     with pytest.raises(DimensionError, match=match):
         _schema(**patch)
 
@@ -641,8 +641,8 @@ def test_the_frame_check_and_the_reading_walk_the_same_leaves(namespace):
         pytest.param('False', set(), id='a-literal-names-nothing'),
     ],
 )
-def test_a_predicate_names_the_declarations_its_leaves_test(namespace, predicate, expected):
-    """A dimension names no declaration — it is a coordinate — so `names_read` drops it where `dims` keeps it."""
+def test_a_predicate_names_the_entries_its_leaves_test(namespace, predicate, expected):
+    """A dimension names no entry — it is a coordinate — so `names_read` drops it where `dims` keeps it."""
     where = where_of(predicate, namespace, 'test')
 
     assert where is not None, 'a predicate the connectives cannot settle survives the fold'
@@ -650,7 +650,7 @@ def test_a_predicate_names_the_declarations_its_leaves_test(namespace, predicate
 
 
 def test_names_read_takes_both_sides_of_a_relation_pair():
-    """The one leaf that names two declarations — two maps compared on the dimension they share.
+    """The one leaf that names two entries — two maps compared on the dimension they share.
 
     BASE has one relation per dimension, so the pair is built directly rather than
     resolved from a predicate string.
@@ -675,7 +675,7 @@ FRAMED = varied(
 
 
 def test_a_declared_frame_is_the_frame_as_written():
-    """A plain entry's frame was its body's, in declaration order; declared, it is the dims: as written."""
+    """A plain entry's frame was its body's, in file order; declared, it is the dims: as written."""
     spec = to_spec(
         varied(FRAMED, **{'expressions.limit': {'dims': ['generator', 'snapshot'], 'expression': 'build * p_max'}})
     )

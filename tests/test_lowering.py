@@ -103,7 +103,7 @@ SHAPES_MODEL = varied(
 
 
 def resolved(text: str, schema: Spec) -> Expression:
-    """Parse, expand and resolve — the program tree a declaration holds.
+    """Parse, expand and resolve — the program tree an entry holds.
 
     The ``'t'`` is the error-context label the resolver stamps on refusals,
     not a dimension.
@@ -132,7 +132,7 @@ def shapes_schema() -> Spec:
 
 
 def test_program_structure(dispatch_program):
-    assert list(dispatch_program.parameters) == ['capacity', 'load', 'cost'], 'keyed by name, in declaration order'
+    assert list(dispatch_program.parameters) == ['capacity', 'load', 'cost'], 'keyed by name, in file order'
     ((vname, v),) = dispatch_program.variables.items()
     assert vname == 'dispatch'
     assert v.dims == ('snapshot', 'generator'), 'the frame is the dims, in the order the file wrote it'
@@ -190,11 +190,11 @@ def test_a_literal_amount_resolves_to_one_signed_number():
             And(CAPACITY_POSITIVE, Not(ParameterComparison('load', '==', 0.0, ('snapshot',)))),
             id='a-compound-where-keeps-its-connectives',
         ),
-        pytest.param('False', BooleanLiteral(False), id='the-empty-declaration-keeps-its-own-spelling'),
+        pytest.param('False', BooleanLiteral(False), id='the-empty-entry-keeps-its-own-spelling'),
         pytest.param('capacity > 0 AND True', CAPACITY_POSITIVE, id='and-true-is-the-other-side'),
         pytest.param('capacity > 0 OR False', CAPACITY_POSITIVE, id='or-false-is-the-other-side'),
         pytest.param('capacity > 0 OR True', None, id='or-true-is-no-mask-at-all'),
-        pytest.param('capacity > 0 AND False', BooleanLiteral(False), id='and-false-is-the-empty-declaration'),
+        pytest.param('capacity > 0 AND False', BooleanLiteral(False), id='and-false-is-the-empty-entry'),
         pytest.param('NOT True', BooleanLiteral(False), id='not-true-is-false'),
         pytest.param('NOT False', None, id='not-false-is-no-mask'),
         pytest.param('NOT (capacity > 0 AND False)', None, id='a-branch-folded-away-folds-the-one-above-it'),
@@ -221,11 +221,11 @@ def test_a_where_is_one_resolved_predicate_with_every_literal_folded(dispatch_sc
     )
 
 
-def test_a_folded_mask_reaches_the_declaration_the_shorter_spelling_would_have():
-    """The fold is the program's, not a helper's: two files, one declaration."""
+def test_a_folded_mask_reaches_the_entry_the_shorter_spelling_would_have():
+    """The fold is the program's, not a helper's: two files, one entry."""
     written_out = schema_of(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0 AND True'}).program
     plain = schema_of(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0'}).program
-    assert written_out.variables['p'] == plain.variables['p'], 'the same mask, so the same declaration'
+    assert written_out.variables['p'] == plain.variables['p'], 'the same mask, so the same entry'
 
 
 def test_an_unknown_where_name_is_an_error_at_lowering_too(dispatch_schema):
@@ -238,11 +238,11 @@ def test_an_unknown_where_name_is_an_error_at_lowering_too(dispatch_schema):
 def test_a_lowered_mask_cannot_be_rewritten_in_place(dispatch_program):
     """A consumer handed a program could invert the mask another one reads.
 
-    The where nodes were plain dataclasses while every declaration embedding
+    The where nodes were plain dataclasses while every entry embedding
     them was frozen, so `variable.where.root.op = '!='` rewrote `capacity > 0` into
     `capacity != 0` on the shared object — two consumers disagreeing about one
     file, which is the failure a program exists to prevent. It also left
-    hashability depending on the file: an unmasked declaration hashed and a
+    hashability depending on the file: an unmasked entry hashed and a
     masked one raised TypeError.
     """
     (v,) = dispatch_program.variables.values()
@@ -251,7 +251,7 @@ def test_a_lowered_mask_cannot_be_rewritten_in_place(dispatch_program):
     with pytest.raises(FrozenInstanceError):
         v.where.root.op = '!='
     assert v.where == Mask(CAPACITY_POSITIVE), 'the mask the file wrote, unchanged'
-    assert isinstance(hash(v), int), 'a masked declaration hashes like an unmasked one'
+    assert isinstance(hash(v), int), 'a masked entry hashes like an unmasked one'
 
 
 def test_a_lowered_where_is_a_mask_that_answers_from_its_root(dispatch_program):
@@ -263,7 +263,7 @@ def test_a_lowered_where_is_a_mask_that_answers_from_its_root(dispatch_program):
     (v,) = dispatch_program.variables.values()
 
     assert v.where == Mask(CAPACITY_POSITIVE)
-    assert v.where.names_read == {'capacity'}, 'the declarations the mask names'
+    assert v.where.names_read == {'capacity'}, 'the entries the mask names'
     assert v.where.conjuncts == (CAPACITY_POSITIVE,), 'a mask that is not an AND is its own only conjunct'
     assert v.where.atoms == (CAPACITY_POSITIVE,), 'a single leaf, connectives removed'
 
@@ -291,7 +291,7 @@ def test_a_lowered_where_is_a_mask_that_answers_from_its_root(dispatch_program):
     ],
 )
 def test_a_lowered_mask_answers_its_dims_conjuncts_and_atoms(variable, where, dims, conjuncts, atoms):
-    """`Mask.dims` is read off the leaves, which carry their declarations' dims;
+    """`Mask.dims` is read off the leaves, which carry their entries' dims;
     `atoms` crosses the `OR` that `conjuncts` stops at."""
     mask = to_spec(varied(SMALL_MODEL, **{f'variables.{variable}.where': where})).program.variables[variable].where
 
@@ -326,10 +326,10 @@ def test_where_children_is_the_one_walk_under_a_predicate(where, under):
 
 
 def test_a_synthetic_predicate_answers_its_own_dims():
-    """A tree built from resolved pieces answers like a declaration's own mask.
+    """A tree built from resolved pieces answers like an entry's own mask.
 
     A consumer builds region complements and conjunctions — `Not(root)`,
-    `And(a, b)` — with no declaration behind them. Because the leaves carry
+    `And(a, b)` — with no entry behind them. Because the leaves carry
     their dims, wrapping any such tree in `Mask` answers without a name-to-dims
     mapping, which is what let the mapping die everywhere.
     """
@@ -735,7 +735,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
         ('snapshot',),
     ), 'the dims a consumer reads are read off the join: dropped, added, and the key columns kept'
     assert zonal.operand.columns.relation is program.relations['zone_of'], (
-        'the join holds the one declaration the program holds, not an equal copy built again'
+        'the join holds the one entry the program holds, not an equal copy built again'
     )
     assert program.constraints['history'].lhs == Sum(
         Join(
@@ -841,7 +841,7 @@ def test_a_relation_is_declared_as_the_file_declares_it():
     assert program.relations == {
         'season_of': Relation((('g', 'g'), ('season', 'season')), ('g',)),
         'at_bus': Relation((('g', 'g'), ('bus', 'bus')), ('g',)),
-    }, 'every relation under its own name, in declaration order'
+    }, 'every relation under its own name, in file order'
     assert program.relations['season_of'].values == ('season',), 'and each says what its key determines'
     assert program.dimensions['g'] == Dimension(dtype='str'), 'a dimension carries its dtype and no relation'
 
@@ -861,7 +861,7 @@ def test_a_program_is_built_by_keyword_so_a_field_added_later_cannot_reorder_an_
 
 
 @pytest.mark.parametrize('group', ['parameters', 'variables', 'constraints', 'dimensions', 'relations', 'sos'])
-def test_a_program_seals_its_declaration_groups(dispatch_program, group):
+def test_a_program_seals_its_entry_groups(dispatch_program, group):
     """`frozen=True` sealed the fields and said nothing about what was behind them."""
     with pytest.raises(TypeError):
         getattr(dispatch_program, group)['sneak'] = None  # pyrefly: ignore[unsupported-operation]  the point of the test
@@ -882,7 +882,7 @@ def test_roots_are_the_trees_a_row_is_built_from():
         program.objective.expression,
         program.constraints['c'].lhs,
         program.constraints['c'].rhs,
-    ), 'the objective first, then both sides of each constraint, in declaration order'
+    ), 'the objective first, then both sides of each constraint, in file order'
     assert program.expressions['spend'].expression not in program.roots, (
         'a named expression builds no row, so it is not one of the trees a row is built from'
     )
@@ -1014,7 +1014,7 @@ def test_the_fallback_region_carries_the_mask_the_file_left_unwritten():
 
 
 def test_a_region_s_when_is_a_mask_with_its_own_dims():
-    """`Region.when` arrives in the same carrier as a declaration's `where`.
+    """`Region.when` arrives in the same carrier as an entry's `where`.
 
     It was the one mask left as a bare node, so a helper written over `Mask`
     branched on where a mask came from — the divergence the carrier exists to
@@ -1121,9 +1121,9 @@ def test_a_macro_formal_named_like_an_entry_keeps_the_entry_out_of_the_math():
 def test_an_entry_that_reads_a_dual_is_a_reported_quantity():
     """A dual is read after the solve, so an entry calling one is never in the math: it lowers to a Dual leaf and stays reported."""
     program = to_spec(varied(TINY, expressions={'shadow_price': 'dual(c)'})).program
-    declaration = program.expressions['shadow_price']
-    assert declaration.in_math is False, 'the entry reading a dual is reported, never in the math'
-    assert isinstance(declaration.expression, Dual), 'and it lowers to a Dual leaf'
+    entry = program.expressions['shadow_price']
+    assert entry.in_math is False, 'the entry reading a dual is reported, never in the math'
+    assert isinstance(entry.expression, Dual), 'and it lowers to a Dual leaf'
 
 
 def test_a_spec_answers_with_one_program_however_often_it_is_asked():
@@ -1163,7 +1163,7 @@ def test_a_lowered_spec_still_pickles_and_lowers_to_the_same_program():
 def test_a_lowered_program_pickles_and_is_the_same_program():
     """A program crosses a process as itself, walked or not.
 
-    Every group of declarations is sealed against writes, and the seal used
+    Every group of entries is sealed against writes, and the seal used
     to be a ``MappingProxyType``, which pickle refuses — so a program could
     be built by one process and never handed to another, and a consumer
     running slices in a pool re-lowered the file per slice. The seal now
@@ -1193,7 +1193,7 @@ def test_a_lowered_program_pickles_and_is_the_same_program():
 def test_two_groups_of_a_program_merge_with_or_as_they_did_behind_the_proxy():
     """`program.constraints | program.variables` is a dict of both, as it was
     when the groups were `MappingProxyType`s — a consumer that walks every
-    declaration this way (specsolve's parity harness does) broke on alpha.78,
+    entry this way (specsolve's parity harness does) broke on alpha.78,
     where the seal answered `|` with a `TypeError`."""
     program = to_spec(
         {

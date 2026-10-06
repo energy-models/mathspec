@@ -11,8 +11,8 @@ language whose scalars are user data; both are fixed here:
   names in this language — a country code as a dimension, a mode as a relation.
   YAML 1.1 resolves them to ``True``/``False``; only ``true``/``false`` are
   booleans here, which is the YAML 1.2 core schema.
-- **Duplicate keys.** 1.1 lets the last one win silently, discarding a
-  declaration the file plainly contains.
+- **Duplicate keys.** 1.1 lets the last one win silently, discarding an
+  entry the file plainly contains.
 
 The output is plain ``dict``/``str``: no loader wrapper reaches the schema
 or the AST.
@@ -79,7 +79,7 @@ def _check_duplicate_keys(node: yaml.Node, origin: str) -> None:
                 msg = (
                     f'{origin}:{line}: duplicate key {key!r} — first declared on '
                     f'line {seen[key]}. YAML would silently keep the last one, '
-                    f'discarding a declaration the file contains.'
+                    f'discarding an entry the file contains.'
                 )
                 raise SchemaError(msg)
             seen[key] = line

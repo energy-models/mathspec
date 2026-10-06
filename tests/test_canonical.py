@@ -51,7 +51,7 @@ def _dumped(**patch: object) -> str:
 
 def test_two_files_that_mean_the_same_thing_write_the_same_text():
     """The claim the form makes, over the three ambiguities a file carries: the
-    order two declarations are written in, the order of the terms of a sum, and
+    order two entries are written in, the order of the terms of a sum, and
     the order of the factors of a product."""
     one = ms.to_spec(
         {
@@ -128,7 +128,7 @@ def test_a_sum_is_broken_one_term_to_a_line():
     )
 
 
-def test_the_declarations_of_a_section_are_sorted_by_name():
+def test_the_entries_of_a_section_are_sorted_by_name():
     dumped = ms.to_spec(
         varied(DISPATCH_MODEL, **{'constraints.a_cap.dims': [], 'constraints.a_cap.expression': 'sum(p) >= 0'})
     ).to_yaml(canonical=True)
@@ -160,8 +160,8 @@ SECTIONS = [
 def _written_backwards(raw: object, depth: int = 3) -> object:
     """*raw* with every mapping down to *depth* levels written in reverse order.
 
-    Three levels reach the sections, the declarations of each section and the
-    keys of each declaration. They stop above a `cases:` block, whose regions
+    Three levels reach the sections, the entries of each section and the
+    keys of each entry. They stop above a `cases:` block, whose regions
     are a mapping that the form keeps in the file's order.
     """
     if depth == 0 or not isinstance(raw, dict):
@@ -171,8 +171,8 @@ def _written_backwards(raw: object, depth: int = 3) -> object:
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
 def test_a_file_written_backwards_writes_the_same_text(path):
-    """The section order, the declaration order in each section and the key
-    order in each declaration are spelling. A file that writes all three in
+    """The section order, the file order in each section and the key
+    order in each entry are spelling. A file that writes all three in
     reverse is the same spec, so it writes the same text."""
     raw = raw_of(path)
     backwards = ms.to_spec(_written_backwards(raw)).to_yaml(canonical=True)
@@ -190,9 +190,9 @@ def test_the_sections_come_in_one_order(path):
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
 def test_every_section_is_sorted_by_name(path):
     data = yaml.safe_load(ms.to_spec(path).to_yaml(canonical=True))
-    for section, declarations in data.items():
-        if isinstance(declarations, dict) and section != 'objective':
-            assert list(declarations) == sorted(declarations), f'{path.name}: `{section}` reads in name order'
+    for section, entries in data.items():
+        if isinstance(entries, dict) and section != 'objective':
+            assert list(entries) == sorted(entries), f'{path.name}: `{section}` reads in name order'
 
 
 def _commitment_with_its_cases_reversed() -> dict[str, object]:
@@ -212,7 +212,7 @@ def _piecewise_with_its_links_reversed() -> dict[str, object]:
         pytest.param(
             DISPATCH_MODEL,
             varied(DISPATCH_MODEL, **{'variables.p.dims': ['generator', 'snapshot']}),
-            id='a-declarations-dims',
+            id='the-dims-of-an-entry',
         ),
         pytest.param(
             raw_of(EXAMPLES / 'commitment.yaml'),
@@ -452,9 +452,9 @@ def test_every_spelling_of_one_sum_writes_one_text():
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
 def test_the_form_declares_the_same_spec(path):
-    """The form is not only stable, it is the same spec: every declaration is
+    """The form is not only stable, it is the same spec: every entry is
     there, under its own name, on its own frame. What the form is allowed to
-    change is the text of an expression and the order two declarations sit in.
+    change is the text of an expression and the order two entries sit in.
 
     A frame is compared as the set it is. Sorting `variables:` changes the
     order a `piecewise:` expansion meets them in, so a constraint the expansion

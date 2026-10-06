@@ -86,9 +86,9 @@ __all__ = [
 
 
 class _StrictSpec(BaseModel):
-    """Base for every schema block: unknown keys are an error, not a shrug.
+    """Base for every part of a spec: unknown keys are an error, not a shrug.
 
-    A misspelled optional key would otherwise be dropped and its declaration
+    A misspelled optional key would otherwise be dropped and its entry
     fall back to a default — ``boundz:`` leaves the variable unbounded,
     ``wher:`` leaves it unmasked — loading a spec the file does not describe.
     """
@@ -221,13 +221,13 @@ class RelationSpec(_StrictSpec):
 
     A sum joins the table on the columns ``over=`` names and every other key
     column, and groups by the columns ``by=relation[...]`` names; a lookup
-    joins on the columns it names. The declaration fixes no direction, and a
+    joins on the columns it names. The entry fixes no direction, and a
     column is named after its own dimension or after none, so a name in a
     call reads the same as a column and as a dimension. The map itself is data, and arrives with the rest of it, under
     the relation's name, one column per role.
     """
 
-    _label: ClassVar[str] = 'a relation declaration'
+    _label: ClassVar[str] = 'a relation entry'
 
     key: str | list[str] | dict[str, str]
     values: str | list[str] | dict[str, str] | None = None
@@ -314,7 +314,7 @@ class DimensionSpec(_StrictSpec):
     ([`RelationSpec`][]), keyed by their own name.
     """
 
-    _label: ClassVar[str] = 'a dimension declaration'
+    _label: ClassVar[str] = 'a dimension entry'
 
     dtype: DimensionDtype = 'str'
     #: Whether the order the data gives the coordinates in is part of the
@@ -335,7 +335,7 @@ class DimensionSpec(_StrictSpec):
 class ParameterSpec(_StrictSpec):
     """A declared parameter with dims and dtype, and what a missing row of its data means."""
 
-    _label: ClassVar[str] = 'a parameter declaration'
+    _label: ClassVar[str] = 'a parameter entry'
 
     dims: list[str]
     dtype: ParameterDtype = 'float'
@@ -434,7 +434,7 @@ class BoundsSpec(_StrictSpec):
 class VariableSpec(_StrictSpec):
     """A declared decision variable."""
 
-    _label: ClassVar[str] = 'a variable declaration'
+    _label: ClassVar[str] = 'a variable entry'
 
     dims: list[str]
     where: str | None = None
@@ -478,7 +478,7 @@ class GivenParameterSpec(_StrictSpec):
     the frame. What a missing row means is the declaring file's ``missing:``.
     """
 
-    _label: ClassVar[str] = 'a given parameter declaration'
+    _label: ClassVar[str] = 'a given parameter entry'
 
     dims: list[str]
     dtype: ParameterDtype = 'float'
@@ -492,7 +492,7 @@ class GivenVariableSpec(_StrictSpec):
     the column owns its bounds and its mask.
     """
 
-    _label: ClassVar[str] = 'a given variable declaration'
+    _label: ClassVar[str] = 'a given variable entry'
 
     dims: list[str]
     domain: VariableDomain = 'continuous'
@@ -507,7 +507,7 @@ class GivenConstraintSpec(_StrictSpec):
     builds a row.
     """
 
-    _label: ClassVar[str] = 'a given constraint declaration'
+    _label: ClassVar[str] = 'a given constraint entry'
 
     dims: list[str]
     description: str | None = None
@@ -528,7 +528,7 @@ class GivenExpressionSpec(_StrictSpec):
     composed.
     """
 
-    _label: ClassVar[str] = 'a given expression declaration'
+    _label: ClassVar[str] = 'a given expression entry'
 
     dims: list[str]
     description: str | None = None
@@ -542,7 +542,7 @@ class GivenMaskSpec(_StrictSpec):
     a solve decides: the predicate is the definer's.
     """
 
-    _label: ClassVar[str] = 'a given mask declaration'
+    _label: ClassVar[str] = 'a given mask entry'
 
     dims: list[str]
     description: str | None = None
@@ -572,7 +572,7 @@ class GivenSpec(_StrictSpec):
 class ConstraintSpec(_StrictSpec):
     """A declared constraint: one rule, over one frame."""
 
-    _label: ClassVar[str] = 'a constraint declaration'
+    _label: ClassVar[str] = 'a constraint entry'
 
     dims: list[str]
     where: str | None = None
@@ -583,7 +583,7 @@ class ConstraintSpec(_StrictSpec):
 class ObjectiveSpec(_StrictSpec):
     """A declared objective function."""
 
-    _label: ClassVar[str] = 'an objective declaration'
+    _label: ClassVar[str] = 'an objective entry'
 
     sense: ObjectiveSense = 'minimize'
     expression: str
@@ -598,7 +598,7 @@ class MacroSpec(_StrictSpec):
     the syntax tree before resolution reads the expression.
     """
 
-    _label: ClassVar[str] = 'a macro declaration'
+    _label: ClassVar[str] = 'a macro entry'
 
     args: list[str] = []
     kwargs: list[str] = []
@@ -774,7 +774,7 @@ class MaskSpec(_StrictSpec):
     never a value in an expression.
     """
 
-    _label: ClassVar[str] = 'a mask declaration'
+    _label: ClassVar[str] = 'a mask entry'
 
     #: The predicate, in the where grammar.
     where: str
@@ -816,7 +816,7 @@ class AssumptionSpec(_StrictSpec):
     the data checks it, and refuses the data where it does not hold.
     """
 
-    _label: ClassVar[str] = 'an assumption declaration'
+    _label: ClassVar[str] = 'an assumption entry'
 
     #: The predicate, in the where grammar. It holds at every coordinate of
     #: its own frame that ``where`` admits.
@@ -911,7 +911,7 @@ class PiecewiseSpec(_StrictSpec):
     exactly two links).
     """
 
-    _label: ClassVar[str] = 'a piecewise declaration'
+    _label: ClassVar[str] = 'a piecewise entry'
 
     #: The breakpoint dimension.
     over: str
@@ -1007,7 +1007,7 @@ class SosSpec(_StrictSpec):
     needs both.
     """
 
-    _label: ClassVar[str] = 'a sos declaration'
+    _label: ClassVar[str] = 'a sos entry'
 
     variable: str
     along: str
@@ -1061,7 +1061,7 @@ class Spec(_StrictSpec):
     [`LanguageError`][mathspec.errors.LanguageError] on a spec the language refuses.
     Holding one is the proof, so nothing downstream checks it again.
 
-    The API is the thirteen declaration sections plus ``version`` and
+    The API is the thirteen sections plus ``version`` and
     ``description``, three ways back out — [`to_dict`][] for the spec as
     data, [`to_yaml`][] for the file a reviewer reads, [`expand`][] for the
     spec with its formulations written out as plain rows — and [`program`][], the
@@ -1076,7 +1076,7 @@ class Spec(_StrictSpec):
     #: any release — and declaring it is what lets a later reader refuse a file
     #: it cannot read rather than misinterpret it.
     version: int = 0
-    #: What the file as a whole is, in the same plain prose a declaration's
+    #: What the file as a whole is, in the same plain prose an entry's
     #: ``description:`` takes. The typeset document opens with it.
     description: str | None = None
     #: What this file reads and does not build ([`GivenSpec`][]). Empty in a file that stands alone.
@@ -1174,7 +1174,7 @@ class Spec(_StrictSpec):
         """The file a reviewer reads — including for a spec that never had one.
 
         Args:
-            canonical: Write the normal form instead: declarations sorted by
+            canonical: Write the normal form instead: entries sorted by
                 name, every expression printed from its parsed tree, one term
                 of a sum per line. Two files that state the same spec write
                 the same text, so what a diff shows is a difference in the
@@ -1228,17 +1228,17 @@ class Spec(_StrictSpec):
 
     @model_validator(mode='after')
     def _names_are_names(self) -> Spec:
-        """Every declaration is keyed by something an expression could write.
+        """Every entry is keyed by something an expression could write.
 
         Read off the spec's own mappings rather than a list of sections, so a
         section added later cannot be forgotten here — every mapping a Spec
-        carries is keyed by a declaration name. ``given:`` nests its five
+        carries is keyed by an entry name. ``given:`` nests its five
         mappings one level down, so they are read off [`GivenSpec`][] the
         same way.
         """
         sections = [*self, *((f'given: {kind}', group) for kind, group in self.given)]
         errors = [
-            f'{section}: {name!r} is not a name. A declaration is named the way an expression '
+            f'{section}: {name!r} is not a name. An entry is named the way an expression '
             f'writes it — a letter or an underscore, then letters, digits or underscores — so '
             f'nothing can refer to this one. Rename it.'
             for section, value in sections
@@ -1253,7 +1253,7 @@ class Spec(_StrictSpec):
 
     @model_validator(mode='after')
     def _lower(self) -> Spec:
-        """Every rule that reads across declarations, then every expression and where string.
+        """Every rule that reads across entries, then every expression and where string.
 
         A fault in a curve's link is named against the link the file wrote. The
         rows a curve states are held to the language when [`expand`][]

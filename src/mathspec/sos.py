@@ -4,7 +4,7 @@
 
 """Expand ``sos:`` blocks into the binaries and rows that state the same restriction.
 
-A set becomes ordinary declarations under names prefixed with the block's own,
+A set becomes ordinary entries under names prefixed with the block's own,
 the way a ``piecewise:`` block becomes weights and rows; what it emits is
 tabled in ``docs/reference/language/piecewise.md``. An unpicked member is held
 at zero from both sides, so the rewrite states the same feasible set whatever
@@ -71,7 +71,7 @@ class Emitted:
 
     @property
     def by_kind(self) -> tuple[tuple[str, tuple[str, ...]], ...]:
-        """Each name by the kind of declaration it would collide with."""
+        """Each name by the kind of entry it would collide with."""
         return (('variable', (self.seg,)), ('constraint', (self.pick, self.link, self.below)))
 
 
@@ -95,7 +95,7 @@ def expand_sets(schema: Spec) -> Spec:
 
 
 def emit(raw: dict[str, object], name: str) -> None:
-    """Write what the set *name* states as declarations of *raw*, and drop the block.
+    """Write what the set *name* states as entries of *raw*, and drop the block.
 
     Args:
         raw: A spec as data, mid-expansion, declaring the set and the variable

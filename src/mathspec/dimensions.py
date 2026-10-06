@@ -242,15 +242,15 @@ def _check_named_amount(
 
 
 # ---------------------------------------------------------------------------
-# declaration-level rules
+# entry-level rules
 # ---------------------------------------------------------------------------
 
 
 def check_schema(schema: Spec, program: Program) -> None:
-    """Check every declaration's dim rules, on the trees *program* holds for *schema*.
+    """Check every entry's dim rules, on the trees *program* holds for *schema*.
 
     Raises:
-        DimensionError: On the first declaration that breaks one.
+        DimensionError: On the first entry that breaks one.
     """
     for vname, vdef in schema.variables.items():
         frame = frozenset(vdef.dims)
@@ -324,7 +324,7 @@ def check_schema(schema: Spec, program: Program) -> None:
 def _check_value_dims(node: Expression, schema: Spec, frame: frozenset[str], context: str) -> None:
     """A region's value may only carry dims the frame does — the ``otherwise:`` included.
 
-    A wider one would give the quantity dims its declaration does not, which is
+    A wider one would give the quantity dims its entry does not, which is
     the second answer a ``dims:`` exists to avoid.
     """
     got = dims_of(node, schema, context)

@@ -5,12 +5,12 @@
 """The program: what a file declares, with names resolved and shapes fixed.
 
 The second public state, and the one a consumer reads. A [`Program`][] is
-the file typed, section for section: every declaration it makes, with names
+the file typed, section for section: every entry it makes, with names
 resolved, shapes fixed and every rule decidable without data checked, and no
 data at all. Lowering, as a [`Spec`][mathspec.spec.Spec] loads, is the only
 thing that builds one, so nothing here re-checks a hand-built one.
 
-Node and declaration classes are matched with ``isinstance``. The rules a
+Node and entry classes are matched with ``isinstance``. The rules a
 node's structure does not show is [`children`][]; the questions over the walk
 are [`walk_regions`][], [`walk`][] and the filters beside them. A
 resolved ``where`` arrives as a [`Mask`][], and what
@@ -132,13 +132,13 @@ ConstraintSense = ComparisonOperator
 #: link are read affinely (``mathspec.degree``), so those are the two.
 QuadraticPosition = Literal['objective', 'constraint']
 
-#: The dtype a dimension index may declare (the declaration rules), and what
+#: The dtype a dimension index may declare (the entry rules), and what
 #: its labels are. ``datetime`` is a dimension's alone — labels on a timeline
 #: order and compare, where a *value* of that type is a moment nothing
 #: computes with.
 DimensionDtype = Literal['float', 'int', 'str', 'datetime']
 
-#: The dtype a parameter may declare (the declaration rules), and what its bound
+#: The dtype a parameter may declare (the entry rules), and what its bound
 #: column must be. ``bool`` is a parameter's alone — a value column may be a
 #: flag a mask reads, where a label set of two members is a dimension nothing
 #: indexes by.
@@ -168,7 +168,7 @@ RelationMissing = Literal['refused', 'absent']
 #: quantity *is* zero there, so the term contributes nothing and the row stands.
 VariableMissing = Literal['absent', 'neutral']
 
-#: Which way an objective is optimised (the declaration rules).
+#: Which way an objective is optimised (the entry rules).
 ObjectiveSense = Literal['minimize', 'maximize']
 
 #: The order of special ordered set.
@@ -267,7 +267,7 @@ class Divide:
 
 @dataclass(frozen=True)
 class Column:
-    """One column of a relation: the relation's name, and the column's name in its declaration."""
+    """One column of a relation: the relation's name, and the column's name in its entry."""
 
     relation: str
     name: str
@@ -477,7 +477,7 @@ def children(expression: Expression) -> tuple[Expression, ...]:
 
 
 # --------------------------------------------------------------------------
-# Declarations
+# Entries
 # --------------------------------------------------------------------------
 
 
@@ -528,7 +528,7 @@ class Relation:
 class JoinColumns:
     """One relation as one call joins it: the columns joined on, and the columns grouped by.
 
-    The declaration fixes no direction; the call does, and this is the one it
+    The entry fixes no direction; the call does, and this is the one it
     named. ``name`` is the relation's, as [`Program.relations`][] keys it.
     ``joined`` and ``grouped`` are *roles* — column names of ``relation``,
     which maps every role to its dimension and names the key. ``joined`` is
@@ -686,10 +686,10 @@ def assumption_message(name: str, assumption: Assumption) -> str:
 
 @dataclass(frozen=True)
 class Parameter:
-    """Shape declaration; data is attached at execution time by name.
+    """The shape of a column; data is attached at execution time by name.
 
-    ``dtype`` is what the declaration claims the values are, and a consumer
-    attaching data refuses a column that is not it — so the *declaration* is
+    ``dtype`` is what the entry claims the values are, and a consumer
+    attaching data refuses a column that is not it — so the *entry* is
     what is read, rather than whatever the column happens to hold. It
     refuses a null or NaN value too: a coordinate with no value has no row,
     and ``inf`` is a value.
@@ -722,7 +722,7 @@ class Variable:
 class Given:
     """A column or a row family this program reads and does not build.
 
-    The frame is the whole declaration. A consumer looks the name up in the
+    The frame is the whole entry. A consumer looks the name up in the
     model this one is layered onto, checks the frame against what it finds,
     and refuses a name the host does not provide.
     """
@@ -781,7 +781,7 @@ class Constraint:
 class Sos:
     """One special-ordered set per coordinate of the variable's ``dims`` minus ``along``.
 
-    The only declaration that adds neither a column nor a row: it names
+    The only entry that adds neither a column nor a row: it names
     columns a consumer already has and says what may be nonzero among them. Which
     dims those are is the variable's own ``dims`` and is read from it: a
     copy here would be a second home for a fact
@@ -873,7 +873,7 @@ class Piecewise:
             to 1.
         points: The parameter saying how far each curve runs, or ``None``.
         frame: The dimensions the block builds one curve per coordinate of,
-            in declaration order.
+            in file order.
         description: What the file wrote under ``description:``, or ``None``.
     """
 
@@ -923,7 +923,7 @@ class Reach:
     """One read along an axis whose distance only data can say.
 
     Attributes:
-        label: The declaration reading, as the lowering's messages label it.
+        label: The entry reading, as the lowering's messages label it.
         name: The parameter or relation that says how far.
         kind: An ``offset`` is a parameter's values, which
             [`Separability.resolved`][] folds in; a ``partition`` and a
@@ -943,7 +943,7 @@ class Separability:
     each on its own, and a decomposition cuts the same axis and solves each
     piece on its own. What the program can say is whether every row it builds
     is then complete inside one window: how far a row reads ahead along the
-    axis, which declarations tie the axis together so that no window holds
+    axis, which entries tie the axis together so that no window holds
     them, and — the same fact read as a set — which rows and columns are left
     over as the border every window shares. It cannot say whether the windowed
     answer is the one a whole-horizon solve would give — a store carried over
@@ -959,7 +959,7 @@ class Separability:
         ahead: Coordinates a window must see after its last row for every row
             it builds to be complete — what a negative ``shift`` reads. ``0``
             is pointwise; a ``shift`` of ``-2`` is ``2``.
-        coupled: Each declaration that ties the axis together, to what ties it
+        coupled: Each entry that ties the axis together, to what ties it
             and the one change to the spec that would not: a sum over the axis
             in a constraint, a grouping that sums it away, a wrapped
             translation, a set. No window satisfies these, and no rewrite here
@@ -969,15 +969,15 @@ class Separability:
             a named offset, a partition whose groups a window may cut, a read
             through a relation at a coordinate the data chooses.
             [`resolved`][] folds a parameter's values in.
-        restarts: Each declaration counting a position along the axis, which a
+        restarts: Each entry counting a position along the axis, which a
             window restarts at its first row. Whether that is wanted — a seed
             once per window, or once per horizon — is for the spec's author to decide, so it is
             reported rather than refused.
-        linking_rows: Each constraint no one window holds whole, in declaration
+        linking_rows: Each constraint no one window holds whole, in entry
             order: one the axis does not index, whose row stands in every
             window, and one [`coupled`][] names. A reach the data decides is
             not one, so a row waiting on [`undecided`][] may span two windows.
-        linking_columns: Each variable the axis does not index, in declaration
+        linking_columns: Each variable the axis does not index, in entry
             order, whose column every window reads. A decomposition calls a
             window a block, and with [`linking_rows`][] this is the border of
             a bordered block-diagonal form cut along the axis, whole where
@@ -1036,10 +1036,10 @@ class Separability:
 class Program:
     """A complete declarative description of a mathematical program, with no data in it.
 
-    Every group of declarations is keyed by the name the file wrote, in the
+    Every group of entries is keyed by the name the file wrote, in the
     order it wrote them, and is read-only: the mappings are wrapped at
     construction, so a consumer cannot rewrite what another consumer reads.
-    A whole program is not hashable — the declarations and expression nodes
+    A whole program is not hashable — the entries and expression nodes
     inside it are, which is what dedup and memoisation ask for.
     """
 
@@ -1206,7 +1206,7 @@ def is_quadratic(expression: Expression) -> bool:
     """Whether *expression* contains a product of two variable-carrying operands.
 
     A structural question over the program, and unrelated consumers ask it —
-    what a solver must support, which declarations to build last, whether this
+    what a solver must support, which entries to build last, whether this
     form can be represented at all — so it is answered once here beside the
     other walks rather than once per consumer in its own terms.
 
@@ -1253,8 +1253,8 @@ class BooleanLiteral:
 class ParameterDefined:
     """True wherever the named parameter is non-null and finite.
 
-    ``dims`` is the parameter's own, copied off the declaration during
-    resolution; every leaf below that names a declaration carries its dims
+    ``dims`` is the parameter's own, copied off the entry during
+    resolution; every leaf below that names an entry carries its dims
     (or ``over``) the same way.
     """
 
@@ -1446,7 +1446,7 @@ class MaskReference:
     body: Predicate
 
 
-#: Every predicate resolution has typed: it names a declaration and the kind is
+#: Every predicate resolution has typed: it names an entry and the kind is
 #: settled. Resolution passes these straight through, having nothing left to
 #: decide about them.
 TypedPredicate = (
@@ -1494,7 +1494,7 @@ def where_children(where: Predicate) -> tuple[Predicate, ...]:
 
 
 def _atoms(where: Predicate) -> Iterator[TypedPredicate]:
-    """Every node in *where* that reads a declaration, connectives removed.
+    """Every node in *where* that reads an entry, connectives removed.
 
     A boolean literal yields nothing.
 
@@ -1514,7 +1514,7 @@ def _atoms(where: Predicate) -> Iterator[TypedPredicate]:
 def _atom_dims(atom: TypedPredicate) -> frozenset[str]:
     """One leaf's dims — the rule [`Mask.dims`][] is the union of.
 
-    A parameter or variable leaf carries its own dims off the declaration; a
+    A parameter or variable leaf carries its own dims off the entry; a
     comparison on a dimension is read through that dimension, and a relation
     through the dimensions of the columns it is read at — its key for a
     comparison, every column for a bare existence.
@@ -1546,9 +1546,9 @@ def _atom_dims(atom: TypedPredicate) -> frozenset[str]:
 
 
 def _atom_names(atom: TypedPredicate) -> frozenset[str]:
-    """One leaf's declarations, its dimension apart — the rule [`Mask.names_read`][] is the union of.
+    """One leaf's entries, its dimension apart — the rule [`Mask.names_read`][] is the union of.
 
-    A comparison on a dimension names no declaration — a coordinate is not
+    A comparison on a dimension names no entry — a coordinate is not
     data to feed — a relation pair names both maps it compares, and a
     comparison of expressions names every parameter and relation its sides
     read, answered on the program's form of it since only a program mask is
@@ -1690,8 +1690,8 @@ class Mask:
         """The dims the mask is read at — the union of what each leaf carries.
 
         Empty for a mask over nothing but literals. Read off the leaves, which
-        resolution stamped with their declarations' dims, so a predicate built
-        from resolved pieces answers exactly as a declaration's own does.
+        resolution stamped with their entries' dims, so a predicate built
+        from resolved pieces answers exactly as an entry's own does.
         """
         return frozenset(dim for atom in self.atoms for dim in _atom_dims(atom))
 
@@ -1728,7 +1728,7 @@ class Advice:
 
     Attributes:
         kind: The pass that said it.
-        subject: The declaration it is about — a dimension name, a variable name.
+        subject: The entry it is about — a dimension name, a variable name.
         text: The sentence, naming the rewrite.
     """
 

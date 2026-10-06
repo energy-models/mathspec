@@ -254,7 +254,7 @@ variables:
 
 #### Scalar variable
 
-an empty dims: a scalar declaration, whose line carries no quantifier
+an empty dims: a scalar entry, whose line carries no quantifier
 
 ```yaml
 variables:

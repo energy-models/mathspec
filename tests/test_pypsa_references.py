@@ -140,7 +140,7 @@ def _stated(name: str, row: str) -> bool:
 
 @pytest.mark.parametrize('page', sorted(PATCHED))
 def test_a_patch_keeps_the_pypsa_name_of_what_it_changes(page: str):
-    """A patch rewrites declarations of the base; a rewritten name keeps its PyPSA name and its dtype, or it has drifted."""
+    """A patch rewrites entries of the base; a rewritten name keeps its PyPSA name and its dtype, or it has drifted."""
     own = SPECS[page]
     drifted = []
     for section in ('parameters', 'relations', 'variables', 'constraints'):

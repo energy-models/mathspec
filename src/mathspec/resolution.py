@@ -91,7 +91,7 @@ class Namespace:
     def __init__(self, schema: Spec) -> None:
         #: The schema the names come from — what an expression is expanded and
         #: dim-checked against, since macros, named expressions and the dim
-        #: rules read declarations the flat listing below does not carry.
+        #: rules read entries the flat listing below does not carry.
         self.schema = schema
         variables = {**schema.variables, **schema.given.variables, **schema.given.expressions}
         parameters = {**schema.parameters, **schema.given.parameters}
@@ -271,7 +271,7 @@ class Namespace:
 
         Args:
             name: The name the file wrote.
-            context: The declaration it was found in.
+            context: The entry it was found in.
             allow_dims: Whether a dimension would have been accepted there. It marks a
                 where string, which reads a relation as readily as a parameter, so the
                 listing carries the relations too; an expression, where a relation is not a
@@ -309,7 +309,7 @@ class Namespace:
 
 
 def mask_of(node: Predicate | None) -> Mask | None:
-    """The mask a declaration carries for a resolved where: ``None`` where there is none, or where every row passes."""
+    """The mask an entry carries for a resolved where: ``None`` where there is none, or where every row passes."""
     if node is None or (isinstance(node, BooleanLiteral) and node.value):
         return None
     return Mask(node)

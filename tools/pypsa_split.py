@@ -13,13 +13,13 @@ The one file writes each hub, a row or a named expression that every component
 adds its share to, as the sum of named terms: `Bus_injection` is
 `Generator_injection + … + Transformer_injection`, and `Bus_nodal_balance`
 reads `Bus_injection == 0`. The objective reads the hub `total_cost`. A
-fragment owns the declarations of its topic, its terms among them, and reads
+fragment owns the entries of its topic, its terms among them, and reads
 what another topic declares under `given:`; each term names the hub it adds to
 with `adds_to:`, and the fragment reads that hub under `given:`. One fragment
 reads each hub without adding to it, with its description, so the terms always
 have a reader, and a new component is one new fragment. The reader of
 `total_cost` also sets the objective. A mask goes to the topic its name
-names, as any declaration does, and a fragment that reads another topic's
+names, as any entry does, and a fragment that reads another topic's
 mask reads it under `given: masks:`.
 
 `merge` then writes each hub as the file does, so `check` is one comparison:
@@ -53,7 +53,7 @@ FRAME = ('dimensions', 'relations')
 IDENT = re.compile(r'[A-Za-z_][A-Za-z0-9_]*')
 HEADER = '# SPDX-FileCopyrightText: mathspec Contributors\n#\n# SPDX-License-Identifier: MIT\n'
 
-#: The topic a declaration goes to, by the first word of its name.
+#: The topic an entry goes to, by the first word of its name.
 PREFIX_TOPIC = {
     'Generator': 'generator',
     'Link': 'link',
@@ -115,7 +115,7 @@ TOPIC_PREFIX = {topic: prefix for prefix, topic in PREFIX_TOPIC.items() if prefi
 Key = tuple[str, str]
 
 
-#: The components with unit commitment, whose declarations are cut by feature.
+#: The components with unit commitment, whose entries are cut by feature.
 COMMITTABLE = ('Generator', 'Link', 'Process')
 
 #: A feature of a committable component, by a pattern on the rest of the name;
@@ -128,7 +128,7 @@ FEATURES = (
 
 
 def topic(name: str) -> str:
-    """The fragment a declaration of *name* goes to."""
+    """The fragment an entry of *name* goes to."""
     if 'security' in name or 'BODF' in name:
         return 'security'
     prefix, _, rest = name.partition('_')
@@ -144,7 +144,7 @@ def topic(name: str) -> str:
 
 
 def _sliced(text: str) -> dict[Key, str]:
-    """The source lines of every declaration, cut where the next one at the same indent starts.
+    """The source lines of every entry, cut where the next one at the same indent starts.
 
     Slicing text rather than dumping parsed data keeps each block's formatting,
     so a fragment reads like the file it was cut from.
@@ -218,7 +218,7 @@ class Model:
 
     @property
     def keys(self) -> list[Key]:
-        """Every declaration, in the order of the source file."""
+        """Every entry, in the order of the source file."""
         return list(self.blocks)
 
     def frames(self) -> dict[str, tuple[str, ...]]:
@@ -270,7 +270,7 @@ def fragments(model: Model) -> dict[str, str]:
 
 
 def _dumped(name: str, block: Mapping[str, object], indent: str = '  ') -> str:
-    """A generated declaration, its long text folded one term per line."""
+    """A generated entry, its long text folded one term per line."""
     lines = [f'{indent}{name}:']
     for field, value in block.items():
         if value is None:
@@ -296,7 +296,7 @@ def _fragment(
     adds: Mapping[str, str],
     homes: set[str],
 ) -> str:
-    """One fragment as YAML text, its ``given:`` block first, then its sections and declarations in source order.
+    """One fragment as YAML text, its ``given:`` block first, then its sections and entries in source order.
 
     A term carries the hub it adds to as ``adds_to:``. A hub the fragment is
     home to is read under ``given:`` with its description, and the home of the
@@ -323,7 +323,7 @@ def _fragment(
 
 
 #: The kinds a fragment reads under `given:`, and the fields of the source
-#: declaration each restates beside the frame.
+#: entry each restates beside the frame.
 GIVEN_KINDS = {'parameters': ('dtype',), 'variables': ('domain',), 'expressions': (), 'masks': ()}
 
 

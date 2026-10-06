@@ -247,7 +247,7 @@ def test_macro_arity_errors(call, match):
     ],
 )
 def test_macro_collisions_rejected(patch, match):
-    """Helper names are reserved for every kind of declaration, not just macros."""
+    """Helper names are reserved for every kind of entry, not just macros."""
     with pytest.raises(LanguageError, match=match):
         schema(**patch)
 

@@ -12,9 +12,9 @@ other files. Do [your first spec](first-spec.md) first.
 ## The network
 
 Make a file `network.yaml`. It balances every bus, and it reads the injection
-at a bus under [`given:`](reference/language/declarations.md#given): what the
+at a bus under [`given:`](reference/language/entries.md#given): what the
 components put in is theirs to say, in
-[a term](reference/language/declarations.md#terms) each. It also sets the
+[a term](reference/language/entries.md#terms) each. It also sets the
 objective, and the objective reads the total cost the same way: what each
 component costs is a term of its own.
 
@@ -53,15 +53,15 @@ python -m mathspec check network.yaml
 The check accepts it, and notes each name it reads and does not define:
 
 ```text
-expression 'injection' is read here and declared elsewhere: the model this one is layered onto provides it. A consumer checks that it does, on the same frame, and refuses the program where it does not. A fragment is composed instead: merge() folds this declaration into the one a sibling introduces, or writes it from the terms siblings add.
-expression 'total_cost' is read here and declared elsewhere: the model this one is layered onto provides it. A consumer checks that it does, on the same frame, and refuses the program where it does not. A fragment is composed instead: merge() folds this declaration into the one a sibling introduces, or writes it from the terms siblings add.
+expression 'injection' is read here and declared elsewhere: the model this one is layered onto provides it. A consumer checks that it does, on the same frame, and refuses the program where it does not. A fragment is composed instead: merge() folds this entry into the one a sibling introduces, or writes it from the terms siblings add.
+expression 'total_cost' is read here and declared elsewhere: the model this one is layered onto provides it. A consumer checks that it does, on the same frame, and refuses the program where it does not. A fragment is composed instead: merge() folds this entry into the one a sibling introduces, or writes it from the terms siblings add.
 ```
 
 ## The generators
 
 Make a file `generators.yaml`. It says what the fleet puts into a bus as a
 named expression, `generation`. It reads the injection too, and
-[`adds_to:`](reference/language/declarations.md#terms) on `generation` names
+[`adds_to:`](reference/language/entries.md#terms) on `generation` names
 the injection as what the expression adds to. What the fleet costs is a term
 of the total cost in the same way, `generation_cost`. The two dimensions it shares
 with the network it restates as a dtype and nothing else: a description is not
@@ -367,7 +367,7 @@ python -m mathspec check emissions.yaml
 The check accepts it, and notes the variable it reads:
 
 ```text
-variable 'dispatch' is read here and declared elsewhere: the model this one is layered onto provides it. A consumer checks that it does, on the same frame, and refuses the program where it does not. A fragment is composed instead: merge() folds this declaration into the one a sibling introduces.
+variable 'dispatch' is read here and declared elsewhere: the model this one is layered onto provides it. A consumer checks that it does, on the same frame, and refuses the program where it does not. A fragment is composed instead: merge() folds this entry into the one a sibling introduces.
 ```
 
 Merge all five files:
@@ -406,7 +406,7 @@ fragments 'generators.yaml' and 'loads.yaml' add a term to 'injection', and no o
 
 - [Compose a spec from several files](howto/compose.md) covers `merge` and
   `override`, which lays a patch over a spec.
-- [`given`](reference/language/declarations.md#given) gives every rule a file
+- [`given`](reference/language/entries.md#given) gives every rule a file
   that reads another file obeys.
 - [A component library](examples/library/index.md) shows larger fragments
   beside the math they print.

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""One declaration typesets to the bare line the whole-model render prints for it."""
+"""One entry typesets to the bare line the whole-model render prints for it."""
 
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ PLAIN = varied(
         ),
     ],
 )
-def test_a_declaration_prints_the_line_the_whole_model_render_prints(model: dict, name: str, expected: str):
+def test_an_entry_prints_the_line_the_whole_model_render_prints(model: dict, name: str, expected: str):
     """The frame comes from the declared `dims` of a cased expression, a
     constraint or a variable, and from the body's own dims of a plain
     expression; the given/chosen cut a variable inside it decides."""

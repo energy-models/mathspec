@@ -374,7 +374,7 @@ def _absence_cells(subject: Subject, *, numeric: bool) -> list[Cell]:
 
 
 def _numeric(dtype: DeclaredDtype | None, literals: set[_Literal]) -> bool:
-    """Is this subject a magnitude? The declaration says so where it is known."""
+    """Is this subject a magnitude? The entry says so where it is known."""
     if dtype is not None:
         return dtype in ('float', 'int')
     return bool(literals) and all(isinstance(value, int | float) and not isinstance(value, bool) for value in literals)

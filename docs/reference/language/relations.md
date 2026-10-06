@@ -97,7 +97,7 @@ joins. It prints nothing for `refused`.
 
 ## How a relation is used
 
-The declaration fixes no direction. A call **joins** the operand to the
+The entry fixes no direction. A call **joins** the operand to the
 relation on the columns they share, and **groups** what the join produces. A
 call names columns of a relation as `relation[column]`, or as
 `relation[column, …]` for several columns of one table. The relation is written

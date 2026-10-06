@@ -17,7 +17,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
 
 1. **Write the network as a spec.** It balances the injection at a bus, and
    reads the injection under
-   [`given`](../reference/language/declarations.md#given): what the components
+   [`given`](../reference/language/entries.md#given): what the components
    put in is theirs to say. It sets the objective on `total_cost`, which it
    reads the same way: what each component costs is the component's to say.
    Nothing in it names a component class.
@@ -46,7 +46,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
 2. **Write each component file against the network.** It declares its own
    dimension and its own math. It reads `Bus_injection` too, and says what it
    puts into a bus as a named expression, a
-   [term](../reference/language/declarations.md#terms) whose `adds_to:` names
+   [term](../reference/language/entries.md#terms) whose `adds_to:` names
    `Bus_injection`. A component that costs something adds its cost to
    `total_cost` the same way.
 
@@ -197,21 +197,21 @@ which each component pins at its own port.
 
 ## What a fragment may share
 
-| The entry                                         | What happens                                                                                                                                                                                        |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                     |
-| a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                       |
-| `ordered: true` on a shared dimension             | it is a claim about the dimension rather than the dimension, so the dimension is ordered if one fragment says so                                                                                    |
-| `missing:` on a shared relation                   | it is a claim about the data, and the fragments that declare the relation say the same one. `missing: refused` is the same as no `missing:`                                                         |
-| any other declaration                             | one fragment declares it, and a second is refused                                                                                                                                                   |
-| an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the declaration where the introducer wrote none                                             |
-| a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                          |
-| a given mask                                      | the reader's `dims` name the dimensions the defining fragment's predicate reads, no more and no fewer                                                                                               |
-| a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                              |
-| an expression with `adds_to:`                     | the sum it names is the body one fragment defines, if any, followed by every term by its name, in the order of the list. [Terms](../reference/language/declarations.md#terms) gives what is refused |
-| `objective`                                       | one fragment sets it, and a second is refused. Several fragments contribute to it as terms of a sum the objective reads                                                                             |
-| `version`                                         | every fragment is written against the same one                                                                                                                                                      |
-| `description` at the top of a fragment            | it is about the fragment and is not carried. Pass the composed spec's as `description=`                                                                                                             |
+| The entry                                         | What happens                                                                                                                                                                                   |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                |
+| a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                  |
+| `ordered: true` on a shared dimension             | it is a claim about the dimension rather than the dimension, so the dimension is ordered if one fragment says so                                                                               |
+| `missing:` on a shared relation                   | it is a claim about the data, and the fragments that declare the relation say the same one. `missing: refused` is the same as no `missing:`                                                    |
+| any other entry                                   | one fragment declares it, and a second is refused                                                                                                                                              |
+| an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the entry where the introducer wrote none                                              |
+| a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                     |
+| a given mask                                      | the reader's `dims` name the dimensions the defining fragment's predicate reads, no more and no fewer                                                                                          |
+| a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                         |
+| an expression with `adds_to:`                     | the sum it names is the body one fragment defines, if any, followed by every term by its name, in the order of the list. [Terms](../reference/language/entries.md#terms) gives what is refused |
+| `objective`                                       | one fragment sets it, and a second is refused. Several fragments contribute to it as terms of a sum the objective reads                                                                        |
+| `version`                                         | every fragment is written against the same one                                                                                                                                                 |
+| `description` at the top of a fragment            | it is about the fragment and is not carried. Pass the composed spec's as `description=`                                                                                                        |
 
 ## A name two fragments declare
 
@@ -250,7 +250,7 @@ constraints:
 ```
 
 ```text
-fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'missing': 'absent'}. A given declaration says the same as the declaration it is folded into, or less: restate the frame as the introducer declares it, or leave the field out.
+fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'missing': 'absent'}. A given entry says the same as the entry it is folded into, or less: restate the frame as the introducer declares it, or leave the field out.
 ```
 
 Two fragments that both only read a column have to read it the same way, and
@@ -271,7 +271,7 @@ Given variable 'Generator_p' collides with the variable of the same name. Names 
 ## A base and its patches
 
 1. **Write the base as a spec**, and each patch as the change it makes. A
-   patch names only the fields it changes. A declaration a patch does not name
+   patch names only the fields it changes. An entry a patch does not name
    stays as the base wrote it. A named expression the patch writes on one line
    replaces only the body, `expression:` or `cases:`. The entry keeps its
    `dims:`, its description and its `adds_to:`, so the new body carries no
@@ -324,8 +324,8 @@ Given variable 'Generator_p' collides with the variable of the same name. Names 
    `spec` declares `emission_cap` beside `power_balance`, and `dispatch` carries
    the mask `capacity > 0`.
 
-3. **Remove a declaration with `null`.** A patch that does not mention a
-   declaration leaves it alone, so removal needs a marker of its own.
+3. **Remove an entry with `null`.** A patch that does not mention an
+   entry leaves it alone, so removal needs a marker of its own.
 
    ```yaml title="feasibility.yaml"
    constraints:
@@ -333,17 +333,17 @@ Given variable 'Generator_p' collides with the variable of the same name. Names 
    objective: null
    ```
 
-   A `null` makes what it names absent. On a declaration, the declaration is
-   removed. On a field, the field takes its default and the declaration stays:
+   A `null` makes what it names absent. On an entry, the entry is
+   removed. On a field, the field takes its default and the entry stays:
    `dispatch: { where: null }` gives that variable no mask, and
    `dispatch: { bounds: { upper: null } }` leaves it open above. Higher up,
-   `constraints: null` is refused, because a section is not a declaration and
+   `constraints: null` is refused, because a section is not an entry and
    nulling it removes nothing.
 
 4. **Put a patch that refines another after it.** `override` lays the
    patches in the order of the list, each on the result of the ones before.
    Where two patches write one field, the later one wins. A later patch may
-   also edit or remove a declaration an earlier one creates.
+   also edit or remove an entry an earlier one creates.
 
    ```python
    spec = ms.override('base.yaml', ['pathway.yaml', 'project.yaml'])
@@ -351,28 +351,28 @@ Given variable 'Generator_p' collides with the variable of the same name. Names 
 
 ## What a patch may say
 
-| The entry                            | What happens                                                                  |
-| ------------------------------------ | ----------------------------------------------------------------------------- |
-| some fields of a declaration         | those fields change, and the rest of the declaration stays                    |
-| a whole declaration under a new name | it is added                                                                   |
-| `null` under a declaration's name    | it is removed                                                                 |
-| `null` on a field of a declaration   | the field takes its default, and the rest of the declaration stays            |
-| `null` under a section's name        | it is refused                                                                 |
-| a dimension or a relation            | it is added, or restated as the base declares it                              |
-| `ordered:` on a restated dimension   | `true` makes the dimension ordered; `false` over an ordered one is refused    |
-| `missing:` on a relation             | it changes what a key the map leaves out means, as on a parameter             |
-| an entry under one kind of `given:`  | it is edited, added or removed like any declaration, and the other kinds stay |
-| `version`, `description`             | the patch's value replaces the base's                                         |
-| a field an earlier patch writes      | the later patch's value replaces it                                           |
+| The entry                           | What happens                                                               |
+| ----------------------------------- | -------------------------------------------------------------------------- |
+| some fields of an entry             | those fields change, and the rest of the entry stays                       |
+| a whole entry under a new name      | it is added                                                                |
+| `null` under an entry's name        | it is removed                                                              |
+| `null` on a field of an entry       | the field takes its default, and the rest of the entry stays               |
+| `null` under a section's name       | it is refused                                                              |
+| a dimension or a relation           | it is added, or restated as the base declares it                           |
+| `ordered:` on a restated dimension  | `true` makes the dimension ordered; `false` over an ordered one is refused |
+| `missing:` on a relation            | it changes what a key the map leaves out means, as on a parameter          |
+| an entry under one kind of `given:` | it is edited, added or removed like any entry, and the other kinds stay    |
+| `version`, `description`            | the patch's value replaces the base's                                      |
+| a field an earlier patch writes     | the later patch's value replaces it                                        |
 
 ## A partial entry on a missing name
 
-An entry naming some fields has to land on a declaration the base or an
+An entry naming some fields has to land on an entry the base or an
 earlier patch has. A mistyped name is refused rather than read as a new
-declaration:
+entry:
 
 ```text
-patch 'project.yaml' edits the constraint 'power_balnce', which its base does not declare. Did you mean 'power_balance'? A patch creates a declaration only by writing it whole, and this one is not: a constraint needs `expression`.
+patch 'project.yaml' edits the constraint 'power_balnce', which its base does not declare. Did you mean 'power_balance'? A patch creates an entry only by writing it whole, and this one is not: a constraint needs `expression`.
 ```
 
 To add a constraint, write the whole constraint. To change one, spell its name
@@ -381,13 +381,13 @@ as the base spells it.
 ## A dimension redeclared
 
 A patch may add a dimension or a relation, and may restate one the base
-declares. The restatement says what the base says: half a declaration is a
+declares. The restatement says what the base says: half an entry is a
 second reading of the same name, and a field written at its default is the
 same as one left out. Changing one under the expressions already written
 over it is refused, and so is removing one:
 
 ```text
-patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch adjusts the math, not the coordinate space the math is already written over: restate the declaration word for word, leave it out, or give the patch a dimension of its own under a name of its own.
+patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch adjusts the math, not the coordinate space the math is already written over: restate the entry word for word, leave it out, or give the patch a dimension of its own under a name of its own.
 ```
 
 `ordered` is a claim about the dimension, not the dimension. A patch may add
@@ -406,17 +406,17 @@ back.
 
 ## A section set to `null`
 
-A `null` removes the declaration it names. A section holds declarations rather
+A `null` removes the entry it names. A section holds entries rather
 than being one, so nulling a section is refused rather than read as emptying
 it:
 
 ```text
-patch 'project.yaml' sets 'constraints' to null, which removes nothing: the removal marker names one declaration, and a section is not one. Remove the declarations one at a time, each under its own name, or leave the section out of the patch.
+patch 'project.yaml' sets 'constraints' to null, which removes nothing: the removal marker names one entry, and a section is not one. Remove the entries one at a time, each under its own name, or leave the section out of the patch.
 ```
 
 ## A stale removal
 
-A removal says what the base has, so a removal of a declaration the base does
+A removal says what the base has, so a removal of an entry the base does
 not have is refused with the near miss:
 
 ```text

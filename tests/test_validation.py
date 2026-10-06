@@ -91,7 +91,7 @@ class TestValidateExpressions:
             ),
         ],
     )
-    def test_a_bad_declaration_is_refused_at_load(self, patch, fragments):
+    def test_a_bad_entry_is_refused_at_load(self, patch, fragments):
         with pytest.raises(LanguageError) as exc:
             _schema(**patch)
         for fragment in fragments:
@@ -124,7 +124,7 @@ class TestValidateExpressions:
         """Validation raised after the macros and the `expressions:` entries, so a constraint's fault waited for the next load."""
         message = _refusal(**patch, constraints={'c': {'dims': ['g'], 'expression': 'p <= also_nope'}})
         assert "'nope' not found" in message
-        assert "Constraint 'c': 'also_nope' not found" in message, 'every declaration is read, whatever an entry did'
+        assert "Constraint 'c': 'also_nope' not found" in message, 'every entry is read, whatever an entry did'
 
     def test_a_refused_call_is_not_read_by_the_call_around_it(self):
         """`sum(sum(p, over=lk[g]))`: the inner call writes a selection in `over=`, and the outer bare sum then said its operand was already a scalar, because the refused call was still built."""
@@ -148,12 +148,12 @@ class TestValidateExpressions:
         ],
     )
     def test_a_nonlinear_entry_is_refused_where_the_math_reads_it(self, patch, fragments):
-        """The refusal a nonlinear body once earned at its own declaration now fires where the math reads it.
+        """The refusal a nonlinear body once earned at its own entry now fires where the math reads it.
 
         `bad` (a variable divisor) loads on its own — nothing reads it, so it
         is a reported quantity. The constraint and the objective
         read it and hit the divisor ban at their own ceiling, which is the whole
-        point of grading rather than banning at declaration. The piecewise-link
+        point of grading rather than banning where it is written. The piecewise-link
         position is `test_a_link_reading_a_nonlinear_entry_is_refused`; a bound
         and a where, which reference no expression at all, are
         `test_a_bound_or_where_cannot_name_an_expression`.
@@ -192,7 +192,7 @@ class TestValidateExpressions:
         because it is arithmetic over solved numbers, so a typo that leaves it
         unread is not caught by the loader. The language pays that cost openly —
         the entry loads, says the math does not read it, and prints as a
-        definition like any other — rather than degree-checking a declaration
+        definition like any other — rather than degree-checking an entry
         nothing consumes.
         """
         model = varied(SMALL_MODEL, expressions={'lcoe': 'c / sum(p)'})
@@ -1184,11 +1184,11 @@ class TestRulesDecidedWithoutData:
                     'variables.s_seg': {'dims': ['g'], 'domain': 'binary'},
                 },
                 ("its expansion writes variable 's_seg'",),
-                id='sos-whose-expansion-collides-with-a-declaration',
+                id='sos-whose-expansion-collides-with-an-entry',
             ),
             pytest.param(
                 {'relations.tag': {'key': 'g', 'dtype': 'str'}},
-                ("unknown key 'dtype' in a relation declaration. Valid keys: description, key, missing, values.",),
+                ("unknown key 'dtype' in a relation entry. Valid keys: description, key, missing, values.",),
                 id='relation-with-a-dtype-of-its-own',
             ),
             pytest.param({'relations.tag': {'key': 'g'}}, ('has 1 column(s)',), id='relation-with-one-column'),
@@ -1407,12 +1407,12 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'relations.lk.rows': {'g1': 'h1'}},
-                ("unknown key 'rows' in a relation declaration", 'Valid keys'),
+                ("unknown key 'rows' in a relation entry", 'Valid keys'),
                 id='a-relation-declaring-its-map',
             ),
             pytest.param(
                 {'relations.lk.value': 'h'},
-                ("unknown key 'value' in a relation declaration", "Did you mean 'values'?"),
+                ("unknown key 'value' in a relation entry", "Did you mean 'values'?"),
                 id='a-relation-naming-one-value-column',
             ),
             pytest.param(
@@ -1450,7 +1450,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'dimensions.g.values': ['a', 'b']},
-                ("unknown key 'values' in a dimension declaration", 'Valid keys'),
+                ("unknown key 'values' in a dimension entry", 'Valid keys'),
                 id='a-dimension-declaring-its-members',
             ),
             pytest.param(
@@ -1543,7 +1543,7 @@ class TestRulesDecidedWithoutData:
                 {
                     'dimensions.z': {},
                     # only a bare relation may key two columns over one dimension: a key that
-                    # determines a value is refused for it at the declaration
+                    # determines a value is refused for it at the entry
                     'relations.bare': {'key': {'k': 'g', 'j0': 'h', 'j1': 'h', 'm': 'z'}},
                     'objective': {'expression': 'sum(sum(q, over=k, by=bare[m]))'},
                 },
@@ -1856,7 +1856,7 @@ class TestTheFrontDoor:
         assert to_spec(parse_yaml(model.to_yaml())) == model
 
     def test_an_empty_list_survives_the_round_trip(self):
-        """`dims: []` is a scalar declaration, not an absence — stripping it would put the variable on every dim it names."""
+        """`dims: []` is a scalar entry, not an absence — stripping it would put the variable on every dim it names."""
         model = _schema(**{'variables.p.dims': []})
         assert model.to_dict()['variables']['p']['dims'] == [], 'the empty frame is written out, not dropped'
         assert to_spec(model.to_dict()).variables['p'].dims == [], 'and reads back as the scalar it declares'
@@ -1903,7 +1903,7 @@ def _cased(cases: dict[str, Any] | None = None, **block: Any) -> dict[str, Any]:
 
 
 class TestExpressionCases:
-    """`cases:` on a named expression — the declaration, and the shape it must have."""
+    """`cases:` on a named expression — the entry, and the shape it must have."""
 
     def test_a_cased_expression_loads(self):
         block = to_spec(_cased()).expressions['headroom']
@@ -2050,7 +2050,7 @@ class TestExpressionCases:
         with pytest.raises(DimensionError, match='snapshot'):
             to_spec(model)
 
-    def test_a_fault_in_an_arm_names_the_declaration_and_is_reported_once(self):
+    def test_a_fault_in_an_arm_names_the_entry_and_is_reported_once(self):
         """The block is resolved once, and the fault is in one place.
 
         Naming the use site would report a case on a constraint that has none,
@@ -2111,14 +2111,14 @@ class TestANumberIsAnExpression:
             _schema(**{'expressions.always': {'expression': True}})
 
 
-class TestADeclarationIsNamed:
-    """A declaration's key must be a name the expression grammar could write.
+class TestAnEntryIsNamed:
+    """An entry's key must be a name the expression grammar could write.
 
     Nothing checked it, so `parameters: {'': {...}}` loaded, and a piecewise
     block naming it under `points:` had its mask silently dropped —
     `if mask:` in the expansion read a declared parameter as "this block
     masks nothing", and the weights came out unmasked. Every unwritable name
-    has the same shape: a declaration no expression can reach, in a language
+    has the same shape: an entry no expression can reach, in a language
     whose promise is that the file decides.
     """
 
@@ -2148,7 +2148,7 @@ class TestADeclarationIsNamed:
         ],
     )
     def test_a_name_no_expression_could_write_is_refused(self, section: str, name: str):
-        declarations: dict[str, Any] = {
+        entries: dict[str, Any] = {
             'dimensions': {'dtype': 'str'},
             'relations': {'key': 'g', 'values': 'h'},
             'parameters': {'dims': ['g']},
@@ -2160,7 +2160,7 @@ class TestADeclarationIsNamed:
             'sos': {'variable': 'p', 'along': 'g', 'type': 1},
         }
         model = copy.deepcopy(SMALL_MODEL)
-        model.setdefault(section, {})[name] = declarations[section]
+        model.setdefault(section, {})[name] = entries[section]
         with pytest.raises(LanguageError, match='is not a name'):
             to_spec(model)
 
@@ -2192,7 +2192,7 @@ def test_an_expression_too_deep_to_walk_fails_as_a_language_error(patch, nests):
 
     A 400-term sum is a model a generator writes, not a pathological input, so
     what a reader got for it was a traceback through `expansion._descend` with
-    nothing naming the file, the declaration, or what to write instead.
+    nothing naming the file, the entry, or what to write instead.
     """
     with pytest.raises(LanguageError, match='past the 100 levels'):
         to_spec(varied(DISPATCH_MODEL, **patch))
@@ -2238,11 +2238,11 @@ def test_a_name_may_open_with_an_underscore():
     assert '_reserve' in schema.parameters, 'a leading underscore is a name, as NAME and the schema both say'
 
 
-def test_each_declaration_is_resolved_once_however_many_readers(monkeypatch):
+def test_each_entry_is_resolved_once_however_many_readers(monkeypatch):
     """Loading, lowering and typesetting a model resolve each expression and where string once.
 
     Every reader after validation — the dim rules, the typesetter — used to
-    parse, expand and resolve the declaration's text again, so one constraint
+    parse, expand and resolve the entry's text again, so one constraint
     was resolved four times per load and the trees the readers walked were
     built apart from the one the language checked (#401). They read the
     program lowering built now. A curve's links were resolved again for its
@@ -2457,7 +2457,7 @@ def test_a_bare_parameter_whose_answer_needs_the_data_loads(patch):
 def test_a_given_parameter_has_no_missing():
     """The file that declares the parameter owns what a missing row means, as it owns a variable's bounds."""
     message = _refusal(**{'given.parameters.d': {'dims': ['g'], 'missing': 'neutral'}})
-    assert "unknown key 'missing' in a given parameter declaration" in message
+    assert "unknown key 'missing' in a given parameter entry" in message
 
 
 @pytest.mark.parametrize(

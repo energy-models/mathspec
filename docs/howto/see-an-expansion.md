@@ -12,7 +12,7 @@ concept of a set.
 
 ## 1. Write the formulation out
 
-`expand()` writes each formulation out as plain declarations, and `to_yaml()`
+`expand()` writes each formulation out as plain entries, and `to_yaml()`
 prints the result as a file.
 
 === "Python"

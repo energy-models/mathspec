@@ -2,10 +2,10 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The front door, and the rules a declaration is held to against the others before any expression is read.
+"""The front door, and the rules an entry is held to against the others before any expression is read.
 
 [`to_spec`][] reads a spec definition into a [`Spec`][].
-[`reference_errors`][] holds the rules one declaration is held to against
+[`reference_errors`][] holds the rules one entry is held to against
 the others — a name declared once, a frame over declared dimensions, a bound
 naming a numeric parameter, a set over one dim of one variable, a curve
 through parameters carrying its breakpoints — which lowering runs before it
@@ -41,7 +41,7 @@ def to_spec(spec: str | Path | Mapping[str, object] | Spec) -> Spec:
     """Load and validate a spec definition — the language's front door.
 
     Everything decidable without data is decided here: schema shape, every
-    rule one declaration is held to against the others, every expression and
+    rule one entry is held to against the others, every expression and
     where string, and every macro template.
 
     Args:
@@ -58,7 +58,7 @@ def to_spec(spec: str | Path | Mapping[str, object] | Spec) -> Spec:
         FileNotFoundError: A ``str`` with no newline that names no file.
     """
     if isinstance(spec, (list, tuple)):
-        msg = 'a spec is one file, one dict or one Spec, never a list of them; merge the declarations into one dict.'
+        msg = 'a spec is one file, one dict or one Spec, never a list of them; merge the entries into one dict.'
         raise SchemaError(msg)
     if isinstance(spec, Spec):
         return spec
@@ -79,7 +79,7 @@ def emitted_name_errors(schema: Spec, program: Program) -> list[str]:
 
 
 def reference_errors(schema: Spec) -> list[str]:
-    """Every cross-declaration rule *schema* breaks, collected rather than raised on the first."""
+    """Every cross-entry rule *schema* breaks, collected rather than raised on the first."""
     return [
         *_name_collisions(schema),
         *_frame_dimensions(schema),
@@ -93,12 +93,12 @@ def reference_errors(schema: Spec) -> list[str]:
 
 
 def undeclared_dimension(kind: str, name: str, dimension: str) -> str:
-    """The one wording for a declaration naming a dimension the file does not declare."""
+    """The one wording for an entry naming a dimension the file does not declare."""
     return f"{kind} '{name}' references undeclared dimension '{dimension}'. Declare it under 'dimensions:'."
 
 
 def _flat_namespace(schema: Spec) -> list[tuple[str, Iterable[str]]]:
-    """Each kind of declaration whose names share the one namespace an expression reads, in declaration order."""
+    """Each kind of entry whose names share the one namespace an expression reads, in file order."""
     return [
         ('dimension', schema.dimensions),
         ('relation', schema.relations),
@@ -349,7 +349,7 @@ def _piecewise_references(schema: Spec) -> Iterator[str]:
 def _collisions(schema: Spec, context: str, by_kind: Iterable[tuple[str, Iterable[str]]]) -> Iterator[str]:
     """The refusal for each name *context*'s expansion writes that the file already declares, by kind.
 
-    An emitted variable joins the flat namespace, so any declaration there
+    An emitted variable joins the flat namespace, so any entry there
     takes its name; a constraint, a set and an assumption each have their own.
     """
     sections = {'named expression': 'expressions', 'sos': 'sos', 'given variable': 'given: variables'}

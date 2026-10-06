@@ -237,7 +237,7 @@ class Walk:
         self._parameters = {**program.parameters, **program.given.parameters}
 
     def _frame_of(self, name: str) -> list[str]:
-        """The dims named expression *name* is read over, as its declaration carries them."""
+        """The dims named expression *name* is read over, as its entry carries them."""
         entry = self.program.expressions.get(name) or self.program.given.expressions[name]
         return list(entry.dims)
 
@@ -406,7 +406,7 @@ class Walk:
         return node
 
     def _sum(self, node: Sum, ctx: _Context) -> tuple[str, int]:
-        """A reduction over named dims: one dummy index per dim, in declaration order, or the group-by over a join."""
+        """A reduction over named dims: one dummy index per dim, in file order, or the group-by over a join."""
         if isinstance(node.operand, Join) and node.operand.columns.axes:
             return self._grouped_sum(node.operand, ctx)
         memberships = []
@@ -652,7 +652,7 @@ class Walk:
             return f'{self.format.prose("where ")} {condition}'
         return f'{self._op("forall")} {over} {self._op("such_that")} {condition}'
 
-    # -- declarations ------------------------------------------------------
+    # -- entries ------------------------------------------------------
 
     def equations(self) -> list[tuple[str, list[Line]]]:
         """Every titled section of equations."""
@@ -702,7 +702,7 @@ class Walk:
         )
 
     def _definitions(self) -> list[Line]:
-        """One line per named expression, in declaration order, defining it.
+        """One line per named expression, in file order, defining it.
 
         A use prints the symbol and the block prints here, as a paper states a
         quantity it names. Every declared one prints, used or not. Inlining

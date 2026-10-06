@@ -4,7 +4,7 @@
 
 """Expand ``piecewise:`` blocks into plain variables and constraints.
 
-A block becomes ordinary affine declarations when a caller asks
+A block becomes ordinary affine entries when a caller asks
 [`expand`][mathspec.spec.Spec.expand] for them, under names prefixed with the
 block's own; what each method emits is tabled in
 ``docs/reference/language/piecewise.md``. Every rule a block is held to is
@@ -277,7 +277,7 @@ class Emitted:
 
     @property
     def by_kind(self) -> tuple[tuple[str, tuple[str, ...]], ...]:
-        """Each name by the kind of declaration it would collide with."""
+        """Each name by the kind of entry it would collide with."""
         return (
             ('variable', (self.lam, self.set.seg)),
             (
@@ -310,7 +310,7 @@ def leaves_ungated(gate: VariableSpec | Variable | None) -> bool:
 def curve_frame(schema: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expression]) -> tuple[str, ...]:
     """The dimensions block *name* builds one curve per coordinate of: every one its links and its gate carry.
 
-    In declaration order, because iterating a set would vary the emitted
+    In file order, because iterating a set would vary the emitted
     ``dims`` — and every column index behind it — per process. *links* are the
     block's link expressions typed, as [`resolve_links`][] answers.
 
@@ -371,7 +371,7 @@ class _Block:
         self.frame = curve.frame
 
     def expand(self) -> None:
-        """Write the block's declarations into the raw spec."""
+        """Write the block's entries into the raw spec."""
         if self.pw.method == 'lp':
             self._segment_lines()
         else:

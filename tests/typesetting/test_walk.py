@@ -59,7 +59,7 @@ def test_a_where_lands_on_the_quantifier_not_in_the_equation(name: FormatName, f
     text = typeset(model, name, legend=False)
     forall, such_that = fmt.operators['forall'], fmt.operators['such_that']
     masked = [line for line in text.splitlines() if such_that in line]
-    assert len(masked) == 1, 'one declaration carries a mask, so exactly one line says so'
+    assert len(masked) == 1, 'one entry carries a mask, so exactly one line says so'
     assert masked[0].index(forall) < masked[0].index(such_that), 'the mask follows the quantifier, not the equation'
 
 
@@ -955,7 +955,7 @@ def test_a_curve_prints_what_its_method_assumes_of_the_breakpoints(name: FormatN
     assert fmt.operators['or'] in section, 'the either-way bend is two counts joined by or, one per direction'
 
 
-def test_an_assumption_is_a_declaration_a_line_may_be_asked_for():
+def test_an_assumption_is_an_entry_a_line_may_be_asked_for():
     """`typeset_line` prints one line for a name; an assumption is now one of the names it takes."""
     model = varied(DISPATCH_MODEL, assumptions={'costs_are_positive': 'cost > 0'})
     assert typeset_line(model, 'costs_are_positive', 'latex') == (

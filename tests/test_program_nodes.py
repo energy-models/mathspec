@@ -55,7 +55,7 @@ def test_every_program_node_is_one_some_file_lowers_to(kinds):
     reached, declared = kinds
     assert declared <= reached, (
         f'{FIXTURE.name} lowers to none of {sorted(declared - reached)}. A node no file reaches is '
-        f'one whose lowering nobody has run — add a declaration using the construct it stands for.'
+        f'one whose lowering nobody has run — add an entry using the construct it stands for.'
     )
 
 

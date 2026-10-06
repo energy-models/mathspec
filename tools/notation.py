@@ -9,7 +9,7 @@
 
 The source is ``tests/typesetting/golden/model.yaml``, the one spec that
 carries every construct — ``tests/typesetting/test_golden.py`` holds it to the
-language, and this tool emits a row for every declaration in it. The fixture's
+language, and this tool emits a row for every entry in it. The fixture's
 own case-label comments become the captions; :data:`FAMILIES` gives each row
 its heading and its place on the page.
 """
@@ -54,11 +54,11 @@ BEGIN, END = '<!-- notation:begin -->', '<!-- notation:end -->'
 BLOCKS = ('objective', 'constraints', 'expressions', 'masks', 'variables', 'piecewise', 'sos', 'assumptions')
 
 #: The page's sections in the order of the language reference, and in each the
-#: fixture's declarations under the construct they show. The declaration name
+#: fixture's entries under the construct they show. The entry name
 #: is the fixture's and no reader searches for it, so it stays in the YAML and
 #: the heading names the construct. Within a section the order is the file's
 #: wherever a caption reads against the row above it ("its adjoint", "the same
-#: window"). Every declaration of the fixture is here exactly once, or the
+#: window"). Every entry of the fixture is here exactly once, or the
 #: tool refuses to write the page.
 FAMILIES: dict[str, dict[str, str]] = {
     'Variable domains': {
@@ -168,12 +168,12 @@ FAMILIES: dict[str, dict[str, str]] = {
     },
 }
 
-#: Declarations whose caption says nothing its heading does not, so the page
+#: Entries whose caption says nothing its heading does not, so the page
 #: prints the heading alone.
 NAMED_BY_HEADING = frozenset({'spill', 'slack', 'theta', 'balance'})
 
 
-class Declaration:
+class Entry:
     """One block of the fixture: its name, the block it sits in, its YAML, and the caption beside it."""
 
     def __init__(self, name: str, block: str, lines: list[str], caption: str) -> None:
@@ -188,7 +188,7 @@ class Declaration:
 
     @property
     def yaml(self) -> str:
-        """The declaration under the key of its block, with the caption comment removed.
+        """The entry under the key of its block, with the caption comment removed.
 
         The key is kept because the heading names the construct rather than
         the block, and a section mixes blocks: the fragment is where a reader
@@ -218,20 +218,20 @@ def _described(line: str, lines: list[str]) -> bool:
     return line in lines[start:end]
 
 
-def declarations(text: str) -> dict[str, list[Declaration]]:
+def entries(text: str) -> dict[str, list[Entry]]:
     """The fixture's blocks, by section, in file order.
 
     Scanned rather than parsed by a YAML reader: the comments are the captions,
     and a reader that keeps them is a dependency this repo does not have.
     """
-    found: dict[str, list[Declaration]] = {section: [] for section in BLOCKS}
+    found: dict[str, list[Entry]] = {section: [] for section in BLOCKS}
     section, current = None, None
     for line in text.splitlines():
         if match := re.match(r'^(\w+):', line):
             section = match[1] if match[1] in BLOCKS else None
             current = None
             if section == 'objective':
-                current = Declaration('objective', section, [line], _caption(line))
+                current = Entry('objective', section, [line], _caption(line))
                 found[section].append(current)
             continue
         if section is None:
@@ -242,7 +242,7 @@ def declarations(text: str) -> dict[str, list[Declaration]]:
                 current.lines.append(line)
             continue
         if match := re.match(r'^  (\w+):', line):
-            current = Declaration(match[1], section, [line], _caption(line))
+            current = Entry(match[1], section, [line], _caption(line))
             found[section].append(current)
         elif current is not None and line.strip():
             current.lines.append(line)
@@ -250,7 +250,7 @@ def declarations(text: str) -> dict[str, list[Declaration]]:
 
 
 def _caption(line: str) -> str:
-    """The trailing comment on a declaration's first line, if it carries one."""
+    """The trailing comment on an entry's first line, if it carries one."""
     match = re.search(r'#\s*(.+)$', line)
     return match[1].strip() if match else ''
 
@@ -312,15 +312,12 @@ def block() -> str:
     printed = equations(rendered)
     written = equations(to_markdown(to_spec(MODEL).expand('sos'), numbered=False))
     found = {
-        one.name: one
-        for section, ones in declarations(MODEL.read_text()).items()
-        if section != 'piecewise'
-        for one in ones
+        one.name: one for section, ones in entries(MODEL.read_text()).items() if section != 'piecewise' for one in ones
     }
     placed = [name for rows in FAMILIES.values() for name in rows]
     twice = sorted({name for name in placed if placed.count(name) > 1})
     assert set(placed) == set(found) and not twice, (
-        f'every declaration of the fixture has one heading in FAMILIES: missing '
+        f'every entry of the fixture has one heading in FAMILIES: missing '
         f'{sorted(set(found) - set(placed))}, not in the fixture {sorted(set(placed) - set(found))}, twice {twice}'
     )
     for family, rows in FAMILIES.items():
@@ -366,7 +363,7 @@ def _curves() -> list[str]:
         written = equations(to_markdown(spec.expand('piecewise'), symbols=table, numbered=False))
         found = [
             block
-            for block in declarations(source.read_text())['piecewise']
+            for block in entries(source.read_text())['piecewise']
             if (block.field('method') or 'adjacency') == method
         ]
         assert found, f'{source.name} declares no piecewise block with method: {method}'
@@ -405,7 +402,7 @@ def _table_shown(table: Path | None) -> str:
     A curve prints through its breakpoint parameters, whose names are the data
     preparation's rather than the literature's. Renaming them in the typesetter
     would be a symbol a reader could not trace back to the file, so the rename
-    is a **declaration** — the same ``--symbols`` sidecar any reader may write —
+    is **declared** — in the same ``--symbols`` sidecar any reader may write —
     and the page shows it rather than performing it.
     """
     if table is None:
@@ -417,13 +414,13 @@ def _table_shown(table: Path | None) -> str:
     )
 
 
-def _row(declaration: Declaration, heading: str, printed: dict[str, str]) -> str:
+def _row(entry: Entry, heading: str, printed: dict[str, str]) -> str:
     """One construct: what it is called, what it is for, what it says, and what it prints."""
-    shown = declaration.caption and declaration.name not in NAMED_BY_HEADING
-    caption = f'{declaration.caption}\n\n' if shown else ''
-    assert declaration.name in printed, f'{declaration.name} declares math and the walk printed none of it'
-    math = printed[declaration.name]
-    return f'#### {heading}\n\n{caption}```yaml\n{declaration.yaml}\n```\n\n{math}'
+    shown = entry.caption and entry.name not in NAMED_BY_HEADING
+    caption = f'{entry.caption}\n\n' if shown else ''
+    assert entry.name in printed, f'{entry.name} declares math and the walk printed none of it'
+    math = printed[entry.name]
+    return f'#### {heading}\n\n{caption}```yaml\n{entry.yaml}\n```\n\n{math}'
 
 
 def rendered_page(page: str) -> str:

@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 #: rebuilds it.
 Sign = Literal['+', '-']
 
-#: Where a declaration's expression text sits under a section, once the spec is
+#: Where an entry's expression text sits under a section, once the spec is
 #: plain data. A link is the odd one: it serialises back to the ``[expression,
 #: values]`` list the file wrote, so its expression is a position rather than a
 #: key.
@@ -189,7 +189,7 @@ def canonical_text(text: str) -> str:
 
 
 def _canonical_block(block: object) -> object:
-    """One declaration, with every expression under it normalised and everything else untouched."""
+    """One entry, with every expression under it normalised and everything else untouched."""
     if isinstance(block, dict):
         return {
             key: canonical_text(value)
@@ -208,7 +208,7 @@ def _canonical_links(links: list[list[object]]) -> list[list[object]]:
 
 
 def _sorted_blocks(section: dict[str, object], *, bare_is_expression: bool = False) -> dict[str, object]:
-    """One section's declarations sorted by name, each with its expressions in the normal form.
+    """One section's entries sorted by name, each with its expressions in the normal form.
 
     A named expression written on one line serialises back as a bare string,
     which is the expression itself, so *bare_is_expression* normalises it too.
@@ -222,10 +222,10 @@ def _sorted_blocks(section: dict[str, object], *, bare_is_expression: bool = Fal
 def canonical_dict(spec: Spec) -> dict[str, object]:
     """The spec as plain data, in the form two files that state the same spec share.
 
-    Declarations are sorted by name, the ones under each kind of ``given:``
+    Entries are sorted by name, the ones under each kind of ``given:``
     too, and every expression is printed from its parsed tree, so what is left of a difference is a difference in the spec.
     A ``where`` string, the order of a ``cases:`` block's regions, the order of
-    a declaration's ``dims`` and the order of a piecewise block's links are all
+    an entry's ``dims`` and the order of a piecewise block's links are all
     left as written.
 
     Args:

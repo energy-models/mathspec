@@ -60,7 +60,7 @@ its numbers is on [what a curve assumes](assumptions.md#what-a-curve-assumes).
 `activity:` names a binary variable, and the weights then sum to that variable
 instead of to 1. So `0` pins the curve off.
 
-The gate is a declaration:
+The gate is a variable entry:
 
 ```yaml
 variables:
@@ -98,7 +98,7 @@ run, anywhere on the axis.
 
 ### Missing breakpoints
 
-A parameter a block reads takes [`missing:`](declarations.md#a-missing-row)
+A parameter a block reads takes [`missing:`](entries.md#a-missing-row)
 like any other parameter, and reads it alike inside and outside the curve.
 **A values parameter of a curve with `points:` is not `refused`.** The curve
 stops where the mask stops, so the table has no rows past it by design.

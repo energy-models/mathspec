@@ -148,7 +148,7 @@ def test_the_table_may_rename_a_named_expression_cased_or_plain():
     assert 's_{t} & =' in tex, 'the definition prints under the spelling the table gave'
 
 
-def test_the_definitions_print_in_declaration_order():
+def test_the_definitions_print_in_file_order():
     """The file's order, not a set's — six of them, so a shuffle cannot pass by luck.
 
     The names were once collected into a `frozenset`, whose iteration order
@@ -160,4 +160,4 @@ def test_the_definitions_print_in_declaration_order():
     tex = to_latex(varied(CASED, **{f'expressions.{n}': BY_REGION for n in declared}), legend=False)
     section = tex[tex.index('Definitions') : tex.index('Variable domains')]
     labels = re.findall(r'^\\text\{(\w+)\} &&', section, flags=re.MULTILINE)
-    assert labels == ['headroom', *declared], "declaration order, the file's own"
+    assert labels == ['headroom', *declared], "file order, the file's own"

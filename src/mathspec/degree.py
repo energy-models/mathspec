@@ -7,7 +7,7 @@
 **Degree 2 in the math, degree 1 in what stands beside it.** An objective and a
 constraint both take ``variable * variable``; a *bound* and a ``piecewise:``
 link do not — each of those is read affinely. An ``expressions:`` entry is not
-degree-checked at declaration at all: the math reading it is checked where it
+degree-checked where it is written: the math reading it is checked where it
 reads, at that position's own ceiling, and an entry the math never reads
 (``NamedExpression.in_math``) is held to no degree.
 
@@ -41,7 +41,7 @@ def check_binary(node: Multiply | Divide | Power, context: str, *, ceiling: int)
 
     Args:
         node: The product, quotient or power to judge.
-        context: What to name in the message — the declaration being read.
+        context: What to name in the message — the entry being read.
         ceiling: The highest degree this position can honour — 2 in an
             objective or a constraint, 1 everywhere else.
 

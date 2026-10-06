@@ -621,9 +621,7 @@ def test_inlining_keeps_the_definition_of_a_term():
 @pytest.mark.parametrize('spec', [BALANCE, FLEET], ids=['a-reader', 'a-contributor'])
 def test_a_given_expression_prints_no_line_of_its_own(spec):
     """The term prints as the definition it is; the name it adds to prints in the legend."""
-    with pytest.raises(
-        LanguageError, match=r"'injection' is a given expression, and a given declaration prints no line"
-    ):
+    with pytest.raises(LanguageError, match=r"'injection' is a given expression, and a given entry prints no line"):
         typeset_line(spec, 'injection', 'latex')
 
 

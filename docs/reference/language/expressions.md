@@ -74,13 +74,13 @@ a square.
 
 One flat namespace covers dimensions, relations, parameters, variables, named
 expressions, masks, macros and the built-in operators. A collision is a load error that
-names both declarations, and nothing shadows anything.
+names both entries, and nothing shadows anything.
 
 Position decides which kinds of name are legal:
 
 | Position                               | Legal kinds                                                                                                              |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| expression (`p * cost`)                | a variable, or a parameter whose values are numbers ([dtype](declarations.md#parameters))                                |
+| expression (`p * cost`)                | a variable, or a parameter whose values are numbers ([dtype](entries.md#parameters))                                     |
 | dimension argument (`over=`, `along=`) | a dimension, or a list of them for `over=`. Beside `by=`, a name in `over=` is a column of the relation where it has one |
 | column argument (`by=`, `within=`)     | columns of one relation, written `relation[column]` or `relation[column, …]`                                             |
 | `where` string                         | a parameter, variable, dimension, relation or mask ([where strings](#where-strings))                                     |
@@ -111,8 +111,8 @@ The dimension set of every expression is known before any data is attached:
 | `shift(x, along=d, offset=n)`    | `dims(x)`                      | error if `d ∉ dims(x)`                                                           |
 | `sum_back(x, along=d, window=n)` | `dims(x)`                      | error if `d ∉ dims(x)`                                                           |
 
-An outer product is allowed. The declaration's own dimensions are its
-**frame**, and a declaration may not disagree with its expression:
+An outer product is allowed. The entry's own dimensions are its
+**frame**, and an entry may not disagree with its expression:
 
 - A constraint requires `dims(lhs) ∪ dims(rhs)` to **equal** its `dims`.
 - An objective must carry **no dimensions**. Write the sums that reduce it.
@@ -161,12 +161,12 @@ QUOTED     ::= "'" chars "'" | '"' chars '"'
 | `shift(where_expr, along=name, offset=i)` | a predicate                | The predicate read `i` coordinates back, and false where that vacates                                                                                                                                                                                                                                |
 | `at(where_expr, by=relation[c])`          | a predicate                | The predicate read through the relation ([reading a predicate through a relation](#reading-a-predicate-through-a-relation)), and false where the relation has no row                                                                                                                                 |
 | `AND` `OR` `NOT`                          | —                          | Case-insensitive. `NOT` binds tighter than `AND`, and `AND` tighter than `OR`                                                                                                                                                                                                                        |
-| `True` / `False`                          | —                          | `True` is the same as no `where`; `False` gives a declaration with no rows                                                                                                                                                                                                                           |
+| `True` / `False`                          | —                          | `True` is the same as no `where`; `False` gives an entry with no rows                                                                                                                                                                                                                                |
 
 A bare name that is not declared is a load error.
 
 A comparison at a missing row reads the value the parameter's
-[`missing:`](declarations.md#a-missing-row) names, as does a bare `bool` name.
+[`missing:`](entries.md#a-missing-row) names, as does a bare `bool` name.
 Under every reading, a bare numeric name asks whether the data has a row.
 
 ### Counting what a predicate admits
@@ -259,7 +259,7 @@ A bare name on the right is read as a string label when the spec does not
 declare it. A declared name there is a load error.
 
 Quote a label that is not an identifier, such as `'combined-cycle'`. A quoted
-word is never read as a declaration.
+word is never read as an entry.
 
 A comparison is checked against the declared `dtype`. A `datetime` dimension is
 compared against a quoted ISO date such as `'2030-01-01'` or

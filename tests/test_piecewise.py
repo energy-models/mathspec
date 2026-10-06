@@ -5,7 +5,7 @@
 """`piecewise:` expansion, judged at the door that decides it.
 
 Every claim here is one `to_spec` or `Spec.expand` reaches with no data attached:
-which declarations a curve emits, which names it may not collide with, which
+which entries a curve emits, which names it may not collide with, which
 methods exist, and which gates a block will accept.
 """
 
@@ -90,7 +90,7 @@ TWO_DIM = varied(
 
 
 def test_an_emitted_set_may_not_collide_with_a_declared_one():
-    """The emitted-name rule, for the one declaration kind that is new."""
+    """The emitted-name rule, for the one entry kind that is new."""
     with pytest.raises(SchemaError, match="writes sos 'cost_curve', which this file already declares"):
         schema_of(NONCONVEX_YAML, sos={'cost_curve': {'variable': 'p', 'along': 'snapshot', 'type': 1}})
 
@@ -151,7 +151,7 @@ def test_the_file_keeps_its_curve_and_the_expansion_has_none():
     schema = schema_of(NONCONVEX_YAML)
 
     assert 'cost_curve' in schema.piecewise, 'loading a model does not spend its blocks'
-    assert not schema.expand('piecewise').piecewise, 'the block is spent once its declarations are emitted'
+    assert not schema.expand('piecewise').piecewise, 'the block is spent once its entries are emitted'
 
 
 def test_a_program_mirrors_the_model_it_was_lowered_from():
@@ -195,10 +195,10 @@ def test_expansion_is_idempotent():
         pytest.param(['generator', 'snapshot', 'bp'], id='generator-first'),
     ],
 )
-def test_the_emitted_foreach_follows_declaration_order(order):
+def test_the_emitted_foreach_follows_file_order(order):
     """The frame is a set until something orders it, and a set iterates the
     same way for the same names within one process — so a run that reads the
-    set rather than the declaration fails one of the two orderings."""
+    set rather than the entry fails one of the two orderings."""
     schema = schema_of(TWO_DIM, dimensions={d: TWO_DIM['dimensions'][d] for d in order})
     assert expand_piecewise(schema).variables['cost_curve_lam'].dims == order
 
@@ -378,7 +378,7 @@ def test_a_malformed_block_is_refused(model, patch, match):
     ],
 )
 def test_a_link_outside_the_language_is_named_where_the_user_wrote_it(link_expression, message):
-    """Lowering would catch these too, but naming ``cost_curve_link0`` — a declaration the user never wrote."""
+    """Lowering would catch these too, but naming ``cost_curve_link0`` — an entry the user never wrote."""
     with pytest.raises(SchemaError, match=message) as exc:
         schema_of(NONCONVEX_YAML, **{'piecewise.cost_curve.links': [[link_expression, 'bp_x'], ['op_cost', 'bp_y']]})
     assert "piecewise 'cost_curve' link 0" in str(exc.value)
@@ -400,7 +400,7 @@ def test_a_block_is_refused_on_the_link_the_file_wrote_and_not_on_a_row_it_would
     with pytest.raises(SchemaError) as exc:
         schema_of(model, **patch)
     assert "piecewise 'cost_curve'" in str(exc.value) and 'link 0' in str(exc.value)
-    assert 'cost_curve_' not in str(exc.value), 'the refusal names the block, not a declaration the expansion writes'
+    assert 'cost_curve_' not in str(exc.value), 'the refusal names the block, not an entry the expansion writes'
 
 
 def test_an_undeclared_breakpoint_dimension_is_refused_once():
@@ -429,10 +429,10 @@ def test_a_link_reading_a_refused_entry_names_it_and_its_refusal_is_listed():
 def test_a_link_reading_a_nonlinear_entry_is_refused():
     """A named entry, nonlinear and so legal on its own, is refused where the link reads it.
 
-    `ratio` loads — nothing bans it at declaration — but a
+    `ratio` loads — nothing bans it where it is written — but a
     piecewise link is affine, so reading it there hits the same divisor ban a
     constraint would. The refusal lives at the reading position, not the
-    declaration: the entry-declaration relocation for the other math positions
+    entry: the same move for the other math positions
     is `TestValidateExpressions.test_a_nonlinear_entry_is_refused_where_the_math_reads_it`.
     """
     with pytest.raises(SchemaError, match='the divisor contains variables') as exc:
@@ -500,7 +500,7 @@ def test_a_link_reading_a_dual_entry_is_refused():
     ],
 )
 def test_a_gate_that_is_not_a_variable_is_refused(activity, match):
-    """Only a variable has a declaration to say what its absence means, and the block needs that answer."""
+    """Only a variable has an entry to say what its absence means, and the block needs that answer."""
     with pytest.raises(SchemaError, match=match):
         expand_piecewise(schema_of(GATED, **{'piecewise.cost_curve.activity': activity}))
 

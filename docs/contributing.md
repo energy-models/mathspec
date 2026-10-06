@@ -100,11 +100,15 @@ changes.
 The same construct passes through three layers, and each names it in full. The
 suffix says which layer:
 
-| Layer                        | Suffix               | Example                                |
-| ---------------------------- | -------------------- | -------------------------------------- |
-| YAML block (`mathspec.spec`) | `Block`              | `VariableSpec`, `PiecewiseSpec`        |
-| Syntax (`mathspec.*_parser`) | `Node`               | `NameNode`, `UnresolvedComparisonNode` |
-| Program (`mathspec.program`) | none / `Declaration` | `Variable`, `Variable`                 |
+| Layer                        | Suffix | Example                                |
+| ---------------------------- | ------ | -------------------------------------- |
+| YAML (`mathspec.spec`)       | `Spec` | `VariableSpec`, `PiecewiseSpec`        |
+| Syntax (`mathspec.*_parser`) | `Node` | `NameNode`, `UnresolvedComparisonNode` |
+| Program (`mathspec.program`) | none   | `Variable`, `Piecewise`                |
+
+In the program, the node that stands where an expression uses a name ends in
+`Reference`: `VariableReference` reads a `Variable`, and `ExpressionReference`
+reads a `NamedExpression`.
 
 A node names the operation, not the verb a file writes. One verb can resolve
 to two nodes, so the file's spelling cannot decide the name.

@@ -50,7 +50,7 @@ examples/library/
   `Port_`, `port` and `bus`.
 - **A fragment is what a system has. A patch is how a component is
   formulated.** A second kind of component is a peer, and `merge` composes it.
-  A different formulation of one component edits declarations that already
+  A different formulation of one component edits entries that already
   exist, and `override` lays it over the composition.
 
 ## The variant

@@ -173,7 +173,7 @@ def typeset_line(
     symbols: str | Path | Mapping[str, object] | SymbolTable | None = None,
     inline_expressions: bool = True,
 ) -> str:
-    """Render one declaration as the bare line the document prints for it.
+    """Render one entry as the bare line the document prints for it.
 
     The line the whole-spec render prints for it — a named expression's
     or a mask's definition, a constraint, an assumption, a ``piecewise:``
@@ -218,7 +218,7 @@ def typeset_line(
     given_kind = next((kind for kind, group in givens.items() if name in group), None)
     if given_kind is not None:
         msg = (
-            f"'{name}' is a given {given_kind}, and a given declaration prints no line of its own — "
+            f"'{name}' is a given {given_kind}, and a given entry prints no line of its own — "
             f"this file reads it and does not build it. It prints in the legend, under 'Given', "
             f'so call typeset() for the whole spec.'
         )

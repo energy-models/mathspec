@@ -44,7 +44,7 @@ DISPATCH_MODEL: dict[str, Any] = {
 }
 
 #: Two dimensions, a relation between them, a numeric, a scalar, a boolean and a
-#: label parameter, a variable on each frame — one declaration of every kind
+#: label parameter, a variable on each frame — one entry of every kind
 #: a rule can name, and no objective, so a test adds what it judges. `p` and `r`
 #: share no dimension, which is what a rule about *different* dims needs.
 SMALL_MODEL: dict[str, Any] = {
@@ -133,7 +133,7 @@ def comparison_of(text: str, ns: Namespace, context: str) -> tuple[Expression, s
 
 
 def where_of(text: str | None, ns: Namespace, context: str, self_variable: str | None = None) -> Mask | None:
-    """Parse and resolve one where string into the mask a declaration carries, raising every problem at once."""
+    """Parse and resolve one where string into the mask an entry carries, raising every problem at once."""
     errors: list[str] = []
     resolved = resolve_where_text(text, ns, context, errors, self_variable)
     if errors:

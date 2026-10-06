@@ -87,7 +87,7 @@ class ExpressionResolver:
     """One resolution walk over an expression, and the three things every step of it reads.
 
     A node that cannot be built comes back as ``None`` with its refusal
-    appended to ``errors``; every sibling is still read, so a declaration
+    appended to ``errors``; every sibling is still read, so an entry
     with two faults reports both. ``formals`` are a macro template's formals:
     a formal has no kind until a call site binds it, so a node one stands
     under is ``None`` with nothing appended.
@@ -584,7 +584,7 @@ class ExpressionResolver:
         """How ``sum(x, over=..., by=relation[...])`` joins the relation, and the dims it sums away with no column.
 
         A name in *over* is a column of the relation where it has one, and a
-        dimension otherwise, summed away after the group-by. The declaration
+        dimension otherwise, summed away after the group-by. The entry
         refuses a column named after a dimension it is not over, so the two
         readings never disagree. Every column a call touches is written in it,
         so a relation may gain a column without changing what the call means.

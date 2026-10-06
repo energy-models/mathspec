@@ -5,7 +5,7 @@
 """`sos:` as a formulation: what a set is written out as, and what it may not lose.
 
 Every claim here is one `Spec.expand` reaches with no data attached — which
-declarations a set emits, which coefficient links them, and that the adjacency
+entries a set emits, which coefficient links them, and that the adjacency
 method is the same rows under the same names.
 """
 
@@ -77,7 +77,7 @@ def test_a_set_carries_no_coefficient_of_its_own():
     capped a picked member the set does not cap; above it the row was a looser big-M;
     a solver taking the set natively ignored it either way. So the coefficient is the
     member's own bound and nothing else, and the key is not in the language."""
-    with pytest.raises(SchemaError, match="unknown key 'bound' in a sos declaration"):
+    with pytest.raises(SchemaError, match="unknown key 'bound' in a sos entry"):
         schema_of(varied(PICKED, **{'sos.pick.bound': 500}))
 
 

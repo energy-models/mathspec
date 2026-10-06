@@ -65,7 +65,7 @@ def test_a_dimension_nothing_reaches_is_named():
 )
 def test_a_dimension_something_reaches_is_in_use(patch):
     assert not advice(varied(TARGET_ONLY, **patch)), (
-        'a dimension a relation targets, a declaration indexes or a grouping groups by is in use'
+        'a dimension a relation targets, an entry indexes or a grouping groups by is in use'
     )
 
 

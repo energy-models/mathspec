@@ -35,8 +35,8 @@ UnaryOperator = Literal['+', '-']
 #: switches over — it keeps no list of its own.
 BinaryOperator = Literal['+', '-', '*', '/', '**']
 
-#: What an expression writes to refer to a declaration, and so what a
-#: declaration may be named.
+#: What an expression writes to refer to an entry, and so what an
+#: entry may be named.
 NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
 #: A float — a fractional part or an exponent. A sign is the unary operator's.
