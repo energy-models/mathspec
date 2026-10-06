@@ -159,6 +159,12 @@ expressions:
       winter: { when: "position(snapshot) > 0 and season_of == 'winter'", expression: cost * 2 }
     otherwise: 0
 
+masks:
+  dispatchable: # a named predicate with its words: a use prints the symbol over the dims its predicate reads, the predicate prints once
+    where: "p_max > 0 AND NOT is_flexible"
+    description: a unit that dispatches and cannot be turned down
+  priced_dispatch: "dispatchable AND spend_cap > 0" # the one-line form, reading another mask and a data-only entry
+
 constraints:
   budgeted: # names the plain expression: its symbol prints here, its definition once below
     dims: [snapshot]
@@ -326,6 +332,10 @@ constraints:
   capped: # an expressions: entry on a side, read by the name the file gave it
     dims: [snapshot, generator]
     where: "spend_cap > 0 OR NOT is_flexible"
+    expression: p <= p_max
+  masked: # a mask as the where, beside a condition of the constraint's own
+    dims: [snapshot, generator]
+    where: "priced_dispatch AND position(snapshot) > 0"
     expression: p <= p_max
 
 assumptions: # what the data has to satisfy for the answer to mean anything

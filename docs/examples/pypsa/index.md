@@ -80,8 +80,8 @@ cost at risk.
 | [process_ramping](process_ramping.md) | 5 | 0 | 6 | 14 |  |
 | [security](security.md) | 2 | 0 | 8 | 10 |  |
 | [settings](settings.md) | 9 | 0 | 0 | 8 |  |
-| [storage_unit](storage_unit.md) | 35 | 6 | 21 | 15 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [store](store.md) | 28 | 4 | 11 | 15 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [storage_unit](storage_unit.md) | 35 | 6 | 21 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [store](store.md) | 28 | 4 | 11 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
 | [transformer](transformer.md) | 23 | 5 | 16 | 5 | `total_cost`, `Bus_injection`, `Cycle_angle_sum` |
 <!-- gallery:end -->
 

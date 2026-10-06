@@ -14,6 +14,8 @@ given:
   variables:
     Link_status: { dims: [scenario, snapshot, link], domain: integer }
     Link_p_nom_ext: { dims: [link] }
+  masks:
+    Link_committed: { dims: [snapshot, link] }
 
 dimensions:
   scenario:
@@ -88,9 +90,7 @@ variables:
       `Link-maintenance_capacity` — the chosen build while in maintenance, zero
       otherwise: the product the `maintcap` rows linearize
     dims: [scenario, snapshot, link]
-    where: >-
-      Link_maintainable AND Link_p_nom_extendable
-      AND NOT (Link_committable AND Link_p_nom_mod > 0) AND Link_active
+    where: Link_maint_ext
     absence: zero
     bounds:
       lower: 0
@@ -100,12 +100,22 @@ variables:
       otherwise: the product the `maint-status` rows linearize, so a unit in
       maintenance may also be off
     dims: [scenario, snapshot, link]
-    where: >-
-      Link_maintainable AND Link_committable
-      AND NOT (Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)) AND Link_active
+    where: Link_maintainable AND Link_committed AND NOT (Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0))
     absence: zero
     bounds:
       lower: 0
+
+masks:
+  Link_maint_ext:
+    description: >-
+      a maintainable link with an extendable build, unless it is committable
+      and modular, that stands in the snapshot's period — the maintenance rows
+      against the chosen build
+    where: >-
+      Link_maintainable
+      AND Link_p_nom_extendable
+      AND NOT (Link_committable AND Link_p_nom_mod > 0)
+      AND Link_active
 
 constraints:
   Link_maint_event_count:
@@ -131,54 +141,54 @@ constraints:
       `Link-maintcap_upper` — the build taken off is at most the chosen build in
       maintenance, and at most the build less its floor out of it
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_p_nom_extendable AND NOT (Link_committable AND Link_p_nom_mod > 0) AND Link_active
+    where: Link_maint_ext
     expression: Link_maintenance_capacity <= Link_p_nom_ext - Link_p_nom_min * (1 - Link_maintenance)
   Link_maintcap_upper_nommax:
     description: "`Link-maintcap_upper_nommax` — out of maintenance, no build is taken off"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_p_nom_extendable AND NOT (Link_committable AND Link_p_nom_mod > 0) AND Link_active
+    where: Link_maint_ext
     expression: Link_maintenance_capacity <= Link_p_nom_max * Link_maintenance
   Link_maintcap_lower_nommax:
     description: "`Link-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_p_nom_extendable AND NOT (Link_committable AND Link_p_nom_mod > 0) AND Link_active
+    where: Link_maint_ext
     expression: Link_maintenance_capacity >= Link_p_nom_ext - Link_p_nom_max * (1 - Link_maintenance)
   Link_maintcap_lower_nommin:
     description: "`Link-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_p_nom_extendable AND NOT (Link_committable AND Link_p_nom_mod > 0) AND Link_active AND Link_p_nom_min > 0
+    where: Link_maint_ext AND Link_p_nom_min > 0
     expression: Link_maintenance_capacity >= Link_p_nom_min * Link_maintenance
   Link_maint_status_le_status:
     description: "`Link-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0) AND Link_active
+    where: Link_maintainable AND Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
     expression: Link_maintenance_status <= Link_status
   Link_maint_status_le_maint:
     description: "`Link-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0) AND Link_active
+    where: Link_maintainable AND Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
     expression: Link_maintenance_status <= Link_maintenance
   Link_maint_status_lb:
     description: "`Link-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0) AND Link_active
+    where: Link_maintainable AND Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
     expression: Link_maintenance_status >= Link_status + Link_maintenance - 1
   Link_maint_modstatus_le_status:
     description: "`Link-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_committable AND Link_p_nom_mod > 0 AND Link_active
+    where: Link_maintainable AND Link_committed AND Link_p_nom_mod > 0
     expression: Link_maintenance_status <= Link_status
   Link_maint_modstatus_le_maint:
     description: >-
       `Link-maint-modstatus-le-maint` — out of maintenance, no module is on in
       maintenance; in it, at most the modules the build cap holds
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_committable AND Link_p_nom_mod > 0 AND Link_active
+    where: Link_maintainable AND Link_committed AND Link_p_nom_mod > 0
     expression: Link_maintenance_status <= Link_p_nom_max / Link_p_nom_mod * Link_maintenance
   Link_maint_modstatus_lb:
     description: "`Link-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
     dims: [scenario, snapshot, link]
-    where: Link_maintainable AND Link_committable AND Link_p_nom_mod > 0 AND Link_active
+    where: Link_maintainable AND Link_committed AND Link_p_nom_mod > 0
     expression: Link_maintenance_status >= Link_status - Link_p_nom_max / Link_p_nom_mod * (1 - Link_maintenance)
 
 assumptions:

@@ -19,7 +19,6 @@ given:
     snapshot_weightings_stores: { dims: [snapshot] }
     GlobalConstraint_counts_snapshot: { dims: [scenario, global_constraint, snapshot], dtype: bool }
   expressions:
-    GlobalConstraint_snapshot_closes: { dims: [scenario, global_constraint, snapshot] }
     primary_energy: { dims: [scenario, global_constraint] }
     operational_limit: { dims: [scenario, global_constraint] }
     tech_capacity_expansion: { dims: [global_constraint] }
@@ -278,12 +277,26 @@ expressions:
           AND position(snapshot, within=snapshot_period[period]) == 0
         expression: StorageUnit_state_of_charge_initial
     otherwise: StorageUnit_retention * shift(StorageUnit_state_of_charge, along=snapshot, offset=1)
+  StorageUnit_last_counted_active:
+    description: >-
+      one at the last snapshot a row counts where a unit stands, and zero
+      elsewhere — a unit that retires before the last counted snapshot closes
+      on its last active level, as PyPSA forward-fills the level over the
+      counted snapshots (`global_constraints.py:455-458`)
+    dims: [scenario, global_constraint, snapshot, storage_unit]
+    cases:
+      last:
+        when: >-
+          GlobalConstraint_counts_snapshot AND StorageUnit_active
+          AND NOT shift(GlobalConstraint_counts_snapshot AND StorageUnit_active, along=snapshot, offset=-1)
+        expression: 1
+    otherwise: 0
   StorageUnit_closing_weight:
     description: >-
       what the charge a unit holds at a snapshot counts for in a row as its
       closing level — the years of the period at the last snapshot of each
       counted period where the unit reopens per period, one at the last
-      counted snapshot where it does not, and nothing elsewhere
+      counted snapshot it stands in where it does not, and nothing elsewhere
     dims: [scenario, global_constraint, snapshot, storage_unit]
     cases:
       per_period:
@@ -291,7 +304,7 @@ expressions:
         expression: at(period_weight_years, by=snapshot_period[period])
       carried_over:
         when: NOT StorageUnit_state_of_charge_initial_per_period
-        expression: GlobalConstraint_snapshot_closes
+        expression: StorageUnit_last_counted_active
     otherwise: 0
   StorageUnit_primary_energy:
     expression: >-
@@ -323,70 +336,82 @@ expressions:
       sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), over=storage_unit, by=StorageUnit_bus[bus])
     adds_to: Bus_injection
 
+masks:
+  StorageUnit_fix:
+    description: >-
+      a storage unit with a fixed build that stands in the snapshot's period —
+      PyPSA's `fix` rows
+    where: NOT StorageUnit_p_nom_extendable AND StorageUnit_active
+  StorageUnit_ext:
+    description: >-
+      a storage unit with an extendable build that stands in the snapshot's
+      period — PyPSA's `ext` rows
+    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+
 constraints:
   StorageUnit_fix_p_dispatch_lower:
     description: "`StorageUnit-fix-p_dispatch-lower` — dispatch is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_dispatch >= 0
   StorageUnit_fix_p_dispatch_upper:
     description: "`StorageUnit-fix-p_dispatch-upper` — a fixed unit dispatches at most its nominal power"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_dispatch <= StorageUnit_p_max_pu * StorageUnit_p_nom
   StorageUnit_fix_p_store_lower:
     description: "`StorageUnit-fix-p_store-lower` — storing is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_store >= 0
   StorageUnit_fix_p_store_upper:
     description: >-
       `StorageUnit-fix-p_store-upper` — a fixed unit stores at most its
       nominal power, the minimum-per-unit column carrying that cap negated
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_store <= -StorageUnit_p_min_pu * StorageUnit_p_nom
   StorageUnit_fix_state_of_charge_lower:
     description: "`StorageUnit-fix-state_of_charge-lower` — charge is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_state_of_charge >= 0
   StorageUnit_fix_state_of_charge_upper:
     description: "`StorageUnit-fix-state_of_charge-upper` — a fixed unit holds at most its hours at nominal power"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_state_of_charge <= StorageUnit_max_hours * StorageUnit_p_nom
   StorageUnit_ext_p_dispatch_lower:
     description: "`StorageUnit-ext-p_dispatch-lower` — dispatch is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_dispatch >= 0
   StorageUnit_ext_p_dispatch_upper:
     description: "`StorageUnit-ext-p_dispatch-upper` — an extendable unit dispatches at most the chosen build"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_dispatch <= StorageUnit_p_max_pu * StorageUnit_p_nom_ext
   StorageUnit_ext_p_store_lower:
     description: "`StorageUnit-ext-p_store-lower` — storing is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_store >= 0
   StorageUnit_ext_p_store_upper:
     description: >-
       `StorageUnit-ext-p_store-upper` — an extendable unit stores at most the
       chosen build, the minimum-per-unit column carrying that cap negated
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_store <= -StorageUnit_p_min_pu * StorageUnit_p_nom_ext
   StorageUnit_ext_state_of_charge_lower:
     description: "`StorageUnit-ext-state_of_charge-lower` — charge is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_state_of_charge >= 0
   StorageUnit_ext_state_of_charge_upper:
     description: "`StorageUnit-ext-state_of_charge-upper` — an extendable unit holds at most its hours at the chosen build"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_state_of_charge <= StorageUnit_max_hours * StorageUnit_p_nom_ext
   StorageUnit_ext_p_nom_lower:
     description: "`StorageUnit-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
@@ -568,7 +593,6 @@ assumptions:
 | $`\mathrm{w}^{\mathrm{yr}}`$ | `period_weight_years` over $`\mathcal{Y}`$, data another file declares |
 | $`\mathrm{w}^{\mathrm{sto}}`$ | `snapshot_weightings_stores` over $`\mathcal{T}`$, data another file declares |
 | $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$, data another file declares |
-| $`\mathit{last}`$ | `GlobalConstraint_snapshot_closes` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$, an expression another file defines |
 | $`\mathit{primary\_energy}`$ | `primary_energy` over $`\Xi \times \mathcal{G}`$, an expression this file adds `StorageUnit_primary_energy` to |
 | $`\mathit{operational\_limit}`$ | `operational_limit` over $`\Xi \times \mathcal{G}`$, an expression this file adds `StorageUnit_operational_limit` to |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression this file adds `StorageUnit_tech_capacity_expansion` to |
@@ -582,7 +606,8 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\overleftarrow{\mathit{soc}}`$ | `StorageUnit_charge_carried_in` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — the charge a unit opens a snapshot with — at the first snapshot it stands in, its last such snapshot's less standing loss where it is cyclic and the given initial charge, which no standing loss has touched yet, where it is not; the previous snapshot's less standing loss otherwise. A unit built in a later period opens in that period, and a cyclic one that retires closes on its own last snapshot. Per period, the same holds with each investment period as the horizon |
-| $`\mathit{w}^{h}`$ | `StorageUnit_closing_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{S}`$ — what the charge a unit holds at a snapshot counts for in a row as its closing level — the years of the period at the last snapshot of each counted period where the unit reopens per period, one at the last counted snapshot where it does not, and nothing elsewhere |
+| $`\mathit{last}^{h}`$ | `StorageUnit_last_counted_active` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{S}`$ — one at the last snapshot a row counts where a unit stands, and zero elsewhere — a unit that retires before the last counted snapshot closes on its last active level, as PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:455-458`) |
+| $`\mathit{w}^{h}`$ | `StorageUnit_closing_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{S}`$ — what the charge a unit holds at a snapshot counts for in a row as its closing level — the years of the period at the last snapshot of each counted period where the unit reopens per period, one at the last counted snapshot it stands in where it does not, and nothing elsewhere |
 | $`\mathit{StorageUnit\_primary\_energy}`$ | `StorageUnit_primary_energy` over $`\Xi \times \mathcal{G}`$ |
 | $`\mathit{StorageUnit\_operational\_limit}`$ | `StorageUnit_operational_limit` over $`\Xi \times \mathcal{G}`$ |
 | $`\mathit{StorageUnit\_tech\_capacity\_expansion}`$ | `StorageUnit_tech_capacity_expansion` over $`\mathcal{G}`$ |
@@ -590,6 +615,13 @@ assumptions:
 | $`\mathit{StorageUnit\_capex}`$ | `StorageUnit_capex` (scalar) |
 | $`\mathit{StorageUnit\_additions}`$ | `StorageUnit_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{StorageUnit\_injection}`$ | `StorageUnit_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
+
+#### Masks
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{h,\mathrm{fix}}`$ | `StorageUnit_fix` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with a fixed build that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{h,\mathrm{ext}}`$ | `StorageUnit_ext` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with an extendable build that stands in the snapshot's period — PyPSA's `ext` rows |
 
 $`t \ominus k`$ denotes cyclic translation: index $`t-k`$ taken modulo the size of the dimension (`roll`). Plain $`t-k`$ (`shift`) has no wraparound — terms translated past the edge are simply absent.
 
@@ -606,73 +638,73 @@ $`\lvert \mathcal{T} \rvert`$ denotes the size of the set being counted along, a
 **`StorageUnit_fix_p_dispatch_lower`**
 
 ```math
-h^{+}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{+}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{fix}}_{t,s}
 ```
 
 **`StorageUnit_fix_p_dispatch_upper`**
 
 ```math
-h^{+}_{\xi,t,s} \le \overline{\mathrm{h}}_{\xi,t,s} \cdot \mathrm{h}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{+}_{\xi,t,s} \le \overline{\mathrm{h}}_{\xi,t,s} \cdot \mathrm{h}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{fix}}_{t,s}
 ```
 
 **`StorageUnit_fix_p_store_lower`**
 
 ```math
-h^{-}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{-}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{fix}}_{t,s}
 ```
 
 **`StorageUnit_fix_p_store_upper`**
 
 ```math
-h^{-}_{\xi,t,s} \le -\underline{\mathrm{h}}_{\xi,t,s} \cdot \mathrm{h}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{-}_{\xi,t,s} \le -\underline{\mathrm{h}}_{\xi,t,s} \cdot \mathrm{h}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{fix}}_{t,s}
 ```
 
 **`StorageUnit_fix_state_of_charge_lower`**
 
 ```math
-\mathit{soc}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+\mathit{soc}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{fix}}_{t,s}
 ```
 
 **`StorageUnit_fix_state_of_charge_upper`**
 
 ```math
-\mathit{soc}_{\xi,t,s} \le \mathrm{T}^{h}_{\xi,s} \cdot \mathrm{h}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+\mathit{soc}_{\xi,t,s} \le \mathrm{T}^{h}_{\xi,s} \cdot \mathrm{h}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{fix}}_{t,s}
 ```
 
 **`StorageUnit_ext_p_dispatch_lower`**
 
 ```math
-h^{+}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{+}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{ext}}_{t,s}
 ```
 
 **`StorageUnit_ext_p_dispatch_upper`**
 
 ```math
-h^{+}_{\xi,t,s} \le \overline{\mathrm{h}}_{\xi,t,s} \cdot H_{s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{+}_{\xi,t,s} \le \overline{\mathrm{h}}_{\xi,t,s} \cdot H_{s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{ext}}_{t,s}
 ```
 
 **`StorageUnit_ext_p_store_lower`**
 
 ```math
-h^{-}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{-}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{ext}}_{t,s}
 ```
 
 **`StorageUnit_ext_p_store_upper`**
 
 ```math
-h^{-}_{\xi,t,s} \le -\underline{\mathrm{h}}_{\xi,t,s} \cdot H_{s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+h^{-}_{\xi,t,s} \le -\underline{\mathrm{h}}_{\xi,t,s} \cdot H_{s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{ext}}_{t,s}
 ```
 
 **`StorageUnit_ext_state_of_charge_lower`**
 
 ```math
-\mathit{soc}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+\mathit{soc}_{\xi,t,s} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{ext}}_{t,s}
 ```
 
 **`StorageUnit_ext_state_of_charge_upper`**
 
 ```math
-\mathit{soc}_{\xi,t,s} \le \mathrm{T}^{h}_{\xi,s} \cdot H_{s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+\mathit{soc}_{\xi,t,s} \le \mathrm{T}^{h}_{\xi,s} \cdot H_{s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h,\mathrm{ext}}_{t,s}
 ```
 
 **`StorageUnit_ext_p_nom_lower`**
@@ -737,10 +769,16 @@ h^{-}_{\xi,t,s} = \mathrm{h}^{-,\mathrm{set}}_{\xi,t,s} \qquad \forall\, \xi \in
 \overleftarrow{\mathit{soc}}_{\xi,t,s} = \begin{cases} \rho_{\xi,t,s} \cdot \mathit{soc}_{\xi,\left( t \ominus \mathrm{idle} \right) \ominus 1,s} & \text{if } \mathrm{cyc}_{\xi,s} \wedge \neg \mathrm{cyc}^{y}_{\xi,s} \wedge \neg \mathrm{reset}_{\xi,s} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}_{t,s} \right) \\ \mathrm{soc}^{0}_{\xi,s} & \text{if } \neg \mathrm{cyc}_{\xi,s} \wedge \neg \mathrm{cyc}^{y}_{\xi,s} \wedge \neg \mathrm{reset}_{\xi,s} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}_{t,s} \right) \\ \rho_{\xi,t,s} \cdot \mathit{soc}_{\xi,t \ominus^{\mathrm{snapshot\_period}(t)} 1,s} & \text{if } \mathrm{cyc}^{y}_{\xi,s} \\ \mathrm{soc}^{0}_{\xi,s} & \text{if } \mathrm{reset}_{\xi,s} \wedge \neg \mathrm{cyc}^{y}_{\xi,s} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = 0 \\ \rho_{\xi,t,s} \cdot \mathit{soc}_{\xi,t - 1,s} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
+**`StorageUnit_last_counted_active`**
+
+```math
+\mathit{last}^{h}_{\xi,g,t,s} = \begin{cases} 1 & \text{if } \mathrm{in}_{\xi,g,t} \wedge \mathrm{on}^{h}_{t,s} \wedge \neg \left( \mathrm{in}_{\xi,g,t + 1} \wedge \mathrm{on}^{h}_{t + 1,s} \right) \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T},\ s \in \mathcal{S}
+```
+
 **`StorageUnit_closing_weight`**
 
 ```math
-\mathit{w}^{h}_{\xi,g,t,s} = \begin{cases} \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{\xi,g,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ \mathit{last}_{\xi,g,t} & \text{if } \neg \mathrm{reset}_{\xi,s} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T},\ s \in \mathcal{S}
+\mathit{w}^{h}_{\xi,g,t,s} = \begin{cases} \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{\xi,g,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ \mathit{last}^{h}_{\xi,g,t,s} & \text{if } \neg \mathrm{reset}_{\xi,s} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
 **`StorageUnit_primary_energy`**
@@ -783,6 +821,20 @@ h^{-}_{\xi,t,s} = \mathrm{h}^{-,\mathrm{set}}_{\xi,t,s} \qquad \forall\, \xi \in
 
 ```math
 \mathit{StorageUnit\_injection}_{\xi,t,n} = \sum_{s \in \mathcal{S} \,:\, \mathrm{StorageUnit\_bus}(s) = n} \mathrm{sgn}^{h}_{s} \cdot \left( h^{+}_{\xi,t,s} - h^{-}_{\xi,t,s} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+```
+
+#### Masks
+
+**`StorageUnit_fix`**
+
+```math
+\mathrm{on}^{h,\mathrm{fix}}_{t,s} \iff \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S}
+```
+
+**`StorageUnit_ext`**
+
+```math
+\mathrm{on}^{h,\mathrm{ext}}_{t,s} \iff \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
 #### Variable domains

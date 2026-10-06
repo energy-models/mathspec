@@ -127,10 +127,16 @@ node's operands, and `where_children()` walks a predicate's. `walk()` yields
 every node under an expression, parents first. `walk_regions()` yields each node
 with the `cases:` regions it stands inside, outermost first.
 
-A `Named` stands where an `expressions:` entry is used. Its `body` is the
+A `NamedExpression` stands where an `expressions:` entry is used. Its `body` is the
 entry's expression, the same object that `program.expressions[name].expression`
 holds, and its value is the body's value. `children()` steps into the body, so
 a walk reads through it.
+
+A `NamedMask` stands where a `masks:` entry is read. Its `body` is the entry's
+predicate, the root of `program.masks[name].where`, and it is true where the
+body is true. `where_children()` steps into the body, so `.atoms`,
+`.names_read` and `.dims` read through it, and a consumer that builds rows
+needs nothing from `program.masks`.
 
 Every `where` arrives as a `Mask`. Its `.root` is the resolved predicate. The
 mask also answers four questions:
@@ -166,11 +172,14 @@ stands at a mask's root or nowhere. A `Region`'s `when` is a `Mask` too.
 ## What a program does not build
 
 `program.given.parameters`, `program.given.variables`,
-`program.given.expressions` and `program.given.constraints` name what the spec
-reads and does not build ([given](language/declarations.md#given)). Every
-other group is a build instruction. These four are names to look up in the
-model this one is layered onto. An expression reads a given expression as a
-`Variable` of that name, over the frame under `program.given.expressions`.
+`program.given.expressions`, `program.given.masks` and
+`program.given.constraints` name what the spec reads and does not build
+([given](language/declarations.md#given)). Every other group is a build
+instruction. These five are names to look up in the model this one is layered
+onto. An expression reads a given expression as a `Variable` of that name,
+over the frame under `program.given.expressions`. A `where` reads a given mask
+as a `ParameterDefined` of that name: boolean data over the frame under
+`program.given.masks`.
 An entry of `program.expressions` whose `adds_to` names a given expression is
 a term this file adds to it. The name is still one the program reads and does
 not build.
@@ -197,7 +206,7 @@ layer.given.constraints['balance'].dims  # ('snapshot', 'bus')
 The host model provides each name: it holds a column or a row family of that
 name. A consumer that builds the program checks that the host provides each
 name on the same frame, and refuses the program where it does not. A consumer
-with no host refuses a program whose four groups are not all empty. `advice`
+with no host refuses a program whose five groups are not all empty. `advice`
 returns one note of kind `given` per name
 ([what `advice` warns about](language/errors.md#what-advice-warns-about)).
 

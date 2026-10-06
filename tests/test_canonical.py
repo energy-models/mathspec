@@ -149,6 +149,7 @@ SECTIONS = [
     'constraints',
     'objective',
     'expressions',
+    'masks',
     'macros',
     'piecewise',
     'sos',

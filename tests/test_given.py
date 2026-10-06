@@ -48,11 +48,11 @@ SURFACE = {
 }
 
 
-def test_given_holds_four_kinds_and_refuses_a_fifth():
+def test_given_holds_five_kinds_and_refuses_a_sixth():
     """The section is closed, so a kind nobody has admitted yet is the schema's own refusal."""
     with pytest.raises(LanguageError) as raised:
         to_spec({**SUPPLY, 'given': {'macros': {'twice': {'params': ['x'], 'template': '2 * x'}}}})
-    assert 'Valid keys: constraints, expressions, parameters, variables' in str(raised.value), (
+    assert 'Valid keys: constraints, expressions, masks, parameters, variables' in str(raised.value), (
         'the refusal names what the block takes'
     )
 

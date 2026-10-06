@@ -133,7 +133,7 @@ def test_calls_dual_finds_a_dual_wherever_it_stands(text, found):
 def test_calls_dual_finds_a_dual_inside_a_cased_arm():
     """`calls_dual` recurses through a region of a `Cases`, not only the top node.
 
-    The reference resolves to the `Named` node carrying the block, so this also
+    The reference resolves to the `NamedExpression` node carrying the block, so this also
     guards that the walk steps through it into the region values, reaching a
     dual a non-recursive check — one that only inspected the node it was
     handed — would miss.

@@ -12,7 +12,6 @@ given:
     snapshot_weightings_stores: { dims: [snapshot] }
     GlobalConstraint_counts_snapshot: { dims: [scenario, global_constraint, snapshot], dtype: bool }
   expressions:
-    GlobalConstraint_snapshot_closes: { dims: [scenario, global_constraint, snapshot] }
     primary_energy: { dims: [scenario, global_constraint] }
     operational_limit: { dims: [scenario, global_constraint] }
     tech_capacity_expansion: { dims: [global_constraint] }
@@ -229,12 +228,26 @@ expressions:
         when: Store_e_initial_per_period AND NOT Store_e_cyclic_per_period AND position(snapshot, within=snapshot_period[period]) == 0
         expression: Store_e_initial
     otherwise: Store_retention * shift(Store_e, along=snapshot, offset=1)
+  Store_last_counted_active:
+    description: >-
+      one at the last snapshot a row counts where a store stands, and zero
+      elsewhere — a store that retires before the last counted snapshot closes
+      on its last active level, as PyPSA forward-fills the level over the
+      counted snapshots (`global_constraints.py:507-510`)
+    dims: [scenario, global_constraint, snapshot, store]
+    cases:
+      last:
+        when: >-
+          GlobalConstraint_counts_snapshot AND Store_active
+          AND NOT shift(GlobalConstraint_counts_snapshot AND Store_active, along=snapshot, offset=-1)
+        expression: 1
+    otherwise: 0
   Store_closing_weight:
     description: >-
       what the energy a store holds at a snapshot counts for in a row as its
       closing level — the years of the period at the last snapshot of each
       counted period where the store reopens per period, one at the last
-      counted snapshot where it does not, and nothing elsewhere
+      counted snapshot it stands in where it does not, and nothing elsewhere
     dims: [scenario, global_constraint, snapshot, store]
     cases:
       per_period:
@@ -242,7 +255,7 @@ expressions:
         expression: at(period_weight_years, by=snapshot_period[period])
       carried_over:
         when: NOT Store_e_initial_per_period
-        expression: GlobalConstraint_snapshot_closes
+        expression: Store_last_counted_active
     otherwise: 0
   Store_primary_energy:
     expression: >-

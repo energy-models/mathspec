@@ -13,6 +13,10 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - docs: every spec in the docs and examples opens with its given block ([#813](https://github.com/energy-models/mathspec/pull/813))
+- docs(pypsa): storage that retires before the last counted snapshot closes a global limit at its last active level ([#850](https://github.com/energy-models/mathspec/pull/850))
+- refactor(program)!: the node a use of a named expression stands as is `NamedExpression`, beside `NamedMask`, and `Named` is gone ([#822](https://github.com/energy-models/mathspec/pull/822))
+- docs(pypsa): the pypsa spec names its repeated row conditions as masks, and its topic files read them under `given: masks:` ([#825](https://github.com/energy-models/mathspec/pull/825))
+- feat(language): a where predicate is named once under `masks:`, and another file reads it under `given: masks:` ([#821](https://github.com/energy-models/mathspec/pull/821))
 - feat(language)!: a construct that reads the order of a dimension needs the dimension declared ordered ([#793](https://github.com/energy-models/mathspec/pull/793))
 - docs(pypsa): the pypsa reference targets master at 51986084, where the eight rungs that diverged now match ([#844](https://github.com/energy-models/mathspec/pull/844))
 - feat(language)!: a call names the columns of a relation as relation[column], and a sum through a relation is a sum over the axes its join opens ([#664](https://github.com/energy-models/mathspec/pull/664))
