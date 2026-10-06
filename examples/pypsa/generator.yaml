@@ -58,7 +58,7 @@ parameters:
     description: >-
       the sign output enters its bus's balance with — PyPSA's `sign`, `1`
       unless given, `-1` for a unit that draws power. PyPSA refuses one that
-      differs by scenario (`consistency.py:1187`)
+      differs by scenario (`constants.py:43`)
     dims: [generator]
   Generator_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
@@ -86,9 +86,7 @@ parameters:
   Generator_first_active:
     description: >-
       one in the first period a generator stands in, zero elsewhere, data prep.
-      PyPSA takes `active.cumsum() == 1`, which also counts a generator
-      that has retired in every later period (`global_constraints.py:276`,
-      PyPSA/PyPSA#1938)
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
     dims: [period, generator]
   Generator_p_set:
     description: a given output schedule; a generator without one has no row here
@@ -109,7 +107,7 @@ parameters:
     dims: [scenario, generator]
   Generator_p_nom_set:
     description: a given nominal power for an extendable generator; one without a value has no row here
-    dims: [scenario, generator]
+    dims: [generator]
   Generator_e_sum_min:
     description: least energy over the horizon; minus infinity where no floor is meant
     dims: [scenario, generator]
@@ -255,7 +253,7 @@ constraints:
     expression: Generator_p_nom_ext <= Generator_p_nom_max
   Generator_p_nom_set:
     description: "`Generator-p_nom_set` — the chosen build pinned, wherever a value is given"
-    dims: [scenario, generator]
+    dims: [generator]
     where: Generator_p_nom_extendable AND Generator_p_nom_set
     expression: Generator_p_nom_ext == Generator_p_nom_set
   Generator_e_sum_min:

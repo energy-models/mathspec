@@ -127,7 +127,7 @@ expressions:
     description: >-
       the commitment state a link carries into a snapshot — off at the
       first snapshot it stands in past the first of the horizon, as PyPSA
-      reads a status it did not build (`constraints.py:297`), and the state
+      reads a status it did not build (`constraints.py:298`), and the state
       carried over otherwise
     dims: [scenario, snapshot, link]
     cases:

@@ -4,16 +4,13 @@
 
 """Rung 57: `p_nom_set` pins an extendable build on a network with scenarios.
 
-PyPSA raises on any `*_nom_set` on a network with scenarios
-(PyPSA/PyPSA#1942). The two futures are identical, so the oracle is the same
+The two futures are identical, so the expected cost is the cost of the same
 network without scenarios.
 """
 
 from __future__ import annotations
 
 import spine
-
-ISSUE = 1942
 
 
 def network():
@@ -36,8 +33,3 @@ def build():
     n = network()
     n.set_scenarios({'calm': 0.6, 'stormy': 0.4})
     return n
-
-
-def oracle():
-    """The network without scenarios: the futures are identical, so the expected cost is its cost."""
-    return [(1.0, network())]
