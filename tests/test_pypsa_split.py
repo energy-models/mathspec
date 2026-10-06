@@ -161,7 +161,7 @@ def test_the_split_index_names_a_hub_once_per_fragment_and_needs_a_described_rea
         **FLEET,
         'expressions': {
             **FLEET['expressions'],
-            'curtailment': {'expression': 'sum(gen_p, by=gen_bus, over=generator, into=bus)', 'adds_to': 'injection'},
+            'curtailment': {'expression': 'sum(gen_p, over=generator, by=gen_bus[bus])', 'adds_to': 'injection'},
         },
     }
     specs = {'balance': to_spec(BALANCE), 'fleet': to_spec(twice), 'demand': to_spec(DEMAND)}

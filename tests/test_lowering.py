@@ -23,19 +23,22 @@ from mathspec.program import (
     Add,
     And,
     Assumption,
+    Axis,
     BooleanLiteral,
     Cases,
+    Column,
     Constant,
     CountComparison,
     DimensionComparison,
     DimensionDeclaration,
-    Direction,
     Divide,
     Dual,
     Expression,
     ExpressionComparison,
     Footprint,
-    GroupSum,
+    Join,
+    JoinColumns,
+    JoinedPredicate,
     Mask,
     Multiply,
     Not,
@@ -46,8 +49,6 @@ from mathspec.program import (
     Partition,
     Power,
     Program,
-    Pullback,
-    PulledBackPredicate,
     QuadraticPosition,
     Region,
     RelationDeclaration,
@@ -75,21 +76,21 @@ CAPACITY_POSITIVE = ParameterComparison('capacity', '>', 0.0, ('generator',))
 #: the smallest model that loads, for a claim about the plan's record rather
 #: than about the math in it. A test adds what it judges with :func:`varied`.
 TINY = {
-    'dimensions': {'g': {}},
+    'dimensions': {'g': {'ordered': True}},
     'parameters': {'cost': {'dims': ['g']}},
     'variables': {'p': {'dims': ['g'], 'bounds': {'lower': 0, 'upper': 1}}},
     'constraints': {'c': {'dims': [], 'expression': 'sum(p, over=g) >= 1'}},
 }
 
-#: `lk` as `sum` reads it: key consumed, value produced, nothing joined.
+#: `lk` as `sum` joins it: joined on the key, grouped by the value, no key column left unnamed.
 LK = RelationDeclaration((('g', 'g'), ('h', 'h')), ('g',))
 LK2 = RelationDeclaration((('g', 'g'), ('z', 'z')), ('g',))
-LK_DIRECTION = Direction('lk', LK, ('g',), ('h',), ())
+LK_JOIN = JoinColumns('lk', LK, ('g',), ('h',))
 AT_BUS = RelationDeclaration((('g', 'g'), ('bus', 'bus')), ('g',))
 
 #: `fixtures.SMALL_MODEL` plus a second relation and a per-entity
 #: offset. Which node a construct becomes is mostly a claim about the dim it
-#: consumes and the dim it lands on, and stating that needs a third dimension
+#: joins on and the dim it groups by, and stating that needs a third dimension
 #: and two relations over one of them.
 SHAPES_MODEL = varied(
     SMALL_MODEL,
@@ -141,13 +142,13 @@ def test_program_structure(dispatch_program):
     ((cname, c),) = dispatch_program.constraints.items()
     assert cname == 'power_balance'
     assert c.dims == ('snapshot',), 'the frame is the dims, in the order the file wrote it'
-    assert c.lhs == Sum(Variable('dispatch'), ('generator',))
+    assert c.lhs == Sum(Variable('dispatch'), (Axis('generator'),))
     assert c.sense == '==', "the comparison crosses as the file's own operator, untranslated"
     assert c.rhs == Parameter('load')
 
     assert dispatch_program.objective.sense == 'minimize', "the program carries the language's spelling, untranslated"
     assert dispatch_program.objective.expression == Sum(
-        Multiply(Variable('dispatch'), Parameter('cost')), ('generator', 'snapshot')
+        Multiply(Variable('dispatch'), Parameter('cost')), (Axis('generator'), Axis('snapshot'))
     ), 'the objective carries the sum the file wrote, over the dims it named none of'
 
 
@@ -165,9 +166,9 @@ def test_a_file_with_no_objective_lowers_to_no_sense():
     assert program.objective is None, 'no objective declared is no objective, not a minimisation of nothing'
 
 
-def test_a_literal_amount_resolves_to_one_signed_number(dispatch_schema):
+def test_a_literal_amount_resolves_to_one_signed_number():
     """`offset=-1` parses as a unary minus over `1`; after resolution it is `-1`, for every reader alike."""
-    ns = Namespace(dispatch_schema)
+    ns = Namespace(schema_of(DISPATCH_YAML, **{'dimensions.snapshot': {'dtype': 'int', 'ordered': True}}))
     node = expression_of('shift(dispatch, along=snapshot, offset=-1, edge=+0)', ns, 't')
     assert isinstance(node, Translate)
     assert (node.offset, node.fill) == (-1, 0.0)
@@ -404,7 +405,7 @@ def test_a_comparison_of_expressions_lowers_to_program_expressions_on_both_sides
                 'variables.p.where': 'c <= 0.5 * k',
                 'constraints.w': {
                     'dims': ['g'],
-                    'where': 'c <= at(zc, by=lk2, over=z, into=g) + sum_back(c, along=g, window=2, by=lk2, within=z)',
+                    'where': 'c <= at(zc, by=lk2[z]) + sum_back(c, along=g, window=2, within=lk2[z])',
                     'expression': 'p <= c',
                 },
             },
@@ -417,9 +418,9 @@ def test_a_comparison_of_expressions_lowers_to_program_expressions_on_both_sides
     )
     mask = program.constraints['w'].where
     assert mask is not None and isinstance(mask.root, ExpressionComparison)
-    assert isinstance(mask.root.right, Add) and isinstance(mask.root.right.left, Pullback)
+    assert isinstance(mask.root.right, Add) and isinstance(mask.root.right.left, Join)
     assert mask.names_read == frozenset({'c', 'zc', 'lk2'}), (
-        'the relation a pullback and a partition read through is data the consumer attaches too'
+        'the relation a lookup and a partition read through is data the consumer attaches too'
     )
 
 
@@ -468,14 +469,14 @@ def test_a_predicate_read_through_a_relation_is_lowered_and_keeps_the_relation_i
                 'parameters.zcap': {'dims': ['z']},
                 'constraints.w': {
                     'dims': ['g'],
-                    'where': 'at(zcap <= 0.5 * k, by=lk2, over=z, into=g)',
+                    'where': 'at(zcap <= 0.5 * k, by=lk2[z])',
                     'expression': 'p <= c',
                 },
             },
         )
     ).program
     mask = program.constraints['w'].where
-    assert mask is not None and isinstance(mask.root, PulledBackPredicate)
+    assert mask is not None and isinstance(mask.root, JoinedPredicate)
     assert mask.root.operand.root == ExpressionComparison(
         Parameter('zcap'), '<=', Multiply(Constant(0.5), Parameter('k')), ('z',)
     ), 'the read predicate is rebuilt, not handed through with the resolved comparison still in it'
@@ -569,17 +570,21 @@ def test_a_power_resolves_to_a_node_of_its_own(dispatch_schema):
 @pytest.mark.parametrize(
     ('expression', 'expected'),
     [
-        pytest.param('sum(q)', Sum(Variable('q'), ('g', 'h')), id='a-bare-sum-consumes-every-dim-the-operand-carries'),
-        pytest.param('sum(q, over=h)', Sum(Variable('q'), ('h',)), id='an-over-consumes-the-dim-it-names'),
         pytest.param(
-            'sum(p, by=lk, over=g, into=h)',
-            GroupSum(Variable('p'), direction=LK_DIRECTION),
-            id='a-grouped-sum-names-the-dim-it-consumes-and-the-one-it-lands-on',
+            'sum(q)',
+            Sum(Variable('q'), (Axis('g'), Axis('h'))),
+            id='a-bare-sum-sums-away-every-dim-the-operand-carries',
+        ),
+        pytest.param('sum(q, over=h)', Sum(Variable('q'), (Axis('h'),)), id='an-over-sums-away-the-dim-it-names'),
+        pytest.param(
+            'sum(p, over=g, by=lk[h])',
+            Sum(Join(Variable('p'), LK_JOIN), (Axis('g', Column('lk', 'g')),)),
+            id='a-grouped-sum-is-a-sum-over-the-axis-its-join-opens',
         ),
         pytest.param(
-            'at(r, by=lk, over=h, into=g)',
-            Pullback(Variable('r'), direction=Direction('lk', LK, ('h',), ('g',), ())),
-            id='a-pullback-reads-the-same-table-back',
+            'at(r, by=lk[h])',
+            Join(Variable('r'), JoinColumns('lk', LK, ('h',), ('g',))),
+            id='an-at-is-the-same-join-the-other-way-with-no-sum-over-it',
         ),
         pytest.param(
             "shift(p, along=g, offset=1, edge='wrap')",
@@ -602,7 +607,7 @@ def test_a_power_resolves_to_a_node_of_its_own(dispatch_schema):
             id='a-named-offset-written-with-a-plus-is-the-parameter',
         ),
         pytest.param(
-            'shift(p, along=g, offset=1, by=lk, within=h, edge=0)',
+            'shift(p, along=g, offset=1, within=lk[h], edge=0)',
             Translate(
                 Variable('p'),
                 'g',
@@ -624,7 +629,7 @@ def test_a_power_resolves_to_a_node_of_its_own(dispatch_schema):
             id='a-named-width-crosses-as-the-parameter-name',
         ),
         pytest.param(
-            'sum_back(p, along=g, window=2, by=lk, within=h)',
+            'sum_back(p, along=g, window=2, within=lk[h])',
             WindowSum(
                 Variable('p'),
                 'g',
@@ -652,18 +657,18 @@ def test_a_partition_keeps_its_group_when_the_relation_gains_a_value_column():
     for values in ('day', ['day', 'week']):
         program = to_spec(
             {
-                'dimensions': {'hour': {'dtype': 'int'}, 'day': {}, 'week': {}},
+                'dimensions': {'hour': {'dtype': 'int', 'ordered': True}, 'day': {}, 'week': {}},
                 'relations': {'cal': {'key': 'hour', 'values': values}},
                 'variables': {'p': {'dims': ['hour']}},
                 'constraints': {
                     'k': {
                         'dims': ['hour'],
-                        'expression': 'p >= shift(p, along=hour, offset=1, edge=0, by=cal, within=day)',
+                        'expression': 'p >= shift(p, along=hour, offset=1, edge=0, within=cal[day])',
                     }
                 },
             }
         ).program
-        grouping[str(values)] = _partition_of(program.constraints['k']).group
+        grouping[str(values)] = _partition_of(program.constraints['k']).grouped
     assert grouping == {'day': ('day',), "['day', 'week']": ('day',)}, (
         'the group is the columns the call named, on both calendars'
     )
@@ -676,32 +681,32 @@ def _partition_of(row):
     return partition
 
 
-def test_a_relation_lowers_with_the_direction_each_call_names():
-    """Every node reading a relation carries its columns, its key and the direction, so a consumer joins on the right columns."""
+def test_a_relation_lowers_with_the_join_each_call_names():
+    """Every node reading a relation carries its columns, its key and the join, so a consumer joins on the right columns."""
     program = to_spec(
         {
-            'dimensions': {'snapshot': {'dtype': 'int'}, 'generator': {}, 'zone': {}},
+            'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'generator': {'ordered': True}, 'zone': {}},
             'relations': {'zone_of': {'key': ['generator', 'snapshot'], 'values': 'zone'}},
             'parameters': {'price': {'dims': ['snapshot', 'zone']}},
             'variables': {
                 'p': {'dims': ['snapshot', 'generator'], 'where': "zone_of == 'A' AND zone_of"},
                 'first': {
                     'dims': ['snapshot', 'generator'],
-                    'where': 'position(generator, by=zone_of, within=zone) == 0',
+                    'where': 'position(generator, within=zone_of[zone]) == 0',
                 },
             },
             'constraints': {
                 'zonal': {
                     'dims': ['snapshot', 'zone'],
-                    'expression': 'sum(p, by=zone_of, over=generator, into=zone) <= 1',
+                    'expression': 'sum(p, over=generator, by=zone_of[zone]) <= 1',
                 },
                 'priced': {
                     'dims': ['snapshot', 'generator'],
-                    'expression': 'p <= at(price, by=zone_of, into=generator, over=zone)',
+                    'expression': 'p <= at(price, by=zone_of[zone])',
                 },
                 'history': {
                     'dims': ['generator', 'zone'],
-                    'expression': 'sum(p, by=zone_of, over=snapshot, into=zone) <= 1',
+                    'expression': 'sum(p, over=snapshot, by=zone_of[zone]) <= 1',
                 },
             },
         }
@@ -711,31 +716,35 @@ def test_a_relation_lowers_with_the_direction_each_call_names():
     declared = RelationDeclaration(columns, ('generator', 'snapshot'))
     assert program.relations == {'zone_of': declared}, 'the relation sits once in the program, under its name'
     zonal = program.constraints['zonal'].lhs
-    assert zonal == GroupSum(
-        Variable('p'), direction=Direction('zone_of', declared, ('generator',), ('zone',), ('snapshot',))
-    ), 'a grouped sum names the column it consumes, the one it produces and the one it joins on'
-    assert isinstance(zonal, GroupSum)
-    assert (zonal.direction.consumed_dims, zonal.direction.produced_dims, zonal.direction.joined_dims) == (
-        ('generator',),
-        ('zone',),
-        ('snapshot',),
-    ), 'the dims a consumer reads are read off the direction'
-    assert zonal.direction.relation is program.relations['zone_of'], (
-        'the direction holds the one declaration the program holds, not an equal copy built again'
+    columns = JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('zone', 'snapshot'))
+    assert zonal == Sum(Join(Variable('p'), columns), (Axis('generator', Column('zone_of', 'generator')),)), (
+        'a grouped sum is a sum over a join: the join names the column over the over= dim and the unnamed key '
+        'column as joined on, the by= column and that key column as grouped by, and the sum stands over the axis '
+        'the join opens for the column it drops'
     )
-    assert program.constraints['history'].lhs == GroupSum(
-        Variable('p'), direction=Direction('zone_of', declared, ('snapshot',), ('zone',), ('generator',))
-    ), 'the same table read from its other key column'
+    assert isinstance(zonal, Sum) and isinstance(zonal.operand, Join)
+    assert (zonal.operand.columns.dropped_dims, zonal.operand.columns.added_dims, zonal.operand.columns.kept) == (
+        ('generator',),
+        ('zone',),
+        ('snapshot',),
+    ), 'the dims a consumer reads are read off the join: dropped, added, and the key columns kept'
+    assert zonal.operand.columns.relation is program.relations['zone_of'], (
+        'the join holds the one declaration the program holds, not an equal copy built again'
+    )
+    assert program.constraints['history'].lhs == Sum(
+        Join(Variable('p'), JoinColumns('zone_of', declared, ('snapshot', 'generator'), ('zone', 'generator'))),
+        (Axis('snapshot', Column('zone_of', 'snapshot')),),
+    ), 'the same table joined on its other key column'
     priced = program.constraints['priced'].rhs
-    assert priced == Pullback(
-        Parameter('price'), direction=Direction('zone_of', declared, ('zone',), ('generator',), ('snapshot',))
-    ), 'and its adjoint consumes the value column and produces the key column'
-    assert isinstance(priced, Pullback)
-    assert (priced.direction.consumed_dims, priced.direction.produced_dims, priced.direction.joined_dims) == (
+    assert priced == Join(
+        Parameter('price'), JoinColumns('zone_of', declared, ('zone', 'snapshot'), ('generator', 'snapshot'))
+    ), 'and an at is the bare join, on the value column, grouped by the key columns'
+    assert isinstance(priced, Join)
+    assert (priced.columns.dropped_dims, priced.columns.added_dims, priced.columns.kept) == (
         ('zone',),
         ('generator',),
         ('snapshot',),
-    ), 'an at consumes the coarse dims, produces the fine, and joins on the rest of the key'
+    ), 'an at joins on the coarse dims, groups by the fine, and keeps the rest of the key'
     p_where = program.variables['p'].where
     assert p_where is not None
     assert [(type(a).__name__, a.dims) for a in p_where.atoms] == [
@@ -754,14 +763,14 @@ def test_a_binary_variable_lowers_to_a_binary_domain():
     assert program.variables['dispatch'].domain == 'binary'
 
 
-def test_a_divisor_under_a_pullback_is_still_named():
+def test_a_divisor_under_a_join_is_still_named():
     """`children` has to descend through every node, or a refusal loses its name."""
     quotient = Divide(Variable('x'), Parameter('rate'))
     component_of = RelationDeclaration((('flow', 'flow'), ('component', 'component')), ('flow',))
-    pulled = Pullback(quotient, direction=Direction('component_of', component_of, ('component',), ('flow',), ()))
+    looked_up = Join(quotient, JoinColumns('component_of', component_of, ('component',), ('flow',)))
 
-    assert parameters_of(pulled) == frozenset({'rate'}), 'the walk descends through `Pullback`'
-    assert parameters_of(Sum(pulled, ('flow',))) == frozenset({'rate'}), 'and through a `Sum` over it'
+    assert parameters_of(looked_up) == frozenset({'rate'}), 'the walk descends through `Join`'
+    assert parameters_of(Sum(looked_up, (Axis('flow'),))) == frozenset({'rate'}), 'and through a `Sum` over it'
 
 
 def test_a_divisor_under_a_power_is_still_named():
@@ -827,6 +836,14 @@ def test_a_relation_is_declared_as_the_file_declares_it():
     }, 'every relation under its own name, in declaration order'
     assert program.relations['season_of'].values == ('season',), 'and each says what its key determines'
     assert program.dimensions['g'] == DimensionDeclaration(dtype='str'), 'a dimension carries its dtype and no relation'
+
+
+@pytest.mark.parametrize('ordered', [pytest.param(True, id='ordered'), pytest.param(False, id='unordered')])
+def test_a_program_reports_whether_a_dimension_is_ordered(ordered: bool):
+    """The program dropped ``ordered``, so a consumer of it read every dimension as unordered."""
+    program = to_spec(varied(TINY, dimensions={'g': {'ordered': ordered}})).program
+
+    assert program.dimensions['g'].ordered is ordered
 
 
 def test_a_program_is_built_by_keyword_so_a_field_added_later_cannot_reorder_an_old_call():
@@ -939,7 +956,7 @@ def test_a_dimension_carries_the_dtype_its_labels_are_checked_against():
 
 
 CASED = {
-    'dimensions': {'t': {'dtype': 'int'}, 'g': {'dtype': 'str'}},
+    'dimensions': {'t': {'dtype': 'int', 'ordered': True}, 'g': {'dtype': 'str', 'ordered': True}},
     'parameters': {'committable': {'dims': ['g'], 'dtype': 'bool'}, 'initial': {'dims': ['g']}},
     'variables': {'status': {'dims': ['t', 'g'], 'domain': 'binary'}},
     'expressions': {
@@ -1117,7 +1134,7 @@ def test_a_lowered_spec_still_pickles_and_lowers_to_the_same_program():
 
     spec = Spec.model_validate(
         {
-            'dimensions': {'t': {'dtype': 'int'}, 'g': {'dtype': 'str'}},
+            'dimensions': {'t': {'dtype': 'int', 'ordered': True}, 'g': {'dtype': 'str', 'ordered': True}},
             'parameters': {'load': {'dims': ['t']}, 'cost': {'dims': ['g']}},
             'variables': {'p': {'dims': ['t', 'g'], 'bounds': {'lower': 0}}},
             'constraints': {'balance': {'dims': ['t'], 'expression': 'sum(p, over=g) >= load'}},
@@ -1145,7 +1162,7 @@ def test_a_lowered_program_pickles_and_is_the_same_program():
 
     program = to_spec(
         {
-            'dimensions': {'t': {'dtype': 'int'}, 'g': {'dtype': 'str'}},
+            'dimensions': {'t': {'dtype': 'int', 'ordered': True}, 'g': {'dtype': 'str', 'ordered': True}},
             'parameters': {'load': {'dims': ['t']}, 'cost': {'dims': ['g']}},
             'variables': {'p': {'dims': ['t', 'g'], 'bounds': {'lower': 0}}},
             'constraints': {'balance': {'dims': ['t'], 'expression': 'sum(p, over=g) >= load'}},
@@ -1169,7 +1186,7 @@ def test_two_groups_of_a_program_merge_with_or_as_they_did_behind_the_proxy():
     where the seal answered `|` with a `TypeError`."""
     program = to_spec(
         {
-            'dimensions': {'t': {'dtype': 'int'}},
+            'dimensions': {'t': {'dtype': 'int', 'ordered': True}},
             'parameters': {'load': {'dims': ['t']}},
             'variables': {'p': {'dims': ['t'], 'bounds': {'lower': 0}}},
             'constraints': {'meet': {'dims': ['t'], 'expression': 'p >= load'}},

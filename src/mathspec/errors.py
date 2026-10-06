@@ -44,6 +44,15 @@ def did_you_mean(name: str, known: Iterable[str], *, label: str = 'Declared', li
     return f'{label}: {", ".join(candidates) or "nothing"}.' if listing else ''
 
 
+def unordered(context: str, construct: str, dimension: str) -> str:
+    """The refusal for *construct* reading the order of *dimension*, which is not declared ordered."""
+    return (
+        f"{context}: {construct} reads the order of '{dimension}', which is not declared ordered, so the "
+        f'order it read would be the row order of the data. Declare the order part of the model with '
+        f"'{dimension}: {{ordered: true}}' under dimensions:."
+    )
+
+
 def schema_error(exc: ValidationError) -> LanguageError:
     """A pydantic ``ValidationError`` as one of ours.
 

@@ -57,6 +57,9 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
   `cases:` block, a [reported entry](language/named.md#reported-expressions)
   and a [term](language/declarations.md#terms) keep their definition line
   under either `inline_expressions` setting.
+- A [mask](language/named.md#masks) prints its upright symbol where it is
+  read and its predicate once, under a **Masks** heading, with ⟺. It prints
+  by symbol under either `inline_expressions` setting.
 - Wherever the math moves an index, which every `shift` does, the document
   prints a line saying what that notation means.
 - A file that does not load does not print.
@@ -80,8 +83,8 @@ dimension, parameter and variable.
 ## Printing one declaration on its own
 
 `typeset_declaration` returns the line the document prints for one named
-expression, constraint, assumption or variable, with its quantifier and without
-a document, a label, a number or math delimiters:
+expression, mask, constraint, assumption, curve or variable, with its
+quantifier and without a document, a label, a number or math delimiters:
 
 ```python
 ms.typeset_declaration('spec.yaml', 'spend', 'latex')
@@ -103,7 +106,7 @@ A line on its own has no _Definitions_ section beside it, so the plain named
 expressions it uses are substituted. A cased expression prints by symbol, and a
 second call with its name prints its block.
 
-A name that is none of the four kinds is refused with the near miss. A name
+A name that is none of the six kinds is refused with the near miss. A name
 declared as two of them, such as a constraint and a variable, is refused too.
 
 ## Symbol tables

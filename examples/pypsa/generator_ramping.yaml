@@ -8,11 +8,13 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   generator:
     description: generating units, each on one bus
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -58,6 +60,8 @@ given:
     Generator_previous_status: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_effective: { dims: [scenario, generator] }
     Generator_p_nom_committed: { dims: [scenario, generator] }
+  masks:
+    Generator_com_ext: { dims: [snapshot, generator] }
 
 expressions:
   Generator_previous_p:
@@ -130,6 +134,16 @@ expressions:
           * (Generator_previous_status - Generator_status)
     otherwise: Generator_ramp_down_rate * Generator_p_nom_effective
 
+masks:
+  Generator_ramps_from_previous:
+    description: >-
+      a snapshot whose ramp reads a previous output — any snapshot but its
+      period's first, and the horizon's first where the generator comes in off
+      or carries an initial output
+    where: >-
+      position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
+      (Generator_status_initial == 0 OR Generator_p_init))
+
 constraints:
   Generator_p_ramp_limit_up_run_big_m:
     description: >-
@@ -138,10 +152,9 @@ constraints:
       releases the row in the snapshot it turns on
     dims: [scenario, snapshot, generator]
     where: >-
-      Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
+      Generator_com_ext
       AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND Generator_ramps_from_previous
     expression: >-
       Generator_p - Generator_previous_p <=
       Generator_ramp_up_rate * Generator_p_nom_ext
@@ -153,10 +166,9 @@ constraints:
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, generator]
     where: >-
-      Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
+      Generator_com_ext
       AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND Generator_ramps_from_previous
     expression: >-
       Generator_p - Generator_previous_p <=
       Generator_start_up_rate * Generator_p_nom_ext
@@ -168,10 +180,9 @@ constraints:
       releases the row in the snapshot it turns off
     dims: [scenario, snapshot, generator]
     where: >-
-      Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
+      Generator_com_ext
       AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND Generator_ramps_from_previous
     expression: >-
       Generator_previous_p - Generator_p <=
       Generator_ramp_down_rate * Generator_p_nom_ext
@@ -183,10 +194,9 @@ constraints:
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, generator]
     where: >-
-      Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
+      Generator_com_ext
       AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
-      AND Generator_active
+      AND Generator_ramps_from_previous
     expression: >-
       Generator_previous_p - Generator_p <=
       Generator_shut_down_rate * Generator_p_nom_ext
@@ -203,7 +213,7 @@ constraints:
     where: >-
       (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
       AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
+      AND Generator_ramps_from_previous
       AND Generator_active
     expression: Generator_p - Generator_previous_p <= Generator_ramp_up_allowance
   Generator_p_ramp_limit_down:
@@ -218,7 +228,7 @@ constraints:
     where: >-
       (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
       AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
+      AND Generator_ramps_from_previous
       AND Generator_active
     expression: Generator_previous_p - Generator_p <= Generator_ramp_down_allowance
 
@@ -229,11 +239,11 @@ assumptions:
     description: >-
       PyPSA reads `up_time_before` of a unit that is not committable in its
       ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp
-      alone builds (`constraints.py:1052-1053`). Where it is zero, PyPSA
+      alone builds (`constraints.py:1018-1019`). Where it is zero, PyPSA
       builds a row at the first snapshot with nothing carried in, and caps
       the unit there at zero, or at its start-up ramp where another unit of
       the component is committable with a fixed build
-      (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
+      (`constraints.py:1063-1066`, `1082-1084`). PyPSA documents
       the attribute as read only for a committable unit and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data

@@ -8,6 +8,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   bus:
     description: network nodes
   line:
@@ -29,6 +30,7 @@ dimensions:
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
 
@@ -61,9 +63,7 @@ parameters:
   Line_first_active:
     description: >-
       one in the first period a line stands in, zero elsewhere, data prep.
-      PyPSA takes `active.cumsum() == 1`, which also counts a line
-      that has retired in every later period (`global_constraints.py:276`,
-      PyPSA/PyPSA#1938)
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
     dims: [period, line]
   Line_s_nom:
     description: nominal apparent power
@@ -94,7 +94,7 @@ parameters:
     dims: [scenario, line]
   Line_s_nom_set:
     description: a given nominal apparent power for an extendable line; one without a value has no row here
-    dims: [scenario, line]
+    dims: [line]
   Line_s_set:
     description: a given flow schedule; a line without one has no row here
     dims: [scenario, snapshot, line]
@@ -104,7 +104,7 @@ parameters:
       in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default.
       A line whose carrier is not AC has no row either. The deprecated `v_ang_min` is
       ignored, as PyPSA ignores it with a `DeprecationWarning`
-      (`constraints.py:1713-1720`)
+      (`constraints.py:1702-1709`)
     dims: [scenario, line]
   Line_x_pu_eff:
     description: >-
@@ -115,7 +115,7 @@ parameters:
     description: >-
       the line's series impedance, signed by its orientation in the cycle —
       the cycle basis, data prep; a line in no cycle has no row. PyPSA builds
-      the cycle basis from the first scenario only (`networks.py:1356-1363`)
+      the cycle basis from the first scenario only (`networks.py:1430-1437`)
     dims: [period, line, cycle]
   Line_loss_max:
     description: the loss at a line's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep
@@ -133,9 +133,8 @@ parameters:
     dims: [scenario, snapshot, line, segment]
   Line_volume_weight:
     description: >-
-      the line's length where its carrier is in the row's set, the first
-      scenario's length as PyPSA reads it (`global_constraints.py:835-836`) —
-      data prep; a
+      the line's length in each scenario where its carrier is in the row's
+      set (`global_constraints.py:847-848`) — data prep; a
       line outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [scenario, global_constraint, line]
@@ -147,7 +146,7 @@ parameters:
       line outside the set, or one that does not stand in the row's period,
       has no row. The capital cost is PyPSA's `capital_cost` property, which is
       `Line_capital_cost` without `fom_cost` (`components.py:1151-1169`,
-      `global_constraints.py:935`)
+      `global_constraints.py:870-879`)
     dims: [scenario, global_constraint, line]
   Line_tech_capacity_weight:
     description: >-
@@ -169,7 +168,7 @@ variables:
       cost and held up by the cuts; absent, and zero in the balance, where
       the network is lossless
     dims: [scenario, snapshot, line]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     absence: zero
     bounds:
       lower: 0
@@ -215,7 +214,7 @@ expressions:
     adds_to: total_cost
   Line_additions:
     expression: >-
-      sum(Line_s_nom_ext * Line_first_active, by=Line_carrier, over=line, into=carrier)
+      sum(Line_s_nom_ext * Line_first_active, over=line, by=Line_carrier[carrier])
     adds_to: Carrier_additions
   Line_s_monitored:
     description: >-
@@ -228,14 +227,21 @@ expressions:
     otherwise: 0
   Line_injection:
     expression: >-
-      -sum(Line_s, by=Line_bus0, over=line, into=bus)
-      + sum(Line_s, by=Line_bus1, over=line, into=bus)
-      - (0.5 * sum(Line_loss, by=Line_bus0, over=line, into=bus))
-      - (0.5 * sum(Line_loss, by=Line_bus1, over=line, into=bus))
+      -sum(Line_s, over=line, by=Line_bus0[bus])
+      + sum(Line_s, over=line, by=Line_bus1[bus])
+      - (0.5 * sum(Line_loss, over=line, by=Line_bus0[bus]))
+      - (0.5 * sum(Line_loss, over=line, by=Line_bus1[bus]))
     adds_to: Bus_injection
   Line_angle_sum:
-    expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period, over=period, into=snapshot), over=line)
+    expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period[period]), over=line)
     adds_to: Cycle_angle_sum
+
+masks:
+  Line_lossy:
+    description: >-
+      a line that stands in the snapshot's period, where the run models
+      transmission losses
+    where: transmission_losses AND Line_active
 
 constraints:
   Line_fix_s_lower:
@@ -270,7 +276,7 @@ constraints:
     expression: Line_s_nom_ext <= Line_s_nom_max
   Line_s_nom_set:
     description: "`Line-s_nom_set` — the chosen build pinned, wherever a value is given"
-    dims: [scenario, line]
+    dims: [line]
     where: Line_s_nom_extendable AND Line_s_nom_set
     expression: Line_s_nom_ext == Line_s_nom_set
   Line_s_nom_modularity:
@@ -301,7 +307,7 @@ constraints:
   Line_loss_upper:
     description: "`Line-loss_upper` — a line dissipates at most the loss at its rating"
     dims: [scenario, snapshot, line]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     expression: Line_loss <= Line_loss_max
   Line_loss_tangents_forward:
     description: >-
@@ -310,12 +316,12 @@ constraints:
       `k`, or one row stacked over its `secant` axis, and this block states them
       all over the segment dimension
     dims: [scenario, snapshot, line, segment]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     expression: Line_loss + Line_loss_slope * Line_s >= Line_loss_offset
   Line_loss_tangents_reverse:
     description: >-
       `Line-loss_tangents-{k}--1`, `Line-loss_secants-neg` — the same fan
       mirrored, the loss depending on the flow's magnitude
     dims: [scenario, snapshot, line, segment]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     expression: Line_loss - Line_loss_slope * Line_s >= Line_loss_offset

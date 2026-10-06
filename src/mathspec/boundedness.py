@@ -23,13 +23,12 @@ from mathspec.program import (
     Divide,
     Dual,
     Expression,
-    GroupSum,
+    Join,
     Multiply,
-    Named,
+    NamedExpression,
     Negate,
     Parameter,
     Power,
-    Pullback,
     Sum,
     Translate,
     Variable,
@@ -122,7 +121,7 @@ def _coefficient_sign(node: Expression) -> Sign:
     """
     if isinstance(node, Negate):
         return _flip(_coefficient_sign(node.operand))
-    if isinstance(node, Named):
+    if isinstance(node, NamedExpression):
         return _coefficient_sign(node.body)
     if isinstance(node, Constant) and node.value != 0:
         return '+' if node.value > 0 else '-'
@@ -163,7 +162,7 @@ def _record_signs(node: Expression, sign: Sign, signs: dict[str, Sign]) -> None:
         _record_signs(node.base, None, signs)
         _record_signs(node.exponent, None, signs)
         return
-    if isinstance(node, Sum | GroupSum | Pullback | Translate | WindowSum | Cases | Named):
+    if isinstance(node, Sum | Join | Translate | WindowSum | Cases | NamedExpression):
         for child in children(node):
             _record_signs(child, sign, signs)
         return

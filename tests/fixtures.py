@@ -32,7 +32,7 @@ OPERATOR_PROBES = sorted((EXAMPLES / 'operators').glob('*.yaml'))
 #: names, so a test that prints it asserts on the math rather than on the
 #: example's own vocabulary.
 DISPATCH_MODEL: dict[str, Any] = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'generator': {'dtype': 'str'}},
+    'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'generator': {'dtype': 'str'}},
     'parameters': {
         'p_max': {'dims': ['generator']},
         'cost': {'dims': ['generator']},
@@ -48,7 +48,7 @@ DISPATCH_MODEL: dict[str, Any] = {
 #: a rule can name, and no objective, so a test adds what it judges. `p` and `r`
 #: share no dimension, which is what a rule about *different* dims needs.
 SMALL_MODEL: dict[str, Any] = {
-    'dimensions': {'g': {'dtype': 'str'}, 'h': {'dtype': 'str'}},
+    'dimensions': {'g': {'dtype': 'str', 'ordered': True}, 'h': {'dtype': 'str', 'ordered': True}},
     'relations': {'lk': {'key': 'g', 'values': 'h'}},
     'parameters': {
         'c': {'dims': ['g']},

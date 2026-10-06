@@ -8,6 +8,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   bus:
     description: network nodes
   storage_unit:
@@ -17,6 +18,7 @@ dimensions:
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
 
@@ -45,9 +47,7 @@ parameters:
   StorageUnit_first_active:
     description: >-
       one in the first period a storage unit stands in, zero elsewhere, data prep.
-      PyPSA takes `active.cumsum() == 1`, which also counts a storage unit
-      that has retired in every later period (`global_constraints.py:276`,
-      PyPSA/PyPSA#1938)
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
     dims: [period, storage_unit]
   StorageUnit_p_nom_min:
     description: least nominal power an extendable storage unit may be built at
@@ -65,7 +65,7 @@ parameters:
     dims: [scenario, storage_unit]
   StorageUnit_p_nom_set:
     description: a given nominal power for an extendable storage unit; one without a value has no row here
-    dims: [scenario, storage_unit]
+    dims: [storage_unit]
   StorageUnit_p_nom:
     description: nominal power
     dims: [scenario, storage_unit]
@@ -95,7 +95,7 @@ parameters:
     description: >-
       the sign net dispatch enters its bus's balance with — PyPSA's `sign`,
       `1` unless given. PyPSA refuses one that differs by scenario
-      (`consistency.py:1187`)
+      (`constants.py:43`)
     dims: [storage_unit]
   StorageUnit_retention:
     description: share of charge kept over a snapshot — PyPSA's `(1 - standing_loss) ** elapsed hours`, data prep
@@ -264,11 +264,11 @@ expressions:
         when: StorageUnit_cyclic_state_of_charge_per_period
         expression: >-
           StorageUnit_retention
-          * shift(StorageUnit_state_of_charge, along=snapshot, offset=1, edge='wrap', by=snapshot_period, within=period)
+          * shift(StorageUnit_state_of_charge, along=snapshot, offset=1, edge='wrap', within=snapshot_period[period])
       period_opening:
         when: >-
           StorageUnit_state_of_charge_initial_per_period AND NOT StorageUnit_cyclic_state_of_charge_per_period
-          AND position(snapshot, by=snapshot_period, within=period) == 0
+          AND position(snapshot, within=snapshot_period[period]) == 0
         expression: StorageUnit_state_of_charge_initial
     otherwise: StorageUnit_retention * shift(StorageUnit_state_of_charge, along=snapshot, offset=1)
   StorageUnit_closing_weight:
@@ -280,8 +280,8 @@ expressions:
     dims: [scenario, global_constraint, snapshot, storage_unit]
     cases:
       per_period:
-        when: StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, by=snapshot_period, within=period) == -1
-        expression: at(period_weight_years, by=snapshot_period, over=period, into=snapshot)
+        when: StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, within=snapshot_period[period]) == -1
+        expression: at(period_weight_years, by=snapshot_period[period])
       carried_over:
         when: NOT StorageUnit_state_of_charge_initial_per_period
         expression: GlobalConstraint_snapshot_closes
@@ -299,87 +299,99 @@ expressions:
     adds_to: tech_capacity_expansion
   StorageUnit_opex:
     expression: >-
-      sum(sum(((StorageUnit_p_dispatch * StorageUnit_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=storage_unit), over=snapshot)
-      + sum(sum((((StorageUnit_p_dispatch * StorageUnit_p_dispatch) * StorageUnit_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=storage_unit), over=snapshot)
-      + sum(sum(((StorageUnit_state_of_charge * StorageUnit_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=storage_unit), over=snapshot)
-      + sum(sum(((StorageUnit_spill * StorageUnit_spill_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=storage_unit), over=snapshot)
+      sum(sum(((StorageUnit_p_dispatch * StorageUnit_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
+      + sum(sum((((StorageUnit_p_dispatch * StorageUnit_p_dispatch) * StorageUnit_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
+      + sum(sum(((StorageUnit_state_of_charge * StorageUnit_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
+      + sum(sum(((StorageUnit_spill * StorageUnit_spill_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
     adds_to: scenario_opex
   StorageUnit_capex:
     expression: sum(scenario_weight * StorageUnit_p_nom_ext * StorageUnit_capital_cost * StorageUnit_capital_weight)
     adds_to: total_cost
   StorageUnit_additions:
     expression: >-
-      sum(StorageUnit_p_nom_ext * StorageUnit_first_active, by=StorageUnit_carrier, over=storage_unit, into=carrier)
+      sum(StorageUnit_p_nom_ext * StorageUnit_first_active, over=storage_unit, by=StorageUnit_carrier[carrier])
     adds_to: Carrier_additions
   StorageUnit_injection:
     expression: >-
-      sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), by=StorageUnit_bus, over=storage_unit, into=bus)
+      sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), over=storage_unit, by=StorageUnit_bus[bus])
     adds_to: Bus_injection
+
+masks:
+  StorageUnit_fix:
+    description: >-
+      a storage unit with a fixed build that stands in the snapshot's period —
+      PyPSA's `fix` rows
+    where: NOT StorageUnit_p_nom_extendable AND StorageUnit_active
+  StorageUnit_ext:
+    description: >-
+      a storage unit with an extendable build that stands in the snapshot's
+      period — PyPSA's `ext` rows
+    where: StorageUnit_p_nom_extendable AND StorageUnit_active
 
 constraints:
   StorageUnit_fix_p_dispatch_lower:
     description: "`StorageUnit-fix-p_dispatch-lower` — dispatch is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_dispatch >= 0
   StorageUnit_fix_p_dispatch_upper:
     description: "`StorageUnit-fix-p_dispatch-upper` — a fixed unit dispatches at most its nominal power"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_dispatch <= StorageUnit_p_max_pu * StorageUnit_p_nom
   StorageUnit_fix_p_store_lower:
     description: "`StorageUnit-fix-p_store-lower` — storing is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_store >= 0
   StorageUnit_fix_p_store_upper:
     description: >-
       `StorageUnit-fix-p_store-upper` — a fixed unit stores at most its
       nominal power, the minimum-per-unit column carrying that cap negated
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_store <= -StorageUnit_p_min_pu * StorageUnit_p_nom
   StorageUnit_fix_state_of_charge_lower:
     description: "`StorageUnit-fix-state_of_charge-lower` — charge is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_state_of_charge >= 0
   StorageUnit_fix_state_of_charge_upper:
     description: "`StorageUnit-fix-state_of_charge-upper` — a fixed unit holds at most its hours at nominal power"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_state_of_charge <= StorageUnit_max_hours * StorageUnit_p_nom
   StorageUnit_ext_p_dispatch_lower:
     description: "`StorageUnit-ext-p_dispatch-lower` — dispatch is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_dispatch >= 0
   StorageUnit_ext_p_dispatch_upper:
     description: "`StorageUnit-ext-p_dispatch-upper` — an extendable unit dispatches at most the chosen build"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_dispatch <= StorageUnit_p_max_pu * StorageUnit_p_nom_ext
   StorageUnit_ext_p_store_lower:
     description: "`StorageUnit-ext-p_store-lower` — storing is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_store >= 0
   StorageUnit_ext_p_store_upper:
     description: >-
       `StorageUnit-ext-p_store-upper` — an extendable unit stores at most the
       chosen build, the minimum-per-unit column carrying that cap negated
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_store <= -StorageUnit_p_min_pu * StorageUnit_p_nom_ext
   StorageUnit_ext_state_of_charge_lower:
     description: "`StorageUnit-ext-state_of_charge-lower` — charge is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_state_of_charge >= 0
   StorageUnit_ext_state_of_charge_upper:
     description: "`StorageUnit-ext-state_of_charge-upper` — an extendable unit holds at most its hours at the chosen build"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_state_of_charge <= StorageUnit_max_hours * StorageUnit_p_nom_ext
   StorageUnit_ext_p_nom_lower:
     description: "`StorageUnit-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
@@ -393,7 +405,7 @@ constraints:
     expression: StorageUnit_p_nom_ext <= StorageUnit_p_nom_max
   StorageUnit_p_nom_set:
     description: "`StorageUnit-p_nom_set` — the chosen build pinned, wherever a value is given"
-    dims: [scenario, storage_unit]
+    dims: [storage_unit]
     where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_set
     expression: StorageUnit_p_nom_ext == StorageUnit_p_nom_set
   StorageUnit_p_nom_modularity:
@@ -462,7 +474,7 @@ assumptions:
     description: >-
       PyPSA reads the closing charge of a unit that reopens per period at
       the last snapshot of every period, and fails on a `primary_energy` row
-      that names an `investment_period` (`global_constraints.py:474`)
+      that names an `investment_period` (`global_constraints.py:469`)
   StorageUnit_primary_energy_carried_over_has_unit_years:
     holds: "period_weight_years == 1"
     where: "StorageUnit_primary_energy_weight AND NOT StorageUnit_state_of_charge_initial_per_period"
@@ -470,13 +482,13 @@ assumptions:
       a unit that carries its charge from one period to the next closes
       once, at the last counted snapshot, and no period's years weighs that
       level — PyPSA refuses it where any period's years is not one
-      (`global_constraints.py:448`)
+      (`global_constraints.py:443`)
   StorageUnit_operational_limit_carried_over_has_unit_years:
-    holds: "at(period_weight_years == 1, by=snapshot_period, over=period, into=snapshot)"
+    holds: "at(period_weight_years == 1, by=snapshot_period[period])"
     where: "StorageUnit_operational_limit_weight AND NOT StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot"
     description: >-
       the same for an `operational_limit` row, over the periods it counts —
-      PyPSA refuses it (`global_constraints.py:647`)
+      PyPSA refuses it (`global_constraints.py:648`)
   StorageUnit_marginal_cost_quadratic_without_risk_preference:
     holds: "StorageUnit_marginal_cost_quadratic == 0"
     where: "CVaR_omega > 0"

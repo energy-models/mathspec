@@ -4,9 +4,8 @@
 
 """Rung 53: a `transmission_volume_expansion_limit` row holds in every scenario under `multi_investment_periods`.
 
-PyPSA builds no such row on a network with scenarios and investment
-periods (PyPSA/PyPSA#1939). The two futures are identical, so the oracle is the
-same network without scenarios, which PyPSA solves with the row.
+The two futures are identical, so the expected cost is the cost of the same
+network without scenarios.
 """
 
 from __future__ import annotations
@@ -15,7 +14,6 @@ from datetime import datetime
 
 import pandas as pd
 
-ISSUE = 1939
 OPTIMIZE = {'multi_investment_periods': True}
 
 
@@ -66,8 +64,3 @@ def build():
     n = network()
     n.set_scenarios({'calm': 0.6, 'stormy': 0.4})
     return n
-
-
-def oracle():
-    """The network without scenarios: the futures are identical, so the expected cost is its cost."""
-    return [(1.0, network())]

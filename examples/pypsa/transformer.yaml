@@ -8,6 +8,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   bus:
     description: network nodes
   transformer:
@@ -27,6 +28,7 @@ dimensions:
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -79,7 +81,7 @@ parameters:
     dims: [scenario, transformer]
   Transformer_s_nom_set:
     description: a given nominal apparent power for an extendable transformer; one without a value has no row here
-    dims: [scenario, transformer]
+    dims: [transformer]
   Transformer_s_set:
     description: a given flow schedule; a transformer without one has no row here
     dims: [scenario, snapshot, transformer]
@@ -115,9 +117,8 @@ parameters:
       whether a transformer's phase shift is a decision — PyPSA's
       `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a
       fixed shift carried by `phase_shift`. The shift parameters carry no
-      scenario: only a cycle row and an angle row read them, PyPSA fails on a
-      transformer in a cycle on a network with scenarios (`constraints.py:1660`),
-      and builds no angle row on one
+      scenario, while PyPSA reads them per scenario (`variables.py:433-443`,
+      `constraints.py:1652`, `:1735`): a parity gap (#783)
     dims: [transformer]
     dtype: bool
   Transformer_phase_shift_min:
@@ -175,7 +176,7 @@ variables:
       a line does; absent, and zero in the balance, where the network is
       lossless
     dims: [scenario, snapshot, transformer]
-    where: transmission_losses AND Transformer_active
+    where: Transformer_lossy
     absence: zero
     bounds:
       lower: 0
@@ -226,17 +227,24 @@ expressions:
     otherwise: 0
   Transformer_injection:
     expression: >-
-      -sum(Transformer_s, by=Transformer_bus0, over=transformer, into=bus)
-      + sum(Transformer_s, by=Transformer_bus1, over=transformer, into=bus)
-      - (0.5 * sum(Transformer_loss, by=Transformer_bus0, over=transformer, into=bus))
-      - (0.5 * sum(Transformer_loss, by=Transformer_bus1, over=transformer, into=bus))
+      -sum(Transformer_s, over=transformer, by=Transformer_bus0[bus])
+      + sum(Transformer_s, over=transformer, by=Transformer_bus1[bus])
+      - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus0[bus]))
+      - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus1[bus]))
     adds_to: Bus_injection
   Transformer_angle_sum:
     expression: >-
-      sum(Transformer_s * at(Transformer_cycle_weight, by=snapshot_period, over=period, into=snapshot), over=transformer)
+      sum(Transformer_s * at(Transformer_cycle_weight, by=snapshot_period[period]), over=transformer)
       + sum(Transformer_phase_shift_weight, over=transformer)
-      + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot_period, over=period, into=snapshot), over=transformer)
+      + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot_period[period]), over=transformer)
     adds_to: Cycle_angle_sum
+
+masks:
+  Transformer_lossy:
+    description: >-
+      a transformer that stands in the snapshot's period, where the run models
+      transmission losses
+    where: transmission_losses AND Transformer_active
 
 constraints:
   Transformer_fix_s_lower:
@@ -271,7 +279,7 @@ constraints:
     expression: Transformer_s_nom_ext <= Transformer_s_nom_max
   Transformer_s_nom_set:
     description: "`Transformer-s_nom_set` — the chosen build pinned, wherever a value is given"
-    dims: [scenario, transformer]
+    dims: [transformer]
     where: Transformer_s_nom_extendable AND Transformer_s_nom_set
     expression: Transformer_s_nom_ext == Transformer_s_nom_set
   Transformer_s_nom_modularity:
@@ -319,7 +327,7 @@ constraints:
   Transformer_loss_upper:
     description: "`Transformer-loss_upper` — a transformer dissipates at most the loss at its rating"
     dims: [scenario, snapshot, transformer]
-    where: transmission_losses AND Transformer_active
+    where: Transformer_lossy
     expression: Transformer_loss <= Transformer_loss_max
   Transformer_loss_tangents_forward:
     description: >-
@@ -327,12 +335,12 @@ constraints:
       loss sits above every cut to its curve for flow one way, as a line's
       does, over the segment dimension
     dims: [scenario, snapshot, transformer, segment]
-    where: transmission_losses AND Transformer_active
+    where: Transformer_lossy
     expression: Transformer_loss + Transformer_loss_slope * Transformer_s >= Transformer_loss_offset
   Transformer_loss_tangents_reverse:
     description: >-
       `Transformer-loss_tangents-{k}--1`, `Transformer-loss_secants-neg` — the
       same fan mirrored, the loss depending on the flow's magnitude
     dims: [scenario, snapshot, transformer, segment]
-    where: transmission_losses AND Transformer_active
+    where: Transformer_lossy
     expression: Transformer_loss - Transformer_loss_slope * Transformer_s >= Transformer_loss_offset
