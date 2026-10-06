@@ -44,7 +44,7 @@ constraints:
   Bus_nodal_balance:
     description: "`Bus-nodal_balance` — what the ports on a bus put in nets to nothing"
     dims: [snapshot, bus]
-    expression: sum(Port_p, by=Port_bus, over=port, into=bus) == 0
+    expression: sum(Port_p, over=port, by=Port_bus[bus]) == 0
 given:
   expressions:
     total_cost: { dims: [], description: what running the system costs }

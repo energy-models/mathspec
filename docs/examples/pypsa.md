@@ -2460,7 +2460,7 @@ snapshot, while its ramp rows bind inside each period.
 
 | PyPSA | status | note |
 | --- | --- | --- |
-| [`StorageUnit-energy_balance`](#storageunit-energy_balance), [`Store-energy_balance`](#store-energy_balance), per period | done | two more cases in the charge carried in: a `shift(…, edge='wrap', by=snapshot_period, within=period)` and the initial level at `position(snapshot, by=snapshot_period, within=period) == 0` |
+| [`StorageUnit-energy_balance`](#storageunit-energy_balance), [`Store-energy_balance`](#store-energy_balance), per period | done | two more cases in the charge carried in: a `shift(…, edge='wrap', within=snapshot_period[period])` and the initial level at `position(snapshot, within=snapshot_period[period]) == 0` |
 | [`{c}-p-ramp_limit_*`, `-bigM`, at a period start](#generator-p-ramp_limit_up) | done | the `where:` drops every period start but the horizon's first |
 
 <!-- reference:rung_29_storage_per_period:begin -->
@@ -3210,7 +3210,7 @@ still in transit at the first snapshots of every period. PyPSA measures the
 delay in `generators` weighting per period and rounds it down to a snapshot
 start (`multiports.py:106-123`). Scenarios do not change the source snapshot.
 `Link_output_arrival` and `Process_output_arrival` therefore shift with
-`by=snapshot_period, within=period`. A plain run has one period, so the shift
+`within=snapshot_period[period]`. A plain run has one period, so the shift
 is the flat one.
 
 The rung builds a link that delays by two and wraps, and a process that
@@ -3221,7 +3221,7 @@ that flat shift patched into PyPSA's source index, the network solves to
 
 | PyPSA | status | note |
 | --- | --- | --- |
-| [link and process `delay`, `cyclic_delay`](#bus-nodal_balance) per investment period | done | `shift(offset=delay, by=snapshot_period, within=period)`; `edge='wrap'` closes each period, `edge=0` vacates each period's first snapshots |
+| [link and process `delay`, `cyclic_delay`](#bus-nodal_balance) per investment period | done | `shift(offset=delay, within=snapshot_period[period])`; `edge='wrap'` closes each period, `edge=0` vacates each period's first snapshots |
 
 <!-- reference:rung_38_delay_per_period:begin -->
 > ✔ `pypsa 1.3.0.post1.dev23+g02bdcbbaf` solves this rung's network at objective `12918.75`, 104 rows.
@@ -5950,7 +5950,7 @@ $`t \ominus k`$ denotes cyclic translation: index $`t-k`$ taken modulo the size 
 
 $`t \boxminus_{v} k`$ denotes translation with $`v`$ standing where index $`t-k`$ leaves the dimension (`shift(edge=v)`), so the row at that boundary is built and carries $`v`$ rather than being dropped.
 
-$`t \ominus^{\mathrm{relation}(t)} k`$ denotes a translation counted inside the group a relation puts $`t`$ in (`shift(by=relation)`), so a term never crosses out of its own group. The two modifiers take different slots — the group above, the fill below — so $`t \boxminus_{v}^{\mathrm{relation}(t)} k`$ is both at once.
+$`t \ominus^{\mathrm{relation}(t)} k`$ denotes a translation counted inside the group a relation puts $`t`$ in (`shift(within=relation[c])`), so a term never crosses out of its own group. The two modifiers take different slots — the group above, the fill below — so $`t \boxminus_{v}^{\mathrm{relation}(t)} k`$ is both at once.
 
 $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own order — the order `shift` steps along, not the order labels sort in — counted from $`0`$. The index itself stays the coordinate, so $`t`$ compares against labels and $`\mathrm{pos}(t)`$ against positions.
 
@@ -6586,7 +6586,7 @@ Generator_p_ramp_limit_up_run_big_m:
   where: >-
     Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
     AND Generator_active
   expression: >-
     Generator_p - Generator_previous_p <=
@@ -6612,7 +6612,7 @@ Generator_p_ramp_limit_up_start_big_m:
   where: >-
     Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
     AND Generator_active
   expression: >-
     Generator_p - Generator_previous_p <=
@@ -6638,7 +6638,7 @@ Generator_p_ramp_limit_down_run_big_m:
   where: >-
     Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
     AND Generator_active
   expression: >-
     Generator_previous_p - Generator_p <=
@@ -6664,7 +6664,7 @@ Generator_p_ramp_limit_down_shut_big_m:
   where: >-
     Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
     AND Generator_active
   expression: >-
     Generator_previous_p - Generator_p <=
@@ -6937,7 +6937,7 @@ Generator_maint_window:
     maintenance status is at most one
   dims: [scenario, snapshot, generator]
   where: Generator_maintainable AND Generator_active
-  expression: Generator_maintenance == sum(Generator_maintenance_start, by=Generator_maintenance_cover, over=start, into=covered)
+  expression: Generator_maintenance == sum(Generator_maintenance_start, over=start, by=Generator_maintenance_cover[covered])
 ```
 
 ```math
@@ -7274,7 +7274,7 @@ Link_p_ramp_limit_up_run_big_m:
   where: >-
     Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
     AND (Link_ramp_limit_up OR Link_ramp_limit_start_up)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
     AND Link_active
   expression: >-
     Link_p - Link_previous_p <=
@@ -7300,7 +7300,7 @@ Link_p_ramp_limit_up_start_big_m:
   where: >-
     Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
     AND (Link_ramp_limit_up OR Link_ramp_limit_start_up)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
     AND Link_active
   expression: >-
     Link_p - Link_previous_p <=
@@ -7326,7 +7326,7 @@ Link_p_ramp_limit_down_run_big_m:
   where: >-
     Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
     AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
     AND Link_active
   expression: >-
     Link_previous_p - Link_p <=
@@ -7352,7 +7352,7 @@ Link_p_ramp_limit_down_shut_big_m:
   where: >-
     Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
     AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
     AND Link_active
   expression: >-
     Link_previous_p - Link_p <=
@@ -7625,7 +7625,7 @@ Link_maint_window:
     maintenance status is at most one
   dims: [scenario, snapshot, link]
   where: Link_maintainable AND Link_active
-  expression: Link_maintenance == sum(Link_maintenance_start, by=Link_maintenance_cover, over=start, into=covered)
+  expression: Link_maintenance == sum(Link_maintenance_start, over=start, by=Link_maintenance_cover[covered])
 ```
 
 ```math
@@ -7962,7 +7962,7 @@ Process_p_ramp_limit_up_run_big_m:
   where: >-
     Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
     AND (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
     AND Process_active
   expression: >-
     Process_p - Process_previous_p <=
@@ -7988,7 +7988,7 @@ Process_p_ramp_limit_up_start_big_m:
   where: >-
     Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
     AND (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
     AND Process_active
   expression: >-
     Process_p - Process_previous_p <=
@@ -8014,7 +8014,7 @@ Process_p_ramp_limit_down_run_big_m:
   where: >-
     Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
     AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
     AND Process_active
   expression: >-
     Process_previous_p - Process_p <=
@@ -8040,7 +8040,7 @@ Process_p_ramp_limit_down_shut_big_m:
   where: >-
     Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
     AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
     AND Process_active
   expression: >-
     Process_previous_p - Process_p <=
@@ -8313,7 +8313,7 @@ Process_maint_window:
     maintenance status is at most one
   dims: [scenario, snapshot, process]
   where: Process_maintainable AND Process_active
-  expression: Process_maintenance == sum(Process_maintenance_start, by=Process_maintenance_cover, over=start, into=covered)
+  expression: Process_maintenance == sum(Process_maintenance_start, over=start, by=Process_maintenance_cover[covered])
 ```
 
 ```math
@@ -9022,8 +9022,8 @@ Line_fix_s_lower_security:
     sub-network `n`; this block states them all over the outage
     dimension
   dims: [scenario, snapshot, line, outage]
-  where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period, over=period, into=snapshot)
-  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s >= -Line_s_max_pu * Line_s_nom
+  where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
+  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom
 ```
 
 ```math
@@ -9043,8 +9043,8 @@ Line_fix_s_upper_security:
     one row per outaged component `c` and sub-network `n`; this block
     states them all over the outage dimension
   dims: [scenario, snapshot, line, outage]
-  where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period, over=period, into=snapshot)
-  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s <= Line_s_max_pu * Line_s_nom
+  where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
+  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s <= Line_s_max_pu * Line_s_nom
 ```
 
 ```math
@@ -9065,8 +9065,8 @@ Line_ext_s_lower_security:
     outaged component `c` and sub-network `n`; this block states them
     all over the outage dimension
   dims: [scenario, snapshot, line, outage]
-  where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period, over=period, into=snapshot)
-  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s >= -Line_s_max_pu * Line_s_nom_ext
+  where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
+  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom_ext
 ```
 
 ```math
@@ -9087,8 +9087,8 @@ Line_ext_s_upper_security:
     sub-network `n`; this block states them all over the outage
     dimension
   dims: [scenario, snapshot, line, outage]
-  where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period, over=period, into=snapshot)
-  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s <= Line_s_max_pu * Line_s_nom_ext
+  where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
+  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s <= Line_s_max_pu * Line_s_nom_ext
 ```
 
 ```math
@@ -9109,8 +9109,8 @@ Transformer_fix_s_lower_security:
     sub-network `n`; this block states them all over the outage
     dimension
   dims: [scenario, snapshot, transformer, outage]
-  where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot)
-  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom
+  where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
+  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom
 ```
 
 ```math
@@ -9130,8 +9130,8 @@ Transformer_fix_s_upper_security:
     PyPSA names one row per outaged component `c` and sub-network `n`;
     this block states them all over the outage dimension
   dims: [scenario, snapshot, transformer, outage]
-  where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot)
-  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom
+  where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
+  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom
 ```
 
 ```math
@@ -9152,8 +9152,8 @@ Transformer_ext_s_lower_security:
     outaged component `c` and sub-network `n`; this block states them
     all over the outage dimension
   dims: [scenario, snapshot, transformer, outage]
-  where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot)
-  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom_ext
+  where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
+  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom_ext
 ```
 
 ```math
@@ -9174,8 +9174,8 @@ Transformer_ext_s_upper_security:
     `c` and sub-network `n`; this block states them all over the
     outage dimension
   dims: [scenario, snapshot, transformer, outage]
-  where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot)
-  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period, over=period, into=snapshot) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom_ext
+  where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
+  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom_ext
 ```
 
 ```math
@@ -9223,7 +9223,7 @@ Generator_p_ramp_limit_up:
   where: >-
     (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
     AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
     AND Generator_active
   expression: Generator_p - Generator_previous_p <= Generator_ramp_up_allowance
 ```
@@ -9249,7 +9249,7 @@ Generator_p_ramp_limit_down:
   where: >-
     (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
     AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init)))
     AND Generator_active
   expression: Generator_previous_p - Generator_p <= Generator_ramp_down_allowance
 ```
@@ -9275,7 +9275,7 @@ Link_p_ramp_limit_up:
   where: >-
     (Link_ramp_limit_up OR Link_ramp_limit_start_up)
     AND NOT (Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0))
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
     AND Link_active
   expression: Link_p - Link_previous_p <= Link_ramp_up_allowance
 ```
@@ -9301,7 +9301,7 @@ Link_p_ramp_limit_down:
   where: >-
     (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
     AND NOT (Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0))
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
     AND Link_active
   expression: Link_previous_p - Link_p <= Link_ramp_down_allowance
 ```
@@ -9327,7 +9327,7 @@ Process_p_ramp_limit_up:
   where: >-
     (Process_ramp_limit_up OR Process_ramp_limit_start_up)
     AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
     AND Process_active
   expression: Process_p - Process_previous_p <= Process_ramp_up_allowance
 ```
@@ -9353,7 +9353,7 @@ Process_p_ramp_limit_down:
   where: >-
     (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
     AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-    AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+    AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
     AND Process_active
   expression: Process_previous_p - Process_p <= Process_ramp_down_allowance
 ```
@@ -10791,11 +10791,11 @@ StorageUnit_charge_carried_in:
       when: StorageUnit_cyclic_state_of_charge_per_period
       expression: >-
         StorageUnit_retention
-        * shift(StorageUnit_state_of_charge, along=snapshot, offset=1, edge='wrap', by=snapshot_period, within=period)
+        * shift(StorageUnit_state_of_charge, along=snapshot, offset=1, edge='wrap', within=snapshot_period[period])
     period_opening:
       when: >-
         StorageUnit_state_of_charge_initial_per_period AND NOT StorageUnit_cyclic_state_of_charge_per_period
-        AND position(snapshot, by=snapshot_period, within=period) == 0
+        AND position(snapshot, within=snapshot_period[period]) == 0
       expression: StorageUnit_state_of_charge_initial
   otherwise: StorageUnit_retention * shift(StorageUnit_state_of_charge, along=snapshot, offset=1)
 ```
@@ -10832,9 +10832,9 @@ Store_energy_carried_in:
       expression: Store_e_initial
     period_cyclic:
       when: Store_e_cyclic_per_period
-      expression: Store_retention * shift(Store_e, along=snapshot, offset=1, edge='wrap', by=snapshot_period, within=period)
+      expression: Store_retention * shift(Store_e, along=snapshot, offset=1, edge='wrap', within=snapshot_period[period])
     period_opening:
-      when: Store_e_initial_per_period AND NOT Store_e_cyclic_per_period AND position(snapshot, by=snapshot_period, within=period) == 0
+      when: Store_e_initial_per_period AND NOT Store_e_cyclic_per_period AND position(snapshot, within=snapshot_period[period]) == 0
       expression: Store_e_initial
   otherwise: Store_retention * shift(Store_e, along=snapshot, offset=1)
 ```
@@ -10859,8 +10859,8 @@ Link_output_arrival:
   cases:
     wrapping:
       when: Link_output_cyclic_delay
-      expression: shift(at(Link_p, by=Link_output_link, over=link, into=link_output), along=snapshot, offset=Link_output_delay, edge='wrap', by=snapshot_period, within=period) * Link_efficiency
-  otherwise: shift(at(Link_p, by=Link_output_link, over=link, into=link_output), along=snapshot, offset=Link_output_delay, edge=0, by=snapshot_period, within=period) * Link_efficiency
+      expression: shift(at(Link_p, by=Link_output_link[link]), along=snapshot, offset=Link_output_delay, edge='wrap', within=snapshot_period[period]) * Link_efficiency
+  otherwise: shift(at(Link_p, by=Link_output_link[link]), along=snapshot, offset=Link_output_delay, edge=0, within=snapshot_period[period]) * Link_efficiency
 ```
 
 ```math
@@ -10883,8 +10883,8 @@ Process_output_arrival:
   cases:
     wrapping:
       when: Process_output_cyclic_delay
-      expression: shift(at(Process_p, by=Process_output_process, over=process, into=process_output), along=snapshot, offset=Process_output_delay, edge='wrap', by=snapshot_period, within=period) * Process_rate
-  otherwise: shift(at(Process_p, by=Process_output_process, over=process, into=process_output), along=snapshot, offset=Process_output_delay, edge=0, by=snapshot_period, within=period) * Process_rate
+      expression: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge='wrap', within=snapshot_period[period]) * Process_rate
+  otherwise: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge=0, within=snapshot_period[period]) * Process_rate
 ```
 
 ```math
@@ -10903,7 +10903,7 @@ GlobalConstraint_energy_weight:
   cases:
     counted:
       when: GlobalConstraint_counts_snapshot
-      expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period, over=period, into=snapshot)
+      expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
   otherwise: 0
 ```
 
@@ -10940,8 +10940,8 @@ StorageUnit_closing_weight:
   dims: [scenario, global_constraint, snapshot, storage_unit]
   cases:
     per_period:
-      when: StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, by=snapshot_period, within=period) == -1
-      expression: at(period_weight_years, by=snapshot_period, over=period, into=snapshot)
+      when: StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, within=snapshot_period[period]) == -1
+      expression: at(period_weight_years, by=snapshot_period[period])
     carried_over:
       when: NOT StorageUnit_state_of_charge_initial_per_period
       expression: GlobalConstraint_snapshot_closes
@@ -10964,8 +10964,8 @@ Store_closing_weight:
   dims: [scenario, global_constraint, snapshot, store]
   cases:
     per_period:
-      when: Store_e_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, by=snapshot_period, within=period) == -1
-      expression: at(period_weight_years, by=snapshot_period, over=period, into=snapshot)
+      when: Store_e_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, within=snapshot_period[period]) == -1
+      expression: at(period_weight_years, by=snapshot_period[period])
     carried_over:
       when: NOT Store_e_initial_per_period
       expression: GlobalConstraint_snapshot_closes
@@ -11251,8 +11251,8 @@ tech_capacity_expansion:
 ```yaml
 Generator_opex:
   expression: >-
-    sum(sum(((Generator_p * Generator_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=generator), over=snapshot)
-    + sum(sum((((Generator_p * Generator_p) * Generator_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=generator), over=snapshot)
+    sum(sum(((Generator_p * Generator_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
+    + sum(sum((((Generator_p * Generator_p) * Generator_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
 ```
 
 ```math
@@ -11264,7 +11264,7 @@ Generator_opex:
 ```yaml
 Generator_commitment_opex:
   expression: >-
-    sum(sum(((Generator_status * Generator_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=generator), over=snapshot)
+    sum(sum(((Generator_status * Generator_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
     + sum(sum(Generator_start_up * Generator_start_up_cost, over=generator), over=snapshot)
     + sum(sum(Generator_shut_down * Generator_shut_down_cost, over=generator), over=snapshot)
 ```
@@ -11278,8 +11278,8 @@ Generator_commitment_opex:
 ```yaml
 Link_opex:
   expression: >-
-    sum(sum(((Link_p * Link_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=link), over=snapshot)
-    + sum(sum((((Link_p * Link_p) * Link_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=link), over=snapshot)
+    sum(sum(((Link_p * Link_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
+    + sum(sum((((Link_p * Link_p) * Link_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
 ```
 
 ```math
@@ -11291,7 +11291,7 @@ Link_opex:
 ```yaml
 Link_commitment_opex:
   expression: >-
-    sum(sum(((Link_status * Link_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=link), over=snapshot)
+    sum(sum(((Link_status * Link_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
     + sum(sum(Link_start_up * Link_start_up_cost, over=link), over=snapshot)
     + sum(sum(Link_shut_down * Link_shut_down_cost, over=link), over=snapshot)
 ```
@@ -11305,8 +11305,8 @@ Link_commitment_opex:
 ```yaml
 Process_opex:
   expression: >-
-    sum(sum(((Process_p * Process_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=process), over=snapshot)
-    + sum(sum((((Process_p * Process_p) * Process_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=process), over=snapshot)
+    sum(sum(((Process_p * Process_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
+    + sum(sum((((Process_p * Process_p) * Process_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
 ```
 
 ```math
@@ -11318,7 +11318,7 @@ Process_opex:
 ```yaml
 Process_commitment_opex:
   expression: >-
-    sum(sum(((Process_status * Process_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=process), over=snapshot)
+    sum(sum(((Process_status * Process_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
     + sum(sum(Process_start_up * Process_start_up_cost, over=process), over=snapshot)
     + sum(sum(Process_shut_down * Process_shut_down_cost, over=process), over=snapshot)
 ```
@@ -11332,10 +11332,10 @@ Process_commitment_opex:
 ```yaml
 StorageUnit_opex:
   expression: >-
-    sum(sum(((StorageUnit_p_dispatch * StorageUnit_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=storage_unit), over=snapshot)
-    + sum(sum((((StorageUnit_p_dispatch * StorageUnit_p_dispatch) * StorageUnit_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=storage_unit), over=snapshot)
-    + sum(sum(((StorageUnit_state_of_charge * StorageUnit_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=storage_unit), over=snapshot)
-    + sum(sum(((StorageUnit_spill * StorageUnit_spill_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=storage_unit), over=snapshot)
+    sum(sum(((StorageUnit_p_dispatch * StorageUnit_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
+    + sum(sum((((StorageUnit_p_dispatch * StorageUnit_p_dispatch) * StorageUnit_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
+    + sum(sum(((StorageUnit_state_of_charge * StorageUnit_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
+    + sum(sum(((StorageUnit_spill * StorageUnit_spill_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
 ```
 
 ```math
@@ -11347,9 +11347,9 @@ StorageUnit_opex:
 ```yaml
 Store_opex:
   expression: >-
-    sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
-    + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
-    + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=store), over=snapshot)
+    sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
+    + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
+    + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
 ```
 
 ```math
@@ -11498,7 +11498,7 @@ total_cost:
 ```yaml
 Generator_additions:
   expression: >-
-    sum(Generator_p_nom_ext * Generator_first_active, by=Generator_carrier, over=generator, into=carrier)
+    sum(Generator_p_nom_ext * Generator_first_active, over=generator, by=Generator_carrier[carrier])
 ```
 
 ```math
@@ -11510,7 +11510,7 @@ Generator_additions:
 ```yaml
 Line_additions:
   expression: >-
-    sum(Line_s_nom_ext * Line_first_active, by=Line_carrier, over=line, into=carrier)
+    sum(Line_s_nom_ext * Line_first_active, over=line, by=Line_carrier[carrier])
 ```
 
 ```math
@@ -11522,7 +11522,7 @@ Line_additions:
 ```yaml
 Link_additions:
   expression: >-
-    sum(Link_p_nom_ext * Link_first_active, by=Link_carrier, over=link, into=carrier)
+    sum(Link_p_nom_ext * Link_first_active, over=link, by=Link_carrier[carrier])
 ```
 
 ```math
@@ -11534,7 +11534,7 @@ Link_additions:
 ```yaml
 Process_additions:
   expression: >-
-    sum(Process_p_nom_ext * Process_first_active, by=Process_carrier, over=process, into=carrier)
+    sum(Process_p_nom_ext * Process_first_active, over=process, by=Process_carrier[carrier])
 ```
 
 ```math
@@ -11546,7 +11546,7 @@ Process_additions:
 ```yaml
 StorageUnit_additions:
   expression: >-
-    sum(StorageUnit_p_nom_ext * StorageUnit_first_active, by=StorageUnit_carrier, over=storage_unit, into=carrier)
+    sum(StorageUnit_p_nom_ext * StorageUnit_first_active, over=storage_unit, by=StorageUnit_carrier[carrier])
 ```
 
 ```math
@@ -11558,7 +11558,7 @@ StorageUnit_additions:
 ```yaml
 Store_additions:
   expression: >-
-    sum(Store_e_nom_ext * Store_first_active, by=Store_carrier, over=store, into=carrier)
+    sum(Store_e_nom_ext * Store_first_active, over=store, by=Store_carrier[carrier])
 ```
 
 ```math
@@ -11666,8 +11666,8 @@ Outage_s:
     transformer's flow before it goes out
   dims: [scenario, snapshot, outage]
   cases:
-    line: { when: Outage_line, expression: "at(Line_s_monitored, by=Outage_line, over=line, into=outage)" }
-  otherwise: at(Transformer_s_monitored, by=Outage_transformer, over=transformer, into=outage)
+    line: { when: Outage_line, expression: "at(Line_s_monitored, by=Outage_line[line])" }
+  otherwise: at(Transformer_s_monitored, by=Outage_transformer[transformer])
 ```
 
 ```math
@@ -11678,7 +11678,7 @@ Outage_s:
 
 ```yaml
 Generator_injection:
-  expression: sum(Generator_sign * Generator_p, by=Generator_bus, over=generator, into=bus)
+  expression: sum(Generator_sign * Generator_p, over=generator, by=Generator_bus[bus])
 ```
 
 ```math
@@ -11690,10 +11690,10 @@ Generator_injection:
 ```yaml
 Line_injection:
   expression: >-
-    -sum(Line_s, by=Line_bus0, over=line, into=bus)
-    + sum(Line_s, by=Line_bus1, over=line, into=bus)
-    - (0.5 * sum(Line_loss, by=Line_bus0, over=line, into=bus))
-    - (0.5 * sum(Line_loss, by=Line_bus1, over=line, into=bus))
+    -sum(Line_s, over=line, by=Line_bus0[bus])
+    + sum(Line_s, over=line, by=Line_bus1[bus])
+    - (0.5 * sum(Line_loss, over=line, by=Line_bus0[bus]))
+    - (0.5 * sum(Line_loss, over=line, by=Line_bus1[bus]))
 ```
 
 ```math
@@ -11705,8 +11705,8 @@ Line_injection:
 ```yaml
 Link_injection:
   expression: >-
-    -sum(Link_p, by=Link_bus0, over=link, into=bus)
-    + sum(Link_output_arrival, by=Link_output_bus, over=link_output, into=bus)
+    -sum(Link_p, over=link, by=Link_bus0[bus])
+    + sum(Link_output_arrival, over=link_output, by=Link_output_bus[bus])
 ```
 
 ```math
@@ -11716,7 +11716,7 @@ Link_injection:
 ### `Load_injection`
 
 ```yaml
-Load_injection: sum(Load_demand, by=Load_bus, over=load, into=bus)
+Load_injection: sum(Load_demand, over=load, by=Load_bus[bus])
 ```
 
 ```math
@@ -11728,7 +11728,7 @@ Load_injection: sum(Load_demand, by=Load_bus, over=load, into=bus)
 ```yaml
 Process_injection:
   expression: >-
-    sum(Process_output_arrival, by=Process_output_bus, over=process_output, into=bus)
+    sum(Process_output_arrival, over=process_output, by=Process_output_bus[bus])
 ```
 
 ```math
@@ -11740,7 +11740,7 @@ Process_injection:
 ```yaml
 StorageUnit_injection:
   expression: >-
-    sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), by=StorageUnit_bus, over=storage_unit, into=bus)
+    sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), over=storage_unit, by=StorageUnit_bus[bus])
 ```
 
 ```math
@@ -11750,7 +11750,7 @@ StorageUnit_injection:
 ### `Store_injection`
 
 ```yaml
-Store_injection: sum(Store_sign * Store_p, by=Store_bus, over=store, into=bus)
+Store_injection: sum(Store_sign * Store_p, over=store, by=Store_bus[bus])
 ```
 
 ```math
@@ -11762,10 +11762,10 @@ Store_injection: sum(Store_sign * Store_p, by=Store_bus, over=store, into=bus)
 ```yaml
 Transformer_injection:
   expression: >-
-    -sum(Transformer_s, by=Transformer_bus0, over=transformer, into=bus)
-    + sum(Transformer_s, by=Transformer_bus1, over=transformer, into=bus)
-    - (0.5 * sum(Transformer_loss, by=Transformer_bus0, over=transformer, into=bus))
-    - (0.5 * sum(Transformer_loss, by=Transformer_bus1, over=transformer, into=bus))
+    -sum(Transformer_s, over=transformer, by=Transformer_bus0[bus])
+    + sum(Transformer_s, over=transformer, by=Transformer_bus1[bus])
+    - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus0[bus]))
+    - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus1[bus]))
 ```
 
 ```math
@@ -11799,7 +11799,7 @@ Bus_injection:
 ### `Line_angle_sum`
 
 ```yaml
-Line_angle_sum: sum(Line_s * at(Line_cycle_weight, by=snapshot_period, over=period, into=snapshot), over=line)
+Line_angle_sum: sum(Line_s * at(Line_cycle_weight, by=snapshot_period[period]), over=line)
 ```
 
 ```math
@@ -11811,9 +11811,9 @@ Line_angle_sum: sum(Line_s * at(Line_cycle_weight, by=snapshot_period, over=peri
 ```yaml
 Transformer_angle_sum:
   expression: >-
-    sum(Transformer_s * at(Transformer_cycle_weight, by=snapshot_period, over=period, into=snapshot), over=transformer)
+    sum(Transformer_s * at(Transformer_cycle_weight, by=snapshot_period[period]), over=transformer)
     + sum(Transformer_phase_shift_weight, over=transformer)
-    + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot_period, over=period, into=snapshot), over=transformer)
+    + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot_period[period]), over=transformer)
 ```
 
 ```math
@@ -12565,7 +12565,7 @@ StorageUnit_primary_energy_carried_over_has_unit_years:
 
 ```yaml
 StorageUnit_operational_limit_carried_over_has_unit_years:
-  holds: "at(period_weight_years == 1, by=snapshot_period, over=period, into=snapshot)"
+  holds: "at(period_weight_years == 1, by=snapshot_period[period])"
   where: "StorageUnit_operational_limit_weight AND NOT StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot"
   description: >-
     the same for an `operational_limit` row, over the periods it counts —
@@ -12613,7 +12613,7 @@ Store_primary_energy_carried_over_has_unit_years:
 
 ```yaml
 Store_operational_limit_carried_over_has_unit_years:
-  holds: "at(period_weight_years == 1, by=snapshot_period, over=period, into=snapshot)"
+  holds: "at(period_weight_years == 1, by=snapshot_period[period])"
   where: "Store_operational_limit_weight AND NOT Store_e_initial_per_period AND GlobalConstraint_counts_snapshot"
   description: >-
     the same for an `operational_limit` row, over the periods it counts —
