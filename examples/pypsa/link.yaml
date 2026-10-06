@@ -8,6 +8,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   bus:
     description: network nodes
   link:
@@ -22,6 +23,7 @@ dimensions:
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
 
@@ -270,6 +272,13 @@ expressions:
       -sum(Link_p, over=link, by=Link_bus0[bus])
       + sum(Link_output_arrival, over=link_output, by=Link_output_bus[bus])
     adds_to: Bus_injection
+
+masks:
+  Link_committed:
+    description: >-
+      a committable link that stands in the snapshot's period — every
+      unit-commitment row's set
+    where: Link_committable AND Link_active
 
 constraints:
   Link_fix_p_lower:

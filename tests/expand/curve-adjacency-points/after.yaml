@@ -1,5 +1,5 @@
 dimensions:
-  bp: { dtype: int }
+  bp: { dtype: int, ordered: true }
 
 parameters:
   x_bp: { dims: [bp], missing: neutral }

@@ -32,8 +32,8 @@ if TYPE_CHECKING:
 #: Every axis takes its coordinates from data, so nothing here sizes one.
 STORAGE: dict[str, Any] = {
     'dimensions': {
-        'snapshot': {'dtype': 'int'},
-        'storage': {},
+        'snapshot': {'dtype': 'int', 'ordered': True},
+        'storage': {'ordered': True},
         'period': {'dtype': 'int'},
     },
     'relations': {'period_of': {'key': 'snapshot', 'values': 'period'}},

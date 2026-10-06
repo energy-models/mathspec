@@ -8,6 +8,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   bus:
     description: network nodes
   storage_unit:
@@ -17,6 +18,7 @@ dimensions:
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
 
@@ -323,70 +325,82 @@ expressions:
       sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), over=storage_unit, by=StorageUnit_bus[bus])
     adds_to: Bus_injection
 
+masks:
+  StorageUnit_fix:
+    description: >-
+      a storage unit with a fixed build that stands in the snapshot's period —
+      PyPSA's `fix` rows
+    where: NOT StorageUnit_p_nom_extendable AND StorageUnit_active
+  StorageUnit_ext:
+    description: >-
+      a storage unit with an extendable build that stands in the snapshot's
+      period — PyPSA's `ext` rows
+    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+
 constraints:
   StorageUnit_fix_p_dispatch_lower:
     description: "`StorageUnit-fix-p_dispatch-lower` — dispatch is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_dispatch >= 0
   StorageUnit_fix_p_dispatch_upper:
     description: "`StorageUnit-fix-p_dispatch-upper` — a fixed unit dispatches at most its nominal power"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_dispatch <= StorageUnit_p_max_pu * StorageUnit_p_nom
   StorageUnit_fix_p_store_lower:
     description: "`StorageUnit-fix-p_store-lower` — storing is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_store >= 0
   StorageUnit_fix_p_store_upper:
     description: >-
       `StorageUnit-fix-p_store-upper` — a fixed unit stores at most its
       nominal power, the minimum-per-unit column carrying that cap negated
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_p_store <= -StorageUnit_p_min_pu * StorageUnit_p_nom
   StorageUnit_fix_state_of_charge_lower:
     description: "`StorageUnit-fix-state_of_charge-lower` — charge is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_state_of_charge >= 0
   StorageUnit_fix_state_of_charge_upper:
     description: "`StorageUnit-fix-state_of_charge-upper` — a fixed unit holds at most its hours at nominal power"
     dims: [scenario, snapshot, storage_unit]
-    where: not StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_fix
     expression: StorageUnit_state_of_charge <= StorageUnit_max_hours * StorageUnit_p_nom
   StorageUnit_ext_p_dispatch_lower:
     description: "`StorageUnit-ext-p_dispatch-lower` — dispatch is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_dispatch >= 0
   StorageUnit_ext_p_dispatch_upper:
     description: "`StorageUnit-ext-p_dispatch-upper` — an extendable unit dispatches at most the chosen build"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_dispatch <= StorageUnit_p_max_pu * StorageUnit_p_nom_ext
   StorageUnit_ext_p_store_lower:
     description: "`StorageUnit-ext-p_store-lower` — storing is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_store >= 0
   StorageUnit_ext_p_store_upper:
     description: >-
       `StorageUnit-ext-p_store-upper` — an extendable unit stores at most the
       chosen build, the minimum-per-unit column carrying that cap negated
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_p_store <= -StorageUnit_p_min_pu * StorageUnit_p_nom_ext
   StorageUnit_ext_state_of_charge_lower:
     description: "`StorageUnit-ext-state_of_charge-lower` — charge is non-negative"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_state_of_charge >= 0
   StorageUnit_ext_state_of_charge_upper:
     description: "`StorageUnit-ext-state_of_charge-upper` — an extendable unit holds at most its hours at the chosen build"
     dims: [scenario, snapshot, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    where: StorageUnit_ext
     expression: StorageUnit_state_of_charge <= StorageUnit_max_hours * StorageUnit_p_nom_ext
   StorageUnit_ext_p_nom_lower:
     description: "`StorageUnit-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"

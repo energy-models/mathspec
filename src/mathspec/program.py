@@ -66,10 +66,12 @@ __all__ = [
     'JoinedPredicate',
     'Link',
     'Mask',
+    'MaskDeclaration',
     'Missing',
     'MissingReading',
     'Multiply',
-    'Named',
+    'NamedExpression',
+    'NamedMask',
     'Negate',
     'Not',
     'ObjectiveDeclaration',
@@ -408,7 +410,7 @@ class Cases:
 
 
 @dataclass(frozen=True)
-class Named:
+class NamedExpression:
     """A use of an ``expressions:`` entry, standing where its name was written, with the entry's body under it.
 
     Its value is its body's: a consumer building rows steps through it, as
@@ -447,13 +449,13 @@ Expression = (
     | Translate
     | WindowSum
     | Cases
-    | Named
+    | NamedExpression
 )
 
 
 def children(expression: Expression) -> tuple[Expression, ...]:
     """The sub-expressions of *expression* — what every walk recurses through."""
-    if isinstance(expression, Named):
+    if isinstance(expression, NamedExpression):
         return (expression.body,)
     if isinstance(expression, Negate):
         return (expression.operand,)
@@ -641,6 +643,9 @@ class DimensionDeclaration:
     #: checked against — the same claim ``ParameterDeclaration.dtype`` makes
     #: about a value column, one axis over.
     dtype: DimensionDtype = 'str'
+    #: Whether the order of the labels is part of the model, so a consumer
+    #: must keep the order the data gives them in.
+    ordered: bool = False
     description: str | None = None
 
 
@@ -740,6 +745,9 @@ class GivenTargets:
     constraints: Mapping[str, GivenDeclaration] = Sealed({})
     #: Named expressions the host model defines, by name.
     expressions: Mapping[str, GivenDeclaration] = Sealed({})
+    #: Masks the host model defines, by name. A where reads one as the data it
+    #: is: a [`ParameterDefined`][] of a boolean over its frame.
+    masks: Mapping[str, GivenDeclaration] = Sealed({})
 
     def __post_init__(self) -> None:
         for f in fields(self):
@@ -747,7 +755,7 @@ class GivenTargets:
 
     def __bool__(self) -> bool:
         """Whether the program reads anything it does not build."""
-        return bool(self.parameters or self.variables or self.constraints or self.expressions)
+        return bool(self.parameters or self.variables or self.constraints or self.expressions or self.masks)
 
 
 @dataclass(frozen=True)
@@ -814,6 +822,22 @@ class ExpressionDeclaration:
     description: str | None = None
     #: The sum this entry adds to as a term, or ``None``.
     adds_to: str | None = None
+
+
+@dataclass(frozen=True)
+class MaskDeclaration:
+    """A named predicate — a ``masks:`` entry, read wherever a ``where``, a ``when`` or a ``holds`` names it.
+
+    It builds nothing of its own: every use stands as a [`NamedMask`][] with
+    this predicate under it, so a consumer reading a mask never looks the
+    name up here.
+    """
+
+    where: Mask
+    #: The frame the mask is read over: the dims its predicate carries, in the
+    #: order ``dimensions:`` declares them.
+    dims: tuple[str, ...]
+    description: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1036,11 +1060,14 @@ class Program:
     #: each and refuses with [`assumption_message`][].
     assumptions: Mapping[str, Assumption] = Sealed({})
     #: Declared ``expressions:``, each saying whether the math reads it. None
-    #: builds a row of its own — one the math reads stands as a [`Named`][]
+    #: builds a row of its own — one the math reads stands as a [`NamedExpression`][]
     #: where it is read — but all are lowered with the program, so a file whose
     #: named expression is outside the language is refused by every verb that
     #: reads the file rather than only by the one that reads the expression.
     expressions: Mapping[str, ExpressionDeclaration] = Sealed({})
+    #: Declared ``masks:``. Each use stands as a [`NamedMask`][] where it is
+    #: read, so a consumer building rows needs nothing from this group.
+    masks: Mapping[str, MaskDeclaration] = Sealed({})
     #: What this program reads and does not build ([`GivenTargets`][]), for a host model to provide.
     given: GivenTargets = GivenTargets()
     #: What the file as a whole is, as its ``description:`` says.
@@ -1403,6 +1430,20 @@ class Or:
     right: Predicate
 
 
+@dataclass(frozen=True)
+class NamedMask:
+    """A use of a ``masks:`` entry, standing where its name was written, with the entry's predicate under it.
+
+    Its truth is its body's: a consumer steps through it, as
+    [`where_children`][] does. It is kept as a node rather than written in so
+    the typesetter can print the symbol where the name stood and define it
+    once, as [`NamedExpression`][] does for an expression.
+    """
+
+    name: str
+    body: Predicate
+
+
 #: Every predicate resolution has typed: it names a declaration and the kind is
 #: settled. Resolution passes these straight through, having nothing left to
 #: decide about them.
@@ -1421,20 +1462,21 @@ TypedPredicate = (
     | JoinedPredicate
 )
 
-#: The boolean connectives — the only where nodes carrying other where nodes,
-#: and so the only place a walk over a predicate recurses. The grammar builds
-#: these classes directly, over leaves still unresolved, so a pre-resolution
-#: tree shares them — the transient impurity resolution normalizes away.
+#: The boolean connectives — with [`NamedMask`][], the only where nodes
+#: carrying other where nodes, and so the places a walk over a predicate
+#: recurses. The grammar builds these classes directly, over leaves still
+#: unresolved, so a pre-resolution tree shares them — the transient impurity
+#: resolution normalizes away.
 Connective = Not | And | Or
 
 #: Every resolved predicate node. The parser's ``Unresolved*`` nodes are not members: they live with the
 #: grammar in [`mathspec._where_parser`][], and resolution rewrites them away
 #: before anything here is asked.
-Predicate = BooleanLiteral | TypedPredicate | Connective
+Predicate = BooleanLiteral | TypedPredicate | Connective | NamedMask
 
 
 def where_children(where: Predicate) -> tuple[Predicate, ...]:
-    """The predicates under *where* — a connective's operands, and nothing under a leaf.
+    """The predicates under *where* — a connective's operands, a named mask's body, and nothing under a leaf.
 
     What every walk over a predicate recurses through, as [`children`][] is
     for an expression. A leaf has nothing under it whether or not it is
@@ -1444,6 +1486,8 @@ def where_children(where: Predicate) -> tuple[Predicate, ...]:
         return (where.operand,)
     if isinstance(where, (And, Or)):
         return (where.left, where.right)
+    if isinstance(where, NamedMask):
+        return (where.body,)
     return ()
 
 
@@ -1457,7 +1501,7 @@ def _atoms(where: Predicate) -> Iterator[TypedPredicate]:
     """
     if isinstance(where, TypedPredicate):
         yield where
-    elif isinstance(where, BooleanLiteral | Connective):
+    elif isinstance(where, BooleanLiteral | Connective | NamedMask):
         for child in where_children(where):
             yield from _atoms(child)
     else:
@@ -1574,7 +1618,8 @@ def _fold(node: Predicate) -> Predicate:
     none, ``NOT True`` is ``False`` and ``NOT NOT X`` is ``X``. What survives
     is a predicate over data, or the one literal the whole mask reduces to —
     the invariant [`Mask`][] applies at construction, so it holds wherever
-    a mask is built.
+    a mask is built. A [`NamedMask`][] is left whole: its body was folded
+    when the entry was read, and refused there where it folded to a literal.
     """
     if isinstance(node, Not):
         operand = _fold(node.operand)

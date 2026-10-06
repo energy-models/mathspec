@@ -7,7 +7,7 @@ description: >-
   reads the last and nothing is vacated.
 
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
 
 variables:
   p:

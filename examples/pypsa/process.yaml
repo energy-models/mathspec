@@ -8,6 +8,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   bus:
     description: network nodes
   process:
@@ -22,6 +23,7 @@ dimensions:
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
 
@@ -239,6 +241,13 @@ expressions:
     expression: >-
       sum(Process_output_arrival, over=process_output, by=Process_output_bus[bus])
     adds_to: Bus_injection
+
+masks:
+  Process_committed:
+    description: >-
+      a committable process that stands in the snapshot's period — every
+      unit-commitment row's set
+    where: Process_committable AND Process_active
 
 constraints:
   Process_fix_p_lower:

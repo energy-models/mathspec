@@ -73,7 +73,7 @@ a square.
 ## Name resolution
 
 One flat namespace covers dimensions, relations, parameters, variables, named
-expressions, macros and the built-in operators. A collision is a load error that
+expressions, masks, macros and the built-in operators. A collision is a load error that
 names both declarations, and nothing shadows anything.
 
 Position decides which kinds of name are legal:
@@ -83,7 +83,7 @@ Position decides which kinds of name are legal:
 | expression (`p * cost`)                | a variable, or a parameter whose values are numbers ([dtype](declarations.md#parameters))                                |
 | dimension argument (`over=`, `along=`) | a dimension, or a list of them for `over=`. Beside `by=`, a name in `over=` is a column of the relation where it has one |
 | column argument (`by=`, `within=`)     | columns of one relation, written `relation[column]` or `relation[column, …]`                                             |
-| `where` string                         | a parameter, variable, dimension or relation ([where strings](#where-strings))                                           |
+| `where` string                         | a parameter, variable, dimension, relation or mask ([where strings](#where-strings))                                     |
 | `bounds.lower` / `bounds.upper`        | a parameter name, or a number                                                                                            |
 | the `edge` key of `shift`              | `'wrap'` in quotes, or a bare number                                                                                     |
 | `dual` argument (`dual(c)`)            | a constraint. It resolves against the constraints alone ([named expressions](named.md#reading-a-constraints-dual))       |
@@ -149,6 +149,7 @@ QUOTED     ::= "'" chars "'" | '"' chars '"'
 | `name` (bare)                             | variable                   | The variable exists at this coordinate                                                                                                                                                                 |
 | `name` (bare)                             | relation                   | A row exists, read at the relation's key. A relation may be [partial](relations.md#the-data-contract), and this selects the labels that do map                                                         |
 | `name` (bare)                             | dimension                  | A load error. It would be true everywhere                                                                                                                                                              |
+| `name` (bare)                             | mask                       | The mask's predicate ([masks](named.md#masks)). A given mask is true or false at each coordinate, as a `bool` parameter is                                                                             |
 | `name OP value`                           | parameter                  | Element-wise. A missing row with no `missing:` value compares false                                                                                                                                    |
 | `name OP value`                           | dimension                  | A filter on the frame's own coordinate column                                                                                                                                                          |
 | `name OP value`, `name[col] OP value`     | relation                   | A filter on a value column, read at the relation's key. Name the column where the key determines several. A comparison reads one column                                                                |
@@ -285,7 +286,7 @@ is one fewer. A comparison against the previous row gives its `shift` an
 
 ```yaml
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
 parameters:
   load: { dims: [snapshot] }
   ramp: { dims: [] }
@@ -308,7 +309,7 @@ refused everywhere.
 
 ```yaml
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
 parameters:
   soc_initial: { dims: [] }
 variables:
@@ -327,7 +328,7 @@ makes, so each period gets one seeded row:
 
 ```yaml
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
   period: { dtype: int }
 relations:
   period_of: { key: snapshot, values: period }

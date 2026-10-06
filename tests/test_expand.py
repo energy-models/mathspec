@@ -238,18 +238,26 @@ READ_OUTSIDE = {'constraints.cap': {'dims': ['h'], 'expression': 'r <= by'}}
         pytest.param({}, id='a-curve-over-every-breakpoint'),
     ],
 )
-def test_a_curve_parameter_read_outside_the_curve_declares_missing(points):
+@pytest.mark.parametrize(
+    ('outside', 'reader'),
+    [
+        pytest.param(READ_OUTSIDE, "constraint 'cap'", id='a-constraint'),
+        pytest.param({'masks.steep': 'by > 1'}, "mask 'steep'", id='a-mask-no-where-names'),
+    ],
+)
+def test_a_curve_parameter_read_outside_the_curve_declares_missing(points, outside, reader):
     """`r <= by` read a curve's values parameter with no `missing:` the author could set.
 
     The loader refused `missing:` on it, and the reading came from the curve: `None` from lowering, then
     `neutral` inferred by the expansion. Nothing in the file said what a missing row of `by` means in `cap`.
+    A mask no `where` names was not asked at all, although another file reads it under `given: masks:`.
     """
     with pytest.raises(LanguageError) as caught:
-        to_spec(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **READ_OUTSIDE, **points))
+        to_spec(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **outside, **points))
     message = str(caught.value)
     assert "parameter 'by'" in message, 'the message names the parameter that has to change'
     assert "piecewise 'curve'" in message, 'and the curve that reads it'
-    assert "constraint 'cap'" in message, 'and the declaration outside the curve that reads it too'
+    assert reader in message, 'and the declaration outside the curve that reads it too'
     assert 'missing: refused, absent, neutral, or a value' in message, 'and names the rewrite'
 
 

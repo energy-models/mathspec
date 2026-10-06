@@ -31,6 +31,7 @@ from mathspec.program import (
     ExpressionComparison,
     JoinedPredicate,
     Mask,
+    NamedMask,
     Negate,
     Not,
     Or,
@@ -507,6 +508,8 @@ def _evaluate(node: Predicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             return _evaluate(left, cell, grid) and _evaluate(right, cell, grid)
         case Or(left=left, right=right):
             return _evaluate(left, cell, grid) or _evaluate(right, cell, grid)
+        case NamedMask(body=body):
+            return _evaluate(body, cell, grid)
         case _:
             assert_never(node)
 

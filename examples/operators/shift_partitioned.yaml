@@ -7,7 +7,7 @@ description: >-
   snapshot reads that season's last and no level crosses the boundary.
 
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
   season: { dtype: str }
 
 relations:

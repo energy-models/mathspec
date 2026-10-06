@@ -120,7 +120,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
 
    ```yaml title="store.yaml"
    dimensions:
-     snapshot: { dtype: int }
+     snapshot: { dtype: int, ordered: true }
      bus: { dtype: str }
      store: { dtype: str }
    relations:
@@ -201,9 +201,11 @@ which each component pins at its own port.
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                     |
 | a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                       |
+| `ordered: true` on a shared dimension             | it is a claim about the dimension rather than the dimension, so the dimension is ordered if one fragment says so                                                                                    |
 | any other declaration                             | one fragment declares it, and a second is refused                                                                                                                                                   |
 | an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the declaration where the introducer wrote none                                             |
 | a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                          |
+| a given mask                                      | the reader's `dims` name the dimensions the defining fragment's predicate reads, no more and no fewer                                                                                               |
 | a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                              |
 | an expression with `adds_to:`                     | the sum it names is the body one fragment defines, if any, followed by every term by its name, in the order of the list. [Terms](../reference/language/declarations.md#terms) gives what is refused |
 | `objective`                                       | one fragment sets it, and a second is refused. Several fragments contribute to it as terms of a sum the objective reads                                                                             |
@@ -355,7 +357,8 @@ Given variable 'Generator_p' collides with the variable of the same name. Names 
 | `null` under a declaration's name    | it is removed                                                                 |
 | `null` on a field of a declaration   | the field takes its default, and the rest of the declaration stays            |
 | `null` under a section's name        | it is refused                                                                 |
-| a dimension or a relation            | it is added, or restated word for word as the base declares it                |
+| a dimension or a relation            | it is added, or restated as the base declares it                              |
+| `ordered:` on a restated dimension   | `true` makes the dimension ordered; `false` over an ordered one is refused    |
 | an entry under one kind of `given:`  | it is edited, added or removed like any declaration, and the other kinds stay |
 | `version`, `description`             | the patch's value replaces the base's                                         |
 | a field an earlier patch writes      | the later patch's value replaces it                                           |
@@ -376,12 +379,22 @@ as the base spells it.
 ## A dimension redeclared
 
 A patch may add a dimension or a relation, and may restate one the base
-declares. The restatement is word for word: half a declaration is a second
-reading of the same name. Changing one under the expressions already written
+declares. The restatement says what the base says: half a declaration is a
+second reading of the same name, and a field written at its default is the
+same as one left out. Changing one under the expressions already written
 over it is refused, and so is removing one:
 
 ```text
 patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch adjusts the math, not the coordinate space the math is already written over: restate the declaration word for word, leave it out, or give the patch a dimension of its own under a name of its own.
+```
+
+`ordered` is a claim about the dimension, not the dimension. A patch may add
+it, so a patch that steps along `snapshot` declares it `ordered: true` over a
+base that does not. A patch may not take it back, because the base may
+already step along it:
+
+```text
+patch 'unordered.yaml' says the dimension 'snapshot' is not ordered, where its base declares it ordered. A construct in the base may step along it, and a patch adds the claim of order but never withdraws it: leave `ordered` out of the patch.
 ```
 
 ## A section set to `null`

@@ -3,11 +3,12 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Named expressions and macros
+# Named expressions, masks and macros
 
 An `expressions:` entry names a quantity once, for the math to read or for a
-solve to report. A `macros:` entry is a template with arguments, substituted
-before anything reads it.
+solve to report. A `masks:` entry names a `where` predicate once, for every
+`where:` that reads it. A `macros:` entry is a template with arguments,
+substituted before anything reads it.
 
 ## `expressions`
 
@@ -185,6 +186,84 @@ duals are opposite.
 | `sum(p, over=g) == load`        | the price of one more unit of `load` |
 
 A row that `c`'s `where:` deletes has no dual.
+
+## `masks`
+
+A mask names a [`where` predicate](expressions.md#where-strings) once. A
+`where:`, a `when:` or a `holds:` then reads it by name:
+
+```yaml
+dimensions:
+  period: { dtype: int, ordered: true }
+  generator: { dtype: str }
+parameters:
+  build_year: { dims: [generator] }
+  lifetime: { dims: [generator] }
+  period_year: { dims: [period] }
+  p_nom: { dims: [generator] }
+masks:
+  stands:
+    where: build_year <= period_year AND period_year < build_year + lifetime
+    description: the generator stands in this period
+variables:
+  p:
+    dims: [period, generator]
+    where: stands
+    bounds: { lower: 0, upper: p_nom }
+constraints:
+  ramp_up:
+    dims: [period, generator]
+    where: stands AND shift(stands, along=period, offset=1)
+    expression: p - shift(p, along=period, offset=1) <= 0.5 * p_nom
+```
+
+The typeset document prints the mask's symbol where it is read. The symbol is
+upright, as data is. The predicate prints once, under _Masks_, with ⟺ where an
+expression prints =:
+
+```math
+\mathrm{stands}_{e,g} \iff \mathrm{build\_year}_{g} \le \mathrm{period\_year}_{e} \wedge \mathrm{period\_year}_{e} < \mathrm{build\_year}_{g} + \mathrm{lifetime}_{g} \qquad \forall\, e \in \mathcal{E},\ g \in \mathcal{G}
+```
+
+```math
+p_{e,g} - p_{e - 1,g} \le 0.5 \cdot \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, e \in \mathcal{E},\ g \in \mathcal{G} \,:\, \mathrm{stands}_{e,g} \wedge \mathrm{stands}_{e - 1,g}
+```
+
+| Field         |                                                 |                |
+| ------------- | ----------------------------------------------- | -------------- |
+| `where`       | required. The predicate, in the `where` grammar |                |
+| `description` | free text                                       | default `null` |
+
+An entry with no `description:` may be the bare `where` string.
+
+- **A bare mask name stands for its predicate.** It does so in a `where:`, a
+  `when:` and a `holds:`, under `NOT`, and inside `count`, `shift` and `at`.
+  The rows are the rows the predicate written out gives.
+- **The predicate gives the frame.** A mask runs over the dimensions its
+  predicate reads, in the order `dimensions:` declares them, and the symbol
+  prints with those indices. A mask declares no `dims:`. A use over more
+  dimensions reads the mask as the same along the rest, and `shift` reads it
+  back along a dimension of its frame only.
+- **A mask may read another mask**, and a named expression that reads data
+  only. A cycle is refused with its chain:
+
+  ```text
+  Mask 'again': circular mask reference: again -> again
+  ```
+
+- **A mask is never a number.** In arithmetic or in a comparison it is
+  refused:
+
+  ```text
+  Named expression 'e': 'stands' is a mask, which is true or false where it is read, and not a number. Write it bare in the where — stands, or NOT stands — rather than comparing it or computing with it.
+  ```
+
+- **A predicate that folds to `True` or `False` is refused**, since it names
+  every row or none.
+- **A variable's own `where:` may not ask, through a mask, whether the
+  variable exists.** The loader refuses this as it refuses the bare name.
+
+Another file reads a mask under [`given: masks`](declarations.md#given-masks).
 
 ## `macros`
 

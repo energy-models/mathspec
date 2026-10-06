@@ -28,13 +28,13 @@ A dimension, a relation and a parameter declare no equation; what they print is 
 
 ```yaml
 dimensions:
-  snapshot: { dtype: int }
-  generator: { dtype: str }
+  snapshot: { dtype: int, ordered: true }
+  generator: { dtype: str, ordered: true }
   bus: { dtype: str }
   zone: { dtype: str }
   season: { dtype: str }
   technology: { dtype: str }
-  bp: { dtype: int } # the breakpoints every curve below runs through
+  bp: { dtype: int, ordered: true } # the breakpoints every curve below runs through
 
 relations:
   gen_bus: { key: generator, values: bus }
@@ -128,6 +128,13 @@ parameters:
 | $`\mathit{net}`$ | `net` over $`\mathcal{T}`$ — what a snapshot spills, less what it lacks |
 | $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{T} \times \mathcal{B}`$ |
 | $`\mathrm{startup\_cost}`$ | `startup_cost` over $`\mathcal{T} \times \mathcal{G}`$ — what starting a unit in this snapshot costs, which the horizon's edge changes |
+
+#### Masks
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{dispatchable}`$ | `dispatchable` over $`\mathcal{G}`$ — a unit that dispatches and cannot be turned down |
+| $`\mathrm{priced\_dispatch}`$ | `priced_dispatch` over $`\mathcal{G}`$ |
 
 Upright is what the data supplies — a parameter such as $`\mathrm{p}^{\mathrm{max}}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`p`$. An index is italic too, being what a quantifier chooses, and a set is script.
 
@@ -792,6 +799,51 @@ expressions:
 
 ```math
 \mathit{marginal\_price}_{t,b} = \lambda_{\mathrm{balance},t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+```
+
+### Named masks
+
+#### Named mask
+
+a named predicate with its words: a use prints the symbol over the dims its predicate reads, the predicate prints once
+
+```yaml
+masks:
+  dispatchable:
+    where: "p_max > 0 AND NOT is_flexible"
+```
+
+```math
+\mathrm{dispatchable}_{g} \iff \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} \qquad \forall\, g \in \mathcal{G}
+```
+
+#### Mask that reads a mask
+
+the one-line form, reading another mask and a data-only entry
+
+```yaml
+masks:
+  priced_dispatch: "dispatchable AND spend_cap > 0"
+```
+
+```math
+\mathrm{priced\_dispatch}_{g} \iff \mathrm{dispatchable}_{g} \wedge \mathrm{spend}^{\mathrm{cap}}_{g} > 0 \qquad \forall\, g \in \mathcal{G}
+```
+
+#### Mask in a condition
+
+a mask as the where, beside a condition of the constraint's own
+
+```yaml
+constraints:
+  masked:
+    dims: [snapshot, generator]
+    where: "priced_dispatch AND position(snapshot) > 0"
+    expression: p <= p_max
+```
+
+```math
+p_{t,g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{priced\_dispatch}_{g} \wedge \mathrm{pos}(t) > 0
 ```
 
 ### Shifts

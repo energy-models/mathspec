@@ -158,7 +158,7 @@ def test_the_legend_prints_what_a_masked_out_variable_means(name: FormatName, fm
 CURVED = varied(
     DISPATCH_MODEL,
     **{
-        'dimensions.bp': {'dtype': 'int'},
+        'dimensions.bp': {'dtype': 'int', 'ordered': True},
         'parameters.bp_x': {'dims': ['generator', 'bp']},
         'parameters.bp_y': {'dims': ['generator', 'bp']},
         'variables.op_cost': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}},

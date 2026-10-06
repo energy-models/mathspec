@@ -39,14 +39,14 @@ objective:
 That file is a complete spec. The pages of this section give the exact rules,
 and the [glossary](../glossary.md) defines each word they use in a fixed sense.
 
-## The ten rules
+## The eleven rules
 
 `to_spec` refuses a file that breaks one of these rules, with a message that
 names the fix.
 
 | #   | Rule                                                                                                                                                                  |                                                                 |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| 1   | A file has twelve declaration keys, plus `version` and `description`. An unknown key is refused, with the nearest valid key named.                                    | [File shape](file.md)                                           |
+| 1   | A file has thirteen declaration keys, plus `version` and `description`. An unknown key is refused, with the nearest valid key named.                                  | [File shape](file.md)                                           |
 | 2   | Everything that can be checked without data is checked when the file loads.                                                                                           | [Errors](errors.md)                                             |
 | 3   | Every name is declared once. A parameter and a dimension both called `snapshot` is refused.                                                                           | [Names](expressions.md#name-resolution)                         |
 | 4   | Where a name may stand depends on what it is. A dimension follows `over=` or `along=`, and is never multiplied.                                                       | [Names](expressions.md#name-resolution)                         |
@@ -56,3 +56,4 @@ names the fix.
 | 8   | A row missing from a table is refused, unless the declaration's `missing:` says it is absent, neutral, or a value.                                                    | [Absence](absence.md#what-creates-absence)                      |
 | 9   | Two variables may be multiplied in the objective and in a constraint, and nowhere else. `x / y` and `a ** b` need their divisor, base and exponent free of variables. | [Expressions](expressions.md)                                   |
 | 10  | The operators are `sum`, `sum_back`, `at` and `shift`, plus `dual` in a reported expression. A file cannot add one.                                                   | [Operators](operators.md)                                       |
+| 11  | A construct that steps or counts along a dimension needs it declared `ordered: true`: `shift`, `sum_back`, `position`, `piecewise` and an `sos` of `type: 2`.         | [Order](dimensions.md#order)                                    |

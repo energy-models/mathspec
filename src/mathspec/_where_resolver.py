@@ -26,7 +26,7 @@ from mathspec._expression_parser import (
     literal_number,
     nodes,
 )
-from mathspec._expression_resolver import ExpressionResolver
+from mathspec._expression_resolver import ExpressionResolver, mask_compared
 from mathspec._where_parser import (
     ColumnNode,
     UnresolvedComparisonNode,
@@ -35,7 +35,7 @@ from mathspec._where_parser import (
     UnresolvedWhereNode,
 )
 from mathspec.dimensions import dims_of, join_dims
-from mathspec.errors import DimensionError, LanguageError, did_you_mean, prefixed
+from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
 from mathspec.expansion import expand
 from mathspec.program import (
     Add,
@@ -51,6 +51,7 @@ from mathspec.program import (
     JoinedPredicate,
     Mask,
     Multiply,
+    NamedMask,
     Negate,
     Not,
     Or,
@@ -108,7 +109,7 @@ class WhereResolver:
 
     def where(self, node: Predicate | UnresolvedWhereNode) -> Predicate | UnresolvedWhereNode:
         """One predicate node typed, or returned unresolved with its refusal appended."""
-        if isinstance(node, BooleanLiteral | TypedPredicate):
+        if isinstance(node, BooleanLiteral | TypedPredicate | NamedMask):
             return node
         if isinstance(node, NameNode):
             return self._where_name(node)
@@ -126,13 +127,24 @@ class WhereResolver:
             return Or(self._child(node.left), self._child(node.right))
         assert_never(node)
 
+    @property
+    def masks(self) -> frozenset[str]:
+        """Every mask this file names, defined or given."""
+        return self.ns.masks | self.ns.given_masks
+
     def _child(self, node: Predicate | UnresolvedWhereNode) -> Predicate:
         """A connective's child, typed as resolved: an unresolved one survives only with its refusal appended."""
         return cast('Predicate', self.where(node))
 
     def _where_name(self, node: NameNode) -> Predicate | UnresolvedWhereNode:
-        """A bare name: a parameter's or relation's definedness, or a variable's existence."""
+        """A bare name: a mask's predicate, a parameter's or relation's definedness, or a variable's existence."""
         ns, context = self.ns, self.context
+        if node.name in ns.masks:
+            try:
+                return ns.mask(node.name, context)
+            except SchemaError as e:
+                self.errors.append(str(e))
+                return node
         kind = ns.kind(node.name)
         if kind is None:
             self.errors.append(ns.unknown(node.name, context, allow_dims=True))
@@ -222,6 +234,9 @@ class WhereResolver:
                 f'it does not carry — it reads {_listed(sorted(mask.dims))}. Translate it along one of those.'
             )
             return node
+        if self.ns.unordered(along.name):
+            self.errors.append(unordered(context, f'shift(<predicate>, along={along.name})', along.name))
+            return node
         return TranslatedPredicate(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
 
     def _joined(self, node: UnresolvedPredicateCallNode, mask: Mask) -> Predicate | UnresolvedWhereNode:
@@ -301,6 +316,10 @@ class WhereResolver:
         """
         if isinstance(node.left, FunctionCallNode) and node.left.name == 'position':
             return self._position(node.left, node)
+        compared = [name for side in (node.left, node.right) if (name := _side_name_or_none(side)) is not None]
+        if masked := [name for name in compared if name in self.masks]:
+            self.errors.append(mask_compared(masked[0], self.context))
+            return node
         plain = self._plain(node)
         if plain is None:
             return self._expression_comparison(node)
@@ -423,6 +442,9 @@ class WhereResolver:
                 f"'{dimension}' is {_declared_as(ns, dimension)}. "
                 f'{did_you_mean(dimension, ns.dimensions, label="Dimensions")}'
             )
+            return node
+        if ns.unordered(dimension):
+            self.errors.append(unordered(context, f'position({dimension})', dimension))
             return node
         if within is None:
             return DimensionPosition(dimension, node.op, position)
@@ -606,6 +628,11 @@ class _Plain(NamedTuple):
     op: PredicateOperator
     value: float | str
     quoted: bool
+
+
+def _side_name_or_none(side: ArithmeticNode | ColumnNode | KeywordNode) -> str | None:
+    """The bare name a side spells, or ``None`` — a quoted label is no name."""
+    return side.name if isinstance(side, NameNode) else None
 
 
 def _side_name(side: ArithmeticNode | ColumnNode) -> str | None:
