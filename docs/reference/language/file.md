@@ -5,8 +5,8 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # File shape
 
-A spec file is a YAML mapping with **twelve declaration keys**, plus
-`version` and `description`. Any subset of the twelve is accepted.
+A spec file is a YAML mapping with **thirteen declaration keys**, plus
+`version` and `description`. Any subset of the thirteen is accepted.
 
 | Key           |                                                                                                   |
 | ------------- | ------------------------------------------------------------------------------------------------- |
@@ -18,6 +18,7 @@ A spec file is a YAML mapping with **twelve declaration keys**, plus
 | `constraints` | the rules those decisions obey                                                                    |
 | `objective`   | what is minimised or maximised                                                                    |
 | `expressions` | named quantities, reusable in the math and readable after a solve ([named expressions](named.md)) |
+| `masks`       | named `where` predicates, read by name wherever a `where` string is ([masks](named.md#masks))     |
 | `macros`      | templates that take arguments ([macros](named.md#macros))                                         |
 | `piecewise`   | piecewise-linear curves ([piecewise](piecewise.md))                                               |
 | `sos`         | special-ordered sets ([sos](piecewise.md#sos))                                                    |

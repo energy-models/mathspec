@@ -34,7 +34,8 @@ from mathspec.program import (
     JoinedPredicate,
     Mask,
     Multiply,
-    Named,
+    NamedExpression,
+    NamedMask,
     Negate,
     Not,
     Or,
@@ -318,7 +319,7 @@ class Walk:
 
     def _arithmetic(self, node: Expression, ctx: _Context) -> tuple[str, int]:
         """Render *node*, returning the text and the precedence it binds at."""
-        if isinstance(node, Named):
+        if isinstance(node, NamedExpression):
             if self.inline_expressions and not isinstance(node.body, Cases):
                 return self._arithmetic(node.body, ctx)
             return ctx.indexed(self.symbols.name[node.name], self._frame_of(node.name)), _ATOM
@@ -408,7 +409,7 @@ class Walk:
 
         [`_binary`][] folds the sign of the result, so a substituted term prints as its body written out.
         """
-        while self.inline_expressions and isinstance(node, Named) and not isinstance(node.body, Cases):
+        while self.inline_expressions and isinstance(node, NamedExpression) and not isinstance(node.body, Cases):
             node = node.body
         return node
 
@@ -539,9 +540,12 @@ class Walk:
             assert not node.value, 'an always-true mask is folded away or refused before anything prints it'
             return self._op('false'), _ATOM
 
+        if isinstance(node, NamedMask):
+            return ctx.indexed(self.symbols.name[node.name], list(self.program.masks[node.name].dims)), _ATOM
+
         if isinstance(node, ParameterDefined):
             indexed = ctx.indexed(self.symbols.name[node.name], list(node.dims))
-            if self._parameters[node.name].dtype == 'bool':
+            if node.name in self.program.given.masks or self._parameters[node.name].dtype == 'bool':
                 return indexed, _ATOM
             return f'{indexed} {self.format.prose(" is defined")}', comparison
 
@@ -664,6 +668,7 @@ class Walk:
             ('Objective', self._objective()),
             ('Subject to', self._constraints()),
             ('Definitions', self._definitions()),
+            ('Masks', [self.mask(name) for name in self.program.masks]),
             ('Variable domains', self._variables()),
             ('Assumptions', self._assumptions()),
         ]
@@ -749,21 +754,38 @@ class Walk:
             condition=self._quantifier(frame, ''),
         )
 
+    def mask(self, name: str) -> Line:
+        """The line defining one mask, ``symbol ⟺ predicate`` over its frame.
+
+        A mask is a predicate rather than a value, so it is defined with ⟺
+        where an expression is defined with =; every use prints the symbol.
+        """
+        entry = self.program.masks[name]
+        frame = list(entry.dims)
+        ctx = self._context(frame)
+        return Line(
+            label=name,
+            left=ctx.indexed(self.symbols.name[name], frame),
+            right=f'{self._op("iff")} {self._predicate(entry.where.root, ctx)}',
+            condition=self._quantifier(frame, ''),
+        )
+
     def line(self, name: str) -> Line:
-        """The one line *name* prints as: a named expression, a constraint, an assumption, a curve, or a variable's domain.
+        """The one line *name* prints as: a named expression, a mask, a constraint, an assumption, a curve, or a variable's domain.
 
         An assumption is looked up where the document prints it from, so a
         condition a curve's method states is a line a reader can ask for
         before the curve is written out.
 
         Raises:
-            SchemaError: *name* is declared as none of the five, or as two — a
+            SchemaError: *name* is declared as none of the six, or as two — a
                 constraint may share a variable's name, and one line prints
                 one of them.
         """
         program = self.program
         kinds = {
             'named expression': (program.expressions, self.definition),
+            'mask': (program.masks, self.mask),
             'constraint': (program.constraints, self._constraint),
             'assumption': (program.assumptions, self._assumption),
             'curve': (program.piecewise, self._piecewise),
@@ -773,7 +795,7 @@ class Walk:
         if not found:
             everything = {n for group, _ in kinds.values() for n in group}
             msg = (
-                f"'{name}' is not a named expression, constraint, assumption, curve or variable. "
+                f"'{name}' is not a named expression, mask, constraint, assumption, curve or variable. "
                 f'{did_you_mean(name, everything)}'
             )
             raise SchemaError(msg)

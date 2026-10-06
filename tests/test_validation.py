@@ -2369,6 +2369,15 @@ _READS_ORDER = [
         't',
         id='position',
     ),
+    pytest.param({'masks.first': 'position(t) == 0'}, 't', id='a-mask-predicate'),
+    pytest.param(
+        {
+            'masks.lit': 'on',
+            'constraints.c': {'dims': ['t'], 'where': 'shift(lit, along=t, offset=1)', 'expression': 'x <= 0'},
+        },
+        't',
+        id='a-shifted-mask',
+    ),
     pytest.param(
         {'piecewise.curve': {'over': 'bp', 'links': [['x', 'bp_x'], ['y', 'bp_y']]}},
         'bp',
