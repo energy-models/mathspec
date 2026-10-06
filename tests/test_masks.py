@@ -23,7 +23,7 @@ from tests.fixtures import SMALL_MODEL, varied
 
 #: A unit stands in a period between its build year and its retirement, and
 #: two families of rows read that test: the core's capacity and a ramp.
-DIMS: dict[str, Any] = {'period': {'dtype': 'int'}, 'generator': {'dtype': 'str'}}
+DIMS: dict[str, Any] = {'period': {'dtype': 'int', 'ordered': True}, 'generator': {'dtype': 'str'}}
 FRAME = ['period', 'generator']
 STANDS = 'build_year <= period_year AND period_year < build_year + lifetime'
 

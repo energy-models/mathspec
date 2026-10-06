@@ -1,5 +1,5 @@
 dimensions:
-  g: { dtype: str }
+  g: { dtype: str, ordered: true }
 
 variables:
   p:

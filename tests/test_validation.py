@@ -211,7 +211,7 @@ def _kwarg_model(expression: str, dims: list[str] | None = None) -> dict[str, An
     """
     return {
         'dimensions': {
-            'snapshot': {'dtype': 'int'},
+            'snapshot': {'dtype': 'int', 'ordered': True},
             'bus': {'dtype': 'str'},
             'generator': {'dtype': 'str'},
         },
@@ -552,7 +552,7 @@ class TestVersion:
 #: `position(dim)` needs a relation over *that* dimension, so one over it and one into it.
 POSITION_SCHEMA = to_spec(
     {
-        'dimensions': {'snapshot': {'dtype': 'int'}, 'period': {'dtype': 'int'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'period': {'dtype': 'int'}},
         'relations': {
             'period_of': {'key': 'snapshot', 'values': 'period'},
             'starts_at': {'key': 'period', 'values': 'snapshot'},
@@ -1854,7 +1854,7 @@ class TestTheFrontDoor:
 #: A model with room for a cased expression: two dimensions, so an arm can be
 #: narrower than the frame, and a variable, so an arm can reach one.
 CASED_BASE = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'generator': {}},
+    'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'generator': {}},
     'parameters': {'p_max': {'dims': ['generator']}, 'load': {'dims': ['snapshot']}},
     'variables': {'p': {'dims': ['snapshot', 'generator']}},
 }
@@ -2253,7 +2253,7 @@ def test_each_declaration_is_resolved_once_however_many_readers(monkeypatch):
                     'otherwise': 'p_max - p',
                 },
                 'constraints.spare': {'dims': ['snapshot', 'generator'], 'expression': 'p <= headroom'},
-                'dimensions.bp': {'dtype': 'int'},
+                'dimensions.bp': {'dtype': 'int', 'ordered': True},
                 'parameters.bp_x': {'dims': ['generator', 'bp']},
                 'parameters.bp_y': {'dims': ['generator', 'bp']},
                 'variables.op_cost': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}},
@@ -2330,3 +2330,113 @@ def test_an_infinite_bound_is_refused_with_the_null_that_opens_a_side(side, valu
     message = _refusal(DISPATCH_MODEL, **{f'variables.p.bounds.{side}': value})
     assert f'bounds.{side} is {value}, and a bound is finite' in message
     assert f'{side}: null' in message, 'the refusal names the spelling of an open side'
+
+
+#: One dimension every construct below reads the order of, and a breakpoint
+#: dimension for the two formulations; neither declares its order.
+UNORDERED: dict[str, Any] = {
+    'dimensions': {'t': {'dtype': 'int'}, 'bp': {'dtype': 'int'}},
+    'parameters': {
+        'on': {'dims': ['t'], 'dtype': 'bool'},
+        'bp_x': {'dims': ['bp']},
+        'bp_y': {'dims': ['bp']},
+    },
+    'variables': {
+        'x': {'dims': ['t'], 'bounds': {'lower': 0, 'upper': 1}},
+        'y': {'dims': ['t'], 'bounds': {'lower': 0, 'upper': 1}},
+        'z': {'dims': ['bp'], 'bounds': {'lower': 0, 'upper': 1}},
+    },
+}
+
+_READS_ORDER = [
+    pytest.param(
+        {'constraints.c': {'dims': ['t'], 'expression': 'x <= shift(x, along=t, offset=1, edge=0)'}},
+        't',
+        id='shift',
+    ),
+    pytest.param(
+        {'constraints.c': {'dims': ['t'], 'expression': 'x <= sum_back(y, along=t, window=2)'}},
+        't',
+        id='sum_back',
+    ),
+    pytest.param(
+        {'constraints.c': {'dims': ['t'], 'where': 'shift(on, along=t, offset=1)', 'expression': 'x <= 0'}},
+        't',
+        id='a-where-shift',
+    ),
+    pytest.param(
+        {'constraints.c': {'dims': ['t'], 'where': 'position(t) == 0', 'expression': 'x <= 0'}},
+        't',
+        id='position',
+    ),
+    pytest.param({'masks.first': 'position(t) == 0'}, 't', id='a-mask-predicate'),
+    pytest.param(
+        {
+            'masks.lit': 'on',
+            'constraints.c': {'dims': ['t'], 'where': 'shift(lit, along=t, offset=1)', 'expression': 'x <= 0'},
+        },
+        't',
+        id='a-shifted-mask',
+    ),
+    pytest.param(
+        {'piecewise.curve': {'over': 'bp', 'links': [['x', 'bp_x'], ['y', 'bp_y']]}},
+        'bp',
+        id='a-piecewise-curve',
+    ),
+    pytest.param({'sos.s': {'variable': 'z', 'along': 'bp', 'type': 2}}, 'bp', id='a-type-2-set'),
+]
+
+
+@pytest.mark.parametrize(('patch', 'dimension'), _READS_ORDER)
+def test_a_construct_that_reads_order_along_an_unordered_dimension_is_refused(patch, dimension):
+    """The order an unordered dimension has is the data's row order, which is not part of the model."""
+    message = _refusal(UNORDERED, **patch)
+    assert f"reads the order of '{dimension}', which is not declared ordered" in message
+    assert f"'{dimension}: {{ordered: true}}' under dimensions:" in message, 'the refusal names the rewrite'
+
+
+@pytest.mark.parametrize(('patch', 'dimension'), _READS_ORDER)
+def test_the_same_construct_along_an_ordered_dimension_loads(patch, dimension):
+    ordered = varied(UNORDERED, **{f'dimensions.{dimension}.ordered': True})
+    to_spec(varied(ordered, **patch))
+
+
+def test_a_where_shift_along_a_dimension_its_predicate_lacks_is_refused_for_that_first():
+    """The order refusal came first, so a file that declared ``bp`` ordered met a second refusal after it."""
+    where = {'constraints.c': {'dims': ['t'], 'where': 'shift(on, along=bp, offset=1)', 'expression': 'x <= 0'}}
+    message = _refusal(UNORDERED, **where)
+    assert 'reads the predicate back along a dimension it does not carry' in message
+    assert 'not declared ordered' not in message, 'the predicate cannot be read along bp, ordered or not'
+
+
+def test_a_type_1_set_reads_no_order():
+    """At most one member is nonzero, whichever it is, so the set says nothing about neighbours."""
+    to_spec(varied(UNORDERED, **{'sos.s': {'variable': 'z', 'along': 'bp', 'type': 1}}))
+
+
+@pytest.mark.parametrize(
+    ('ordered', 'written'),
+    [
+        pytest.param(False, {'dtype': 'int'}, id='unordered'),
+        pytest.param(True, {'dtype': 'int', 'ordered': True}, id='ordered'),
+    ],
+)
+def test_a_dimension_writes_ordered_only_where_it_is_true(ordered, written):
+    """Leaving it out is what `false` says, so a file that never wrote it round-trips unchanged."""
+    spec = to_spec({'dimensions': {'t': {'dtype': 'int', 'ordered': ordered}}})
+    assert spec.to_dict()['dimensions'] == {'t': written}
+    assert to_spec(spec.to_dict()) == spec
+
+
+@pytest.mark.parametrize(
+    'dump',
+    [
+        pytest.param({'exclude_defaults': True}, id='exclude_defaults'),
+        pytest.param({'exclude_unset': True}, id='exclude_unset'),
+        pytest.param({'exclude': {'dimensions': {'t': {'ordered'}}}}, id='exclude'),
+    ],
+)
+def test_a_dump_that_leaves_ordered_out_still_writes_the_dimension(dump):
+    """The serializer dropped `ordered` with `del`, so a dump that had already left it out raised a KeyError."""
+    spec = to_spec({'dimensions': {'t': {'dtype': 'int'}}})
+    assert spec.model_dump(**dump)['dimensions'] == {'t': {'dtype': 'int'}}

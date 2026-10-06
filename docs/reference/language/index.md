@@ -39,7 +39,7 @@ objective:
 That file is a complete spec. The pages of this section give the exact rules,
 and the [glossary](../glossary.md) defines each word they use in a fixed sense.
 
-## The ten rules
+## The eleven rules
 
 `to_spec` refuses a file that breaks one of these rules, with a message that
 names the fix.
@@ -56,3 +56,4 @@ names the fix.
 | 8   | A parameter row missing from the table reads as `0` in arithmetic and as false in a `where`. Where `0` would change the meaning, the row is refused.                  | [Absence](absence.md#what-creates-absence)                      |
 | 9   | Two variables may be multiplied in the objective and in a constraint, and nowhere else. `x / y` and `a ** b` need their divisor, base and exponent free of variables. | [Expressions](expressions.md)                                   |
 | 10  | The operators are `sum`, `sum_back`, `at` and `shift`, plus `dual` in a reported expression. A file cannot add one.                                                   | [Operators](operators.md)                                       |
+| 11  | A construct that steps or counts along a dimension needs it declared `ordered: true`: `shift`, `sum_back`, `position`, `piecewise` and an `sos` of `type: 2`.         | [Order](dimensions.md#order)                                    |

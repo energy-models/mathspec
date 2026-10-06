@@ -22,7 +22,7 @@ description: >-
   inequality is written once.
 
 dimensions:
-  snapshot: { dtype: int, description: dispatch periods }
+  snapshot: { dtype: int, description: dispatch periods, ordered: true }
   generator: { description: generating units }
 
 parameters:
