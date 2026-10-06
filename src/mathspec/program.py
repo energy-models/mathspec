@@ -114,7 +114,6 @@ __all__ = [
     'carries_variable',
     'children',
     'is_quadratic',
-    'names_under',
     'parameters_of',
     'variables_of',
     'walk',
@@ -1560,7 +1559,7 @@ def _atom_names(atom: TypedPredicate) -> frozenset[str]:
         case RelationPairComparison():
             return frozenset({atom.name, atom.other})
         case ExpressionComparison():
-            return names_under(atom.left, atom.right)
+            return _names_under(atom.left, atom.right)
         case CountComparison():
             return atom.predicate.names_read
         case TranslatedPredicate():
@@ -1573,7 +1572,7 @@ def _atom_names(atom: TypedPredicate) -> frozenset[str]:
             assert_never(atom)
 
 
-def names_under(*expressions: Expression) -> frozenset[str]:
+def _names_under(*expressions: Expression) -> frozenset[str]:
     """Every parameter and relation the data has to supply for *expressions* — what a mask's ``names_read`` promises.
 
     [`parameters_of`][] alone misses the data an operator reads beside its

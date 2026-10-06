@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import copy
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from mathspec._yaml import parse_yaml
+from mathspec._yaml import parse_yaml, read_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
 from mathspec.program import DimensionPosition
 from mathspec.resolution import Namespace
@@ -2382,6 +2383,29 @@ def test_inf_and_dot_inf_load_as_one_number():
 def test_a_parameter_missing_that_reads_nothing_is_refused(dtype, written, fragment):
     message = _refusal(**{'parameters.c': {'dims': ['g'], 'dtype': dtype, 'missing': written}})
     assert fragment in message
+
+
+#: A curve under `points: x_bp`, both values tables declared `missing: neutral`.
+CURVE_UNDER_POINTS = Path(__file__).parent / 'expand' / 'curve-lp-points' / 'before.yaml'
+
+
+@pytest.mark.parametrize('parameter', ['x_bp', 'y_bp'])
+@pytest.mark.parametrize(
+    'declared',
+    [
+        pytest.param({'dims': ['bp']}, id='left-out'),
+        pytest.param({'dims': ['bp'], 'missing': 'refused'}, id='refused-written'),
+    ],
+)
+def test_a_values_table_under_points_is_not_refused(parameter, declared):
+    """`points: x_bp` with `x_bp` declared `refused` loaded, and named a mask every breakpoint is in.
+
+    `refused` says the table has a row at every breakpoint, so the curve never ran short of the dimension, and the
+    refusal of a curve parameter read outside the curve suggested that reading.
+    """
+    message = _refusal(read_yaml(CURVE_UNDER_POINTS), **{f'parameters.{parameter}': declared})
+    assert f"parameter '{parameter}' is refused where a row is missing, and piecewise 'curve'" in message
+    assert 'Declare missing: neutral, absent, or a value of its dtype' in message, 'the refusal names the rewrite'
 
 
 def test_a_given_parameter_has_no_missing():

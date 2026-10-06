@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mathspec import piecewise, to_spec
-from mathspec.errors import LanguageError
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, schema_of, varied
 from tests.test_sos import CURVE
 from tools.render_tex import models
@@ -32,6 +31,8 @@ if TYPE_CHECKING:
 MASKED = varied(
     CURVE,
     **{
+        'parameters.bp_x.missing': 'neutral',
+        'parameters.bp_y.missing': 'neutral',
         'piecewise.cost_curve.method': 'lp',
         'piecewise.cost_curve.points': 'bp_x',
         'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '>=']],
@@ -192,30 +193,18 @@ SMALL_CURVE = {
 }
 
 
-@pytest.mark.parametrize(
-    ('points', 'missing'),
-    [
-        pytest.param({'piecewise.curve.points': 'bx'}, 'neutral', id='a-curve-that-says-how-far-it-runs'),
-        pytest.param({}, 'refused', id='a-curve-over-every-breakpoint'),
-    ],
-)
-def test_the_expansion_says_what_a_missing_breakpoint_means(points, missing):
-    """A curve's own parameters take no `missing:`, because the block owns their shape. The expansion keeps
-    no block: its weights stand on `points:` and its assumptions ask for a value only where the mask holds. Left
-    unwritten, the expansion would declare `refused`, and a consumer attaching the rows would refuse the ragged curve
-    the block admits; a curve with no `points:` reads every breakpoint."""
-    rows = schema_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **points)).expand('piecewise').program
-    assert {name: rows.parameters[name].missing for name in ('bx', 'by', 'c')} == {
-        'bx': missing,
-        'by': missing,
-        'c': 'refused',
-    }, "the expansion reads the curve's tables as the block did, and every other parameter as declared"
+#: A curve under `points:` names what a missing row of each values table means.
+UNDER_POINTS = {'piecewise.curve.points': 'bx', 'parameters.bx.missing': 'neutral', 'parameters.by.missing': 'neutral'}
 
 
 @pytest.mark.parametrize(
     'points',
     [
-        pytest.param({'piecewise.curve.points': 'bx'}, id='a-curve-that-says-how-far-it-runs'),
+        pytest.param(UNDER_POINTS, id='a-curve-that-says-how-far-it-runs'),
+        pytest.param(
+            {**UNDER_POINTS, 'parameters.run': {'dims': ['h'], 'dtype': 'bool'}, 'piecewise.curve.points': 'run'},
+            id='a-boolean-mask',
+        ),
         pytest.param({}, id='a-curve-over-every-breakpoint'),
     ],
 )
@@ -227,71 +216,19 @@ def test_a_spec_and_its_expansion_read_a_missing_row_alike(points):
     assert declared == expanded, 'a spec and its expansion read a missing row of every parameter alike'
 
 
-#: A row outside the curve that reads one of its values parameters.
-READ_OUTSIDE = {'constraints.cap': {'dims': ['h'], 'expression': 'r <= by'}}
-
-
-@pytest.mark.parametrize(
-    'points',
-    [
-        pytest.param({'piecewise.curve.points': 'bx'}, id='a-curve-that-says-how-far-it-runs'),
-        pytest.param({}, id='a-curve-over-every-breakpoint'),
-    ],
-)
-@pytest.mark.parametrize(
-    ('outside', 'reader'),
-    [
-        pytest.param(READ_OUTSIDE, "constraint 'cap'", id='a-constraint'),
-        pytest.param({'masks.steep': 'by > 1'}, "mask 'steep'", id='a-mask-no-where-names'),
-    ],
-)
-def test_a_curve_parameter_read_outside_the_curve_declares_missing(points, outside, reader):
-    """`r <= by` read a curve's values parameter with no `missing:` the author could set.
-
-    The loader refused `missing:` on it, and the reading came from the curve: `None` from lowering, then
-    `neutral` inferred by the expansion. Nothing in the file said what a missing row of `by` means in `cap`.
-    A mask no `where` names was not asked at all, although another file reads it under `given: masks:`.
-    """
-    with pytest.raises(LanguageError) as caught:
-        to_spec(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **outside, **points))
-    message = str(caught.value)
-    assert "parameter 'by'" in message, 'the message names the parameter that has to change'
-    assert "piecewise 'curve'" in message, 'and the curve that reads it'
-    assert reader in message, 'and the declaration outside the curve that reads it too'
-    assert 'missing: refused, absent, neutral, or a value' in message, 'and names the rewrite'
-
-
-@pytest.mark.parametrize('missing', ['refused', 'absent', 'neutral', 0])
+@pytest.mark.parametrize('missing', ['absent', 'neutral', 0])
 def test_a_curve_parameter_takes_the_missing_it_declares(missing):
     """`missing:` on a curve's parameter was refused at load, so a row outside the curve could not say what it reads."""
     spec = to_spec(
         varied(
             SMALL_MODEL,
             **copy.deepcopy(SMALL_CURVE),
-            **READ_OUTSIDE,
-            **{'piecewise.curve.points': 'bx', 'parameters.by.missing': missing},
+            **{
+                **UNDER_POINTS,
+                'constraints.cap': {'dims': ['h'], 'expression': 'r <= by'},
+                'parameters.by.missing': missing,
+            },
         )
     )
     assert spec.program.parameters['by'].missing == missing
     assert spec.expand('piecewise').program.parameters['by'].missing == missing
-
-
-def test_a_boolean_points_mask_reads_a_missing_row_as_its_declaration_says():
-    """The expansion declared a boolean `points:` mask `neutral`, so a missing row was a breakpoint left out.
-
-    The curve does not decide that: a table of `true` and `false` at every breakpoint is a mask as well. The mask
-    reads the default, `refused`, unless the file says otherwise.
-    """
-    spec = schema_of(
-        varied(
-            SMALL_MODEL,
-            **copy.deepcopy(SMALL_CURVE),
-            **{'parameters.run': {'dims': ['h'], 'dtype': 'bool'}, 'piecewise.curve.points': 'run'},
-        )
-    )
-    for program in (spec.program, spec.expand('piecewise').program):
-        assert {name: program.parameters[name].missing for name in ('bx', 'by', 'run')} == {
-            'bx': 'neutral',
-            'by': 'neutral',
-            'run': 'refused',
-        }, 'a values table under points: stops short of the dimension, and the mask reads as declared'

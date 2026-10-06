@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from mathspec.dimensions import check_schema, dims_of
 from mathspec.errors import SchemaError, did_you_mean, prefixed
 from mathspec.expansion import expand, parse_template
-from mathspec.piecewise import assumptions_of, curve_frame, lp_domain_refusal, ragged, resolve_links
+from mathspec.piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec.program import (
     Assumption,
     BooleanLiteral,
@@ -42,7 +42,6 @@ from mathspec.program import (
     SosDeclaration,
     VariableDeclaration,
     VariableDefined,
-    names_under,
     variables_of,
     walk,
 )
@@ -58,7 +57,7 @@ from mathspec.resolution import (
 from mathspec.validation import emitted_name_errors, reference_errors
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Iterable, Mapping
 
     from mathspec.program import Expression
     from mathspec.spec import AssumptionBlock, Spec
@@ -216,12 +215,9 @@ def lower(schema: Spec) -> Program:
             assert assumption is not None and not errors, 'what a method assumes is stated in the language'
             assumptions[aname] = assumption
 
-    shortened = ragged(schema)
     program = Program(
         parameters={
-            name: ParameterDeclaration(
-                tuple(pdef.dims), pdef.dtype, 'neutral' if name in shortened else pdef.reading, pdef.description
-            )
+            name: ParameterDeclaration(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description)
             for name, pdef in schema.parameters.items()
         },
         variables=variables,
@@ -267,54 +263,10 @@ def lower(schema: Spec) -> Program:
         ),
         description=schema.description,
     )
-    if errors := [*emitted_name_errors(schema, program), *_curve_parameters_read_outside(schema, program)]:
+    if errors := [*emitted_name_errors(schema, program), *refused_under_points(schema)]:
         raise SchemaError('\n'.join(errors))
     check_schema(schema, program)
     return program
-
-
-def _curve_parameters_read_outside(schema: Spec, program: Program) -> Iterator[str]:
-    """A refusal for each parameter a curve reads that a declaration outside every curve reads too, with no ``missing:``.
-
-    The curve decides what a missing breakpoint means only for its own rows,
-    so the file says what a missing row means where something else reads it.
-    The assumptions a method implies are the curve's, and are not outside it.
-    """
-    curves = {name: block for block, pw in schema.piecewise.items() for name in sorted(pw.consumes)}
-    unwritten = {n for n in curves if n in schema.parameters and schema.parameters[n].missing is None}
-    if not unwritten:
-        return
-    readers: dict[str, str] = {}
-    for label, names in _readers(schema, program):
-        for name in sorted(names & unwritten):
-            readers.setdefault(name, label)
-    for name, reader in readers.items():
-        yield (
-            f"parameter '{name}': piecewise '{curves[name]}' reads it as breakpoints and {reader} reads it too, "
-            f'so the file says what a missing row of it means. Declare missing: refused, absent, neutral, or a '
-            f'value of its dtype.'
-        )
-
-
-def _readers(schema: Spec, program: Program) -> Iterator[tuple[str, frozenset[str]]]:
-    """Each declaration outside the curves, labelled as a refusal names it, with the data it reads."""
-    for name, variable in program.variables.items():
-        bounds = [b for b in (variable.lower, variable.upper) if b is not None]
-        where = variable.where.names_read if variable.where is not None else frozenset()
-        yield f"variable '{name}'", names_under(*bounds) | where
-    for name, constraint in program.constraints.items():
-        where = constraint.where.names_read if constraint.where is not None else frozenset()
-        yield f"constraint '{name}'", names_under(constraint.lhs, constraint.rhs) | where
-    if program.objective is not None:
-        yield 'the objective', names_under(program.objective.expression)
-    for name, entry in program.expressions.items():
-        yield f"named expression '{name}'", names_under(entry.expression)
-    for name, mask in program.masks.items():
-        yield f"mask '{name}'", mask.where.names_read
-    for name in schema.assumptions:
-        assumption = program.assumptions[name]
-        where = assumption.where.names_read if assumption.where is not None else frozenset()
-        yield f"assumption '{name}'", assumption.predicate.names_read | where
 
 
 def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str]) -> list[NamedExpression]:

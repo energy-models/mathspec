@@ -26,7 +26,7 @@ from mathspec.resolution import resolve_expression_text
 from mathspec.spec import AssumptionBlock, Curvature, PiecewiseBlock, Spec, VariableBlock
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
 
     from mathspec.program import Expression
     from mathspec.resolution import Namespace
@@ -96,9 +96,9 @@ def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, Assumption
     """What *block* assumes of its numbers, by the name the document prints and a refusal quotes.
 
     Every curve assumes its breakpoints are there, because a missing row does
-    not shorten a curve. Under ``points:`` its parameters read ``neutral``, so
-    a breakpoint missing inside the mask would read as a zero and sit the curve
-    on the origin. A curve has an x-axis only where two
+    not shorten a curve. Under ``points:`` its tables are not ``refused``, so
+    a breakpoint missing inside the mask would read as their ``missing:`` and,
+    under ``neutral``, sit the curve on the origin. A curve has an x-axis only where two
     links tie it, so the increasing condition — and the shape it is checked
     with — exist only there; ``lp`` alone needs a segment to state a line for;
     a mask must be one run.
@@ -481,20 +481,24 @@ class _Block:
             )
 
 
-def ragged(schema: Spec) -> frozenset[str]:
-    """The values parameters a missing row of which is a breakpoint the curve does not run through.
+def refused_under_points(schema: Spec) -> Iterator[str]:
+    """A refusal for each values parameter of a curve with ``points:`` that reads a missing row as ``refused``.
 
-    ``points:`` says the curve stops short of the dimension, and its weights
-    and segment rows read a values parameter only where the mask holds, so a
-    row is missing outside the mask by design: ``refused`` would refuse the
-    curve the block declares. Every other reading reads alike there, and
-    ``neutral`` is the one written. A parameter a curve over every breakpoint
-    also reads, a ``points:`` mask that is not a values parameter, and a
-    parameter whose ``missing:`` the file wrote are not among them.
+    ``points:`` says the curve stops short of the dimension, so its tables
+    have no row past the mask by design. ``refused`` says every row is
+    there: the curve never runs short, and a mask that names the table marks
+    every breakpoint.
     """
-    shortened = {link.values for pw in schema.piecewise.values() if pw.points for link in pw.links}
-    complete = {n for pw in schema.piecewise.values() if not pw.points for n in pw.consumes}
-    return frozenset(n for n in shortened - complete if n in schema.parameters and schema.parameters[n].missing is None)
+    for block, pw in schema.piecewise.items():
+        if pw.points is None:
+            continue
+        for name in dict.fromkeys(link.values for link in pw.links):
+            if schema.parameters[name].missing == 'refused':
+                yield (
+                    f"parameter '{name}' is refused where a row is missing, and piecewise '{block}' reads it under "
+                    f"points: '{pw.points}', which stops the curve where its rows stop. Declare missing: neutral, "
+                    f'absent, or a value of its dtype.'
+                )
 
 
 def expand_piecewise(schema: Spec) -> Spec:
@@ -505,8 +509,6 @@ def expand_piecewise(schema: Spec) -> Spec:
     binaries are what the method *is*, so the spec that comes back carries no
     set of its own ([`mathspec.sos.emit`][] is where they are spelled).
     Each block's frame and names are read off the program *schema* lowered to.
-
-    Each parameter in [`ragged`][] is declared ``missing: neutral``.
     """
     if not schema.piecewise:
         return schema
@@ -516,8 +518,6 @@ def expand_piecewise(schema: Spec) -> Spec:
     raw.setdefault('constraints', {})
     for name, pw in schema.piecewise.items():
         _Block(schema, raw, name, pw, program.piecewise[name]).expand()
-    for parameter in ragged(schema):
-        raw['parameters'][parameter]['missing'] = 'neutral'
     raw['piecewise'].clear()
     for name, pw in schema.piecewise.items():
         if pw.method == 'adjacency':

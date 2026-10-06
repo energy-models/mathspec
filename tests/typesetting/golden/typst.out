@@ -25,8 +25,8 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("lead")$: `lead` over $cal(G)$
 / $upright("budget")$: `budget` (scalar)
 / $upright("growth")$: `growth` (scalar)
-/ $upright("bp_x")$: `bp_x` over $cal(G) times cal(A)$
-/ $upright("bp_y")$: `bp_y` over $cal(G) times cal(A)$
+/ $upright("bp_x")$: `bp_x` over $cal(G) times cal(A)$, `neutral` where the data has no row
+/ $upright("bp_y")$: `bp_y` over $cal(G) times cal(A)$, `neutral` where the data has no row
 / $upright("bp_heat")$: `bp_heat` over $cal(G) times cal(A)$
 / $upright("bp_run")$: `bp_run` over $cal(G) times cal(A)$
 

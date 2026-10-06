@@ -90,31 +90,29 @@ piecewise:
       - [op_cost, bp_y]
 ```
 
-A row missing from `bp_y` is still refused. Where the length is its own data,
+Each values parameter declares `missing: neutral`, because its table stops
+where the curve stops ([below](#missing-breakpoints)). A row missing from `bp_y`
+where `bp_x` has one is still refused. Where the length is its own data,
 name a boolean parameter instead. The marked breakpoints are one consecutive
 run, anywhere on the axis.
 
 ### Missing breakpoints
 
 A parameter a block reads takes [`missing:`](declarations.md#a-missing-row)
-like any other parameter. Where the file writes none:
-
-- **A values parameter that only curves with `points:` read is `neutral`.** The
-  curve stops where the mask stops, so the table has no rows past it by design,
-  and the curve reads none of them.
-- **Every other parameter a block reads is `refused`**, the default. This is a
-  values parameter of a curve with no `points:`, and a boolean `points:` mask.
-  A mask that leaves out a breakpoint with no row declares `missing: neutral`.
-- **A parameter that a declaration outside every curve also reads is refused at
-  load.** The curve says nothing about what a missing row means there, so the
-  file says it:
+like any other parameter, and reads it alike inside and outside the curve.
+**A values parameter of a curve with `points:` is not `refused`.** The curve
+stops where the mask stops, so the table has no rows past it by design.
+`refused` says that every row is there: the curve never runs short, and a
+mask that names the table marks every breakpoint. The load is refused:
 
 ```text
-parameter 'bp_y': piecewise 'cost_curve' reads it as breakpoints and constraint 'cost_cap' reads it too, so the file says what a missing row of it means. Declare missing: refused, absent, neutral, or a value of its dtype.
+parameter 'bp_y' is refused where a row is missing, and piecewise 'cost_curve' reads it under points: 'bp_x', which stops the curve where its rows stop. Declare missing: neutral, absent, or a value of its dtype.
 ```
 
-The assumptions a `method:` implies read the parameters as the curve does, and
-are not outside it. An `assumptions:` entry the file writes is.
+Declare `missing: neutral` on each values parameter of the block. The
+`<block>_complete` assumption still refuses a missing row inside the mask. A
+values parameter of a curve with no `points:`, and a boolean `points:` mask,
+read the default, `refused`.
 
 ### `method`
 
@@ -196,7 +194,6 @@ shows a spec before and after.
 - **Every name written out starts with the name of the block.** The weights of
   the curve `curve` are `curve_lam`.
 - **No formulation emits a parameter.** The same data attaches to a spec and its
-  expansion, and reads alike in both. The expansion writes `missing: neutral` on
-  each values parameter that [reads as `neutral`](#missing-breakpoints).
+  expansion, and reads alike in both.
 - **The assumptions a `method:` implies become `assumptions:` entries** with
   the same names.

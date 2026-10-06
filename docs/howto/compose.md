@@ -202,6 +202,7 @@ which each component pins at its own port.
 | a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                     |
 | a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                       |
 | `ordered: true` on a shared dimension             | it is a claim about the dimension rather than the dimension, so the dimension is ordered if one fragment says so                                                                                    |
+| `missing:` on a shared relation                   | it is a claim about the data, and the fragments that declare the relation say the same one. `missing: refused` is the same as no `missing:`                                                         |
 | any other declaration                             | one fragment declares it, and a second is refused                                                                                                                                                   |
 | an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the declaration where the introducer wrote none                                             |
 | a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                          |
@@ -359,6 +360,7 @@ Given variable 'Generator_p' collides with the variable of the same name. Names 
 | `null` under a section's name        | it is refused                                                                 |
 | a dimension or a relation            | it is added, or restated as the base declares it                              |
 | `ordered:` on a restated dimension   | `true` makes the dimension ordered; `false` over an ordered one is refused    |
+| `missing:` on a relation             | it changes what a key the map leaves out means, as on a parameter             |
 | an entry under one kind of `given:`  | it is edited, added or removed like any declaration, and the other kinds stay |
 | `version`, `description`             | the patch's value replaces the base's                                         |
 | a field an earlier patch writes      | the later patch's value replaces it                                           |
@@ -396,6 +398,11 @@ already step along it:
 ```text
 patch 'unordered.yaml' says the dimension 'snapshot' is not ordered, where its base declares it ordered. A construct in the base may step along it, and a patch adds the claim of order but never withdraws it: leave `ordered` out of the patch.
 ```
+
+`missing:` is a claim about the data, not the coordinate space. A patch may
+change it on a relation as on a parameter, and may name it alone:
+`relations: {gen_bus: {missing: absent}}`. `null` puts the default, `refused`,
+back.
 
 ## A section set to `null`
 

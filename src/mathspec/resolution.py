@@ -118,13 +118,11 @@ class Namespace:
         #: parameter name -> the value its ``missing:`` reads a missing row as,
         #: for the parameters that name one; what a where comparison reads there.
         self.defaults: dict[str, bool | float] = {
-            p: pd.missing
-            for p, pd in schema.parameters.items()
-            if pd.missing is not None and not isinstance(pd.missing, str)
+            p: pd.missing for p, pd in schema.parameters.items() if not isinstance(pd.missing, str)
         }
         #: relation name -> its columns and key, as declared.
         self.relations: dict[str, RelationDeclaration] = {
-            n: RelationDeclaration(lk.pairs, lk.key_roles, lk.reading, lk.description)
+            n: RelationDeclaration(lk.pairs, lk.key_roles, lk.missing, lk.description)
             for n, lk in schema.relations.items()
         }
         #: parameter or variable name -> the dims it is read through —

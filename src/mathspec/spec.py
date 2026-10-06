@@ -32,7 +32,6 @@ from mathspec._expression_parser import NAME, ComparisonOperator
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
     DimensionDtype,
-    Missing,
     MissingReading,
     ObjectiveSense,
     ParameterDtype,
@@ -116,6 +115,13 @@ _MISSING_SCHEMA: dict[str, object] = {
 _READINGS = ', '.join(get_args(MissingReading))
 
 
+def _without_refused(written: dict[str, object]) -> dict[str, object]:
+    """*written* with ``missing: refused`` left out, so the default written out and left out write one text."""
+    if written.get('missing') == 'refused':
+        written.pop('missing')
+    return written
+
+
 def _missing_null(kind: str, rewrite: str) -> ValueError:
     """``missing: null`` reads as either the default or an absent row, so it is refused for the word that says which."""
     return ValueError(f'missing: null on {kind} names no reading. {rewrite}')
@@ -186,6 +192,8 @@ class RelationBlock(_StrictBlock):
 
     key: str | list[str] | dict[str, str]
     values: str | list[str] | dict[str, str] | None = None
+    #: What a key the map leaves out means: ``refused`` where the file writes
+    #: nothing, and ``None`` for a bare relation, whose rows are its membership.
     missing: Annotated[RelationMissing | None, WithJsonSchema({'enum': list(get_args(RelationMissing))})] = Field(
         default=None, json_schema_extra={'default': 'refused'}
     )
@@ -209,21 +217,25 @@ class RelationBlock(_StrictBlock):
 
     @model_validator(mode='after')
     def _a_bare_relation_has_no_gap(self) -> RelationBlock:
-        """A bare relation's rows are its membership, so a key it leaves out is not missing."""
+        """A bare relation's rows are its membership, so a key it leaves out is not missing.
+
+        A map left unwritten reads ``refused``, held as the value, so the spec
+        that writes the default and the one that leaves it out are one spec.
+        """
         if self.missing is not None and self.values is None:
             msg = (
                 f'missing: {self.missing} on a relation with no `values:`. Its rows are its membership, '
                 f'so a key it leaves out is not missing: drop the key.'
             )
             raise ValueError(msg)
+        if self.values is not None and self.missing is None:
+            self.missing = 'refused'
         return self
 
-    @property
-    def reading(self) -> RelationMissing | None:
-        """What a key the map leaves out means: ``refused`` unless the file says, and ``None`` for a bare relation."""
-        if self.values is None:
-            return None
-        return self.missing or 'refused'
+    @model_serializer(mode='wrap')
+    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        """``missing`` is written where it is not ``refused``: refused is what leaving it out says."""
+        return _without_refused(cast('dict[str, object]', handler(self)))
 
     @property
     def pairs(self) -> tuple[tuple[str, str], ...]:
@@ -288,9 +300,7 @@ class ParameterBlock(_StrictBlock):
 
     dims: list[str]
     dtype: ParameterDtype = 'float'
-    missing: Annotated[MissingReading | bool | int | float | None, WithJsonSchema(_MISSING_SCHEMA)] = Field(
-        default=None, json_schema_extra={'default': 'refused'}
-    )
+    missing: Annotated[MissingReading | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -311,16 +321,16 @@ class ParameterBlock(_StrictBlock):
             raise ValueError(msg)
         return v
 
-    @property
-    def reading(self) -> Missing:
-        """What a missing row means: what the file wrote, or ``refused`` where it wrote nothing."""
-        return 'refused' if self.missing is None else self.missing
+    @model_serializer(mode='wrap')
+    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        """``missing`` is written where it is not ``refused``: refused is what leaving it out says."""
+        return _without_refused(cast('dict[str, object]', handler(self)))
 
     @model_validator(mode='after')
     def _a_value_fits_the_dtype(self) -> ParameterBlock:
         """A value fills rows of the column, so it has the column's dtype."""
         v = self.missing
-        if v is None or isinstance(v, str):
+        if isinstance(v, str):
             return self
         if self.dtype == 'str':
             msg = f'missing: {v!r} on a str parameter. A label has no value to fill: write {_READINGS}.'
