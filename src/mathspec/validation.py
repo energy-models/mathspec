@@ -23,7 +23,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from mathspec._yaml import read_spec
-from mathspec.errors import SchemaError
+from mathspec.errors import SchemaError, unordered
 from mathspec.operators import BUILTIN_NAMES
 from mathspec.piecewise import Emitted as EmittedCurve
 from mathspec.sos import Emitted as EmittedSet
@@ -245,6 +245,8 @@ def _sos_shapes(schema: Spec) -> Iterator[str]:
                 f"'{block.variable}' (dims {schema.variables[block.variable].dims}). Set 'along:' "
                 f'to one of these dims.'
             )
+        elif block.type == 2 and not schema.dimensions[block.along].ordered:
+            yield unordered(context, f'type: 2 along {block.along}', block.along)
         elif block.variable in claimed:
             yield (
                 f"{context}: variable '{block.variable}' already carries the set declared by "
@@ -290,6 +292,8 @@ def _piecewise_references(schema: Spec) -> Iterator[str]:
         if pw.over not in schema.dimensions:
             yield undeclared_dimension('piecewise', name, pw.over)
             continue
+        if not schema.dimensions[pw.over].ordered:
+            yield unordered(context, f'over: {pw.over}', pw.over)
         for i, link in enumerate(pw.links):
             if link.values not in schema.parameters:
                 yield f"{context}: link {i} values references undeclared parameter '{link.values}'. Declare it under 'parameters:'."

@@ -25,6 +25,8 @@ What that means for each section:
 * **A dimension or a relation every fragment may declare**, and the ones that
   do have to say the same thing about it. Prose is not a claim, so two
   descriptions of one dimension agree, and the first one given is carried.
+  ``ordered`` is a claim about the space, not the space, so a dimension one
+  fragment declares ordered is ordered.
 * **Every other declaration is owned.** A name two fragments declare is refused,
   both named.
 * **One fragment sets the objective.** A second one is refused, both named.
@@ -74,8 +76,9 @@ What a patch may say, and what is refused:
   earlier patch laid on it, so a later patch wins a field an earlier one
   writes, and edits or removes a declaration an earlier one creates.
 * **A patch adjusts the math, not the coordinate space.** A ``dimensions`` or
-  ``relations`` entry may be added or restated word for word, never changed and
-  never removed.
+  ``relations`` entry may be added or restated as the schema reads its base,
+  never changed and never removed. A restated dimension may add
+  ``ordered: true``, and may not write it false over a base that makes it.
 * ``null`` **makes what it names absent.** A declaration set to ``null`` is
   removed, and a removal of what the base does not declare is refused. A field
   set to ``null`` is dropped, and takes its default when the result loads:
@@ -271,22 +274,50 @@ def _agreed(
     neither declaration is the one being restated, so a field only one of them
     writes is a difference nothing settles. *claims* says what a block claims;
     a reading's frame is a set. Prose is not a claim, so the first description
-    given is carried.
+    given is carried. A dimension's ``ordered`` folds by [`_joined`][].
     """
     merged: dict[str, object] = {}
     for name, sections in read.items():
         for key, block in _mapping(sections.get(section)).items():
-            if key in merged and claims(merged[key]) != claims(block):
+            if key not in merged:
+                merged[key] = block
+            elif (joined := _joined(section, merged[key], block, claims)) is None:
                 raise LanguageError(
                     f"fragments '{_author_of(read, section, key)}' and '{name}' say different things about "
                     f'the {label} {key!r}: {merged[key]!r} against {block!r}. Make the two identical, '
                     f'or {repair}.'
                 )
-            merged.setdefault(key, block)
+            else:
+                merged[key] = joined
     for key, block in merged.items():
         if said := _said(read, section, key):
             merged[key] = {**_mapping(block), 'description': said}
     return merged
+
+
+def _joined(section: str, kept: object, block: object, claims: Callable[[object], object] = _claims) -> object | None:
+    """*kept* and *block* as the one declaration both say, or ``None`` where they say different things.
+
+    A dimension's ``ordered`` is a claim about the space, not the space: it
+    lets a construct read the order the data gives, and the coordinates are
+    the same either way. So one declaration that makes the claim joins one
+    that does not, and the two are one ordered dimension. Every other field
+    is the space itself, and has to be equal under *claims*.
+    """
+    if section != 'dimensions':
+        return kept if claims(kept) == claims(block) else None
+    if claims(_without(kept, 'ordered')) != claims(_without(block, 'ordered')):
+        return None
+    ordered = bool(_mapping(kept).get('ordered') or _mapping(block).get('ordered'))
+    return {**_mapping(kept), 'ordered': True} if ordered else kept
+
+
+def _declared(section: str, block: object) -> dict[str, object]:
+    """*block* as the schema reads it, so a field written at its default says what leaving it out says."""
+    try:
+        return _entry_class(Spec, section).model_validate(block).model_dump()
+    except ValidationError as e:
+        raise schema_error(e) from None
 
 
 def _claimed(read: Mapping[str, dict[str, object]], section: str) -> dict[str, object]:
@@ -795,9 +826,12 @@ def _given(declared: dict[str, object], patch: dict[str, object], name: str) -> 
 def _shared(declared: dict[str, object], patch: dict[str, object], section: str, name: str) -> dict[str, object]:
     """One ``dimensions`` or ``relations`` block: a patch adds one or restates one, never changes or drops it.
 
-    The restatement is compared for equality rather than field by field: a
-    patch that names half a declaration is as much a second reading of the
-    coordinate space as one that names another value.
+    The restatement is compared as the schema reads both sides rather than
+    field by field: a patch that names half a declaration is as much a second
+    reading of the coordinate space as one that names another value, and a
+    field written at its default is no change. A dimension's ``ordered`` folds
+    by [`_joined`][], so a patch may add the claim; writing it false over a
+    base that makes it is the one narrowing [`_joined`][] cannot see.
     """
     out = dict(declared)
     singular = _singular(section)
@@ -809,12 +843,21 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
             )
         if key not in out:
             out[key] = block
-        elif out[key] != block:
+            continue
+        base, laid = _declared(section, out[key]), _declared(section, block)
+        if base.get('ordered') and _mapping(block).get('ordered') is False:
+            raise LanguageError(
+                f"patch '{name}' says the {singular} '{key}' is not ordered, where its base declares it "
+                f'ordered. A construct in the base may step along it, and a patch adds the claim of order '
+                f'but never withdraws it: leave `ordered` out of the patch.'
+            )
+        if (joined := _joined(section, base, laid, lambda written: written)) is None:
             raise LanguageError(
                 f"patch '{name}' declares the {singular} '{key}' as {block!r}, where its base "
                 f'declares {out[key]!r}. Restate the declaration word for word, leave it out, or give '
                 f'the patch {_a(singular)} of its own under a name of its own.'
             )
+        out[key] = joined
     return out
 
 

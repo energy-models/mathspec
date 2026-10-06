@@ -38,7 +38,7 @@ FLEET = {
     'given': {'expressions': {'injection': {'dims': BUS_FRAME}}},
     'expressions': {
         'generator_injection': {
-            'expression': 'sum(gen_p, by=gen_bus, over=generator, into=bus)',
+            'expression': 'sum(gen_p, over=generator, by=gen_bus[bus])',
             'description': 'what the generators put in',
             'adds_to': 'injection',
         }
@@ -61,7 +61,7 @@ STORAGE = {
     'variables': {'store_p': {'dims': ['snapshot', 'store']}},
     'given': {'expressions': {'injection': {'dims': BUS_FRAME}}},
     'expressions': {
-        'store_injection': {'expression': 'sum(store_p, by=store_bus, over=store, into=bus)', 'adds_to': 'injection'}
+        'store_injection': {'expression': 'sum(store_p, over=store, by=store_bus[bus])', 'adds_to': 'injection'}
     },
 }
 

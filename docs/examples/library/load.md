@@ -34,7 +34,7 @@ constraints:
       what a load takes is what its port withdraws. No PyPSA row stands for
       this: PyPSA writes the load into the balance instead
     dims: [snapshot, load]
-    expression: at(Port_p, by=Load_port, over=port, into=load) == -Load_p_set
+    expression: at(Port_p, by=Load_port[port]) == -Load_p_set
 ```
 
 PyPSA's `Load`, wired to a port rather than straight to a bus. What it takes is data, so it decides nothing.

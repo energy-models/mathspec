@@ -28,10 +28,9 @@ Four rules follow from that question:
   parameter in the renderer.
 - The set of operators is fixed, so a tool cannot add a `roll` that the others
   do not know.
-- Each operator has one rule for the dimensions it produces.
-  `sum(p, by=gen_bus, over=generator, into=bus)` lands on `bus` for every
-  program.
-- Degree is decided when the file loads, so whether `x * y` is allowed does not
+- Each operator has one rule for the dimensions of its result. `sum(p, over=generator, by=gen_bus[bus])`
+  groups by `bus` for every program.
+- Degree is decided when the file loads. Whether `x * y` is allowed does not
   depend on which engine builds the model.
 
 A `piecewise:` block and a `sos:` block each state ordinary variables and

@@ -29,6 +29,7 @@ from mathspec.program import (
     DimensionComparison,
     DimensionPosition,
     ExpressionComparison,
+    JoinedPredicate,
     Mask,
     Negate,
     Not,
@@ -36,7 +37,6 @@ from mathspec.program import (
     Parameter,
     ParameterComparison,
     ParameterDefined,
-    PulledBackPredicate,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -138,7 +138,7 @@ class Subject:
 
     ``kind`` separates the namespaces that could otherwise collide: a
     dimension's coordinates and its *rank* are two subjects over one name, and
-    a rank is further split by the ``by=`` relation it is counted within.
+    a rank is further split by the ``within=`` columns it is counted within.
     """
 
     kind: Literal['param', 'expression', 'dim', 'rank', 'relation', 'relation_pair', 'variable']
@@ -255,10 +255,10 @@ def _observe(
             'Test this row, or precompute the neighbour as a boolean parameter and test that'
         )
         raise Undecidable(msg)
-    if isinstance(node, PulledBackPredicate):
+    if isinstance(node, JoinedPredicate):
         msg = (
-            f"it reads a predicate through '{node.direction.name}', which only the data decides. "
-            'Test this row, or precompute the read as a boolean parameter and test that'
+            f"it reads a predicate through '{node.columns.name}', and which rows that admits only the data "
+            'decides — test this row, or precompute the read as a boolean parameter and test that'
         )
         raise Undecidable(msg)
     if isinstance(node, DimensionPosition):
@@ -292,7 +292,7 @@ def _subject_of(node: TypedPredicate) -> Subject:
         case DimensionPosition(name=name, partition=partition):
             if partition is None:
                 return Subject('rank', name)
-            return Subject('rank', name, partition.name, partition.group)
+            return Subject('rank', name, partition.name, partition.grouped)
         case RelationDefined(name=name) | RelationComparison(name=name):
             return Subject('relation', name)
         case RelationPairComparison(name=name, other=other):
@@ -303,7 +303,7 @@ def _subject_of(node: TypedPredicate) -> Subject:
             return Subject('expression', 'a count of the coordinates a predicate admits')
         case TranslatedPredicate():
             return Subject('expression', 'a predicate read at a neighbouring coordinate')
-        case PulledBackPredicate():
+        case JoinedPredicate():
             return Subject('expression', 'a predicate read through a relation')
         case _:
             assert_never(node)
@@ -496,7 +496,7 @@ def _atom(node: TypedPredicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
         case ExpressionComparison():
             msg = 'a comparison of expressions is refused as undecidable before any cell is read'
             raise AssertionError(msg)
-        case CountComparison() | TranslatedPredicate() | PulledBackPredicate():
+        case CountComparison() | TranslatedPredicate() | JoinedPredicate():
             msg = (
                 'a predicate read as a count, at a neighbour or through a relation is refused as undecidable '
                 'before any cell is read'

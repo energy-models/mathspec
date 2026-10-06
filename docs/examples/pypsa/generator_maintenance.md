@@ -15,6 +15,7 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   generator:
     description: generating units, each on one bus
 
@@ -126,7 +127,7 @@ constraints:
       maintenance status is at most one
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_active
-    expression: Generator_maintenance == sum(Generator_maintenance_start, by=Generator_maintenance_cover, over=start, into=covered)
+    expression: Generator_maintenance == sum(Generator_maintenance_start, over=start, by=Generator_maintenance_cover[covered])
   Generator_maint_start_horizon:
     description: "`Generator-maint-start-horizon` — no event starts where it could not run its whole duration"
     dims: [scenario, snapshot, generator]
@@ -193,34 +194,34 @@ assumptions:
     where: "Generator_maintainable"
     description: >-
       a maintainable generator with no event schedules no maintenance —
-      PyPSA refuses it (`consistency.py:1516`)
+      PyPSA refuses it (`consistency.py:1493`)
   Generator_maintenance_duration_positive:
     holds: "Generator_maintenance_duration > 0"
     where: "Generator_maintainable"
     description: >-
       an event that covers no hours is no maintenance window — PyPSA
-      refuses it (`consistency.py:1506`)
+      refuses it (`consistency.py:1483`)
   Generator_maintenance_duration_fits_the_horizon:
     holds: "Generator_maintenance_duration <= sum(snapshot_weightings_generators, over=snapshot)"
     where: "Generator_maintainable"
     description: >-
       one event longer than the horizon, in generator weightings, blocks
       every start and makes the event count infeasible — PyPSA refuses it
-      (`consistency.py:1527`)
+      (`consistency.py:1504`)
   Generator_maintenance_events_fit_the_horizon:
     holds: "Generator_maintenance_duration * Generator_maintenance_events <= sum(snapshot_weightings_generators, over=snapshot)"
     where: "Generator_maintainable"
     description: >-
       the events together longer than the horizon, in generator
       weightings, cannot all be scheduled — PyPSA refuses it
-      (`consistency.py:1539`)
+      (`consistency.py:1516`)
   Generator_maintenance_build_cap_is_finite:
     holds: "Generator_p_nom_max < inf"
     where: "Generator_maintainable AND Generator_p_nom_extendable"
     description: >-
       the `maintcap` rows hold the chosen build in maintenance against
       `p_nom_max`, so an infinite cap is an infinite coefficient — PyPSA
-      refuses it (`consistency.py:1551`)
+      refuses it (`consistency.py:1528`)
   Generator_maintenance_module_count_is_finite:
     holds: "Generator_p_nom_max < inf"
     where: "Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_p_nom_mod > 0"
@@ -228,7 +229,7 @@ assumptions:
       the `maint-modstatus` rows bound the modules on in maintenance by
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
-      (`constraints.py:503-506`)
+      (`constraints.py:504-507`)
 ```
 
 #### Sets

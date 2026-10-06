@@ -15,11 +15,13 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   link:
     description: controllable connections, each from one bus to the buses it delivers to
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -132,7 +134,7 @@ expressions:
     description: >-
       the commitment state a link carries into a snapshot — off at the
       first snapshot it stands in past the first of the horizon, as PyPSA
-      reads a status it did not build (`constraints.py:297`), and the state
+      reads a status it did not build (`constraints.py:298`), and the state
       carried over otherwise
     dims: [scenario, snapshot, link]
     cases:
@@ -148,7 +150,7 @@ expressions:
     otherwise: shift(Link_status, along=snapshot, offset=1)
   Link_commitment_opex:
     expression: >-
-      sum(sum(((Link_status * Link_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=link), over=snapshot)
+      sum(sum(((Link_status * Link_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
       + sum(sum(Link_start_up * Link_start_up_cost, over=link), over=snapshot)
       + sum(sum(Link_shut_down * Link_shut_down_cost, over=link), over=snapshot)
     adds_to: scenario_opex
@@ -347,7 +349,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the commitment state a link carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:297`), and the state carried over otherwise |
+| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the commitment state a link carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
 | $`\overleftarrow{u}^{\circ f}`$ | `Link_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the state a link carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Link\_commitment\_opex}`$ | `Link_commitment_opex` over $`\Xi`$ |
 

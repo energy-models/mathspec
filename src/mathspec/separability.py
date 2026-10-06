@@ -11,9 +11,8 @@ from typing import TYPE_CHECKING, Literal, NamedTuple
 from mathspec.program import (
     Cases,
     DimensionPosition,
-    GroupSum,
+    Join,
     Mask,
-    Pullback,
     Reach,
     Separability,
     Sum,
@@ -99,26 +98,25 @@ def separabilities(program: Program) -> dict[str, Separability]:
             if isinstance(node, Cases):
                 masks.extend(region.when for region in node.regions)
             elif isinstance(node, Sum):
-                if reductions_couple:
-                    for dimension in node.over:
+                for axis in node.over:
+                    if axis.column is not None:
+                        assert isinstance(node.operand, Join), 'a join axis is opened by the join the sum stands over'
                         report(
                             'coupled',
-                            dimension,
+                            axis.dimension,
                             label,
-                            f'sums over {dimension} (use sum_back(window=n) for a rolling sum)',
+                            f'groups {axis.dimension} into {", ".join(node.operand.columns.added_dims)} — window that dimension instead, or cut only at the group edges',
                         )
-            elif isinstance(node, GroupSum):
-                for dimension in node.direction.consumed_dims:
-                    report(
-                        'coupled',
-                        dimension,
-                        label,
-                        f'groups {dimension} into {", ".join(node.direction.produced_dims)} (window that dimension '
-                        f'instead, or cut only at the group edges)',
-                    )
-            elif isinstance(node, Pullback):
-                for dimension in node.direction.consumed_dims:
-                    waits_on(dimension, label, node.direction.name, 'coordinate')
+                    elif reductions_couple:
+                        report(
+                            'coupled',
+                            axis.dimension,
+                            label,
+                            f'sums over {axis.dimension} — a rolling sum_back(window=n) windows, a total over the horizon does not',
+                        )
+            elif isinstance(node, Join) and not node.columns.axes:
+                for dimension in node.columns.dropped_dims:
+                    waits_on(dimension, label, node.columns.name, 'coordinate')
             elif isinstance(node, (Translate, WindowSum)):
                 dimension = node.along
                 if node.wrap:

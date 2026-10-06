@@ -151,10 +151,12 @@ class RelationBlock(_StrictBlock):
           ends: {key: line, values: {bus0: bus, bus1: bus}}
           connection: {key: [generator, bus]}
 
-    An operator reads the table in the direction the call names
-    (``over=``, ``into=``), joining on the other key columns; the
-    declaration fixes no direction. The map itself is data, and arrives with the rest of it,
-    under the relation's name, one column per role.
+    A sum joins the table on the columns ``over=`` names and every other key
+    column, and groups by the columns ``by=relation[...]`` names; a lookup
+    joins on the columns it names. The declaration fixes no direction, and a
+    column is named after its own dimension or after none, so a name in a
+    call reads the same as a column and as a dimension. The map itself is data, and arrives with the rest of it, under
+    the relation's name, one column per role.
     """
 
     _label: ClassVar[str] = 'a relation declaration'
@@ -192,7 +194,7 @@ class RelationBlock(_StrictBlock):
 
 
 class DimensionBlock(_StrictBlock):
-    """A declared dimension, and the dtype its coordinates must be.
+    """A declared dimension, the dtype its coordinates must be, and whether their order means anything.
 
     A dimension is an axis and nothing else: it declares that the axis exists
     and what its coordinates are typed as, never which coordinates there are —
@@ -204,7 +206,19 @@ class DimensionBlock(_StrictBlock):
     _label: ClassVar[str] = 'a dimension declaration'
 
     dtype: DimensionDtype = 'str'
+    #: Whether the order the data gives the coordinates in is part of the
+    #: model. Only an ordered dimension is one a construct may step or count
+    #: along; every other one is a set whose row order means nothing.
+    ordered: bool = False
     description: str | None = None
+
+    @model_serializer(mode='wrap')
+    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        """``ordered`` is written where it is true: false is what leaving it out says."""
+        written = cast('dict[str, object]', handler(self))
+        if not self.ordered:
+            written.pop('ordered', None)
+        return written
 
 
 class ParameterBlock(_StrictBlock):

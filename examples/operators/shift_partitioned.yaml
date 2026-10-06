@@ -7,7 +7,7 @@ description: >-
   snapshot reads that season's last and no level crosses the boundary.
 
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
   season: { dtype: str }
 
 relations:
@@ -21,6 +21,6 @@ variables:
 constraints:
   no_faster_than_before_in_season:
     dims: [snapshot]
-    expression: p <= shift(p, along=snapshot, offset=1, edge='wrap', by=season_of, within=season)
+    expression: p <= shift(p, along=snapshot, offset=1, edge='wrap', within=season_of[season])
 
 objective: { sense: minimize, expression: sum(p) }

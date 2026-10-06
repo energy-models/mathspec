@@ -153,7 +153,7 @@ the set out too.
 
         ```yaml
         dimensions:
-          bp: { dtype: int }
+          bp: { dtype: int, ordered: true }
 
         parameters:
           x_bp: { dims: [bp] }
@@ -210,7 +210,7 @@ the set out too.
 
         ```yaml
         dimensions:
-          bp: { dtype: int }
+          bp: { dtype: int, ordered: true }
 
         parameters:
           x_bp: { dims: [bp] }
@@ -313,7 +313,7 @@ the set out too.
 
         ```yaml
         dimensions:
-          bp: { dtype: int }
+          bp: { dtype: int, ordered: true }
 
         parameters:
           x_bp: { dims: [bp] }

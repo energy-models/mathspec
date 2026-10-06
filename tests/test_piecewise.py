@@ -25,8 +25,8 @@ from tests.fixtures import DISPATCH_MODEL, expanded, raw_of, schema_of, varied
 #: binaries and links is not something a smaller one can stand in for.
 NONCONVEX_YAML = """
 dimensions:
-  snapshot: {dtype: int}
-  bp: {dtype: int}
+  snapshot: {dtype: int, ordered: true}
+  bp: {dtype: int, ordered: true}
 
 parameters:
   load: {dims: [snapshot]}
@@ -493,7 +493,7 @@ def test_a_link_reading_a_dual_entry_is_refused():
 @pytest.mark.parametrize(
     ('activity', 'match'),
     [
-        pytest.param('at(u_unit, by=unit_of)', 'is not a declared variable', id='a-pullback-through-a-relation'),
+        pytest.param('at(u_unit, by=unit_of[unit])', 'is not a declared variable', id='a-lookup-through-a-relation'),
         pytest.param('shift(u, along=snapshot, offset=1)', 'is not a declared variable', id='a-shifted-gate'),
         pytest.param('u * 2', 'is not a declared variable', id='an-arithmetic-gate'),
     ],

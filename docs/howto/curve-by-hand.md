@@ -42,7 +42,7 @@ and the data sets the number of flows.
        expression: sum(weight, over=bp) == 1
      on_the_curve: # one row per flow
        dims: [flow, time]
-       expression: rate == sum(at(weight, by=converter_of, over=converter, into=flow) * bp_rate, over=bp)
+       expression: rate == sum(at(weight, by=converter_of[converter]) * bp_rate, over=bp)
    ```
 
 A converter with a fourth flow is then one more row in the data.

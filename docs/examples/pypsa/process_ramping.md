@@ -15,11 +15,13 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   process:
     description: generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -147,7 +149,7 @@ constraints:
     where: >-
       Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
       AND (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
       AND Process_active
     expression: >-
       Process_p - Process_previous_p <=
@@ -162,7 +164,7 @@ constraints:
     where: >-
       Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
       AND (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
       AND Process_active
     expression: >-
       Process_p - Process_previous_p <=
@@ -177,7 +179,7 @@ constraints:
     where: >-
       Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
       AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
       AND Process_active
     expression: >-
       Process_previous_p - Process_p <=
@@ -192,7 +194,7 @@ constraints:
     where: >-
       Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
       AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
       AND Process_active
     expression: >-
       Process_previous_p - Process_p <=
@@ -210,7 +212,7 @@ constraints:
     where: >-
       (Process_ramp_limit_up OR Process_ramp_limit_start_up)
       AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
       AND Process_active
     expression: Process_p - Process_previous_p <= Process_ramp_up_allowance
   Process_p_ramp_limit_down:
@@ -225,7 +227,7 @@ constraints:
     where: >-
       (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
       AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
       AND Process_active
     expression: Process_previous_p - Process_p <= Process_ramp_down_allowance
 
@@ -236,11 +238,11 @@ assumptions:
     description: >-
       PyPSA reads `up_time_before` of a process that is not committable in its
       ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp
-      alone builds (`constraints.py:1052-1053`). Where it is zero, PyPSA
+      alone builds (`constraints.py:1018-1019`). Where it is zero, PyPSA
       builds a row at the first snapshot with nothing carried in, and caps
       the process there at zero, or at its start-up ramp where another process of
       the component is committable with a fixed build
-      (`constraints.py:1097-1100`, `1116-1118`). PyPSA documents
+      (`constraints.py:1063-1066`, `1082-1084`). PyPSA documents
       the attribute as read only for a committable process and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data

@@ -59,7 +59,7 @@ either side:
 
 ```yaml
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
   generator: { dtype: str }
 parameters:
   eta: { dims: [generator] }

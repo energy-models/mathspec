@@ -209,7 +209,8 @@ def lower(schema: Spec) -> Program:
         constraints=constraints,
         objective=objective,
         dimensions={
-            name: DimensionDeclaration(ddef.dtype, ddef.description) for name, ddef in schema.dimensions.items()
+            name: DimensionDeclaration(dtype=ddef.dtype, ordered=ddef.ordered, description=ddef.description)
+            for name, ddef in schema.dimensions.items()
         },
         relations=ns.relations,
         sos={

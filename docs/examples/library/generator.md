@@ -13,9 +13,10 @@ into `port`, its parameters, its variable and its cost. It reads `Port_p` and
 writes `Generator_bus`. The surface sets the objective, so this file on its own
 sets none.
 
-The constraint lets the library compose. `at(Port_p, by=Generator_port,
-over=port, into=generator)` pins the flow at the port of this component and adds
-no term to the balance, so the balance does not grow.
+The constraint is what makes the library composable.
+`at(Port_p, by=Generator_port[port])` pins the flow at
+this component's own port rather than adding a term to the balance, so the
+balance does not grow.
 
 The file is cut to what a dispatch spec needs. PyPSA carries a fixed build, an
 availability profile and ramp limits, and this file states none of the three.
@@ -58,7 +59,7 @@ constraints:
       what a generator produces is what its port injects. No PyPSA row stands
       for this: PyPSA writes the generator into the balance instead
     dims: [snapshot, generator]
-    expression: at(Port_p, by=Generator_port, over=port, into=generator) == Generator_p
+    expression: at(Port_p, by=Generator_port[port]) == Generator_p
 expressions:
   Generator_cost:
     expression: sum(Generator_p * Generator_marginal_cost)

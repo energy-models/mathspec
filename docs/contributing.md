@@ -111,13 +111,13 @@ with a suffix that says which layer it is:
 A node names the operation, not the function a file writes. One function can
 resolve to two nodes, so the spelling in the file cannot decide the name.
 
-| File function      | Node        | What the node names                |
-| ------------------ | ----------- | ---------------------------------- |
-| `sum(over=)`       | `Sum`       | dimensions removed from the result |
-| `sum(by=)`         | `GroupSum`  | a sum through a relation           |
-| `at(by=)`          | `Pullback`  | a read through a relation          |
-| `shift(along=)`    | `Translate` | a re-index along one dimension     |
-| `sum_back(along=)` | `WindowSum` | a sum over a trailing window       |
+| File verb          | Node                | What the node names                                  |
+| ------------------ | ------------------- | ---------------------------------------------------- |
+| `sum(over=)`       | `Sum`               | axes removed from the result                         |
+| `sum(by=)`         | `Sum` over a `Join` | a join, and the sum over the axes it opens           |
+| `at(by=)`          | `Join`              | a join whose groups are one row, with no sum over it |
+| `shift(along=)`    | `Translate`         | a re-index along one dimension                       |
+| `sum_back(along=)` | `WindowSum`         | a sum over a trailing window                         |
 
 No name is abbreviated.
 

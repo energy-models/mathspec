@@ -15,11 +15,13 @@ dimensions:
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   process:
     description: generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -132,7 +134,7 @@ expressions:
     description: >-
       the commitment state a process carries into a snapshot — off at the
       first snapshot it stands in past the first of the horizon, as PyPSA
-      reads a status it did not build (`constraints.py:297`), and the state
+      reads a status it did not build (`constraints.py:298`), and the state
       carried over otherwise
     dims: [scenario, snapshot, process]
     cases:
@@ -148,7 +150,7 @@ expressions:
     otherwise: shift(Process_status, along=snapshot, offset=1)
   Process_commitment_opex:
     expression: >-
-      sum(sum(((Process_status * Process_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=process), over=snapshot)
+      sum(sum(((Process_status * Process_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
       + sum(sum(Process_start_up * Process_start_up_cost, over=process), over=snapshot)
       + sum(sum(Process_shut_down * Process_shut_down_cost, over=process), over=snapshot)
     adds_to: scenario_opex
@@ -347,7 +349,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the commitment state a process carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:297`), and the state carried over otherwise |
+| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the commitment state a process carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
 | $`\overleftarrow{u}^{\circ z}`$ | `Process_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the state a process carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Process\_commitment\_opex}`$ | `Process_commitment_opex` over $`\Xi`$ |
 

@@ -96,7 +96,7 @@ given:
 expressions:
   generation:
     description: what the fleet puts into a bus
-    expression: sum(dispatch, by=gen_bus, over=generator, into=bus)
+    expression: sum(dispatch, over=generator, by=gen_bus[bus])
     adds_to: injection
   generation_cost:
     description: what running the fleet costs

@@ -42,7 +42,7 @@ def test_a_dimension_index_never_steals_a_letter_a_variable_owns(name: FormatNam
     """With `plant` -> `p` and a variable `p`, the output was `p_{t,p}` and no
     reader could tell which `p` was which."""
     model = {
-        'dimensions': {'plant': {'dtype': 'str'}, 'snapshot': {'dtype': 'int'}},
+        'dimensions': {'plant': {'dtype': 'str'}, 'snapshot': {'dtype': 'int', 'ordered': True}},
         'parameters': {'cost': {'dims': ['plant']}},
         'variables': {'p': {'dims': ['snapshot', 'plant'], 'bounds': {'lower': 0}}},
         'objective': {'expression': 'sum(p * cost)'},
@@ -66,7 +66,7 @@ def test_a_where_lands_on_the_quantifier_not_in_the_equation(name: FormatName, f
 def _masked(dtype: str) -> dict[str, object]:
     """One model per mask dtype: a bare parameter atom is the whole `where`."""
     return {
-        'dimensions': {'g': {'dtype': 'str'}},
+        'dimensions': {'g': {'dtype': 'str', 'ordered': True}},
         'parameters': {'flag': {'dims': ['g'], 'dtype': dtype}},
         'variables': {
             'keep': {'dims': ['g'], 'where': 'flag', 'bounds': {'lower': 0, 'upper': 1}},
@@ -112,7 +112,7 @@ def _storage(shift: str) -> dict[str, object]:
     No parameter, so it is also the model the "given" convention has nothing to say about.
     """
     return {
-        'dimensions': {'snapshot': {'dtype': 'int'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}},
         'variables': {'soc': {'dims': ['snapshot'], 'bounds': {'lower': 0, 'upper': 100}}},
         'constraints': {'balance': {'dims': ['snapshot'], 'expression': f'soc == shift(soc, along=snapshot, {shift})'}},
     }
@@ -154,13 +154,13 @@ def test_a_fill_and_a_group_take_the_operators_two_slots(name: FormatName, fmt: 
     group the translation stays inside.
     """
     model = {
-        'dimensions': {'snapshot': {'dtype': 'int'}, 'season': {'dtype': 'str'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
         'relations': {'season_of': {'key': 'snapshot', 'values': 'season'}},
         'variables': {'p': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
             'held': {
                 'dims': ['snapshot'],
-                'expression': 'p <= shift(p, along=snapshot, offset=1, edge=0, by=season_of, within=season)',
+                'expression': 'p <= shift(p, along=snapshot, offset=1, edge=0, within=season_of[season])',
             }
         },
         'objective': {'sense': 'minimize', 'expression': 'sum(p)'},
@@ -179,13 +179,13 @@ def test_a_translation_by_nothing_takes_no_legend_note(name: FormatName):
     """A shift by 0 prints no operator, but the legend read every partitioned
     translation as printed and explained a grouped operator the page never shows."""
     model = {
-        'dimensions': {'snapshot': {'dtype': 'int'}, 'season': {'dtype': 'str'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
         'relations': {'season_of': {'key': 'snapshot', 'values': 'season'}},
         'variables': {'p': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
             'held': {
                 'dims': ['snapshot'],
-                'expression': 'p <= shift(p, along=snapshot, offset=0, edge=0, by=season_of, within=season)',
+                'expression': 'p <= shift(p, along=snapshot, offset=0, edge=0, within=season_of[season])',
             }
         },
         'objective': {'sense': 'minimize', 'expression': 'sum(p)'},
@@ -196,18 +196,18 @@ def test_a_translation_by_nothing_takes_no_legend_note(name: FormatName):
 
 
 @EVERY_FORMAT
-def test_a_translation_under_a_pullback_survives_it(name: FormatName, fmt: Format):
+def test_a_translation_under_a_lookup_survives_it(name: FormatName, fmt: Format):
     """``at`` and ``shift`` both re-index at the leaf, and the leaf has one subscript.
 
     Whoever wrote it last used to win: ``at(shift(cap, along=period, offset=1,
-    edge=0), by=period_of, over=period, into=snapshot)`` printed `cap_{period_of(t)}`, dropping a
+    edge=0), by=period_of[period])`` printed `cap_{period_of(t)}`, dropping a
     translation the plan builds. The subscript is a composition, so it renders
     as one.
     """
     model = {
         'dimensions': {
-            'snapshot': {'dtype': 'int'},
-            'period': {'dtype': 'int'},
+            'snapshot': {'dtype': 'int', 'ordered': True},
+            'period': {'dtype': 'int', 'ordered': True},
         },
         'relations': {'period_of': {'key': 'snapshot', 'values': 'period'}},
         'parameters': {'cap': {'dims': ['period']}},
@@ -215,13 +215,13 @@ def test_a_translation_under_a_pullback_survives_it(name: FormatName, fmt: Forma
         'constraints': {
             'within': {
                 'dims': ['snapshot'],
-                'expression': 'p <= at(shift(cap, along=period, offset=1, edge=0), by=period_of, over=period, into=snapshot)',
+                'expression': 'p <= at(shift(cap, along=period, offset=1, edge=0), by=period_of[period])',
             }
         },
     }
     text = typeset(model, name, legend=False)
     assert fmt.operators['edge_minus'] in text, 'the shift under the at was dropped from the subscript'
-    assert fmt.apply(fmt.upright('period_of'), 't') in text, 'the pullback itself was dropped'
+    assert fmt.apply(fmt.upright('period_of'), 't') in text, 'the lookup itself was dropped'
 
 
 @EVERY_FORMAT
@@ -234,7 +234,7 @@ def test_translations_that_disagree_at_the_edge_do_not_merge(name: FormatName, f
     composition; only identical policies add.
     """
     model = {
-        'dimensions': {'snapshot': {'dtype': 'int'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}},
         'variables': {'soc': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
             'b': {
@@ -306,7 +306,7 @@ def test_a_negative_fill_prints(name: FormatName, fmt: Format):
     lowering did, the walk's step did not.
     """
     model = {
-        'dimensions': {'g': {}},
+        'dimensions': {'g': {'ordered': True}},
         'parameters': {'cap': {'dims': ['g']}},
         'variables': {'p': {'dims': ['g']}},
         'constraints': {'k': {'dims': ['g'], 'expression': 'p <= shift(cap, along=g, offset=1, edge=-1)'}},
@@ -317,7 +317,7 @@ def test_a_negative_fill_prints(name: FormatName, fmt: Format):
 def _selected(mask: str) -> dict[str, Any]:
     """One constraint carrying *mask*, over a dimension a relation groups."""
     return {
-        'dimensions': {'snapshot': {'dtype': 'int'}, 'season': {'dtype': 'str'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
         'relations': {'season_of': {'key': 'snapshot', 'values': 'season'}},
         'variables': {'soc': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {'seed': {'dims': ['snapshot'], 'where': mask, 'expression': 'soc == 0'}},
@@ -342,7 +342,7 @@ def test_a_grouped_position_rides_a_subscript_rather_than_a_second_argument(name
     As ``pos(t, season_of(t))`` the second argument sits where a reader of the
     first one expects an integer, and nothing says it means "within".
     """
-    text = typeset(_selected('position(snapshot, by=season_of, within=season) == 0'), name)
+    text = typeset(_selected('position(snapshot, within=season_of[season]) == 0'), name)
     applied = fmt.apply(fmt.upright('season_of'), 't')
     assert fmt.apply(fmt.subscript(fmt.operators['position'], [applied]), 't') in text
 
@@ -367,7 +367,7 @@ def test_a_dimension_compared_against_a_number_says_what_its_coordinates_are(nam
         pytest.param('against positions', _selected('position(snapshot) == 0'), DISPATCH_MODEL, id='a-position'),
         pytest.param(
             'counts within the group',
-            _selected('position(snapshot, by=season_of, within=season) == 0'),
+            _selected('position(snapshot, within=season_of[season]) == 0'),
             _selected('position(snapshot) == 0'),
             id='a-grouped-position',
         ),
@@ -616,7 +616,7 @@ def test_a_dimension_is_not_a_head_a_qualifier_hangs_off(name: FormatName, fmt: 
 #: and a capital cost over (g) alone. No constraints, so every summation in the
 #: rendered document is one the objective asked for.
 MIXED = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'generator': {'dtype': 'str'}},
+    'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'generator': {'dtype': 'str', 'ordered': True}},
     'parameters': {'cost': {'dims': ['generator']}, 'capex': {'dims': ['generator']}},
     'variables': {
         'p': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}},
@@ -683,8 +683,8 @@ def test_every_operator_probe_renders(path, name: FormatName, fmt: Format):
 #: consumes one of `gen_bt`'s two value columns leaves the other one.
 UNREAD = {
     'dimensions': {
-        'snapshot': {'dtype': 'int'},
-        'generator': {'dtype': 'str'},
+        'snapshot': {'dtype': 'int', 'ordered': True},
+        'generator': {'dtype': 'str', 'ordered': True},
         'zone': {'dtype': 'str'},
         'bus': {'dtype': 'str'},
         'technology': {'dtype': 'str'},
@@ -710,21 +710,21 @@ def _grouped(dims: list[str], expression: str) -> str:
 
 
 def test_a_sum_that_reads_no_value_column_asks_only_that_the_key_has_a_row():
-    """`sum(u, by=gen_zone, over=generator, into=snapshot)` died with `KeyError: 'zone'`.
+    """`sum(u, over=generator, by=gen_zone[snapshot])` died with `KeyError: 'zone'`.
 
     The domain was written as a whole row of the table, which needs an index
     for every column, and this sum goes between the two key columns: it reads
     no value column, so there is no index to write in `zone`'s place. What the
     sum asks of the table is that the key it reads between has a row at all.
     """
-    row = _grouped(['snapshot'], 'sum(u, by=gen_zone, over=generator, into=snapshot) <= cap')
+    row = _grouped(['snapshot'], 'sum(u, over=generator, by=gen_zone[snapshot]) <= cap')
     assert r'\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_zone}(g,\ t) \text{ is defined}}' in row, (
         'the condition is that the row exists, and the unread value column is written nowhere'
     )
 
 
 def test_a_value_column_the_call_consumes_is_a_condition_like_a_produced_one():
-    """`sum(f, by=gen_bt, over=[generator, bus], into=technology)` bound `b` and then
+    """`sum(f, over=[generator, bus], by=gen_bt[technology])` bound `b` and then
     said nothing about it, so the sum ran over every bus rather than over the
     one the table puts each generator on.
 
@@ -732,7 +732,7 @@ def test_a_value_column_the_call_consumes_is_a_condition_like_a_produced_one():
     column by consuming it too, and either way the column is one lookup at the
     key.
     """
-    row = _grouped(['technology'], 'sum(f, by=gen_bt, over=[generator, bus], into=technology) <= cap')
+    row = _grouped(['technology'], 'sum(f, over=[generator, bus], by=gen_bt[technology]) <= cap')
     assert (
         r'\sum_{g \in \mathcal{G},\ b \in \mathcal{B} \,:\, '
         r'\mathrm{gen\_bt.bus}(g) = b \wedge \mathrm{gen\_bt.technology}(g) = e}'
@@ -747,7 +747,11 @@ def test_a_value_column_the_call_consumes_is_a_condition_like_a_produced_one():
 #: Two frames over generators, a relation onto buses and a boolean mask — what the
 #: scope and bracketing cases are written against.
 BUSES = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'generator': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
+    'dimensions': {
+        'snapshot': {'dtype': 'int', 'ordered': True},
+        'generator': {'dtype': 'str', 'ordered': True},
+        'bus': {'dtype': 'str'},
+    },
     'relations': {'bus_of': {'key': 'generator', 'values': 'bus'}},
     'parameters': {'load': {'dims': ['snapshot']}, 'k': {'dims': []}, 'flag': {'dims': ['snapshot'], 'dtype': 'bool'}},
     'variables': {'p': {'dims': ['snapshot', 'generator']}, 'q': {'dims': ['snapshot', 'generator']}},
@@ -767,7 +771,7 @@ def _row(expression: str, where: str | None = None, **patch: object) -> str:
     ('expression', 'expected'),
     [
         pytest.param(
-            'p == at(sum(q, by=bus_of, over=generator, into=bus), by=bus_of, over=bus, into=generator)',
+            'p == at(sum(q, over=generator, by=bus_of[bus]), by=bus_of[bus])',
             r"\sum_{g' \in \mathcal{G} \,:\, \mathrm{bus\_of}(g') = \mathrm{bus\_of}(g)} q_{t,g'}",
             id='grouped-by-a-relation',
         ),
@@ -977,7 +981,7 @@ def test_a_condition_a_method_states_is_a_line_that_may_be_asked_for_before_it_i
 
 #: One curve, varied per case: two links pinned to it, over one breakpoint dim.
 _CURVE = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'bp': {'dtype': 'int'}},
+    'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'bp': {'dtype': 'int', 'ordered': True}},
     'parameters': {
         'bp_x': {'dims': ['bp']},
         'bp_y': {'dims': ['bp']},

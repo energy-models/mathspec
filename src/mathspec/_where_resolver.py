@@ -22,10 +22,8 @@ from mathspec._expression_parser import (
     ArithmeticNode,
     FunctionCallNode,
     KeywordNode,
-    NameListNode,
     NameNode,
     literal_number,
-    names_in,
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver
@@ -36,8 +34,8 @@ from mathspec._where_parser import (
     UnresolvedPredicateCallNode,
     UnresolvedWhereNode,
 )
-from mathspec.dimensions import dims_of, pulled_back_dims
-from mathspec.errors import DimensionError, LanguageError, did_you_mean, prefixed
+from mathspec.dimensions import dims_of, join_dims
+from mathspec.errors import DimensionError, LanguageError, did_you_mean, prefixed, unordered
 from mathspec.expansion import expand
 from mathspec.program import (
     Add,
@@ -47,10 +45,10 @@ from mathspec.program import (
     CountComparison,
     DimensionComparison,
     DimensionPosition,
-    Direction,
     Divide,
     Expression,
     ExpressionComparison,
+    JoinedPredicate,
     Mask,
     Multiply,
     Negate,
@@ -61,7 +59,6 @@ from mathspec.program import (
     Power,
     Predicate,
     PredicateOperator,
-    PulledBackPredicate,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -155,8 +152,8 @@ class WhereResolver:
                 if len(set(dims)) < len(dims):
                     self.errors.append(
                         f"{context}: '{node.name}' has two columns over one dimension ({list(shape.roles)}), so a "
-                        f'bare name is ambiguous. Compare a column: '
-                        f'{node.name}.{shape.values[0] if shape.values else shape.roles[-1]} == ....'
+                        f'bare name cannot say which the frame supplies. Compare a column: '
+                        f'{node.name}[{shape.values[0] if shape.values else shape.roles[-1]}] == ....'
                     )
                     return node
                 return RelationDefined(node.name, dims)
@@ -171,7 +168,7 @@ class WhereResolver:
         return node
 
     def _predicate_call(self, node: UnresolvedPredicateCallNode) -> Predicate | UnresolvedWhereNode:
-        """``shift(<predicate>, along=, offset=)`` or ``at(<predicate>, by=, over=, into=)`` — the two operators that read a predicate and answer one.
+        """``shift(<predicate>, along=, offset=)`` or ``at(<predicate>, by=relation[column])`` — the two operators that read a predicate and answer one.
 
         ``count`` answers a number, so it stands on a comparison's side and
         [`_count`][] reads it there. Anything else naming a predicate is
@@ -198,7 +195,7 @@ class WhereResolver:
         if len(self.errors) > found:
             return node
         if node.name == 'at':
-            return self._pulled_back(node, Mask(operand))
+            return self._joined(node, Mask(operand))
         if (refusal := _kwargs_error(context, 'shift', node.kwargs, required=('along', 'offset'))) is not None:
             self.errors.append(refusal)
             return node
@@ -219,30 +216,32 @@ class WhereResolver:
                 f'not read. Step along one of {_listed(sorted(mask.dims))}.'
             )
             return node
+        if self.ns.unordered(along.name):
+            self.errors.append(unordered(context, f'shift(<predicate>, along={along.name})', along.name))
+            return node
         return TranslatedPredicate(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
 
-    def _pulled_back(self, node: UnresolvedPredicateCallNode, mask: Mask) -> Predicate | UnresolvedWhereNode:
-        """``at(<predicate>, by=, over=, into=)`` — the predicate read through a relation, as ``at`` reads an array.
+    def _joined(self, node: UnresolvedPredicateCallNode, mask: Mask) -> Predicate | UnresolvedWhereNode:
+        """``at(<predicate>, by=relation[column])`` — the predicate read through a relation, as ``at`` reads an array.
 
-        The relation and its two ends are read by the rules an expression's
-        ``at`` is, so the one refusal a file meets for a bad read is the same
-        in a ``where:`` and in an expression.
+        The columns are read by the rules an expression's ``at`` is, so the one
+        refusal a file meets for a bad read is the same in a ``where:`` and in
+        an expression.
         """
         context = self.context
-        if (refusal := _kwargs_error(context, 'at', node.kwargs, required=('by', 'over', 'into'))) is not None:
+        if (refusal := _kwargs_error(context, 'at', node.kwargs, required=('by',))) is not None:
             self.errors.append(refusal)
             return node
-        found = len(self.errors)
-        roles = {key: node.kwargs[key] for key in ('over', 'into')}
-        by = self._expressions.relation_ref(node.kwargs['by'], 'at', 'by', roles, None)
-        if len(self.errors) > found or not isinstance(by, Direction):
+        columns = self._expressions.columns_ref(node.kwargs['by'], 'at', 'by')
+        by = None if columns is None else self._expressions.lookup(columns, mask.dims)
+        if by is None:
             return node
         try:
-            dims = pulled_back_dims(by, mask.dims, context, 'the predicate')
+            dims = join_dims(by, mask.dims, context, 'the predicate')
         except DimensionError as refusal:
             self.errors.append(str(refusal))
             return node
-        return PulledBackPredicate(mask, by, tuple(sorted(dims)))
+        return JoinedPredicate(mask, by, tuple(sorted(dims)))
 
     def _count(self, node: UnresolvedCountNode) -> Predicate | UnresolvedWhereNode:
         """``count(<predicate>, over=<dim>) <op> <integer>`` — how many coordinates the predicate admits.
@@ -395,16 +394,16 @@ class WhereResolver:
     def _position(
         self, call: FunctionCallNode, node: UnresolvedComparisonNode
     ) -> DimensionPosition | UnresolvedComparisonNode:
-        """``position(dim[, by=relation, within=columns]) <op> i``: the name a dimension, ``by=`` a relation keyed over it."""
+        """``position(dim[, within=relation[column]]) <op> i``: the name a dimension, the relation keyed over it."""
         ns, context = self.ns, self.context
         shape = _position_shape(call)
         if shape is None:
             self.errors.append(
-                f'{context}: this position() call is not of the form '
-                f'position(<dim>[, by=<relation>, within=<column>]). Write it in that form.'
+                f'{context}: position() is written position(<dim>[, within=<relation>[<column>]]), and this '
+                f'call is not of that shape. It takes the dimension it counts along and nothing else beside within=.'
             )
             return node
-        dimension, by, into = shape
+        dimension, within = shape
         index = None if isinstance(node.right, ColumnNode | KeywordNode) else literal_number(node.right)
         if index is None or not index.value.is_integer():
             self.errors.append(
@@ -420,20 +419,13 @@ class WhereResolver:
                 f'{did_you_mean(dimension, ns.dimensions, label="Dimensions")}'
             )
             return node
-        if by is None:
+        if ns.unordered(dimension):
+            self.errors.append(unordered(context, f'position({dimension})', dimension))
+            return node
+        if within is None:
             return DimensionPosition(dimension, node.op, position)
-        if (problem := self._expressions.not_a_relation(by, 'position', 'by')) is not None:
-            self.errors.append(problem)
-            return node
-        spelled = f'position({dimension}, by={by})'
-        if into is None:
-            self.errors.append(
-                f'{context}: {spelled} does not name within=. Write '
-                f"position({dimension}, by={by}, within=<column>), with a value column of '{by}': "
-                f'{list(ns.relations[by].values)}.'
-            )
-            return node
-        partition = self._expressions.partition(by, 'position', dimension, into)
+        columns = self._expressions.columns_ref(within, 'position', 'within')
+        partition = None if columns is None else self._expressions.partition(columns, 'position', dimension)
         if partition is None:
             return node
         return DimensionPosition(dimension, node.op, position, partition)
@@ -442,9 +434,9 @@ class WhereResolver:
         """``name <op> literal``, or the one structural form ``relation <op> relation``."""
         ns, context = self.ns, self.context
         value = plain.value
-        left_name, _, left_column = plain.name.partition('.')
+        left_name, left_column = _split_column(plain.name)
         if not plain.quoted and isinstance(value, str):
-            right_name, _, right_column = value.partition('.')
+            right_name, right_column = _split_column(value)
             if (rhs_kind := ns.kind(right_name)) is not None:
                 if rhs_kind == 'relation' and ns.kind(left_name) == 'relation':
                     left = self._relation_column(left_name, left_column or None, plain.name, plain.op)
@@ -523,7 +515,7 @@ class WhereResolver:
             if len(shape.values) != 1:
                 self.errors.append(
                     f"{context}: '{spelling}': '{name}' has {len(shape.values)} value columns ({list(shape.values)}), "
-                    f'so name one: {name}.{shape.values[0] if shape.values else "..."}.'
+                    f'so say which the comparison reads: {name}[{shape.values[0]}].'
                 )
                 return None
             return shape.values[0]
@@ -612,7 +604,7 @@ class _Plain(NamedTuple):
 
 
 def _side_name(side: ArithmeticNode | ColumnNode) -> str | None:
-    """The name a side of a where-comparison spells — bare or ``relation.column`` — or ``None`` where it is arithmetic."""
+    """The name a side of a where-comparison spells — bare or ``relation[column]`` — or ``None`` where it is arithmetic."""
     if isinstance(side, NameNode):
         return side.name
     if isinstance(side, ColumnNode):
@@ -620,17 +612,17 @@ def _side_name(side: ArithmeticNode | ColumnNode) -> str | None:
     return None
 
 
-def _position_shape(call: FunctionCallNode) -> tuple[str, str | None, tuple[str, ...] | None] | None:
-    """``(dim, by, within)`` off a ``position(...)`` call, or ``None`` where the call is not of that shape."""
-    if len(call.args) != 1 or not isinstance(call.args[0], NameNode) or set(call.kwargs) - {'by', 'within'}:
+def _split_column(name: str) -> tuple[str, str]:
+    """``relation[column]`` as its two names, and a bare name with an empty column: the one reader of a side's spelling."""
+    relation, _, column = name.partition('[')
+    return relation, column.removesuffix(']')
+
+
+def _position_shape(call: FunctionCallNode) -> tuple[str, ArithmeticNode | None] | None:
+    """``(dim, within)`` off a ``position(...)`` call, or ``None`` where the call is not of that shape."""
+    if len(call.args) != 1 or not isinstance(call.args[0], NameNode) or set(call.kwargs) - {'within'}:
         return None
-    by, within = call.kwargs.get('by'), call.kwargs.get('within')
-    if by is not None and not isinstance(by, NameNode):
-        return None
-    if within is not None and not isinstance(within, NameNode | NameListNode):
-        return None
-    into = names_in(within) if within is not None else None
-    return call.args[0].name, by.name if by is not None else None, into
+    return call.args[0].name, call.kwargs.get('within')
 
 
 def _kwargs_error(
@@ -639,7 +631,7 @@ def _kwargs_error(
     """Why *kwargs* is not what *name* takes over a predicate, or ``None`` where it is.
 
     A predicate-reading call takes exactly the keywords named here. The
-    arithmetic forms of these operators take more — an ``edge=``, a ``by=`` —
+    arithmetic forms of these operators take more — an ``edge=``, a ``within=`` —
     and each is refused rather than ignored, since a predicate answers the
     vacated coordinate itself and a grouped form has nobody asking for it yet.
     """
@@ -726,7 +718,7 @@ def _relation_pair_error(context: str, node: _Plain, other: str, ns: Namespace, 
     answers are silent, and a build's data library decides which one.
     """
     comparison = f"'{node.name} {node.op} {other}'"
-    left_name, right_name = node.name.partition('.')[0], other.partition('.')[0]
+    left_name, right_name = _split_column(node.name)[0], _split_column(other)[0]
     ls, rs = ns.relations[left_name], ns.relations[right_name]
     left_keys, right_keys = {ls.dim(k) for k in ls.key}, {rs.dim(k) for k in rs.key}
     if left_keys != right_keys:

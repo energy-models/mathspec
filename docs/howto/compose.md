@@ -69,7 +69,7 @@ and you can nest them as `override(merge([…]), […])`.
        total_cost: { dims: [] }
    expressions:
      Generator_injection:
-       expression: sum(Generator_p, by=Generator_bus, over=generator, into=bus)
+       expression: sum(Generator_p, over=generator, by=Generator_bus[bus])
        adds_to: Bus_injection
      Generator_cost:
        expression: sum(Generator_p * Generator_marginal_cost)
@@ -90,7 +90,7 @@ and you can nest them as `override(merge([…]), […])`.
        Bus_injection: { dims: [snapshot, bus] }
    expressions:
      Load_injection:
-       expression: -sum(Load_p_set, by=Load_bus, over=load, into=bus)
+       expression: -sum(Load_p_set, over=load, by=Load_bus[bus])
        adds_to: Bus_injection
    ```
 
@@ -122,7 +122,7 @@ and you can nest them as `override(merge([…]), […])`.
 
    ```yaml title="store.yaml"
    dimensions:
-     snapshot: { dtype: int }
+     snapshot: { dtype: int, ordered: true }
      bus: { dtype: str }
      store: { dtype: str }
    relations:
@@ -141,7 +141,7 @@ and you can nest them as `override(merge([…]), […])`.
        Bus_injection: { dims: [snapshot, bus] }
    expressions:
      Store_injection:
-       expression: sum(Store_p, by=Store_bus, over=store, into=bus)
+       expression: sum(Store_p, over=store, by=Store_bus[bus])
        adds_to: Bus_injection
    ```
 
@@ -204,6 +204,7 @@ which each component pins at its own port.
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                     |
 | a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                       |
+| `ordered: true` on a shared dimension             | it is a claim about the dimension rather than the dimension, so the dimension is ordered if one fragment says so                                                                                    |
 | any other declaration                             | one fragment declares it, and a second is refused                                                                                                                                                   |
 | an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the declaration where the introducer wrote none                                             |
 | a given expression                                | the body of the definition carries no dimension that the `dims` of the reading fragment do not name                                                                                                 |
@@ -361,7 +362,8 @@ Given variable 'Generator_p' collides with the variable of the same name. Rename
 | `null` under a declaration's name    | it is removed                                                                 |
 | `null` on a field of a declaration   | the field takes its default, and the rest of the declaration stays            |
 | `null` under a section's name        | it is refused                                                                 |
-| a dimension or a relation            | it is added, or restated word for word as the base declares it                |
+| a dimension or a relation            | it is added, or restated as the base declares it                              |
+| `ordered:` on a restated dimension   | `true` makes the dimension ordered; `false` over an ordered one is refused    |
 | an entry under one kind of `given:`  | it is edited, added or removed like any declaration, and the other kinds stay |
 | `version`, `description`             | the patch's value replaces the base's                                         |
 | a field an earlier patch writes      | the later patch's value replaces it                                           |
@@ -381,13 +383,23 @@ as the base spells it.
 
 ## A dimension redeclared
 
-A patch may add a dimension or a relation, and may restate one that the base
-declares, when the restatement matches the base word for word. `override`
-refuses a patch that changes one, because the expressions are already written
-over it, and it also refuses a patch that removes one:
+A patch may add a dimension or a relation, and may restate one the base
+declares. The restatement says what the base says: half a declaration is a
+second reading of the same name, and a field written at its default is the
+same as one left out. Changing one under the expressions already written
+over it is refused, and so is removing one:
 
 ```text
 patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. Restate the declaration word for word, leave it out, or give the patch a dimension of its own under a name of its own.
+```
+
+`ordered` is a claim about the dimension, not the dimension. A patch may add
+it, so a patch that steps along `snapshot` declares it `ordered: true` over a
+base that does not. A patch may not take it back, because the base may
+already step along it:
+
+```text
+patch 'unordered.yaml' says the dimension 'snapshot' is not ordered, where its base declares it ordered. A construct in the base may step along it, and a patch adds the claim of order but never withdraws it: leave `ordered` out of the patch.
 ```
 
 ## A section set to `null`
