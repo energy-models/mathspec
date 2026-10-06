@@ -10,6 +10,7 @@ given:
     scenario_weight: { dims: [scenario] }
     CVaR_omega: { dims: [] }
     period_weight_objective: { dims: [period] }
+    snapshot_weightings_generators: { dims: [snapshot] }
   variables:
     Link_maintenance: { dims: [scenario, snapshot, link] }
     Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
@@ -96,8 +97,8 @@ parameters:
   Link_output_delay:
     description: >-
       snapshots a port's delivery lags its link's flow — PyPSA's `delay`,
-      `delay2`, … read long, in `snapshot_weightings.generators` units, which
-      the file states as whole snapshots; zero for a port that delivers at once.
+      `delay2`, … read long, over the `snapshot_weightings.generators` value
+      and rounded up, as data prep; zero for a port that delivers at once.
       The same in every scenario: PyPSA refuses a delay that differs by
       scenario (`constants.py:52`)
     dims: [link_output]
@@ -328,6 +329,16 @@ constraints:
     expression: Link_p == Link_p_set
 
 assumptions:
+  Link_output_delay_under_uniform_weighting:
+    holds: "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
+    where: "Link_output_delay > 0"
+    description: >-
+      a delayed port lags by the same whole number of snapshots in every
+      period. PyPSA lags by elapsed time in `generators` weighting and
+      rounds the source down to a snapshot start (`multiports.py:100-133`),
+      so the two agree only where that weighting is one value over the
+      horizon. PyPSA does not refuse an uneven weighting, so the file does
+      (#299)
   Link_marginal_cost_quadratic_without_risk_preference:
     holds: "Link_marginal_cost_quadratic == 0"
     where: "CVaR_omega"

@@ -10,6 +10,7 @@ given:
     scenario_weight: { dims: [scenario] }
     CVaR_omega: { dims: [] }
     period_weight_objective: { dims: [period] }
+    snapshot_weightings_generators: { dims: [snapshot] }
   variables:
     Process_maintenance: { dims: [scenario, snapshot, process] }
     Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
@@ -92,9 +93,9 @@ parameters:
   Process_output_delay:
     description: >-
       snapshots a port's transfer lags its process's internal power — PyPSA's
-      `delay0`, `delay1`, … read long, in `snapshot_weightings.generators`
-      units, which the file states as whole snapshots; zero for a port that
-      transfers at once. The same in every scenario, as a link's
+      `delay0`, `delay1`, … read long, over the `snapshot_weightings.generators`
+      value and rounded up, as data prep; zero for a port that transfers at
+      once. The same in every scenario, as a link's
     dims: [process_output]
     dtype: int
   Process_output_cyclic_delay:
@@ -297,6 +298,11 @@ constraints:
     expression: Process_p == Process_p_set
 
 assumptions:
+  Process_output_delay_under_uniform_weighting:
+    holds: "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
+    where: "Process_output_delay > 0"
+    description: >-
+      the same for a delayed process port (#299)
   Process_marginal_cost_quadratic_without_risk_preference:
     holds: "Process_marginal_cost_quadratic == 0"
     where: "CVaR_omega"

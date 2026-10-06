@@ -221,6 +221,27 @@ def test_the_cvar_blocks_stand_exactly_where_a_risk_preference_is_set(section: s
     )
 
 
+@pytest.mark.parametrize('component', ['Link', 'Process'])
+def test_a_delayed_port_assumes_one_generators_weighting_over_the_horizon(component: str):
+    """PyPSA lags a delayed port by elapsed time in `generators` weighting (`multiports.py:100-133`), the file by whole snapshots.
+
+    The two agree only under one weighting value, and nothing refused another,
+    so the file diverged from PyPSA without a word (#783).
+    """
+    assumed = BASE.assumptions[f'{component}_output_delay_under_uniform_weighting']
+    mask = BASE.program.assumptions[f'{component}_output_delay_under_uniform_weighting'].where
+    grid = _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}, {})
+    checked = {
+        delay: _evaluate(mask.root, {Subject('param', f'{component}_output_delay'): delay}, grid) for delay in (0, 1)
+    }
+    assert checked == {0: False, 1: True}, (
+        'the weighting is checked for a delayed port and not for one that delivers at once'
+    )
+    assert assumed.holds == (
+        "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
+    ), 'every snapshot weighs what the one before it weighs, the last against the first, so the weighting is one value'
+
+
 @pytest.mark.parametrize(
     ('component', 'attr'),
     [
