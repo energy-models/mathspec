@@ -141,11 +141,11 @@ def test_the_declarations_of_a_section_are_sorted_by_name():
 SECTIONS = [
     'version',
     'description',
+    'given',
     'dimensions',
     'relations',
     'parameters',
     'variables',
-    'given',
     'constraints',
     'objective',
     'expressions',
