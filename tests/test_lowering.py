@@ -488,7 +488,7 @@ def test_assumptions_carry_the_file_s_entries_and_the_curves_behind_them():
     """One mapping holds every fact about the data, so a consumer attaching it has one loop and one refusal.
 
     The file's entries come first, in the order it wrote them; each
-    ``piecewise:`` block's conditions follow under the name a refusal quotes.
+    ``piecewise:`` entry's conditions follow under the name a refusal quotes.
     """
     program = expanded(EXAMPLES / 'piecewise_lp.yaml', 'piecewise').program
     derived = [name for name in program.assumptions if name.startswith('cost_curve_')]
@@ -523,7 +523,7 @@ def test_an_assumption_lowers_both_of_its_masks():
 
 
 def test_an_assumption_refuses_in_the_words_the_file_wrote():
-    """``description:`` reached no consumer: the block held it and neither the program nor the sentence did.
+    """``description:`` reached no consumer: the entry held it and neither the program nor the sentence did.
 
     The names alone say which columns are wrong. What the author wrote says
     why the rule is there, which is what the reader of a refusal needs, so

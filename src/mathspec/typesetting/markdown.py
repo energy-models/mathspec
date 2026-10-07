@@ -22,7 +22,7 @@ from mathspec.typesetting.format import escaped, paragraphs
 from mathspec.typesetting.latex import LatexFormat
 
 if TYPE_CHECKING:
-    from mathspec.typesetting.format import Entry, Line
+    from mathspec.typesetting.format import LegendItem, Line
 
 
 #: What Markdown reads as markup inside a paragraph, each escaped by a leading
@@ -86,8 +86,8 @@ class MarkdownFormat(LatexFormat):
         return '\n\n'.join(blocks)
 
     @override
-    def glossary(self, entries: list[Entry]) -> str:
-        rows = '\n'.join(f'| {_cell(self.math(e.symbol))} | {_cell(e.meaning)} |' for e in entries)
+    def glossary(self, items: list[LegendItem]) -> str:
+        rows = '\n'.join(f'| {_cell(self.math(e.symbol))} | {_cell(e.meaning)} |' for e in items)
         return f'| Symbol | Meaning |\n|---|---|\n{rows}'
 
     @override

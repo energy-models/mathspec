@@ -2,12 +2,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Expand ``piecewise:`` blocks into plain variables and constraints.
+"""Expand ``piecewise:`` entries into plain variables and constraints.
 
-A block becomes ordinary affine entries when a caller asks
+An entry becomes ordinary affine entries when a caller asks
 [`expand`][mathspec.spec.Spec.expand] for them, under names prefixed with the
-block's own; what each method emits is tabled in
-``docs/reference/language/piecewise.md``. Every rule a block is held to is
+entry's own; what each method emits is tabled in
+``docs/reference/language/piecewise.md``. Every rule an entry is held to is
 decided at load, before this runs: the names it references in
 [`Spec`][], its links where every expression is typed, and
 its frame in [`curve_frame`][].
@@ -47,7 +47,7 @@ def _curvature_required(pw: Piecewise) -> Curvature | None:
     silently wrong rather than merely loose.
 
     With both links pinned the weights range over the whole hull, and what
-    drives them within it is the objective rather than the block. There the
+    drives them within it is the objective rather than the entry. There the
     most a method states is ``'either'``: a mixed curve is wrong whichever way
     the pressure runs, and a single bend is exact one of the two ways.
     """
@@ -59,7 +59,7 @@ def _curvature_required(pw: Piecewise) -> Curvature | None:
 
 
 def resolve_links(name: str, pw: PiecewiseSpec, ns: Namespace, errors: list[str]) -> tuple[Expression, ...] | None:
-    """Block *name*'s link expressions typed, in link order, or ``None`` once one failed, its refusal appended.
+    """Entry *name*'s link expressions typed, in link order, or ``None`` once one failed, its refusal appended.
 
     A link is read affinely, so it is held to degree 1 where it is read.
     """
@@ -92,8 +92,8 @@ def lp_domain_refusal(name: str, pw: PiecewiseSpec, links: tuple[Expression, ...
     )
 
 
-def assumptions_of(block: str, pw: Piecewise) -> dict[str, AssumptionSpec]:
-    """What *block* assumes of its numbers, by the name the document prints and a refusal quotes.
+def assumptions_of(name: str, pw: Piecewise) -> dict[str, AssumptionSpec]:
+    """What entry *name* assumes of its numbers, by the name the document prints and a refusal quotes.
 
     Every curve assumes its breakpoints are there, because a missing row does
     not shorten a curve. Under ``points:`` its tables are not ``refused``, so
@@ -103,19 +103,19 @@ def assumptions_of(block: str, pw: Piecewise) -> dict[str, AssumptionSpec]:
     with — exist only there; ``lp`` alone needs a segment to state a line for;
     a mask must be one run.
 
-    Read off the block rather than off an expansion, so a spec states what it
+    Read off the entry rather than off an expansion, so a spec states what it
     assumes whether or not its curves have been written out. Each condition is
     an ``assumptions:`` entry over the parameters the file declared, its
     ``description`` naming the method and the rewrite that takes a curve of any
     shape: the expansion writes them into the spec, and a spec that still
-    declares the block resolves the same entries at load.
+    declares the entry resolves the same entries at load.
     """
     d, mask = pw.over, pw.points
     assumed: dict[str, AssumptionSpec] = {}
-    assumed[f'{block}_complete'] = AssumptionSpec(
+    assumed[f'{name}_complete'] = AssumptionSpec(
         holds=' AND '.join(dict.fromkeys(link.values for link in pw.links)),
         where=mask,
-        description=f"piecewise '{block}': every breakpoint the curve runs through needs a row in "
+        description=f"piecewise '{name}': every breakpoint the curve runs through needs a row in "
         f'{_quoted(link.values for link in pw.links)} — a missing row does not shorten the curve. '
         + (
             f"Attach the rows, or narrow points: '{mask}' to where the curve runs."
@@ -126,23 +126,23 @@ def assumptions_of(block: str, pw: Piecewise) -> dict[str, AssumptionSpec]:
     curvature = _curvature_required(pw)
     if curvature is not None:
         x, y = (link.values for link in pw.curve)
-        assumed[f'{block}_increasing'] = AssumptionSpec(
+        assumed[f'{name}_increasing'] = AssumptionSpec(
             holds=f'{_back(x, d, 1)} < {x}',
             where=_neighbours(d, mask),
-            description=f"piecewise '{block}': method: {pw.method} requires strictly increasing breakpoints in '{x}' along '{d}'",
+            description=f"piecewise '{name}': method: {pw.method} requires strictly increasing breakpoints in '{x}' along '{d}'",
         )
-        assumed[f'{block}_curvature'] = _bends(block, pw, x, y, curvature)
+        assumed[f'{name}_curvature'] = _bends(name, pw, x, y, curvature)
     if pw.method == 'lp':
-        assumed[f'{block}_breakpoints'] = AssumptionSpec(
+        assumed[f'{name}_breakpoints'] = AssumptionSpec(
             holds=f'count({mask or pw.curve[0].values}, over={d}) >= 2',
-            description=f"piecewise '{block}': method: lp needs at least two breakpoints per curve — the method *is* its "
+            description=f"piecewise '{name}': method: lp needs at least two breakpoints per curve — the method *is* its "
             f'segment lines, so a curve with no segment states nothing and leaves the bounded link on its own '
             f'bound. Use method: adjacency, sos2 or convex, which pin it to the points it does have.',
         )
     if mask is not None:
-        assumed[f'{block}_contiguous'] = AssumptionSpec(
+        assumed[f'{name}_contiguous'] = AssumptionSpec(
             holds=f'count({_edge(d, mask, "first")}, over={d}) == 1',
-            description=f"piecewise '{block}': points: '{mask}' must mark a consecutive run of at least one breakpoint per "
+            description=f"piecewise '{name}': points: '{mask}' must mark a consecutive run of at least one breakpoint per "
             f'curve — {_GAP[pw.method]}.',
         )
     return assumed
@@ -197,7 +197,7 @@ def _interior(over: str, mask: str | None) -> str:
     return f'{mask} AND shift({mask}, along={over}, offset=1) AND shift({mask}, along={over}, offset=-1)'
 
 
-def _bends(block: str, pw: Piecewise, x: str, y: str, curvature: Curvature) -> AssumptionSpec:
+def _bends(name: str, pw: Piecewise, x: str, y: str, curvature: Curvature) -> AssumptionSpec:
     """The curve bends the way *curvature* says, as a comparison of the two slopes at each breakpoint.
 
     The slopes are compared as a cross-product rather than as two quotients,
@@ -213,7 +213,7 @@ def _bends(block: str, pw: Piecewise, x: str, y: str, curvature: Curvature) -> A
     interior = _interior(d, mask)
     shape = 'a single bend' if curvature == 'either' else f'a {curvature} curve'
     description = (
-        f"piecewise '{block}': method: {pw.method} is exact only for {shape}, and '{y}' over '{x}' along "
+        f"piecewise '{name}': method: {pw.method} is exact only for {shape}, and '{y}' over '{x}' along "
         f"'{d}' is not one, so the answer is wrong rather than loose. Use method: adjacency "
         f'or sos2, which take a curve of any shape.'
     )
@@ -230,10 +230,10 @@ def _bends(block: str, pw: Piecewise, x: str, y: str, curvature: Curvature) -> A
 
 @dataclass(frozen=True)
 class Emitted:
-    """Every name one block's expansion may write, spelled once for the emitter and the collision check.
+    """Every name one entry's expansion may write, spelled once for the emitter and the collision check.
 
-    The set a block states writes names of its own, and they are reserved
-    whichever method the block declares: which of the two write them is the
+    The set an entry states writes names of its own, and they are reserved
+    whichever method the entry declares: which of the two write them is the
     method's business, and a collision is the file's either way.
     """
 
@@ -249,7 +249,7 @@ class Emitted:
 
     @classmethod
     def of(cls, name: str, pw: Piecewise) -> Emitted:
-        """The names block *name* writes."""
+        """The names entry *name* writes."""
         return cls(
             name,
             f'{name}_lam',
@@ -263,10 +263,10 @@ class Emitted:
         )
 
     def written(self, method: PiecewiseMethod, *, ungated: bool) -> tuple[str, ...]:
-        """The variables and constraints [`expand`][mathspec.spec.Spec.expand] declares for a block of *method*.
+        """The variables and constraints [`expand`][mathspec.spec.Spec.expand] declares for an entry of *method*.
 
-        *ungated* is [`leaves_ungated`][] of the block's gate. The set a
-        ``sos2`` or ``adjacency`` block states is written out too, since
+        *ungated* is [`leaves_ungated`][] of the entry's gate. The set a
+        ``sos2`` or ``adjacency`` entry states is written out too, since
         ``expand()`` writes every set.
         """
         if method == 'lp':
@@ -308,11 +308,11 @@ def leaves_ungated(gate: VariableSpec | Variable | None) -> bool:
 
 
 def curve_frame(schema: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expression]) -> tuple[str, ...]:
-    """The dimensions block *name* builds one curve per coordinate of: every one its links and its gate carry.
+    """The dimensions entry *name* builds one curve per coordinate of: every one its links and its gate carry.
 
     In file order, because iterating a set would vary the emitted
     ``dims`` — and every column index behind it — per process. *links* are the
-    block's link expressions typed, as [`resolve_links`][] answers.
+    entry's link expressions typed, as [`resolve_links`][] answers.
 
     Raises:
         DimensionError: A link or the gate carries the breakpoint dimension, or
@@ -334,7 +334,7 @@ def curve_frame(schema: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expr
         if stray := [d for d in schema.parameters[link.values].dims if d != pw.over and d not in frame]:
             raise DimensionError(
                 f"{context}: link {i} values parameter '{link.values}' carries {stray}, which no link "
-                f'expression does — the block builds one curve per coordinate of {frame}, so a curve '
+                f'expression does — the entry builds one curve per coordinate of {frame}, so a curve '
                 f'varying along {stray} has nothing to vary against. Declare a link expression over '
                 f"it, or drop it from '{link.values}'."
             )
@@ -343,18 +343,18 @@ def curve_frame(schema: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expr
         if stray := [d for d in mask if d != pw.over and d not in frame]:
             raise DimensionError(
                 f"{context}: points parameter '{pw.points}' carries {stray}, which the links do not — "
-                f"a mask says which of the block's own coordinates exist, and cannot add coordinates"
+                f"a mask says which of the entry's own coordinates exist, and cannot add coordinates"
             )
     return tuple(frame)
 
 
-class _Block:
-    """One ``piecewise:`` block being expanded into the raw spec it writes.
+class _Expansion:
+    """One ``piecewise:`` entry being expanded into the raw spec it writes.
 
     ``mask`` is the parameter masking the weights, or ``None`` for a whole
-    curve: the ``bool`` the file named, or one of the block's own values
+    curve: the ``bool`` the file named, or one of the entry's own values
     parameters, which as a bare name in a ``where`` is true wherever it has a
-    row. Nothing here can fail: every rule a block is held to was decided when
+    row. Nothing here can fail: every rule an entry is held to was decided when
     *schema* loaded.
     """
 
@@ -362,16 +362,16 @@ class _Block:
         self.schema = schema
         self.raw = raw
         self.name = name
-        #: The block as the file wrote it, for the link text the rows repeat.
+        #: The entry as the file wrote it, for the link text the rows repeat.
         self.pw = pw
-        #: The block as the program carries it, for its frame and the names it writes.
+        #: The entry as the program carries it, for its frame and the names it writes.
         self.curve = curve
         self.emitted = Emitted.of(name, curve)
         self.mask = pw.points
         self.frame = curve.frame
 
     def expand(self) -> None:
-        """Write the block's entries into the raw spec."""
+        """Write this entry's expansion into the raw spec."""
         if self.pw.method == 'lp':
             self._segment_lines()
         else:
@@ -392,7 +392,7 @@ class _Block:
     # -- emitters ----------------------------------------------------------
 
     def _weight(self, name: str, **fields: object) -> None:
-        """A variable over the frame and the breakpoint dim, masked as the block is."""
+        """A variable over the frame and the breakpoint dim, masked as the entry is."""
         sos.section(self.raw, 'variables')[name] = {
             'dims': [*self.frame, self.pw.over],
             **({'where': self.mask} if self.mask else {}),
@@ -431,10 +431,10 @@ class _Block:
     def _gate_rows(self) -> tuple[tuple[str, str | None, str], ...]:
         """What the weights sum to, as ``(name suffix, where, right-hand side)``.
 
-        One row where the gate exists at every coordinate the block builds a curve
+        One row where the gate exists at every coordinate the entry builds a curve
         for, and **two** where it does not. A gate is a variable, so a masked one
-        has coordinates where it does not exist — and there the block is ungated,
-        which is the ``1`` a block with no ``activity:`` gets. Written as a single
+        has coordinates where it does not exist — and there the entry is ungated,
+        which is the ``1`` an entry with no ``activity:`` gets. Written as a single
         row it would instead be *no row*: absence does not spread out of a
         reduction, so the right-hand side would take the row with it and leave the
         weights without the convexity that makes them a curve at all (#1158).
@@ -487,26 +487,26 @@ def refused_under_points(schema: Spec) -> Iterator[str]:
     there: the curve never runs short, and a mask that names the table marks
     every breakpoint.
     """
-    for block, pw in schema.piecewise.items():
+    for entry_name, pw in schema.piecewise.items():
         if pw.points is None:
             continue
         for name in dict.fromkeys(link.values for link in pw.links):
             if schema.parameters[name].missing == 'refused':
                 yield (
-                    f"parameter '{name}' is refused where a row is missing, and piecewise '{block}' reads it under "
+                    f"parameter '{name}' is refused where a row is missing, and piecewise '{entry_name}' reads it under "
                     f"points: '{pw.points}', which stops the curve where its rows stop. Declare missing: neutral, "
                     f'absent, or a value of its dtype.'
                 )
 
 
 def expand_piecewise(schema: Spec) -> Spec:
-    """*schema* with every ``piecewise:`` block written out — *schema* itself where it declares none.
+    """*schema* with every ``piecewise:`` entry written out — *schema* itself where it declares none.
 
-    A ``method: adjacency`` block states its restriction as the set
+    A ``method: adjacency`` entry states its restriction as the set
     ``method: sos2`` states, and then that set is written out here too: the
     binaries are what the method *is*, so the spec that comes back carries no
     set of its own ([`mathspec.sos.emit`][] is where they are spelled).
-    Each block's frame and names are read off the program *schema* lowered to.
+    Each entry's frame and names are read off the program *schema* lowered to.
     """
     if not schema.piecewise:
         return schema
@@ -515,7 +515,7 @@ def expand_piecewise(schema: Spec) -> Spec:
     raw.setdefault('variables', {})
     raw.setdefault('constraints', {})
     for name, pw in schema.piecewise.items():
-        _Block(schema, raw, name, pw, program.piecewise[name]).expand()
+        _Expansion(schema, raw, name, pw, program.piecewise[name]).expand()
     raw['piecewise'].clear()
     for name, pw in schema.piecewise.items():
         if pw.method == 'adjacency':

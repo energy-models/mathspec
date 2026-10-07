@@ -225,15 +225,15 @@ class Namespace:
         A text that does not parse or expand reads nothing here: the
         resolution that follows reports it.
         """
-        block, context = self.schema.expressions[name], f"Named expression '{name}'"
+        entry, context = self.schema.expressions[name], f"Named expression '{name}'"
         arithmetic: list[ParsedNode] = []
-        for text in (block.expression, *(case.expression for case in (block.cases or {}).values()), block.otherwise):
+        for text in (entry.expression, *(case.expression for case in (entry.cases or {}).values()), entry.otherwise):
             if text is not None:
                 try:
                     arithmetic.append(parse_and_expand(text, self, context))
                 except ValueError:
                     continue
-        for case in (block.cases or {}).values():
+        for case in (entry.cases or {}).values():
             try:
                 pending: list[ParsedWhere] = [parse_where(case.when)]
             except ValueError:
@@ -481,7 +481,7 @@ def _over_the_ceiling(node: Expression, context: str, errors: list[str], *, ceil
     return False
 
 
-def _named(name: str, block: ExpressionSpec, ns: Namespace, errors: list[str]) -> ExpressionReference | None:
+def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -> ExpressionReference | None:
     """One ``expressions:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
 
     A cased entry's arms are checked one by one, so every fault is collected
@@ -491,15 +491,15 @@ def _named(name: str, block: ExpressionSpec, ns: Namespace, errors: list[str]) -
     the rest apart, so the regions are disjoint and total.
     """
     context = f"Named expression '{name}'"
-    if not block.cases:
-        assert block.expression is not None
-        body = resolve_expression_text(block.expression, ns, context, errors, ceiling=None)
+    if not entry.cases:
+        assert entry.expression is not None
+        body = resolve_expression_text(entry.expression, ns, context, errors, ceiling=None)
         return None if body is None else ExpressionReference(name, body)
 
     found = len(errors)
     regions: list[Region] = []
     masks: dict[str, Predicate] = {}
-    for case_name, case in block.cases.items():
+    for case_name, case in entry.cases.items():
         arm_context = case_context(name, case_name)
         when = resolve_where_text(case.when, ns, arm_context, errors)
         if isinstance(when, BooleanLiteral):
@@ -509,8 +509,8 @@ def _named(name: str, block: ExpressionSpec, ns: Namespace, errors: list[str]) -
         value = resolve_expression_text(case.expression, ns, arm_context, errors, ceiling=None)
         if when is not None and value is not None:
             regions.append(Region(Mask(when), value))
-    assert block.otherwise is not None
-    fallback = resolve_expression_text(block.otherwise, ns, case_context(name, None), errors, ceiling=None)
+    assert entry.otherwise is not None
+    fallback = resolve_expression_text(entry.otherwise, ns, case_context(name, None), errors, ceiling=None)
     if len(errors) > found or fallback is None:
         return None
     errors.extend(f'{context}: {problem}' for problem in overlapping(masks, ns.dtypes, ns.defaults))
@@ -520,19 +520,19 @@ def _named(name: str, block: ExpressionSpec, ns: Namespace, errors: list[str]) -
     return ExpressionReference(name, Cases((*regions, left_over)))
 
 
-def _mask(name: str, block: MaskSpec, ns: Namespace, errors: list[str]) -> MaskReference | None:
+def _mask(name: str, entry: MaskSpec, ns: Namespace, errors: list[str]) -> MaskReference | None:
     """One ``masks:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
 
     A predicate the connectives decide is refused, since a name for every row
     or for none narrows nothing a where could not say plainly.
     """
     context = f"Mask '{name}'"
-    body = resolve_where_text(block.where, ns, context, errors)
+    body = resolve_where_text(entry.where, ns, context, errors)
     if body is None:
         return None
     if isinstance(body, BooleanLiteral):
         errors.append(
-            f'{context}: the predicate {block.where!r} folds to {str(body.value).lower()}, so the mask '
+            f'{context}: the predicate {entry.where!r} folds to {str(body.value).lower()}, so the mask '
             f'{"admits every row" if body.value else "admits no row"} and names nothing a where needs. '
             f'Delete it, or write the predicate over the data.'
         )

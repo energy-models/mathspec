@@ -28,7 +28,7 @@ between the two. The data does.
 
 3. **Pin it in the data where it is given.** Attach `size_min` and `size_max` as
    the same value for a plant whose size is fixed. Equal bounds pin a variable
-   ([variables](../reference/language/entries.md#variables)).
+   ([variables](../reference/language/parameters-variables-constraints.md#variables)).
 
 A pinned variable is still a variable: `size * on` is `variable * variable`,
 and `size` cannot stand in another variable's `bounds:`. Where a bound has to

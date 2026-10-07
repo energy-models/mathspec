@@ -183,7 +183,7 @@ call.
 
 ## Where to next
 
-- [Your first spec](first-spec.md): write the file above one block at a
+- [Your first spec](first-spec.md): write the file above one section at a
   time, check it and print it.
 - [The language](reference/language/index.md): what a file may contain, and
   what it means.

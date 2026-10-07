@@ -40,8 +40,8 @@ SCENARIO_FREE_VARIABLES = {
 }
 
 
-def _dims(block: Any) -> list[str]:
-    return list(block.dims or [])
+def _dims(entry: Any) -> list[str]:
+    return list(entry.dims or [])
 
 
 def test_every_standard_name_survives():
@@ -92,8 +92,8 @@ INVARIANT_SUFFIXES = ('_extendable', '_committable', '_nom_mod', '_active', '_ca
 def test_what_pypsa_holds_equal_across_scenarios_spans_no_scenario():
     spanning = sorted(
         name
-        for name, block in ALL.parameters.items()
-        if name.endswith(INVARIANT_SUFFIXES) and 'scenario' in _dims(block)
+        for name, entry in ALL.parameters.items()
+        if name.endswith(INVARIANT_SUFFIXES) and 'scenario' in _dims(entry)
     )
     assert not spanning, f'PyPSA refuses these to differ by scenario, so they carry no scenario: {spanning}'
 

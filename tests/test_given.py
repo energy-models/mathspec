@@ -55,7 +55,7 @@ def test_given_holds_five_kinds_and_refuses_a_sixth():
     with pytest.raises(LanguageError) as raised:
         to_spec({**SUPPLY, 'given': {'macros': {'twice': {'params': ['x'], 'template': '2 * x'}}}})
     assert 'Valid keys: constraints, expressions, masks, parameters, variables' in str(raised.value), (
-        'the refusal names what the block takes'
+        'the refusal names what the section takes'
     )
 
 
@@ -71,7 +71,7 @@ def test_a_given_name_is_held_to_the_name_rule():
         to_spec({**SUPPLY, 'given': {'variables': {'no-flow': {'dims': ['snapshot', 'port']}}}})
 
 
-def test_a_whole_model_writes_no_given_block():
+def test_a_whole_model_writes_no_given_section():
     whole = to_spec({**SUPPLY, 'given': {}, 'constraints': {}})
     assert 'given' not in whole.to_dict(), 'an empty section is an absence, and is left out'
 
@@ -128,7 +128,7 @@ def test_a_name_both_introduced_and_given_in_one_file_is_refused():
 
 
 @pytest.mark.parametrize(
-    ('block', 'says'),
+    ('entry', 'says'),
     [
         pytest.param({'dims': ['snapshot', 'nowhere']}, 'nowhere', id='a-frame-over-an-undeclared-dimension'),
         pytest.param({'dims': ['snapshot', 'snapshot']}, 'twice', id='a-frame-naming-one-dimension-twice'),
@@ -136,9 +136,9 @@ def test_a_name_both_introduced_and_given_in_one_file_is_refused():
         pytest.param({'dims': ['snapshot'], 'where': 'gen_cost > 0'}, 'where', id='a-mask-the-owner-holds'),
     ],
 )
-def test_a_given_entry_is_refused_where_it_oversteps(block, says):
+def test_a_given_entry_is_refused_where_it_oversteps(entry, says):
     with pytest.raises(LanguageError) as raised:
-        to_spec({**SUPPLY, 'given': {'variables': {'flow': block}}})
+        to_spec({**SUPPLY, 'given': {'variables': {'flow': entry}}})
     assert says in str(raised.value)
 
 
@@ -312,15 +312,15 @@ def test_a_dual_naming_nothing_says_where_to_declare_it():
 
 
 @pytest.mark.parametrize(
-    ('block', 'says'),
+    ('entry', 'says'),
     [
         pytest.param({'dims': [], 'expression': 'sum(p) >= 0'}, 'expression', id='a-body-the-owner-holds'),
         pytest.param({'dims': [], 'sense': '<='}, 'sense', id='a-sense-nothing-here-could-check'),
     ],
 )
-def test_a_given_row_family_is_refused_where_it_oversteps(block, says):
+def test_a_given_row_family_is_refused_where_it_oversteps(entry, says):
     with pytest.raises(LanguageError) as raised:
-        to_spec({**LAYER, 'given': {**LAYER['given'], 'constraints': {'balance': block}}})
+        to_spec({**LAYER, 'given': {**LAYER['given'], 'constraints': {'balance': entry}}})
     assert says in str(raised.value)
 
 
@@ -413,15 +413,15 @@ def test_a_given_parameter_prints_under_the_given_heading():
 
 
 @pytest.mark.parametrize(
-    ('block', 'says'),
+    ('entry', 'says'),
     [
         pytest.param({'dims': ['nowhere']}, 'nowhere', id='a-frame-over-an-undeclared-dimension'),
         pytest.param({'dims': ['generator'], 'default': 0}, 'default', id='a-field-a-parameter-does-not-have'),
     ],
 )
-def test_a_given_parameter_is_refused_where_it_oversteps(block, says):
+def test_a_given_parameter_is_refused_where_it_oversteps(entry, says):
     with pytest.raises(LanguageError) as raised:
-        to_spec({**PRICED, 'given': {**PRICED['given'], 'parameters': {'gen_cost': block}}})
+        to_spec({**PRICED, 'given': {**PRICED['given'], 'parameters': {'gen_cost': entry}}})
     assert says in str(raised.value)
 
 

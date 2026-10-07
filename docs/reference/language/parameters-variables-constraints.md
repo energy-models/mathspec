@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Parameters, variables, constraints and the objective
 
-These four blocks carry the math, and `given:` names what the math reads from
+These four sections carry the math, and `given:` names what the math reads from
 another file. Each takes an optional `description:`, free text that the
 [typeset](../typeset.md#descriptions) legend prints.
 
@@ -94,7 +94,7 @@ A value has the parameter's dtype:
 
 A NaN, a quoted number and `missing: null` are refused. A `given:` parameter
 has no `missing:`. The file that declares the parameter owns it. A parameter a
-[`piecewise:`](piecewise.md#missing-breakpoints) block reads takes `missing:`
+[`piecewise:`](piecewise.md#missing-breakpoints) entry reads takes `missing:`
 too. A values parameter of a curve with `points:` declares one other than
 `refused`.
 
@@ -144,7 +144,7 @@ A pinned variable is still a variable.
 `given:` holds what this file reads and does not build: data under
 `parameters:`, columns under `variables:`, named expressions under
 `expressions:`, masks under `masks:`, and row families under `constraints:`. It
-takes those five keys and no other. A file with a `given:` block loads and prints on its own.
+takes those five keys and no other. A file with a `given:` section loads and prints on its own.
 
 ### `given: parameters`
 
@@ -432,7 +432,7 @@ different set is refused, with both frames.
 
 ## `constraints`
 
-One block is one rule. The name of the block is the name of the constraint.
+One entry is one rule. The name of the entry is the name of the constraint.
 
 ```yaml
 dimensions:
@@ -464,12 +464,12 @@ numbers and parameters alone is refused at load.
 `dims: []` gives one scalar row. A scalar variable may not carry a `where`; put the condition on the constraints
 that use it.
 
-Two regimes of one rule are two blocks, each under its own `where:`
+two regimes of one rule are two entries, each under its own `where:`
 ([state a rule that differs by regime](../../howto/regimes.md)).
 
 ## `objective`
 
-The objective is a single block with no name.
+The objective is a single entry with no name.
 
 ```yaml
 dimensions:
@@ -493,7 +493,7 @@ The expression must be **scalar**. Nothing is summed for you:
 `sum(x * a) + sum(y * b)` and `sum(x * a + y * b)` are both allowed, and they
 state different objectives.
 
-There is one objective block. To pursue several goals, weight them into one
+There is one objective. To pursue several goals, weight them into one
 expression.
 
 A spec composed from several files also has one objective, and one file sets

@@ -46,8 +46,8 @@ module to its rule.
 - **A value or an error, and nothing between.** `to_spec` either returns a
   `Spec` or raises an error that names the rewrite. `advice()` is separate: it
   talks about a file the language accepts, and changes nothing.
-- **Nothing is written out unasked.** A `piecewise:` or `sos:` block stays the
-  block until a caller calls
+- **Nothing is written out unasked.** A `piecewise:` or `sos:` entry stays the
+  entry until a caller calls
   [`spec.expand()`](../reference/spec.md#mathspec.spec.Spec.expand).
 
 What a solver or file format can take, how the numbers attach to the names, and

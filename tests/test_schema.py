@@ -54,7 +54,7 @@ def test_no_definition_refers_only_to_itself():
 
 
 @pytest.mark.parametrize(
-    ('block', 'field', 'alias'),
+    ('entry', 'field', 'alias'),
     [
         pytest.param('ObjectiveSpec', 'sense', spec.ObjectiveSense, id='sense'),
         pytest.param('VariableSpec', 'domain', spec.VariableDomain, id='domain'),
@@ -67,26 +67,26 @@ def test_no_definition_refers_only_to_itself():
         pytest.param('SosSpec', 'type', spec.SosType, id='sos-type'),
     ],
 )
-def test_a_closed_vocabulary_is_published_as_an_enum(block, field, alias):
+def test_a_closed_vocabulary_is_published_as_an_enum(entry, field, alias):
     """Read off the `Literal` rather than restated, so widening one is a one-line change."""
-    published = json.loads(schema.PATH.read_text())['$defs'][block]['properties'][field]
+    published = json.loads(schema.PATH.read_text())['$defs'][entry]['properties'][field]
     enum = published.get('enum') or next(
         (branch['enum'] for branch in published.get('anyOf', []) if 'enum' in branch), None
     )
-    assert enum == list(get_args(alias)), f'{block}.{field} stopped publishing its closed vocabulary'
+    assert enum == list(get_args(alias)), f'{entry}.{field} stopped publishing its closed vocabulary'
 
 
 @pytest.mark.parametrize(
-    ('block', 'default'),
+    ('entry', 'default'),
     [
         pytest.param('ParameterSpec', 'refused', id='parameter'),
         pytest.param('RelationSpec', 'refused', id='relation'),
         pytest.param('VariableSpec', 'absent', id='variable'),
     ],
 )
-def test_the_schema_publishes_the_reading_a_file_gets_by_leaving_missing_out(block, default):
+def test_the_schema_publishes_the_reading_a_file_gets_by_leaving_missing_out(entry, default):
     """The parameter and the relation hold `None` until read, and the schema published that `null`, not `refused`."""
-    published = json.loads(schema.PATH.read_text())['$defs'][block]['properties']['missing']
+    published = json.loads(schema.PATH.read_text())['$defs'][entry]['properties']['missing']
     assert published['default'] == default
 
 

@@ -174,7 +174,7 @@ ObjectiveSense = Literal['minimize', 'maximize']
 #: The order of special ordered set.
 SosType = Literal[1, 2]
 
-#: How a ``piecewise:`` block restricts its interpolation weights. Kept in step
+#: How a ``piecewise:`` entry restricts its interpolation weights. Kept in step
 #: with [`PIECEWISE_METHODS`][mathspec.spec.PIECEWISE_METHODS], which says what each one
 #: emits, by ``tests/test_schema.py``.
 PiecewiseMethod = Literal['adjacency', 'sos2', 'convex', 'lp']
@@ -844,7 +844,7 @@ class NamedMask:
 
 @dataclass(frozen=True)
 class Link:
-    """One link of a ``piecewise:`` block: an expression tied to the breakpoints a values parameter holds.
+    """One link of a ``piecewise:`` entry: an expression tied to the breakpoints a values parameter holds.
 
     ``sign`` is ``'=='`` where the link is pinned to the curve, and one side
     of it where the link is bounded by the curve instead.
@@ -857,7 +857,7 @@ class Link:
 
 @dataclass(frozen=True)
 class Piecewise:
-    """A ``piecewise:`` block as the curve it states, which [`expand`][mathspec.spec.Spec.expand] writes out as rows.
+    """A ``piecewise:`` entry as the curve it states, which [`expand`][mathspec.spec.Spec.expand] writes out as rows.
 
     A program of a spec that still declares one carries it here, typed; a
     program of the expanded spec carries the rows instead, under
@@ -872,7 +872,7 @@ class Piecewise:
         activity: The binary the weights sum to, or ``None`` where they sum
             to 1.
         points: The parameter saying how far each curve runs, or ``None``.
-        frame: The dimensions the block builds one curve per coordinate of,
+        frame: The dimensions the entry builds one curve per coordinate of,
             in file order.
         description: What the file wrote under ``description:``, or ``None``.
     """
@@ -887,12 +887,12 @@ class Piecewise:
 
     @property
     def nominated(self) -> str | None:
-        """The block's own values parameter ``points:`` names, so the mask is derived from it — or ``None``."""
+        """The entry's own values parameter ``points:`` names, so the mask is derived from it — or ``None``."""
         return self.points if self.points in {link.values for link in self.links} else None
 
     @property
     def curve(self) -> tuple[Link, Link]:
-        """The two links as ``(x, y)``, the bounded one last. Two-link blocks only."""
+        """The two links as ``(x, y)``, the bounded one last. Two-link entries only."""
         x, y = self.links
         return (y, x) if x.sign != '==' else (x, y)
 
@@ -1052,12 +1052,12 @@ class Program:
     dimensions: Mapping[str, Dimension] = Sealed({})
     relations: Mapping[str, Relation] = Sealed({})
     sos: Mapping[str, Sos] = Sealed({})
-    #: Each ``piecewise:`` block the spec still declares, as the curve it
+    #: Each ``piecewise:`` entry the spec still declares, as the curve it
     #: states; empty on a program of a spec whose curves are written out.
     piecewise: Mapping[str, Piecewise] = Sealed({})
     #: What the data has to satisfy for the answer to mean anything, by the
     #: name a refusal quotes: every ``assumptions:`` entry the file wrote, then
-    #: what each ``piecewise:`` block's method assumes of its breakpoints. The
+    #: what each ``piecewise:`` entry's method assumes of its breakpoints. The
     #: language decides none of it, so the consumer attaching the data checks
     #: each and refuses with [`assumption_message`][].
     assumptions: Mapping[str, Assumption] = Sealed({})

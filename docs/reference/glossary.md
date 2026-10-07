@@ -33,7 +33,7 @@ data exists.
 : What a consumer does when it puts data on a program. A rule about numbers can
 be checked only then, and the language checks none itself. The docs never say
 "bind" for it, so that **bound** means one thing: a lower or upper limit on a
-variable ([variables](language/entries.md#variables)).
+variable ([variables](language/parameters-variables-constraints.md#variables)).
 
 **Provide**
 : What the host model, the model a file is layered onto, does for a name under
@@ -86,7 +86,7 @@ row that reads it is not built ([absence](language/absence.md)).
 `missing:` says what it is: refused when the data is attached (`refused`, the
 default), absence (`absent`), `0` in arithmetic and false in a `where`
 (`neutral`), or a value
-([a missing row](language/entries.md#a-missing-row)).
+([a missing row](language/parameters-variables-constraints.md#a-missing-row)).
 
 ## Kinds of construct
 
@@ -95,7 +95,7 @@ default), absence (`absent`), `0` in arithmetic and false in a `where`
 typesetter prints: the operators and the `where` comparisons.
 
 **Formulation**
-: A block that states ordinary variables and constraints rather than being
+: An entry that states ordinary variables and constraints rather than being
 one: `piecewise:` and `sos:` ([piecewise curves and SOS](language/piecewise.md)).
 
 A request for a new construct is a macro, a primitive or a formulation, or it

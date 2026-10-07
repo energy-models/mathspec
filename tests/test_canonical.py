@@ -222,7 +222,7 @@ def _piecewise_with_its_links_reversed() -> dict[str, object]:
         pytest.param(
             raw_of(EXAMPLES / 'piecewise.yaml'),
             _piecewise_with_its_links_reversed(),
-            id='the-links-of-a-piecewise-block',
+            id='the-links-of-a-piecewise-entry',
         ),
         pytest.param(
             varied(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0 and cost > 0'}),
@@ -479,11 +479,11 @@ def test_the_form_declares_the_same_spec(path):
         assert sorted(getattr(original, group)) == sorted(getattr(rewritten, group)), (
             f'{group}: the form declares a different set of names'
         )
-    assert [(name, frozenset(block.dims), block.sense) for name, block in sorted(rewritten.constraints.items())] == [
-        (name, frozenset(block.dims), block.sense) for name, block in sorted(original.constraints.items())
+    assert [(name, frozenset(entry.dims), entry.sense) for name, entry in sorted(rewritten.constraints.items())] == [
+        (name, frozenset(entry.dims), entry.sense) for name, entry in sorted(original.constraints.items())
     ], 'every constraint keeps its frame and its sense'
-    assert [(name, frozenset(block.dims), block.domain) for name, block in sorted(rewritten.variables.items())] == [
-        (name, frozenset(block.dims), block.domain) for name, block in sorted(original.variables.items())
+    assert [(name, frozenset(entry.dims), entry.domain) for name, entry in sorted(rewritten.variables.items())] == [
+        (name, frozenset(entry.dims), entry.domain) for name, entry in sorted(original.variables.items())
     ], 'and every variable its frame and its domain'
     assert (rewritten.objective is None) == (original.objective is None), 'an objective is kept, or its absence is'
     if original.objective is not None and rewritten.objective is not None:

@@ -72,7 +72,7 @@ OperatorName = Literal[
 #: with, since a predicate is not a value to equate. ``such_that`` is the colon in
 #: "∀ t ∈ T : condition", ``times`` sits between sets in the legend,
 #: ``maps_to`` is the → in a coordinate map, ``curve`` and ``hull`` are the two
-#: sets a ``piecewise:`` block states its links lie on, and the three
+#: sets a ``piecewise:`` entry states its links lie on, and the three
 #: translations are three conventions: plain leaves the vacated position absent,
 #: ``cyclic_*`` wraps, ``edge_*`` fills it with the value it carries as a
 #: subscript.
@@ -134,7 +134,7 @@ class Line:
 
 
 @dataclass(frozen=True)
-class Entry:
+class LegendItem:
     """One legend row: a symbol, and everything opposite it as one string."""
 
     symbol: str
@@ -249,7 +249,7 @@ class Format(Protocol):
 
     def equations(self, lines: list[Line], *, numbered: bool) -> str: ...
 
-    def glossary(self, entries: list[Entry]) -> str:
+    def glossary(self, items: list[LegendItem]) -> str:
         """A legend section's rows; [`section`][] sets its title, as it does for the equations."""
         ...
 

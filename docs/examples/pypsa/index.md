@@ -12,10 +12,10 @@ two have one [canonical form](../../howto/compare.md).
 
 Every fragment loads, prints and gets advice on its own. What it reads and does
 not declare, it states under
-[`given`](../../reference/language/entries.md#given). A component that
+[`given`](../../reference/language/parameters-variables-constraints.md#given). A component that
 puts something into a sum every component adds to, such as the bus balance or
 the operating cost, names its share as an expression of its own, a
-[term](../../reference/language/entries.md#terms) whose `adds_to:` names
+[term](../../reference/language/parameters-variables-constraints.md#terms) whose `adds_to:` names
 the sum. One fragment reads each sum and adds nothing to it, so the terms
 always have a reader. A new component is one new file, and the network does
 not change.

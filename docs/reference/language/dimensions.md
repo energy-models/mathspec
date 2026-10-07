@@ -51,7 +51,7 @@ Constraint 'ramp': shift(along=snapshot) reads the order of 'snapshot', which is
 ```
 
 A `dtype` does not make a dimension ordered: an `int` dimension may number
-things that have no order. An `sos` block with `type: 1` reads no order, and
+things that have no order. An `sos` entry with `type: 1` reads no order, and
 `edge='wrap'` makes one `shift` cyclic without changing the dimension.
 
 Whether to declare a column of data as a dimension, a relation or a parameter

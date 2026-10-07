@@ -73,7 +73,7 @@ comparison is the caller's business.
 
 The table carries **notation only**. What an entry _is_, which is the prose
 in the right-hand column of the legend, comes from the spec's own
-`description:`, read straight off the block. That is the spec talking about
+`description:`, read straight off the entry. That is the spec talking about
 itself, rather than a reader choosing symbols.
 
 A description travels with the file, survives a rename, and needs no sidecar.

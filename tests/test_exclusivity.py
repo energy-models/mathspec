@@ -143,7 +143,7 @@ class TestProvesApart:
         assert refusals(schema, cases), 'a float between the two bands is claimed by both'
 
     def test_a_when_of_true_is_not_a_fallback(self, schema: Spec):
-        """The fallback is the block's `otherwise:`, and nothing inside `cases:` stands in for it.
+        """The fallback is the entry's `otherwise:`, and nothing inside `cases:` stands in for it.
 
         A mask that happens to be true everywhere is read as any other mask is,
         so it collides with every case beside it.

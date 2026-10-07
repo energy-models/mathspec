@@ -167,8 +167,8 @@ CURVED = varied(
 )
 
 
-def test_one_table_spells_the_blocks_a_file_states_and_the_rows_they_state():
-    """The weights are named after the block, which no equation can carry, and the
+def test_one_table_spells_the_entries_a_file_states_and_the_rows_they_state():
+    """The weights are named after the entry, which no equation can carry, and the
     table that renames them has to render the file they came from too."""
     spec = to_spec(CURVED)
     table = {'notation': 'latex', 'names': {'curve_lam': r'\lambda'}}

@@ -46,8 +46,8 @@ def _verdict(dimension: str = 'h', **patch: Any):
     return to_spec({**BASE, **patch}).program.separability[dimension]
 
 
-def _rows(expression: str, *, dims: list[str] | None = None, **block: Any) -> dict[str, Any]:
-    return {'constraints': {'k': {'dims': dims or ['h', 'u'], 'expression': expression, **block}}}
+def _rows(expression: str, *, dims: list[str] | None = None, **fields: Any) -> dict[str, Any]:
+    return {'constraints': {'k': {'dims': dims or ['h', 'u'], 'expression': expression, **fields}}}
 
 
 @pytest.mark.parametrize(

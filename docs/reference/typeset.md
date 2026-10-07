@@ -39,12 +39,12 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
 | `legend`             | `--no-legend`          | Print the table of sets, parameters, variables and definitions above the math. Default: on                                      |
 | `numbered`           | `--no-numbers`         | Number the equations. Default: on                                                                                               |
 | `inline_expressions` | `--inline-expressions` | Substitute each named expression that the math reads into the equations that read it, instead of defining it once. Default: off |
-| —                    | `--expand`             | Print the variables and constraints the `piecewise:` and `sos:` blocks state, rather than the blocks. Default: off              |
+| —                    | `--expand`             | Print the variables and constraints the `piecewise:` and `sos:` entries state, rather than the entries. Default: off            |
 
 `-o FILE` writes to a file instead of stdout.
 
 - The spec's `description:` opens the document.
-- A `piecewise:` block prints as one line: the curve it states, over the frame
+- A `piecewise:` entry prints as one line: the curve it states, over the frame
   it states one curve per coordinate of. To print its rows, print
   [`spec.expand()`](spec.md#mathspec.spec.Spec.expand) or pass `--expand`
   ([see an expansion](../howto/see-an-expansion.md)).
@@ -55,7 +55,7 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
 - A [named expression](language/named.md) prints its symbol where it is used
   and its body once, under a **Definitions** heading, in file order. A
   `cases:` block, a [reported entry](language/named.md#reported-expressions)
-  and a [term](language/entries.md#terms) keep their definition line
+  and a [term](language/parameters-variables-constraints.md#terms) keep their definition line
   under either `inline_expressions` setting.
 - A [mask](language/named.md#masks) prints its upright symbol where it is
   read and its predicate once, under a **Masks** heading, with ⟺. It prints
@@ -104,7 +104,7 @@ print(f'The balance holds: $`{line}`$')
 
 A line on its own has no _Definitions_ section beside it, so the plain named
 expressions it uses are substituted. A cased expression prints by symbol, and a
-second call with its name prints its block.
+second call with its name prints its definition.
 
 A name that is none of the six kinds is refused with the near miss. A name
 declared as two of them, such as a constraint and a variable, is refused too.

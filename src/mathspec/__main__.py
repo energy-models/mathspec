@@ -11,7 +11,7 @@ typeset format, read off [`mathspec.typesetting.FORMATS`][]. Every verb reads
 the file as written, and nothing here writes a formulation out unasked.
 The typeset verbs take ``--expand``, because a shell cannot compose
 [`expand`][mathspec.spec.Spec.expand] the way a caller does and the rows are a
-different document; ``check`` has no such flag, because advice reads a block
+different document; ``check`` has no such flag, because advice reads an entry
 as the rows it states.
 """
 
@@ -56,7 +56,7 @@ def parser() -> argparse.ArgumentParser:
         verb.add_argument(
             '--expand',
             action='store_true',
-            help='print the variables and constraints the piecewise: and sos: blocks state, not the blocks',
+            help='print the variables and constraints the piecewise: and sos: entries state, not the entries',
         )
     return front
 

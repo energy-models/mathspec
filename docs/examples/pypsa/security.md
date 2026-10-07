@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Security
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the security-constrained flows over the outages. It reads `Line_s_max_pu`, `Line_s_monitored`, `Line_s_nom`, `Line_s_nom_ext`, `Line_s_nom_extendable`, `Transformer_s_max_pu` and 4 more under [`given`](../../reference/language/entries.md#given).
+One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the security-constrained flows over the outages. It reads `Line_s_max_pu`, `Line_s_monitored`, `Line_s_nom`, `Line_s_nom_ext`, `Line_s_nom_extendable`, `Transformer_s_max_pu` and 4 more under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -98,7 +98,7 @@ constraints:
       of its rating: its flow takes on its share of the outaged branch's
       flow. PyPSA names one row per outaged component `c` and
       sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block states them all over the outage
+      `multi_investment_periods`; this entry states them all over the outage
       dimension
     dims: [scenario, snapshot, line, outage]
     where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
@@ -109,7 +109,7 @@ constraints:
       after any one outage, a fixed line carries at most its rating: its
       flow takes on its share of the outaged branch's flow. PyPSA names
       one row per outaged component `c` and sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block
+      `multi_investment_periods`; this entry
       states them all over the outage dimension
     dims: [scenario, snapshot, line, outage]
     where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
@@ -121,7 +121,7 @@ constraints:
       negative of its rating of the chosen build: its flow takes on its
       share of the outaged branch's flow. PyPSA names one row per
       outaged component `c` and sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block states them
+      `multi_investment_periods`; this entry states them
       all over the outage dimension
     dims: [scenario, snapshot, line, outage]
     where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
@@ -133,7 +133,7 @@ constraints:
       of the chosen build: its flow takes on its share of the outaged
       branch's flow. PyPSA names one row per outaged component `c` and
       sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block states them all over the outage
+      `multi_investment_periods`; this entry states them all over the outage
       dimension
     dims: [scenario, snapshot, line, outage]
     where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
@@ -145,7 +145,7 @@ constraints:
       negative of its rating: its flow takes on its share of the outaged
       branch's flow. PyPSA names one row per outaged component `c` and
       sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block states them all over the outage
+      `multi_investment_periods`; this entry states them all over the outage
       dimension
     dims: [scenario, snapshot, transformer, outage]
     where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
@@ -157,7 +157,7 @@ constraints:
       rating: its flow takes on its share of the outaged branch's flow.
       PyPSA names one row per outaged component `c` and sub-network `n`, with `-period-{p}` appended per period `p` under
       `multi_investment_periods`;
-      this block states them all over the outage dimension
+      this entry states them all over the outage dimension
     dims: [scenario, snapshot, transformer, outage]
     where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
     expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom
@@ -168,7 +168,7 @@ constraints:
       the negative of its rating of the chosen build: its flow takes on
       its share of the outaged branch's flow. PyPSA names one row per
       outaged component `c` and sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block states them
+      `multi_investment_periods`; this entry states them
       all over the outage dimension
     dims: [scenario, snapshot, transformer, outage]
     where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
@@ -180,7 +180,7 @@ constraints:
       its rating of the chosen build: its flow takes on its share of the
       outaged branch's flow. PyPSA names one row per outaged component
       `c` and sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block states them all over the
+      `multi_investment_periods`; this entry states them all over the
       outage dimension
     dims: [scenario, snapshot, transformer, outage]
     where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])

@@ -29,7 +29,7 @@ def advice(spec: str | Path | Mapping[str, object] | Spec | Program) -> tuple[Ad
 
     Args:
         spec: Anything [`to_spec`][] accepts, or a [`Program`][], read as
-            it arrived. A ``piecewise:`` or ``sos:`` block is read as the rows
+            it arrived. A ``piecewise:`` or ``sos:`` entry is read as the rows
             it states, so the answer is the one its expansion gets, with
             nothing expanded.
 

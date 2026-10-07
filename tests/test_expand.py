@@ -26,7 +26,7 @@ from tools.render_tex import models
 if TYPE_CHECKING:
     from mathspec.spec import Spec
 
-#: The curve masked by one of its own values parameters, the one block whose
+#: The curve masked by one of its own values parameters, the one entry whose
 #: rows sit on more than the file's own names.
 MASKED = varied(
     CURVE,
@@ -153,7 +153,7 @@ def test_what_a_curve_assumes_of_its_numbers_rides_on_the_expansion_too(model):
     assert {'cost_curve_increasing', 'cost_curve_curvature'} <= set(stated), (
         'the breakpoints increase and the curve bends one way, both checked where the data is'
     )
-    assert written_out == stated, 'and the expansion carries every condition the block came with'
+    assert written_out == stated, 'and the expansion carries every condition the entry came with'
 
 
 @pytest.mark.parametrize('model', MODELS, ids=[m.stem for m in MODELS])
@@ -183,8 +183,8 @@ def test_a_model_with_no_formulation_expands_to_itself():
     assert spec.expand() is spec, 'nothing to write out returns the same object, not a copy'
 
 
-#: `fixtures.SMALL_MODEL` plus a two-link curve over its second dimension, so a
-#: block's own parameters stand beside ordinary ones in one model.
+#: `fixtures.SMALL_MODEL` plus a two-link curve over its second dimension, so an
+#: entry's own parameters stand beside ordinary ones in one model.
 SMALL_CURVE = {
     'parameters.bx': {'dims': ['h']},
     'parameters.by': {'dims': ['h']},
@@ -209,7 +209,7 @@ UNDER_POINTS = {'piecewise.curve.points': 'bx', 'parameters.bx.missing': 'neutra
     ],
 )
 def test_a_spec_and_its_expansion_read_a_missing_row_alike(points):
-    """Lowering reported `None` for every parameter a block consumes, and the expansion declared it `neutral`."""
+    """Lowering reported `None` for every parameter an entry consumes, and the expansion declared it `neutral`."""
     spec = schema_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **points))
     declared = {name: p.missing for name, p in spec.program.parameters.items()}
     expanded = {name: p.missing for name, p in spec.expand('piecewise').program.parameters.items()}

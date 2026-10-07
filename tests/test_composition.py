@@ -178,10 +178,10 @@ def test_a_disagreement_between_fragments_is_refused(fragments, says):
 
 def _said(fragment: dict[str, object], section: str, name: str, words: str) -> dict[str, object]:
     """*fragment* with the entry *name* under *section* described as *words*."""
-    block = copy.deepcopy(fragment)
-    entries = block[section] if section != 'given' else block['given']['variables']
+    spec = copy.deepcopy(fragment)
+    entries = spec[section] if section != 'given' else spec['given']['variables']
     entries[name] = {**entries[name], 'description': words}
-    return block
+    return spec
 
 
 #: Two fragments that word one entry differently.
@@ -710,7 +710,7 @@ def test_a_patch_over_one_kind_of_given_leaves_the_other_alone():
     ],
 )
 def test_a_whole_given_entry_is_created_and_the_model_loads(base, reads):
-    """A patch adds a column to read, whether or not the base opened the block."""
+    """A patch adds a column to read, whether or not the base opened the `given:` section."""
     laid = override(base, [{'given': {'variables': {'q': {'dims': ['g']}}}}])
     assert sorted(laid.given.variables) == reads, 'the created column joins whatever the base read'
 

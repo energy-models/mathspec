@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Your first spec
 
-In this lesson you write a least-cost dispatch spec one block at a time, check
+In this lesson you write a least-cost dispatch spec one section at a time, check
 it, and print it as math. [Install mathspec](howto/installation.md) first.
 
 ## Dimensions
@@ -36,8 +36,8 @@ dimension 'generator' is never used: nothing is indexed by it, nothing aggregate
 
 ## Parameters and a variable
 
-Add three [parameters](reference/language/entries.md#parameters), the data
-the spec expects, and one [variable](reference/language/entries.md#variables),
+Add three [parameters](reference/language/parameters-variables-constraints.md#parameters), the data
+the spec expects, and one [variable](reference/language/parameters-variables-constraints.md#variables),
 the decision the solver makes. The `where:` line leaves out every generator with
 no capacity.
 
@@ -75,9 +75,9 @@ python -m mathspec markdown --no-legend dispatch.yaml
 
 ## Constraint and objective
 
-Add one [constraint](reference/language/entries.md#constraints), which
+Add one [constraint](reference/language/parameters-variables-constraints.md#constraints), which
 meets the load in every snapshot, and the
-[objective](reference/language/entries.md#objective):
+[objective](reference/language/parameters-variables-constraints.md#objective):
 
 ```yaml
 constraints:

@@ -268,14 +268,14 @@ def check_schema(schema: Spec, program: Program) -> None:
                     )
 
     for ename, entry in program.expressions.items():
-        block = schema.expressions[ename]
-        if block.dims is None:
+        declared = schema.expressions[ename]
+        if declared.dims is None:
             continue
-        frame = frozenset(block.dims)
+        frame = frozenset(declared.dims)
         if not isinstance(entry.expression, Cases):
             _check_body_dims(entry.expression, schema, frame, f"Named expression '{ename}'")
             continue
-        for region, label in zip(entry.expression.regions, [*block.cases, None], strict=True):
+        for region, label in zip(entry.expression.regions, [*declared.cases, None], strict=True):
             context = case_context(ename, label)
             if label is not None:
                 _check_where_dims(region.when, frame, context)

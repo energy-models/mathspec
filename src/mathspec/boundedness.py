@@ -65,7 +65,7 @@ def unbounded_notes(program: Program) -> list[Advice]:
     if program.objective is None:
         return []
 
-    constrained = {block.variable for block in program.sos.values()}
+    constrained = {entry.variable for entry in program.sos.values()}
     for curve in program.piecewise.values():
         constrained |= variables_of(*(link.expression for link in curve.links))
     for constraint in program.constraints.values():

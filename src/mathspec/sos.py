@@ -2,10 +2,10 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Expand ``sos:`` blocks into the binaries and rows that state the same restriction.
+"""Expand ``sos:`` entries into the binaries and rows that state the same restriction.
 
-A set becomes ordinary entries under names prefixed with the block's own,
-the way a ``piecewise:`` block becomes weights and rows; what it emits is
+A set becomes ordinary entries under names prefixed with the entry's own,
+the way a ``piecewise:`` entry becomes weights and rows; what it emits is
 tabled in ``docs/reference/language/piecewise.md``. An unpicked member is held
 at zero from both sides, so the rewrite states the same feasible set whatever
 sign the member takes — what it needs is a coefficient on each side, which a
@@ -83,7 +83,7 @@ _SEGMENTS = {
 
 
 def expand_sets(schema: Spec) -> Spec:
-    """*schema* with every ``sos:`` block written out as binaries and the rows that link them.
+    """*schema* with every ``sos:`` entry written out as binaries and the rows that link them.
 
     The curves an expansion wrote out ride along, because a spec whose
     curves are already written out is the one this is usually asked of.
@@ -95,7 +95,7 @@ def expand_sets(schema: Spec) -> Spec:
 
 
 def emit(raw: dict[str, object], name: str) -> None:
-    """Write what the set *name* states as entries of *raw*, and drop the block.
+    """Write what the set *name* states as entries of *raw*, and drop the entry.
 
     Args:
         raw: A spec as data, mid-expansion, declaring the set and the variable
@@ -103,9 +103,9 @@ def emit(raw: dict[str, object], name: str) -> None:
         name: Which set to lower.
     """
     sets = section(raw, 'sos')
-    block = sets.pop(name)
-    assert isinstance(block, dict), 'a validated spec carries each set as a mapping'
-    variable, over, order = block['variable'], block['along'], block['type']
+    entry = sets.pop(name)
+    assert isinstance(entry, dict), 'a validated spec carries each set as a mapping'
+    variable, over, order = entry['variable'], entry['along'], entry['type']
     member = section(raw, 'variables')[variable]
     assert isinstance(member, dict), 'a validated spec carries each variable as a mapping'
     dims = list(member['dims'])

@@ -949,7 +949,7 @@ def test_a_curve_prints_what_its_method_assumes_of_the_breakpoints(name: FormatN
     text = typeset(EXAMPLES / 'piecewise.yaml', name, legend=False)
     section = text[text.index('Assumptions') :]
     assert 'cost_curve_increasing' in section.replace(r'\_', '_'), (
-        'a condition is named after the block whose method implies it'
+        'a condition is named after the entry whose method implies it'
     )
     assert fmt.operators['lt'] in section, 'the x-axis is strictly increasing between neighbours'
     assert fmt.operators['or'] in section, 'the either-way bend is two counts joined by or, one per direction'
@@ -1036,7 +1036,7 @@ _CURVE = {
     ],
 )
 def test_a_curve_prints_as_the_curve_it_states(patch: dict[str, Any], expected: str):
-    """The block, not the rows it stands for: `typeset(spec.expand())` prints those."""
+    """The entry, not the rows it stands for: `typeset(spec.expand())` prints those."""
     assert expected in typeset_line(varied(_CURVE, **patch), 'curve', 'latex')
 
 
@@ -1075,8 +1075,8 @@ def test_a_curve_prints_over_the_frame_its_expansion_builds_one_per_coordinate_o
     assert emitted == ['snapshot', 'generator'], 'the quantifier above is that frame, in that order'
 
 
-def test_the_expansion_prints_the_rows_the_block_states():
-    """Which is the whole reason the block prints as one line: the two readings are one call apart."""
+def test_the_expansion_prints_the_rows_the_entry_states():
+    """Which is the whole reason the entry prints as one line: the two readings are one call apart."""
     spec = to_spec(_CURVE)
 
     assert 'curve_lam' not in to_markdown(spec), 'nothing a curve emits is named where the curve itself prints'
@@ -1084,7 +1084,7 @@ def test_the_expansion_prints_the_rows_the_block_states():
 
 
 @EVERY_FORMAT
-def test_a_set_is_labelled_by_the_block_that_declares_it(name: FormatName, fmt: Format):
+def test_a_set_is_labelled_by_the_entry_that_declares_it(name: FormatName, fmt: Format):
     """The line was labelled ``<variable> sos``, a name the file never wrote, while every other line carries its key."""
     picked = varied(
         DISPATCH_MODEL,

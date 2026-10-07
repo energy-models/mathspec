@@ -11,7 +11,7 @@ checker. A tool reads the spec through two objects, `Spec` and `Program`.
 ## `Spec` and `Program`
 
 A `Spec` holds the file as written: its `macros:`, its descriptions, and a
-`piecewise:` block as one block. A `Program` holds what the file means:
+`piecewise:` entry as one entry. A `Program` holds what the file means:
 every macro expanded, every name typed, every operator resolved to a node, and
 every dimension and degree rule already checked. A curve stays one curve there
 until [`spec.expand()`](#formulations-written-out) writes it out. The
@@ -83,8 +83,8 @@ sorted(rows.variables)  # ['cost', 'curve_lam', 'p']
 
 `to_spec` takes a path, the YAML, a mapping or a `Spec`. `spec.program` is the
 program built when the spec loaded, so every ask on one spec returns one
-object. A `piecewise:` block is a curve under `program.piecewise`, typed, and a
-`sos:` block is a set under `program.sos`. Every parameter the program declares
+object. A `piecewise:` entry is a curve under `program.piecewise`, typed, and an
+`sos:` entry is a set under `program.sos`. Every parameter the program declares
 is one the file declared.
 
 ## Formulations written out
@@ -186,7 +186,7 @@ stands at a mask's root or nowhere. A `Region`'s `when` is a `Mask` too.
 `program.given.parameters`, `program.given.variables`,
 `program.given.expressions`, `program.given.masks` and
 `program.given.constraints` name what the spec reads and does not build
-([given](language/entries.md#given)). Every other group is a build
+([given](language/parameters-variables-constraints.md#given)). Every other group is a build
 instruction. These five are names to look up in the model this one is layered
 onto. An expression reads a given expression as a `VariableReference` of that name,
 over the frame under `program.given.expressions`. A `where` reads a given mask
@@ -321,7 +321,7 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 
 Four things are left as the file wrote them. They are a predicate in the
 `where` grammar, the order of a `cases:` block's regions, the order of an
-entry's `dims`, and the order of a piecewise block's links. A difference
+entry's `dims`, and the order of a piecewise entry's links. A difference
 in any of them is a difference in the text.
 
 Sorting `variables:` changes the order a

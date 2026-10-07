@@ -130,7 +130,7 @@ def test_a_variable_reached_through_another_cased_expression_still_prints_chosen
     """The given/chosen cut follows the whole chain, not one link of it.
 
     `opening_cost` names `headroom` and nothing else that moves; `headroom`
-    holds a variable. A walk stopping at the inner block would print the outer
+    holds a variable. A walk stopping at the inner entry would print the outer
     one upright — a quantity the solver decides, set as one the model was handed.
     """
     assert chosen_expressions(to_spec(_NESTED).program) == {'headroom', 'opening_cost'}, (

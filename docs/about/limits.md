@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 # The limits of the language
 
 A spec can only say what the language has words for. This page says which words
-can be added, and which cannot. Read it before you ask for a new operator, block
+can be added, and which cannot. Read it before you ask for a new operator, section
 or keyword. For the rules a spec itself has to obey, read
 [the eleven rules](../reference/language/index.md#the-eleven-rules).
 
@@ -22,13 +22,13 @@ costs to add.
   `at`, `shift`, and the `where` comparisons. Adding one is the expensive kind:
   every engine that builds models has to implement it, and the typesetter has
   to print it in LaTeX, Typst and Markdown.
-- **A formulation** is a block that states ordinary variables and constraints
+- **A formulation** is an entry that states ordinary variables and constraints
   rather than being one. `piecewise:` and `sos:` are the two. It costs as much as
   a primitive to build, but composes as freely as a macro. It emits variables,
   constraints and assumptions, and no parameter, so
   [`spec.expand()`](../reference/language/piecewise.md#writing-a-formulation-out)
   writes it out with the data the spec already expects.
-- **A section** is a block of entries of one kind, such as
+- **A section** is a top-level key that holds entries of one kind, such as
   `variables:` or `given:`. One enters where it states something no section
   states, where a file decides it without data, and where the typesetter prints
   it. `given:` entered on all three. No other section says that a parameter,

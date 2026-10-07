@@ -857,7 +857,7 @@ class TestAPredicateIsAnOperand:
     def test_a_read_names_several_columns_as_an_expression_does(self, where, dims, reads):
         """A where string reads several columns of one relation, as an expression does (#781).
 
-        A piecewise block whose mask is read through a walk into `[flow, effect]`
+        A piecewise entry whose mask is read through a walk into `[flow, effect]`
         writes this `where:`, and the load failed on its own assertion.
         """
         spec = to_spec(
@@ -1885,19 +1885,19 @@ CASED_BASE = {
 OPENING = {'opening': {'when': 'position(snapshot) == 0', 'expression': 'p_max'}}
 
 
-def _headroom(block: dict[str, Any]) -> dict[str, Any]:
-    """`CASED_BASE` with *block* as its one named expression, `headroom`."""
-    return {**copy.deepcopy(CASED_BASE), 'expressions': {'headroom': block}}
+def _headroom(entry: dict[str, Any]) -> dict[str, Any]:
+    """`CASED_BASE` with *entry* as its one named expression, `headroom`."""
+    return {**copy.deepcopy(CASED_BASE), 'expressions': {'headroom': entry}}
 
 
-def _cased(cases: dict[str, Any] | None = None, **block: Any) -> dict[str, Any]:
-    """`_headroom` over a cased block: `OPENING` or *cases*, an `otherwise:` of 0, and *block* on top."""
+def _cased(cases: dict[str, Any] | None = None, **entry: Any) -> dict[str, Any]:
+    """`_headroom` over a cased entry: `OPENING` or *cases*, an `otherwise:` of 0, and *entry* on top."""
     return _headroom(
         {
             'dims': ['snapshot', 'generator'],
             'cases': OPENING if cases is None else cases,
             'otherwise': 0,
-            **block,
+            **entry,
         }
     )
 
@@ -1906,9 +1906,9 @@ class TestExpressionCases:
     """`cases:` on a named expression — the entry, and the shape it must have."""
 
     def test_a_cased_expression_loads(self):
-        block = to_spec(_cased()).expressions['headroom']
-        assert list(block.cases) == ['opening'], 'the one case, under the name the file gave it'
-        assert block.otherwise == '0'
+        entry = to_spec(_cased()).expressions['headroom']
+        assert list(entry.cases) == ['opening'], 'the one case, under the name the file gave it'
+        assert entry.otherwise == '0'
 
     @pytest.mark.parametrize(
         ('when', 'fragment'),
@@ -1941,7 +1941,7 @@ class TestExpressionCases:
         assert written['otherwise'] == '0'
 
     @pytest.mark.parametrize(
-        ('block', 'fragment'),
+        ('entry', 'fragment'),
         [
             pytest.param(
                 {'expression': 'load', 'dims': ['snapshot'], 'cases': OPENING, 'otherwise': 0},
@@ -1962,9 +1962,9 @@ class TestExpressionCases:
             ),
         ],
     )
-    def test_the_two_forms_do_not_mix(self, block: dict[str, Any], fragment: str):
+    def test_the_two_forms_do_not_mix(self, entry: dict[str, Any], fragment: str):
         with pytest.raises(SchemaError, match=re.escape(fragment)):
-            to_spec(_headroom(block))
+            to_spec(_headroom(entry))
 
     @pytest.mark.parametrize(
         ('cases', 'message'),
@@ -2051,7 +2051,7 @@ class TestExpressionCases:
             to_spec(model)
 
     def test_a_fault_in_an_arm_names_the_entry_and_is_reported_once(self):
-        """The block is resolved once, and the fault is in one place.
+        """The entry is resolved once, and the fault is in one place.
 
         Naming the use site would report a case on a constraint that has none,
         and one sentence per constraint reading the expression is the same
@@ -2115,8 +2115,8 @@ class TestAnEntryIsNamed:
     """An entry's key must be a name the expression grammar could write.
 
     Nothing checked it, so `parameters: {'': {...}}` loaded, and a piecewise
-    block naming it under `points:` had its mask silently dropped —
-    `if mask:` in the expansion read a declared parameter as "this block
+    entry naming it under `points:` had its mask silently dropped —
+    `if mask:` in the expansion read a declared parameter as "this entry
     masks nothing", and the weights came out unmasked. Every unwritable name
     has the same shape: an entry no expression can reach, in a language
     whose promise is that the file decides.

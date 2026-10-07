@@ -10,8 +10,8 @@ the others — a name declared once, a frame over declared dimensions, a bound
 naming a numeric parameter, a set over one dim of one variable, a curve
 through parameters carrying its breakpoints — which lowering runs before it
 reads any expression, since resolution assumes every one of them.
-[`emitted_name_errors`][] is read off the program instead: what a block's
-expansion writes is decided by the block as lowered. The rules that need a
+[`emitted_name_errors`][] is read off the program instead: what an entry's
+expansion writes is decided by the entry as lowered. The rules that need a
 typed expression stay with the expressions in [`lower`][mathspec.lowering.lower]:
 a macro formal against a dimension, a curve's links, and every dim rule.
 """
@@ -71,11 +71,11 @@ def emitted_name_errors(schema: Spec, program: Program) -> list[str]:
     Read off the program rather than the file, since what a curve writes is
     decided by the curve as lowered — its links, its method, its mask.
     """
-    by_block = [
-        *((f"Sos '{name}'", EmittedSet.of(name, block.sos_type).by_kind) for name, block in program.sos.items()),
+    by_entry = [
+        *((f"Sos '{name}'", EmittedSet.of(name, entry.sos_type).by_kind) for name, entry in program.sos.items()),
         *((f"piecewise '{name}'", EmittedCurve.of(name, curve).by_kind) for name, curve in program.piecewise.items()),
     ]
-    return [error for context, by_kind in by_block for error in _collisions(schema, context, by_kind)]
+    return [error for context, by_kind in by_entry for error in _collisions(schema, context, by_kind)]
 
 
 def reference_errors(schema: Spec) -> list[str]:
@@ -244,32 +244,32 @@ def _bound_names(schema: Spec) -> Iterator[str]:
 def _sos_shapes(schema: Spec) -> Iterator[str]:
     """A set runs along one dim of one declared variable, and a variable carries one set."""
     claimed: dict[str, str] = {}
-    for sname, block in schema.sos.items():
+    for sname, entry in schema.sos.items():
         context = f"Sos '{sname}'"
-        if block.along not in schema.dimensions:
-            yield (undeclared_dimension('Sos', sname, block.along))
-        elif block.variable not in schema.variables:
+        if entry.along not in schema.dimensions:
+            yield (undeclared_dimension('Sos', sname, entry.along))
+        elif entry.variable not in schema.variables:
             yield (
-                f"{context}: '{block.variable}' is not a declared variable.\n"
+                f"{context}: '{entry.variable}' is not a declared variable.\n"
                 f'  Variables: {sorted(schema.variables)}\n'
                 f'A set is over one variable, so a parameter or an expression cannot carry one.'
             )
-        elif block.along not in schema.variables[block.variable].dims:
+        elif entry.along not in schema.variables[entry.variable].dims:
             yield (
-                f"{context}: along '{block.along}' is not a dim of variable "
-                f"'{block.variable}' (dims {schema.variables[block.variable].dims}). The set runs "
+                f"{context}: along '{entry.along}' is not a dim of variable "
+                f"'{entry.variable}' (dims {schema.variables[entry.variable].dims}). The set runs "
                 f"along one of the variable's own dims — one set per coordinate of the rest."
             )
-        elif block.type == 2 and not schema.dimensions[block.along].ordered:
-            yield unordered(context, f'type: 2 along {block.along}', block.along)
-        elif block.variable in claimed:
+        elif entry.type == 2 and not schema.dimensions[entry.along].ordered:
+            yield unordered(context, f'type: 2 along {entry.along}', entry.along)
+        elif entry.variable in claimed:
             yield (
-                f"{context}: variable '{block.variable}' already carries the set declared by "
-                f"'{claimed[block.variable]}'. A variable holds one set — declare a second "
+                f"{context}: variable '{entry.variable}' already carries the set declared by "
+                f"'{claimed[entry.variable]}'. A variable holds one set — declare a second "
                 f'variable, or state the other restriction as a constraint.'
             )
         else:
-            claimed[block.variable] = sname
+            claimed[entry.variable] = sname
 
 
 def _sos_bounds(schema: Spec) -> Iterator[str]:
@@ -281,20 +281,20 @@ def _sos_bounds(schema: Spec) -> Iterator[str]:
     it. Decided here rather than where the rewrite runs, so a set the
     language cannot state twice is refused before any data exists.
     """
-    for sname, block in schema.sos.items():
-        if (member := schema.variables.get(block.variable)) is None:
+    for sname, entry in schema.sos.items():
+        if (member := schema.variables.get(entry.variable)) is None:
             continue
         context = f"Sos '{sname}'"
         below, above = coefficients(member.domain, member.bounds.lower, member.bounds.upper)
         if below is None:
             yield (
-                f"{context}: variable '{block.variable}' has no lower bound, and the set expands to rows "
+                f"{context}: variable '{entry.variable}' has no lower bound, and the set expands to rows "
                 f'that hold an unpicked member at zero from below as well as above. Declare bounds.lower, '
                 f'as a number or a parameter.'
             )
         if above is None:
             yield (
-                f"{context}: variable '{block.variable}' has no upper bound, and the set expands to rows "
+                f"{context}: variable '{entry.variable}' has no upper bound, and the set expands to rows "
                 f'that hold an unpicked member at zero from above as well as below. Declare bounds.upper, '
                 f'as a number or a parameter.'
             )

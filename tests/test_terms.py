@@ -576,7 +576,7 @@ def test_a_term_over_fewer_dimensions_merges_where_another_carries_the_rest():
     'body', [pytest.param({'expression': '-2 * load'}, id='a-mapping'), pytest.param('-2 * load', id='one-line')]
 )
 def test_a_patch_changes_a_term_s_body_and_keeps_what_it_adds_to(body):
-    """A one-line patch replaced the whole block, so the term lost its `adds_to:` and left the sum unannounced."""
+    """A one-line patch replaced the whole entry, so the term lost its `adds_to:` and left the sum unannounced."""
     doubled = override(DEMAND, [{'expressions': {'demand_injection': body}}])
     assert doubled.expressions['demand_injection'].expression == '-2 * load'
     assert doubled.expressions['demand_injection'].adds_to == 'injection'

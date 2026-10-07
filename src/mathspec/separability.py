@@ -50,8 +50,8 @@ def _built_blocks(program: Program) -> Iterator[_Block]:
     the constraint sides reaches it, and walking it again would report one
     coupling twice.
     """
-    for name, block in program.constraints.items():
-        yield _Block(f"constraint '{name}'", name, (block.lhs, block.rhs), block.where, True)
+    for name, constraint in program.constraints.items():
+        yield _Block(f"constraint '{name}'", name, (constraint.lhs, constraint.rhs), constraint.where, True)
     for name, variable in program.variables.items():
         bounds = tuple(side for side in (variable.lower, variable.upper) if side is not None)
         yield _Block(f"variable '{name}'", None, bounds, variable.where, True)
@@ -141,12 +141,12 @@ def separabilities(program: Program) -> dict[str, Separability]:
                 if isinstance(atom, DimensionPosition):
                     report('restarts', atom.name, label, f'counts a position along {atom.name}')
 
-    for name, block in program.sos.items():
+    for name, entry in program.sos.items():
         report(
             'coupled',
-            block.along,
+            entry.along,
             f"set '{name}'",
-            f'is a set along {block.along}, which a window would cut — only a window holding every whole set keeps it',
+            f'is a set along {entry.along}, which a window would cut — only a window holding every whole set keeps it',
         )
 
     def joined(kind: str, dimension: str) -> dict[str, str]:

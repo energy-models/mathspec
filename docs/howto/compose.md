@@ -17,7 +17,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
 
 1. **Write the network as a spec.** It balances the injection at a bus, and
    reads the injection under
-   [`given`](../reference/language/entries.md#given): what the components
+   [`given`](../reference/language/parameters-variables-constraints.md#given): what the components
    put in is theirs to say. It sets the objective on `total_cost`, which it
    reads the same way: what each component costs is the component's to say.
    Nothing in it names a component class.
@@ -46,7 +46,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
 2. **Write each component file against the network.** It declares its own
    dimension and its own math. It reads `Bus_injection` too, and says what it
    puts into a bus as a named expression, a
-   [term](../reference/language/entries.md#terms) whose `adds_to:` names
+   [term](../reference/language/parameters-variables-constraints.md#terms) whose `adds_to:` names
    `Bus_injection`. A component that costs something adds its cost to
    `total_cost` the same way.
 
@@ -197,21 +197,21 @@ which each component pins at its own port.
 
 ## What a fragment may share
 
-| The entry                                         | What happens                                                                                                                                                                                   |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                |
-| a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                  |
-| `ordered: true` on a shared dimension             | it is a claim about the dimension rather than the dimension, so the dimension is ordered if one fragment says so                                                                               |
-| `missing:` on a shared relation                   | it is a claim about the data, and the fragments that declare the relation say the same one. `missing: refused` is the same as no `missing:`                                                    |
-| any other entry                                   | one fragment declares it, and a second is refused                                                                                                                                              |
-| an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the entry where the introducer wrote none                                              |
-| a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                     |
-| a given mask                                      | the reader's `dims` name the dimensions the defining fragment's predicate reads, no more and no fewer                                                                                          |
-| a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                         |
-| an expression with `adds_to:`                     | the sum it names is the body one fragment defines, if any, followed by every term by its name, in the order of the list. [Terms](../reference/language/entries.md#terms) gives what is refused |
-| `objective`                                       | one fragment sets it, and a second is refused. Several fragments contribute to it as terms of a sum the objective reads                                                                        |
-| `version`                                         | every fragment is written against the same one                                                                                                                                                 |
-| `description` at the top of a fragment            | it is about the fragment and is not carried. Pass the composed spec's as `description=`                                                                                                        |
+| The entry                                         | What happens                                                                                                                                                                                                            |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                                         |
+| a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                                           |
+| `ordered: true` on a shared dimension             | it is a claim about the dimension rather than the dimension, so the dimension is ordered if one fragment says so                                                                                                        |
+| `missing:` on a shared relation                   | it is a claim about the data, and the fragments that declare the relation say the same one. `missing: refused` is the same as no `missing:`                                                                             |
+| any other entry                                   | one fragment declares it, and a second is refused                                                                                                                                                                       |
+| an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the entry where the introducer wrote none                                                                       |
+| a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                                              |
+| a given mask                                      | the reader's `dims` name the dimensions the defining fragment's predicate reads, no more and no fewer                                                                                                                   |
+| a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                                                  |
+| an expression with `adds_to:`                     | the sum it names is the body one fragment defines, if any, followed by every term by its name, in the order of the list. [Terms](../reference/language/parameters-variables-constraints.md#terms) gives what is refused |
+| `objective`                                       | one fragment sets it, and a second is refused. Several fragments contribute to it as terms of a sum the objective reads                                                                                                 |
+| `version`                                         | every fragment is written against the same one                                                                                                                                                                          |
+| `description` at the top of a fragment            | it is about the fragment and is not carried. Pass the composed spec's as `description=`                                                                                                                                 |
 
 ## A name two fragments declare
 

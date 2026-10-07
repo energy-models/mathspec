@@ -150,10 +150,10 @@ def split_index(specs: Mapping[str, Spec]) -> str:
     readers: dict[str, tuple[str, tuple[str, ...]]] = {}
     terms: dict[str, list[tuple[str, str]]] = {}
     for name, spec in specs.items():
-        adds = {block.adds_to for block in spec.expressions.values() if block.adds_to is not None}
-        for term, block in spec.expressions.items():
-            if block.adds_to is not None:
-                terms.setdefault(block.adds_to, []).append((name, term))
+        adds = {expression.adds_to for expression in spec.expressions.values() if expression.adds_to is not None}
+        for term, expression in spec.expressions.items():
+            if expression.adds_to is not None:
+                terms.setdefault(expression.adds_to, []).append((name, term))
         for hub, entry in spec.given.expressions.items():
             if entry.description and hub not in adds:
                 readers[hub] = (name, tuple(entry.dims))
@@ -177,7 +177,9 @@ def split_index(specs: Mapping[str, Spec]) -> str:
     for name, spec in specs.items():
         given = spec.given
         reads = len(given.parameters) + len(given.variables) + len(given.expressions) + len(given.constraints)
-        hubs = dict.fromkeys(block.adds_to for block in spec.expressions.values() if block.adds_to is not None)
+        hubs = dict.fromkeys(
+            expression.adds_to for expression in spec.expressions.values() if expression.adds_to is not None
+        )
         adds = ', '.join(f'`{hub}`' for hub in hubs)
         files.append(
             f'| [{name}]({name}.md) | {len(spec.parameters)} | {len(spec.variables)} | {len(spec.constraints)} '
@@ -241,7 +243,7 @@ def entry(text: str, section: str, name: str | None = None) -> str:
 def _names_for(name: str, description: str | None) -> list[str]:
     """Every other-side name an entry stands for: the backticked tokens before the ` — ` of its description.
 
-    One entry answers to one PyPSA name as a rule; a block whose rows PyPSA
+    One entry answers to one PyPSA name as a rule; an entry whose rows PyPSA
     names differently by mode lists them all before the dash, the first canonical.
     """
     text = description or ''
@@ -270,13 +272,13 @@ def declared_block(path: Path) -> str:
     domains = _section(page, 'Variable domains').strip()
     assumption = equations(_section(page, 'Assumptions')) if model.assumptions else {}
     parts = [legend, f'### Objective\n\n```yaml\n{entry(text, "objective")}\n```\n\n{objective}']
-    for name, block in model.constraints.items():
+    for name, constraint in model.constraints.items():
         printed = equation[name]
         if _reads_a_sum(model, name):
             line = typeset_line(model, name, 'markdown', symbols=sidecar_for(path), inline_expressions=True)
             printed = f'```math\n{line}\n```'
         parts.append(
-            f'### `{_stands_for(name, block.description)}`\n\n'
+            f'### `{_stands_for(name, constraint.description)}`\n\n'
             f'`{name}`\n\n'
             f'```yaml\n{entry(text, "constraints", name)}\n```\n\n'
             f'{printed}'
@@ -299,8 +301,10 @@ def patched_block(base: Path, patch: Path) -> str:
     model = override(base, [patch])
     written = yaml.safe_load(text)
     headings = {
-        'variables': {name: _stands_for(name, block.description) for name, block in model.variables.items()},
-        'constraints': {name: _stands_for(name, block.description) for name, block in model.constraints.items()},
+        'variables': {name: _stands_for(name, variable.description) for name, variable in model.variables.items()},
+        'constraints': {
+            name: _stands_for(name, constraint.description) for name, constraint in model.constraints.items()
+        },
         'assumptions': {name: name for name in model.assumptions},
     }
     parts = [model.description]

@@ -72,7 +72,7 @@ def overlapping(
 
     Args:
         cases: The ``when`` of every case, keyed by the case's name. The
-            block's ``otherwise`` is not among them: it claims what the rest
+            entry's ``otherwise`` is not among them: it claims what the rest
             leave, so it overlaps nothing by construction.
         dtypes: The declared dtype of every name a mask compares against.
         defaults: The value a missing row reads as, for every parameter whose

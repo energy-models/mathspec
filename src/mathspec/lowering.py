@@ -8,7 +8,7 @@ One lowering, on the language side, run when a [`Spec`][]
 loads: it reads every expression and where string into the program's own
 nodes, checks every rule decidable without data, and packages the
 entries, section for section. The program mirrors the spec it was
-lowered from: a ``piecewise:`` block the spec still declares is a curve on
+lowered from: a ``piecewise:`` entry the spec still declares is a curve on
 the program, and [`expand`][mathspec.spec.Spec.expand] is what writes it out
 as rows.
 """
@@ -84,7 +84,7 @@ def lower(schema: Spec) -> Program:
       curve as lowered;
     - every dim rule (``dimensions.check_schema``), once names resolve.
 
-    A ``piecewise:`` block's links are resolved and its frame checked here, on
+    A ``piecewise:`` entry's links are resolved and its frame checked here, on
     the link the file wrote, so the expansion writes rows the language has
     already held to every rule; what its method assumes of the breakpoints
     stands under the program's assumptions with the file's own, so a spec
@@ -358,7 +358,7 @@ def _bound(value: float | str | None) -> Constant | ParameterReference | None:
     return Constant(value)
 
 
-def _assumption(name: str, block: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:
+def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:
     """One ``assumptions:`` entry typed, or ``None`` once anything in it failed.
 
     A predicate the connectives decide is refused: one that folds to true
@@ -368,13 +368,13 @@ def _assumption(name: str, block: AssumptionSpec, ns: Namespace, errors: list[st
     """
     context = f"Assumption '{name}'"
     found = len(errors)
-    holds = resolve_where_text(block.holds, ns, context, errors)
-    where = resolve_where_text(block.where, ns, f'{context}, where', errors)
+    holds = resolve_where_text(entry.holds, ns, context, errors)
+    where = resolve_where_text(entry.where, ns, f'{context}, where', errors)
     if isinstance(holds, BooleanLiteral):
-        errors.append(_decided_assumption(context, block.holds, value=holds.value))
+        errors.append(_decided_assumption(context, entry.holds, value=holds.value))
     if isinstance(where, BooleanLiteral):
-        assert block.where is not None, 'a where the file did not write resolves to nothing'
-        errors.append(_decided_where(context, block.where, value=where.value))
+        assert entry.where is not None, 'a where the file did not write resolves to nothing'
+        errors.append(_decided_where(context, entry.where, value=where.value))
     for mask, part in ((holds, 'assumes'), (where, 'is checked where')):
         if mask is None or isinstance(mask, BooleanLiteral):
             continue
@@ -388,7 +388,7 @@ def _assumption(name: str, block: AssumptionSpec, ns: Namespace, errors: list[st
     if len(errors) > found:
         return None
     assert holds is not None, 'a where string that read to nothing appended an error'
-    return Assumption(Mask(holds), mask_of(where), block.description)
+    return Assumption(Mask(holds), mask_of(where), entry.description)
 
 
 def _decided_assumption(context: str, text: str, *, value: bool) -> str:

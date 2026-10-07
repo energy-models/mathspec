@@ -47,11 +47,11 @@ PIECEWISE = {
 }
 BEGIN, END = '<!-- notation:begin -->', '<!-- notation:end -->'
 
-#: The blocks of the fixture that declare math. ``dimensions``, ``relations``
+#: The sections of the fixture that declare math. ``dimensions``, ``relations``
 #: and ``parameters`` are absent on purpose: they declare no equation, and what
 #: they print is the legend, which the page shows once rather than a row at a
 #: time.
-BLOCKS = ('objective', 'constraints', 'expressions', 'masks', 'variables', 'piecewise', 'sos', 'assumptions')
+SECTIONS = ('objective', 'constraints', 'expressions', 'masks', 'variables', 'piecewise', 'sos', 'assumptions')
 
 #: The page's sections in the order of the language reference, and in each the
 #: fixture's entries under the construct they show. The entry name
@@ -174,13 +174,13 @@ NAMED_BY_HEADING = frozenset({'spill', 'slack', 'theta', 'balance'})
 
 
 class Entry:
-    """One block of the fixture: its name, the block it sits in, its YAML, and the caption beside it."""
+    """One entry of the fixture: its name, the section it sits in, its YAML, and the caption beside it."""
 
-    def __init__(self, name: str, block: str, lines: list[str], caption: str) -> None:
-        self.name, self.block, self.lines, self.caption = name, block, lines, caption
+    def __init__(self, name: str, section: str, lines: list[str], caption: str) -> None:
+        self.name, self.section, self.lines, self.caption = name, section, lines, caption
 
     def field(self, key: str) -> str:
-        """One scalar the block declares — ``''`` where it declares no such key."""
+        """One scalar the entry declares — ``''`` where it declares no such key."""
         for line in self.lines:
             if match := re.match(rf'^\s+{key}:\s*(\S+)', line):
                 return match[1]
@@ -188,15 +188,15 @@ class Entry:
 
     @property
     def yaml(self) -> str:
-        """The entry under the key of its block, with the caption comment removed.
+        """The entry under the key of its section, with the caption comment removed.
 
         The key is kept because the heading names the construct rather than
-        the block, and a section mixes blocks: the fragment is where a reader
+        the section, and a page section mixes sections: the fragment is where a reader
         sees whether the row is a constraint, an expression or a variable.
         """
         kept = [line for line in self.lines if not _described(line, self.lines)]
         kept[0] = re.sub(r'[ ]+#.*$', '', kept[0])
-        key = [] if self.block == 'objective' else [f'{self.block}:']
+        key = [] if self.section == 'objective' else [f'{self.section}:']
         return '\n'.join([*key, *kept])
 
 
@@ -219,16 +219,16 @@ def _described(line: str, lines: list[str]) -> bool:
 
 
 def entries(text: str) -> dict[str, list[Entry]]:
-    """The fixture's blocks, by section, in file order.
+    """The fixture's entries, by section, in file order.
 
     Scanned rather than parsed by a YAML reader: the comments are the captions,
     and a reader that keeps them is a dependency this repo does not have.
     """
-    found: dict[str, list[Entry]] = {section: [] for section in BLOCKS}
+    found: dict[str, list[Entry]] = {section: [] for section in SECTIONS}
     section, current = None, None
     for line in text.splitlines():
         if match := re.match(r'^(\w+):', line):
-            section = match[1] if match[1] in BLOCKS else None
+            section = match[1] if match[1] in SECTIONS else None
             current = None
             if section == 'objective':
                 current = Entry('objective', section, [line], _caption(line))
@@ -258,7 +258,7 @@ def _caption(line: str) -> str:
 def equations(rendered: str) -> dict[str, str]:
     """Label -> the ``math`` fence the walk printed for it.
 
-    The objective's line carries no label — the block has no name — so it is
+    The objective's line carries no label — the entry has no name — so it is
     keyed by the section it is the only member of.
     """
     found = {}
@@ -290,13 +290,13 @@ DECLARED = ('dimensions', 'relations', 'parameters')
 
 
 def preamble(text: str) -> str:
-    """The fixture's ``dimensions``/``relations``/``parameters`` blocks, verbatim."""
-    blocks = []
+    """The fixture's ``dimensions``/``relations``/``parameters`` sections, verbatim."""
+    sections = []
     for name in DECLARED:
         body = text[text.index(f'\n{name}:') + 1 :]
         end = re.search(r'\n(?=\w)', body)
-        blocks.append(body[: end.start()] if end else body)
-    return '\n'.join(blocks).strip()
+        sections.append(body[: end.start()] if end else body)
+    return '\n'.join(sections).strip()
 
 
 def block() -> str:
@@ -324,7 +324,7 @@ def block() -> str:
         parts.append(f'### {family}')
         if family == 'Piecewise curves':
             parts.append(
-                'A curve prints as the curve it states, over the frame the block builds one per coordinate of, '
+                'A curve prints as the curve it states, over the frame the entry builds one per coordinate of, '
                 'and its expansion prints the rows that curve stands for. One row per `method:`, each from the '
                 "spec named under it, so the symbols in this section are that spec's."
             )
@@ -351,7 +351,7 @@ def block() -> str:
 def _curves() -> list[str]:
     """One row per ``method:``, each captioned with what that method restricts.
 
-    Both readings come from one spec and one symbol table: the block as the
+    Both readings come from one spec and one symbol table: the entry as the
     file states it, and the rows ``expand('piecewise')`` writes out — which for
     ``sos2`` keeps the set and for ``adjacency`` is the binaries that set states.
     """
@@ -362,21 +362,21 @@ def _curves() -> list[str]:
         stated = equations(to_markdown(spec, symbols=table, numbered=False))
         written = equations(to_markdown(spec.expand('piecewise'), symbols=table, numbered=False))
         found = [
-            block
-            for block in entries(source.read_text())['piecewise']
-            if (block.field('method') or 'adjacency') == method
+            entry
+            for entry in entries(source.read_text())['piecewise']
+            if (entry.field('method') or 'adjacency') == method
         ]
-        assert found, f'{source.name} declares no piecewise block with method: {method}'
-        for block in found:
-            row = _row(block, heading, stated)
+        assert found, f'{source.name} declares no piecewise entry with method: {method}'
+        for entry in found:
+            row = _row(entry, heading, stated)
             caption = f'`method: {method}` \N{EM DASH} {PIECEWISE_METHODS[method]}, in `{source.relative_to(ROOT)}`.'
-            derived = [math for label, math in stated.items() if label.startswith(f'{block.name} ')]
+            derived = [math for label, math in stated.items() if label.startswith(f'{entry.name} ')]
             assumed = (
                 '\n\n'.join(['What the method assumes of the numbers attached to it:', *derived]) if derived else ''
             )
             rows.append(
                 row.replace('\n\n', f'\n\n{caption}\n\n{_table_shown(table)}', 1)
-                + f'\n\n{_written_out(block.name, written)}'
+                + f'\n\n{_written_out(entry.name, written)}'
             )
             if assumed:
                 rows.append(assumed)
@@ -386,8 +386,8 @@ def _curves() -> list[str]:
 def _written_out(name: str, printed: dict[str, str]) -> str:
     """The rows the formulation *name* states, as its expansion prints them.
 
-    Everything an expansion writes is named after the block that stated it, so
-    the block's own name is what collects the lines back together. The set a
+    Everything an expansion writes is named after the entry that stated it, so
+    the entry's own name is what collects the lines back together. The set a
     ``sos2`` curve keeps takes that name whole.
     """
     rows = [math for label, math in printed.items() if label == name or label.startswith(f'{name}_')]

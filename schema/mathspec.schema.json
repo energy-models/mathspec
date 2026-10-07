@@ -169,7 +169,7 @@
     },
     "ExpressionCaseSpec": {
       "additionalProperties": false,
-      "description": "One region of a named expression: the value, and when it is the value.\n\nEvery case says where it applies. The value wherever none of them does is\nthe block's ``otherwise:``, which is written outside ``cases:`` because it\nis not a region like these \u2014 it is what is left::\n\n    cases:\n      opening: { when: \"position(snapshot) == 0\", expression: p_max }\n    otherwise: 0",
+      "description": "One region of a named expression: the value, and when it is the value.\n\nEvery case says where it applies. The value wherever none of them does is\nthe entry's ``otherwise:``, which is written outside ``cases:`` because it\nis not a region like these \u2014 it is what is left::\n\n    cases:\n      opening: { when: \"position(snapshot) == 0\", expression: p_max }\n    otherwise: 0",
       "properties": {
         "expression": {
           "anyOf": [
@@ -689,7 +689,7 @@
       "anyOf": [
         {
           "additionalProperties": false,
-          "description": "One link of a piecewise block: an expression pinned to a values curve.\n\nWritten in YAML as ``[expression, values]`` or ``[expression, values,\nsign]`` and serialised back to exactly that form, so a round trip through\n[`Spec.to_yaml`][] reproduces the file.",
+          "description": "One link of a piecewise entry: an expression pinned to a values curve.\n\nWritten in YAML as ``[expression, values]`` or ``[expression, values,\nsign]`` and serialised back to exactly that form, so a round trip through\n[`Spec.to_yaml`][] reproduces the file.",
           "properties": {
             "expression": {
               "title": "Expression",

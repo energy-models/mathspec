@@ -80,7 +80,7 @@ Position decides which kinds of name are legal:
 
 | Position                               | Legal kinds                                                                                                              |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| expression (`p * cost`)                | a variable, or a parameter whose values are numbers ([dtype](entries.md#parameters))                                     |
+| expression (`p * cost`)                | a variable, or a parameter whose values are numbers ([dtype](parameters-variables-constraints.md#parameters))            |
 | dimension argument (`over=`, `along=`) | a dimension, or a list of them for `over=`. Beside `by=`, a name in `over=` is a column of the relation where it has one |
 | column argument (`by=`, `within=`)     | columns of one relation, written `relation[column]` or `relation[column, …]`                                             |
 | `where` string                         | a parameter, variable, dimension, relation or mask ([where strings](#where-strings))                                     |
@@ -166,7 +166,7 @@ QUOTED     ::= "'" chars "'" | '"' chars '"'
 A bare name that is not declared is a load error.
 
 A comparison at a missing row reads the value the parameter's
-[`missing:`](entries.md#a-missing-row) names, as does a bare `bool` name.
+[`missing:`](parameters-variables-constraints.md#a-missing-row) names, as does a bare `bool` name.
 Under every reading, a bare numeric name asks whether the data has a row.
 
 ### Counting what a predicate admits

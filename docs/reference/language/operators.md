@@ -129,7 +129,7 @@ constraints:
 
 `edge='wrap'` makes the store cyclic: the first snapshot reads the last. Bare,
 the row the vacated coordinate would have fed is not built; state the initial
-condition in a block of its own ([a rule that differs by regime](../../howto/regimes.md)).
+condition in an entry of its own ([a rule that differs by regime](../../howto/regimes.md)).
 
 Two rules hold for `edge=`:
 

@@ -44,8 +44,8 @@ expressions:
     description: the nominal capacity, the same in every snapshot
 ```
 
-[`adds_to:`](entries.md#terms) adds this expression as a term to the sum
-it names. The sum is a [given expression](entries.md#given-expressions)
+[`adds_to:`](parameters-variables-constraints.md#terms) adds this expression as a term to the sum
+it names. The sum is a [given expression](parameters-variables-constraints.md#given-expressions)
 of the same file, and [`merge`](../../howto/compose.md#a-library-of-components)
 adds the entry to it by its own name.
 
@@ -263,7 +263,7 @@ An entry with no `description:` may be the bare `where` string.
 - **A variable's own `where:` may not ask, through a mask, whether the
   variable exists.** The loader refuses this as it refuses the bare name.
 
-Another file reads a mask under [`given: masks`](entries.md#given-masks).
+Another file reads a mask under [`given: masks`](parameters-variables-constraints.md#given-masks).
 
 ## `macros`
 

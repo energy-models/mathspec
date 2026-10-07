@@ -2,9 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The file: what it says, as every block it may contain, rooted at [`Spec`][].
+"""The file: what it says, as every entry it may contain, rooted at [`Spec`][].
 
-The first public state. A [`Spec`][] holds one file's sections as the blocks
+The first public state. A [`Spec`][] holds one file's sections as the entries
 below, and [`BUILTIN_NAMES`][] is the closed set of operators an expression in
 one may call. Nothing here has seen data; what the file means is its
 [`program`][mathspec.spec.Spec.program].
@@ -95,7 +95,7 @@ class _StrictSpec(BaseModel):
 
     model_config = ConfigDict(extra='forbid')
 
-    #: What this block is called in a YAML file, for the error message.
+    #: What this entry or section is called in a YAML file, for the error message.
     _label: ClassVar[str]
 
     @model_validator(mode='before')
@@ -119,13 +119,13 @@ class _StrictSpec(BaseModel):
         return data
 
 
-#: A block that states rows rather than being one, which [`Spec.expand`][]
+#: A section whose entries state rows rather than being rows, which [`Spec.expand`][]
 #: writes out on request.
 Formulation = Literal['piecewise', 'sos']
 
 #: The shape a method needs a curve to have to be exact on it, which the
-#: ``<block>_curvature`` assumption states. ``convex`` and ``concave`` name the
-#: side a bounded link binds from; ``either`` is the weaker condition a block
+#: ``<entry>_curvature`` assumption states. ``convex`` and ``concave`` name the
+#: side a bounded link binds from; ``either`` is the weaker condition an entry
 #: with both links pinned states — any single bend will do, and only a *mixed*
 #: curve fails it.
 Curvature = Literal['convex', 'concave', 'either']
@@ -174,7 +174,7 @@ FORMULATIONS: tuple[Formulation, ...] = ('piecewise', 'sos')
 def _also_written_as(
     core_schema: CoreSchema, handler: GetJsonSchemaHandler, shorthand: Mapping[str, object]
 ) -> dict[str, object]:
-    """The block's own schema, widened to a *shorthand* its before-validator takes.
+    """The entry's own schema, widened to a *shorthand* its before-validator takes.
 
     A ``mode='before'`` rewrite is invisible to pydantic, which generates the
     schema from the post-rewrite fields alone, so the shorthand has to be added
@@ -551,7 +551,7 @@ class GivenMaskSpec(_StrictSpec):
 class GivenSpec(_StrictSpec):
     """What this file reads and does not build, by kind. Closed at the five kinds."""
 
-    _label: ClassVar[str] = 'a given block'
+    _label: ClassVar[str] = "the 'given:' section"
 
     #: Data another file declares ([`GivenParameterSpec`][]).
     parameters: dict[str, GivenParameterSpec] = {}
@@ -631,7 +631,7 @@ class ExpressionCaseSpec(_StrictSpec):
     """One region of a named expression: the value, and when it is the value.
 
     Every case says where it applies. The value wherever none of them does is
-    the block's ``otherwise:``, which is written outside ``cases:`` because it
+    the entry's ``otherwise:``, which is written outside ``cases:`` because it
     is not a region like these — it is what is left::
 
         cases:
@@ -673,7 +673,7 @@ class ExpressionSpec(_StrictSpec):
     frame the given entry states, and does not read the name it adds to.
     """
 
-    _label: ClassVar[str] = 'a named expression'
+    _label: ClassVar[str] = 'an expression entry'
 
     expression: Expression | None = None
     #: The frame the quantity is read over — required with ``cases:``, and
@@ -851,7 +851,7 @@ class AssumptionSpec(_StrictSpec):
 
 
 class PiecewiseLinkSpec(_StrictSpec):
-    """One link of a piecewise block: an expression pinned to a values curve.
+    """One link of a piecewise entry: an expression pinned to a values curve.
 
     Written in YAML as ``[expression, values]`` or ``[expression, values,
     sign]`` and serialised back to exactly that form, so a round trip through
@@ -886,7 +886,7 @@ class PiecewiseLinkSpec(_StrictSpec):
         return [self.expression, self.values] if self.sign == '==' else [self.expression, self.values, self.sign]
 
 
-#: How a ``piecewise:`` block restricts its interpolation weights, and what
+#: How a ``piecewise:`` entry restricts its interpolation weights, and what
 #: each one emits. The key is ``method:`` because that is
 #: ``linopy.Spec.add_piecewise_formulation``'s (#695); ``sos2`` and ``lp`` are
 #: its words too, and mean the same things. ``adjacency`` and ``convex`` are
@@ -926,19 +926,19 @@ class PiecewiseSpec(_StrictSpec):
 
     @property
     def consumes(self) -> frozenset[str]:
-        """The parameters the block reads: each link's values, and the ``points:`` mask."""
+        """The parameters the entry reads: each link's values, and the ``points:`` mask."""
         return frozenset({link.values for link in self.links} | ({self.points} if self.points else set()))
 
     @property
     def nominated(self) -> str | None:
-        """The block's own values parameter ``points:`` names, so the mask is derived from it — or ``None``."""
+        """The entry's own values parameter ``points:`` names, so the mask is derived from it — or ``None``."""
         return self.points if self.points in {link.values for link in self.links} else None
 
     @property
     def curve(self) -> tuple[PiecewiseLinkSpec, PiecewiseLinkSpec]:
         """The two links as ``(x, y)``, the bounded one last.
 
-        Two-link blocks only.
+        Two-link entries only.
         """
         x, y = self.links
         return (y, x) if x.sign != '==' else (x, y)
@@ -1100,11 +1100,11 @@ class Spec(_StrictSpec):
 
         Computing it *is* the expression pass, so a spec the language refuses
         raises here; loading forces it, so every ask on a spec in hand is the
-        one object. It mirrors the spec: a ``piecewise:`` block still in it is
-        a curve under ``program.piecewise`` and a ``sos:`` block a set under
+        one object. It mirrors the spec: a ``piecewise:`` entry still in it is
+        a curve under ``program.piecewise`` and an ``sos:`` entry a set under
         ``program.sos``, and [`expand`][] is what writes either out as rows,
         so a consumer building rows reads ``spec.expand(...).program`` and
-        refuses a block it does not take.
+        refuses an entry it does not take.
         """
         from mathspec.lowering import lower
 
@@ -1195,8 +1195,8 @@ class Spec(_StrictSpec):
 
         A formulation states rows rather than being one — ``piecewise:`` states
         a curve, ``sos:`` states which members of a family may be nonzero.
-        Expanding one writes those rows under names prefixed with the block's
-        own, and drops the block. The result is a different spec: it declares
+        Expanding one writes those rows under names prefixed with the entry's
+        own, and drops the entry. The result is a different spec: it declares
         more variables and constraints, so it does not compare equal to this
         one. It declares the same dimensions and parameters, so the same data
         attaches to both. Nothing is cached, so a second call builds the
@@ -1209,7 +1209,7 @@ class Spec(_StrictSpec):
                 ``method: sos2`` curve emits a set and no set emits a curve.
 
         Returns:
-            The spec with those blocks written out, or this same object where
+            The spec with those sections written out, or this same object where
             it declares none of them, so an expansion asked for the same kinds
             again returns itself. It is a spec like any other: [`to_yaml`][]
             writes it, and [`program`][] holds its rows.
