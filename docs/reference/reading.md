@@ -303,7 +303,7 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 
 - **The sections come in one order**, whatever order the file wrote them in:
   `version`, `description`, `given`, `dimensions`, `relations`, `parameters`,
-  `variables`, `constraints`, `objective`, `expressions`, `macros`,
+  `variables`, `constraints`, `objective`, `expressions`, `masks`, `macros`,
   `piecewise`, `sos`, `assumptions`. The keys of a declaration also come in one
   order.
 - **Declarations are sorted by name** within each section.
