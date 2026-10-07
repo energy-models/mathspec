@@ -61,7 +61,7 @@ dimensions:
   generator: { dtype: str }
 parameters:
   cost: { dims: [generator] } # refused: every generator has a cost
-  ramp_limit: { dims: [generator], missing: neutral } # no row means no limit
+  start_up_cost: { dims: [generator], missing: neutral } # no row means no cost
   p_set: { dims: [generator], missing: absent } # no row, no fixing row
   efficiency: { dims: [generator], missing: 1 }
   p_nom_max: { dims: [generator], missing: .inf }
