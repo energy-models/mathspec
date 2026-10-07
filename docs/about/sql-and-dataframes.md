@@ -9,6 +9,8 @@ This page explains each construct of a spec in relational terms. Read it if you
 think in SQL, polars or pandas, and want to know what a line of a spec does to
 the tables it reads. The [language reference](../reference/language/index.md)
 holds the rules. This page only translates them.
+[Relations as linear maps](relations-as-linear-maps.md) gives the same
+operators in the terms of linear algebra.
 
 The spec below is used throughout. A generator `p` serves the load at its bus in
 each snapshot:
@@ -52,8 +54,8 @@ gap a parameter has, and its [`missing:`](../reference/language/declarations.md#
 says what that gap means.
 
 **A variable and a constraint are tables of rows to build.** `p` has one
-column per coordinate of `(snapshot, generator)`, and `balance` has one row per
-coordinate of `(snapshot, bus)`.
+decision variable per coordinate of `(snapshot, generator)`. `balance` has one
+row per coordinate of `(snapshot, bus)`.
 
 **A relation is a table whose `key:` is its primary key.**
 `gen_bus: { key: generator, values: bus }` is a two-column table with one row
@@ -62,14 +64,16 @@ row. With `missing: absent`, a generator may have no row.
 
 ## Absence is a missing row
 
-**A `where:` is a `WHERE` on the rows a declaration builds.** `p` has no column
-for a generator with `p_max = 0`. The coordinate is not set to zero. It does not
-exist, so every expression that reads it sees no row.
+**A `where:` is a `WHERE` on the rows a declaration builds.** `p` has no decision
+variable for a generator with `p_max = 0`. The coordinate is not set to zero.
+It does not exist, so every expression that reads it sees no row.
 
 **Arithmetic is an inner join on the shared key columns.** `p * cost` joins the
 table of `p` and the table of `cost` on `generator`. A key column only one side
 carries is crossed, so `p * cost` has the columns `snapshot` and `generator`. A
-coordinate with no row on either side has no row in the result. The
+coordinate with no row on either side has no row in the result. Under the
+default `missing: refused`, a parameter has every row, so the join drops only
+what a `where:` or a `missing: absent` left out. The
 [dimension table](../reference/language/expressions.md#how-dimensions-combine)
 gives the key columns of every expression before any data exists.
 
@@ -83,7 +87,7 @@ including where a summing operator stops a missing row from spreading.
 
 ## Operators are queries
 
-Each operator is one query shape. In the SQL column, `rest` stands for every key
+Each operator below is one query shape. In the SQL column, `rest` stands for every key
 column of the operand that the operator does not name, and `x` holds the
 operand's value.
 
@@ -92,27 +96,30 @@ operand's value.
 | `sum(x, over=d)`                 | `SELECT rest, SUM(value) FROM x GROUP BY rest`                                                | `x.group_by(rest).agg(pl.col('value').sum())`                          |
 | `sum(x)`                         | `SELECT SUM(value) FROM x`                                                                    | `x.select(pl.col('value').sum())`                                      |
 | `sum(x, over=d, by=R[c])`        | `SELECT rest, R.c, SUM(value) FROM x JOIN R ON x.d = R.d GROUP BY rest, R.c`                  | `x.join(R, on=d).group_by([*rest, c]).agg(pl.col('value').sum())`      |
-| `at(x, by=R[c])`                 | `SELECT R.key, value FROM R JOIN x ON R.c = x.c`                                              | `R.join(x, on=c)`                                                      |
+| `at(x, by=R[c])`                 | `SELECT R.key, rest, value FROM R JOIN x ON R.c = x.c`                                        | `R.join(x, on=c)`                                                      |
 | `shift(x, along=d, offset=n)`    | `LAG(value, n) OVER (PARTITION BY rest ORDER BY d)`, and the first `n` rows are dropped       | `pl.col('value').shift(n).over(rest, order_by=d)`, then drop the nulls |
 | `shift(…, edge=v)`               | `LAG(value, n, v) OVER (PARTITION BY rest ORDER BY d)`                                        | `pl.col('value').shift(n, fill_value=v).over(rest, order_by=d)`        |
 | `sum_back(x, along=d, window=n)` | `SUM(value) OVER (PARTITION BY rest ORDER BY d ROWS BETWEEN n - 1 PRECEDING AND CURRENT ROW)` | `pl.col('value').rolling_sum(n, min_samples=1).over(rest, order_by=d)` |
 
-The SQL is a reading aid, not a lowering. Four points differ from the literal
-query:
+The SQL is a reading aid, not a lowering. Four points need more than the query
+in the table:
 
 - **`shift` and `sum_back` count positions of the dimension, not rows of the
   table.** `LAG` steps over a missing row to the row before it. `shift` reads the
   missing row instead, and the result is absent there. The window functions
   above are exact only where every position has a row.
-- **`edge='wrap'` has no `LAG` spelling.** The first position reads the last
-  one.
+- **`edge='wrap'` has no window-function spelling.** In `shift`, the first
+  position reads the last one. In `sum_back`, the window reaches around to the
+  end of the dimension.
+- **`window=p` has no frame spelling.** `p` is a parameter, so each entity has
+  its own window length. A SQL frame takes a constant. Write it as a self-join
+  on the positions from `d - p + 1` to `d`.
 - **`within=R[c]` adds the group to the partition.** `shift(…, within=R[c])` is
   `PARTITION BY rest, R.c`, after a join with `R`.
-- **A sum keeps the row where some summands are missing.** The missing summand
-  is one term fewer. `SUM` over the rows that remain does the same.
 
-The [operator reference](../reference/language/operators.md) says what each
-operator accepts and refuses.
+The table covers `sum`, `at`, `shift` and `sum_back`. The
+[operator reference](../reference/language/operators.md) holds every operator,
+and says what each one accepts and refuses.
 
 ## Why there is no join operator
 
@@ -122,7 +129,7 @@ sums away, and that column is not a dimension, so no declaration can carry it.
 [limits](limits.md#deliberate-non-primitives) page holds the refusal and its
 rewrite.
 
-So the query shapes above are all the shapes a spec can state. A query outside
-them, such as a pivot, a string operation or a join on a computed column, is
-[data preparation](limits.md#what-counts-as-data-preparation). It happens
+So a spec combines two tables only through arithmetic, `sum(by=)` and
+`at(by=)`. A query outside the language, such as a pivot, a string operation or
+a join on a computed column, is [data preparation](limits.md#what-counts-as-data-preparation). It happens
 before the data reaches the spec.

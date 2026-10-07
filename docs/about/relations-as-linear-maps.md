@@ -9,6 +9,8 @@ This page says what a [relation](../reference/language/relations.md) is in the
 language of linear algebra. It then shows that the join and group-by on that
 page are one computation with the sum a paper prints. Read it if "joined on"
 and "grouped by" read as database words and you want the math they stand for.
+[A spec in SQL and dataframe terms](sql-and-dataframes.md) gives the same
+operators as queries.
 
 ```yaml
 dimensions:
