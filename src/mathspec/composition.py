@@ -876,11 +876,13 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
                 f'but never withdraws it: leave `ordered` out of the patch.'
             )
         if (joined := _joined(section, base, laid, lambda written: _without(written, 'missing'))) is None:
+            claim = 'ordered' if section == 'dimensions' else 'missing'
             raise LanguageError(
                 f"patch '{name}' declares the {singular} '{key}' as {block!r}, where its base "
                 f'declares {out[key]!r}. A patch adjusts the math, not the coordinate space the math is '
-                f'already written over: restate the declaration word for word, leave it out, or give the '
-                f'patch {_a(singular)} of its own under a name of its own.'
+                f'already written over: each field but `{claim}` has to read as the base reads it, and a '
+                f'field the patch leaves out reads as its default. Restate the {singular} as its base '
+                f'declares it, leave it out, or give the patch {_a(singular)} of its own under a name of its own.'
             )
         out[key] = joined
     return out
