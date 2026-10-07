@@ -77,6 +77,7 @@ nav:
       - The limits: about/limits.md
       - Versions: about/versions.md
       - Relations as linear maps: about/relations-as-linear-maps.md
+      - A spec in SQL and dataframe terms: about/sql-and-dataframes.md
       - Changelog: changelog.md
   # Everything a spec writer does not need, grouped by reader: whoever
   # writes a tool against `Spec` and `Program` (an engine such as specsolve, a
