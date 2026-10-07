@@ -1504,7 +1504,7 @@ A source feeds two sinks over links whose energy arrives late. The PyPSA `delay`
 holds back the delivery of a port by a number of snapshots. `cyclic_delay` says
 what happens to flow still in transit at the end of the horizon: it wraps to the
 start, or it is lost. The delay is a number per link, and the wrap is a kind per
-link, so the balance turns them on with a `cases:` block over `shift(…,
+link, so the balance turns them on with `cases:` over `shift(…,
 offset=Link_output_delay, edge=…)`. One case wraps (`edge='wrap'`), and the
 other vacates (`edge=0`).
 
@@ -1559,7 +1559,7 @@ def build():
     ``pipe_lose`` delays by one and does not wrap, so the flow that would arrive
     in the first snapshot is lost and that snapshot's demand falls to the backup.
     The two links differ in both a per-link number (`delay`) and a per-link kind
-    (`cyclic_delay`), which is what the spec's ``cases:`` block turns on.
+    (`cyclic_delay`), which is what the spec's ``cases:`` turns on.
     """
     import pypsa
 

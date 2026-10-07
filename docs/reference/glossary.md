@@ -45,9 +45,15 @@ The host model will hold a column or a row family of that name, on the same fram
 A consumer is responsible for checking that the host provides each given name
 ([what a program does not build](reading.md#what-a-program-does-not-build)).
 
+**Section**
+: One of the thirteen top-level keys of a file, such as `parameters:` or
+`given:`, and the entries under it ([file shape](language/file.md)).
+
 **Entry**
-: One named item under one of the top-level keys: one dimension, one
-parameter, one constraint ([file shape](language/file.md)).
+: One named item under one section: one dimension, one parameter, one
+constraint ([file shape](language/file.md)). In Python, an entry is a
+`*Spec` in `mathspec.spec`, such as `VariableSpec`, and a class with the
+bare name in `mathspec.program`, such as `Variable`.
 
 ## Coordinates
 
@@ -104,12 +110,13 @@ New constructs (primitives, formulations, macros) are not allowed ([how a new co
 
 The meaning of some words changes depending on the context in which they appear in the docs.
 
-| Word     | One sense                                               | The other sense                                               |
-| -------- | ------------------------------------------------------- | ------------------------------------------------------------- |
-| row      | a constraint at one coordinate                          | one line of a parameter's or a relation's table               |
-| column   | a variable at one coordinate                            | one column of a data table or a relation                      |
-| set      | an `sos:` entry                                         | the set symbol of a dimension, $\mathcal{G}$, in the legend   |
-| regime   | one case of a [`cases:`](language/named.md#cases) block | one of two constraints, each under its own `where:`           |
-| domain   | a variable's `continuous`, `integer` or `binary`        | the rows that hold a curve's link inside its breakpoint range |
-| program  | `spec.program`, the typed spec                          | a linear or quadratic program, the problem a solver takes     |
-| the rows | the constraint rows of a spec                           | the expanded spec: the spec a formulation is written out as   |
+| Word     | One sense                                          | The other sense                                               |
+| -------- | -------------------------------------------------- | ------------------------------------------------------------- |
+| row      | a constraint at one coordinate                     | one line of a parameter's or a relation's table               |
+| column   | a variable at one coordinate                       | one column of a data table or a relation                      |
+| set      | an `sos:` entry                                    | the set symbol of a dimension, $\mathcal{G}$, in the legend   |
+| regime   | one case under [`cases:`](language/named.md#cases) | one of two constraints, each under its own `where:`           |
+| domain   | a variable's `continuous`, `integer` or `binary`   | the rows that hold a curve's link inside its breakpoint range |
+| program  | `spec.program`, the typed spec                     | a linear or quadratic program, the problem a solver takes     |
+| the rows | the constraint rows of a spec                      | the expanded spec: the spec a formulation is written out as   |
+| section  | a top-level key of the file, such as `parameters:` | a heading of a typeset document, such as **Definitions**      |

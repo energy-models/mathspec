@@ -88,5 +88,5 @@ regime, and committable and non-committable generators are the usual case.
    message that names the rewrite.
 
 What a `where:` means is under [absence](../reference/language/absence.md);
-what a `cases:` block accepts is under
+what `cases:` accepts is under
 [named expressions](../reference/language/named.md#cases).

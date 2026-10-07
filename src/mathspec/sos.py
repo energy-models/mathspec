@@ -31,7 +31,7 @@ Coefficients = tuple[float | str | None, float | str | None]
 def coefficients(domain: str, lower: float | str | None, upper: float | str | None) -> Coefficients:
     """What a member's two linking rows multiply its binary by, ``None`` on a side the spec leaves open.
 
-    The 0 and 1 a binary's domain fixes, which no bounds block carries;
+    The 0 and 1 a binary's domain fixes, which no ``bounds:`` carries;
     otherwise the member's own declared bounds, each a number or the name of a
     parameter. A parameter is a coefficient like any other: it is what the row
     multiplies by, and no rewrite needs to know its value. Nothing else is a
@@ -142,7 +142,7 @@ def _scaled(factor: float | str, picked: str) -> str:
 def _coefficients(member: dict[str, object]) -> tuple[float | str, float | str]:
     """The two coefficients as an expression writes them, read off the member."""
     declared = member.get('bounds')
-    assert declared is None or isinstance(declared, dict), 'a validated spec carries a bounds block as a mapping'
+    assert declared is None or isinstance(declared, dict), 'a validated spec carries `bounds:` as a mapping'
     lower, upper = (declared.get('lower'), declared.get('upper')) if declared else (None, None)
     assert isinstance(lower, float | str | None) and isinstance(upper, float | str | None), (
         'a bound is a number, the name of a parameter, or open'

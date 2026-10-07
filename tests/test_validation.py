@@ -806,7 +806,7 @@ class TestAWhereSideIsReadInResolution:
 
     @pytest.mark.parametrize('fmt', sorted(FORMATS))
     def test_a_lone_case_comparing_expressions_loads(self, fmt: FormatName):
-        """A block of one case that compared expressions was refused as if it
+        """A `cases:` with one case that compared expressions was refused as if it
         could overlap its `otherwise`. The `otherwise` is built as the complement
         of the cases, so one case overlaps nothing, and the same comparison
         loaded inside `shift(..., offset=0)` (#794)."""
@@ -1979,12 +1979,12 @@ class TestExpressionCases:
             pytest.param({'cases': OPENING, 'otherwise': 0}, '`cases:` needs a `dims:`', id='no-dims'),
             pytest.param(
                 {'dims': ['snapshot', 'generator'], 'cases': OPENING},
-                'a `cases:` block needs an `otherwise:`',
+                '`cases:` needs an `otherwise:`',
                 id='no-otherwise',
             ),
             pytest.param(
                 {'expression': 'load', 'otherwise': 0},
-                '`otherwise:` needs a `cases:` block',
+                '`otherwise:` needs `cases:`',
                 id='otherwise-alone',
             ),
         ],

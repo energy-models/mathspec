@@ -706,7 +706,7 @@ class Walk:
 
         A use prints the symbol and the entry prints here, as a paper states a
         quantity it names. Every declared one prints, used or not. Inlining
-        substitutes away the plain ones the math reads; a ``cases`` block has
+        substitutes away the plain ones the math reads; a cased expression has
         no single body to substitute, and an entry the math never reads has
         nowhere to be substituted *into*, so both still print.
         """
@@ -716,7 +716,7 @@ class Walk:
         """The named expressions that print under their own symbol: every one, or only the unsubstitutable when inlining.
 
         Inlining leaves a name standing only where substitution cannot reach
-        it — a ``cases`` block, an entry the objective and constraints never
+        it — a cased expression, an entry the objective and constraints never
         read, which is a quantity reported back rather than solved for, and a
         term this file adds to a sum, which the math reads only as that sum's
         symbol.

@@ -399,7 +399,7 @@ class BoundsSpec(_StrictSpec):
     and the other infinity leaves no value at all.
     """
 
-    _label: ClassVar[str] = 'a bounds block'
+    _label: ClassVar[str] = "a variable's 'bounds:'"
 
     lower: float | str | None = None
     upper: float | str | None = None
@@ -706,10 +706,10 @@ class ExpressionSpec(_StrictSpec):
             msg = '`cases:` needs a `dims:`. Add `dims:` with the dimensions the cases range over.'
             raise ValueError(msg)
         if self.cases and self.otherwise is None:
-            msg = 'a `cases:` block needs an `otherwise:`. Add `otherwise:` with the value where no `when` holds.'
+            msg = '`cases:` needs an `otherwise:`. Add `otherwise:` with the value where no `when` holds.'
             raise ValueError(msg)
         if self.otherwise is not None and not self.cases:
-            msg = '`otherwise:` needs a `cases:` block. For one value everywhere, write `expression:` instead.'
+            msg = '`otherwise:` needs `cases:`. For one value everywhere, write `expression:` instead.'
             raise ValueError(msg)
         return self
 

@@ -82,7 +82,7 @@ def test_a_set_carries_no_coefficient_of_its_own():
 
 
 def test_a_coefficient_of_one_is_left_out_of_the_row_rather_than_printed():
-    """A binary carries no bounds block, and its upper bound is 1 all the same — which multiplies nothing."""
+    """A binary carries no `bounds:`, and its upper bound is 1 all the same — which multiplies nothing."""
     spec = spec_of(varied(PICKED, **{'variables.p': {'dims': ['g'], 'domain': 'binary'}}))
 
     assert spec.expand('sos').constraints['pick_nonzero'].expression == 'p <= (pick_seg)'

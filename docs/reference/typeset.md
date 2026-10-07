@@ -57,7 +57,7 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
   heading.
 - A [named expression](language/named.md) prints its symbol where it is used
   and its body once, under a **Definitions** heading, in file order. A
-  `cases:` block, a [reported entry](language/named.md#reported-expressions)
+  cased expression, a [reported entry](language/named.md#reported-expressions)
   and a [term](language/parameters-variables-constraints.md#terms) keep their definition line
   under either `inline_expressions` setting.
 - A [mask](language/named.md#masks) prints its upright symbol where a file

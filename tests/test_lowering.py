@@ -813,8 +813,8 @@ def test_walk_regions_carries_the_regions_a_node_stands_under():
         (Constant(0.0), (OUTER, ~INNER)),
         (ParameterReference('q'), (~OUTER,)),
     ], (
-        'parents first; a node outside any block carries nothing; a `Cases` carries only the regions '
-        'above it; a value under two blocks carries both, the outer one first'
+        'parents first; a node outside any `cases:` carries nothing; a `Cases` carries only the regions '
+        'above it; a value under two `cases:` carries both, the outer one first'
     )
 
 

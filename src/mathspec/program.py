@@ -1164,7 +1164,7 @@ def walk_regions(*expressions: Expression) -> Iterator[tuple[Expression, tuple[M
 
     The regions are the ``when`` of every [`Cases`][] region the node's
     value stands under, the outermost first, which is the order the masks
-    conjoin in. A node outside any ``cases:`` block carries the empty tuple,
+    conjoin in. A node outside any ``cases:`` carries the empty tuple,
     and a ``Cases`` node carries only the regions above it, not its own. The
     tuple rather than one conjoined mask: what a consumer does with the
     regions is its own, and the conjunction is one ``&`` away.

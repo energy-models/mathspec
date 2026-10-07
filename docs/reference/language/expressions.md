@@ -303,7 +303,7 @@ constraints:
 ```
 
 A [case `when:`](named.md#the-rules-that-keep-the-cases-apart) may compare
-expressions only in a block with one case. A comparison with a number on both
+expressions only where `cases:` holds one case. A comparison with a number on both
 sides, such as `2 < 1`, is refused everywhere.
 
 ### `position()`

@@ -113,10 +113,10 @@ A named expression carries **exactly one** of `expression:` and `cases:`.
   `position(snapshot) == 0` and `position(snapshot) == -1` pick the same row on
   a dimension with one member, so count from one end only.
 
-- In a block of two or more cases, a `when:` may not compare expressions, such
+- Where `cases:` holds two or more cases, a `when:` may not compare expressions, such
   as `c > 2 * k`, because the loader cannot prove such a case apart from the
   others before the data arrives. Precompute the test as a boolean parameter. A
-  block with one case may compare expressions, because its `otherwise:` claims
+  `cases:` with one case may compare expressions, because its `otherwise:` claims
   only what the case leaves.
 
 - Each `when:` and each value sits inside the frame, and a narrower case

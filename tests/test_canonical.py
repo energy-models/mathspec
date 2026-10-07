@@ -161,7 +161,7 @@ def _written_backwards(raw: object, depth: int = 3) -> object:
     """*raw* with every mapping down to *depth* levels written in reverse order.
 
     Three levels reach the sections, the entries of each section and the
-    keys of each entry. They stop above a `cases:` block, whose regions
+    keys of each entry. They stop above `cases:`, whose regions
     are a mapping that the form keeps in the file's order.
     """
     if depth == 0 or not isinstance(raw, dict):
@@ -217,7 +217,7 @@ def _piecewise_with_its_links_reversed() -> dict[str, object]:
         pytest.param(
             raw_of(EXAMPLES / 'commitment.yaml'),
             _commitment_with_its_cases_reversed(),
-            id='the-regions-of-a-cases-block',
+            id='the-regions-under-cases',
         ),
         pytest.param(
             raw_of(EXAMPLES / 'piecewise.yaml'),

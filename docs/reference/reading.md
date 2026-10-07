@@ -326,7 +326,7 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
   reviewer sees a changed coefficient in the diff.
 
 Four things are left as the file wrote them: a predicate in the `where`
-grammar, the order of a `cases:` block's regions, the order of an entry's
+grammar, the order of the regions under `cases:`, the order of an entry's
 `dims`, and the order of a piecewise entry's links. A difference in any of them
 is a difference in the text.
 
