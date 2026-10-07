@@ -107,7 +107,7 @@ def test_a_fragment_reads_what_a_sibling_declares():
 
 
 def test_a_fragment_that_does_not_load_on_its_own_is_refused():
-    """A sibling's declarations must not make a broken file load: a fragment is a spec before it is a piece."""
+    """A sibling's entries must not make a broken file load: a fragment is a spec before it is a piece."""
     unread = {key: value for key, value in SUPPLY.items() if key != 'given'}
     with pytest.raises(LanguageError, match=r"fragment '#2' does not load on its own") as raised:
         merge([SURFACE, unread, DEMAND])
@@ -177,14 +177,14 @@ def test_a_disagreement_between_fragments_is_refused(fragments, says):
 
 
 def _said(fragment: dict[str, object], section: str, name: str, words: str) -> dict[str, object]:
-    """*fragment* with the declaration *name* under *section* described as *words*."""
-    block = copy.deepcopy(fragment)
-    entries = block[section] if section != 'given' else block['given']['variables']
+    """*fragment* with the entry *name* under *section* described as *words*."""
+    spec = copy.deepcopy(fragment)
+    entries = spec[section] if section != 'given' else spec['given']['variables']
     entries[name] = {**entries[name], 'description': words}
-    return block
+    return spec
 
 
-#: Two fragments that word one declaration differently.
+#: Two fragments that word one entry differently.
 WORDED = [
     pytest.param('dimensions', 'snapshot', id='a-shared-dimension'),
     pytest.param('given', 'flow', id='a-reading-nothing-introduces'),
@@ -265,7 +265,7 @@ def test_two_fragments_that_read_a_missing_key_apart_are_refused(fragments):
         pytest.param('a flow', 'a flow', id='the-owner-s-own-wins'),
     ],
 )
-def test_a_reader_s_description_fills_a_declaration_that_has_none(owner, carried):
+def test_a_reader_s_description_fills_an_entry_that_has_none(owner, carried):
     """A reader's words about a name were dropped when the name was folded, even where the owner wrote none."""
     surface = _said(SURFACE, 'variables', 'flow', owner) if owner else SURFACE
     supply = _said(SUPPLY, 'given', 'flow', 'what a port puts into its bus')
@@ -422,7 +422,7 @@ def test_the_base_and_the_patches_are_never_mutated():
     assert before == (DISPATCH_MODEL, patches), 'a patched base is a new mapping, and both inputs are untouched'
 
 
-def test_a_whole_declaration_is_created_and_the_model_loads():
+def test_a_whole_entry_is_created_and_the_model_loads():
     spec = override(DISPATCH_MODEL, [CARBON])
     assert 'co2_cap' in spec.constraints
     assert to_markdown(spec), 'a composed spec is one a reviewer can read as math'
@@ -449,15 +449,15 @@ def test_a_whole_declaration_is_created_and_the_model_loads():
     ],
 )
 def test_a_partial_entry_that_lands_on_nothing_is_refused(patch, says):
-    """The typo case: laying a partial entry on nothing would invent a declaration nothing refers to."""
+    """The typo case: laying a partial entry on nothing would invent an entry nothing refers to."""
     with pytest.raises(LanguageError, match=r'does not declare') as raised:
         override(DISPATCH_MODEL, [patch])
     assert says in str(raised.value), 'the refusal says what the entry is short of, or what it nearly named'
 
 
-def test_a_null_removes_a_declaration_and_the_model_still_loads():
+def test_a_null_removes_an_entry_and_the_model_still_loads():
     laid = override(DISPATCH_MODEL, [{'constraints': {'balance': None}}])
-    assert laid.constraints == {}, 'the declaration is gone rather than emptied'
+    assert laid.constraints == {}, 'the entry is gone rather than emptied'
 
 
 def test_a_stale_removal_is_refused():
@@ -485,7 +485,7 @@ def test_a_stale_removal_is_refused():
     ],
 )
 def test_a_null_field_takes_its_default(patch, field, default):
-    """`null` makes what it names absent: a declaration is removed, and a field takes its default.
+    """`null` makes what it names absent: an entry is removed, and a field takes its default.
 
     A field that takes no null was the case that failed: `domain: null` was laid
     as a value the schema refuses, so a patch could not put a field back to its
@@ -573,17 +573,17 @@ def test_a_patch_that_withdraws_ordered_is_refused():
     [
         pytest.param(
             {'dimensions': {'snapshot': {'dtype': 'str'}}},
-            'Restate the declaration word for word',
+            'Restate the entry word for word',
             id='declared-as-something-else',
         ),
         pytest.param(
             {'dimensions': {'snapshot': {}}},
-            'Restate the declaration word for word',
+            'Restate the entry word for word',
             id='restated-in-part',
         ),
         pytest.param(
             {'dimensions': {'snapshot': None}},
-            'remove the declarations written over it one at a time',
+            'remove the entries written over it one at a time',
             id='removed',
         ),
     ],
@@ -658,7 +658,7 @@ def test_a_whole_section_set_to_null_is_refused(patch):
     """Nulling a section reads as emptying it, and laying it silently changed nothing at all."""
     with pytest.raises(LanguageError, match=r'removes nothing') as raised:
         override(DISPATCH_MODEL, [patch])
-    assert 'one at a time' in str(raised.value), 'the refusal names the rewrite, which is one null per declaration'
+    assert 'one at a time' in str(raised.value), 'the refusal names the rewrite, which is one null per entry'
 
 
 def test_the_objective_is_laid_over_field_by_field():
@@ -700,7 +700,7 @@ def test_a_patch_over_one_kind_of_given_leaves_the_other_alone():
     """`given:` is laid over a kind at a time, so patching the columns cannot drop the row families."""
     laid = override(GIVEN_BASE, [{'given': {'variables': {'p': {'domain': 'binary'}}}}])
     p = laid.given.variables['p']
-    assert (p.dims, p.domain) == (['g'], 'binary'), 'the given column is edited field by field like any declaration'
+    assert (p.dims, p.domain) == (['g'], 'binary'), 'the given column is edited field by field like any entry'
     assert sorted(laid.given.constraints) == ['cap'], 'the kind the patch did not name is still there'
 
 
@@ -712,7 +712,7 @@ def test_a_patch_over_one_kind_of_given_leaves_the_other_alone():
     ],
 )
 def test_a_whole_given_entry_is_created_and_the_model_loads(base, reads):
-    """A patch adds a column to read, whether or not the base opened the block."""
+    """A patch adds a column to read, whether or not the base opened the `given:` section."""
     laid = override(base, [{'given': {'variables': {'q': {'dims': ['g']}}}}])
     assert sorted(laid.given.variables) == reads, 'the created column joins whatever the base read'
 

@@ -50,8 +50,8 @@ def _built_blocks(program: Program) -> Iterator[_Block]:
     the constraint sides reaches it, and walking it again would report one
     coupling twice.
     """
-    for name, block in program.constraints.items():
-        yield _Block(f"constraint '{name}'", name, (block.lhs, block.rhs), block.where, True)
+    for name, constraint in program.constraints.items():
+        yield _Block(f"constraint '{name}'", name, (constraint.lhs, constraint.rhs), constraint.where, True)
     for name, variable in program.variables.items():
         bounds = tuple(side for side in (variable.lower, variable.upper) if side is not None)
         yield _Block(f"variable '{name}'", None, bounds, variable.where, True)
@@ -142,24 +142,24 @@ def separabilities(program: Program) -> dict[str, Separability]:
                 if isinstance(atom, DimensionPosition):
                     report('restarts', atom.name, label, f'counts a position along {atom.name}')
 
-    for name, block in program.sos.items():
+    for name, entry in program.sos.items():
         report(
             'coupled',
-            block.along,
+            entry.along,
             f"set '{name}'",
-            f'is a set along {block.along} (cut only between whole sets)',
+            f'is a set along {entry.along} (cut only between whole sets)',
         )
 
     def joined(kind: str, dimension: str) -> dict[str, str]:
         return {label: ', '.join(dict.fromkeys(found)) for label, found in reasons[kind][dimension].items()}
 
     def linking_rows(dimension: str) -> tuple[str, ...]:
-        """Each constraint no one window of *dimension* holds whole, in declaration order.
+        """Each constraint no one window of *dimension* holds whole, in file order.
 
         Two shapes reach the border by different routes, and a constraint that
         takes both is still one name: a row the axis does not index stands in
-        every window, and a row a coupling names reads the whole axis. Only a
-        declaration that builds a row can put one here, which is what ``rows``
+        every window, and a row a coupling names reads the whole axis. Only an
+        entry that builds a row can put one here, which is what ``rows``
         holds the coupled labels to.
         """
         coupled = {rows[label] for label in reasons['coupled'][dimension] if label in rows}

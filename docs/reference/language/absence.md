@@ -36,8 +36,8 @@ hold.
 | a missing row of a `missing: absent` parameter    | the parameter, at that coordinate                                           |
 
 Nothing else creates absence. A missing row is the only gap a parameter can
-have, because a null or NaN value is [refused](declarations.md#parameters) when
-the data is attached. The parameter's [`missing:`](declarations.md#a-missing-row)
+have, because a null or NaN value is [refused](parameters-variables-constraints.md#parameters) when
+the data is attached. The parameter's [`missing:`](parameters-variables-constraints.md#a-missing-row)
 key says what a missing row is:
 
 | `missing:`            | A missing row                                                                               |

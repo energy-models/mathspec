@@ -15,7 +15,7 @@ from mathspec.errors import SchemaError
 from mathspec.program import Axis, Column, Join, Mask, RelationPairComparison, Sum
 from mathspec.resolution import Namespace
 from mathspec.validation import to_spec
-from tests.fixtures import DISPATCH_MODEL, expression_of, schema_of, varied, where_of
+from tests.fixtures import DISPATCH_MODEL, expression_of, spec_of, varied, where_of
 
 if TYPE_CHECKING:
     from mathspec.spec import Spec
@@ -63,18 +63,18 @@ BASE = {
 }
 
 
-def _schema(**overrides) -> Spec:
-    return schema_of(BASE, **overrides)
+def _spec(**overrides) -> Spec:
+    return spec_of(BASE, **overrides)
 
 
 def _dims(expr: str) -> frozenset[str]:
-    s = _schema()
+    s = _spec()
     return dims_of(expression_of(expr, Namespace(s), 't'), s, 't')
 
 
 @pytest.fixture
 def namespace() -> Namespace:
-    return Namespace(_schema())
+    return Namespace(_spec())
 
 
 # ---------------------------------------------------------------------------
@@ -200,7 +200,7 @@ def test_dim_inference(expr, expected):
 
 
 def _dims_with(expr: str, **overrides) -> frozenset[str]:
-    s = _schema(**overrides)
+    s = _spec(**overrides)
     return dims_of(expression_of(expr, Namespace(s), 't'), s, 't')
 
 
@@ -257,7 +257,7 @@ def test_a_join_opens_an_axis_for_the_column_it_drops_and_the_sum_over_it_closes
     `rep_of[snapshot]`, so it is not the dimension's own axis. The sum over
     the join closes it, and the frame keeps the `snapshot` the row groups by.
     """
-    s = _schema()
+    s = _spec()
     node = expression_of('sum(p, over=snapshot, by=rep_of[rep])', Namespace(s), 't')
     assert isinstance(node, Sum) and isinstance(node.operand, Join)
     assert node.over == (Axis('snapshot', Column('rep_of', 'snapshot')),), 'the sum stands over the axis the join opens'
@@ -271,7 +271,7 @@ def test_a_sum_joins_on_a_key_column_and_a_value_column_together():
 
 def test_a_dual_carries_the_constraints_own_frame():
     """`dual(c)` is a row dual at every coordinate of the constraint's declared `dims`."""
-    s = _schema()
+    s = _spec()
     assert _dims_with('dual(balance)') == frozenset(s.constraints['balance'].dims) == {'snapshot', 'bus'}
 
 
@@ -451,7 +451,7 @@ def test_an_outer_product_is_legal_and_carries_both_dim_sets():
 
 
 # ---------------------------------------------------------------------------
-# declaration-level rules
+# entry-level rules
 # ---------------------------------------------------------------------------
 
 
@@ -485,9 +485,9 @@ def test_an_outer_product_is_legal_and_carries_both_dim_sets():
         ),
     ],
 )
-def test_an_ill_dimensioned_declaration_is_rejected(patch, match):
+def test_an_ill_dimensioned_entry_is_rejected(patch, match):
     with pytest.raises(DimensionError, match=match):
-        _schema(**patch)
+        _spec(**patch)
 
 
 class TestTheEdgeRulesAreDecidedAtLoad:
@@ -641,8 +641,8 @@ def test_the_frame_check_and_the_reading_walk_the_same_leaves(namespace):
         pytest.param('False', set(), id='a-literal-names-nothing'),
     ],
 )
-def test_a_predicate_names_the_declarations_its_leaves_test(namespace, predicate, expected):
-    """A dimension names no declaration — it is a coordinate — so `names_read` drops it where `dims` keeps it."""
+def test_a_predicate_names_the_entries_its_leaves_test(namespace, predicate, expected):
+    """A dimension names no entry — it is a coordinate — so `names_read` drops it where `dims` keeps it."""
     where = where_of(predicate, namespace, 'test')
 
     assert where is not None, 'a predicate the connectives cannot settle survives the fold'
@@ -650,7 +650,7 @@ def test_a_predicate_names_the_declarations_its_leaves_test(namespace, predicate
 
 
 def test_names_read_takes_both_sides_of_a_relation_pair():
-    """The one leaf that names two declarations — two maps compared on the dimension they share.
+    """The one leaf that names two entries — two maps compared on the dimension they share.
 
     BASE has one relation per dimension, so the pair is built directly rather than
     resolved from a predicate string.
@@ -675,7 +675,7 @@ FRAMED = varied(
 
 
 def test_a_declared_frame_is_the_frame_as_written():
-    """A plain entry's frame was its body's, in declaration order; declared, it is the dims: as written."""
+    """A plain entry's frame was its body's, in file order; declared, it is the dims: as written."""
     spec = to_spec(
         varied(FRAMED, **{'expressions.limit': {'dims': ['generator', 'snapshot'], 'expression': 'build * p_max'}})
     )

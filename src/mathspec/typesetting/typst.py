@@ -14,7 +14,7 @@ from mathspec.typesetting.format import OPERATOR_SPELLINGS, aligned_rows, escape
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from mathspec.typesetting.format import Entry, Line, Notation, OperatorName
+    from mathspec.typesetting.format import LegendItem, Line, Notation, OperatorName
 
 _PREAMBLE = """#set page(margin: 2.5cm)
 #set text(size: 11pt)
@@ -132,8 +132,8 @@ class TypstFormat:
         numbering = '#set math.equation(numbering: "(1)")\n' if numbered else ''
         return f'{numbering}$ {body} $'
 
-    def glossary(self, entries: list[Entry]) -> str:
-        return '\n'.join(f'/ {self.math(e.symbol)}: {e.meaning}' for e in entries)
+    def glossary(self, items: list[LegendItem]) -> str:
+        return '\n'.join(f'/ {self.math(e.symbol)}: {e.meaning}' for e in items)
 
     def section(self, title: str, body: str) -> str:
         return f'== {title}\n{body}'

@@ -5,15 +5,15 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # File shape
 
-A spec file is a YAML mapping with **thirteen declaration keys**, plus
+A spec file is a YAML mapping with **thirteen section keys**, plus
 `version` and `description`, and any subset of the thirteen is accepted.
 
 | Key           |                                                                                                   |
 | ------------- | ------------------------------------------------------------------------------------------------- |
-| `given`       | what this file reads but does not build ([given](declarations.md#given))                          |
+| `given`       | what this file reads but does not build ([given](parameters-variables-constraints.md#given))      |
 | `dimensions`  | the dimensions ([dimensions](dimensions.md))                                                      |
 | `relations`   | named relations between dimensions ([relations](relations.md))                                    |
-| `parameters`  | the data the spec expects ([declarations](declarations.md))                                       |
+| `parameters`  | the data the spec expects ([parameters](parameters-variables-constraints.md#parameters))          |
 | `variables`   | what the solver decides                                                                           |
 | `constraints` | the rules those decisions obey                                                                    |
 | `objective`   | what is minimised or maximised                                                                    |
@@ -55,7 +55,7 @@ Upgrade mathspec, or write the version this file targets.
 
 ## Unknown keys
 
-An unknown key is a load error, at the top level and inside every declaration,
+An unknown key is a load error, at the top level and inside every entry,
 and the message names the nearest valid key:
 
 ```text

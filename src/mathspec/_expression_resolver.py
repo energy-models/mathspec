@@ -52,13 +52,13 @@ from mathspec.program import (
     JoinColumns,
     Multiply,
     Negate,
-    Parameter,
+    ParameterReference,
     Partition,
     Power,
-    RelationDeclaration,
+    Relation,
     Sum,
     Translate,
-    Variable,
+    VariableReference,
     WindowSum,
     carries_variable,
     children,
@@ -88,7 +88,7 @@ class ExpressionResolver:
     """One resolution walk over an expression, and the three things every step of it reads.
 
     A node that cannot be built comes back as ``None`` with its refusal
-    appended to ``errors``; every sibling is still read, so a declaration
+    appended to ``errors``; every sibling is still read, so an entry
     with two faults reports both. ``formals`` are a macro template's formals:
     a formal has no kind until a call site binds it, so a node one stands
     under is ``None`` with nothing appended.
@@ -183,7 +183,7 @@ class ExpressionResolver:
 
         A named expression arrives as the one node [`Namespace.named`][]
         built for it; the cast is the one place a
-        [`NamedExpression`][mathspec.program.NamedExpression] enters a tree typed as a program's,
+        [`ExpressionReference`][mathspec.program.ExpressionReference] enters a tree typed as a program's,
         which lowering makes true.
         """
         if node.name in self.formals:
@@ -199,13 +199,13 @@ class ExpressionResolver:
                 return None
         match self.ns.kind(node.name):
             case 'variable':
-                return Variable(node.name)
+                return VariableReference(node.name)
             case 'parameter':
                 dtype = self.ns.dtypes.get(node.name)
                 if dtype is not None and dtype not in NUMERIC_DTYPES:
                     self.errors.append(not_a_number(node.name, dtype, self.context))
                     return None
-                return Parameter(node.name)
+                return ParameterReference(node.name)
             case 'dimension':
                 self.errors.append(
                     f"{self.context}: '{node.name}' is a dimension, and a dimension is "
@@ -302,7 +302,7 @@ class ExpressionResolver:
     def _at(self, operand: Expression, columns: ColumnsNode) -> Expression | None:
         """``at(x, by=relation[column])``: *operand* read at the value of *columns* each row of the relation holds."""
         try:
-            inner = dims_of(operand, self.ns.schema, self.context)
+            inner = dims_of(operand, self.ns.spec, self.context)
         except DimensionError as e:
             self.errors.append(str(e))
             return None
@@ -342,7 +342,7 @@ class ExpressionResolver:
     def _bare_sum(self, operand: Expression) -> Expression | None:
         """``sum(x)`` with no ``over=`` or ``by=`` reduces every dim the operand carries, which it has to carry some of."""
         try:
-            inner = dims_of(operand, self.ns.schema, self.context)
+            inner = dims_of(operand, self.ns.spec, self.context)
         except DimensionError as e:
             self.errors.append(str(e))
             return None
@@ -575,7 +575,7 @@ class ExpressionResolver:
         """How ``sum(x, over=..., by=relation[...])`` joins the relation, and the dims it sums away with no column.
 
         A name in *over* is a column of the relation where it has one, and a
-        dimension otherwise, summed away after the group-by. The declaration
+        dimension otherwise, summed away after the group-by. The entry
         refuses a column named after a dimension it is not over, so the two
         readings never disagree. Every column a call touches is written in it,
         so a relation may gain a column without changing what the call means.
@@ -741,7 +741,7 @@ def _lookup_rewrite(name: str, columns: tuple[str, ...], plain: tuple[str, ...])
     return f'sum({lookup}, over={shown(plain)})' if plain else lookup
 
 
-def _columns_over(shape: RelationDeclaration, dims: tuple[str, ...]) -> str:
+def _columns_over(shape: Relation, dims: tuple[str, ...]) -> str:
     """The columns of *shape* over each of *dims*, for the writer who named a dimension where a column was meant."""
     over = {d: [r for r in shape.roles if shape.dim(r) == d] for d in dims}
     if named := [f'the columns over {d!r} are {roles}' for d, roles in over.items() if roles]:

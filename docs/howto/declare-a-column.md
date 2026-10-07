@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 Decide whether a column of your data is a
 [dimension](../reference/language/dimensions.md), a
 [relation](../reference/language/relations.md) or a
-[parameter](../reference/language/declarations.md#parameters), from what the
+[parameter](../reference/language/parameters-variables-constraints.md#parameters), from what the
 math does with the column.
 
 | The column…                                                                                                                           | is declared as                          |

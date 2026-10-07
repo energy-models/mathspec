@@ -17,7 +17,7 @@ regime, and committable and non-committable generators are the usual case.
      committable: { dims: [generator], dtype: bool }
    ```
 
-2. **Write one block per regime, each under its own `where:`.** The block
+2. **Write one entry per regime, each under its own `where:`.** The entry
    builds rows only where its mask holds, so a regime that needs no row gets
    none:
 
@@ -48,7 +48,7 @@ regime, and committable and non-committable generators are the usual case.
 
    Here a non-committable generator is bounded by `capacity` alone, through the
    variable's `bounds:`. Where the other regime has a rule of its own, write
-   it as a third block under `where: "NOT committable"`.
+   it as a third entry under `where: "NOT committable"`.
 
 3. **Where the regime changes a quantity rather than a rule, name the
    quantity with `cases:`** and write the rule once against it:
@@ -88,5 +88,5 @@ regime, and committable and non-committable generators are the usual case.
    message that names the rewrite.
 
 What a `where:` means is under [absence](../reference/language/absence.md);
-what a `cases:` block accepts is under
+what `cases:` accepts is under
 [named expressions](../reference/language/named.md#cases).

@@ -39,12 +39,12 @@ from mathspec.program import (
     BooleanLiteral,
     Cases,
     Expression,
+    ExpressionReference,
     Mask,
-    NamedExpression,
-    NamedMask,
+    MaskReference,
     Predicate,
     Region,
-    RelationDeclaration,
+    Relation,
     VariableDefined,
     carries_variable,
 )
@@ -55,17 +55,17 @@ if TYPE_CHECKING:
     from mathspec._expression_parser import ComparisonOperator, ParsedNode
     from mathspec._where_parser import ParsedWhere
     from mathspec.program import DeclaredDtype
-    from mathspec.spec import ExpressionBlock, MaskBlock, Spec
+    from mathspec.spec import ExpressionSpec, MaskSpec, Spec
 
 
 #: What a name a file may write turns out to be. Answered by
 #: [`Namespace.kind`][], so a pass reading a name switches over this rather
 #: than over the stores it would otherwise have to try in order.
-DeclarationKind = Literal['variable', 'parameter', 'dimension', 'relation']
+NameKind = Literal['variable', 'parameter', 'dimension', 'relation']
 
 
 class Namespace:
-    """The declared names of one schema, by kind — the whole of what a file may name, read once.
+    """The declared names of one spec, by kind — the whole of what a file may name, read once.
 
     A name has one kind: validation.py refuses one declared under two sections.
     """
@@ -84,66 +84,65 @@ class Namespace:
         'masks',
         'parameters',
         'relations',
-        'schema',
+        'spec',
         'variables',
     )
 
-    def __init__(self, schema: Spec) -> None:
-        #: The schema the names come from. Expressions are expanded and
+    def __init__(self, spec: Spec) -> None:
+        #: The spec the names come from. Expressions are expanded and
         #: dim-checked against it, because macros, named expressions and the dim
-        #: rules read declarations that the flat listing below does not carry.
-        self.schema = schema
-        variables = {**schema.variables, **schema.given.variables, **schema.given.expressions}
-        parameters = {**schema.parameters, **schema.given.parameters}
+        #: rules read entries that the flat listing below does not carry.
+        self.spec = spec
+        variables = {**spec.variables, **spec.given.variables, **spec.given.expressions}
+        parameters = {**spec.parameters, **spec.given.parameters}
         self.variables = frozenset(variables)
-        self.bodies = frozenset(schema.expressions)
+        self.bodies = frozenset(spec.expressions)
         #: The declared masks, read by name wherever a where string is.
-        self.masks = frozenset(schema.masks)
+        self.masks = frozenset(spec.masks)
         #: The masks this file reads under ``given:``. A where reads each as
         #: the boolean data it is to this file, so each is a parameter here too.
-        self.given_masks = frozenset(schema.given.masks)
+        self.given_masks = frozenset(spec.given.masks)
         self.parameters = frozenset(parameters) | self.given_masks
-        self.dimensions = frozenset(schema.dimensions)
+        self.dimensions = frozenset(spec.dimensions)
         #: The declared constraint names, off the flat namespace: a bare name
         #: never reaches them, so a spec may name a constraint after a variable.
         #: Consulted only in ``dual()``'s argument position.
-        self.constraints = frozenset({**schema.constraints, **schema.given.constraints})
+        self.constraints = frozenset({**spec.constraints, **spec.given.constraints})
         #: name -> declared dtype, for dimensions, parameters and relations alike;
         #: what a where comparison checks its literal against.
         self.dtypes: dict[str, DeclaredDtype] = {
             **{p: pd.dtype for p, pd in parameters.items()},
-            **{m: cast('DeclaredDtype', 'bool') for m in schema.given.masks},
-            **{d: dd.dtype for d, dd in schema.dimensions.items()},
+            **{m: cast('DeclaredDtype', 'bool') for m in spec.given.masks},
+            **{d: dd.dtype for d, dd in spec.dimensions.items()},
         }
         #: parameter name -> the value its ``missing:`` reads a missing row as,
         #: for the parameters that name one; what a where comparison reads there.
         self.defaults: dict[str, bool | float] = {
-            p: pd.missing for p, pd in schema.parameters.items() if not isinstance(pd.missing, str)
+            p: pd.missing for p, pd in spec.parameters.items() if not isinstance(pd.missing, str)
         }
         #: relation name -> its columns and key, as declared.
-        self.relations: dict[str, RelationDeclaration] = {
-            n: RelationDeclaration(lk.pairs, lk.key_roles, lk.missing, lk.description)
-            for n, lk in schema.relations.items()
+        self.relations: dict[str, Relation] = {
+            n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()
         }
         #: parameter or variable name -> the ``dims`` it is read through. Stamped onto
         #: each leaf a where names, the way a relation leaf carries ``over``.
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: tuple(pd.dims) for p, pd in parameters.items()},
-            **{m: tuple(md.dims) for m, md in schema.given.masks.items()},
+            **{m: tuple(md.dims) for m, md in spec.given.masks.items()},
             **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
         }
         #: named expression -> its resolved node, or ``None``, and its refusals;
         #: filled the first time anything reads the name.
-        self._named: dict[str, tuple[NamedExpression | None, tuple[str, ...]]] = {}
+        self._named: dict[str, tuple[ExpressionReference | None, tuple[str, ...]]] = {}
         #: The named expressions and masks waiting to be resolved, the first one
         #: asked for at the bottom. Each sits above the entries it reads, so the
         #: list is a cycle's chain.
         self._loading: list[str] = []
         #: mask -> its resolved node, or ``None``, and its refusals; filled
         #: the first time anything reads the name.
-        self._masks: dict[str, tuple[NamedMask | None, tuple[str, ...]]] = {}
+        self._masks: dict[str, tuple[MaskReference | None, tuple[str, ...]]] = {}
 
-    def named(self, name: str, context: str) -> NamedExpression:
+    def named(self, name: str, context: str) -> ExpressionReference:
         """The ``expressions:`` entry *name* as the node that stands where its name is written.
 
         Resolved under the entry's own context the first time it is asked
@@ -167,7 +166,7 @@ class Namespace:
         chain = ' -> '.join([*self._loading[self._loading.index(name) :], *through, name])
         return f'{context}: circular {noun} reference: {chain}. Remove one reference.'
 
-    def mask(self, name: str, context: str) -> NamedMask:
+    def mask(self, name: str, context: str) -> MaskReference:
         """The ``masks:`` entry *name* as the node that stands where its name is written.
 
         Resolved under the entry's own context the first time it is asked
@@ -184,17 +183,17 @@ class Namespace:
             raise SchemaError(msg)
         return node
 
-    def mask_entry(self, name: str) -> tuple[NamedMask | None, tuple[str, ...]]:
+    def mask_entry(self, name: str) -> tuple[MaskReference | None, tuple[str, ...]]:
         """The ``masks:`` entry *name* resolved, or ``None``, with every refusal it earned."""
         if name not in self._masks:
             self._loading.append(name)
             errors: list[str] = []
-            node = _mask(name, self.schema.masks[name], self, errors)
+            node = _mask(name, self.spec.masks[name], self, errors)
             self._loading.pop()
             self._masks[name] = (node, tuple(errors))
         return self._masks[name]
 
-    def named_entry(self, name: str) -> tuple[NamedExpression | None, tuple[str, ...]]:
+    def named_entry(self, name: str) -> tuple[ExpressionReference | None, tuple[str, ...]]:
         """The ``expressions:`` entry *name* resolved, or ``None``, with every refusal it earned.
 
         The entries it reads are resolved before it, walked from a stack that
@@ -215,7 +214,7 @@ class Namespace:
                 self._loading.append(waiting[0])
                 continue
             errors: list[str] = []
-            node = _named(top, self.schema.expressions[top], self, errors)
+            node = _named(top, self.spec.expressions[top], self, errors)
             self._named[top] = (node, tuple(errors))
             self._loading.pop()
         return self._named[name]
@@ -226,15 +225,15 @@ class Namespace:
         A text that does not parse or expand reads nothing here: the
         resolution that follows reports it.
         """
-        block, context = self.schema.expressions[name], f"Named expression '{name}'"
+        entry, context = self.spec.expressions[name], f"Named expression '{name}'"
         arithmetic: list[ParsedNode] = []
-        for text in (block.expression, *(case.expression for case in (block.cases or {}).values()), block.otherwise):
+        for text in (entry.expression, *(case.expression for case in (entry.cases or {}).values()), entry.otherwise):
             if text is not None:
                 try:
                     arithmetic.append(parse_and_expand(text, self, context))
                 except ValueError:
                     continue
-        for case in (block.cases or {}).values():
+        for case in (entry.cases or {}).values():
             try:
                 pending: list[ParsedWhere] = [parse_where(case.when)]
             except ValueError:
@@ -253,9 +252,9 @@ class Namespace:
 
     def unordered(self, name: str) -> bool:
         """Whether the declared dimension *name* is one whose order the file does not declare part of the model."""
-        return not self.schema.dimensions[name].ordered
+        return not self.spec.dimensions[name].ordered
 
-    def kind(self, name: str) -> DeclarationKind | None:
+    def kind(self, name: str) -> NameKind | None:
         """What *name* was declared as, or ``None`` where the file declares it nowhere."""
         if name in self.variables:
             return 'variable'
@@ -272,7 +271,7 @@ class Namespace:
 
         Args:
             name: The name the file wrote.
-            context: The declaration it was found in.
+            context: The entry it was found in.
             allow_dims: Whether a dimension would have been accepted there. It marks a
                 where string, which reads a relation as readily as a parameter, so the
                 listing carries the relations too; an expression, where a relation is not a
@@ -310,7 +309,7 @@ class Namespace:
 
 
 def mask_of(node: Predicate | None) -> Mask | None:
-    """The mask a declaration carries for a resolved where: ``None`` where there is none, or where every row passes."""
+    """The mask an entry carries for a resolved where: ``None`` where there is none, or where every row passes."""
     if node is None or (isinstance(node, BooleanLiteral) and node.value):
         return None
     return Mask(node)
@@ -347,7 +346,7 @@ def resolve_expression(
     Returns:
         The tree, or ``None`` once anything failed — appending to *errors*
         rather than raising, so a caller collecting problems across a whole
-        schema reports them together. Also ``None``, with nothing appended,
+        spec reports them together. Also ``None``, with nothing appended,
         where a name in *formals* stands under *node*: a macro template is
         checked by the rules a call site is before anything calls it, and
         only the call site that binds its formals has a tree to build.
@@ -480,7 +479,7 @@ def _over_the_ceiling(node: Expression, context: str, errors: list[str], *, ceil
     return False
 
 
-def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) -> NamedExpression | None:
+def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -> ExpressionReference | None:
     """One ``expressions:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
 
     A cased entry's arms are checked one by one, so every fault is collected
@@ -490,15 +489,15 @@ def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) 
     the rest apart, so the regions are disjoint and total.
     """
     context = f"Named expression '{name}'"
-    if not block.cases:
-        assert block.expression is not None
-        body = resolve_expression_text(block.expression, ns, context, errors, ceiling=None)
-        return None if body is None else NamedExpression(name, body)
+    if not entry.cases:
+        assert entry.expression is not None
+        body = resolve_expression_text(entry.expression, ns, context, errors, ceiling=None)
+        return None if body is None else ExpressionReference(name, body)
 
     found = len(errors)
     regions: list[Region] = []
     masks: dict[str, Predicate] = {}
-    for case_name, case in block.cases.items():
+    for case_name, case in entry.cases.items():
         arm_context = case_context(name, case_name)
         when = resolve_where_text(case.when, ns, arm_context, errors)
         if isinstance(when, BooleanLiteral):
@@ -508,35 +507,35 @@ def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) 
         value = resolve_expression_text(case.expression, ns, arm_context, errors, ceiling=None)
         if when is not None and value is not None:
             regions.append(Region(Mask(when), value))
-    assert block.otherwise is not None
-    fallback = resolve_expression_text(block.otherwise, ns, case_context(name, None), errors, ceiling=None)
+    assert entry.otherwise is not None
+    fallback = resolve_expression_text(entry.otherwise, ns, case_context(name, None), errors, ceiling=None)
     if len(errors) > found or fallback is None:
         return None
     errors.extend(f'{context}: {problem}' for problem in overlapping(masks, ns.dtypes, ns.defaults))
     if len(errors) > found:
         return None
     left_over = Region(remainder(region.when for region in regions), fallback)
-    return NamedExpression(name, Cases((*regions, left_over)))
+    return ExpressionReference(name, Cases((*regions, left_over)))
 
 
-def _mask(name: str, block: MaskBlock, ns: Namespace, errors: list[str]) -> NamedMask | None:
+def _mask(name: str, entry: MaskSpec, ns: Namespace, errors: list[str]) -> MaskReference | None:
     """One ``masks:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
 
     A predicate the connectives decide is refused, since a name for every row
     or for none narrows nothing a where could not say plainly.
     """
     context = f"Mask '{name}'"
-    body = resolve_where_text(block.where, ns, context, errors)
+    body = resolve_where_text(entry.where, ns, context, errors)
     if body is None:
         return None
     if isinstance(body, BooleanLiteral):
         errors.append(
-            f'{context}: the predicate {block.where!r} folds to {str(body.value).lower()}, so the mask '
+            f'{context}: the predicate {entry.where!r} folds to {str(body.value).lower()}, so the mask '
             f'{"admits every row" if body.value else "admits no row"} and names nothing a where needs. '
             f'Delete it, or write the predicate over the data.'
         )
         return None
-    return NamedMask(name, body)
+    return MaskReference(name, body)
 
 
 def self_existence(where: Predicate, variable: str, context: str) -> str | None:

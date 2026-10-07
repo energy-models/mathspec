@@ -19,14 +19,14 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mathspec import piecewise, to_spec
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, schema_of, varied
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, spec_of, varied
 from tests.test_sos import CURVE
 from tools.render_tex import models
 
 if TYPE_CHECKING:
     from mathspec.spec import Spec
 
-#: The curve masked by one of its own values parameters, the one block whose
+#: The curve masked by one of its own values parameters, the one entry whose
 #: rows sit on more than the file's own names.
 MASKED = varied(
     CURVE,
@@ -69,35 +69,35 @@ def test_a_model_expands_to_the_file_written_beside_it(case: Path):
 )
 def test_a_kind_this_language_does_not_have_is_refused_naming_both(kinds):
     with pytest.raises(ValueError, match=re.escape("is not a formulation. Expand 'piecewise' and 'sos'")):
-        schema_of(CURVE).expand(*kinds)
+        spec_of(CURVE).expand(*kinds)
 
 
 def test_the_order_is_the_languages_rather_than_the_callers():
     """A curve states a set, so asking for the set first would leave one behind."""
-    asked_backwards = schema_of(CURVE).expand('sos', 'piecewise')
+    asked_backwards = spec_of(CURVE).expand('sos', 'piecewise')
 
     assert not asked_backwards.sos and not asked_backwards.piecewise, 'both are written out either way round'
 
 
 def test_a_model_with_nothing_to_write_out_is_the_one_that_comes_back():
-    schema = schema_of(DISPATCH_MODEL)
+    spec = spec_of(DISPATCH_MODEL)
 
-    assert schema.expand() is schema
-    assert schema.expand('sos') is schema
+    assert spec.expand() is spec
+    assert spec.expand('sos') is spec
 
 
 def test_one_set_of_kinds_expands_to_one_model():
-    schema = schema_of(CURVE)
+    spec = spec_of(CURVE)
 
-    assert schema.expand('piecewise') == schema.expand('piecewise')
-    assert schema.expand() == schema.expand('piecewise', 'sos')
-    assert schema.expand() != schema.expand('piecewise'), 'a set left standing is a different model'
+    assert spec.expand('piecewise') == spec.expand('piecewise')
+    assert spec.expand() == spec.expand('piecewise', 'sos')
+    assert spec.expand() != spec.expand('piecewise'), 'a set left standing is a different model'
 
 
 def test_asking_for_an_expansion_leaves_the_model_equal_to_itself():
     """Each expansion was cached in the spec's private state, which pydantic compares,
     so two loads of one file stopped being equal once one of them had been expanded."""
-    asked, untouched = schema_of(CURVE), schema_of(CURVE)
+    asked, untouched = spec_of(CURVE), spec_of(CURVE)
     asked.expand('piecewise')
     assert asked == untouched
 
@@ -107,14 +107,14 @@ def test_loading_writes_no_curve_out_and_each_ask_writes_them_out_once(monkeypat
     """`expand()` called the curve expander and then asked for the curves again, so one full
     ask wrote them out twice. A full ask writes the sets out of the model the curves
     were written out to."""
-    schema = schema_of(CURVE)
+    loaded = spec_of(CURVE)
     asked: list[Spec] = []
     written_out = piecewise.expand_piecewise
     monkeypatch.setattr(piecewise, 'expand_piecewise', lambda spec: asked.append(spec) or written_out(spec))
 
     assert asked == [], 'loading a model writes no curve out'
-    assert not schema.expand(*kinds).piecewise
-    assert asked == [schema], 'one ask writes the curves out once, from this model'
+    assert not loaded.expand(*kinds).piecewise
+    assert asked == [loaded], 'one ask writes the curves out once, from this model'
 
 
 def test_an_expansion_declares_exactly_the_parameters_the_file_declared():
@@ -122,13 +122,13 @@ def test_an_expansion_declares_exactly_the_parameters_the_file_declared():
     derivation the expanded model carried in private state, so the expansion asked for data the
     model it came from did not and ``to_yaml`` refused it. Every one of them is a predicate a
     ``where:`` writes, so the expansion emits none."""
-    schema = schema_of(MASKED)
-    expanded = schema.expand()
+    spec = spec_of(MASKED)
+    expanded = spec.expand()
 
     assert {name: (p.dims, p.dtype) for name, p in expanded.parameters.items()} == {
-        name: (p.dims, p.dtype) for name, p in schema.parameters.items()
+        name: (p.dims, p.dtype) for name, p in spec.parameters.items()
     }, 'a curve emits no parameter, so the same data attaches to both'
-    assert schema_of(expanded.to_yaml()).to_dict() == expanded.to_dict(), (
+    assert spec_of(expanded.to_yaml()).to_dict() == expanded.to_dict(), (
         'the expansion is a file like any other, and loading it back changes nothing'
     )
 
@@ -146,14 +146,14 @@ def test_what_a_curve_assumes_of_its_numbers_rides_on_the_expansion_too(model):
     """`lp` and `convex` are exact only for a curve of the right shape, which no load
     decides. The program carries the condition for the consumer that has the numbers,
     and writing the curve out must not be the way a model loses it."""
-    spec = schema_of(model)
+    spec = spec_of(model)
     stated = spec.expand('piecewise').program.assumptions
     written_out = spec.expand().program.assumptions
 
     assert {'cost_curve_increasing', 'cost_curve_curvature'} <= set(stated), (
         'the breakpoints increase and the curve bends one way, both checked where the data is'
     )
-    assert written_out == stated, 'and the expansion carries every condition the block came with'
+    assert written_out == stated, 'and the expansion carries every condition the entry came with'
 
 
 @pytest.mark.parametrize('model', MODELS, ids=[m.stem for m in MODELS])
@@ -161,7 +161,7 @@ def test_the_same_sources_bind_a_model_and_its_expansion(model):
     """What a formulation may emit, asserted on every model the repository ships:
     neither a set nor a curve emits a parameter. A consumer's `sources` argument
     is therefore the same either way."""
-    spec = schema_of(model)
+    spec = spec_of(model)
     supplied = set(spec.expand('piecewise').program.parameters)
     written_out = set(spec.expand().program.parameters)
 
@@ -170,7 +170,7 @@ def test_the_same_sources_bind_a_model_and_its_expansion(model):
 
 def test_an_expansion_is_a_different_model_and_has_nothing_left_to_write_out():
     """What `expand()` returns: a new model, which a second expansion hands back unchanged."""
-    spec = schema_of(CURVE)
+    spec = spec_of(CURVE)
     expanded = spec.expand()
 
     assert expanded != spec, 'the expansion declares more rows, so it is a different model'
@@ -178,13 +178,13 @@ def test_an_expansion_is_a_different_model_and_has_nothing_left_to_write_out():
 
 
 def test_a_model_with_no_formulation_expands_to_itself():
-    spec = schema_of(DISPATCH_MODEL)
+    spec = spec_of(DISPATCH_MODEL)
 
     assert spec.expand() is spec, 'nothing to write out returns the same object, not a copy'
 
 
-#: `fixtures.SMALL_MODEL` plus a two-link curve over its second dimension, so a
-#: block's own parameters stand beside ordinary ones in one model.
+#: `fixtures.SMALL_MODEL` plus a two-link curve over its second dimension, so an
+#: entry's own parameters stand beside ordinary ones in one model.
 SMALL_CURVE = {
     'parameters.bx': {'dims': ['h']},
     'parameters.by': {'dims': ['h']},
@@ -209,8 +209,8 @@ UNDER_POINTS = {'piecewise.curve.points': 'bx', 'parameters.bx.missing': 'neutra
     ],
 )
 def test_a_spec_and_its_expansion_read_a_missing_row_alike(points):
-    """Lowering reported `None` for every parameter a block consumes, and the expansion declared it `neutral`."""
-    spec = schema_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **points))
+    """Lowering reported `None` for every parameter an entry consumes, and the expansion declared it `neutral`."""
+    spec = spec_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **points))
     declared = {name: p.missing for name, p in spec.program.parameters.items()}
     expanded = {name: p.missing for name, p in spec.expand('piecewise').program.parameters.items()}
     assert declared == expanded, 'a spec and its expansion read a missing row of every parameter alike'

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec import advice, merge, override, to_markdown, to_spec, typeset, typeset_declaration
+from mathspec import advice, merge, override, to_markdown, to_spec, typeset, typeset_line
 from mathspec.canonical import canonical_yaml
 from mathspec.errors import LanguageError
 from mathspec.typesetting import FORMATS
@@ -577,7 +577,7 @@ def test_a_term_over_fewer_dimensions_merges_where_another_carries_the_rest():
     'body', [pytest.param({'expression': '-2 * load'}, id='a-mapping'), pytest.param('-2 * load', id='one-line')]
 )
 def test_a_patch_changes_a_term_s_body_and_keeps_what_it_adds_to(body):
-    """A one-line patch replaced the whole block, so the term lost its `adds_to:` and left the sum unannounced."""
+    """A one-line patch replaced the whole entry, so the term lost its `adds_to:` and left the sum unannounced."""
     doubled = override(DEMAND, [{'expressions': {'demand_injection': body}}])
     assert doubled.expressions['demand_injection'].expression == '-2 * load'
     assert doubled.expressions['demand_injection'].adds_to == 'injection'
@@ -623,12 +623,12 @@ def test_inlining_keeps_the_definition_of_a_term():
 def test_a_given_expression_prints_no_line_of_its_own(spec):
     """The term prints as the definition it is; the name it adds to prints in the legend."""
     with pytest.raises(LanguageError, match=r"'injection' is a given expression, which prints no line of its own"):
-        typeset_declaration(spec, 'injection', 'latex')
+        typeset_line(spec, 'injection', 'latex')
 
 
 def test_the_composed_sum_prints_its_terms_by_name():
     composed = merge([FLEET, DEMAND, BALANCE])
-    assert typeset_declaration(composed, 'injection', 'typst', inline_expressions=False) == (
+    assert typeset_line(composed, 'injection', 'typst', inline_expressions=False) == (
         'italic("injection")_(t,b) = italic("generator_injection")_(t,b) + upright("demand_injection")_(t,b) '
         'quad forall t in cal(T), b in cal(B)'
     )

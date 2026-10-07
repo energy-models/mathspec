@@ -29,19 +29,19 @@ from mathspec.program import (
     Dual,
     Expression,
     ExpressionComparison,
+    ExpressionReference,
     Join,
     JoinColumns,
     JoinedPredicate,
     Mask,
+    MaskReference,
     Multiply,
-    NamedExpression,
-    NamedMask,
     Negate,
     Not,
     Or,
-    Parameter,
     ParameterComparison,
     ParameterDefined,
+    ParameterReference,
     Partition,
     Power,
     Predicate,
@@ -52,8 +52,8 @@ from mathspec.program import (
     Sum,
     Translate,
     TranslatedPredicate,
-    Variable,
     VariableDefined,
+    VariableReference,
     WindowSum,
 )
 from mathspec.typesetting.format import Line, OperatorName, number
@@ -64,7 +64,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
     from mathspec._expression_parser import BinaryOperator
-    from mathspec.program import PiecewiseDeclaration, Program, SosDeclaration
+    from mathspec.program import Piecewise, Program, Sos
     from mathspec.typesetting.format import Format
     from mathspec.typesetting.symbols import Symbols
 
@@ -237,7 +237,7 @@ class Walk:
         self._parameters = {**program.parameters, **program.given.parameters}
 
     def _frame_of(self, name: str) -> list[str]:
-        """The dims named expression *name* is read over, as its declaration carries them."""
+        """The dims named expression *name* is read over, as its entry carries them."""
         entry = self.program.expressions.get(name) or self.program.given.expressions[name]
         return list(entry.dims)
 
@@ -311,7 +311,7 @@ class Walk:
 
     def _arithmetic(self, node: Expression, ctx: _Context) -> tuple[str, int]:
         """Render *node*, returning the text and the precedence it binds at."""
-        if isinstance(node, NamedExpression):
+        if isinstance(node, ExpressionReference):
             if self.inline_expressions and not isinstance(node.body, Cases):
                 return self._arithmetic(node.body, ctx)
             return ctx.indexed(self.symbols.name[node.name], self._frame_of(node.name)), _ATOM
@@ -319,10 +319,10 @@ class Walk:
         if isinstance(node, Constant):
             return self._number(node.value), _ATOM if node.value >= 0 else 1
 
-        if isinstance(node, Parameter):
+        if isinstance(node, ParameterReference):
             return ctx.indexed(self.symbols.name[node.name], list(self._parameters[node.name].dims)), _ATOM
 
-        if isinstance(node, Variable):
+        if isinstance(node, VariableReference):
             frames = {**self.program.variables, **self.program.given.variables, **self.program.given.expressions}
             return ctx.indexed(self.symbols.name[node.name], list(frames[node.name].dims)), _ATOM
 
@@ -401,12 +401,12 @@ class Walk:
 
         [`_binary`][] folds the sign of the result, so a substituted term prints as its body written out.
         """
-        while self.inline_expressions and isinstance(node, NamedExpression) and not isinstance(node.body, Cases):
+        while self.inline_expressions and isinstance(node, ExpressionReference) and not isinstance(node.body, Cases):
             node = node.body
         return node
 
     def _sum(self, node: Sum, ctx: _Context) -> tuple[str, int]:
-        """A reduction over named dims: one dummy index per dim, in declaration order, or the group-by over a join."""
+        """A reduction over named dims: one dummy index per dim, in file order, or the group-by over a join."""
         if isinstance(node.operand, Join) and node.operand.columns.axes:
             return self._grouped_sum(node.operand, ctx)
         memberships = []
@@ -532,7 +532,7 @@ class Walk:
             assert not node.value, 'an always-true mask is folded away or refused before anything prints it'
             return self._op('false'), _ATOM
 
-        if isinstance(node, NamedMask):
+        if isinstance(node, MaskReference):
             return ctx.indexed(self.symbols.name[node.name], list(self.program.masks[node.name].dims)), _ATOM
 
         if isinstance(node, ParameterDefined):
@@ -652,7 +652,7 @@ class Walk:
             return f'{self.format.prose("where ")} {condition}'
         return f'{self._op("forall")} {over} {self._op("such_that")} {condition}'
 
-    # -- declarations ------------------------------------------------------
+    # -- entries ------------------------------------------------------
 
     def equations(self) -> list[tuple[str, list[Line]]]:
         """Every titled section of equations."""
@@ -670,7 +670,7 @@ class Walk:
 
         The expression is scalar — every reduction in it is one the file wrote
         — so it renders like any other, and the line carries no label: the
-        block has no name, and the section heading already says what it is.
+        objective has no name, and the section heading already says what it is.
         """
         objective = self.program.objective
         if objective is None:
@@ -681,7 +681,7 @@ class Walk:
     def _constraints(self) -> list[Line]:
         """Every constraint, then every curve.
 
-        A ``piecewise:`` block restricts what its link expressions may be
+        A ``piecewise:`` entry restricts what its link expressions may be
         together, which is what a row does, so it prints here rather than among
         the domains — where a set prints, being a property of one variable.
         """
@@ -702,11 +702,11 @@ class Walk:
         )
 
     def _definitions(self) -> list[Line]:
-        """One line per named expression, in declaration order, defining it.
+        """One line per named expression, in file order, defining it.
 
-        A use prints the symbol and the block prints here, as a paper states a
+        A use prints the symbol and the entry prints here, as a paper states a
         quantity it names. Every declared one prints, used or not. Inlining
-        substitutes away the plain ones the math reads; a ``cases`` block has
+        substitutes away the plain ones the math reads; a cased expression has
         no single body to substitute, and an entry the math never reads has
         nowhere to be substituted *into*, so both still print.
         """
@@ -716,7 +716,7 @@ class Walk:
         """The named expressions that print under their own symbol: every one, or only the unsubstitutable when inlining.
 
         Inlining leaves a name standing only where substitution cannot reach
-        it — a ``cases`` block, an entry the objective and constraints never
+        it — a cased expression, an entry the objective and constraints never
         read, which is a quantity reported back rather than solved for, and a
         term this file adds to a sum, which the math reads only as that sum's
         symbol.
@@ -814,27 +814,27 @@ class Walk:
     def _variables(self) -> list[Line]:
         """One line per variable, and one more for a set the variable carries.
 
-        A ``sos:`` block restricts the *domain* — which members of a family may
+        An ``sos:`` entry restricts the *domain* — which members of a family may
         be nonzero at once — so it prints under this heading, beside the
         variable it is a property of, rather than among the constraints, where
         it would read as a row a solver holds.
         """
-        sets = {block.variable: (key, block) for key, block in self.program.sos.items()}
+        sets = {entry.variable: (key, entry) for key, entry in self.program.sos.items()}
         lines = []
-        for name, block in self.program.variables.items():
+        for name, variable in self.program.variables.items():
             lines.append(self._variable(name))
             if name in sets:
-                lines.append(self._sos(name, *sets[name], self._context(frame=block.dims)))
+                lines.append(self._sos(name, *sets[name], self._context(frame=variable.dims)))
         return lines
 
     def _variable(self, name: str) -> Line:
-        block = self.program.variables[name]
-        ctx = self._context(frame=block.dims)
-        symbol = ctx.indexed(self.symbols.name[name], list(block.dims))
-        condition = self._quantifier(list(block.dims), self._condition(ctx, block.where))
-        lower, upper = block.lower, block.upper
+        entry = self.program.variables[name]
+        ctx = self._context(frame=entry.dims)
+        symbol = ctx.indexed(self.symbols.name[name], list(entry.dims))
+        condition = self._quantifier(list(entry.dims), self._condition(ctx, entry.where))
+        lower, upper = entry.lower, entry.upper
 
-        if block.domain == 'binary':
+        if entry.domain == 'binary':
             left, right = symbol, f'{self._op("in")} {self._op("binary_set")}'
         else:
             if lower is not None and upper is not None:
@@ -845,21 +845,21 @@ class Walk:
             elif lower is not None:
                 left, right = symbol, f'{self._op("ge")} {self._bound(ctx, lower)}'
             else:
-                domain = self._op('integers' if block.domain == 'integer' else 'reals')
+                domain = self._op('integers' if entry.domain == 'integer' else 'reals')
                 left, right = symbol, f'{self._op("in")} {domain}'
-            if block.domain == 'integer' and (lower is not None or upper is not None):
+            if entry.domain == 'integer' and (lower is not None or upper is not None):
                 right = f'{right}, {symbol} {self._op("in")} {self._op("integers")}'
         return Line(label=name, left=left, right=right, condition=condition)
 
-    def _sos(self, name: str, key: str, block: SosDeclaration, ctx: _Context) -> Line:
+    def _sos(self, name: str, key: str, entry: Sos, ctx: _Context) -> Line:
         """The variable's family along the set's dim, as one member of the SOS set, quantified over the other dims."""
         dims = self.program.variables[name].dims
         family = self.format.parenthesise(ctx.indexed(self.symbols.name[name], list(dims)))
         return Line(
             label=key,
-            left=self.format.subscript(family, [self._membership(block.along)]),
-            right=f'{self._op("in")} {self._op("sos_set")}{block.sos_type}',
-            condition=self._quantifier([d for d in dims if d != block.along], ''),
+            left=self.format.subscript(family, [self._membership(entry.along)]),
+            right=f'{self._op("in")} {self._op("sos_set")}{entry.sos_type}',
+            condition=self._quantifier([d for d in dims if d != entry.along], ''),
         )
 
     # -- assumptions -------------------------------------------------------
@@ -886,65 +886,65 @@ class Walk:
         return Line(label=name, left=left, right=right, condition=self._quantifier(frame, self._condition(ctx, where)))
 
     def _piecewise(self, name: str) -> Line:
-        """One ``piecewise:`` block as the curve it states, over the frame it states one per coordinate of.
+        """One ``piecewise:`` entry as the curve it states, over the frame it states one per coordinate of.
 
-        The links' expressions are a point, and the block says that point lies
+        The links' expressions are a point, and the entry says that point lies
         on the piecewise-linear locus through the breakpoints. A bounded link
         states one side of the locus instead, so there the locus prints as the
         function of the pinned link that it is and the link's own sign says
         which side.
         """
-        block = self.program.piecewise[name]
-        links = [link.expression for link in block.links]
-        frame = list(block.frame)
-        ctx = self._context([*frame, block.over])
-        locus = self._locus(block, ctx)
-        bounded = next((i for i, link in enumerate(block.links) if link.sign != '=='), None)
+        entry = self.program.piecewise[name]
+        links = [link.expression for link in entry.links]
+        frame = list(entry.frame)
+        ctx = self._context([*frame, entry.over])
+        locus = self._locus(entry, ctx)
+        bounded = next((i for i, link in enumerate(entry.links) if link.sign != '=='), None)
         if bounded is None:
             left = self._tuple([self._expression(node, ctx) for node in links])
             right = f'{self._op("in")} {locus}'
         else:
             pinned = links[1 - bounded]
             left = self._expression(links[bounded], ctx)
-            sign = self._op(_PREDICATES[block.links[bounded].sign])
+            sign = self._op(_PREDICATES[entry.links[bounded].sign])
             right = f'{sign} {self.format.apply(locus, self._expression(pinned, ctx))}'
         return Line(label=name, left=left, right=right, condition=self._quantifier(frame, ''))
 
-    def _locus(self, block: PiecewiseDeclaration, ctx: _Context) -> str:
+    def _locus(self, entry: Piecewise, ctx: _Context) -> str:
         """The set the links lie on: the curve through the breakpoints, or the hull ``convex`` relaxes it onto.
 
         A gate multiplies it, which is what gating a curve does — the weights
         sum to the gate, so the locus is the origin where the gate is 0 and the
         curve where it is 1.
         """
-        operator = self._op('hull' if block.method == 'convex' else 'curve')
-        through = self.format.subscript(operator, [self._breakpoints(block, ctx)])
+        operator = self._op('hull' if entry.method == 'convex' else 'curve')
+        through = self.format.subscript(operator, [self._breakpoints(entry, ctx)])
         values = self.format.joined(
             [
                 ctx.indexed(self.symbols.name[link.values], list(self.program.parameters[link.values].dims))
-                for link in block.links
+                for link in entry.links
             ],
             '',
         )
         locus = self.format.apply(through, values)
-        gate = self._gate(block, ctx)
+        gate = self._gate(entry, ctx)
         return f'{gate} {self._op("cdot")} {locus}' if gate else locus
 
-    def _breakpoints(self, block: PiecewiseDeclaration, ctx: _Context) -> str:
+    def _breakpoints(self, entry: Piecewise, ctx: _Context) -> str:
         """Which breakpoints the curve runs through: every one of the dimension, or the ones ``points:`` admits.
 
         A ``points:`` naming a boolean parameter reads as the flag it is, and
         one naming a values parameter as the rows that parameter has, which is
         the same reading a ``where`` gives either of them.
         """
-        over = self._membership(block.over)
-        if block.points is None:
+        over = self._membership(entry.over)
+        if entry.points is None:
             return over
-        admitted = ParameterDefined(block.points, tuple(self.program.parameters[block.points].dims))
+        admitted = ParameterDefined(entry.points, tuple(self.program.parameters[entry.points].dims))
         return f'{over} {self._op("such_that")} {self._predicate(admitted, ctx)}'
 
-    def _gate(self, block: PiecewiseDeclaration, ctx: _Context) -> str:
-        """The factor an ``activity:`` puts on the locus, or ``''`` where the block has none.
+    def _gate(self, entry: Piecewise, ctx: _Context) -> str:
+        """The factor an ``activity:`` puts on the locus, or ``''`` where the entry has none.
 
         Where the gate is a variable that does not exist at every coordinate
         the curve is built for, the factor is the gate where it exists and 1
@@ -953,7 +953,7 @@ class Walk:
         curve unstated rather than ungated. ``missing: neutral`` is the other
         reading and pins the curve off, which is the factor on its own.
         """
-        if (activity := block.activity) is None:
+        if (activity := entry.activity) is None:
             return ''
         gate = self.program.variables[activity]
         symbol = ctx.indexed(self.symbols.name[activity], list(gate.dims))
@@ -967,7 +967,7 @@ class Walk:
 
     def _bound(self, ctx: _Context, value: Expression) -> str:
         """A bound as the file wrote it: a number, or a parameter indexed over its dims."""
-        if isinstance(value, Parameter):
+        if isinstance(value, ParameterReference):
             return ctx.indexed(self.symbols.name[value.name], list(self._parameters[value.name].dims))
         assert isinstance(value, Constant), 'a bound is a number or the name of a parameter'
         return self._number(value.value)

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Your first spec
 
-Write a least-cost dispatch spec one block at a time, check it, and print it
+Write a least-cost dispatch spec one section at a time, check it, and print it
 as math. [Install mathspec](howto/installation.md) first.
 
 ## Dimensions
@@ -31,14 +31,14 @@ python -m mathspec check dispatch.yaml
 The check accepts the file, but advises that nothing uses the dimensions yet:
 
 ```text
-dimension 'snapshot' is never used: nothing is indexed by it, nothing sums into it, and no relation has a column over it. Remove it, or keep it if the declarations that use it are still to be written.
-dimension 'generator' is never used: nothing is indexed by it, nothing sums into it, and no relation has a column over it. Remove it, or keep it if the declarations that use it are still to be written.
+dimension 'snapshot' is never used: nothing is indexed by it, nothing sums into it, and no relation has a column over it. Remove it, or keep it if the entries that use it are still to be written.
+dimension 'generator' is never used: nothing is indexed by it, nothing sums into it, and no relation has a column over it. Remove it, or keep it if the entries that use it are still to be written.
 ```
 
 ## Parameters and a variable
 
-Add three [parameters](reference/language/declarations.md#parameters), the data
-the spec expects, and one [variable](reference/language/declarations.md#variables),
+Add three [parameters](reference/language/parameters-variables-constraints.md#parameters), the data
+the spec expects, and one [variable](reference/language/parameters-variables-constraints.md#variables),
 the decision the solver makes. The `where:` line leaves out every generator with
 no capacity.
 
@@ -76,9 +76,9 @@ python -m mathspec markdown --no-legend dispatch.yaml
 
 ## Constraint and objective
 
-Add one [constraint](reference/language/declarations.md#constraints), which
+Add one [constraint](reference/language/parameters-variables-constraints.md#constraints), which
 meets the load in every snapshot, and the
-[objective](reference/language/declarations.md#objective):
+[objective](reference/language/parameters-variables-constraints.md#objective):
 
 ```yaml
 constraints:

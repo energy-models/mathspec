@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Lines
 
-This file states PyPSA's `Line`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to each of these sums: `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection` and `Cycle_angle_sum`. It reads `scenario_weight` and `transmission_losses`, which other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
+This file states PyPSA's `Line`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to each of these sums: `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection` and `Cycle_angle_sum`. It reads `scenario_weight` and `transmission_losses`, which other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -328,7 +328,7 @@ constraints:
     description: >-
       `Line-loss_tangents-{k}-1`, `Line-loss_secants-pos` — the loss sits above
       every cut to its curve for flow one way; PyPSA names one row per tangent
-      `k`, or one row stacked over its `secant` axis, and this block states them
+      `k`, or one row stacked over its `secant` axis, and this entry states them
       all over the segment dimension
     dims: [scenario, snapshot, line, segment]
     where: Line_lossy

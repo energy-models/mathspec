@@ -12,9 +12,9 @@ one spec, and then add a component without changing the other files. Do
 ## The network
 
 Make a file `network.yaml`, which balances every bus. It reads the injection at
-a bus under [`given:`](reference/language/declarations.md#given), because each
+a bus under [`given:`](reference/language/parameters-variables-constraints.md#given), because each
 component file adds its own share as a
-[term](reference/language/declarations.md#terms). A term is a named expression
+[term](reference/language/parameters-variables-constraints.md#terms). A term is a named expression
 that adds to a sum another file reads. The file also sets the objective, which
 reads the total cost in the same way: each component adds its cost as a term.
 
@@ -53,15 +53,15 @@ python -m mathspec check network.yaml
 The check accepts it, and notes each name it reads and does not define:
 
 ```text
-expression 'injection' is read here and declared elsewhere: the model this one is layered onto provides it. A tool refuses the spec where that model does not, over the same dims. merge() replaces this declaration with the one another file declares, or builds it from the terms other files add.
-expression 'total_cost' is read here and declared elsewhere: the model this one is layered onto provides it. A tool refuses the spec where that model does not, over the same dims. merge() replaces this declaration with the one another file declares, or builds it from the terms other files add.
+expression 'injection' is read here and declared elsewhere: the model this one is layered onto provides it. A tool refuses the spec where that model does not, over the same dims. merge() replaces this entry with the one another file declares, or builds it from the terms other files add.
+expression 'total_cost' is read here and declared elsewhere: the model this one is layered onto provides it. A tool refuses the spec where that model does not, over the same dims. merge() replaces this entry with the one another file declares, or builds it from the terms other files add.
 ```
 
 ## The generators
 
 Make a file `generators.yaml`. Its named expression `generation` is what the
 fleet puts into a bus. The file reads the injection too, and
-[`adds_to:`](reference/language/declarations.md#terms) on `generation` makes
+[`adds_to:`](reference/language/parameters-variables-constraints.md#terms) on `generation` makes
 `generation` a term of the injection. In the same way, `generation_cost` is a
 term of the total cost. The file restates the two dimensions it shares with the
 network as a dtype only, because a missing description does not conflict with
@@ -367,7 +367,7 @@ python -m mathspec check emissions.yaml
 The check accepts it, and notes the variable it reads:
 
 ```text
-variable 'dispatch' is read here and declared elsewhere: the model this one is layered onto provides it. A tool refuses the spec where that model does not, over the same dims. merge() replaces this declaration with the one another file declares.
+variable 'dispatch' is read here and declared elsewhere: the model this one is layered onto provides it. A tool refuses the spec where that model does not, over the same dims. merge() replaces this entry with the one another file declares.
 ```
 
 Merge all five files:
@@ -405,7 +405,7 @@ fragments 'generators.yaml' and 'loads.yaml' add a term to 'injection', and no o
 
 - [Compose a spec from several files](howto/compose.md) covers `merge` and
   `override`, which lays a patch over a spec.
-- [`given`](reference/language/declarations.md#given) gives the rules for a
+- [`given`](reference/language/parameters-variables-constraints.md#given) gives the rules for a
   file that reads what another file declares.
 - [A component library](examples/library/index.md) shows larger fragments
   beside the math they print.

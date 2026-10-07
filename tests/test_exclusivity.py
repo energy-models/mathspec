@@ -51,13 +51,13 @@ STORAGE: dict[str, Any] = {
 
 
 @pytest.fixture(scope='module')
-def schema() -> Spec:
+def spec() -> Spec:
     return to_spec(STORAGE)
 
 
-def refusals(schema: Spec, cases: dict[str, str]) -> list[str]:
-    """Resolve each case's `when` against *schema*, then decide every pair."""
-    namespace = Namespace(schema)
+def refusals(spec: Spec, cases: dict[str, str]) -> list[str]:
+    """Resolve each case's `when` against *spec*, then decide every pair."""
+    namespace = Namespace(spec)
     return list(
         overlapping(
             {name: _mask(when, namespace, name) for name, when in cases.items()},
@@ -119,8 +119,8 @@ class TestProvesApart:
             ),
         ],
     )
-    def test_a_pair_that_shares_no_coordinate_is_proved_apart(self, schema: Spec, cases: dict[str, str], claim: str):
-        assert refusals(schema, cases) == [], claim
+    def test_a_pair_that_shares_no_coordinate_is_proved_apart(self, spec: Spec, cases: dict[str, str], claim: str):
+        assert refusals(spec, cases) == [], claim
 
     @pytest.mark.parametrize(
         'cases',
@@ -133,29 +133,29 @@ class TestProvesApart:
             ),
         ],
     )
-    def test_the_ramp_regimes_from_the_issue(self, schema: Spec, cases: dict[str, str]):
+    def test_the_ramp_regimes_from_the_issue(self, spec: Spec, cases: dict[str, str]):
         """The three quantities #2 factors a PyPSA ramp limit into, less each one's `otherwise`."""
-        assert refusals(schema, cases) == [], f'{cases} claims no coordinate twice'
+        assert refusals(spec, cases) == [], f'{cases} claims no coordinate twice'
 
-    def test_a_magnitude_still_admits_one(self, schema: Spec):
+    def test_a_magnitude_still_admits_one(self, spec: Spec):
         """The mirror: `capacity` is a float, so 0.5 is a coordinate it can take."""
         cases = {'small': 'capacity < 1', 'large': 'capacity > 0'}
-        assert refusals(schema, cases), 'a float between the two bands is claimed by both'
+        assert refusals(spec, cases), 'a float between the two bands is claimed by both'
 
-    def test_a_when_of_true_is_not_a_fallback(self, schema: Spec):
-        """The fallback is the block's `otherwise:`, and nothing inside `cases:` stands in for it.
+    def test_a_when_of_true_is_not_a_fallback(self, spec: Spec):
+        """The fallback is the entry's `otherwise:`, and nothing inside `cases:` stands in for it.
 
         A mask that happens to be true everywhere is read as any other mask is,
         so it collides with every case beside it.
         """
         cases = {'first': 'position(snapshot) == 0', 'everything': 'True'}
-        assert refusals(schema, cases), 'a case whose `when` is True claims every coordinate'
+        assert refusals(spec, cases), 'a case whose `when` is True claims every coordinate'
 
 
 @pytest.fixture(scope='module')
-def overlap(schema: Spec) -> str:
+def overlap(spec: Spec) -> str:
     """The one refusal a bool against a label draws, read once for every fragment asserted on it."""
-    [refusal] = refusals(schema, {'cyclic': 'cyclic', 'battery': "kind == 'battery'"})
+    [refusal] = refusals(spec, {'cyclic': 'cyclic', 'battery': "kind == 'battery'"})
     return refusal
 
 
@@ -171,36 +171,36 @@ class TestRefuses:
     def test_an_overlap_names_both_cases_a_witness_and_the_rewrite(self, overlap: str, fragment: str):
         assert fragment in overlap
 
-    def test_every_overlapping_pair_is_named(self, schema: Spec):
+    def test_every_overlapping_pair_is_named(self, spec: Spec):
         """Not the first: a set with three problems has three sentences."""
         cases = {'a': 'cyclic', 'b': 'committable', 'c': "kind == 'battery'"}
-        assert len(refusals(schema, cases)) == 3, 'each of the three pairs overlaps'
+        assert len(refusals(spec, cases)) == 3, 'each of the three pairs overlaps'
 
-    def test_defined_is_not_non_zero(self, schema: Spec):
+    def test_defined_is_not_non_zero(self, spec: Spec):
         """A bare name and `== 0` are different questions, so a zero capacity is in both."""
-        [refusal] = refusals(schema, {'has_initial': 'soc_initial', 'zero': 'soc_initial == 0'})
+        [refusal] = refusals(spec, {'has_initial': 'soc_initial', 'zero': 'soc_initial == 0'})
         assert 'soc_initial is 0.0' in refusal
 
 
 class TestWillNotDecide:
-    def test_both_ends_of_one_axis(self, schema: Spec):
+    def test_both_ends_of_one_axis(self, spec: Spec):
         """The one that matters: first and last are the same row on a one-member
         horizon, and how many members an axis has is data.
         """
-        [refusal] = refusals(schema, {'first': 'position(snapshot) == 0', 'last': 'position(snapshot) == -1'})
+        [refusal] = refusals(spec, {'first': 'position(snapshot) == 0', 'last': 'position(snapshot) == -1'})
         assert 'cannot be told apart before the data arrives' in refusal
         assert 'Count from one end only' in refusal
 
-    def test_a_group_is_named_as_the_group_it_is(self, schema: Spec):
+    def test_a_group_is_named_as_the_group_it_is(self, spec: Spec):
         """`within=` counts within each group, and the refusal says which."""
         cases = {
             'first': 'position(snapshot, within=period_of[period]) == 0',
             'last': 'position(snapshot, within=period_of[period]) == -1',
         }
-        [refusal] = refusals(schema, cases)
+        [refusal] = refusals(spec, cases)
         assert 'within each period_of group' in refusal
 
-    def test_a_literal_written_first_is_named_as_the_order_it_is(self, schema: Spec):
+    def test_a_literal_written_first_is_named_as_the_order_it_is(self, spec: Spec):
         """The advice was to do what the author had already done.
 
         `capacity > 2` is a parameter against a literal and proves apart;
@@ -208,7 +208,7 @@ class TestWillNotDecide:
         the general refusal for a comparison of expressions — which told the
         author to compare one parameter against a literal.
         """
-        [refusal] = refusals(schema, {'big': '2 < capacity', 'small': '2 >= capacity'})
+        [refusal] = refusals(spec, {'big': '2 < capacity', 'small': '2 >= capacity'})
         assert "cases 'big' and 'small'" in refusal, 'the pair is refused once, not each case on its own'
         assert 'the literal is on the left' in refusal
         assert 'capacity > 2.0' not in refusal, 'the rewrite quotes the number as the file wrote it'
@@ -223,14 +223,14 @@ class TestWillNotDecide:
             pytest.param('123456789 < capacity', 'capacity > 123456789', id='a-literal-longer-than-six-digits'),
         ],
     )
-    def test_the_rewrite_is_the_same_test_with_the_sides_swapped(self, schema: Spec, when: str, rewrite: str):
+    def test_the_rewrite_is_the_same_test_with_the_sides_swapped(self, spec: Spec, when: str, rewrite: str):
         """The literal is quoted as the file wrote it: rounded to six digits, `123456789` became `1.23457e+08`, a different test."""
-        [refusal] = refusals(schema, {'one': when, 'two': 'cyclic'})
+        [refusal] = refusals(spec, {'one': when, 'two': 'cyclic'})
         assert rewrite in refusal
 
-    def test_a_comparison_of_real_expressions_keeps_the_general_refusal(self, schema: Spec):
+    def test_a_comparison_of_real_expressions_keeps_the_general_refusal(self, spec: Spec):
         """Only the plain shape is named; anything else is still the data's to decide."""
-        [refusal] = refusals(schema, {'over': 'capacity > soc_initial', 'under': 'capacity <= soc_initial'})
+        [refusal] = refusals(spec, {'over': 'capacity > soc_initial', 'under': 'capacity <= soc_initial'})
         assert 'it compares expressions, whose values only the data decides' in refusal
 
     def test_a_pair_with_more_regions_than_the_budget(self):
@@ -247,9 +247,9 @@ class TestWillNotDecide:
         [refusal] = refusals(to_spec(model), {'wide': bands, 'rest': 'not (' + bands + ')'})
         assert f'exceeds the budget of {CELL_BUDGET}' in refusal
 
-    def test_a_bool_compared_to_a_number(self, schema: Spec):
+    def test_a_bool_compared_to_a_number(self, spec: Spec):
         """Resolution admits it, and truth is not a magnitude to put in order."""
-        [refusal] = refusals(schema, {'on': 'cyclic == 1', 'off': 'not cyclic'})
+        [refusal] = refusals(spec, {'on': 'cyclic == 1', 'off': 'not cyclic'})
         assert 'Write the bare name, or `not cyclic`' in refusal
 
 
@@ -307,8 +307,8 @@ class TestSoundness:
         return Not(node) if rng.random() < 0.15 else node
 
     @pytest.mark.parametrize('seed', [1, 7])
-    def test_a_pair_proved_apart_stays_apart_on_a_finer_grid(self, schema: Spec, seed: int):
-        namespace = Namespace(schema)
+    def test_a_pair_proved_apart_stays_apart_on_a_finer_grid(self, spec: Spec, seed: int):
+        namespace = Namespace(spec)
         atoms = [_mask(text, namespace, 'a probe') for text in self.ATOMS]
         subjects = {
             'capacity': Subject('param', 'capacity'),
@@ -349,12 +349,12 @@ class TestAMissingRow:
         witness said `efficiency is absent`, the name of a reading this
         parameter does not have.
         """
-        schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': 1}}))
-        [refusal] = refusals(schema, self.CASES)
+        spec = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': 1}}))
+        [refusal] = refusals(spec, self.CASES)
         assert 'efficiency has no row' in refusal, 'the witness is the missing row'
         assert 'absent' not in refusal, 'the witness does not use the name of a reading for a missing row'
 
     @pytest.mark.parametrize('reading', ['refused', 'absent', 'neutral'])
     def test_under_a_reading_a_missing_row_compares_false(self, reading: str):
-        schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': reading}}))
-        assert refusals(schema, self.CASES) == [], 'a missing row with no value is in neither case'
+        spec = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': reading}}))
+        assert refusals(spec, self.CASES) == [], 'a missing row with no value is in neither case'

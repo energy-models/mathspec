@@ -29,12 +29,12 @@ The top level of the package holds the functions you call. Every other
 public name is in one of three modules, and how you get the name decides the
 module:
 
-| You get it                  | It lives in        | Such as                                  |
-| --------------------------- | ------------------ | ---------------------------------------- |
-| by calling a function       | `mathspec`         | `to_spec`, `merge`, `typeset`, `advice`  |
-| from what a `Spec` holds    | `mathspec.spec`    | `Spec`, `VariableBlock`, `BUILTIN_NAMES` |
-| from what a `Program` holds | `mathspec.program` | `Program`, `Sum`, `Mask`, `Advice`       |
-| by catching it              | `mathspec.errors`  | `LanguageError`, `SchemaError`           |
+| You get it                  | It lives in        | Such as                                 |
+| --------------------------- | ------------------ | --------------------------------------- |
+| by calling a function       | `mathspec`         | `to_spec`, `merge`, `typeset`, `advice` |
+| from what a `Spec` holds    | `mathspec.spec`    | `Spec`, `VariableSpec`, `BUILTIN_NAMES` |
+| from what a `Program` holds | `mathspec.program` | `Program`, `Sum`, `Mask`, `Advice`      |
+| by catching it              | `mathspec.errors`  | `LanguageError`, `SchemaError`          |
 
 `SymbolTable` and `FormatName` are also at the top level, because you make
 them to give them to the typesetter. `tests/test_public_surface.py` checks
@@ -51,7 +51,7 @@ that each module obeys its rule.
   `advice()` is separate: it reports on a file the language accepts, and
   changes nothing.
 - A function writes nothing out unless the caller asks. A `piecewise:` or
-  `sos:` block stays a block until the caller calls
+  `sos:` entry stays an entry until the caller calls
   [`spec.expand()`](../reference/spec.md#mathspec.spec.Spec.expand).
 
 Each engine decides what a solver or file format can take, how the numbers

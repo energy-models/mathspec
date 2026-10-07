@@ -21,8 +21,8 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
-from mathspec import merge, override, to_spec, typeset_declaration
-from mathspec.program import Add, Constant, NamedExpression
+from mathspec import merge, override, to_spec, typeset_line
+from mathspec.program import Add, Constant, ExpressionReference
 from mathspec.typesetting import to_markdown
 from tools._page import ROOT, sidecar_for, splice, tab, without_header
 from tools._page import main as page_main
@@ -71,14 +71,14 @@ COMPOSED = {
     ),
 }
 
-#: Page -> the spec it shows one declaration at a time: its YAML, then the
+#: Page -> the spec it shows one entry at a time: its YAML, then the
 #: equation it renders, headed by the name the other side gives it, read from
-#: the declaration's own description.
+#: the entry's own description.
 DECLARED = {
     'pypsa.md': ROOT / 'examples' / 'pypsa.yaml',
 }
 
-#: Page -> the base and the patch laid over it, shown one declaration of the
+#: Page -> the base and the patch laid over it, shown one entry of the
 #: patch at a time — its YAML, then the line it prints in the patched spec.
 #: The rest of the patched spec is the base's page.
 PATCHED = {
@@ -150,10 +150,10 @@ def split_index(specs: Mapping[str, Spec]) -> str:
     readers: dict[str, tuple[str, tuple[str, ...]]] = {}
     terms: dict[str, list[tuple[str, str]]] = {}
     for name, spec in specs.items():
-        adds = {block.adds_to for block in spec.expressions.values() if block.adds_to is not None}
-        for term, block in spec.expressions.items():
-            if block.adds_to is not None:
-                terms.setdefault(block.adds_to, []).append((name, term))
+        adds = {expression.adds_to for expression in spec.expressions.values() if expression.adds_to is not None}
+        for term, expression in spec.expressions.items():
+            if expression.adds_to is not None:
+                terms.setdefault(expression.adds_to, []).append((name, term))
         for hub, entry in spec.given.expressions.items():
             if entry.description and hub not in adds:
                 readers[hub] = (name, tuple(entry.dims))
@@ -177,7 +177,9 @@ def split_index(specs: Mapping[str, Spec]) -> str:
     for name, spec in specs.items():
         given = spec.given
         reads = len(given.parameters) + len(given.variables) + len(given.expressions) + len(given.constraints)
-        hubs = dict.fromkeys(block.adds_to for block in spec.expressions.values() if block.adds_to is not None)
+        hubs = dict.fromkeys(
+            expression.adds_to for expression in spec.expressions.values() if expression.adds_to is not None
+        )
         adds = ', '.join(f'`{hub}`' for hub in hubs)
         files.append(
             f'| [{name}]({name}.md) | {len(spec.parameters)} | {len(spec.variables)} | {len(spec.constraints)} '
@@ -225,8 +227,8 @@ def probe_block() -> str:
     return '\n\n'.join(parts)
 
 
-def declaration(text: str, section: str, name: str | None = None) -> str:
-    """One declaration as written: ``section:`` itself, or ``name:`` under it."""
+def entry(text: str, section: str, name: str | None = None) -> str:
+    """One entry as written: ``section:`` itself, or ``name:`` under it."""
     lines = text.splitlines()
     i = lines.index(f'{section}:')
     if name is not None:
@@ -239,9 +241,9 @@ def declaration(text: str, section: str, name: str | None = None) -> str:
 
 
 def _names_for(name: str, description: str | None) -> list[str]:
-    """Every other-side name a declaration stands for: the backticked tokens before the ` — ` of its description.
+    """Every other-side name an entry stands for: the backticked tokens before the ` — ` of its description.
 
-    One declaration answers to one PyPSA name as a rule; a block whose rows PyPSA
+    One entry answers to one PyPSA name as a rule; an entry whose rows PyPSA
     names differently by mode lists them all before the dash, the first canonical.
     """
     text = description or ''
@@ -254,7 +256,7 @@ def _names_for(name: str, description: str | None) -> list[str]:
 
 
 def _stands_for(name: str, description: str | None) -> str:
-    """The other side's canonical name for a declaration — the backticked opening of its description."""
+    """The other side's canonical name for an entry — the backticked opening of its description."""
     return _names_for(name, description)[0]
 
 
@@ -269,48 +271,50 @@ def declared_block(path: Path) -> str:
     definition = equations(_section(page[page.index('#### Objective') :], 'Definitions')) if model.expressions else {}
     domains = _section(page, 'Variable domains').strip()
     assumption = equations(_section(page, 'Assumptions')) if model.assumptions else {}
-    parts = [legend, f'### Objective\n\n```yaml\n{declaration(text, "objective")}\n```\n\n{objective}']
-    for name, block in model.constraints.items():
+    parts = [legend, f'### Objective\n\n```yaml\n{entry(text, "objective")}\n```\n\n{objective}']
+    for name, constraint in model.constraints.items():
         printed = equation[name]
         if _reads_a_sum(model, name):
-            line = typeset_declaration(model, name, 'markdown', symbols=sidecar_for(path), inline_expressions=True)
+            line = typeset_line(model, name, 'markdown', symbols=sidecar_for(path), inline_expressions=True)
             printed = f'```math\n{line}\n```'
         parts.append(
-            f'### `{_stands_for(name, block.description)}`\n\n'
+            f'### `{_stands_for(name, constraint.description)}`\n\n'
             f'`{name}`\n\n'
-            f'```yaml\n{declaration(text, "constraints", name)}\n```\n\n'
+            f'```yaml\n{entry(text, "constraints", name)}\n```\n\n'
             f'{printed}'
         )
     parts.extend(
-        f'### `{name}`\n\n```yaml\n{declaration(text, "expressions", name)}\n```\n\n{definition[name]}'
+        f'### `{name}`\n\n```yaml\n{entry(text, "expressions", name)}\n```\n\n{definition[name]}'
         for name in model.expressions
     )
     parts.append(domains)
     parts.extend(
-        f'### `{name}`\n\n```yaml\n{declaration(text, "assumptions", name)}\n```\n\n{assumption[name]}'
+        f'### `{name}`\n\n```yaml\n{entry(text, "assumptions", name)}\n```\n\n{assumption[name]}'
         for name in model.assumptions
     )
     return '\n\n'.join(parts)
 
 
 def patched_block(base: Path, patch: Path) -> str:
-    """The patch's description, then every declaration it writes as YAML beside the line it prints once laid over *base*."""
+    """The patch's description, then every entry it writes as YAML beside the line it prints once laid over *base*."""
     text = without_header(patch)
     model = override(base, [patch])
     written = yaml.safe_load(text)
     headings = {
-        'variables': {name: _stands_for(name, block.description) for name, block in model.variables.items()},
-        'constraints': {name: _stands_for(name, block.description) for name, block in model.constraints.items()},
+        'variables': {name: _stands_for(name, variable.description) for name, variable in model.variables.items()},
+        'constraints': {
+            name: _stands_for(name, constraint.description) for name, constraint in model.constraints.items()
+        },
         'assumptions': {name: name for name in model.assumptions},
     }
     parts = [model.description]
     for section, heading_of in headings.items():
         for name in written.get(section, {}):
-            line = typeset_declaration(model, name, 'markdown', symbols=sidecar_for(base), inline_expressions=False)
+            line = typeset_line(model, name, 'markdown', symbols=sidecar_for(base), inline_expressions=False)
             parts.append(
                 f'### `{heading_of[name]}`\n\n'
                 f'`{name}`\n\n'
-                f'```yaml\n{declaration(text, section, name)}\n```\n\n'
+                f'```yaml\n{entry(text, section, name)}\n```\n\n'
                 f'```math\n{line}\n```'
             )
     return '\n\n'.join(parts)
@@ -331,10 +335,10 @@ def _reads_a_sum(model: Spec, name: str) -> bool:
     row = model.program.constraints[name]
     lhs, rhs = row.lhs, row.rhs
     return (
-        isinstance(lhs, NamedExpression)
+        isinstance(lhs, ExpressionReference)
         and isinstance(rhs, Constant)
         and rhs.value == 0
-        and all(isinstance(term, NamedExpression) for term in _summands(lhs.body))
+        and all(isinstance(term, ExpressionReference) for term in _summands(lhs.body))
         and len(_summands(lhs.body)) > 1
     )
 

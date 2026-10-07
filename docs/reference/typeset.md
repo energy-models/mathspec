@@ -41,13 +41,13 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
 | `legend`             | `--no-legend`          | Print the table of sets, parameters, variables and definitions above the math. Default: on                                      |
 | `numbered`           | `--no-numbers`         | Number the equations. Default: on                                                                                               |
 | `inline_expressions` | `--inline-expressions` | Substitute each named expression that the math reads into the equations that read it, instead of defining it once. Default: off |
-| —                    | `--expand`             | Print the variables and constraints the `piecewise:` and `sos:` blocks state, rather than the blocks. Default: off              |
+| —                    | `--expand`             | Print the variables and constraints the `piecewise:` and `sos:` entries state, rather than the entries. Default: off            |
 
 `-o FILE` writes to a file instead of stdout.
 
 - The spec's `description:` opens the document.
-- A `piecewise:` block prints as one line, which quantifies the curve over the
-  frame of the block, because the block states one curve at each coordinate of
+- A `piecewise:` entry prints as one line, which quantifies the curve over the
+  frame of the entry, because the entry states one curve at each coordinate of
   that frame. To print its rows, print
   [`spec.expand()`](spec.md#mathspec.spec.Spec.expand) or pass `--expand`
   ([see an expansion](../howto/see-an-expansion.md)).
@@ -56,9 +56,9 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
   breakpoints. A spec that assumes nothing of its data prints no such
   heading.
 - A [named expression](language/named.md) prints its symbol where it is used
-  and its body once, under a **Definitions** heading, in declaration order. A
-  `cases:` block, a [reported entry](language/named.md#reported-expressions)
-  and a [term](language/declarations.md#terms) keep their definition line
+  and its body once, under a **Definitions** heading, in file order. A
+  cased expression, a [reported entry](language/named.md#reported-expressions)
+  and a [term](language/parameters-variables-constraints.md#terms) keep their definition line
   under either `inline_expressions` setting.
 - A [mask](language/named.md#masks) prints its upright symbol where a file
   reads it, and its predicate once, under a **Masks** heading, with ⟺. It
@@ -83,16 +83,16 @@ format. The typesetter escapes every other character that the output format
 would read as markup. The legend prints the description of every
 dimension, parameter and variable.
 
-## Printing one declaration on its own
+## Printing one entry on its own
 
-`typeset_declaration` returns the line that the document prints for one named
+`typeset_line` returns the line that the document prints for one named
 expression, mask, constraint, assumption, curve or variable. The line has its
 quantifier, but no document, label, number or math delimiters:
 
 ```python
-ms.typeset_declaration('spec.yaml', 'spend', 'latex')
+ms.typeset_line('spec.yaml', 'spend', 'latex')
 # \mathit{spend}_{t} = \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
-ms.typeset_declaration('spec.yaml', 'balance', 'latex')
+ms.typeset_line('spec.yaml', 'balance', 'latex')
 # \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
@@ -101,16 +101,16 @@ optional `symbols` table. A Markdown line arrives without delimiters too, so put
 it inside the inline pair:
 
 ```python
-line = ms.typeset_declaration('spec.yaml', 'balance', 'markdown')
+line = ms.typeset_line('spec.yaml', 'balance', 'markdown')
 print(f'The balance holds: $`{line}`$')
 ```
 
 A single line has no _Definitions_ section beside it, so
-`typeset_declaration` substitutes each plain named expression that the line
+`typeset_line` substitutes each plain named expression that the line
 uses. A cased expression prints as its symbol, and a second call with its
-name prints its block.
+name prints its definition.
 
-`typeset_declaration` refuses a name that is none of the six kinds, and names
+`typeset_line` refuses a name that is none of the six kinds, and names
 the closest match. It also refuses a name declared as two of them, such as a
 constraint and a variable.
 
@@ -146,6 +146,6 @@ ms.to_latex('dispatch.yaml', symbols='dispatch.symbols.yaml')
 The typesetter prints each entry as you wrote it and does not translate
 between notations, so `to_typst` refuses a table with `notation: latex`. A key
 that names nothing in the spec, and nothing that its `piecewise:` or `sos:`
-blocks expand into, is an error that names the closest match.
+entries expand into, is an error that names the closest match.
 
 Nothing in a symbol table changes what the file means.

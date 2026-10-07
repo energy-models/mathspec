@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Processes, the maintenance
 
-This file states the maintenance rows of PyPSA's `Process`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Process_active`, `Process_committable`, `Process_p_nom_ext`, `Process_p_nom_extendable`, `Process_p_nom_max`, `Process_p_nom_min` and 3 more names that other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
+This file states the maintenance rows of PyPSA's `Process`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Process_active`, `Process_committable`, `Process_p_nom_ext`, `Process_p_nom_extendable`, `Process_p_nom_max`, `Process_p_nom_min` and 3 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml

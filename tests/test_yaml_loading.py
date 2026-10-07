@@ -47,7 +47,7 @@ _BOOLISH_DIMS = 'dimensions:\n' + ''.join(f'  {name}: {{dtype: str}}\n' for name
 
 
 def test_only_true_and_false_are_booleans(tmp_path):
-    """YAML 1.1 resolved these to bools, so the declaration the file names is not the one that reaches the schema — ``no`` is Norway."""
+    """YAML 1.1 resolved these to bools, so the entry the file names is not the one that reaches the schema — ``no`` is Norway."""
     path = _write(tmp_path, _BOOLISH_DIMS)
 
     assert list(read_yaml(path)['dimensions']) == _BOOLISH, 'every boolish word is a str key, in file order'
@@ -73,14 +73,14 @@ def test_the_loader_yields_plain_types(tmp_path):
     raw = read_yaml(_write(tmp_path, MODEL))
     assert type(raw) is dict
 
-    schema = to_spec(raw)
-    assert all(type(name) is str for name in schema.dimensions), 'a declaration is keyed by a plain str'
-    assert type(schema.variables['p'].dims) is list
-    assert all(type(d) is str for d in schema.variables['p'].dims)
+    spec = to_spec(raw)
+    assert all(type(name) is str for name in spec.dimensions), 'an entry is keyed by a plain str'
+    assert type(spec.variables['p'].dims) is list
+    assert all(type(d) is str for d in spec.variables['p'].dims)
 
 
 def test_duplicate_key_is_an_error_naming_both_lines(tmp_path):
-    """PyYAML keeps the last one, discarding a declaration the file contains."""
+    """PyYAML keeps the last one, discarding an entry the file contains."""
     path = _write(
         tmp_path, MODEL.replace('constraints:\n', 'constraints:\n  balance:\n    dims: []\n    equations: []\n')
     )
@@ -124,7 +124,7 @@ def test_an_empty_file_is_an_empty_model(tmp_path):
 
 
 def test_a_complex_key_is_refused_in_our_tree(tmp_path):
-    """A `? [a, b]` key cannot name a declaration; the refusal is the loader's, not a TypeError."""
+    """A `? [a, b]` key cannot name an entry; the refusal is the loader's, not a TypeError."""
     path = _write(tmp_path, MODEL + 'expressions:\n  ? [a, b]\n  : p\n')
     with pytest.raises(SchemaError, match='a key is a list or a mapping'):
         to_spec(path)

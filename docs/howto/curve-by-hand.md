@@ -7,7 +7,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 Tie a number of flows to one curve where that number is data: a boiler ties two
 flows and a CHP (combined heat and power) unit ties three, in one spec. A
-[`piecewise:`](../reference/language/piecewise.md) block lists its links in the
+[`piecewise:`](../reference/language/piecewise.md) entry lists its links in the
 file, so the file fixes the number of flows. Write the formulation out by hand,
 and the data sets the number of flows.
 
@@ -22,7 +22,7 @@ and the data sets the number of flows.
        bounds: { lower: 0, upper: 1 }
    ```
 
-2. **Restrict the weights with an `sos:` block.** `type: 2` lets at most two
+2. **Restrict the weights with an `sos:` entry.** `type: 2` lets at most two
    consecutive weights be non-zero, which is the restriction that `method: sos2`
    writes:
 

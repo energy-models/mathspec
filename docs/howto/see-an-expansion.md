@@ -5,14 +5,14 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # See what a curve or a set expands to
 
-A [`piecewise:`](../reference/language/piecewise.md) block and a `sos:` block
+A [`piecewise:`](../reference/language/piecewise.md) entry and an `sos:` entry
 (a special ordered set) each stand for plain variables and constraints. Write
 them out to review a formulation, to teach one, or to hand the spec to an
-engine that cannot read a `sos:` block.
+engine that cannot read an `sos:` entry.
 
 ## 1. Write the formulation out
 
-`expand()` writes each formulation out as plain declarations, and `to_yaml()`
+`expand()` writes each formulation out as plain entries, and `to_yaml()`
 prints the result as a file.
 
 === "Python"
@@ -36,7 +36,7 @@ other.
 
 ## 2. Read a set
 
-Compare the tabs. The `sos:` block below says that at most one `p` is nonzero.
+Compare the tabs. The `sos:` entry below says that at most one `p` is nonzero.
 [What a set is written out as](../reference/language/piecewise.md#what-a-set-is-written-out-as)
 names each row the expansion adds.
 
@@ -430,4 +430,4 @@ the set out too.
 [`Spec.expand()`](../reference/spec.md#mathspec.spec.Spec.expand) lists what
 the call accepts, and
 [writing a formulation out](../reference/language/piecewise.md#writing-a-formulation-out)
-says what each block emits.
+says what each entry emits.

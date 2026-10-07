@@ -217,5 +217,5 @@ The other two uses of a relation do not multiply by $`\mathbf{1}_R`$ and sum.
   neighbour $`t'`$ of $`t`$ with $`f(t') = f(t)`$. The fibres of $`f`$
   partition the axis, and the dimensions do not change.
 - A test reads the indicator itself. The name of a relation in a `where`
-  evaluates $`\mathbf{1}_R`$ at the coordinate of the declaration, and keeps
+  evaluates $`\mathbf{1}_R`$ at the coordinate of the entry, and keeps
   the coordinate where $`\mathbf{1}_R`$ is $`1`$.

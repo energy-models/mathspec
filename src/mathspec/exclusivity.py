@@ -31,13 +31,13 @@ from mathspec.program import (
     ExpressionComparison,
     JoinedPredicate,
     Mask,
-    NamedMask,
+    MaskReference,
     Negate,
     Not,
     Or,
-    Parameter,
     ParameterComparison,
     ParameterDefined,
+    ParameterReference,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -72,7 +72,7 @@ def overlapping(
 
     Args:
         cases: The ``when`` of every case, keyed by the case's name. The
-            block's ``otherwise`` is not among them: it claims what the rest
+            entry's ``otherwise`` is not among them: it claims what the rest
             leave, so it overlaps nothing by construction.
         dtypes: The declared dtype of every name a mask compares against.
         defaults: The value a missing row reads as, for every parameter whose
@@ -227,7 +227,7 @@ def _expression_rewrite(node: ExpressionComparison) -> str:
     """
     left, right = node.left, node.right
     number = _signed_literal(left)
-    if number is not None and isinstance(right, Parameter):
+    if number is not None and isinstance(right, ParameterReference):
         return (
             f'the literal is on the left, where a comparison reads as arithmetic. Write the same test '
             f'the other way round, {right.name} {_FLIPPED[node.op]} '
@@ -365,7 +365,7 @@ def _absence_cells(subject: Subject, *, numeric: bool) -> list[Cell]:
 
 
 def _numeric(dtype: DeclaredDtype | None, literals: set[_Literal]) -> bool:
-    """Is this subject a magnitude? The declaration says so where it is known."""
+    """Is this subject a magnitude? The entry says so where it is known."""
     if dtype is not None:
         return dtype in ('float', 'int')
     return bool(literals) and all(isinstance(value, int | float) and not isinstance(value, bool) for value in literals)
@@ -499,7 +499,7 @@ def _evaluate(node: Predicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             return _evaluate(left, cell, grid) and _evaluate(right, cell, grid)
         case Or(left=left, right=right):
             return _evaluate(left, cell, grid) or _evaluate(right, cell, grid)
-        case NamedMask(body=body):
+        case MaskReference(body=body):
             return _evaluate(body, cell, grid)
         case _:
             assert_never(node)

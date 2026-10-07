@@ -80,7 +80,7 @@ def test_check_reads_a_curve_as_written(capsys):
     """`check` expanded every curve on the user's behalf, then refused a curve without `--expand`; either way
     it read a file differently from the typeset verbs, which print it as written.
 
-    Advice reads a block as the rows it states, so `check` takes the file as
+    Advice reads an entry as the rows it states, so `check` takes the file as
     written and has no `--expand`: the rows are a different document to
     print, not a different model to advise on.
     """
@@ -149,7 +149,7 @@ def test_inline_expressions_substitutes_the_named_expressions_away(capsys):
     assert r'\mathit{spend}' in defined and r'\mathit{spend}' not in expanded
 
 
-def test_expand_prints_the_rows_the_blocks_state_rather_than_the_blocks(capsys):
+def test_expand_prints_the_rows_the_entries_state_rather_than_the_entries(capsys):
     """A shell cannot write `spec.expand()`, so the flag is the composition."""
     assert front.main(['latex', MODEL, '--no-legend']) == 0
     stated = capsys.readouterr().out

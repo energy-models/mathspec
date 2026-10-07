@@ -25,12 +25,12 @@ from mathspec.program import (
     WindowSum,
     walk_regions,
 )
-from mathspec.typesetting.format import Entry, number
+from mathspec.typesetting.format import LegendItem, number
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from mathspec.program import Expression, Mask, Missing, Program, RelationDeclaration
+    from mathspec.program import Expression, Mask, Missing, Program, Relation
     from mathspec.typesetting.format import Format, OperatorName
     from mathspec.typesetting.symbols import Symbols
 
@@ -113,9 +113,9 @@ def notice(program: Program) -> Noticed:
         expressions(*(link.expression for link in curve.links))
     for mask in program.masks.values():
         masks(mask.where)
-    for declaration in (*program.constraints.values(), *program.variables.values()):
-        if declaration.where is not None:
-            masks(declaration.where)
+    for entry in (*program.constraints.values(), *program.variables.values()):
+        if entry.where is not None:
+            masks(entry.where)
     for assumption in program.assumptions.values():
         masks(assumption.predicate)
         if assumption.where is not None:
@@ -141,89 +141,89 @@ class Legend:
     def _op(self, name: OperatorName) -> str:
         return self.format.operators[name]
 
-    def glossaries(self, noticed: Noticed, defined: Iterable[str]) -> list[tuple[str, list[Entry]]]:
-        """The sets, parameters, variables, given declarations, definitions and masks, each with its symbol, its dims and its description.
+    def glossaries(self, noticed: Noticed, defined: Iterable[str]) -> list[tuple[str, list[LegendItem]]]:
+        """The sets, parameters, variables, given entries, definitions and masks, each with its symbol, its dims and its description.
 
         *defined* names the expressions that print under their own symbol, so
         a legend row stands exactly where a symbol does.
         """
         fmt, program = self.format, self.program
         sets = [
-            self._entry(
+            self._item(
                 self.symbols.set[d],
                 f'index {fmt.math(self.symbols.index[d])} {fmt.dash} {fmt.mono(d)}{self._coords(d, noticed)}',
-                block.description,
+                entry.description,
             )
-            for d, block in program.dimensions.items()
+            for d, entry in program.dimensions.items()
         ]
         parameters = [
-            self._entry(
+            self._item(
                 self.symbols.name[p],
-                f'{fmt.mono(p)}{self._over(list(block.dims))}{self._missing(block.missing)}',
-                block.description,
+                f'{fmt.mono(p)}{self._over(list(entry.dims))}{self._missing(entry.missing)}',
+                entry.description,
             )
-            for p, block in program.parameters.items()
+            for p, entry in program.parameters.items()
         ]
         variables = [
-            self._entry(
+            self._item(
                 self.symbols.name[v],
-                f'{fmt.mono(v)}{self._over(list(block.dims))}{self._missing(block.missing, "absent", _MASKED_OUT)}',
-                block.description,
+                f'{fmt.mono(v)}{self._over(list(entry.dims))}{self._missing(entry.missing, "absent", _MASKED_OUT)}',
+                entry.description,
             )
-            for v, block in program.variables.items()
+            for v, entry in program.variables.items()
         ]
         given = [
             *(
-                self._entry(
+                self._item(
                     self.symbols.name[g],
-                    f'{fmt.mono(g)}{self._over(list(block.dims))}, data another file declares',
-                    block.description,
+                    f'{fmt.mono(g)}{self._over(list(entry.dims))}, data another file declares',
+                    entry.description,
                 )
-                for g, block in program.given.parameters.items()
+                for g, entry in program.given.parameters.items()
             ),
             *(
-                self._entry(self.symbols.name[g], f'{fmt.mono(g)}{self._over(list(block.dims))}', block.description)
-                for g, block in program.given.variables.items()
+                self._item(self.symbols.name[g], f'{fmt.mono(g)}{self._over(list(entry.dims))}', entry.description)
+                for g, entry in program.given.variables.items()
             ),
             *(
-                self._entry(
+                self._item(
                     self.symbols.name[g],
-                    f'{fmt.mono(g)}{self._over(list(block.dims))}, '
+                    f'{fmt.mono(g)}{self._over(list(entry.dims))}, '
                     + (
                         f'an expression this file adds {", ".join(fmt.mono(t) for t in terms)} to'
                         if (terms := [t for t, e in program.expressions.items() if e.adds_to == g])
                         else 'an expression another file defines'
                     ),
-                    block.description,
+                    entry.description,
                 )
-                for g, block in program.given.expressions.items()
+                for g, entry in program.given.expressions.items()
             ),
             *(
-                self._entry(
+                self._item(
                     self.symbols.constraint[g],
-                    f'{fmt.mono(g)}{self._over(list(block.dims))}, a row family this file reads the dual of',
-                    block.description,
+                    f'{fmt.mono(g)}{self._over(list(entry.dims))}, a row family this file reads the dual of',
+                    entry.description,
                 )
-                for g, block in program.given.constraints.items()
+                for g, entry in program.given.constraints.items()
             ),
             *(
-                self._entry(
+                self._item(
                     self.symbols.name[g],
-                    f'{fmt.mono(g)}{self._over(list(block.dims))}, a mask another file defines',
-                    block.description,
+                    f'{fmt.mono(g)}{self._over(list(entry.dims))}, a mask another file defines',
+                    entry.description,
                 )
-                for g, block in program.given.masks.items()
+                for g, entry in program.given.masks.items()
             ),
         ]
         shown = set(defined)
         definitions = [
-            self._entry(self.symbols.name[e], f'{fmt.mono(e)}{self._over(list(block.dims))}', block.description)
-            for e, block in program.expressions.items()
+            self._item(self.symbols.name[e], f'{fmt.mono(e)}{self._over(list(entry.dims))}', entry.description)
+            for e, entry in program.expressions.items()
             if e in shown
         ]
         masks = [
-            self._entry(self.symbols.name[m], f'{fmt.mono(m)}{self._over(list(block.dims))}', block.description)
-            for m, block in program.masks.items()
+            self._item(self.symbols.name[m], f'{fmt.mono(m)}{self._over(list(entry.dims))}', entry.description)
+            for m, entry in program.masks.items()
         ]
         groups = (
             ('Sets', sets),
@@ -233,11 +233,11 @@ class Legend:
             ('Definitions', definitions),
             ('Masks', masks),
         )
-        return [(title, entries) for title, entries in groups if entries]
+        return [(title, items) for title, items in groups if items]
 
-    def _entry(self, symbol: str, what: str, description: str | None) -> Entry:
+    def _item(self, symbol: str, what: str, description: str | None) -> LegendItem:
         meaning = f'{what} {self.format.dash} {self.format.escape(description)}' if description else what
-        return Entry(symbol, meaning)
+        return LegendItem(symbol, meaning)
 
     def _over(self, dims: list[str]) -> str:
         if not dims:
@@ -255,7 +255,7 @@ class Legend:
             shown = self.format.math(number(value, self.format))
         return f', {shown} {where}'
 
-    def _signature(self, name: str, lk: RelationDeclaration) -> str:
+    def _signature(self, name: str, lk: Relation) -> str:
         """A relation in the legend: a function from its key sets to its value sets, or a relation inside the product."""
 
         def product(roles: Iterable[str]) -> str:

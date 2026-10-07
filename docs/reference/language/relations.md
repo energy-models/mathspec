@@ -97,7 +97,7 @@ map joins, and prints nothing for `refused`.
 
 ## How a relation is used
 
-The declaration fixes no direction. A call **joins** the operand to the
+The entry fixes no direction. A call **joins** the operand to the
 relation on the columns they share, and **groups** what the join produces. A
 call names columns of a relation as `relation[column]`, or as
 `relation[column, …]` for several columns of one table. The relation is written
@@ -195,7 +195,7 @@ coordinate the relation sends nowhere is in no group.
 
 ### Tests
 
-A `where` string uses a relation at the coordinates of its own declaration. It
+A `where` string uses a relation at the coordinates of its own entry. It
 compares a column under `values:`, written `l[c]`, against a label, compares
 two columns of one table, or tests that a row exists
 ([where strings](expressions.md#where-strings)). A comparison reads one column,

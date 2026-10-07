@@ -13,13 +13,13 @@ The one file writes each hub, a row or a named expression that every component
 adds its share to, as the sum of named terms: `Bus_injection` is
 `Generator_injection + … + Transformer_injection`, and `Bus_nodal_balance`
 reads `Bus_injection == 0`. The objective reads the hub `total_cost`. A
-fragment owns the declarations of its topic, its terms among them, and reads
+fragment owns the entries of its topic, its terms among them, and reads
 what another topic declares under `given:`; each term names the hub it adds to
 with `adds_to:`, and the fragment reads that hub under `given:`. One fragment
 reads each hub without adding to it, with its description, so the terms always
 have a reader, and a new component is one new fragment. The reader of
 `total_cost` also sets the objective. A mask goes to the topic its name
-names, as any declaration does, and a fragment that reads another topic's
+names, as any entry does, and a fragment that reads another topic's
 mask reads it under `given: masks:`.
 
 `merge` then writes each hub as the file does, so `check` is one comparison:
@@ -53,7 +53,7 @@ FRAME = ('dimensions', 'relations')
 IDENT = re.compile(r'[A-Za-z_][A-Za-z0-9_]*')
 HEADER = '# SPDX-FileCopyrightText: mathspec Contributors\n#\n# SPDX-License-Identifier: MIT\n'
 
-#: The topic a declaration goes to, by the first word of its name.
+#: The topic an entry goes to, by the first word of its name.
 PREFIX_TOPIC = {
     'Generator': 'generator',
     'Link': 'link',
@@ -115,7 +115,7 @@ TOPIC_PREFIX = {topic: prefix for prefix, topic in PREFIX_TOPIC.items() if prefi
 Key = tuple[str, str]
 
 
-#: The components with unit commitment, whose declarations are cut by feature.
+#: The components with unit commitment, whose entries are cut by feature.
 COMMITTABLE = ('Generator', 'Link', 'Process')
 
 #: A feature of a committable component, by a pattern on the rest of the name;
@@ -128,7 +128,7 @@ FEATURES = (
 
 
 def topic(name: str) -> str:
-    """The fragment a declaration of *name* goes to."""
+    """The fragment an entry of *name* goes to."""
     if 'security' in name or 'BODF' in name:
         return 'security'
     prefix, _, rest = name.partition('_')
@@ -144,9 +144,9 @@ def topic(name: str) -> str:
 
 
 def _sliced(text: str) -> dict[Key, str]:
-    """The source lines of every declaration, cut where the next one at the same indent starts.
+    """The source lines of every entry, cut where the next one at the same indent starts.
 
-    Slicing text rather than dumping parsed data keeps each block's formatting,
+    Slicing text rather than dumping parsed data keeps each entry's formatting,
     so a fragment reads like the file it was cut from.
     """
     lines = text.splitlines()
@@ -159,11 +159,11 @@ def _sliced(text: str) -> dict[Key, str]:
         elif (entry := re.match(r'^  ([A-Za-z_]\w*):', line)) and section in SECTIONS:
             starts.append((i, section, entry.group(1)))
     starts.append((len(lines), None, None))
-    blocks = {}
+    entries = {}
     for (i, section, name), (j, _, _) in itertools.pairwise(starts):
         if section and name:
-            blocks[section, name] = '\n'.join(lines[i:j]).rstrip()
-    return blocks
+            entries[section, name] = '\n'.join(lines[i:j]).rstrip()
+    return entries
 
 
 def _names_in(value: object, known: Mapping[str, str]) -> set[str]:
@@ -177,9 +177,9 @@ def _names_in(value: object, known: Mapping[str, str]) -> set[str]:
     return set()
 
 
-def _entry(block: object) -> dict[str, Any]:
+def _entry(entry: object) -> dict[str, Any]:
     """A named expression as a mapping, however the file wrote it."""
-    return dict(block) if isinstance(block, dict) else {'expression': block}
+    return dict(entry) if isinstance(entry, dict) else {'expression': entry}
 
 
 class Model:
@@ -188,7 +188,7 @@ class Model:
     def __init__(self, path: Path = SOURCE) -> None:
         text = path.read_text()
         self.data: dict[str, Any] = yaml.safe_load(text)
-        self.blocks = _sliced(text)
+        self.entries = _sliced(text)
         self.kind = {n: s for s in SECTIONS if s not in ('constraints', 'assumptions') for n in self.data.get(s, {})}
         #: hub -> the topic of each term -> the term, in the order the topics sort in.
         self.shares: dict[str, dict[str, str]] = {}
@@ -218,8 +218,8 @@ class Model:
 
     @property
     def keys(self) -> list[Key]:
-        """Every declaration, in the order of the source file."""
-        return list(self.blocks)
+        """Every entry, in the order of the source file."""
+        return list(self.entries)
 
     def frames(self) -> dict[str, tuple[str, ...]]:
         """The frame of every named expression and mask, read off the one file."""
@@ -269,10 +269,10 @@ def fragments(model: Model) -> dict[str, str]:
     return written
 
 
-def _dumped(name: str, block: Mapping[str, object], indent: str = '  ') -> str:
-    """A generated declaration, its long text folded one term per line."""
+def _dumped(name: str, entry: Mapping[str, object], indent: str = '  ') -> str:
+    """A generated entry, its long text folded one term per line."""
     lines = [f'{indent}{name}:']
-    for field, value in block.items():
+    for field, value in entry.items():
         if value is None:
             continue
         if isinstance(value, str) and field in ('expression', 'description') and ('\n' in value or len(value) > 80):
@@ -296,7 +296,7 @@ def _fragment(
     adds: Mapping[str, str],
     homes: set[str],
 ) -> str:
-    """One fragment as YAML text, its ``given:`` block first, then its sections and declarations in source order.
+    """One fragment as YAML text, its ``given:`` section first, then its sections and entries in source order.
 
     A term carries the hub it adds to as ``adds_to:``. A hub the fragment is
     home to is read under ``given:`` with its description, and the home of the
@@ -307,15 +307,15 @@ def _fragment(
         parts.append('given:\n' + ''.join(_given(model, kind, given, stated, homes) for kind in GIVEN_KINDS))
     hubs = {term: hub for hub, term in adds.items()}
     for section in SECTIONS:
-        blocks = [
-            _term_block(model.blocks[key], hubs[key[1]])
+        entries = [
+            _term_entry(model.entries[key], hubs[key[1]])
             if section == 'expressions' and key[1] in hubs
-            else model.blocks[key]
+            else model.entries[key]
             for key in model.keys
             if key[0] == section and key in included
         ]
-        if blocks:
-            parts.append(f'{section}:\n' + '\n'.join(blocks) + '\n')
+        if entries:
+            parts.append(f'{section}:\n' + '\n'.join(entries) + '\n')
     objective = model.data['objective']
     if objective['expression'] in homes:
         parts.append(_dumped('objective', objective, indent='') + '\n')
@@ -323,26 +323,26 @@ def _fragment(
 
 
 #: The kinds a fragment reads under `given:`, and the fields of the source
-#: declaration each restates beside the frame.
+#: entry each restates beside the frame.
 GIVEN_KINDS = {'parameters': ('dtype',), 'variables': ('domain',), 'expressions': (), 'masks': ()}
 
 
-def _term_block(block: str, hub: str) -> str:
-    """A term's source block with the hub it adds to, every form the head line does not open reread as a mapping."""
-    head, _, rest = block.partition('\n')
+def _term_entry(source: str, hub: str) -> str:
+    """A term's source entry with the hub it adds to, every form the head line does not open reread as a mapping."""
+    head, _, rest = source.partition('\n')
     name, _, inline = head.partition(':')
     if not (scalar := inline.strip()):
         return f'{head}\n{rest}\n    adds_to: {hub}'
     if scalar[0] in '>|':
         return f'{name}:\n    expression: {scalar}\n{rest}\n    adds_to: {hub}'
-    entry = yaml.safe_load(block)[name.strip()]
+    entry = yaml.safe_load(source)[name.strip()]
     fields = {**entry, 'adds_to': hub} if isinstance(entry, dict) else {'expression': entry, 'adds_to': hub}
     dumped = yaml.safe_dump({name.strip(): fields}, default_flow_style=False, sort_keys=False, width=10**6)
     return textwrap.indent(dumped, ' ' * (len(head) - len(head.lstrip()))).rstrip()
 
 
 def _given(model: Model, kind: str, given: set[Key], stated: Mapping[str, list[str]], homes: set[str]) -> str:
-    """One kind of a fragment's `given:` block, an entry per line in source order, a hub it is home to described."""
+    """One kind of a fragment's `given:` section, an entry per line in source order, a hub it is home to described."""
     names = [n for s, n in model.keys if s == kind and (s, n) in given]
     if not names:
         return ''

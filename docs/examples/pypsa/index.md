@@ -14,10 +14,10 @@ file, and the two have the same [canonical form](../../howto/compare.md).
 Each fragment loads and prints on its own, and
 [`advice`](../../reference/api.md#advice) runs on each fragment alone. A
 fragment lists each name that it reads but does not declare under
-[`given`](../../reference/language/declarations.md#given). Some sums take a
+[`given`](../../reference/language/parameters-variables-constraints.md#given). Some sums take a
 share from every component, such as the bus balance or the operating cost. A
 component names its share of such a sum as an expression of its own, a
-[term](../../reference/language/declarations.md#terms), whose `adds_to:` key
+[term](../../reference/language/parameters-variables-constraints.md#terms), whose `adds_to:` key
 names the sum. For each sum, one fragment reads it and adds nothing to it, so
 the terms always have a reader. To add a component, you add one file, and the
 network file does not change.

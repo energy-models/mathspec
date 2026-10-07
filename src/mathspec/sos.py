@@ -2,10 +2,10 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Expand ``sos:`` blocks into the binaries and rows that state the same restriction.
+"""Expand ``sos:`` entries into the binaries and rows that state the same restriction.
 
-A set becomes ordinary declarations under names prefixed with the block's own,
-the way a ``piecewise:`` block becomes weights and rows; what it emits is
+A set becomes ordinary entries under names prefixed with the entry's own,
+the way a ``piecewise:`` entry becomes weights and rows; what it emits is
 tabled in ``docs/reference/language/piecewise.md``. An unpicked member is held
 at zero from both sides, so the rewrite states the same feasible set whatever
 sign the member takes — what it needs is a coefficient on each side, which a
@@ -31,7 +31,7 @@ Coefficients = tuple[float | str | None, float | str | None]
 def coefficients(domain: str, lower: float | str | None, upper: float | str | None) -> Coefficients:
     """What a member's two linking rows multiply its binary by, ``None`` on a side the spec leaves open.
 
-    The 0 and 1 a binary's domain fixes, which no bounds block carries;
+    The 0 and 1 a binary's domain fixes, which no ``bounds:`` carries;
     otherwise the member's own declared bounds, each a number or the name of a
     parameter. A parameter is a coefficient like any other: it is what the row
     multiplies by, and no rewrite needs to know its value. Nothing else is a
@@ -71,7 +71,7 @@ class Emitted:
 
     @property
     def by_kind(self) -> tuple[tuple[str, tuple[str, ...]], ...]:
-        """Each name by the kind of declaration it would collide with."""
+        """Each name by the kind of entry it would collide with."""
         return (('variable', (self.seg,)), ('constraint', (self.pick, self.link, self.below)))
 
 
@@ -82,20 +82,20 @@ _SEGMENTS = {
 }
 
 
-def expand_sets(schema: Spec) -> Spec:
-    """*schema* with every ``sos:`` block written out as binaries and the rows that link them.
+def expand_sets(spec: Spec) -> Spec:
+    """*spec* with every ``sos:`` entry written out as binaries and the rows that link them.
 
     The curves an expansion wrote out ride along, because a spec whose
     curves are already written out is the one this is usually asked of.
     """
-    raw = schema.model_dump()
-    for name in list(schema.sos):
+    raw = spec.model_dump()
+    for name in list(spec.sos):
         emit(raw, name)
     return Spec.model_validate(raw)
 
 
 def emit(raw: dict[str, object], name: str) -> None:
-    """Write what the set *name* states as declarations of *raw*, and drop the block.
+    """Write what the set *name* states as entries of *raw*, and drop the entry.
 
     Args:
         raw: A spec as data, mid-expansion, declaring the set and the variable
@@ -103,9 +103,9 @@ def emit(raw: dict[str, object], name: str) -> None:
         name: Which set to lower.
     """
     sets = section(raw, 'sos')
-    block = sets.pop(name)
-    assert isinstance(block, dict), 'a validated spec carries each set as a mapping'
-    variable, over, order = block['variable'], block['along'], block['type']
+    entry = sets.pop(name)
+    assert isinstance(entry, dict), 'a validated spec carries each set as a mapping'
+    variable, over, order = entry['variable'], entry['along'], entry['type']
     member = section(raw, 'variables')[variable]
     assert isinstance(member, dict), 'a validated spec carries each variable as a mapping'
     dims = list(member['dims'])
@@ -142,7 +142,7 @@ def _scaled(factor: float | str, picked: str) -> str:
 def _coefficients(member: dict[str, object]) -> tuple[float | str, float | str]:
     """The two coefficients as an expression writes them, read off the member."""
     declared = member.get('bounds')
-    assert declared is None or isinstance(declared, dict), 'a validated spec carries a bounds block as a mapping'
+    assert declared is None or isinstance(declared, dict), 'a validated spec carries `bounds:` as a mapping'
     lower, upper = (declared.get('lower'), declared.get('upper')) if declared else (None, None)
     assert isinstance(lower, float | str | None) and isinstance(upper, float | str | None), (
         'a bound is a number, the name of a parameter, or open'

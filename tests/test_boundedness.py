@@ -14,7 +14,7 @@ import pytest
 
 from mathspec.boundedness import unbounded_notes
 from mathspec.operators import BUILTIN_NAMES
-from tests.fixtures import SMALL_MODEL, schema_of, varied
+from tests.fixtures import SMALL_MODEL, spec_of, varied
 
 BASE = varied(
     SMALL_MODEL,
@@ -24,7 +24,7 @@ BASE = varied(
 
 
 def _advice(**patch):
-    return unbounded_notes(schema_of(BASE, **patch).program)
+    return unbounded_notes(spec_of(BASE, **patch).program)
 
 
 def _notes(**patch) -> list[str]:
@@ -73,7 +73,7 @@ def test_a_variable_the_objective_drives_unopposed_is_named_with_its_side(patch,
 )
 def test_a_named_constant_coefficient_carries_its_sign(objective, side):
     """A coefficient written as an ``expressions:`` entry reaches the pass as a
-    ``NamedExpression`` node over its constant. The sign was read off the node alone, so a
+    ``ExpressionReference`` node over its constant. The sign was read off the node alone, so a
     named ``2`` claimed nothing and the unbounded variable went unnamed."""
     notes = _notes(
         **{
