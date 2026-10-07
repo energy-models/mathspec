@@ -167,7 +167,7 @@
       "title": "DimensionSpec",
       "type": "object"
     },
-    "ExpressionCase": {
+    "ExpressionCaseSpec": {
       "additionalProperties": false,
       "description": "One region of a named expression: the value, and when it is the value.\n\nEvery case says where it applies. The value wherever none of them does is\nthe block's ``otherwise:``, which is written outside ``cases:`` because it\nis not a region like these \u2014 it is what is left::\n\n    cases:\n      opening: { when: \"position(snapshot) == 0\", expression: p_max }\n    otherwise: 0",
       "properties": {
@@ -191,7 +191,7 @@
         "when",
         "expression"
       ],
-      "title": "ExpressionCase",
+      "title": "ExpressionCaseSpec",
       "type": "object"
     },
     "ExpressionSpec": {
@@ -214,7 +214,7 @@
             },
             "cases": {
               "additionalProperties": {
-                "$ref": "#/$defs/ExpressionCase"
+                "$ref": "#/$defs/ExpressionCaseSpec"
               },
               "default": {},
               "minProperties": 1,
@@ -685,7 +685,7 @@
       "title": "ParameterSpec",
       "type": "object"
     },
-    "PiecewiseLink": {
+    "PiecewiseLinkSpec": {
       "anyOf": [
         {
           "additionalProperties": false,
@@ -714,7 +714,7 @@
             "expression",
             "values"
           ],
-          "title": "PiecewiseLink",
+          "title": "PiecewiseLinkSpec",
           "type": "object"
         },
         {
@@ -757,7 +757,7 @@
         },
         "links": {
           "items": {
-            "$ref": "#/$defs/PiecewiseLink"
+            "$ref": "#/$defs/PiecewiseLinkSpec"
           },
           "title": "Links",
           "type": "array"

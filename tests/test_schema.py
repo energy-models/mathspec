@@ -28,7 +28,7 @@ def test_the_checked_in_json_schema_has_not_drifted():
 @pytest.mark.parametrize(
     ('definition', 'shorthand', 'spelling'),
     [
-        pytest.param('PiecewiseLink', 'array', '`[expression, values, sign?]`', id='link-shorthand'),
+        pytest.param('PiecewiseLinkSpec', 'array', '`[expression, values, sign?]`', id='link-shorthand'),
         pytest.param('ExpressionSpec', 'string', 'bare-string', id='bare-string-expression'),
     ],
 )

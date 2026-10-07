@@ -63,7 +63,7 @@ __all__ = [
     'ConstraintSpec',
     'Curvature',
     'DimensionSpec',
-    'ExpressionCase',
+    'ExpressionCaseSpec',
     'ExpressionSpec',
     'Formulation',
     'GivenConstraintSpec',
@@ -76,7 +76,7 @@ __all__ = [
     'MaskSpec',
     'ObjectiveSpec',
     'ParameterSpec',
-    'PiecewiseLink',
+    'PiecewiseLinkSpec',
     'PiecewiseSpec',
     'RelationSpec',
     'SosSpec',
@@ -627,7 +627,7 @@ def _number_is_an_expression(value: object) -> object:
 Expression = Annotated[str, BeforeValidator(_number_is_an_expression, json_schema_input_type=str | float)]
 
 
-class ExpressionCase(_StrictSpec):
+class ExpressionCaseSpec(_StrictSpec):
     """One region of a named expression: the value, and when it is the value.
 
     Every case says where it applies. The value wherever none of them does is
@@ -680,7 +680,7 @@ class ExpressionSpec(_StrictSpec):
     #: the body's own dims where a plain entry leaves it out.
     dims: list[str] | None = None
     #: The regions, keyed by the name labelling the row each prints; every ``when`` is proved apart from the others.
-    cases: Annotated[dict[str, ExpressionCase], Field(min_length=1)] = {}
+    cases: Annotated[dict[str, ExpressionCaseSpec], Field(min_length=1)] = {}
     #: The value wherever no case's ``when`` holds, printed as the last row.
     otherwise: Expression | None = None
     #: The sum this entry adds to as a term, a ``given: expressions:`` entry of this file, or ``None``.
@@ -850,7 +850,7 @@ class AssumptionSpec(_StrictSpec):
         return written
 
 
-class PiecewiseLink(_StrictSpec):
+class PiecewiseLinkSpec(_StrictSpec):
     """One link of a piecewise block: an expression pinned to a values curve.
 
     Written in YAML as ``[expression, values]`` or ``[expression, values,
@@ -915,7 +915,7 @@ class PiecewiseSpec(_StrictSpec):
 
     #: The breakpoint dimension.
     over: str
-    links: list[PiecewiseLink]
+    links: list[PiecewiseLinkSpec]
     #: Which of [`PIECEWISE_METHODS`][] restricts the weights.
     method: PiecewiseMethod = 'adjacency'
     #: What the weights sum to — 1 where absent, or a binary that pins the formulation to 0 when it is 0.
@@ -935,7 +935,7 @@ class PiecewiseSpec(_StrictSpec):
         return self.points if self.points in {link.values for link in self.links} else None
 
     @property
-    def curve(self) -> tuple[PiecewiseLink, PiecewiseLink]:
+    def curve(self) -> tuple[PiecewiseLinkSpec, PiecewiseLinkSpec]:
         """The two links as ``(x, y)``, the bounded one last.
 
         Two-link blocks only.
@@ -974,7 +974,7 @@ class PiecewiseSpec(_StrictSpec):
 
     @field_validator('links')
     @classmethod
-    def _check_links(cls, v: list[PiecewiseLink]) -> list[PiecewiseLink]:
+    def _check_links(cls, v: list[PiecewiseLinkSpec]) -> list[PiecewiseLinkSpec]:
         if len(v) < 2:
             msg = 'piecewise needs at least two links ([expression, values, sign?]).'
             raise ValueError(msg)
