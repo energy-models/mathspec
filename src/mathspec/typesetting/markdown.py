@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 #: What Markdown reads as markup inside a paragraph, each escaped by a leading
-#: backslash — CommonMark lets any ASCII punctuation be. ``$`` is GitHub's
+#: backslash, which CommonMark allows for any ASCII punctuation. ``$`` is GitHub's
 #: inline math, ``~`` its strikethrough; the pipe is a table cell's to escape.
 _SPECIALS = frozenset('\\`*_[]<>~$#')
 

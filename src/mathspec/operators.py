@@ -43,8 +43,8 @@ class Builtin:
     column_kwargs: tuple[str, ...] = ()
     edge_kwargs: tuple[str, ...] = ()
     required_value_kwargs: tuple[str, ...] = ()
-    #: Kwargs the call may omit. Their *kind* still comes from the tuples
-    #: above — this says only that the operator has an answer without them.
+    #: Keyword arguments the call may omit. Their *kind* still comes from the
+    #: tuples above. This says only that the operator has a result without them.
     optional_kwargs: tuple[str, ...] = ()
     #: Kwargs required exactly when the call names columns. A sum through a
     #: relation names the columns that leave, so the key columns it keeps are
@@ -116,35 +116,27 @@ class Amount(NamedTuple):
 
     #: The word for the amount.
     noun: str
-    #: Why negating a named one at the call site is not what the caller means.
+    #: What to write instead of negating a named one at the call site.
     negated: str
-    #: What a named one that varies over the axis it steps along becomes.
-    varies: str
     #: The least whole number a literal may be.
     minimum: float
     #: What a literal must be written as, after ``operator(kwarg=...)``.
     form: str
 
 
-#: The amount each operator that steps along an axis takes, by operator name.
+#: The amount each operator that steps along a dimension takes, by operator name.
 AMOUNTS: dict[str, Amount] = {
     'shift': Amount(
         'offset',
-        'A named offset carries its sign in its values, so that one row pointing backwards says '
-        'so where the data is read — negate the column instead.',
-        'a permutation rather than a lag',
+        'Negate the values of the parameter instead.',
         -math.inf,
-        'must be a whole number, or the name of an integer parameter when the offset differs per '
-        'entity — a lead time, a transit time, a minimum up time.',
+        'must be a whole number, or the name of an integer parameter.',
     ),
     'sum_back': Amount(
         'width',
-        'A width counts positions and so has no direction; which way a window reaches is the '
-        "operator's own name rather than the sign of its width.",
-        'a different window at every position, which is no longer "the last n"',
+        'A width has no sign. Remove the minus.',
         1,
-        'needs a whole number of positions of at least 1, or the name of an integer parameter when '
-        'the window differs per entity. A width of 1 is the operand itself.',
+        'must be a whole number of at least 1, or the name of an integer parameter.',
     ),
 }
 
@@ -156,10 +148,8 @@ EDGE_WRAP = 'wrap'
 def edge_error(name: str, given: str) -> str:
     """Why an ``edge=`` value is not one the language has."""
     return (
-        f'{name}(edge={given}) is not an edge policy.\n'
-        f"Write edge='{EDGE_WRAP}' for a cyclic translation, a number for the "
-        f'value the vacated positions contribute, or omit it and they are '
-        f'absent — which drops the row.'
+        f'{name}(edge={given}) is not an edge value.\n'
+        f"Write edge='{EDGE_WRAP}', a number for the vacated positions, or omit edge= to drop their rows."
     )
 
 
@@ -170,9 +160,8 @@ def call_shape_error(name: str, positional: int, kwargs: Iterable[str]) -> str |
     optional = {*builtin.edge_kwargs, *builtin.optional_kwargs}
     if keys & set(builtin.column_kwargs) and (unsaid := sorted(frozenset(builtin.with_columns) - keys)):
         return (
-            f'{name}() through a relation leaves {", ".join(f"{k}=" for k in unsaid)} unsaid.\n'
-            f'A sum through a relation names the columns that leave the frame, so the key columns it keeps are '
-            f'the ones it does not name.\n'
+            f'{name}() through a relation does not name {", ".join(f"{k}=" for k in unsaid)}. A sum through a '
+            f'relation names in over= the columns it sums away.\n'
             f'Write: {builtin.usage}'
         )
     fits = positional == 1 and keys - optional == builtin.required

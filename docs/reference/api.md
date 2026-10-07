@@ -5,8 +5,9 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Python API
 
-This page documents every name that `import mathspec` exports, grouped by
-task. The top level holds what you call. Three modules hold the rest:
+Look up the signature, the arguments and the errors of every name that
+`import mathspec` exports, grouped by task. The top level holds what you call,
+and three modules hold the rest:
 
 | Module             | Holds                                                   | Documented on             |
 | ------------------ | ------------------------------------------------------- | ------------------------- |

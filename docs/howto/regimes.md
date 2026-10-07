@@ -6,8 +6,8 @@ SPDX-License-Identifier: CC-BY-4.0
 # State a rule that differs by regime
 
 Write one spec in which a rule takes a different form for some members of a
-dimension. Committable and non-committable generators are the usual case, and
-the recipe needs no second file.
+dimension, with no second file. Each group of members that shares one form is a
+regime, and committable and non-committable generators are the usual case.
 
 1. **Put the regime in the data.** A `bool` parameter says which members are
    in it; a `str` parameter names one of several:
@@ -83,9 +83,9 @@ the recipe needs no second file.
 
    `otherwise:` takes every coordinate the cases leave.
 
-4. **Check it** with `python -m mathspec check spec.yaml`. A pair of masks
-   that can both hold, or a case with no `otherwise:`, is refused there with
-   the rewrite named.
+4. **Check it** with `python -m mathspec check spec.yaml`. The check refuses
+   a pair of masks that can both hold, and a case with no `otherwise:`, with a
+   message that names the rewrite.
 
 What a `where:` means is under [absence](../reference/language/absence.md);
 what a `cases:` block accepts is under

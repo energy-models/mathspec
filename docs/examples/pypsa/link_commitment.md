@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Links, the commitment
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Link`, the commitment rows. It adds a term to `scenario_opex`. It reads `Link_active`, `Link_maintenance_capacity`, `Link_maintenance_pu`, `Link_maintenance_status`, `Link_modules_installed`, `Link_n_mod` and 10 more under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states the commitment rows of PyPSA's `Link`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to the sum `scenario_opex`. It reads `Link_active`, `Link_maintenance_capacity`, `Link_maintenance_pu`, `Link_maintenance_status`, `Link_modules_installed`, `Link_n_mod` and 10 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml

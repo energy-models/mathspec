@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generators, the ramping
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Generator`, the ramping rows. It reads `Generator_active`, `Generator_big_m`, `Generator_committable`, `Generator_p`, `Generator_p_nom_committed`, `Generator_p_nom_effective` and 8 more under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states the ramping rows of PyPSA's `Generator`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Generator_active`, `Generator_big_m`, `Generator_committable`, `Generator_p`, `Generator_p_nom_committed`, `Generator_p_nom_effective` and 8 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml

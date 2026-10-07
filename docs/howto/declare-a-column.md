@@ -8,12 +8,12 @@ SPDX-License-Identifier: CC-BY-4.0
 Decide whether a column of your data is a
 [dimension](../reference/language/dimensions.md), a
 [relation](../reference/language/relations.md) or a
-[parameter](../reference/language/parameters-variables-constraints.md#parameters). What decides is
-what the math does with the column.
+[parameter](../reference/language/parameters-variables-constraints.md#parameters), from what the
+math does with the column.
 
 | The column…                                                                                                                           | is declared as                          |
 | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| is an axis: something is indexed by it, or a grouping groups terms by it                                                              | a `dimension`                           |
+| is an axis: something is indexed by it, or a sum groups terms by it                                                                   | a `dimension`                           |
 | has one value per member of a dimension, or per tuple of several — a generator's bus, a line's two ends, a generator's zone by period | a `relation` with that `key`            |
 | relates members of two dimensions many-to-many, with nothing to weigh — which buses a generator may connect to                        | a bare `relation`, with no `values:`    |
 | relates members of two dimensions many-to-many, with a weight per pair — a link's efficiency to each bus, a cycle's lines             | a `parameter` over both                 |
@@ -24,5 +24,5 @@ what the math does with the column.
 
 Two rules decide the cases the table does not list:
 
-1. **If `b` has one value per `a`, declare `b` as a relation keyed by `a`.**
-2. **Two dimensions that depend on each other are one relation.**
+1. If `b` has one value per `a`, declare `b` as a relation keyed by `a`.
+2. Declare two dimensions that depend on each other as one relation.

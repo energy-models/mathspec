@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Lines
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Line`. It adds a term to `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum`. It reads `scenario_weight`, `transmission_losses` under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states PyPSA's `Line`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to each of these sums: `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection` and `Cycle_angle_sum`. It reads `scenario_weight` and `transmission_losses`, which other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml

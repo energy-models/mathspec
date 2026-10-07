@@ -1,6 +1,6 @@
 ---
 name: docs-writing
-description: House rules for writing documentation prose in this project — what a page is for, how it is shaped, and the sentence-level bar. Use when writing a new documentation page or section, or when adding prose to an existing one.
+description: House rules for documentation pages in this project — what a page is for, how it is shaped, and how its examples and headings work. Use when writing a new documentation page or section, or when adding prose to an existing one, together with the prose-writing skill.
 ---
 
 # Writing docs here
@@ -9,34 +9,9 @@ These are the rules a page has to meet. They apply to prose you write now and
 to prose already on the page: a page that does not meet them is not finished,
 whoever wrote it.
 
-The reader knows the domain — optimisation models, YAML, a bit of maths — and
-knows nothing about this project. Write for that person.
-
-## The voice
-
-Plain, direct, professional. Explain to a smart adult who does not work on
-this project. They are not stupid, they are unfamiliar.
-
-- **Say the answer first**, then why. A section that builds to its point makes
-  the reader hold everything until the end.
-- **Short sentences, short words.** "Use" not "utilise", "before" not "prior
-  to", "so" not "in order that". A term the language owns — `piecewise`, a
-  coordinate, a `where`, a macro — is never swapped for a plainer word, but
-  everything around it is.
-- **Snappy is short, not clipped.** A four-word fragment that costs a re-read
-  is worse than the ten-word sentence it replaced.
-- **Confident and flat.** State the rule. Do not hedge with "generally",
-  "typically", "in most cases" unless the exception is real, and then name the
-  exception instead.
-- **No enthusiasm, no marketing.** No "powerful", "seamless", "elegant",
-  "simply", "just", "of course", "as you can see", "note that". Each of these
-  either tells the reader their confusion is their fault, or says nothing.
-- **No jokes and no asides.** A reader hitting this page is stuck, and reads
-  it in a hurry.
-- **No apology and no warning voice.** "Unfortunately", "be careful",
-  "beware" — say what happens and what to write instead.
-- **One spelling convention per page.** The tree is mixed and this skill does
-  not settle it: match the page you are on.
+**Load [the prose-writing skill](../prose-writing/SKILL.md) first.** It sets
+the reader, the voice, the sentences and the words, for pages, PRs and issues
+alike. This skill adds what only a page needs.
 
 ## 1. Decide what the page is before writing a sentence
 
@@ -122,10 +97,11 @@ A rule about a consumer says only what the file guarantees it
 Answer the two questions before starting. If a page needs two kinds, it is
 two sections with two headings, or two pages.
 
-## 2. Open with the purpose
+## 2. Open with what the reader can do
 
-One sentence, above the first rule, saying what the page is for and who needs
-it. No throat-clearing, no restating the title, no "in this section we will".
+The first sentence, above the first rule, says what the reader can do once
+they have read the page. Do not restate the title, and do not describe the
+page: "in this section we will" and "this page holds" are frames.
 
 Then the shape a reader needs, in this order:
 
@@ -160,28 +136,28 @@ The obvious rule gets one sentence.
 
 ## 4. Headings are the table of contents
 
-- **Topic nouns, sentence case.** "Quadratic expressions", not "Degree 2 in
-  the math, degree 1 beside it". The test: a reader who types the subject into
-  the search box should land on this heading.
-- **Never a conclusion the reader cannot parse yet.** A heading is read before
-  the section, so it cannot depend on it.
-- **A heading names a subject. It does not narrate one.** "Solver capability",
-  not "What a solver can take is a separate question". "Unknown keys", not "An
-  unknown key is refused". A heading that argues, concludes or tells a small
-  story is the section leaking upward: put the claim in the first sentence,
-  where the reader can act on it.
+- **A heading names the subject, or the question the section answers.**
+  "Quadratic expressions", "How a new construct enters". The test: a reader
+  who types the subject into the search box lands on this heading.
+- **A heading never states a conclusion.** A heading is read before the
+  section, so it cannot depend on it. "Unknown keys", not "An unknown key is
+  refused". "Solver capability", not "What a solver can take is a separate
+  question". Put the claim in the first sentence, where the reader can act on
+  it.
 - **No second clause after a comma or a dash.** "Two states, and the difference
   between them" carries a heading and an aside. Keep the heading.
 - **One `##` per idea.** A section that needs a paragraph of preamble before
   its first rule is two sections.
 
-## 5. Bold lead-ins are the skim layer
+## 5. Bold is for terms and permissions
 
-A reader who reads only the bold lead-ins of a list must come away correct and
-complete. Write them that way deliberately: each is a claim, not a label.
+On a page, bold marks a term where the page defines it, and a short phrase
+that changes what a sentence permits, as the prose-writing skill says. A page
+has no bold lead-in on its list items, and bold is never a whole sentence.
+Where a list must skim, make the first sentence of each item the claim:
 
 ```markdown
-- **Absence spreads through arithmetic.** A sum with one absent term is absent.
+- Absence spreads through arithmetic. A sum with one absent term is absent.
 ```
 
 not
@@ -192,130 +168,32 @@ not
 
 ## 6. Vocabulary
 
-- **Gloss house vocabulary at first use** — _spec_, _program_, _entry_,
-  _dimension_, _coordinate_, _frame_, _relation_, _absence_, _macro_, _named
-  expression_, _reported expression_. One clause with a concrete
-  instance: "one point of it, one generator in one snapshot, is a coordinate".
-- **A file states a spec; a model is a spec with data.** Write "model" only
-  for what an engine builds and a solver takes, never for the file or the
-  `Spec` in hand ([glossary](../../../docs/reference/glossary.md)).
-- **Gloss every acronym and domain term at first use**, in parentheses, six
-  words or fewer.
-- **One word per concept, for the whole page.** _dims_, _dimensions_ and
-  _axis_ are three words, and a reader counts three ideas. Vary nothing for
-  rhythm.
-- **No overloaded words** — do not write "the case in point" beside a `cases:`
-  keyword.
+The prose-writing skill holds the word lists and the project words. On a page,
+two more rules hold:
+
 - **Gloss where the term is used**, and link the reference page that owns it
   rather than redefine it. The ten-rules table on the
   [language index](../../../docs/reference/language/index.md) says which page
   owns which rule; a second definition drifts.
 - **Link the reference section at a construct's first mention** on the page.
-  A construct links to its page under `docs/reference/language/`; a verb —
-  `to_spec`, `to_latex` — links to `docs/reference/typeset.md` or the API
-  page.
+  A construct links to its page under `docs/reference/language/`; a function,
+  such as `to_spec` or `to_latex`, links to `docs/reference/typeset.md` or the
+  API page.
 
-## 7. Sentences
+## 7. A reference entry
 
-The bar, and it is checkable:
+An entry in `docs/reference/` has three parts, in this order.
 
-1. **One idea per sentence.** Median at or under 20 words; over 25 is where a
-   newcomer re-reads.
-2. **Active voice, with a real subject.** "The loader refuses it before any
-   data is attached", not "the refusal comes before any data is attached". An abstract
-   noun as subject is the single biggest reason technical prose reads
-   expert-only.
-3. **State the rule in things, then in abstractions.** "One generator at one
-   snapshot cannot have two previous statuses" before "two values at one
-   coordinate is not a quantity".
-4. **Address the reader for what they do.** "Close such a hole in one of three
-   ways". A rule about the language is about the language, not about "the
-   modeller".
-5. **A full stop, not an em dash, between two independent clauses.** Both
-   halves having a subject and a verb is the test. Keep the dash for an aside
-   inside one clause, and use few.
-6. **Every sentence has a subject and a finite verb.** A paragraph never opens
-   on a title-like fragment: "Grammar first, which is usually free because
-   `f(x, k=v)` already parses" is a caption, not a sentence. Write "Start with
-   the grammar, which is usually free". A heading already labels the section, so
-   a label under it says nothing twice.
-7. **A colon or a dash does not excuse a missing verb.** "The probes: for each
-   operator, the smallest spec that declares it, beside the equation it
-   renders" is three noun phrases and no claim. So is "A dispatch spec with a
-   start-up ramp — the formulation `cases:` exists for", which closes on a
-   stranded preposition. Say who does what: "Each probe declares one operator in
-   the smallest spec that can, and prints the equation beside it."
-8. **No fronted participles** that suspend the subject: "Having no mask to
-   narrow its frame, it is the one that…".
-9. **No elided possessives**: "The dims of a cased one cannot", not "A cased
-   one's cannot".
-10. **A pronoun names its subject again** once a clause has intervened.
-11. **No double negatives, no metaphor stacked on metaphor, no relative clauses
-    stacked without _that_.**
-12. **Say it once.** The same claim in three paragraphs is load-bearing in
-    none.
-
-Measure before committing, and put the numbers in the commit body. The number
-is evidence, not a target: a list-shaped sentence may be long and clear.
-
-````bash
-pixi run python - docs/reference/language/absence.md <<'PY'
-import re, sys
-
-SKIP = ('#', '$$', '|', '>', '    ')
-ABBREV = re.compile(r'(?:\b[A-Za-z]|\d|\be\.g|\bi\.e|\betc|\bcf|\bFig|\bvs)\.$')
-
-
-def blocks(path: str) -> list[str]:
-    """Prose blocks: one per paragraph and one per list item, code stripped.
-
-    Inline code is stripped per line, so a code span reflowed across a line
-    break cannot pair backticks across the whole page and eat the prose
-    between them.
-    """
-    out, buf, incode, incomment = [], [], False, False
-    for line in open(path).read().split('\n'):
-        if incomment:
-            incomment = '-->' not in line
-            continue
-        if line.startswith('<!--') and '-->' not in line:
-            incomment = True
-            continue
-        if line.startswith('```'):
-            incode = not incode
-            continue
-        line = re.sub(r'`[^`]*`', 'X', line)
-        if incode or line.startswith(SKIP):
-            continue
-        item = re.match(r'\s*(?:[-*+]|\d+\.)\s+(.*)', line)
-        if not line.strip() or item:
-            if buf:
-                out.append(' '.join(buf))
-            buf = [item.group(1)] if item else []
-            continue
-        buf.append(line.strip())
-    if buf:
-        out.append(' '.join(buf))
-    return [b for b in out if b.strip()]
-
-
-def sentences(block: str) -> list[str]:
-    """Split on terminal punctuation, rejoining across `1.5`, `e.g.` and initials."""
-    parts, cur = [], ''
-    for chunk in re.split(r'(?<=[.!?])\s+', block):
-        cur = f'{cur} {chunk}'.strip()
-        if not ABBREV.search(cur):
-            parts.append(cur)
-            cur = ''
-    if cur:
-        parts.append(cur)
-    return [p for p in parts if p.strip()]
-
-
-w = sorted(len(s.split()) for b in blocks(sys.argv[1]) for s in sentences(b))
-print('n', len(w), 'avg', round(sum(w) / len(w), 1), 'median', w[len(w) // 2], 'over25', sum(x > 25 for x in w))
-PY
-````
+1. **What it does to the data, verb first, arguments in plain words.** "Shifts
+   array elements by a given offset along a single dimension". Not a metaphor
+   ("reaches along an axis"), and not notation the reader must bind to the
+   signature themselves (_t−n_).
+2. **What it does not do.** "Only data is moved; coordinates stay in place".
+   The sentence that stops a wrong assumption is worth more than any other in
+   the entry, and it is the one most often missing.
+3. **What each remaining argument is for**, at that level. "An additional
+   `edge=` argument handles values shifted beyond the array bounds". The list
+   of its values follows, or lives in the section that owns it.
 
 ## 8. What does not go on the page
 

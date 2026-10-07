@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 Sign = Literal['+', '-']
 
 #: Where an entry's expression text sits under a section, once the spec is
-#: plain data. A link is the odd one: it serialises back to the ``[expression,
+#: plain data. A link is different: it serialises back to the ``[expression,
 #: values]`` list the file wrote, so its expression is a position rather than a
 #: key.
 _EXPRESSION_KEYS = ('expression', 'otherwise', 'template')

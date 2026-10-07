@@ -153,7 +153,7 @@ def test_a_named_expression_arrives_under_the_node_carrying_its_name():
     ('expressions', 'match'),
     [
         pytest.param({'a': 'b + 1', 'b': 'a + 1'}, 'circular expression reference: a -> b -> a', id='a-cycle'),
-        pytest.param({'bad': 'p == load'}, 'must not contain a comparison', id='a-comparison'),
+        pytest.param({'bad': 'p == load'}, 'holds a comparison', id='a-comparison'),
         pytest.param({'load': 'p * cost'}, 'collides with the parameter of the same name', id='a-parameter-collision'),
         pytest.param(
             {'broken': 'sum(nope, over=generator)'},
@@ -193,7 +193,9 @@ def test_a_bad_named_expression_is_refused_at_load(expressions, match):
 )
 def test_a_cycle_is_reported_with_the_chain_that_closes_it(expressions, macros, chain):
     """A cycle closed through a macro was reported as `a -> a`, the macro left out, and one closed through a case's `when` was a `RecursionError`."""
-    with pytest.raises(LanguageError, match=f'circular expression reference: {chain}$') as exc:
+    with pytest.raises(
+        LanguageError, match=rf'circular expression reference: {chain}\. Remove one reference\.$'
+    ) as exc:
         spec(expressions=expressions, macros=macros)
     assert str(exc.value).count('circular') == 1, 'the cycle is reported once, where it closes'
 
@@ -257,11 +259,11 @@ def test_macro_collisions_rejected(patch, match):
     [
         pytest.param(
             {'loop_a': {'template': 'loop_b() + 1'}, 'loop_b': {'template': 'loop_a() + 1'}},
-            'circular macro reference',
+            'calls itself through',
             id='a-cycle',
         ),
         pytest.param(
-            {'m': {'args': ['a'], 'kwargs': ['a'], 'template': 'a'}}, 'duplicate formal', id='a-duplicate-formal'
+            {'m': {'args': ['a'], 'kwargs': ['a'], 'template': 'a'}}, 'formal names repeat', id='a-duplicate-formal'
         ),
         pytest.param(
             {'unused': {'args': ['x'], 'template': 'x * cots'}},
@@ -270,7 +272,7 @@ def test_macro_collisions_rejected(patch, match):
         ),
         pytest.param(
             {'bad': {'args': ['a', 'b'], 'template': 'a == b'}},
-            'must not contain a comparison',
+            'holds a comparison',
             id='a-comparison-in-a-template',
         ),
         pytest.param(
@@ -285,17 +287,17 @@ def test_macro_collisions_rejected(patch, match):
         ),
         pytest.param(
             {'grouped': {'args': ['x'], 'template': 'sum(x, over=g, by=[nope, also])'}},
-            r"Macro 'grouped'.*sum\(by=\.\.\.\) takes columns of one relation, written relation\[column\]",
+            r"Macro 'grouped'.*sum\(by=\.\.\.\) takes columns of one relation. Write relation\[column\]",
             id='a-list-of-names-for-columns',
         ),
         pytest.param(
             {'grouped': {'args': ['x', 'a', 'b'], 'template': 'sum(x, over=a, by=nope[b])'}},
-            r"Macro 'grouped'.*sum\(by=nope\[\.\.\.\]\) does not name a relation or a formal of this macro",
+            r"Macro 'grouped'.*sum\(by=nope\[\.\.\.\]\) does not name a relation or a formal argument of this macro",
             id='a-typo-in-a-relation-beside-formal-columns',
         ),
         pytest.param(
             {'reduced': {'args': ['x'], 'template': 'sum(x, over=nope)'}},
-            r"Macro 'reduced'.*sum\(over=nope\) does not name a declared dimension or a formal of this macro",
+            r"Macro 'reduced'.*sum\(over=nope\) does not name a declared dimension or a formal argument of this macro",
             id='a-typo-in-a-dimension',
         ),
         pytest.param(
@@ -319,7 +321,9 @@ def test_macro_templates_validated_even_when_unused(macros, match):
 
 def test_an_entry_nothing_reads_is_held_to_the_rules_a_use_is():
     """`sum(k)` over a scalar loaded as an unread entry, since the bare sum was only decided where the math read it."""
-    with pytest.raises(LanguageError, match=r"Named expression 'e1': sum\(\) with no over= or by=.*already a scalar"):
+    with pytest.raises(
+        LanguageError, match=r"Named expression 'e1': sum\(\) has no over= or by=, and its operand has no dimensions"
+    ):
         spec_of(SMALL_MODEL, expressions={'e1': 'sum(k)'})
 
 
@@ -468,7 +472,7 @@ def test_a_selection_bound_into_arithmetic_is_refused():
         'constraints': {'k': {'dims': ['generator'], 'expression': 'plus(p, cols=gen_bus[bus]) <= 1'}},
     }
     with pytest.raises(
-        LanguageError, match=r'gen_bus\[bus\] names columns of a relation, which is only legal as an operator'
+        LanguageError, match=r'gen_bus\[bus\] names columns of a relation, which is allowed only as an operator'
     ):
         to_spec(model)
 
@@ -480,5 +484,5 @@ def test_a_formal_inside_a_selection_takes_a_name_and_nothing_else():
         },
         'constraints': {'k': {'dims': ['bus'], 'expression': 'grouped(p, col=2) <= cap'}},
     }
-    with pytest.raises(LanguageError, match=r"the formal 'col' stands inside gen_bus\[col\], where only a name fits"):
+    with pytest.raises(LanguageError, match=r"the formal 'col' is inside gen_bus\[col\], where only a name is allowed"):
         to_spec(model)

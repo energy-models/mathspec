@@ -5,8 +5,8 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The composed spec
 
-What [the surface](surface.md), [generators](generator.md) and
-[loads](load.md) make together:
+This page shows the spec that [the surface](surface.md),
+[generators](generator.md) and [loads](load.md) make together:
 
 ```python
 import mathspec as ms
@@ -14,18 +14,18 @@ import mathspec as ms
 spec = ms.merge(['surface.yaml', 'generator.yaml', 'load.yaml'])
 ```
 
-The file below is `spec`, the spec `merge` returns, written as YAML with
-every default spelled out. No
-fragment holds it, and nothing in the repository commits it. `Port_p` is one
-entry here. Each component fragment read it under `given:`, and merging
-folded those readings into the surface's own entry.
+The file below is `spec`, the spec that `merge` returns, written as YAML with
+every default spelled out. No fragment holds this file, and the repository does
+not commit it. Each component fragment read `Port_p` under `given:`, and `merge`
+folded those readings into the entry of the surface, so `Port_p` is one
+entry here.
 
-The objective is the surface's, and it reads `total_cost`. The generator is
-the one fragment that costs something, so `Generator_cost` is the one term of
-that sum. A second priced fragment would add its own term to `total_cost`.
+The objective comes from the surface, and it reads `total_cost`. The generator
+is the only fragment with a cost, so `Generator_cost` is the only term of that
+sum. A second fragment with a cost would add its own term to `total_cost`.
 
-The math under the file has a tab per formulation. **As composed** is the spec
-above. **With commitment** lays `variants/commitment.yaml` over it with
+The math under the file has a tab per formulation: **As composed** is the spec
+above, and **With commitment** lays `variants/commitment.yaml` over it with
 [`override`](../../howto/compose.md#a-base-and-its-patches), which makes the
 generator a committed unit:
 
@@ -33,9 +33,9 @@ generator a committed unit:
 committed = ms.override(spec, ['variants/commitment.yaml'])
 ```
 
-A patch is refused on its own, since it edits entries it does not
-declare. So the spec it lands on is the only place its math exists, and the
-tab prints the patch beside that math.
+`to_spec` refuses a patch on its own, because the patch edits entries that
+it does not declare. So the patch has math only on the spec it lands on, and
+the tab prints the patch beside that math.
 
 <!-- gallery:begin -->
 ```yaml

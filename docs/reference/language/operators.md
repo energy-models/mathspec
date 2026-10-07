@@ -5,10 +5,10 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Operators
 
-An operator reduces an expression along a dimension, or moves its values along
-one. The set is **closed**: these four, and [`dual`](named.md#reading-a-constraints-dual)
-in a reported expression, are all of them. A composition of them goes in
-[`macros:`](named.md#macros).
+An operator sums an expression over a dimension, or moves its values along one.
+The set is **closed**: the four below, and
+[`dual`](named.md#reading-a-constraints-dual) in a reported expression, are all
+of them, and a file cannot add an operator. Write a composition of them as a [macro](named.md#macros).
 
 | Operator                                                   | Result                                                                                                                                                            |
 | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -16,8 +16,8 @@ in a reported expression, are all of them. A composition of them goes in
 | `sum(array, over=dim)`                                     | `dim` collapses. `array` must carry `dim`                                                                                                                         |
 | `sum(array, over=[a, …])`                                  | Each dimension in the list collapses. `array` must carry each one, and the list names each one once                                                               |
 | `sum(array, over=dim, by=relation[c])`                     | `dim` collapses, and the result is grouped by the relation's column `c`. The other key columns are joined on, so the array carries them and the result keeps them |
-| `sum(array, over=[dim, …], by=relation[c, …])`             | The same with several dimensions and several columns of one relation: joined on together, grouped by a product                                                    |
-| `at(array, by=relation[c])`                                | `array` read at the value of the relation's column `c`, once per key of the relation. The key arrives in the result                                               |
+| `sum(array, over=[dim, …], by=relation[c, …])`             | The same with several dimensions and several columns of one relation. The call joins on them together, and groups by their product                                 |
+| `at(array, by=relation[c])`                                | `array` read at the value of the relation's column `c`, once per key of the relation. The result gains the key                                                     |
 | `shift(array, along=dim, offset=n)`                        | The value `n` positions earlier along `dim`. The vacated edge is **absent**                                                                                       |
 | `shift(array, along=dim, offset=n, edge='wrap')`           | The value `n` positions earlier, counted cyclically, so nothing is vacated                                                                                        |
 | `shift(array, along=dim, offset=n, edge=v)`                | The value `n` positions earlier, with the number `v` standing where the edge was vacated                                                                          |
@@ -62,8 +62,8 @@ constraints:
       == load
 ```
 
-What a call through a relation reads and carries is on
-[how a relation is used](relations.md#how-a-relation-is-used).
+[How a relation is used](relations.md#how-a-relation-is-used) says what a call
+through a relation reads and carries.
 
 ## `at`
 
@@ -74,8 +74,9 @@ decision per bus, read by every line that touches the bus, is
 
 ## `sum_back`
 
-`sum_back` states a minimum up time, a rolling budget or a delivery horizon.
-The dimension **survives**, and a width of `1` is `x` itself.
+`sum_back` sums the last `window` positions along a dimension. Use it for a
+minimum up time, a rolling budget or a delivery horizon. The dimension
+**stays** in the result, and a window of `1` gives `x` itself.
 
 ```yaml
 dimensions:
@@ -97,19 +98,19 @@ constraints:
 objective: { sense: minimize, expression: sum(on) }
 ```
 
-A named width is `dtype: int`, and does not vary along the dimension being
-summed.
+A window given as a parameter is `dtype: int`, and does not vary along the
+dimension being summed.
 
-`edge=` takes `'wrap'` or nothing, and a number is a load error. Without it, a
-window that reaches past the start of the axis is **short**, and no row is lost.
+`edge=` takes `'wrap'` or nothing, and a number is a load error. Without
+`edge=`, a window that reaches past the start of the dimension is **short**,
+and no row is lost.
 
 `within=` takes a [partition](relations.md#partitions).
 
 ## `shift`
 
 `shift` counts positions in the order of an [ordered](dimensions.md#order)
-dimension. `edge=` says
-what stands where nothing moved in.
+dimension. `edge=` says what stands where nothing moved in.
 
 ```yaml
 dimensions:
@@ -127,14 +128,15 @@ constraints:
     expression: soc == shift(soc, along=snapshot, offset=1, edge='wrap') + charge * eta - discharge
 ```
 
-`edge='wrap'` makes the store cyclic: the first snapshot reads the last. Bare,
-the row the vacated coordinate would have fed is not built; state the initial
-condition in an entry of its own ([a rule that differs by regime](../../howto/regimes.md)).
+`edge='wrap'` makes the store cyclic: the first snapshot reads the last. Without
+`edge=`, the row that the vacated coordinate would feed is not built, so state
+the initial condition in an entry of its own ([a rule that differs by
+regime](../../howto/regimes.md)).
 
 Two rules hold for `edge=`:
 
-- **Over a variable, the only numeric edge is `0`.**
-- **A bare `shift` over an expression with no variable is a load error.** The
+- Over a variable, the only numeric edge is `0`.
+- A bare `shift` over an expression with no variable is a load error, and the
   error names the rewrites: `edge='wrap'`, `edge=0`, or `edge=0` together with
   a `where` that excludes the vacated coordinate.
 
@@ -160,13 +162,13 @@ constraints:
 objective: { sense: minimize, expression: sum(soc) }
 ```
 
-Every `edge=` setting then applies one group at a time. A coordinate in no
-group drops under every `edge=`.
+Every `edge=` setting then applies one group at a time, and a coordinate in no
+group is dropped under every `edge=`.
 
 ### A parameter as offset
 
-An offset per entity is a construction lead time, a transit time, or any delay
-the data carries as a column:
+Use a parameter as offset for a construction lead time, a transit time, or any
+delay the data carries as a column:
 
 ```yaml
 dimensions:
@@ -188,21 +190,21 @@ objective: { sense: minimize, expression: sum(order) }
 
 Each of these is a load error:
 
-- **The parameter is not `dtype: int`.**
-- **The parameter varies along the dimension being translated.**
-- **The parameter varies over a dimension the shift cannot read.** The shift
+- The parameter is not `dtype: int`.
+- The parameter varies along the dimension being translated.
+- The parameter varies over a dimension the shift cannot read. The shift
   reads the dimensions of the shifted expression, and the dimension a
   [`within=`](#translation-within-groups) column groups into: `offset=lead`
   with `lead: {dims: [period]}` under `within=period_of[period]` gives one lag
   per period.
 
-The sign travels in the values: `offset=-lead` is refused.
+Put the sign in the data: `offset=-lead` is refused.
 
 ## Every operator as math
 
-Each row is generated from one spec in
+`tools/spec_math.py` generates each row from one spec in
 [`examples/operators/`](https://github.com/energy-models/mathspec/tree/main/examples/operators),
-printed by the [typesetter](../typeset.md). The specs themselves are on
+and the [typesetter](../typeset.md) prints it. The specs themselves are on
 [One construct per spec](../../examples/operators.md).
 
 <!-- operator-math:begin -->

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Links
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Link`. It adds a term to `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection`. It reads `CVaR_omega`, `Link_committable`, `Link_maintenance`, `Link_maintenance_capacity`, `Link_maintenance_pu`, `period_weight_objective` and 2 more under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states PyPSA's `Link`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to each of these sums: `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions` and `Bus_injection`. It reads `CVaR_omega`, `Link_committable`, `Link_maintenance`, `Link_maintenance_capacity`, `Link_maintenance_pu`, `period_weight_objective` and 2 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -104,18 +104,18 @@ parameters:
   Link_output_delay:
     description: >-
       snapshots a port's delivery lags its link's flow — PyPSA's `delay`,
-      `delay2`, … read long, over the `snapshot_weightings.generators` value
-      and rounded up, as data prep; zero for a port that delivers at once.
-      The same in every scenario: PyPSA refuses a delay that differs by
-      scenario (`constants.py:52`)
+      `delay2`, … read long, divided by the `snapshot_weightings.generators`
+      value and rounded up in data prep; zero for a port that delivers at once.
+      A port has the same delay in every scenario, because PyPSA refuses
+      a delay that differs by scenario (`constants.py:52`)
     dims: [link_output]
     dtype: int
   Link_output_cyclic_delay:
     description: >-
       whether a delayed port's flow wraps from the end of its investment
       period — PyPSA's `cyclic_delay`, `cyclic_delay2`, …; where it does not,
-      the flow still in transit at each period's first snapshots is lost. The
-      same in every scenario, as the delay
+      the flow still in transit at each period's first snapshots is lost.
+      The flag is the same in every scenario, as the delay is
     dims: [link_output]
     dtype: bool
   Link_marginal_cost:
@@ -378,8 +378,8 @@ assumptions:
 | $`\underline{\mathrm{f}}`$ | `Link_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — least flow, per unit of nominal power — negative for a link that carries both ways |
 | $`\overline{\mathrm{f}}`$ | `Link_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — most flow, per unit of nominal power |
 | $`\eta`$ | `Link_efficiency` over $`\Xi \times \mathcal{T} \times \mathcal{O}`$ — share of the flow that arrives at an output port, PyPSA's `efficiency`, `efficiency2`, … read long — negative where that port consumes rather than delivers. Read at the snapshot the flow arrives, so a delayed port delivers at its arrival snapshot's efficiency (`constraints.py:1498`) |
-| $`\mathrm{d}^{f}`$ | `Link_output_delay` over $`\mathcal{O}`$ — snapshots a port's delivery lags its link's flow — PyPSA's `delay`, `delay2`, … read long, over the `snapshot_weightings.generators` value and rounded up, as data prep; zero for a port that delivers at once. The same in every scenario: PyPSA refuses a delay that differs by scenario (`constants.py:52`) |
-| $`\mathrm{cyc}^{f}`$ | `Link_output_cyclic_delay` over $`\mathcal{O}`$ — whether a delayed port's flow wraps from the end of its investment period — PyPSA's `cyclic_delay`, `cyclic_delay2`, …; where it does not, the flow still in transit at each period's first snapshots is lost. The same in every scenario, as the delay |
+| $`\mathrm{d}^{f}`$ | `Link_output_delay` over $`\mathcal{O}`$ — snapshots a port's delivery lags its link's flow — PyPSA's `delay`, `delay2`, … read long, divided by the `snapshot_weightings.generators` value and rounded up in data prep; zero for a port that delivers at once. A port has the same delay in every scenario, because PyPSA refuses a delay that differs by scenario (`constants.py:52`) |
+| $`\mathrm{cyc}^{f}`$ | `Link_output_cyclic_delay` over $`\mathcal{O}`$ — whether a delayed port's flow wraps from the end of its investment period — PyPSA's `cyclic_delay`, `cyclic_delay2`, …; where it does not, the flow still in transit at each period's first snapshots is lost. The flag is the same in every scenario, as the delay is |
 | $`\mathrm{c}^{f}`$ | `Link_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one unit of flow |
 | $`\mathrm{c}^{f,(2)}`$ | `Link_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of the square of one unit of flow |
 | $`\mathrm{f}^{\mathrm{mod}}`$ | `Link_p_nom_mod` over $`\mathcal{L}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of; no value means the build is continuous |

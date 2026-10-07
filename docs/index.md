@@ -35,16 +35,16 @@ as math, with no data and no solver.**
 ## A spec is one file
 
 A file states one specification, or spec. A spec declares four things: the
-axes it runs over, the data it expects, the decisions the solver makes, and
-the rules those decisions obey. It holds no data: an engine attaches the data
-and builds a model. The file below is a complete spec.
+dimensions it runs over, the data it expects, the decisions the solver makes,
+and the rules those decisions obey. The file holds no data, because an engine
+attaches the data when it builds a model. The file below is a complete spec.
 
 --8<-- "README.md:model"
 
 ## The math it prints
 
-Printed from the file above, with no data and no solver. **How** shows the
-call.
+The typesetter prints this from the file above, with no data and no solver, and
+the **How** tab shows the call.
 
 <!-- home-math:begin -->
 

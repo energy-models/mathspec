@@ -86,7 +86,7 @@ def test_duplicate_key_is_an_error_naming_both_lines(tmp_path):
     )
 
     first = MODEL.splitlines().index('  balance:') + 1
-    with pytest.raises(SchemaError, match=rf"duplicate key 'balance' .* first declared on line {first}"):
+    with pytest.raises(SchemaError, match=rf"duplicate key 'balance', first declared on line {first}"):
         to_spec(path)
 
 
@@ -114,7 +114,7 @@ def test_a_merge_key_override_is_not_a_duplicate(tmp_path):
 )
 def test_a_non_mapping_document_is_a_load_error(tmp_path, text):
     """Otherwise `Spec(**raw)` raises a bare TypeError about `**`."""
-    with pytest.raises(SchemaError, match='must be a mapping of sections'):
+    with pytest.raises(SchemaError, match='not a mapping of sections'):
         to_spec(_write(tmp_path, text))
 
 
@@ -126,7 +126,7 @@ def test_an_empty_file_is_an_empty_model(tmp_path):
 def test_a_complex_key_is_refused_in_our_tree(tmp_path):
     """A `? [a, b]` key cannot name an entry; the refusal is the loader's, not a TypeError."""
     path = _write(tmp_path, MODEL + 'expressions:\n  ? [a, b]\n  : p\n')
-    with pytest.raises(SchemaError, match='a key must be a scalar'):
+    with pytest.raises(SchemaError, match='a key is a list or a mapping'):
         to_spec(path)
 
 

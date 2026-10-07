@@ -535,7 +535,7 @@ def test_an_assumption_refuses_in_the_words_the_file_wrote():
 
     assert assumption.description == reason, 'the program carries it, so a consumer needs no second read of the file'
     assert assumption_message('sound', assumption) == (
-        f"assumption 'sound' does not hold for the data attached to 'c', 'k' \N{EM DASH} {reason}"
+        f"assumption 'sound' does not hold for the data attached to 'c', 'k': {reason}"
     ), 'the sentence trails what the author wrote'
 
 

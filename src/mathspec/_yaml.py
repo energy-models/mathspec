@@ -28,7 +28,7 @@ import yaml
 
 from mathspec.errors import SchemaError
 
-#: The YAML 1.2 core-schema boolean set — nothing else resolves to a bool.
+#: The YAML 1.2 core-schema booleans. No other scalar loads as a bool.
 _BOOL_1_2 = re.compile(r'^(?:true|True|TRUE|false|False|FALSE)$')
 
 
@@ -69,7 +69,7 @@ def _check_duplicate_keys(node: yaml.Node, origin: str) -> None:
         for key_node, value_node in pairs:
             line = key_node.start_mark.line + 1
             if not isinstance(key_node, yaml.ScalarNode):
-                msg = f'{origin}:{line}: a key must be a scalar — a name, not a list or a mapping.'
+                msg = f'{origin}:{line}: a key is a list or a mapping. Write a name as the key.'
                 raise SchemaError(msg)
             key = key_node.value
             if key_node.tag == _MERGE:
@@ -77,9 +77,7 @@ def _check_duplicate_keys(node: yaml.Node, origin: str) -> None:
                 continue
             if key in seen:
                 msg = (
-                    f'{origin}:{line}: duplicate key {key!r} — first declared on '
-                    f'line {seen[key]}. YAML would silently keep the last one, '
-                    f'discarding an entry the file contains.'
+                    f'{origin}:{line}: duplicate key {key!r}, first declared on line {seen[key]}. Rename or delete one.'
                 )
                 raise SchemaError(msg)
             seen[key] = line
@@ -107,10 +105,7 @@ def read_spec(spec: str | Path) -> dict[str, object]:
             one-line text is told to end with one.
     """
     if isinstance(spec, str) and '\n' not in spec and not Path(spec).is_file():
-        msg = (
-            f'no file named {spec!r}. A str with no newline in it is read as a path, and YAML text '
-            f'is told apart by one — end the text with a newline, or pass a Path.'
-        )
+        msg = f'no file named {spec!r}. End YAML text with a newline, or pass a Path for a file.'
         raise FileNotFoundError(msg)
     if isinstance(spec, Path) or '\n' not in spec:
         return read_yaml(Path(spec))
@@ -136,6 +131,6 @@ def parse_yaml(text: str, origin: str = '<string>') -> dict[str, object]:
     if not data:
         return {}
     if not isinstance(data, dict):
-        msg = f'{origin}: a spec file must be a mapping of sections (dimensions:, variables:, …), got {type(data).__name__}.'
+        msg = f'{origin}: the file holds a {type(data).__name__}, not a mapping of sections. Write sections such as dimensions: at the top level.'
         raise SchemaError(msg)
     return data

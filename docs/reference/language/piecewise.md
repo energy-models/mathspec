@@ -7,13 +7,14 @@ SPDX-License-Identifier: CC-BY-4.0
 
 `piecewise:` states a curve through breakpoints. `sos:` states a family of
 variables of which only one, or only two neighbours, may be non-zero. Both are
-**formulations**: each states plain variables and constraints, and
-[`spec.expand()`](#writing-a-formulation-out) writes them out.
+**formulations**: entries that expand into ordinary variables and constraints
+before the model is built. [`spec.expand()`](#writing-a-formulation-out) writes
+that expansion out.
 
 ## `piecewise`
 
-A `piecewise` entry ties two or more expressions to one piecewise-linear curve.
-The curve is given as breakpoints: the corner values each expression takes
+A `piecewise` entry ties two or more expressions to one piecewise-linear curve,
+which is given as breakpoints: the corner values each expression takes
 together.
 
 ```yaml
@@ -58,9 +59,9 @@ its numbers is on [what a curve assumes](assumptions.md#what-a-curve-assumes).
 ### `activity`
 
 `activity:` names a binary variable, and the weights then sum to that variable
-instead of to 1. So `0` pins the curve off.
+instead of to 1, so `0` pins the curve off.
 
-The gate is a variable entry:
+The gate is an ordinary variable entry:
 
 ```yaml
 variables:
@@ -75,10 +76,11 @@ instead, put `missing: neutral` on the gate.
 
 ### `points`
 
-A values parameter short of a row does not build a shorter curve: the entry's
-[assumption](assumptions.md#what-a-curve-assumes) refuses the data. A curve with
-fewer breakpoints than the dimension holds says so with `points:`. Name one of the entry's own values
-parameters, and the curve is as long as that parameter has rows:
+A values parameter with a missing row does not build a shorter curve, because
+the [assumption](assumptions.md#what-a-curve-assumes) of the entry refuses the
+data. To give a curve fewer breakpoints than the dimension holds, set `points:`
+to one of the values parameters of the entry, and the curve runs as far as that
+parameter has rows:
 
 ```yaml
 piecewise:
@@ -91,31 +93,32 @@ piecewise:
 ```
 
 Each values parameter declares `missing: neutral`, because its table stops
-where the curve stops ([below](#missing-breakpoints)). A row missing from `bp_y`
-where `bp_x` has one is still refused. Where the length is its own data,
-name a boolean parameter instead. The marked breakpoints are one consecutive
-run, anywhere on the axis.
+where the curve stops ([missing breakpoints](#missing-breakpoints)). A row
+missing from `bp_y` where `bp_x` has one is still refused. Where the length is
+its own data, name a boolean parameter instead, whose marked breakpoints must
+be one consecutive run, anywhere along the dimension.
 
 ### Missing breakpoints
 
-A parameter an entry reads takes [`missing:`](parameters-variables-constraints.md#a-missing-row)
-like any other parameter, and reads it alike inside and outside the curve.
-**A values parameter of a curve with `points:` is not `refused`.** The curve
-stops where the mask stops, so the table has no rows past it by design.
-`refused` says that every row is there: the curve never runs short, and a
-mask that names the table marks every breakpoint. The load is refused:
+A parameter that an entry reads takes [`missing:`](parameters-variables-constraints.md#a-missing-row)
+like any other parameter, and reads it the same inside and outside the curve.
+A values parameter of a curve with `points:` may **not** be `refused`, because
+the curve stops where the mask stops, so the table has no rows past it by
+design. `refused` says that every row is there, so the curve never runs short
+and a mask that names the table marks every breakpoint. `to_spec` refuses the
+file:
 
 ```text
 parameter 'bp_y' is refused where a row is missing, and piecewise 'cost_curve' reads it under points: 'bp_x', which stops the curve where its rows stop. Declare missing: neutral, absent, or a value of its dtype.
 ```
 
 Declare `missing: neutral` or `absent` on each values parameter of the entry.
-The two build the same curve: the curve reads a table only inside the mask,
-and there the `<entry>_complete` assumption still refuses a missing row. They
-differ where an expression outside the curve reads the table: `neutral` reads
-`0` there, and `absent` drops the term. Use `absent` where no number stands
-for a breakpoint the curve does not have, and `neutral` where `0` does. A
-values parameter of a curve with no `points:`, and a boolean `points:` mask,
+The two build the same curve, because the curve reads a table only inside the
+mask, and there the `<entry>_complete` assumption still refuses a missing row.
+They differ where an expression outside the curve reads the table: `neutral`
+reads `0` there, and `absent` removes the term. Use `absent` where no number
+stands for a breakpoint the curve does not have, and `neutral` where `0` does.
+A values parameter of a curve with no `points:`, and a boolean `points:` mask,
 read the default, `refused`.
 
 ### `method`
@@ -129,8 +132,8 @@ read the default, `refused`.
 | `convex`                | nothing                                                                       | the hull, which is a pure linear program                       |
 | `lp`                    | no weights at all: one row per segment line, plus two rows holding the domain | the curve as its own lines                                     |
 
-`convex` takes exactly two links and no `activity:`. The shape it needs is an
-[assumption](assumptions.md#what-a-curve-assumes).
+`convex` takes exactly two links and no `activity:`, and the shape it needs is
+an [assumption](assumptions.md#what-a-curve-assumes).
 
 `lp` states the curve as its segment lines. It needs **exactly two links**, one
 of them bounded with `<=` or `>=`, and no `activity:`:
@@ -145,12 +148,13 @@ piecewise:
       - [op_cost, bp_y, ">="] # cost bounded below by the curve
 ```
 
-Where the number of links is data, write the formulation out ([a curve by hand](../../howto/curve-by-hand.md)).
+Where the number of links is data, write the formulation out ([a curve by
+hand](../../howto/curve-by-hand.md)).
 
 ## `sos`
 
 An `sos` entry declares a **special-ordered set**: one dimension of one
-variable, and how many members of that family may be non-zero at once.
+variable, and how many members of that set may be non-zero at once.
 
 ```yaml
 sos:
@@ -160,8 +164,8 @@ sos:
     type: 1 # 1: at most one non-zero; 2: at most two, and consecutive
 ```
 
-A set is over **one** variable, and a variable holds **one** set. A second entry
-naming the same variable is a load error.
+A set is over **one** variable, and a variable holds **one** set, so a second
+entry naming the same variable is a load error.
 
 A member the variable's `where` masks out is not in the set. The order is the
 order of the `along` dimension, which is
@@ -171,10 +175,9 @@ order of the `along` dimension, which is
 
 `spec.expand('sos')` states the set as binaries: one per member for `type: 1`,
 one per segment for `type: 2`. A member the binaries do not admit is held at
-zero, from above and from below. For a set `s` over variable `x` along `d`,
-writing `admitted` for
-`(s_seg)` at `type: 1` and `(s_seg + shift(s_seg, along=d, offset=1, edge=0))`
-at `type: 2`:
+zero, from above and from below. For a set `s` over variable `x` along `d`, let
+`admitted` be `(s_seg)` at `type: 1` and `(s_seg + shift(s_seg, along=d,
+offset=1, edge=0))` at `type: 2`:
 
 | Emitted                                            |                                                   |
 | -------------------------------------------------- | ------------------------------------------------- |
@@ -183,21 +186,21 @@ at `type: 2`:
 | `s_nonzero` (`type: 1`), `s_adjacency` (`type: 2`) | `x <= upper * admitted`                           |
 | the same name plus `_below`                        | `x >= lower * admitted`, where `lower` is not `0` |
 
-`upper` and `lower` are the member's own `bounds:`, a number or a parameter;
-a binary member's are `0` and `1`. A spec is refused at load where a member
-has no `bounds.lower`, or no `bounds.upper` and no `domain: binary`. A name the
-expansion writes that the file already declares is refused at load too.
+`upper` and `lower` are the `bounds:` of the member, a number or a parameter,
+and for a binary member they are `0` and `1`. `to_spec` refuses a spec where a
+member has no `bounds.lower`, or no `bounds.upper` and no `domain: binary`. A
+name the expansion writes that the file already declares is refused at load too.
 
 ## Writing a formulation out
 
-Writing a formulation out replaces the entry with the variables and constraints
-it states. [`Spec.expand()`](../spec.md#mathspec.spec.Spec.expand) is the
-call, and [see what a curve or a set expands to](../../howto/see-an-expansion.md)
-shows a spec before and after.
+[`Spec.expand()`](../spec.md#mathspec.spec.Spec.expand) replaces the entry
+with the variables and constraints it states.
+[See what a curve or a set expands to](../../howto/see-an-expansion.md) shows a
+spec before and after.
 
-- **Every name written out starts with the name of the entry.** The weights of
+- Every name written out starts with the name of the entry, so the weights of
   the curve `curve` are `curve_lam`.
-- **No formulation emits a parameter.** The same data attaches to a spec and its
-  expansion, and reads alike in both.
-- **The assumptions a `method:` implies become `assumptions:` entries** with
-  the same names.
+- No formulation emits a parameter, so the same data attaches to a spec and its
+  expansion, and reads the same in both.
+- The assumptions a `method:` implies become `assumptions:` entries with the
+  same names.

@@ -74,17 +74,17 @@ def _given(program: Program) -> list[Advice]:
 
 def _given_note(kind: str, name: str) -> str:
     return (
-        f"{kind} '{name}' is read here and declared elsewhere: the model this one is layered onto "
-        f'provides it. A consumer checks that it does, on the same frame, and refuses the program where '
-        f'it does not. A fragment is composed instead: merge() folds this entry into the one a '
-        f'sibling introduces{", or writes it from the terms siblings add" if kind == "expression" else ""}.'
+        f"{kind} '{name}' is read here and declared elsewhere: the model this one is layered onto provides it. "
+        f'A tool refuses the spec where that model does not, over the same dims. merge() replaces this '
+        f'entry with the one another file '
+        f'declares{", or builds it from the terms other files add" if kind == "expression" else ""}.'
     )
 
 
 def _term_note(name: str) -> str:
     return (
-        f"expression '{name}' is read here, and this file adds a term to it: merge() sums the term with what "
-        f'the other files write under the name. Until then, the program reads it and does not build it.'
+        f"expression '{name}' is read here, and this file adds a term to it. merge() sums the term with the "
+        f'terms other files add under that name. Until then, the program reads it and does not build it.'
     )
 
 
@@ -116,8 +116,8 @@ def _never_an_axis(program: Program) -> list[Advice]:
             'never-an-axis',
             name,
             f"dimension '{name}' is never used: nothing is indexed by it, nothing "
-            f'aggregates into it, and no relation has a column over it. Remove it — or keep it '
-            f'knowingly, if the entries that use it are still to be written.',
+            f'sums into it, and no relation has a column over it. Remove it, or keep it '
+            f'if the entries that use it are still to be written.',
         )
         for name in program.dimensions
         if name not in reached

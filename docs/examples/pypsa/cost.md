@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The cost
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the expected operating cost and its tail, weighted by scenario. It adds a term to `total_cost`. It reads `CVaR_omega`, `scenario_opex`, `scenario_weight` under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states the expected operating cost and its tail, weighted by scenario. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to the sum `total_cost`. It reads `CVaR_omega`, `scenario_opex` and `scenario_weight`, which other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml

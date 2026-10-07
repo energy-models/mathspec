@@ -6,9 +6,10 @@ SPDX-License-Identifier: CC-BY-4.0
 # Write a piecewise curve out by hand
 
 Tie a number of flows to one curve where that number is data: a boiler ties two
-flows and a CHP unit ties three, in one spec. A
+flows and a CHP (combined heat and power) unit ties three, in one spec. A
 [`piecewise:`](../reference/language/piecewise.md) entry lists its links in the
-file, so it cannot say this. The formulation written out can.
+file, so the file fixes the number of flows. Write the formulation out by hand,
+and the data sets the number of flows.
 
 1. **Declare the weights as a variable over the breakpoint dimension**, masked
    to how far each curve runs:
@@ -21,16 +22,18 @@ file, so it cannot say this. The formulation written out can.
        bounds: { lower: 0, upper: 1 }
    ```
 
-2. **Restrict the weights with an `sos:` entry.** `type: 2` states the
-   restriction that `method: sos2` emits:
+2. **Restrict the weights with an `sos:` entry.** `type: 2` lets at most two
+   consecutive weights be non-zero, which is the restriction that `method: sos2`
+   writes:
 
    ```yaml
    sos:
      on_one_segment: { variable: weight, along: bp, type: 2 }
    ```
 
-3. **Write the convexity row, and one row per flow.** The row per flow is where
-   the count goes, and a relation carries it:
+3. **Write the convexity row, and one row per flow.** The relation
+   `converter_of` maps each flow to its converter, so the data sets how many
+   flows a converter has:
 
    ```yaml
    constraints:
@@ -42,4 +45,4 @@ file, so it cannot say this. The formulation written out can.
        expression: rate == sum(at(weight, by=converter_of[converter]) * bp_rate, over=bp)
    ```
 
-A converter with a fourth flow is then a row in a table.
+A converter with a fourth flow is then one more row in the data.

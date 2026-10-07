@@ -209,7 +209,7 @@ UNREACHABLE = {
         'everything = {n for group, _ in kinds.values() for n in group}',
         'msg = (',
         'raise SchemaError(msg)',
-        'msg = f"\'{name}\' is declared twice, as {found[0]} and as {found[1]}, and one line prints one of them — rename one."',
+        'msg = f"\'{name}\' is declared twice, as {found[0]} and as {found[1]}. Rename one."',
     },
     legend: {'return []'},
 }

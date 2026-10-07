@@ -165,7 +165,7 @@ class TestRefuses:
         [
             pytest.param("cases 'cyclic' and 'battery' both claim the value where", id='both-cases'),
             pytest.param('cyclic is true', id='a-witness'),
-            pytest.param('narrow one of the two `when:` strings by the negation of the other', id='the-rewrite'),
+            pytest.param('Narrow one of the two `when:` strings by the negation of the other', id='the-rewrite'),
         ],
     )
     def test_an_overlap_names_both_cases_a_witness_and_the_rewrite(self, overlap: str, fragment: str):
@@ -189,7 +189,7 @@ class TestWillNotDecide:
         """
         [refusal] = refusals(spec, {'first': 'position(snapshot) == 0', 'last': 'position(snapshot) == -1'})
         assert 'cannot be told apart before the data arrives' in refusal
-        assert 'count from one end only' in refusal
+        assert 'Count from one end only' in refusal
 
     def test_a_group_is_named_as_the_group_it_is(self, spec: Spec):
         """`within=` counts within each group, and the refusal says which."""
@@ -250,7 +250,7 @@ class TestWillNotDecide:
     def test_a_bool_compared_to_a_number(self, spec: Spec):
         """Resolution admits it, and truth is not a magnitude to put in order."""
         [refusal] = refusals(spec, {'on': 'cyclic == 1', 'off': 'not cyclic'})
-        assert 'write the bare name, or `not cyclic`' in refusal
+        assert 'Write the bare name, or `not cyclic`' in refusal
 
 
 class TestSoundness:

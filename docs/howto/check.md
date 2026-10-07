@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Check a spec without data
 
-Refuse a broken spec file before any data or solver is involved, on your
+Catch a broken spec file before you attach data or call a solver, on your
 machine and in CI.
 
 1. **Run the check on one file.**
@@ -20,16 +20,17 @@ machine and in CI.
    variables.p: unknown key 'boundz' in a variable entry. Did you mean 'bounds'?
    ```
 
-   Advice prints on stdout and exits with status 0. A spec the language
-   accepts with nothing to advise prints nothing.
+   Advice is a note that does not stop the file from loading, so it prints on
+   stdout and the command exits with status 0. A spec with no refusal and no
+   advice prints nothing.
 
    ```text
-   Variable 'slack' makes this spec unbounded: no constraint names it, and bounds.lower is open, which is the direction a +slack term improves a minimize objective in. No data can change that, so the solve would answer `unbounded` and name nothing.
+   Variable 'slack' makes this spec unbounded: no constraint names it, and bounds.lower is open, and the +slack term in the minimize objective improves toward it.
    Give it a finite bounds.lower, or the constraint that was meant to define it.
    ```
 
-2. **Run it over every spec in CI.** The exit status is the gate, so a shell
-   loop is the whole job:
+2. **Run it over every spec in CI.** A refusal exits with status 1, so a
+   shell loop is enough to fail the job:
 
    ```bash
    for spec in specs/*.yaml; do python -m mathspec check "$spec" || exit 1; done
@@ -47,6 +48,6 @@ machine and in CI.
        print(note)
    ```
 
-**Without Python**, the JSON schema checks the file's structure and nothing
+Without Python, the JSON schema checks the structure of the file, but nothing
 inside an `expression:` or `where:` string
 ([editor completion and offline checking](installation.md#editor-completion-and-offline-checking)).

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Global constraints
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the five system totals PyPSA caps, each a sum the components add to. It reads `operational_limit`, `primary_energy`, `scenario_weight`, `tech_capacity_expansion`, `transmission_expansion_cost`, `transmission_volume_expansion` under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states the five system totals that PyPSA caps. Each total is a sum that the components add to. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `operational_limit`, `primary_energy`, `scenario_weight`, `tech_capacity_expansion`, `transmission_expansion_cost` and `transmission_volume_expansion`, which other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
