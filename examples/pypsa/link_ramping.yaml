@@ -2,6 +2,27 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    Link_p_nom_extendable: { dims: [link], dtype: bool }
+    Link_committable: { dims: [link], dtype: bool }
+    Link_status_initial: { dims: [scenario, link], dtype: int }
+    Link_p_nom_mod: { dims: [link] }
+    Link_big_m: { dims: [scenario, link] }
+    Link_active: { dims: [snapshot, link], dtype: bool }
+  variables:
+    Link_p: { dims: [scenario, snapshot, link] }
+    Link_status: { dims: [scenario, snapshot, link], domain: integer }
+    Link_start_up: { dims: [scenario, snapshot, link], domain: integer }
+    Link_shut_down: { dims: [scenario, snapshot, link], domain: integer }
+    Link_p_nom_ext: { dims: [link] }
+  expressions:
+    Link_p_nom_effective: { dims: [scenario, link] }
+    Link_previous_status: { dims: [scenario, snapshot, link] }
+    Link_p_nom_committed: { dims: [scenario, link] }
+  masks:
+    Link_com_ext: { dims: [snapshot, link] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -26,40 +47,26 @@ parameters:
   Link_ramp_limit_up:
     description: most a link may raise its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
     dims: [scenario, snapshot, link]
+    missing: neutral
   Link_ramp_limit_down:
     description: most a link may lower its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
     dims: [scenario, snapshot, link]
+    missing: neutral
   Link_ramp_limit_start_up:
-    description: most flow in the snapshot a link starts, per unit of nominal power
+    description: most flow in the snapshot a link starts, per unit of nominal power; no value means no limit
     dims: [scenario, link]
+    missing: neutral
   Link_ramp_limit_shut_down:
-    description: most flow in the snapshot before a link stops, per unit of nominal power
+    description: most flow in the snapshot before a link stops, per unit of nominal power; no value means no limit
     dims: [scenario, link]
+    missing: neutral
   Link_p_init:
     description: >-
       the flow a link brought into the horizon — PyPSA's `p_init`, read
       only where the link came in running; no value means it is unknown, so
       the link carries no ramp row at the first snapshot
     dims: [scenario, link]
-
-given:
-  parameters:
-    Link_p_nom_extendable: { dims: [link], dtype: bool }
-    Link_committable: { dims: [link], dtype: bool }
-    Link_status_initial: { dims: [scenario, link], dtype: int }
-    Link_p_nom_mod: { dims: [link] }
-    Link_big_m: { dims: [scenario, link] }
-    Link_active: { dims: [snapshot, link], dtype: bool }
-  variables:
-    Link_p: { dims: [scenario, snapshot, link] }
-    Link_status: { dims: [scenario, snapshot, link], domain: integer }
-    Link_start_up: { dims: [scenario, snapshot, link], domain: integer }
-    Link_shut_down: { dims: [scenario, snapshot, link], domain: integer }
-    Link_p_nom_ext: { dims: [link] }
-  expressions:
-    Link_p_nom_effective: { dims: [scenario, link] }
-    Link_previous_status: { dims: [scenario, snapshot, link] }
-    Link_p_nom_committed: { dims: [scenario, link] }
+    missing: neutral
 
 expressions:
   Link_previous_p:
@@ -132,6 +139,16 @@ expressions:
           * (Link_previous_status - Link_status)
     otherwise: Link_ramp_down_rate * Link_p_nom_effective
 
+masks:
+  Link_ramps_from_previous:
+    description: >-
+      a snapshot whose ramp reads a previous output — any snapshot but its
+      period's first, and the horizon's first where the link comes in off or
+      carries an initial output
+    where: >-
+      position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
+      (Link_status_initial == 0 OR Link_p_init))
+
 constraints:
   Link_p_ramp_limit_up_run_big_m:
     description: >-
@@ -139,11 +156,7 @@ constraints:
       raises flow no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns on
     dims: [scenario, snapshot, link]
-    where: >-
-      Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
-      AND (Link_ramp_limit_up OR Link_ramp_limit_start_up)
-      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
-      AND Link_active
+    where: Link_com_ext AND (Link_ramp_limit_up OR Link_ramp_limit_start_up) AND Link_ramps_from_previous
     expression: >-
       Link_p - Link_previous_p <=
       Link_ramp_up_rate * Link_p_nom_ext
@@ -154,11 +167,7 @@ constraints:
       committed extendable link ramps no further than its start-up ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, link]
-    where: >-
-      Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
-      AND (Link_ramp_limit_up OR Link_ramp_limit_start_up)
-      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
-      AND Link_active
+    where: Link_com_ext AND (Link_ramp_limit_up OR Link_ramp_limit_start_up) AND Link_ramps_from_previous
     expression: >-
       Link_p - Link_previous_p <=
       Link_start_up_rate * Link_p_nom_ext
@@ -169,11 +178,7 @@ constraints:
       lowers flow no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns off
     dims: [scenario, snapshot, link]
-    where: >-
-      Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
-      AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
-      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
-      AND Link_active
+    where: Link_com_ext AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down) AND Link_ramps_from_previous
     expression: >-
       Link_previous_p - Link_p <=
       Link_ramp_down_rate * Link_p_nom_ext
@@ -184,11 +189,7 @@ constraints:
       a committed extendable link ramps no further than its shut-down ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, link]
-    where: >-
-      Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
-      AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
-      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
-      AND Link_active
+    where: Link_com_ext AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down) AND Link_ramps_from_previous
     expression: >-
       Link_previous_p - Link_p <=
       Link_shut_down_rate * Link_p_nom_ext
@@ -205,7 +206,7 @@ constraints:
     where: >-
       (Link_ramp_limit_up OR Link_ramp_limit_start_up)
       AND NOT (Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0))
-      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+      AND Link_ramps_from_previous
       AND Link_active
     expression: Link_p - Link_previous_p <= Link_ramp_up_allowance
   Link_p_ramp_limit_down:
@@ -220,7 +221,7 @@ constraints:
     where: >-
       (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
       AND NOT (Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0))
-      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init)))
+      AND Link_ramps_from_previous
       AND Link_active
     expression: Link_previous_p - Link_p <= Link_ramp_down_allowance
 

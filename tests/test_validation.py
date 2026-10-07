@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import copy
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from mathspec._yaml import parse_yaml
+from mathspec._yaml import parse_yaml, read_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
 from mathspec.program import DimensionPosition
 from mathspec.resolution import Namespace
@@ -1209,7 +1210,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'relations.tag': {'key': 'g', 'dtype': 'str'}},
-                ("unknown key 'dtype' in a relation declaration. Valid keys: description, key, values.",),
+                ("unknown key 'dtype' in a relation declaration. Valid keys: description, key, missing, values.",),
                 id='relation-with-a-dtype-of-its-own',
             ),
             pytest.param({'relations.tag': {'key': 'g'}}, ('has 1 column(s)',), id='relation-with-one-column'),
@@ -1439,7 +1440,7 @@ class TestRulesDecidedWithoutData:
                 id='a-relation-naming-one-value-column',
             ),
             pytest.param(
-                {'variables.p.absence': 'zero'}, ('absence: zero needs a `where:`',), id='absence-without-a-mask'
+                {'variables.p.missing': 'neutral'}, ('missing: neutral needs a `where:`',), id='neutral-without-a-mask'
             ),
             pytest.param(
                 {'variables.p.bounds.upper': 'c * 2'},
@@ -1601,6 +1602,27 @@ class TestRulesDecidedWithoutData:
                 {'variables.p.where': 'g'},
                 ('a bare dimension name is true at every coordinate',),
                 id='where-a-bare-dimension',
+            ),
+            pytest.param(
+                {'parameters.n': {'dims': ['g'], 'dtype': 'int'}, 'variables.p.where': 'n'},
+                (
+                    "'n' is declared dtype: int and missing: refused",
+                    'Declare `missing: neutral` or `absent`, or compare the value',
+                ),
+                id='where-a-bare-int-parameter-under-refused',
+            ),
+            pytest.param(
+                {'variables.p.where': 'tag'},
+                (
+                    "'tag' is declared dtype: str and missing: refused",
+                    'Declare `missing: absent`, or compare the label',
+                ),
+                id='where-a-bare-str-parameter-under-refused',
+            ),
+            pytest.param(
+                {'parameters.n': {'dims': ['g'], 'dtype': 'int'}, 'masks.held': 'NOT n'},
+                ("'n' is declared dtype: int and missing: refused",),
+                id='a-mask-reading-a-bare-int-parameter-under-refused',
             ),
             pytest.param(
                 {
@@ -2359,6 +2381,171 @@ def test_an_infinite_bound_is_refused_with_the_null_that_opens_a_side(side, valu
     assert f'{side}: null' in message, 'the refusal names the spelling of an open side'
 
 
+@pytest.mark.parametrize(
+    ('dtype', 'written', 'read'),
+    [
+        pytest.param('float', None, 'refused', id='left-out-is-refused'),
+        pytest.param('float', 'absent', 'absent', id='absent'),
+        pytest.param('str', 'absent', 'absent', id='absent-on-a-label'),
+        pytest.param('float', 1, 1, id='a-number'),
+        pytest.param('float', float('inf'), float('inf'), id='yaml-dot-inf'),
+        pytest.param('float', 'inf', float('inf'), id='the-expression-spelling-of-inf'),
+        pytest.param('float', '-inf', float('-inf'), id='the-expression-spelling-of-minus-inf'),
+        pytest.param('int', 2, 2, id='an-integer'),
+        pytest.param('bool', True, True, id='a-flag'),
+    ],
+)
+def test_a_parameter_says_what_a_missing_row_means(dtype, written, read):
+    declared = {'dims': ['g'], 'dtype': dtype} | ({} if written is None else {'missing': written})
+    spec = to_spec(varied(SMALL_MODEL, **{'parameters.c': declared}))
+    assert spec.program.parameters['c'].missing == read
+
+
+def test_inf_and_dot_inf_load_as_one_number():
+    """YAML reads `inf` as a string and `.inf` as a number; the expression grammar takes both."""
+    read = [
+        to_spec(parse_yaml(f'dimensions: {{g: {{}}}}\nparameters: {{c: {{dims: [g], missing: {spelling}}}}}'))
+        .program.parameters['c']
+        .missing
+        for spelling in ('inf', '.inf')
+    ]
+    assert read == [float('inf'), float('inf')], 'the string `inf` and the number `.inf` read as the same infinity'
+
+
+@pytest.mark.parametrize(
+    ('dtype', 'written', 'fragment'),
+    [
+        pytest.param('float', None, 'missing: null on a parameter names no reading', id='null'),
+        pytest.param('float', 'zero', "missing is the string 'zero'. It takes refused, absent, neutral", id='a-word'),
+        pytest.param('float', '1', "missing is the string '1'", id='a-quoted-number'),
+        pytest.param('float', float('nan'), 'missing is nan', id='nan'),
+        pytest.param(
+            'float', True, 'missing: true on a float parameter, which takes a number', id='a-flag-on-a-number'
+        ),
+        pytest.param('int', 1.5, 'missing: 1.5 on an int parameter, which takes an integer', id='a-fraction-on-an-int'),
+        pytest.param('int', float('inf'), 'missing: inf on an int parameter', id='an-infinity-on-an-int'),
+        pytest.param('bool', 1, 'missing: 1 on a bool parameter, which takes true or false', id='a-number-on-a-flag'),
+        pytest.param('str', 1, 'A label has no value to fill', id='a-number-on-a-label'),
+        pytest.param(
+            'str',
+            'neutral',
+            'missing: neutral on a str parameter, which takes refused or absent',
+            id='neutral-on-a-label',
+        ),
+    ],
+)
+def test_a_parameter_missing_that_reads_nothing_is_refused(dtype, written, fragment):
+    message = _refusal(**{'parameters.c': {'dims': ['g'], 'dtype': dtype, 'missing': written}})
+    assert fragment in message
+
+
+#: A curve under `points: x_bp`, both values tables declared `missing: neutral`.
+CURVE_UNDER_POINTS = Path(__file__).parent / 'expand' / 'curve-lp-points' / 'before.yaml'
+
+
+@pytest.mark.parametrize('parameter', ['x_bp', 'y_bp'])
+@pytest.mark.parametrize(
+    'declared',
+    [
+        pytest.param({'dims': ['bp']}, id='left-out'),
+        pytest.param({'dims': ['bp'], 'missing': 'refused'}, id='refused-written'),
+    ],
+)
+def test_a_values_table_under_points_is_not_refused(parameter, declared):
+    """`points: x_bp` with `x_bp` declared `refused` loaded, and named a mask every breakpoint is in.
+
+    `refused` says the table has a row at every breakpoint, so the curve never ran short of the dimension, and the
+    refusal of a curve parameter read outside the curve suggested that reading.
+    """
+    message = _refusal(read_yaml(CURVE_UNDER_POINTS), **{f'parameters.{parameter}': declared})
+    assert f"parameter '{parameter}' is refused where a row is missing, and piecewise 'curve'" in message
+    assert 'Declare missing: neutral, absent, or a value of its dtype' in message, 'the refusal names the rewrite'
+
+
+@pytest.mark.parametrize(
+    'patch',
+    [
+        pytest.param({'parameters.n': {'dims': ['g']}}, id='a-float-may-hold-inf'),
+        pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'bool'}}, id='a-flag-reads-its-value'),
+        pytest.param(
+            {'parameters.n': {'dims': ['g'], 'dtype': 'int', 'missing': 'neutral'}}, id='an-int-under-neutral'
+        ),
+        pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'int', 'missing': 0}}, id='an-int-under-a-value'),
+        pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'str', 'missing': 'absent'}}, id='a-label-under-absent'),
+        pytest.param({'given.parameters.n': {'dims': ['g'], 'dtype': 'int'}}, id='a-given-int'),
+    ],
+)
+def test_a_bare_parameter_whose_answer_needs_the_data_loads(patch):
+    """The declaring file owns a given parameter's `missing:`, so this file cannot decide its rows."""
+    spec = to_spec(varied(SMALL_MODEL, **patch, **{'variables.p.where': 'n'}))
+    assert spec.program.variables['p'].where is not None, 'the bare name stays a mask'
+
+
+def test_a_given_parameter_has_no_missing():
+    """The file that declares the parameter owns what a missing row means, as it owns a variable's bounds."""
+    message = _refusal(**{'given.parameters.d': {'dims': ['g'], 'missing': 'neutral'}})
+    assert "unknown key 'missing' in a given parameter declaration" in message
+
+
+@pytest.mark.parametrize(
+    ('written', 'read'),
+    [
+        pytest.param({}, 'refused', id='left-out-is-refused'),
+        pytest.param({'missing': 'refused'}, 'refused', id='refused'),
+        pytest.param({'missing': 'absent'}, 'absent', id='absent'),
+    ],
+)
+def test_a_relation_says_what_a_label_it_leaves_out_means(written, read):
+    spec = to_spec(varied(SMALL_MODEL, **{'relations.lk': {'key': 'g', 'values': 'h', **written}}))
+    assert spec.program.relations['lk'].missing == read
+
+
+def test_a_bare_relation_has_no_missing_rows():
+    """Its rows are its membership: a pair it leaves out is not a gap, so `refused` would refuse every sparse set."""
+    spec = to_spec(varied(SMALL_MODEL, **{'relations.pair': {'key': ['g', 'h']}}))
+    assert spec.program.relations['pair'].missing is None
+
+
+@pytest.mark.parametrize(
+    ('relation', 'fragment'),
+    [
+        pytest.param(
+            {'key': 'g', 'values': 'h', 'missing': 'neutral'},
+            'missing: neutral on a relation, which takes refused or absent',
+            id='neutral',
+        ),
+        pytest.param(
+            {'key': 'g', 'values': 'h', 'missing': 'h1'}, 'missing: h1 on a relation', id='a-label-as-a-value'
+        ),
+        pytest.param(
+            {'key': 'g', 'values': 'h', 'missing': True}, 'missing: true on a relation', id='a-flag-as-a-value'
+        ),
+        pytest.param(
+            {'key': 'g', 'values': 'h', 'missing': None}, 'missing: null on a relation names no reading', id='null'
+        ),
+        pytest.param(
+            {'key': ['g', 'h'], 'missing': 'refused'},
+            'missing: refused on a relation with no `values:`',
+            id='a-bare-relation',
+        ),
+    ],
+)
+def test_a_relation_missing_that_reads_nothing_is_refused(relation, fragment):
+    assert fragment in _refusal(**{'relations.lk': relation})
+
+
+@pytest.mark.parametrize(
+    ('written', 'fragment'),
+    [
+        pytest.param('refused', 'missing: refused on a variable, which takes absent or neutral', id='refused'),
+        pytest.param(0, 'missing: 0 on a variable, which takes absent or neutral', id='a-value'),
+        pytest.param(None, 'missing: null on a variable names no reading', id='null'),
+    ],
+)
+def test_a_variable_missing_that_reads_data_is_refused(written, fragment):
+    assert fragment in _refusal(**{'variables.p': {'dims': ['g'], 'where': 'c', 'missing': written}})
+
+
 #: One dimension every construct below reads the order of, and a breakpoint
 #: dimension for the two formulations; neither declares its order.
 UNORDERED: dict[str, Any] = {
@@ -2395,6 +2582,15 @@ _READS_ORDER = [
         {'constraints.c': {'dims': ['t'], 'where': 'position(t) == 0', 'expression': 'x <= 0'}},
         't',
         id='position',
+    ),
+    pytest.param({'masks.first': 'position(t) == 0'}, 't', id='a-mask-predicate'),
+    pytest.param(
+        {
+            'masks.lit': 'on',
+            'constraints.c': {'dims': ['t'], 'where': 'shift(lit, along=t, offset=1)', 'expression': 'x <= 0'},
+        },
+        't',
+        id='a-shifted-mask',
     ),
     pytest.param(
         {'piecewise.curve': {'over': 'bp', 'links': [['x', 'bp_x'], ['y', 'bp_y']]}},

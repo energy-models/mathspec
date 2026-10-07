@@ -2,6 +2,21 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
+    Generator_committable: { dims: [generator], dtype: bool }
+    Generator_p_nom_mod: { dims: [generator] }
+    Generator_active: { dims: [snapshot, generator], dtype: bool }
+    snapshot_weightings_generators: { dims: [snapshot] }
+    Generator_p_nom_min: { dims: [scenario, generator] }
+    Generator_p_nom_max: { dims: [scenario, generator] }
+  variables:
+    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_p_nom_ext: { dims: [generator] }
+  masks:
+    Generator_committed: { dims: [snapshot, generator] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -44,6 +59,7 @@ parameters:
       `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [scenario, generator]
+    missing: neutral
   Generator_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it
@@ -60,7 +76,7 @@ variables:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: 1
@@ -68,17 +84,15 @@ variables:
     description: "`Generator-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_active
-    absence: zero
+    missing: neutral
     domain: binary
   Generator_maintenance_capacity:
     description: >-
       `Generator-maintenance_capacity` — the chosen build while in maintenance, zero
       otherwise: the product the `maintcap` rows linearize
     dims: [scenario, snapshot, generator]
-    where: >-
-      Generator_maintainable AND Generator_p_nom_extendable
-      AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
-    absence: zero
+    where: Generator_maint_ext
+    missing: neutral
     bounds:
       lower: 0
   Generator_maintenance_status:
@@ -88,24 +102,24 @@ variables:
       maintenance may also be off
     dims: [scenario, snapshot, generator]
     where: >-
-      Generator_maintainable AND Generator_committable
-      AND NOT (Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)) AND Generator_active
-    absence: zero
+      Generator_maintainable
+      AND Generator_committed
+      AND NOT (Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
+    missing: neutral
     bounds:
       lower: 0
 
-given:
-  parameters:
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
-    Generator_committable: { dims: [generator], dtype: bool }
-    Generator_p_nom_mod: { dims: [generator] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
-    snapshot_weightings_generators: { dims: [snapshot] }
-    Generator_p_nom_min: { dims: [scenario, generator] }
-    Generator_p_nom_max: { dims: [scenario, generator] }
-  variables:
-    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_p_nom_ext: { dims: [generator] }
+masks:
+  Generator_maint_ext:
+    description: >-
+      a maintainable generator with an extendable build, unless it is
+      committable and modular, that stands in the snapshot's period — the
+      maintenance rows against the chosen build
+    where: >-
+      Generator_maintainable
+      AND Generator_p_nom_extendable
+      AND NOT (Generator_committable AND Generator_p_nom_mod > 0)
+      AND Generator_active
 
 constraints:
   Generator_maint_event_count:
@@ -131,54 +145,54 @@ constraints:
       `Generator-maintcap_upper` — the build taken off is at most the chosen build in
       maintenance, and at most the build less its floor out of it
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maint_ext
     expression: Generator_maintenance_capacity <= Generator_p_nom_ext - Generator_p_nom_min * (1 - Generator_maintenance)
   Generator_maintcap_upper_nommax:
     description: "`Generator-maintcap_upper_nommax` — out of maintenance, no build is taken off"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maint_ext
     expression: Generator_maintenance_capacity <= Generator_p_nom_max * Generator_maintenance
   Generator_maintcap_lower_nommax:
     description: "`Generator-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maint_ext
     expression: Generator_maintenance_capacity >= Generator_p_nom_ext - Generator_p_nom_max * (1 - Generator_maintenance)
   Generator_maintcap_lower_nommin:
     description: "`Generator-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND Generator_p_nom_min > 0
+    where: Generator_maint_ext AND Generator_p_nom_min > 0
     expression: Generator_maintenance_capacity >= Generator_p_nom_min * Generator_maintenance
   Generator_maint_status_le_status:
     description: "`Generator-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     expression: Generator_maintenance_status <= Generator_status
   Generator_maint_status_le_maint:
     description: "`Generator-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     expression: Generator_maintenance_status <= Generator_maintenance
   Generator_maint_status_lb:
     description: "`Generator-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     expression: Generator_maintenance_status >= Generator_status + Generator_maintenance - 1
   Generator_maint_modstatus_le_status:
     description: "`Generator-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
     expression: Generator_maintenance_status <= Generator_status
   Generator_maint_modstatus_le_maint:
     description: >-
       `Generator-maint-modstatus-le-maint` — out of maintenance, no module is on in
       maintenance; in it, at most the modules the build cap holds
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
     expression: Generator_maintenance_status <= Generator_p_nom_max / Generator_p_nom_mod * Generator_maintenance
   Generator_maint_modstatus_lb:
     description: "`Generator-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
     expression: Generator_maintenance_status >= Generator_status - Generator_p_nom_max / Generator_p_nom_mod * (1 - Generator_maintenance)
 
 assumptions:

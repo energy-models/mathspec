@@ -53,7 +53,7 @@ nav:
           - Dimensions: reference/language/dimensions.md
           - Relations: reference/language/relations.md
           - Expressions: reference/language/expressions.md
-          - Named expressions and macros: reference/language/named.md
+          - Named expressions, masks and macros: reference/language/named.md
           - Operators: reference/language/operators.md
           - Piecewise curves and SOS: reference/language/piecewise.md
           - Assumptions: reference/language/assumptions.md
@@ -87,6 +87,7 @@ nav:
   - Development:
       - Building on mathspec:
           - Reading a spec and its program: reference/reading.md
+          - Spec API: reference/spec.md
           - Program API: reference/program.md
           - What counts as language: about/what-counts-as-language.md
       - Contributing:

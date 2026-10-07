@@ -104,7 +104,8 @@ class Symbols:
     Attributes:
         overridden: Names the table spelled; the convention note quotes only
             derived symbols.
-        name: Each parameter's, variable's and expression's symbol.
+        name: Each parameter's, variable's, expression's and mask's symbol.
+            A mask is upright, being read off the data as a parameter is.
         constraint: Each constraint's symbol, the subscript ``dual(c)`` prints
             λ against. Off the flat namespace, like the constraints themselves
             — a spec may name a constraint after a variable, so this is its
@@ -146,6 +147,8 @@ def symbols_for(program: Program, fmt: Format, table: SymbolTable) -> Symbols:
         *program.given.variables,
         *program.expressions,
         *program.given.expressions,
+        *program.masks,
+        *program.given.masks,
     )
     declared = frozenset(names)
 
@@ -291,6 +294,8 @@ def _declared(program: Program) -> set[str]:
         | set(program.given.variables)
         | set(program.expressions)
         | set(program.given.expressions)
+        | set(program.masks)
+        | set(program.given.masks)
         | set(program.constraints)
         | set(program.given.constraints)
     )

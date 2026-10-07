@@ -27,9 +27,9 @@ Check the spelling, or declare 'p_charge'.
 
 ## What `advice` warns about
 
-`ms.advice(spec)` returns a tuple of `ms.Advice`, one per warning, and
-`python -m mathspec check spec.yaml` prints them. Advice is only a warning, so the
-file still loads.
+`ms.advice(spec)` returns a tuple of `mathspec.program.Advice`, one per
+warning, and `python -m mathspec check spec.yaml` prints them. Advice is only a
+warning, so the file still loads.
 
 | `kind`          | The file has…                                                                                                     | The advice says…                                                      |
 | --------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |

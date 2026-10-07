@@ -22,6 +22,7 @@ from mathspec.exclusivity import CELL_BUDGET, Special, Subject, _evaluate, _Grid
 from mathspec.program import And, Mask, Not, Or
 from mathspec.resolution import Namespace, resolve_where
 from mathspec.validation import to_spec
+from tests.fixtures import varied
 
 if TYPE_CHECKING:
     from mathspec.program import Predicate
@@ -39,7 +40,7 @@ STORAGE: dict[str, Any] = {
     'parameters': {
         'cyclic': {'dims': ['storage'], 'dtype': 'bool'},
         'committable': {'dims': ['storage'], 'dtype': 'bool'},
-        'kind': {'dims': ['storage'], 'dtype': 'str'},
+        'kind': {'dims': ['storage'], 'dtype': 'str', 'missing': 'absent'},
         'soc_initial': {'dims': ['storage']},
         'capacity': {'dims': ['storage']},
         'age': {'dims': ['storage'], 'dtype': 'int'},
@@ -57,7 +58,13 @@ def schema() -> Spec:
 def refusals(schema: Spec, cases: dict[str, str]) -> list[str]:
     """Resolve each case's `when` against *schema*, then decide every pair."""
     namespace = Namespace(schema)
-    return list(overlapping({name: _mask(when, namespace, name) for name, when in cases.items()}, namespace.dtypes))
+    return list(
+        overlapping(
+            {name: _mask(when, namespace, name) for name, when in cases.items()},
+            namespace.dtypes,
+            namespace.defaults,
+        )
+    )
 
 
 def _mask(text: str, namespace: Namespace, name: str) -> Predicate:
@@ -252,7 +259,8 @@ class TestSoundness:
     The claim the check rests on is that its regions cover every value a
     subject can take, so "no witness among the cells" means "no witness". This
     walks a concrete grid — several points inside single cells, both
-    infinities, an absent value, labels the masks never name — and asserts that
+    infinities, a missing row read as each value `missing:` may name, labels
+    the masks never name — and asserts that
     nothing it proved apart has a point claimed by both. Only pairs the check
     proves apart are walked; a complement pair asserts X and not X and cannot
     fail.
@@ -280,6 +288,13 @@ class TestSoundness:
         'cyclic': [Special.NULL, True, False],
         'kind': [Special.NULL, 'battery', 'h2', 'coal', 'nuclear'],
         'storage': [0, 1, 2],
+    }
+
+    #: The value a missing row reads as, drawn per pair: `None` is a reading
+    #: with no value, and a value sits on a literal, between two, or past them.
+    READINGS: ClassVar[dict[str, list[Any]]] = {
+        'capacity': [None, 0.0, 7.0, 10.0, float('inf')],
+        'cyclic': [None, True, False],
     }
 
     def _random_mask(self, rng: random.Random, atoms: list[Any], depth: int = 0) -> Any:
@@ -311,11 +326,35 @@ class TestSoundness:
         proved = 0
         for _ in range(2000):
             first, second = self._random_mask(rng, atoms), self._random_mask(rng, atoms)
-            if list(overlapping({'a': first, 'b': second}, dtypes)):
+            drawn = {name: rng.choice(values) for name, values in self.READINGS.items()}
+            defaults = {name: value for name, value in drawn.items() if value is not None}
+            if list(overlapping({'a': first, 'b': second}, dtypes, defaults)):
                 continue
             proved += 1
-            cells = _Grid.of([Mask(first), Mask(second)], dtypes)
+            cells = _Grid.of([Mask(first), Mask(second)], dtypes, defaults)
             for point in grid:
                 both = _evaluate(first, point, cells) and _evaluate(second, point, cells)
                 assert not both, f'both cases claim {point} — the cells hid a witness'
         assert proved > 150, f'only {proved} pairs proved apart; the fuzz is not exercising the check'
+
+
+class TestAMissingRow:
+    CASES: ClassVar[dict[str, str]] = {'lossless': 'efficiency == 1', 'not_given': 'not efficiency'}
+
+    def test_a_missing_row_compares_as_the_value_it_reads_as(self):
+        """Both cases claim a storage with no `efficiency` row: it is not given, and it reads 1.
+
+        The prover read a missing row as false in every comparison, so it proved
+        the two apart, and a coordinate the data leaves out had two values. The
+        witness said `efficiency is absent`, the name of a reading this
+        parameter does not have.
+        """
+        schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': 1}}))
+        [refusal] = refusals(schema, self.CASES)
+        assert 'efficiency has no row' in refusal, 'the witness is the missing row'
+        assert 'absent' not in refusal, 'the witness does not use the name of a reading for a missing row'
+
+    @pytest.mark.parametrize('reading', ['refused', 'absent', 'neutral'])
+    def test_under_a_reading_a_missing_row_compares_false(self, reading: str):
+        schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': reading}}))
+        assert refusals(schema, self.CASES) == [], 'a missing row with no value is in neither case'

@@ -9,6 +9,10 @@ This file states PyPSA's `Load`. It is one of the [24 fragments](index.md) that 
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  expressions:
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -44,10 +48,6 @@ parameters:
       refuses one that differs by scenario (`constants.py:51`)
     dims: [load]
     dtype: bool
-
-given:
-  expressions:
-    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Load_demand:

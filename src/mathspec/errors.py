@@ -2,13 +2,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""What the language says back about a file: the errors it raises, and the advice it gives."""
+"""What the language raises: the error tree, and the one wording a consumer's own refusals share."""
 
 from __future__ import annotations
 
 import difflib
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -16,31 +15,8 @@ if TYPE_CHECKING:
     from pydantic import ValidationError
 
 
-#: Which pass an [`Advice`][] comes from. The set is closed, like the operator
-#: set, so a tool that filters on it can list every value.
-AdviceKind = Literal['never-an-axis', 'given', 'unbounded']
-
-
-@dataclass(frozen=True)
-class Advice:
-    """One thing the language advises about a file it accepts.
-
-    Never an error: each is what a half-written spec looks like too. A
-    consumer prints it, or filters on ``kind`` and ``subject``; the text is the
-    language's, so no consumer writes its own.
-
-    Attributes:
-        kind: The pass that said it.
-        subject: The declaration it is about — a dimension name, a variable name.
-        text: The sentence, naming the rewrite.
-    """
-
-    kind: AdviceKind
-    subject: str
-    text: str
-
-    def __str__(self) -> str:
-        return self.text
+#: What ``mathspec.errors`` promises a consumer.
+__all__ = ['DimensionError', 'LanguageError', 'MathSpecError', 'SchemaError', 'did_you_mean']
 
 
 class MathSpecError(ValueError):

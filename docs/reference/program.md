@@ -6,8 +6,9 @@ SPDX-License-Identifier: CC-BY-4.0
 # Program API
 
 Look up every name that `mathspec.program` exports: the declarations, the
-expression and predicate nodes, and the reports that a program returns. [Reading a spec and its program](reading.md) says how they fit
-together.
+expression and predicate nodes, the reports that a program returns, and the
+`Advice` that [`advice`](api.md#mathspec.advice) returns.
+[Reading a spec and its program](reading.md) says how they fit together.
 
 <!-- prettier-ignore-start -->
 

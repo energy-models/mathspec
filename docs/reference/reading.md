@@ -90,7 +90,7 @@ parameter the program declares is one the file declared.
 ## Formulations written out
 
 A program holds each curve and each set as one declaration until
-[`Spec.expand()`](api.md#mathspec.Spec.expand) writes it out. An engine that
+[`Spec.expand()`](spec.md#mathspec.spec.Spec.expand) writes it out. An engine that
 builds rows reads the program of `spec.expand('piecewise')` if it takes a set,
 and the program of `spec.expand()` if it does not. The program of an expansion
 holds no curve:
@@ -120,6 +120,21 @@ written = assumption_message('cost_is_never_negative', program.assumptions['cost
 written  # "assumption 'cost_is_never_negative' does not hold for the data attached to 'bp_y': a negative cost is a gain the objective would chase"
 ```
 
+`program.parameters[name].missing` says what a missing row of that parameter
+means: `'refused'`, `'absent'`, `'neutral'`, or the value that the row reads as.
+It is `None` for a given parameter, because the file that declares the
+parameter says. The program of `spec.expand(...)` reports the same readings.
+`program.relations[name].missing` is `'refused'` or `'absent'`, and `None` for
+a bare relation.
+
+Under `'refused'`, the engine does not build the model from a table with a
+missing row, and names the coordinate. Each engine decides whether it raises at
+the first gap or lists them all. A value is read wherever a value is read: in an
+expression, in a bound, and in a comparison in a mask. A `ParameterDefined` on
+a numeric parameter asks whether the data has a row, so a value does not answer
+it. A `ParameterDefined` on a `bool` parameter reads the value. Under
+`'absent'`, a bound that reads a missing row leaves that side open.
+
 ## Nodes and masks
 
 Import the node classes from `mathspec.program` to test a node with
@@ -128,10 +143,16 @@ operands, and `where_children()` walks a predicate's. `walk()` yields every
 node under an expression, parents first, and `walk_regions()` yields each node
 with the `cases:` regions it stands inside, outermost first.
 
-A `Named` stands where an `expressions:` entry is used. Its `body` is the
+A `NamedExpression` stands where an `expressions:` entry is used. Its `body` is the
 entry's expression, the same object that `program.expressions[name].expression`
 holds, and its value is the body's value. `children()` steps into the body, so
 a walk reads through it.
+
+A `NamedMask` stands where a `masks:` entry is read. Its `body` is the
+predicate of the entry, the root of `program.masks[name].where`, and it is true
+where the body is true. `where_children()` steps into the body, so `.atoms`,
+`.names_read` and `.dims` read through it, and an engine that builds rows needs
+nothing from `program.masks`.
 
 Every `where` arrives as a `Mask`, whose `.root` is the resolved predicate.
 The mask also answers four questions:
@@ -168,12 +189,14 @@ it. A `Region`'s `when` is a `Mask` too.
 ## What a program does not build
 
 `program.given.parameters`, `program.given.variables`,
-`program.given.expressions` and `program.given.constraints` name what the spec
-reads and does not build ([given](language/declarations.md#given)). Every
-other group tells a tool what to build, but these four name what to look up in
-the host model, which is the model that this spec is layered onto. An
-expression reads a given expression as a `Variable` of that name, over the
-frame under `program.given.expressions`.
+`program.given.expressions`, `program.given.masks` and
+`program.given.constraints` name what the spec reads and does not build
+([given](language/declarations.md#given)). Every other group tells a tool what
+to build, but these five name what to look up in the host model, which is the
+model that this spec is layered onto. An expression reads a given expression as
+a `Variable` of that name, over the frame under `program.given.expressions`. A
+`where` reads a given mask as a `ParameterDefined` of that name, which is
+boolean data over the frame under `program.given.masks`.
 An entry of `program.expressions` whose `adds_to` names a given expression is
 a term this file adds to it. The name is still one that the program reads and
 does not build.
@@ -200,7 +223,7 @@ layer.given.constraints['balance'].dims  # ('snapshot', 'bus')
 The host model provides each name: it holds a column or a row family of that
 name. An engine that builds the program checks that the host provides each name
 on the same frame, and refuses the program where it does not. An engine with
-no host model refuses a program that has any name in these four groups. `advice`
+no host model refuses a program that has any name in these five groups. `advice`
 returns one note of kind `given` per name
 ([what `advice` warns about](language/errors.md#what-advice-warns-about)).
 
@@ -248,7 +271,7 @@ introduced is named under the declaration the expansion emitted.
 
 - `coupled` names each declaration that ties the whole axis together: a sum
   over the axis in a constraint, a grouping that sums the axis away, a wrapped
-  shift, or a set. After the dash, each entry names the one change that would
+  shift, or a set. In brackets, each entry names the one change that would
   remove the tie.
 - `undecided` lists each read whose reach only the data can decide, as a `Reach`:
   the declaration, the parameter or relation it reads, and the kind of read. A
@@ -285,8 +308,8 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 ```
 
 - The sections come in one order, whatever order the file wrote them in:
-  `version`, `description`, `dimensions`, `relations`, `parameters`,
-  `variables`, `constraints`, `objective`, `expressions`, `macros`,
+  `version`, `description`, `given`, `dimensions`, `relations`, `parameters`,
+  `variables`, `constraints`, `objective`, `expressions`, `masks`, `macros`,
   `piecewise`, `sos`, `assumptions`. The keys of a declaration also come in one
   order.
 - Declarations are sorted by name within each section.

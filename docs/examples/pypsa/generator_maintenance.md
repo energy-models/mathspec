@@ -9,6 +9,21 @@ This file states the maintenance rows of PyPSA's `Generator`. It is one of the [
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
+    Generator_committable: { dims: [generator], dtype: bool }
+    Generator_p_nom_mod: { dims: [generator] }
+    Generator_active: { dims: [snapshot, generator], dtype: bool }
+    snapshot_weightings_generators: { dims: [snapshot] }
+    Generator_p_nom_min: { dims: [scenario, generator] }
+    Generator_p_nom_max: { dims: [scenario, generator] }
+  variables:
+    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_p_nom_ext: { dims: [generator] }
+  masks:
+    Generator_committed: { dims: [snapshot, generator] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -51,6 +66,7 @@ parameters:
       `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [scenario, generator]
+    missing: neutral
   Generator_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it
@@ -67,7 +83,7 @@ variables:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: 1
@@ -75,17 +91,15 @@ variables:
     description: "`Generator-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_active
-    absence: zero
+    missing: neutral
     domain: binary
   Generator_maintenance_capacity:
     description: >-
       `Generator-maintenance_capacity` — the chosen build while in maintenance, zero
       otherwise: the product the `maintcap` rows linearize
     dims: [scenario, snapshot, generator]
-    where: >-
-      Generator_maintainable AND Generator_p_nom_extendable
-      AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
-    absence: zero
+    where: Generator_maint_ext
+    missing: neutral
     bounds:
       lower: 0
   Generator_maintenance_status:
@@ -95,24 +109,24 @@ variables:
       maintenance may also be off
     dims: [scenario, snapshot, generator]
     where: >-
-      Generator_maintainable AND Generator_committable
-      AND NOT (Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)) AND Generator_active
-    absence: zero
+      Generator_maintainable
+      AND Generator_committed
+      AND NOT (Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
+    missing: neutral
     bounds:
       lower: 0
 
-given:
-  parameters:
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
-    Generator_committable: { dims: [generator], dtype: bool }
-    Generator_p_nom_mod: { dims: [generator] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
-    snapshot_weightings_generators: { dims: [snapshot] }
-    Generator_p_nom_min: { dims: [scenario, generator] }
-    Generator_p_nom_max: { dims: [scenario, generator] }
-  variables:
-    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_p_nom_ext: { dims: [generator] }
+masks:
+  Generator_maint_ext:
+    description: >-
+      a maintainable generator with an extendable build, unless it is
+      committable and modular, that stands in the snapshot's period — the
+      maintenance rows against the chosen build
+    where: >-
+      Generator_maintainable
+      AND Generator_p_nom_extendable
+      AND NOT (Generator_committable AND Generator_p_nom_mod > 0)
+      AND Generator_active
 
 constraints:
   Generator_maint_event_count:
@@ -138,54 +152,54 @@ constraints:
       `Generator-maintcap_upper` — the build taken off is at most the chosen build in
       maintenance, and at most the build less its floor out of it
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maint_ext
     expression: Generator_maintenance_capacity <= Generator_p_nom_ext - Generator_p_nom_min * (1 - Generator_maintenance)
   Generator_maintcap_upper_nommax:
     description: "`Generator-maintcap_upper_nommax` — out of maintenance, no build is taken off"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maint_ext
     expression: Generator_maintenance_capacity <= Generator_p_nom_max * Generator_maintenance
   Generator_maintcap_lower_nommax:
     description: "`Generator-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maint_ext
     expression: Generator_maintenance_capacity >= Generator_p_nom_ext - Generator_p_nom_max * (1 - Generator_maintenance)
   Generator_maintcap_lower_nommin:
     description: "`Generator-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active AND Generator_p_nom_min > 0
+    where: Generator_maint_ext AND Generator_p_nom_min > 0
     expression: Generator_maintenance_capacity >= Generator_p_nom_min * Generator_maintenance
   Generator_maint_status_le_status:
     description: "`Generator-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     expression: Generator_maintenance_status <= Generator_status
   Generator_maint_status_le_maint:
     description: "`Generator-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     expression: Generator_maintenance_status <= Generator_maintenance
   Generator_maint_status_lb:
     description: "`Generator-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     expression: Generator_maintenance_status >= Generator_status + Generator_maintenance - 1
   Generator_maint_modstatus_le_status:
     description: "`Generator-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
     expression: Generator_maintenance_status <= Generator_status
   Generator_maint_modstatus_le_maint:
     description: >-
       `Generator-maint-modstatus-le-maint` — out of maintenance, no module is on in
       maintenance; in it, at most the modules the build cap holds
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
     expression: Generator_maintenance_status <= Generator_p_nom_max / Generator_p_nom_mod * Generator_maintenance
   Generator_maint_modstatus_lb:
     description: "`Generator-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
     dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
     expression: Generator_maintenance_status >= Generator_status - Generator_p_nom_max / Generator_p_nom_mod * (1 - Generator_maintenance)
 
 assumptions:
@@ -247,17 +261,17 @@ assumptions:
 | $`\mathrm{mnt}`$ | `Generator_maintainable` over $`\mathcal{G}`$ — whether a generator must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
 | $`\gamma`$ | `Generator_maintenance_pu` over $`\Xi \times \mathcal{G}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{\mathrm{mnt}}`$ | `Generator_maintenance_events` over $`\Xi \times \mathcal{G}`$ — how many maintenance events the horizon holds |
-| $`\tau^{\mathrm{mnt}}`$ | `Generator_maintenance_duration` over $`\Xi \times \mathcal{G}`$ — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the generator is not maintainable. No row reads it: data prep turns it into `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the assumptions hold it to the horizon |
+| $`\tau^{\mathrm{mnt}}`$ | `Generator_maintenance_duration` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the generator is not maintainable. No row reads it: data prep turns it into `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the assumptions hold it to the horizon |
 | $`\mathrm{blk}`$ | `Generator_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the generator does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`\mu`$ | `Generator_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-maintenance` — whether a maintainable generator is in maintenance: continuous, and one exactly where an event covers the snapshot |
-| $`\mu^{\mathrm{up}}`$ | `Generator_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-maintenance_start` — whether a maintenance event starts in this snapshot |
-| $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
-| $`\mu^{u}`$ | `Generator_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
+| $`\mu`$ | `Generator_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance` — whether a maintainable generator is in maintenance: continuous, and one exactly where an event covers the snapshot |
+| $`\mu^{\mathrm{up}}`$ | `Generator_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_start` — whether a maintenance event starts in this snapshot |
+| $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
+| $`\mu^{u}`$ | `Generator_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
 
 #### Given
 
@@ -272,6 +286,13 @@ assumptions:
 | $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\Xi \times \mathcal{G}`$, data another file declares |
 | $`u`$ | `Generator_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ |
+| $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{T} \times \mathcal{G}`$, a mask another file defines |
+
+#### Masks
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{\mathrm{mnt,ext}}`$ | `Generator_maint_ext` over $`\mathcal{T} \times \mathcal{G}`$ — a maintainable generator with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
 
 #### Subject to
 
@@ -296,61 +317,69 @@ assumptions:
 **`Generator_maintcap_upper`**
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \le P_{g} - \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{nom}}_{\xi,t,g} \le P_{g} - \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{mnt,ext}}_{t,g}
 ```
 
 **`Generator_maintcap_upper_nommax`**
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{nom}}_{\xi,t,g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{mnt,ext}}_{t,g}
 ```
 
 **`Generator_maintcap_lower_nommax`**
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \ge P_{g} - \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{nom}}_{\xi,t,g} \ge P_{g} - \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{mnt,ext}}_{t,g}
 ```
 
 **`Generator_maintcap_lower_nommin`**
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g} \wedge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} > 0
+\mu^{\mathrm{nom}}_{\xi,t,g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{mnt,ext}}_{t,g} \wedge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} > 0
 ```
 
 **`Generator_maint_status_le_status`**
 
 ```math
-\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
 ```
 
 **`Generator_maint_status_le_maint`**
 
 ```math
-\mu^{u}_{\xi,t,g} \le \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \le \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
 ```
 
 **`Generator_maint_status_lb`**
 
 ```math
-\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} + \mu_{\xi,t,g} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} + \mu_{\xi,t,g} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
 ```
 
 **`Generator_maint_modstatus_le_status`**
 
 ```math
-\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 **`Generator_maint_modstatus_le_maint`**
 
 ```math
-\mu^{u}_{\xi,t,g} \le \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \le \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 **`Generator_maint_modstatus_lb`**
 
 ```math
-\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} - \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} - \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+```
+
+#### Masks
+
+**`Generator_maint_ext`**
+
+```math
+\mathrm{on}^{\mathrm{mnt,ext}}_{t,g} \iff \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 #### Variable domains
@@ -370,13 +399,13 @@ assumptions:
 **`Generator_maintenance_capacity`**
 
 ```math
-\mu^{\mathrm{nom}}_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{nom}}_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{mnt,ext}}_{t,g}
 ```
 
 **`Generator_maintenance_status`**
 
 ```math
-\mu^{u}_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \mathrm{on}_{t,g}
+\mu^{u}_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right)
 ```
 
 #### Assumptions

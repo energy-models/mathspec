@@ -28,6 +28,9 @@ description: >-
   wired to a port, the port to a bus, and the balance names no component class.
   A flow is positive where the port injects into its bus. A component that
   costs something adds its cost to `total_cost`.
+given:
+  expressions:
+    total_cost: { dims: [], description: what running the system costs }
 dimensions:
   snapshot: { dtype: datetime, description: dispatch periods }
   bus: { dtype: str, description: network nodes }
@@ -43,9 +46,6 @@ constraints:
     description: "`Bus-nodal_balance` — what the ports on a bus put in nets to nothing"
     dims: [snapshot, bus]
     expression: sum(Port_p, over=port, by=Port_bus[bus]) == 0
-given:
-  expressions:
-    total_cost: { dims: [], description: what running the system costs }
 objective:
   sense: minimize
   expression: total_cost

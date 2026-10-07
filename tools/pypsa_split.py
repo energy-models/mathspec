@@ -18,7 +18,9 @@ what another topic declares under `given:`; each term names the hub it adds to
 with `adds_to:`, and the fragment reads that hub under `given:`. One fragment
 reads each hub without adding to it, with its description, so the terms always
 have a reader, and a new component is one new fragment. The reader of
-`total_cost` also sets the objective.
+`total_cost` also sets the objective. A mask goes to the topic its name
+names, as any declaration does, and a fragment that reads another topic's
+mask reads it under `given: masks:`.
 
 `merge` then writes each hub as the file does, so `check` is one comparison:
 the merged fragments and the one file have one canonical form.
@@ -46,7 +48,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 SOURCE = Path('examples/pypsa.yaml')
-SECTIONS = ('dimensions', 'relations', 'parameters', 'variables', 'expressions', 'constraints', 'assumptions')
+SECTIONS = ('dimensions', 'relations', 'parameters', 'variables', 'expressions', 'masks', 'constraints', 'assumptions')
 FRAME = ('dimensions', 'relations')
 IDENT = re.compile(r'[A-Za-z_][A-Za-z0-9_]*')
 HEADER = '# SPDX-FileCopyrightText: mathspec Contributors\n#\n# SPDX-License-Identifier: MIT\n'
@@ -77,7 +79,6 @@ NAME_TOPIC = {
     'CVaR_omega': 'settings',
     'GlobalConstraint_counts_snapshot': 'settings',
     'GlobalConstraint_energy_weight': 'settings',
-    'GlobalConstraint_snapshot_closes': 'settings',
     'scenario_opex': 'cost',
     'primary_energy': 'global_constraints',
     'operational_limit': 'global_constraints',
@@ -221,8 +222,12 @@ class Model:
         return list(self.blocks)
 
     def frames(self) -> dict[str, tuple[str, ...]]:
-        """The frame of every named expression, read off the one file."""
-        return {name: e.dims for name, e in to_spec(self.data).program.expressions.items()}
+        """The frame of every named expression and mask, read off the one file."""
+        program = to_spec(self.data).program
+        return {
+            **{name: e.dims for name, e in program.expressions.items()},
+            **{name: m.dims for name, m in program.masks.items()},
+        }
 
     def home(self, name: str) -> str:
         """The fragment that reads the hub *name* without adding to it, and carries its description."""
@@ -255,7 +260,7 @@ def fragments(model: Model) -> dict[str, str]:
         given = {model.key(n) for n in read if model.key(n)[0] not in FRAME and model.key(n) not in mine}
         stated = {
             **{n: model.data[s][n]['dims'] for s, n in given if s in ('parameters', 'variables')},
-            **{n: list(frames[n]) for s, n in given if s == 'expressions'},
+            **{n: list(frames[n]) for s, n in given if s in ('expressions', 'masks')},
         }
         frame_reads = read | set().union(*(model.names_in(dims) for dims in stated.values()))
         frame = {model.key(n) for n in frame_reads if model.key(n)[0] in FRAME}
@@ -291,13 +296,15 @@ def _fragment(
     adds: Mapping[str, str],
     homes: set[str],
 ) -> str:
-    """One fragment as YAML text, its sections and declarations in the order of the source file.
+    """One fragment as YAML text, its ``given:`` block first, then its sections and declarations in source order.
 
     A term carries the hub it adds to as ``adds_to:``. A hub the fragment is
     home to is read under ``given:`` with its description, and the home of the
     hub the objective reads writes the objective.
     """
     parts = [HEADER]
+    if given:
+        parts.append('given:\n' + ''.join(_given(model, kind, given, stated, homes) for kind in GIVEN_KINDS))
     hubs = {term: hub for hub, term in adds.items()}
     for section in SECTIONS:
         blocks = [
@@ -309,8 +316,6 @@ def _fragment(
         ]
         if blocks:
             parts.append(f'{section}:\n' + '\n'.join(blocks) + '\n')
-        if section == 'variables' and given:
-            parts.append('given:\n' + ''.join(_given(model, kind, given, stated, homes) for kind in GIVEN_KINDS))
     objective = model.data['objective']
     if objective['expression'] in homes:
         parts.append(_dumped('objective', objective, indent='') + '\n')
@@ -318,8 +323,8 @@ def _fragment(
 
 
 #: The kinds a fragment reads under `given:`, and the fields of the source
-#: declaration each restates beside the dims.
-GIVEN_KINDS = {'parameters': ('dtype',), 'variables': ('domain',), 'expressions': ()}
+#: declaration each restates beside the frame.
+GIVEN_KINDS = {'parameters': ('dtype',), 'variables': ('domain',), 'expressions': (), 'masks': ()}
 
 
 def _term_block(block: str, hub: str) -> str:

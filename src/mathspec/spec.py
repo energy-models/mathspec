@@ -2,9 +2,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The YAML surface's types — every block a file may contain, rooted at [`Spec`][].
+"""The file: what it says, as every block it may contain, rooted at [`Spec`][].
 
-Nothing here has seen data.
+The first public state. A [`Spec`][] holds one file's sections as the blocks
+below, and [`BUILTIN_NAMES`][] is the closed set of operators an expression in
+one may call. Nothing here has seen data; what the file means is its
+[`program`][mathspec.spec.Spec.program].
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from pydantic import (
     ValidationError,
     ValidationInfo,
     ValidatorFunctionWrapHandler,
+    WithJsonSchema,
     field_validator,
     model_serializer,
     model_validator,
@@ -29,15 +33,18 @@ from pydantic import (
 
 from mathspec._expression_parser import NAME, ComparisonOperator
 from mathspec.errors import did_you_mean, schema_error
+from mathspec.operators import BUILTIN_NAMES
 from mathspec.program import (
     DimensionDtype,
+    MissingReading,
     ObjectiveSense,
     ParameterDtype,
     PiecewiseMethod,
     Program,
+    RelationMissing,
     SosType,
-    VariableAbsence,
     VariableDomain,
+    VariableMissing,
 )
 
 if TYPE_CHECKING:
@@ -46,6 +53,36 @@ if TYPE_CHECKING:
     from pydantic import GetJsonSchemaHandler, SerializerFunctionWrapHandler
     from pydantic.config import ExtraValues
     from pydantic_core import CoreSchema
+
+
+#: What ``mathspec.spec`` promises a consumer, sorted.
+__all__ = [
+    'BUILTIN_NAMES',
+    'AssumptionBlock',
+    'BoundsBlock',
+    'ConstraintBlock',
+    'Curvature',
+    'DimensionBlock',
+    'ExpressionBlock',
+    'ExpressionCase',
+    'Formulation',
+    'GivenBlock',
+    'GivenConstraintBlock',
+    'GivenExpressionBlock',
+    'GivenMaskBlock',
+    'GivenParameterBlock',
+    'GivenVariableBlock',
+    'MacroBlock',
+    'MaskBlock',
+    'ObjectiveBlock',
+    'ParameterBlock',
+    'PiecewiseBlock',
+    'PiecewiseLink',
+    'RelationBlock',
+    'SosBlock',
+    'Spec',
+    'VariableBlock',
+]
 
 
 class _StrictBlock(BaseModel):
@@ -97,6 +134,38 @@ Curvature = Literal['convex', 'concave', 'either']
 #: coefficient, a term, a divisor or a bound. A label selects and a flag masks,
 #: so neither is a number.
 NUMERIC_DTYPES: frozenset[ParameterDtype] = frozenset({'float', 'int'})
+
+#: What a parameter's ``missing:`` is written as. The validator takes ``inf``
+#: and ``-inf`` as the numbers they name, which an editor would otherwise flag.
+_MISSING_SCHEMA: dict[str, object] = {
+    'anyOf': [
+        {'enum': list(get_args(MissingReading))},
+        {'type': 'boolean'},
+        {'type': 'number'},
+        {'enum': ['inf', '-inf']},
+    ],
+}
+
+#: The spellings of a missing row, for a refusal to list.
+_READINGS = ', '.join(get_args(MissingReading))
+
+
+def _without_refused(written: dict[str, object]) -> dict[str, object]:
+    """*written* with ``missing: refused`` left out, so the default written out and left out write one text."""
+    if written.get('missing') == 'refused':
+        written.pop('missing')
+    return written
+
+
+def _as_yaml(v: object) -> str:
+    """*v* as the file spells it, so a refusal quotes the line the author wrote."""
+    return str(v).lower() if isinstance(v, bool) else str(v)
+
+
+def _missing_null(kind: str, rewrite: str) -> ValueError:
+    """``missing: null`` reads as either the default or an absent row, so it is refused for the word that says which."""
+    return ValueError(f'missing: null on {kind} names no reading. {rewrite}')
+
 
 #: Every formulation, in the order [`Spec.expand`][] writes them out: a curve
 #: emits a set, and no set emits a curve.
@@ -164,7 +233,50 @@ class RelationBlock(_StrictBlock):
 
     key: str | list[str] | dict[str, str]
     values: str | list[str] | dict[str, str] | None = None
+    #: What a key the map leaves out means: ``refused`` where the file writes
+    #: nothing, and ``None`` for a bare relation, whose rows are its membership.
+    missing: Annotated[RelationMissing | None, WithJsonSchema({'enum': list(get_args(RelationMissing))})] = Field(
+        default=None, json_schema_extra={'default': 'refused'}
+    )
     description: str | None = None
+
+    @field_validator('missing', mode='before')
+    @classmethod
+    def _refused_or_absent(cls, v: object) -> object:
+        """A label is data, so no value fills a gap in a map, and neutral reads as absent wherever a map is read."""
+        if v is None:
+            raise _missing_null(
+                'a relation', 'Write absent for a key the map leaves out, or leave the key out for refused.'
+            )
+        if v not in get_args(RelationMissing):
+            msg = (
+                f'missing: {_as_yaml(v)} on a relation, which takes refused or absent. A label the map leaves out '
+                f'is refused, or belongs to no group.'
+            )
+            raise ValueError(msg)
+        return v
+
+    @model_validator(mode='after')
+    def _a_bare_relation_has_no_gap(self) -> RelationBlock:
+        """A bare relation's rows are its membership, so a key it leaves out is not missing.
+
+        A map left unwritten reads ``refused``, held as the value, so the spec
+        that writes the default and the one that leaves it out are one spec.
+        """
+        if self.missing is not None and self.values is None:
+            msg = (
+                f'missing: {self.missing} on a relation with no `values:`. Its rows are its membership, '
+                f'so a key it leaves out is not missing: drop the key.'
+            )
+            raise ValueError(msg)
+        if self.values is not None and self.missing is None:
+            self.missing = 'refused'
+        return self
+
+    @model_serializer(mode='wrap')
+    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        """``missing`` is written where it is not ``refused``: refused is what leaving it out says."""
+        return _without_refused(cast('dict[str, object]', handler(self)))
 
     @property
     def pairs(self) -> tuple[tuple[str, str], ...]:
@@ -223,13 +335,60 @@ class DimensionBlock(_StrictBlock):
 
 
 class ParameterBlock(_StrictBlock):
-    """A declared parameter with dims and dtype."""
+    """A declared parameter with dims and dtype, and what a missing row of its data means."""
 
     _label: ClassVar[str] = 'a parameter declaration'
 
     dims: list[str]
     dtype: ParameterDtype = 'float'
+    missing: Annotated[MissingReading | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
+
+    @field_validator('missing', mode='before')
+    @classmethod
+    def _a_reading_or_a_value(cls, v: object) -> object:
+        """``inf`` is a string to YAML and a number to the expression grammar, so it is taken as the number."""
+        if v is None:
+            raise _missing_null(
+                'a parameter', 'Write absent for a row that is not there, or leave the key out for refused.'
+            )
+        if v in ('inf', '-inf'):
+            return float(cast('str', v))
+        if isinstance(v, str) and v not in get_args(MissingReading):
+            msg = f'missing is the string {v!r}. It takes {_READINGS}, or a value: a number, true or false.'
+            raise ValueError(msg)
+        if isinstance(v, float) and math.isnan(v):
+            msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _READINGS + '.'
+            raise ValueError(msg)
+        return v
+
+    @model_serializer(mode='wrap')
+    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        """``missing`` is written where it is not ``refused``: refused is what leaving it out says."""
+        return _without_refused(cast('dict[str, object]', handler(self)))
+
+    @model_validator(mode='after')
+    def _a_value_fits_the_dtype(self) -> ParameterBlock:
+        """A value fills rows of the column, so it has the column's dtype, and a label has no neutral value."""
+        v = self.missing
+        if self.dtype == 'str' and v not in ('refused', 'absent'):
+            msg = (
+                f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill, '
+                f'and no neutral one.'
+            )
+            raise ValueError(msg)
+        if isinstance(v, str):
+            return self
+        if self.dtype == 'bool' and not isinstance(v, bool):
+            msg = f'missing: {_as_yaml(v)} on a bool parameter, which takes true or false.'
+            raise ValueError(msg)
+        if self.dtype != 'bool' and isinstance(v, bool):
+            msg = f'missing: {_as_yaml(v)} on a {self.dtype} parameter, which takes a number. Write 1 or 0.'
+            raise ValueError(msg)
+        if self.dtype == 'int' and isinstance(v, float):
+            msg = f'missing: {_as_yaml(v)} on an int parameter, which takes an integer. Write one, or declare dtype: float.'
+            raise ValueError(msg)
+        return self
 
 
 class BoundsBlock(_StrictBlock):
@@ -280,14 +439,31 @@ class VariableBlock(_StrictBlock):
     where: str | None = None
     bounds: BoundsBlock = BoundsBlock()
     domain: VariableDomain = 'continuous'
-    absence: VariableAbsence = 'undefined'
+    missing: VariableMissing = 'absent'
     description: str | None = None
 
+    @field_validator('missing', mode='before')
+    @classmethod
+    def _absent_or_neutral(cls, v: object) -> object:
+        """A variable has no data, so the readings of data do not apply to it."""
+        if v is None:
+            raise _missing_null('a variable', 'Write neutral, or leave the key out for absent.')
+        if v not in get_args(VariableMissing):
+            msg = (
+                f'missing: {_as_yaml(v)} on a variable, which takes absent or neutral. A variable has no data, '
+                f'so refused and a value apply only to a parameter.'
+            )
+            raise ValueError(msg)
+        return v
+
     @model_validator(mode='after')
-    def _absence_needs_a_mask(self) -> VariableBlock:
-        """``absence:`` says what a *missing* coordinate means, so one must be missable."""
-        if self.absence != 'undefined' and self.where is None:
-            msg = f'absence: {self.absence} needs a `where:`. Add a `where:`, or delete `absence:`.'
+    def _neutral_needs_a_mask(self) -> VariableBlock:
+        """``missing:`` says what a masked-out coordinate means, so one must be missable."""
+        if self.missing != 'absent' and self.where is None:
+            msg = (
+                f'missing: {self.missing} needs a `where:`. A variable with no mask exists at every '
+                f'coordinate of its dims, so nothing is missing. Add a `where:`, or delete `missing:`.'
+            )
             raise ValueError(msg)
         return self
 
@@ -295,9 +471,9 @@ class VariableBlock(_StrictBlock):
 class GivenParameterBlock(_StrictBlock):
     """Data this file reads and another file declares.
 
-    It says what a [`ParameterBlock`][] says, because the frame and the
-    dtype are all a parameter declaration holds: a where compares against the
-    dtype, and the dim rules read the frame.
+    It says the frame and the dtype of a [`ParameterBlock`][], which are what
+    this file reads: a where compares against the dtype, and the dim rules read
+    the frame. What a missing row means is the declaring file's ``missing:``.
     """
 
     _label: ClassVar[str] = 'a given parameter declaration'
@@ -356,8 +532,22 @@ class GivenExpressionBlock(_StrictBlock):
     description: str | None = None
 
 
+class GivenMaskBlock(_StrictBlock):
+    """A mask this file reads and another file defines.
+
+    The frame is all this file states, and it names the dims the definer's
+    predicate reads. A where reads the name as data over that frame, true or false at each coordinate, since a mask reads nothing
+    a solve decides: the predicate is the definer's.
+    """
+
+    _label: ClassVar[str] = 'a given mask declaration'
+
+    dims: list[str]
+    description: str | None = None
+
+
 class GivenBlock(_StrictBlock):
-    """What this file reads and does not build, by kind. Closed at the four kinds."""
+    """What this file reads and does not build, by kind. Closed at the five kinds."""
 
     _label: ClassVar[str] = 'a given block'
 
@@ -369,10 +559,12 @@ class GivenBlock(_StrictBlock):
     constraints: dict[str, GivenConstraintBlock] = {}
     #: Named expressions another file defines ([`GivenExpressionBlock`][]).
     expressions: dict[str, GivenExpressionBlock] = {}
+    #: Masks another file defines ([`GivenMaskBlock`][]).
+    masks: dict[str, GivenMaskBlock] = {}
 
     def __bool__(self) -> bool:
         """Whether the file reads anything it does not build."""
-        return bool(self.parameters or self.variables or self.constraints or self.expressions)
+        return bool(self.parameters or self.variables or self.constraints or self.expressions or self.masks)
 
 
 class ConstraintBlock(_StrictBlock):
@@ -547,6 +739,48 @@ class ExpressionBlock(_StrictBlock):
         return written
 
 
+class MaskBlock(_StrictBlock):
+    """A named predicate: one where string, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.
+
+    Written in YAML as a bare where string, or as a mapping once it carries a
+    ``description:``, and serialised back to whichever form it was written in::
+
+        masks:
+          committable: "Generator_committable AND Generator_active"
+          stands:
+            where: build_year <= period_year AND period_year < build_year + lifetime
+            description: the generator stands in this period
+
+    A bare mask name in a where string stands for its predicate, inside
+    ``count``, ``shift`` and ``at`` too. The mask's frame is the dims its
+    predicate reads, so it declares none. A mask is a predicate, so it is
+    never a value in an expression.
+    """
+
+    _label: ClassVar[str] = 'a mask declaration'
+
+    #: The predicate, in the where grammar.
+    where: str
+    description: str | None = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def _from_string(cls, data: object) -> object:
+        return {'where': data} if isinstance(data, str) else data
+
+    @classmethod
+    @override
+    def __get_pydantic_json_schema__(cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler) -> dict[str, object]:
+        """The published schema admits the bare string the one-line form is written as."""
+        return _also_written_as(core_schema, handler, {'type': 'string'})
+
+    @model_serializer
+    def _as_written(self) -> str | dict[str, object]:
+        if self.description is None:
+            return self.where
+        return {'where': self.where, 'description': self.description}
+
+
 class AssumptionBlock(_StrictBlock):
     """What the spec assumes of its data: a predicate every coordinate it is checked at has to satisfy.
 
@@ -674,6 +908,11 @@ class PiecewiseBlock(_StrictBlock):
     description: str | None = None
 
     @property
+    def consumes(self) -> frozenset[str]:
+        """The parameters the block reads: each link's values, and the ``points:`` mask."""
+        return frozenset({link.values for link in self.links} | ({self.points} if self.points else set()))
+
+    @property
     def nominated(self) -> str | None:
         """The block's own values parameter ``points:`` names, so the mask is derived from it — or ``None``."""
         return self.points if self.points in {link.values for link in self.links} else None
@@ -795,10 +1034,10 @@ class Spec(_StrictBlock):
     A ``Spec`` that exists has passed the whole language: constructing one by
     any route — ``to_spec``, [`model_validate`][], the constructor — runs
     every load-time check, expression pass included, and raises
-    [`LanguageError`][] on a spec the language refuses.
+    [`LanguageError`][mathspec.errors.LanguageError] on a spec the language refuses.
     Holding one is the proof, so nothing downstream checks it again.
 
-    The API is the twelve declaration sections plus ``version`` and
+    The API is the thirteen declaration sections plus ``version`` and
     ``description``, three ways back out — [`to_dict`][] for the spec as
     data, [`to_yaml`][] for the file a reviewer reads, [`expand`][] for the
     spec with its formulations written out as plain rows — and [`program`][], the
@@ -816,15 +1055,16 @@ class Spec(_StrictBlock):
     #: What the file as a whole is, in the same plain prose a declaration's
     #: ``description:`` takes. The typeset document opens with it.
     description: str | None = None
+    #: What this file reads and does not build ([`GivenBlock`][]). Empty in a file that stands alone.
+    given: GivenBlock = GivenBlock()
     dimensions: dict[str, DimensionBlock] = {}
     relations: dict[str, RelationBlock] = {}
     parameters: dict[str, ParameterBlock] = {}
     variables: dict[str, VariableBlock] = {}
-    #: What this file reads and does not build ([`GivenBlock`][]). Empty in a file that stands alone.
-    given: GivenBlock = GivenBlock()
     constraints: dict[str, ConstraintBlock] = {}
     objective: ObjectiveBlock | None = None
     expressions: dict[str, ExpressionBlock] = {}
+    masks: dict[str, MaskBlock] = {}
     macros: dict[str, MacroBlock] = {}
     piecewise: dict[str, PiecewiseBlock] = {}
     sos: dict[str, SosBlock] = {}
@@ -968,7 +1208,7 @@ class Spec(_StrictBlock):
 
         Read off the spec's own mappings rather than a list of sections, so a
         section added later cannot be forgotten here — every mapping a Spec
-        carries is keyed by a declaration name. ``given:`` nests its four
+        carries is keyed by a declaration name. ``given:`` nests its five
         mappings one level down, so they are read off [`GivenBlock`][] the
         same way.
         """

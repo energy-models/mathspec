@@ -24,9 +24,6 @@ and you can nest them as `override(merge([…]), […])`.
    component class.
 
    ```yaml title="network.yaml"
-   dimensions:
-     snapshot: { dtype: int }
-     bus: { dtype: str }
    given:
      expressions:
        Bus_injection:
@@ -35,6 +32,9 @@ and you can nest them as `override(merge([…]), […])`.
        total_cost:
          dims: []
          description: what running the system costs
+   dimensions:
+     snapshot: { dtype: int }
+     bus: { dtype: str }
    constraints:
      Bus_balance:
        dims: [snapshot, bus]
@@ -52,6 +52,10 @@ and you can nest them as `override(merge([…]), […])`.
    something adds its cost to `total_cost` the same way.
 
    ```yaml title="generator.yaml"
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus] }
+       total_cost: { dims: [] }
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
@@ -63,10 +67,6 @@ and you can nest them as `override(merge([…]), […])`.
      Generator_marginal_cost: { dims: [generator] }
    variables:
      Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
-   given:
-     expressions:
-       Bus_injection: { dims: [snapshot, bus] }
-       total_cost: { dims: [] }
    expressions:
      Generator_injection:
        expression: sum(Generator_p, over=generator, by=Generator_bus[bus])
@@ -77,6 +77,9 @@ and you can nest them as `override(merge([…]), […])`.
    ```
 
    ```yaml title="load.yaml"
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus] }
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
@@ -85,9 +88,6 @@ and you can nest them as `override(merge([…]), […])`.
      Load_bus: { key: load, values: bus }
    parameters:
      Load_p_set: { dims: [snapshot, load] }
-   given:
-     expressions:
-       Bus_injection: { dims: [snapshot, bus] }
    expressions:
      Load_injection:
        expression: -sum(Load_p_set, over=load, by=Load_bus[bus])
@@ -121,6 +121,9 @@ and you can nest them as `override(merge([…]), […])`.
    term, and `network.yaml` stays as it is.
 
    ```yaml title="store.yaml"
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus] }
    dimensions:
      snapshot: { dtype: int, ordered: true }
      bus: { dtype: str }
@@ -136,9 +139,6 @@ and you can nest them as `override(merge([…]), […])`.
      Store_energy_balance:
        dims: [snapshot, store]
        expression: Store_e == shift(Store_e, along=snapshot, offset=1, edge='wrap') - Store_p
-   given:
-     expressions:
-       Bus_injection: { dims: [snapshot, bus] }
    expressions:
      Store_injection:
        expression: sum(Store_p, over=store, by=Store_bus[bus])
@@ -162,6 +162,11 @@ and you can nest them as `override(merge([…]), […])`.
    component files stay as they are.
 
    ```yaml title="network_slack.yaml"
+   given:
+     expressions:
+       total_cost:
+         dims: []
+         description: what running the system costs
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
@@ -172,11 +177,6 @@ and you can nest them as `override(merge([…]), […])`.
        dims: [snapshot, bus]
        expression: Bus_slack
        description: what the components put into a bus
-   given:
-     expressions:
-       total_cost:
-         dims: []
-         description: what running the system costs
    constraints:
      Bus_balance:
        dims: [snapshot, bus]
@@ -205,9 +205,11 @@ which each component pins at its own port.
 | a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                     |
 | a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                       |
 | `ordered: true` on a shared dimension             | it says that the members have an order and does not change them, so the dimension is ordered if one fragment says so                                                                                |
+| `missing:` on a shared relation                   | it says what a missing row of the data means, so every fragment that declares the relation gives the same value. `missing: refused` is the same as no `missing:`                                    |
 | any other declaration                             | one fragment declares it, and a second is refused                                                                                                                                                   |
 | an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the declaration where the introducer wrote none                                             |
 | a given expression                                | the body of the definition carries no dimension that the `dims` of the reading fragment do not name                                                                                                 |
+| a given mask                                      | the `dims` of the reading fragment name exactly the dimensions that the predicate of the defining fragment reads                                                                                    |
 | a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                              |
 | an expression with `adds_to:`                     | the sum it names is the body one fragment defines, if any, followed by every term by its name, in the order of the list. [Terms](../reference/language/declarations.md#terms) gives what is refused |
 | `objective`                                       | one fragment sets it, and a second is refused. Several fragments contribute to it as terms of a sum the objective reads                                                                             |
@@ -236,12 +238,12 @@ with no `domain`, but it may not say something different. Here a file that caps
 emissions reads `Generator_p` as binary:
 
 ```yaml title="emissions.yaml"
-dimensions:
-  snapshot: { dtype: int }
-  generator: { dtype: str }
 given:
   variables:
     Generator_p: { dims: [snapshot, generator], domain: binary }
+dimensions:
+  snapshot: { dtype: int }
+  generator: { dtype: str }
 parameters:
   Generator_co2: { dims: [generator] }
   co2_cap: { dims: [] }
@@ -252,7 +254,7 @@ constraints:
 ```
 
 ```text
-fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'absence': 'undefined'}. Restate the dims as 'generator.yaml' declares them, or leave the field out.
+fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'missing': 'absent'}. Restate the dims as 'generator.yaml' declares them, or leave the field out.
 ```
 
 Two fragments that both only read a declaration must read it the same way,
@@ -364,6 +366,7 @@ Given variable 'Generator_p' collides with the variable of the same name. Rename
 | `null` under a section's name        | it is refused                                                                 |
 | a dimension or a relation            | it is added, or restated as the base declares it                              |
 | `ordered:` on a restated dimension   | `true` makes the dimension ordered; `false` over an ordered one is refused    |
+| `missing:` on a relation             | it changes what a key the map leaves out means, as on a parameter             |
 | an entry under one kind of `given:`  | it is edited, added or removed like any declaration, and the other kinds stay |
 | `version`, `description`             | the patch's value replaces the base's                                         |
 | a field an earlier patch writes      | the later patch's value replaces it                                           |
@@ -401,6 +404,11 @@ it, because a construct in the base may already step along `snapshot`:
 ```text
 patch 'unordered.yaml' says the dimension 'snapshot' is not ordered, where its base declares it ordered. A patch can add `ordered: true` but cannot remove it, because a construct in the base may step along it. Leave `ordered` out of the patch.
 ```
+
+`missing:` is a claim about the data, not the coordinate space. A patch may
+change it on a relation as on a parameter, and may name it alone:
+`relations: {gen_bus: {missing: absent}}`. `null` puts the default, `refused`,
+back.
 
 ## A section set to `null`
 

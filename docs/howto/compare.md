@@ -76,7 +76,7 @@ lists what the form sorts and what it keeps.
    ```
 
 5. **Compare from Python** where the comparison is one step of a longer
-   script. [`to_yaml`](../reference/api.md#mathspec.Spec.to_yaml) writes the
+   script. [`to_yaml`](../reference/spec.md#mathspec.spec.Spec.to_yaml) writes the
    same text with `canonical=True`:
 
    ```python

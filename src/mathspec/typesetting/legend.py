@@ -25,12 +25,12 @@ from mathspec.program import (
     WindowSum,
     walk_regions,
 )
-from mathspec.typesetting.format import Entry
+from mathspec.typesetting.format import Entry, number
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from mathspec.program import Expression, Mask, Program, RelationDeclaration
+    from mathspec.program import Expression, Mask, Missing, Program, RelationDeclaration
     from mathspec.typesetting.format import Format, OperatorName
     from mathspec.typesetting.symbols import Symbols
 
@@ -111,6 +111,8 @@ def notice(program: Program) -> Noticed:
         expressions(entry.expression)
     for curve in program.piecewise.values():
         expressions(*(link.expression for link in curve.links))
+    for mask in program.masks.values():
+        masks(mask.where)
     for declaration in (*program.constraints.values(), *program.variables.values()):
         if declaration.where is not None:
             masks(declaration.where)
@@ -119,6 +121,13 @@ def notice(program: Program) -> Noticed:
         if assumption.where is not None:
             masks(assumption.where)
     return Noticed(frozenset(policies), grouped, frozenset(positions), frozenset(numeric))
+
+
+#: Where a parameter's or a relation's ``missing:`` applies, as the legend says it.
+_NO_ROW = 'where the data has no row'
+
+#: Where a variable's ``missing:`` applies, as the legend says it.
+_MASKED_OUT = 'where the mask leaves it out'
 
 
 @dataclass(frozen=True)
@@ -133,7 +142,7 @@ class Legend:
         return self.format.operators[name]
 
     def glossaries(self, noticed: Noticed, defined: Iterable[str]) -> list[tuple[str, list[Entry]]]:
-        """The sets, parameters, variables, given declarations and definitions, each with its symbol, its dims and its description.
+        """The sets, parameters, variables, given declarations, definitions and masks, each with its symbol, its dims and its description.
 
         *defined* names the expressions that print under their own symbol, so
         a legend row stands exactly where a symbol does.
@@ -148,11 +157,19 @@ class Legend:
             for d, block in program.dimensions.items()
         ]
         parameters = [
-            self._entry(self.symbols.name[p], f'{fmt.mono(p)}{self._over(list(block.dims))}', block.description)
+            self._entry(
+                self.symbols.name[p],
+                f'{fmt.mono(p)}{self._over(list(block.dims))}{self._missing(block.missing)}',
+                block.description,
+            )
             for p, block in program.parameters.items()
         ]
         variables = [
-            self._entry(self.symbols.name[v], f'{fmt.mono(v)}{self._over(list(block.dims))}', block.description)
+            self._entry(
+                self.symbols.name[v],
+                f'{fmt.mono(v)}{self._over(list(block.dims))}{self._missing(block.missing, "absent", _MASKED_OUT)}',
+                block.description,
+            )
             for v, block in program.variables.items()
         ]
         given = [
@@ -189,6 +206,14 @@ class Legend:
                 )
                 for g, block in program.given.constraints.items()
             ),
+            *(
+                self._entry(
+                    self.symbols.name[g],
+                    f'{fmt.mono(g)}{self._over(list(block.dims))}, a mask another file defines',
+                    block.description,
+                )
+                for g, block in program.given.masks.items()
+            ),
         ]
         shown = set(defined)
         definitions = [
@@ -196,12 +221,17 @@ class Legend:
             for e, block in program.expressions.items()
             if e in shown
         ]
+        masks = [
+            self._entry(self.symbols.name[m], f'{fmt.mono(m)}{self._over(list(block.dims))}', block.description)
+            for m, block in program.masks.items()
+        ]
         groups = (
             ('Sets', sets),
             ('Parameters', parameters),
             ('Variables', variables),
             ('Given', given),
             ('Definitions', definitions),
+            ('Masks', masks),
         )
         return [(title, entries) for title, entries in groups if entries]
 
@@ -215,6 +245,16 @@ class Legend:
         product = self.format.joined([self.symbols.set[d] for d in dims], self._op('times'))
         return f' over {self.format.math(product)}'
 
+    def _missing(self, value: Missing | None, default: str = 'refused', where: str = _NO_ROW) -> str:
+        """What *where* means: the reading or the value ``missing:`` names, and nothing for the *default* reading."""
+        if value is None or value == default:
+            return ''
+        if isinstance(value, str | bool):
+            shown = self.format.mono(str(value).lower())
+        else:
+            shown = self.format.math(number(value, self.format))
+        return f', {shown} {where}'
+
     def _signature(self, name: str, lk: RelationDeclaration) -> str:
         """A relation in the legend: a function from its key sets to its value sets, or a relation inside the product."""
 
@@ -226,7 +266,7 @@ class Legend:
         return f'{self.format.upright(name)} {self._op("subset_of")} {product(lk.roles)}'
 
     def _coords(self, dim: str, noticed: Noticed) -> str:
-        """The dimension's carried structure: each relation with a column over it, as the map or relation it is.
+        """The dimension's carried structure: each relation with a column over it, as the map or relation it is, and each map that may leave a key out.
 
         The dtype is named only where an equation compared the index against a
         number, the one place "position 3" and "the coordinate 3" are both
@@ -239,6 +279,11 @@ class Legend:
         if carried:
             maps = self.format.joined([self._signature(c, lk) for c, lk in carried.items()], '')
             clauses.append(f' with {self.format.math(maps)}')
+            clauses.extend(
+                f', {self.format.mono(c)} is {self.format.mono("absent")} {_NO_ROW}'
+                for c, lk in carried.items()
+                if lk.missing == 'absent'
+            )
         return ''.join(clauses)
 
     def convention_notes(self) -> list[str]:

@@ -49,7 +49,7 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
 - A `piecewise:` block prints as one line, which quantifies the curve over the
   frame of the block, because the block states one curve at each coordinate of
   that frame. To print its rows, print
-  [`spec.expand()`](api.md#mathspec.Spec.expand) or pass `--expand`
+  [`spec.expand()`](spec.md#mathspec.spec.Spec.expand) or pass `--expand`
   ([see an expansion](../howto/see-an-expansion.md)).
 - An [`assumptions:`](language/assumptions.md) entry prints under an
   **Assumptions** heading, last, beside what each curve assumes of its
@@ -60,6 +60,9 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
   `cases:` block, a [reported entry](language/named.md#reported-expressions)
   and a [term](language/declarations.md#terms) keep their definition line
   under either `inline_expressions` setting.
+- A [mask](language/named.md#masks) prints its upright symbol where a file
+  reads it, and its predicate once, under a **Masks** heading, with ⟺. It
+  prints as its symbol under either `inline_expressions` setting.
 - Wherever the math moves an index, which every `shift` does, the document
   prints a line saying what that notation means.
 - A file that does not load does not print.
@@ -83,8 +86,8 @@ dimension, parameter and variable.
 ## Printing one declaration on its own
 
 `typeset_declaration` returns the line that the document prints for one named
-expression, constraint, assumption or variable. The line has its quantifier,
-but no document, label, number or math delimiters:
+expression, mask, constraint, assumption, curve or variable. The line has its
+quantifier, but no document, label, number or math delimiters:
 
 ```python
 ms.typeset_declaration('spec.yaml', 'spend', 'latex')
@@ -107,7 +110,7 @@ A single line has no _Definitions_ section beside it, so
 uses. A cased expression prints as its symbol, and a second call with its
 name prints its block.
 
-`typeset_declaration` refuses a name that is none of the four kinds, and names
+`typeset_declaration` refuses a name that is none of the six kinds, and names
 the closest match. It also refuses a name declared as two of them, such as a
 constraint and a variable.
 

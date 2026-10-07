@@ -70,8 +70,10 @@ LP = varied(
         'variables.running': {'dims': ['snapshot'], 'domain': 'binary'},
     },
 )
+#: The values tables of a curve under ``points:``, which stop where the curve stops.
+RAGGED = {'parameters.bp_x.missing': 'neutral', 'parameters.bp_y.missing': 'neutral'}
 #: The ``lp`` curve masked by one of its own values-parameters, so every check a block can carry is on it.
-LP_MASKED = varied(LP, **{'piecewise.cost_curve.points': 'bp_x'})
+LP_MASKED = varied(LP, **RAGGED, **{'piecewise.cost_curve.points': 'bp_x'})
 #: Two dims in the frame, so the emitted ``dims`` has an order to get wrong.
 TWO_DIM = varied(
     raw_of(NONCONVEX_YAML),
@@ -576,7 +578,11 @@ def test_a_masked_lp_curve_sits_its_rows_on_predicates_rather_than_on_parameters
 def test_a_file_supplied_mask_is_what_the_contiguity_condition_reads():
     """A ``points:`` naming a parameter the file declared is bound like any other, and the mask check names it."""
     program = expanded(
-        varied(LP, **{'parameters.reach': {'dims': ['bp'], 'dtype': 'bool'}, 'piecewise.cost_curve.points': 'reach'}),
+        varied(
+            LP,
+            **RAGGED,
+            **{'parameters.reach': {'dims': ['bp'], 'dtype': 'bool'}, 'piecewise.cost_curve.points': 'reach'},
+        ),
         'piecewise',
     ).program
 
@@ -604,6 +610,7 @@ def test_a_gap_is_explained_by_the_rows_the_method_writes(method, reason):
     )
     spec = schema_of(
         NONCONVEX_YAML,
+        **RAGGED,
         **{
             'piecewise.cost_curve.method': method,
             'piecewise.cost_curve.points': 'bp_x',

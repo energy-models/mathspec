@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mathspec import override, to_spec
-from mathspec.exclusivity import Subject, _evaluate, _Grid, _subject_of
+from mathspec.exclusivity import Special, Subject, _evaluate, _Grid, _subject_of
 from tools import gallery
 from tools.gallery import DECLARED, PATCHED, RECORDED, REFERENCES, _names_for, _stands_for
 
@@ -167,7 +167,7 @@ def test_every_declared_row_is_built_by_some_reference():
 def _admits(mask: Mask, component: str, unit: dict[str, bool | float]) -> bool:
     """Whether a mask over one component's own parameters holds for a unit with those values, read by the exclusivity check."""
     cell = {Subject('param', f'{component}_{name}'): value for name, value in unit.items()}
-    return _evaluate(mask.root, cell, _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}))
+    return _evaluate(mask.root, cell, _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}, {}))
 
 
 @pytest.mark.parametrize('component', ['Generator', 'Link', 'Process'])
@@ -191,6 +191,55 @@ def test_a_fixed_modular_committable_unit_gets_only_its_per_module_commitment_ro
         'maint_modstatus_le_maint',
         'maint_modstatus_lb',
     }, 'a fixed modular committable unit gets the per-module rows and no whole-unit ones'
+
+
+@pytest.mark.parametrize(
+    ('section', 'name'),
+    [
+        *(('variables', name) for name in ('CVaR_a', 'CVaR_theta', 'CVaR')),
+        *(('constraints', name) for name in ('CVaR_excess', 'CVaR_def')),
+        *(
+            ('assumptions', f'{component}_marginal_cost_quadratic_without_risk_preference')
+            for component in ('Generator', 'Link', 'Process', 'StorageUnit', 'Store')
+        ),
+    ],
+)
+def test_the_cvar_blocks_stand_exactly_where_a_risk_preference_is_set(section: str, name: str):
+    """PyPSA builds the CVaR columns and rows, and refuses a quadratic cost, under any risk preference (`optimize.py:461`, `:470-477`).
+
+    The file built the columns always, and the rows and the refusal only where
+    `omega > 0`, so a risk preference with `omega = 0` got neither. Rung 70.
+    """
+    mask = getattr(BASE.program, section)[name].where
+    assert mask is not None, 'the block stands only where a risk preference is set'
+    grid = _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}, {})
+    stands = {
+        omega: _evaluate(mask.root, {Subject('param', 'CVaR_omega'): omega}, grid) for omega in (Special.NULL, 0.0, 0.3)
+    }
+    assert stands == {Special.NULL: False, 0.0: True, 0.3: True}, (
+        'the block stands under a risk preference of any weight, zero included, and not without one'
+    )
+
+
+@pytest.mark.parametrize('component', ['Link', 'Process'])
+def test_a_delayed_port_assumes_one_generators_weighting_over_the_horizon(component: str):
+    """PyPSA lags a delayed port by elapsed time in `generators` weighting (`multiports.py:100-133`), the file by whole snapshots.
+
+    The two agree only under one weighting value, and nothing refused another,
+    so the file diverged from PyPSA without a word (#783).
+    """
+    assumed = BASE.assumptions[f'{component}_output_delay_under_uniform_weighting']
+    mask = BASE.program.assumptions[f'{component}_output_delay_under_uniform_weighting'].where
+    grid = _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}, {})
+    checked = {
+        delay: _evaluate(mask.root, {Subject('param', f'{component}_output_delay'): delay}, grid) for delay in (0, 1)
+    }
+    assert checked == {0: False, 1: True}, (
+        'the weighting is checked for a delayed port and not for one that delivers at once'
+    )
+    assert assumed.holds == (
+        "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
+    ), 'every snapshot weighs what the one before it weighs, the last against the first, so the weighting is one value'
 
 
 @pytest.mark.parametrize(

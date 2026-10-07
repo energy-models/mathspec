@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec import FORMATS, LanguageError, advice, merge, to_markdown, to_spec, typeset
+from mathspec import advice, merge, to_markdown, to_spec, typeset
+from mathspec.errors import LanguageError
+from mathspec.typesetting import FORMATS
 from tests.fixtures import BALANCE
 
 #: One component file: it pins the flow at its own port, and the column it
@@ -48,11 +50,11 @@ SURFACE = {
 }
 
 
-def test_given_holds_four_kinds_and_refuses_a_fifth():
+def test_given_holds_five_kinds_and_refuses_a_sixth():
     """The section is closed, so a kind nobody has admitted yet is the schema's own refusal."""
     with pytest.raises(LanguageError) as raised:
         to_spec({**SUPPLY, 'given': {'macros': {'twice': {'params': ['x'], 'template': '2 * x'}}}})
-    assert 'Valid keys: constraints, expressions, parameters, variables' in str(raised.value), (
+    assert 'Valid keys: constraints, expressions, masks, parameters, variables' in str(raised.value), (
         'the refusal names what the block takes'
     )
 

@@ -81,9 +81,11 @@ on a declaration, and the coordinates it admits.
 row that reads it is not built ([absence](language/absence.md)).
 
 **Missing row**
-: A coordinate that a parameter's table has no row for. It is not absence: it
-reads as `0` in arithmetic and as false in a `where`
-([what creates absence](language/absence.md#what-creates-absence)).
+: A coordinate that a parameter's or a relation's table has no row for. Its
+`missing:` says what it is: refused when the data is attached (`refused`, the
+default), absence (`absent`), `0` in arithmetic and false in a `where`
+(`neutral`), or a value
+([a missing row](language/declarations.md#a-missing-row)).
 
 ## Kinds of construct
 

@@ -6,27 +6,27 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 == Sets
 / $cal(T)$: index $t$ --- `snapshot` (`int` coordinates) with $upright("season_of"): cal(T) arrow.r cal(S), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("rep_of"): cal(T) arrow.r cal(T)$
 / $cal(G)$: index $g$ --- `generator` with $upright("gen_bus"): cal(G) arrow.r cal(B), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("connection") subset.eq cal(G) times cal(B), upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$
-/ $cal(B)$: index $b$ --- `bus` with $upright("gen_bus"): cal(G) arrow.r cal(B), upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("connection") subset.eq cal(G) times cal(B), upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$
-/ $cal(Z)$: index $z$ --- `zone` with $upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z)$
+/ $cal(B)$: index $b$ --- `bus` with $upright("gen_bus"): cal(G) arrow.r cal(B), upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("connection") subset.eq cal(G) times cal(B), upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$, `area_of` is `absent` where the data has no row
+/ $cal(Z)$: index $z$ --- `zone` with $upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z)$, `area_of` is `absent` where the data has no row
 / $cal(S)$: index $s$ --- `season` with $upright("season_of"): cal(T) arrow.r cal(S)$
 / $cal(E)$: index $e$ --- `technology` with $upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$
 / $cal(A)$: index $a$ --- `bp`
 
 == Parameters
-/ $upright("p")^(upright("max"))$: `p_max` over $cal(G)$
+/ $upright("p")^(upright("max"))$: `p_max` over $cal(G)$, $infinity$ where the data has no row
 / $upright("p")^(upright("min"))$: `p_min` over $cal(G)$
-/ $upright("cost")$: `cost` over $cal(G)$
+/ $upright("cost")$: `cost` over $cal(G)$, `neutral` where the data has no row
 / $upright("load")$: `load` over $cal(T) times cal(B)$
-/ $upright("is_flexible")$: `is_flexible` over $cal(G)$
+/ $upright("is_flexible")$: `is_flexible` over $cal(G)$, `false` where the data has no row
 / $upright("zone_cap")$: `zone_cap` over $cal(Z)$
-/ $upright("tech_cap")$: `tech_cap` over $cal(B) times cal(E)$
+/ $upright("tech_cap")$: `tech_cap` over $cal(B) times cal(E)$, `absent` where the data has no row
 / $upright("min_up")$: `min_up` over $cal(G)$
 / $upright("eta")$: `eta` over $cal(G)$
 / $upright("lead")$: `lead` over $cal(G)$
 / $upright("budget")$: `budget` (scalar)
 / $upright("growth")$: `growth` (scalar)
-/ $upright("bp_x")$: `bp_x` over $cal(G) times cal(A)$
-/ $upright("bp_y")$: `bp_y` over $cal(G) times cal(A)$
+/ $upright("bp_x")$: `bp_x` over $cal(G) times cal(A)$, `neutral` where the data has no row
+/ $upright("bp_y")$: `bp_y` over $cal(G) times cal(A)$, `neutral` where the data has no row
 / $upright("bp_heat")$: `bp_heat` over $cal(G) times cal(A)$
 / $upright("bp_run")$: `bp_run` over $cal(G) times cal(A)$
 
@@ -39,7 +39,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $italic("units")$: `units` over $cal(G)$
 / $italic("spare")$: `spare` over $cal(G)$
 / $italic("reserve")$: `reserve` (scalar)
-/ $italic("headroom")$: `headroom` (scalar)
+/ $italic("headroom")$: `headroom` (scalar), `neutral` where the mask leaves it out
 / $italic("weight")$: `weight` over $cal(T) times cal(G)$
 / $italic("fuel")$: `fuel` over $cal(T) times cal(G)$
 / $italic("heat")$: `heat` over $cal(T) times cal(G)$
@@ -54,6 +54,10 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $italic("net")$: `net` over $cal(T)$ --- what a snapshot spills, less what it lacks
 / $italic("marginal_price")$: `marginal_price` over $cal(T) times cal(B)$
 / $upright("startup_cost")$: `startup_cost` over $cal(T) times cal(G)$ --- what starting a unit in this snapshot costs, which the horizon's edge changes
+
+== Masks
+/ $upright("dispatchable")$: `dispatchable` over $cal(G)$ --- a unit that dispatches and cannot be turned down
+/ $upright("priced_dispatch")$: `priced_dispatch` over $cal(G)$
 
 Upright is what the data supplies --- a parameter such as $upright("p")^(upright("max"))$, a coordinate map, a label --- and italic is what the solver chooses, such as $p$. An index is italic too, being what a quantifier chooses, and a set is script.
 
@@ -123,6 +127,7 @@ $ upright("budgeted") & italic("spend")_(t) & <= upright("budget") & forall t in
   upright("run_start") & italic("slack")_(t) & <= upright("load")_(t,b) & forall t in cal(T), b in cal(B) colon upright("load")_(t,b) upright(" is defined") and not (upright("load")_(t - 1,b) upright(" is defined")) \
   upright("zoned") & theta_(b) & <= upright("budget") & forall b in cal(B) colon upright("zone_cap")_(upright("zone_of")(b)) upright(" is defined") \
   upright("capped") & p_(t,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) colon upright("spend")^(upright("cap"))_(g) > 0 or not upright("is_flexible")_(g) \
+  upright("masked") & p_(t,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) colon upright("priced_dispatch")_(g) and upright("pos")(t) > 0 \
   upright("fuel_curve") & (p_(t,g), italic("fuel")_(t,g), italic("heat")_(t,g)) & in italic("on")_(t,g) dot upright("pwl")_(a in cal(A))(upright("bp_x")_(g,a), upright("bp_y")_(g,a), upright("bp_heat")_(g,a)) & forall t in cal(T), g in cal(G) \
   upright("cost_curve") & italic("op_cost")_(t,g) & >= cases(italic("warm")_(t,g) & upright("if ") upright("is_flexible")_(g), 1 & upright("otherwise")) dot upright("pwl")_(a in cal(A) colon upright("bp_run")_(g,a))(upright("bp_x")_(g,a), upright("bp_y")_(g,a))(p_(t,g)) & forall t in cal(T), g in cal(G) \
   upright("hull_curve") & (p_(t,g), italic("fuel")_(t,g)) & in upright("conv")_(a in cal(A))(upright("bp_x")_(g,a), upright("bp_heat")_(g,a)) & forall t in cal(T), g in cal(G) \
@@ -138,6 +143,11 @@ $ upright("spend_cap") & upright("spend")^(upright("cap"))_(g) & = upright("cost
   upright("net") & italic("net")_(t) & = -italic("spill")_(t) + italic("slack")_(t) & forall t in cal(T) \
   upright("marginal_price") & italic("marginal_price")_(t,b) & = lambda_(upright("balance"),t,b) & forall t in cal(T), b in cal(B) \
   upright("startup_cost") & upright("startup_cost")_(t,g) & = cases(upright("cost")_(g) & upright("if ") upright("pos")(t) = 0, upright("cost")_(g) dot 2 & upright("if ") upright("pos")(t) > 0 and upright("season_of")(t) = upright("'winter'"), 0 & upright("otherwise")) & forall t in cal(T), g in cal(G) $
+
+== Masks
+#set math.equation(numbering: "(1)")
+$ upright("dispatchable") & upright("dispatchable")_(g) & arrow.l.r.double.long upright("p")^(upright("max"))_(g) > 0 and not upright("is_flexible")_(g) & forall g in cal(G) \
+  upright("priced_dispatch") & upright("priced_dispatch")_(g) & arrow.l.r.double.long upright("dispatchable")_(g) and upright("spend")^(upright("cap"))_(g) > 0 & forall g in cal(G) $
 
 == Variable domains
 #set math.equation(numbering: "(1)")

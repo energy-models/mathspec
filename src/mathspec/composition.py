@@ -27,6 +27,9 @@ What that means for each section:
   descriptions of one dimension agree, and the first one given is carried.
   ``ordered`` is a claim about the space, not the space, so a dimension one
   fragment declares ordered is ordered.
+  A relation's ``missing:`` is a claim about the data, and the fragments
+  agree on it: ``absent`` and ``refused`` change the result differently, so
+  neither folds into the other. ``missing: refused`` is the same as none.
 * **Every other declaration is owned.** A name two fragments declare is refused,
   both named.
 * **One fragment sets the objective.** A second one is refused, both named.
@@ -47,8 +50,9 @@ What that means for each section:
   reads its own sum through another fragment is refused, both named.
 * **A given declaration is folded** into the declaration that introduces the
   name, once the reader is checked to say the same as the introducer or less.
-  A given expression's body may carry no dimension its reader does not state,
-  and a name read as one kind and introduced as another is refused. A
+  A given expression's body may carry no dimension its reader does not
+  state. A given mask states exactly the dims its definer's predicate reads.
+  A name read as one kind and introduced as another is refused. A
   reader's description fills a declaration its owner left undescribed.
   Two fragments that both read a name have to read it over one frame, as a
   set. What no fragment introduces stays under ``given:`` until a host model
@@ -79,6 +83,8 @@ What a patch may say, and what is refused:
   ``relations`` entry may be added or restated as the schema reads its base,
   never changed and never removed. A restated dimension may add
   ``ordered: true``, and may not write it false over a base that makes it.
+  A relation's ``missing:`` is a claim about the data, not the space: a
+  patch may change it as it changes a parameter's, and may name it alone.
 * ``null`` **makes what it names absent.** A declaration set to ``null`` is
   removed, and a removal of what the base does not declare is refused. A field
   set to ``null`` is dropped, and takes its default when the result loads:
@@ -121,6 +127,7 @@ GIVEN_KINDS = {
     'variables': 'given variable',
     'constraints': 'given constraint',
     'expressions': 'given expression',
+    'masks': 'given mask',
 }
 
 #: What a fragment, a base or a patch may be given as.
@@ -584,21 +591,25 @@ def _fits(
     """Refuse a reading that says more than the declaration it folds into.
 
     A reading states the frame its introducer declares, and every other field
-    it writes is the introducer's. A given expression is the one kind whose
-    frame may be wider than the composed body: a body over fewer dimensions
-    broadcasts, and the composed load refuses a row it would repeat.
+    it writes is the introducer's. A mask declares no frame, so its reader
+    states the dims the predicate reads. A given expression is the one kind
+    whose frame may be wider than the composed body: a body over fewer
+    dimensions broadcasts, and the composed load refuses a row it would repeat.
     """
     stated = set(cast('list[str]', _mapping(reading)['dims']))
     if kind == 'expressions':
         frame = set(_definer_frame(loaded, key))
         fits = frame <= stated
+    elif kind == 'masks':
+        frame = set(next(spec.program.masks[key].dims for spec in loaded.values() if key in spec.program.masks))
+        fits = frame == stated
     else:
         frame = set(cast('list[str]', _mapping(introduced)['dims']))
         fits = frame == stated
     fields = {f: v for f, v in _mapping(_claims(reading)).items() if f != 'dims'}
     if fits and all(_mapping(introduced).get(f) == v for f, v in fields.items()):
         return
-    how = f'over {sorted(frame)}' if kind == 'expressions' else f'as {introduced!r}'
+    how = f'over {sorted(frame)}' if kind in ('expressions', 'masks') else f'as {introduced!r}'
     author = _author_of(read, kind, key)
     raise LanguageError(
         f"fragment '{_reader_of(read, kind, key)}' reads the {GIVEN_KINDS[kind]} {key!r} as {reading!r}, where "
@@ -620,7 +631,7 @@ def _definer_frame(loaded: Mapping[str, Spec], key: str) -> frozenset[str]:
     return frozenset(frame)
 
 
-READ_KINDS = ('parameters', 'variables', 'expressions')
+READ_KINDS = ('parameters', 'variables', 'expressions', 'masks')
 
 
 def _same_kind(read: Mapping[str, dict[str, object]], merged: Mapping[str, object], kind: str, key: str) -> None:
@@ -831,7 +842,9 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
     reading of the coordinate space as one that names another value, and a
     field written at its default is no change. A dimension's ``ordered`` folds
     by [`_joined`][], so a patch may add the claim; writing it false over a
-    base that makes it is the one narrowing [`_joined`][] cannot see.
+    base that makes it is the one narrowing [`_joined`][] cannot see. A
+    relation's ``missing:`` is laid over as a field and left out of the
+    comparison, being a claim about the data.
     """
     out = dict(declared)
     singular = _singular(section)
@@ -844,6 +857,11 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
         if key not in out:
             out[key] = block
             continue
+        if section == 'relations' and 'missing' in _mapping(block):
+            out[key] = _reread(out[key], _mapping(block))
+            block = _without(block, 'missing')
+            if not block:
+                continue
         base, laid = _declared(section, out[key]), _declared(section, block)
         if base.get('ordered') and _mapping(block).get('ordered') is False:
             raise LanguageError(
@@ -851,7 +869,7 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
                 f'ordered. A patch can add `ordered: true` but cannot remove it, because a construct in the base '
                 f'may step along it. Leave `ordered` out of the patch.'
             )
-        if (joined := _joined(section, base, laid, lambda written: written)) is None:
+        if (joined := _joined(section, base, laid, lambda written: _without(written, 'missing'))) is None:
             raise LanguageError(
                 f"patch '{name}' declares the {singular} '{key}' as {block!r}, where its base "
                 f'declares {out[key]!r}. Restate the declaration word for word, leave it out, or give '
@@ -859,6 +877,12 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
             )
         out[key] = joined
     return out
+
+
+def _reread(declared: object, patch: dict[str, object]) -> dict[str, object]:
+    """*declared* reading a missing key as *patch* says, where ``null`` puts back the default."""
+    kept = _mapping(_without(declared, 'missing'))
+    return kept if patch['missing'] is None else {**kept, 'missing': patch['missing']}
 
 
 def _owned(

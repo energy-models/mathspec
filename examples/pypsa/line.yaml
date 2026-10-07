@@ -2,6 +2,19 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    scenario_weight: { dims: [scenario] }
+    transmission_losses: { dims: [], dtype: bool }
+  expressions:
+    transmission_volume_expansion: { dims: [scenario, global_constraint] }
+    transmission_expansion_cost: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -75,6 +88,7 @@ parameters:
   Line_s_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [line]
+    missing: neutral
   Line_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, line]
@@ -95,9 +109,11 @@ parameters:
   Line_s_nom_set:
     description: a given nominal apparent power for an extendable line; one without a value has no row here
     dims: [line]
+    missing: neutral
   Line_s_set:
     description: a given flow schedule; a line without one has no row here
     dims: [scenario, snapshot, line]
+    missing: neutral
   Line_v_ang_max:
     description: >-
       the most the voltage angle difference across a line may be either way,
@@ -106,6 +122,7 @@ parameters:
       ignored, as PyPSA ignores it with a `DeprecationWarning`
       (`constraints.py:1702-1709`)
     dims: [scenario, line]
+    missing: neutral
   Line_x_pu_eff:
     description: >-
       the line's effective series reactance — PyPSA's `x_pu_eff`, `x` over
@@ -117,6 +134,7 @@ parameters:
       the cycle basis, data prep; a line in no cycle has no row. PyPSA builds
       the cycle basis from the first scenario only (`networks.py:1430-1437`)
     dims: [period, line, cycle]
+    missing: neutral
   Line_loss_max:
     description: the loss at a line's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep
     dims: [scenario, snapshot, line]
@@ -138,6 +156,7 @@ parameters:
       line outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [scenario, global_constraint, line]
+    missing: neutral
   Line_expansion_cost_weight:
     description: >-
       the line's capital cost where its carrier is in the row's set, times
@@ -148,12 +167,14 @@ parameters:
       `Line_capital_cost` without `fom_cost` (`components.py:1151-1169`,
       `global_constraints.py:870-879`)
     dims: [scenario, global_constraint, line]
+    missing: neutral
   Line_tech_capacity_weight:
     description: >-
       one where the line is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, line]
+    missing: neutral
 
 variables:
   Line_s:
@@ -168,8 +189,8 @@ variables:
       cost and held up by the cuts; absent, and zero in the balance, where
       the network is lossless
     dims: [scenario, snapshot, line]
-    where: transmission_losses AND Line_active
-    absence: zero
+    where: Line_lossy
+    missing: neutral
     bounds:
       lower: 0
   Line_s_nom_ext:
@@ -185,19 +206,6 @@ variables:
     domain: integer
     bounds:
       lower: 0
-
-given:
-  parameters:
-    scenario_weight: { dims: [scenario] }
-    transmission_losses: { dims: [], dtype: bool }
-  expressions:
-    transmission_volume_expansion: { dims: [scenario, global_constraint] }
-    transmission_expansion_cost: { dims: [scenario, global_constraint] }
-    tech_capacity_expansion: { dims: [global_constraint] }
-    total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
-    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
 
 expressions:
   Line_transmission_volume_expansion:
@@ -235,6 +243,13 @@ expressions:
   Line_angle_sum:
     expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period[period]), over=line)
     adds_to: Cycle_angle_sum
+
+masks:
+  Line_lossy:
+    description: >-
+      a line that stands in the snapshot's period, where the run models
+      transmission losses
+    where: transmission_losses AND Line_active
 
 constraints:
   Line_fix_s_lower:
@@ -300,7 +315,7 @@ constraints:
   Line_loss_upper:
     description: "`Line-loss_upper` — a line dissipates at most the loss at its rating"
     dims: [scenario, snapshot, line]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     expression: Line_loss <= Line_loss_max
   Line_loss_tangents_forward:
     description: >-
@@ -309,12 +324,12 @@ constraints:
       `k`, or one row stacked over its `secant` axis, and this block states them
       all over the segment dimension
     dims: [scenario, snapshot, line, segment]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     expression: Line_loss + Line_loss_slope * Line_s >= Line_loss_offset
   Line_loss_tangents_reverse:
     description: >-
       `Line-loss_tangents-{k}--1`, `Line-loss_secants-neg` — the same fan
       mirrored, the loss depending on the flow's magnitude
     dims: [scenario, snapshot, line, segment]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     expression: Line_loss - Line_loss_slope * Line_s >= Line_loss_offset

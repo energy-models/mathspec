@@ -2,8 +2,8 @@ dimensions:
   bp: { dtype: int, ordered: true }
 
 parameters:
-  x_bp: { dims: [bp] }
-  y_bp: { dims: [bp] }
+  x_bp: { dims: [bp], missing: neutral }
+  y_bp: { dims: [bp], missing: neutral }
 
 variables:
   x: { dims: [], bounds: { lower: 0 } }
@@ -42,8 +42,7 @@ assumptions:
     holds: x_bp AND y_bp
     description: >-
       piecewise 'curve': every breakpoint the curve runs through needs a row in
-      'x_bp', 'y_bp'. A missing row reads as a zero, so the curve passes through
-      the origin. Attach the rows, or narrow points: 'x_bp' to where the curve
+      'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows, or narrow points: 'x_bp' to where the curve
       runs.
   curve_contiguous:
     holds: count(x_bp AND NOT shift(x_bp, along=bp, offset=1), over=bp) == 1

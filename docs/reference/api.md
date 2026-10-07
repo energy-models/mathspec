@@ -6,22 +6,20 @@ SPDX-License-Identifier: CC-BY-4.0
 # Python API
 
 Look up the signature, the arguments and the errors of every name that
-`import mathspec` exports, grouped by task.
+`import mathspec` exports, grouped by task. The top level holds what you call,
+and three modules hold the rest:
+
+| Module             | Holds                                                   | Documented on             |
+| ------------------ | ------------------------------------------------------- | ------------------------- |
+| `mathspec.spec`    | what the file says: `Spec` and its blocks               | [Spec API](spec.md)       |
+| `mathspec.program` | what the file means: `Program`, its nodes, and `Advice` | [Program API](program.md) |
+| `mathspec.errors`  | what you catch: the error tree, and `did_you_mean`      | [Errors](#errors) below   |
 
 <!-- prettier-ignore-start -->
 
 ## Loading
 
-The classes that make up a `Program` are in `mathspec.program`, and the
-[Program API](program.md) documents them.
-
 ::: mathspec.to_spec
-    options:
-      show_root_heading: true
-      show_root_toc_entry: true
-      heading_level: 3
-
-::: mathspec.Spec
     options:
       show_root_heading: true
       show_root_toc_entry: true
@@ -75,7 +73,7 @@ The classes that make up a `Program` are in `mathspec.program`, and the
       show_root_toc_entry: true
       heading_level: 3
 
-::: mathspec.FORMATS
+::: mathspec.FormatName
     options:
       show_root_heading: true
       show_root_toc_entry: true
@@ -89,19 +87,9 @@ The classes that make up a `Program` are in `mathspec.program`, and the
 
 ## Advice
 
+`advice` returns a tuple of [`Advice`](program.md#mathspec.program.Advice).
+
 ::: mathspec.advice
-    options:
-      show_root_heading: true
-      show_root_toc_entry: true
-      heading_level: 3
-
-::: mathspec.Advice
-    options:
-      show_root_heading: true
-      show_root_toc_entry: true
-      heading_level: 3
-
-::: mathspec.AdviceKind
     options:
       show_root_heading: true
       show_root_toc_entry: true
@@ -109,42 +97,11 @@ The classes that make up a `Program` are in `mathspec.program`, and the
 
 ## Errors
 
-::: mathspec.MathSpecError
+::: mathspec.errors
     options:
       show_root_heading: true
       show_root_toc_entry: true
       heading_level: 3
-
-::: mathspec.LanguageError
-    options:
-      show_root_heading: true
-      show_root_toc_entry: true
-      heading_level: 3
-
-::: mathspec.SchemaError
-    options:
-      show_root_heading: true
-      show_root_toc_entry: true
-      heading_level: 3
-
-::: mathspec.DimensionError
-    options:
-      show_root_heading: true
-      show_root_toc_entry: true
-      heading_level: 3
-
-## Names
-
-::: mathspec.BUILTIN_NAMES
-    options:
-      show_root_heading: true
-      show_root_toc_entry: true
-      heading_level: 3
-
-::: mathspec.did_you_mean
-    options:
-      show_root_heading: true
-      show_root_toc_entry: true
-      heading_level: 3
+      members_order: source
 
 <!-- prettier-ignore-end -->

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 from mathspec import merge, override, to_spec, typeset_declaration
-from mathspec.program import Add, Constant, Named
+from mathspec.program import Add, Constant, NamedExpression
 from mathspec.typesetting import to_markdown
 from tools._page import ROOT, sidecar_for, splice, tab, without_header
 from tools._page import main as page_main
@@ -113,6 +113,8 @@ def symbols_for(model: Spec, table_path: Path = LIBRARY_SYMBOLS) -> dict[str, An
         *given.variables,
         *given.expressions,
         *given.constraints,
+        *model.masks,
+        *given.masks,
     }
     return {
         'notation': table['notation'],
@@ -329,10 +331,10 @@ def _reads_a_sum(model: Spec, name: str) -> bool:
     row = model.program.constraints[name]
     lhs, rhs = row.lhs, row.rhs
     return (
-        isinstance(lhs, Named)
+        isinstance(lhs, NamedExpression)
         and isinstance(rhs, Constant)
         and rhs.value == 0
-        and all(isinstance(term, Named) for term in _summands(lhs.body))
+        and all(isinstance(term, NamedExpression) for term in _summands(lhs.body))
         and len(_summands(lhs.body)) > 1
     )
 

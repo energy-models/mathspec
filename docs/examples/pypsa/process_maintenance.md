@@ -9,6 +9,21 @@ This file states the maintenance rows of PyPSA's `Process`. It is one of the [24
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    Process_p_nom_extendable: { dims: [process], dtype: bool }
+    Process_p_nom_min: { dims: [scenario, process] }
+    Process_p_nom_max: { dims: [scenario, process] }
+    Process_committable: { dims: [process], dtype: bool }
+    Process_p_nom_mod: { dims: [process] }
+    Process_active: { dims: [snapshot, process], dtype: bool }
+    snapshot_weightings_generators: { dims: [snapshot] }
+  variables:
+    Process_status: { dims: [scenario, snapshot, process], domain: integer }
+    Process_p_nom_ext: { dims: [process] }
+  masks:
+    Process_committed: { dims: [snapshot, process] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -51,6 +66,7 @@ parameters:
       `Process_maintenance_cover` and `Process_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [scenario, process]
+    missing: neutral
   Process_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it
@@ -67,7 +83,7 @@ variables:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
       upper: 1
@@ -75,17 +91,15 @@ variables:
     description: "`Process-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_active
-    absence: zero
+    missing: neutral
     domain: binary
   Process_maintenance_capacity:
     description: >-
       `Process-maintenance_capacity` — the chosen build while in maintenance, zero
       otherwise: the product the `maintcap` rows linearize
     dims: [scenario, snapshot, process]
-    where: >-
-      Process_maintainable AND Process_p_nom_extendable
-      AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active
-    absence: zero
+    where: Process_maint_ext
+    missing: neutral
     bounds:
       lower: 0
   Process_maintenance_status:
@@ -95,24 +109,24 @@ variables:
       maintenance may also be off
     dims: [scenario, snapshot, process]
     where: >-
-      Process_maintainable AND Process_committable
-      AND NOT (Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)) AND Process_active
-    absence: zero
+      Process_maintainable
+      AND Process_committed
+      AND NOT (Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
+    missing: neutral
     bounds:
       lower: 0
 
-given:
-  parameters:
-    Process_p_nom_extendable: { dims: [process], dtype: bool }
-    Process_p_nom_min: { dims: [scenario, process] }
-    Process_p_nom_max: { dims: [scenario, process] }
-    Process_committable: { dims: [process], dtype: bool }
-    Process_p_nom_mod: { dims: [process] }
-    Process_active: { dims: [snapshot, process], dtype: bool }
-    snapshot_weightings_generators: { dims: [snapshot] }
-  variables:
-    Process_status: { dims: [scenario, snapshot, process], domain: integer }
-    Process_p_nom_ext: { dims: [process] }
+masks:
+  Process_maint_ext:
+    description: >-
+      a maintainable process with an extendable build, unless it is
+      committable and modular, that stands in the snapshot's period — the
+      maintenance rows against the chosen build
+    where: >-
+      Process_maintainable
+      AND Process_p_nom_extendable
+      AND NOT (Process_committable AND Process_p_nom_mod > 0)
+      AND Process_active
 
 constraints:
   Process_maint_event_count:
@@ -138,54 +152,54 @@ constraints:
       `Process-maintcap_upper` — the build taken off is at most the chosen build in
       maintenance, and at most the build less its floor out of it
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_p_nom_extendable AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active
+    where: Process_maint_ext
     expression: Process_maintenance_capacity <= Process_p_nom_ext - Process_p_nom_min * (1 - Process_maintenance)
   Process_maintcap_upper_nommax:
     description: "`Process-maintcap_upper_nommax` — out of maintenance, no build is taken off"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_p_nom_extendable AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active
+    where: Process_maint_ext
     expression: Process_maintenance_capacity <= Process_p_nom_max * Process_maintenance
   Process_maintcap_lower_nommax:
     description: "`Process-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_p_nom_extendable AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active
+    where: Process_maint_ext
     expression: Process_maintenance_capacity >= Process_p_nom_ext - Process_p_nom_max * (1 - Process_maintenance)
   Process_maintcap_lower_nommin:
     description: "`Process-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_p_nom_extendable AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active AND Process_p_nom_min > 0
+    where: Process_maint_ext AND Process_p_nom_min > 0
     expression: Process_maintenance_capacity >= Process_p_nom_min * Process_maintenance
   Process_maint_status_le_status:
     description: "`Process-maint-status-le-status` — the status in maintenance is at most the status"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
+    where: Process_maintainable AND Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
     expression: Process_maintenance_status <= Process_status
   Process_maint_status_le_maint:
     description: "`Process-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
+    where: Process_maintainable AND Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
     expression: Process_maintenance_status <= Process_maintenance
   Process_maint_status_lb:
     description: "`Process-maint-status-lb` — on and in maintenance, the status in maintenance is one"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
+    where: Process_maintainable AND Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
     expression: Process_maintenance_status >= Process_status + Process_maintenance - 1
   Process_maint_modstatus_le_status:
     description: "`Process-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND Process_p_nom_mod > 0 AND Process_active
+    where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
     expression: Process_maintenance_status <= Process_status
   Process_maint_modstatus_le_maint:
     description: >-
       `Process-maint-modstatus-le-maint` — out of maintenance, no module is on in
       maintenance; in it, at most the modules the build cap holds
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND Process_p_nom_mod > 0 AND Process_active
+    where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
     expression: Process_maintenance_status <= Process_p_nom_max / Process_p_nom_mod * Process_maintenance
   Process_maint_modstatus_lb:
     description: "`Process-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
     dims: [scenario, snapshot, process]
-    where: Process_maintainable AND Process_committable AND Process_p_nom_mod > 0 AND Process_active
+    where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
     expression: Process_maintenance_status >= Process_status - Process_p_nom_max / Process_p_nom_mod * (1 - Process_maintenance)
 
 assumptions:
@@ -247,17 +261,17 @@ assumptions:
 | $`\mathrm{mnt}^{z}`$ | `Process_maintainable` over $`\mathcal{J}`$ — whether a process must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
 | $`\gamma^{z}`$ | `Process_maintenance_pu` over $`\Xi \times \mathcal{J}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{z,\mathrm{mnt}}`$ | `Process_maintenance_events` over $`\Xi \times \mathcal{J}`$ — how many maintenance events the horizon holds |
-| $`\tau^{z,\mathrm{mnt}}`$ | `Process_maintenance_duration` over $`\Xi \times \mathcal{J}`$ — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the process is not maintainable. No row reads it: data prep turns it into `Process_maintenance_cover` and `Process_maintenance_start_blocked`, and the assumptions hold it to the horizon |
+| $`\tau^{z,\mathrm{mnt}}`$ | `Process_maintenance_duration` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the process is not maintainable. No row reads it: data prep turns it into `Process_maintenance_cover` and `Process_maintenance_start_blocked`, and the assumptions hold it to the horizon |
 | $`\mathrm{blk}^{z}`$ | `Process_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the process does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`\mu^{z}`$ | `Process_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-maintenance` — whether a maintainable process is in maintenance: continuous, and one exactly where an event covers the snapshot |
-| $`\mu^{z,\mathrm{up}}`$ | `Process_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-maintenance_start` — whether a maintenance event starts in this snapshot |
-| $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
-| $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
+| $`\mu^{z}`$ | `Process_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance` — whether a maintainable process is in maintenance: continuous, and one exactly where an event covers the snapshot |
+| $`\mu^{z,\mathrm{up}}`$ | `Process_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_start` — whether a maintenance event starts in this snapshot |
+| $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
+| $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
 
 #### Given
 
@@ -272,6 +286,13 @@ assumptions:
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
 | $`u^{z}`$ | `Process_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ |
+| $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{T} \times \mathcal{J}`$, a mask another file defines |
+
+#### Masks
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{z,\mathrm{mnt,ext}}`$ | `Process_maint_ext` over $`\mathcal{T} \times \mathcal{J}`$ — a maintainable process with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
 
 #### Subject to
 
@@ -296,61 +317,69 @@ assumptions:
 **`Process_maintcap_upper`**
 
 ```math
-\mu^{z,\mathrm{nom}}_{\xi,t,j} \le Z_{j} - \underline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \left( 1 - \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,\mathrm{nom}}_{\xi,t,j} \le Z_{j} - \underline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \left( 1 - \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{mnt,ext}}_{t,j}
 ```
 
 **`Process_maintcap_upper_nommax`**
 
 ```math
-\mu^{z,\mathrm{nom}}_{\xi,t,j} \le \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,\mathrm{nom}}_{\xi,t,j} \le \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{mnt,ext}}_{t,j}
 ```
 
 **`Process_maintcap_lower_nommax`**
 
 ```math
-\mu^{z,\mathrm{nom}}_{\xi,t,j} \ge Z_{j} - \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \left( 1 - \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,\mathrm{nom}}_{\xi,t,j} \ge Z_{j} - \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \left( 1 - \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{mnt,ext}}_{t,j}
 ```
 
 **`Process_maintcap_lower_nommin`**
 
 ```math
-\mu^{z,\mathrm{nom}}_{\xi,t,j} \ge \underline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j} \wedge \underline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} > 0
+\mu^{z,\mathrm{nom}}_{\xi,t,j} \ge \underline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{mnt,ext}}_{t,j} \wedge \underline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} > 0
 ```
 
 **`Process_maint_status_le_status`**
 
 ```math
-\mu^{z,u}_{\xi,t,j} \le u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,u}_{\xi,t,j} \le u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
 ```
 
 **`Process_maint_status_le_maint`**
 
 ```math
-\mu^{z,u}_{\xi,t,j} \le \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,u}_{\xi,t,j} \le \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
 ```
 
 **`Process_maint_status_lb`**
 
 ```math
-\mu^{z,u}_{\xi,t,j} \ge u^{z}_{\xi,t,j} + \mu^{z}_{\xi,t,j} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,u}_{\xi,t,j} \ge u^{z}_{\xi,t,j} + \mu^{z}_{\xi,t,j} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
 ```
 
 **`Process_maint_modstatus_le_status`**
 
 ```math
-\mu^{z,u}_{\xi,t,j} \le u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,u}_{\xi,t,j} \le u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 **`Process_maint_modstatus_le_maint`**
 
 ```math
-\mu^{z,u}_{\xi,t,j} \le \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,u}_{\xi,t,j} \le \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 **`Process_maint_modstatus_lb`**
 
 ```math
-\mu^{z,u}_{\xi,t,j} \ge u^{z}_{\xi,t,j} - \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \left( 1 - \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,u}_{\xi,t,j} \ge u^{z}_{\xi,t,j} - \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \left( 1 - \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+```
+
+#### Masks
+
+**`Process_maint_ext`**
+
+```math
+\mathrm{on}^{z,\mathrm{mnt,ext}}_{t,j} \iff \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
 ```
 
 #### Variable domains
@@ -370,13 +399,13 @@ assumptions:
 **`Process_maintenance_capacity`**
 
 ```math
-\mu^{z,\mathrm{nom}}_{\xi,t,j} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,\mathrm{nom}}_{\xi,t,j} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{mnt,ext}}_{t,j}
 ```
 
 **`Process_maintenance_status`**
 
 ```math
-\mu^{z,u}_{\xi,t,j} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,u}_{\xi,t,j} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right)
 ```
 
 #### Assumptions

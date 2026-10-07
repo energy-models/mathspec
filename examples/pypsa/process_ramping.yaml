@@ -2,6 +2,27 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    Process_p_nom_extendable: { dims: [process], dtype: bool }
+    Process_committable: { dims: [process], dtype: bool }
+    Process_status_initial: { dims: [scenario, process], dtype: int }
+    Process_p_nom_mod: { dims: [process] }
+    Process_big_m: { dims: [scenario, process] }
+    Process_active: { dims: [snapshot, process], dtype: bool }
+  variables:
+    Process_p: { dims: [scenario, snapshot, process] }
+    Process_status: { dims: [scenario, snapshot, process], domain: integer }
+    Process_start_up: { dims: [scenario, snapshot, process], domain: integer }
+    Process_shut_down: { dims: [scenario, snapshot, process], domain: integer }
+    Process_p_nom_ext: { dims: [process] }
+  expressions:
+    Process_p_nom_effective: { dims: [scenario, process] }
+    Process_previous_status: { dims: [scenario, snapshot, process] }
+    Process_p_nom_committed: { dims: [scenario, process] }
+  masks:
+    Process_com_ext: { dims: [snapshot, process] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -26,40 +47,26 @@ parameters:
   Process_ramp_limit_up:
     description: most a process may raise its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
     dims: [scenario, snapshot, process]
+    missing: neutral
   Process_ramp_limit_down:
     description: most a process may lower its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
     dims: [scenario, snapshot, process]
+    missing: neutral
   Process_ramp_limit_start_up:
-    description: most internal power in the snapshot a process starts, per unit of nominal power
+    description: most internal power in the snapshot a process starts, per unit of nominal power; no value means no limit
     dims: [scenario, process]
+    missing: neutral
   Process_ramp_limit_shut_down:
-    description: most internal power in the snapshot before a process stops, per unit of nominal power
+    description: most internal power in the snapshot before a process stops, per unit of nominal power; no value means no limit
     dims: [scenario, process]
+    missing: neutral
   Process_p_init:
     description: >-
       the internal power a process brought into the horizon — PyPSA's `p_init`, read
       only where the process came in running; no value means it is unknown, so
       the process carries no ramp row at the first snapshot
     dims: [scenario, process]
-
-given:
-  parameters:
-    Process_p_nom_extendable: { dims: [process], dtype: bool }
-    Process_committable: { dims: [process], dtype: bool }
-    Process_status_initial: { dims: [scenario, process], dtype: int }
-    Process_p_nom_mod: { dims: [process] }
-    Process_big_m: { dims: [scenario, process] }
-    Process_active: { dims: [snapshot, process], dtype: bool }
-  variables:
-    Process_p: { dims: [scenario, snapshot, process] }
-    Process_status: { dims: [scenario, snapshot, process], domain: integer }
-    Process_start_up: { dims: [scenario, snapshot, process], domain: integer }
-    Process_shut_down: { dims: [scenario, snapshot, process], domain: integer }
-    Process_p_nom_ext: { dims: [process] }
-  expressions:
-    Process_p_nom_effective: { dims: [scenario, process] }
-    Process_previous_status: { dims: [scenario, snapshot, process] }
-    Process_p_nom_committed: { dims: [scenario, process] }
+    missing: neutral
 
 expressions:
   Process_previous_p:
@@ -132,6 +139,16 @@ expressions:
           * (Process_previous_status - Process_status)
     otherwise: Process_ramp_down_rate * Process_p_nom_effective
 
+masks:
+  Process_ramps_from_previous:
+    description: >-
+      a snapshot whose ramp reads a previous output — any snapshot but its
+      period's first, and the horizon's first where the process comes in off
+      or carries an initial output
+    where: >-
+      position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
+      (Process_status_initial == 0 OR Process_p_init))
+
 constraints:
   Process_p_ramp_limit_up_run_big_m:
     description: >-
@@ -139,11 +156,7 @@ constraints:
       raises internal power no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns on
     dims: [scenario, snapshot, process]
-    where: >-
-      Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
-      AND (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
-      AND Process_active
+    where: Process_com_ext AND (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND Process_ramps_from_previous
     expression: >-
       Process_p - Process_previous_p <=
       Process_ramp_up_rate * Process_p_nom_ext
@@ -154,11 +167,7 @@ constraints:
       committed extendable process ramps no further than its start-up ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, process]
-    where: >-
-      Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
-      AND (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
-      AND Process_active
+    where: Process_com_ext AND (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND Process_ramps_from_previous
     expression: >-
       Process_p - Process_previous_p <=
       Process_start_up_rate * Process_p_nom_ext
@@ -170,10 +179,9 @@ constraints:
       releases the row in the snapshot it turns off
     dims: [scenario, snapshot, process]
     where: >-
-      Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
+      Process_com_ext
       AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
-      AND Process_active
+      AND Process_ramps_from_previous
     expression: >-
       Process_previous_p - Process_p <=
       Process_ramp_down_rate * Process_p_nom_ext
@@ -185,10 +193,9 @@ constraints:
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, process]
     where: >-
-      Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
+      Process_com_ext
       AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
-      AND Process_active
+      AND Process_ramps_from_previous
     expression: >-
       Process_previous_p - Process_p <=
       Process_shut_down_rate * Process_p_nom_ext
@@ -205,7 +212,7 @@ constraints:
     where: >-
       (Process_ramp_limit_up OR Process_ramp_limit_start_up)
       AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND Process_ramps_from_previous
       AND Process_active
     expression: Process_p - Process_previous_p <= Process_ramp_up_allowance
   Process_p_ramp_limit_down:
@@ -220,7 +227,7 @@ constraints:
     where: >-
       (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
       AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-      AND (position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND Process_ramps_from_previous
       AND Process_active
     expression: Process_previous_p - Process_p <= Process_ramp_down_allowance
 

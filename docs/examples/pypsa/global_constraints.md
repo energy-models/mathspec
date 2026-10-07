@@ -9,6 +9,16 @@ This file states the five system totals that PyPSA caps. Each total is a sum tha
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    scenario_weight: { dims: [scenario] }
+  expressions:
+    primary_energy: { dims: [scenario, global_constraint] }
+    operational_limit: { dims: [scenario, global_constraint] }
+    transmission_volume_expansion: { dims: [scenario, global_constraint] }
+    transmission_expansion_cost: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -39,16 +49,6 @@ parameters:
       folded in here by data prep. PyPSA reads it per scenario
       (`global_constraints.py:552`, `:750`, `:829`)
     dims: [scenario, global_constraint]
-
-given:
-  parameters:
-    scenario_weight: { dims: [scenario] }
-  expressions:
-    primary_energy: { dims: [scenario, global_constraint] }
-    operational_limit: { dims: [scenario, global_constraint] }
-    transmission_volume_expansion: { dims: [scenario, global_constraint] }
-    transmission_expansion_cost: { dims: [scenario, global_constraint] }
-    tech_capacity_expansion: { dims: [global_constraint] }
 
 constraints:
   GlobalConstraint_primary_energy_ub:

@@ -18,7 +18,7 @@ dimensions:
   generator: { dtype: str }
   zone: { dtype: str }
 relations:
-  gen_zone: { key: [generator, snapshot], values: zone }
+  gen_zone: { key: [generator, snapshot], values: zone, missing: absent }
 parameters:
   zone_cap: { dims: [snapshot, zone] }
 variables:
@@ -49,9 +49,11 @@ $`f: K \to V`$, and
 \mathbf{1}_R(k, v) = [\, f(k) = v \,].
 ```
 
-The function is partial: it has no value at a key tuple with no row. A bare
-relation is a subset, with no function behind it. In the spec above,
-`gen_zone` is the graph of
+By default the function is total: when the data is attached, a key tuple with
+no row is [refused](../reference/language/relations.md#the-data-contract).
+Under `missing: absent`, as in the spec above, the function is partial: it has
+no value at a key tuple with no row. A bare relation is a subset, with no
+function behind it. In the spec above, `gen_zone` is the graph of
 $`f: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$. The
 [data contract](../reference/language/relations.md#the-data-contract) makes
 sure of this, because the loader checks for one row per key tuple when the
@@ -201,7 +203,9 @@ model that an engine builds is not the matrix product.
   `at` is absent there, and [absence
   spreads](../reference/language/absence.md#how-absence-travels) to the row.
   `where: gen_zone` on `looked_up` writes the domain of $`f`$ into the spec,
-  so a reader sees which rows exist without opening the data.
+  so a reader sees which rows exist without opening the data. Under the
+  default, `missing: refused`, the domain is every key tuple, so no key tuple
+  is outside it.
 
 ## Partitions and tests
 

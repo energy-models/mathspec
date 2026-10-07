@@ -7,13 +7,14 @@
 The second public state, and the one a consumer reads. A [`Program`][] is
 the file typed, section for section: every declaration it makes, with names
 resolved, shapes fixed and every rule decidable without data checked, and no
-data at all. Lowering, as a [`Spec`][] loads, is the only
+data at all. Lowering, as a [`Spec`][mathspec.spec.Spec] loads, is the only
 thing that builds one, so nothing here re-checks a hand-built one.
 
 Node and declaration classes are matched with ``isinstance``. The rules a
 node's structure does not show is [`children`][]; the questions over the walk
 are [`walk_regions`][], [`walk`][] and the filters beside them. A
-resolved ``where`` arrives as a [`Mask`][]. Frozen dataclasses only — no
+resolved ``where`` arrives as a [`Mask`][], and what
+[`advice`][mathspec.advice] says about a program as [`Advice`][]. Frozen dataclasses only — no
 execution logic, and nothing imported from a consumer. How a consumer reads
 one: ``docs/reference/reading.md``.
 """
@@ -37,6 +38,8 @@ if TYPE_CHECKING:
 #: The public names of ``mathspec.program``, sorted.
 __all__ = [
     'Add',
+    'Advice',
+    'AdviceKind',
     'And',
     'Assumption',
     'Axis',
@@ -66,8 +69,12 @@ __all__ = [
     'JoinedPredicate',
     'Link',
     'Mask',
+    'MaskDeclaration',
+    'Missing',
+    'MissingReading',
     'Multiply',
-    'Named',
+    'NamedExpression',
+    'NamedMask',
     'Negate',
     'Not',
     'ObjectiveDeclaration',
@@ -91,6 +98,7 @@ __all__ = [
     'RelationComparison',
     'RelationDeclaration',
     'RelationDefined',
+    'RelationMissing',
     'RelationPairComparison',
     'Separability',
     'SosDeclaration',
@@ -100,10 +108,10 @@ __all__ = [
     'TranslatedPredicate',
     'TypedPredicate',
     'Variable',
-    'VariableAbsence',
     'VariableDeclaration',
     'VariableDefined',
     'VariableDomain',
+    'VariableMissing',
     'WindowSum',
     'assumption_message',
     'carries_variable',
@@ -142,11 +150,21 @@ DeclaredDtype = ParameterDtype | DimensionDtype
 #: The domain a variable may declare.
 VariableDomain = Literal['continuous', 'integer', 'binary']
 
-#: What a masked variable's non-existence *means* where it does not exist.
-#: ``undefined`` is the default: a term that carries it removes its row.
-#: ``zero`` says the quantity *is* zero there, so the term contributes nothing
-#: and the row stands.
-VariableAbsence = Literal['undefined', 'zero']
+#: What a missing row means. ``refused`` refuses the data. ``absent`` removes
+#: the row of a term that reads it. ``neutral`` reads the value that contributes
+#: nothing: ``0`` as a coefficient, ``false`` in a ``where``.
+MissingReading = Literal['refused', 'absent', 'neutral']
+
+#: A parameter's ``missing:``: a reading, or the value a missing row reads as.
+Missing = MissingReading | bool | float
+
+#: A relation's ``missing:``. A label the map leaves out is refused, or belongs to no group.
+RelationMissing = Literal['refused', 'absent']
+
+#: What a masked variable means where its ``where`` masks it out. ``absent`` is
+#: the default: a term that carries it removes its row. ``neutral`` says the
+#: quantity *is* zero there, so the term contributes nothing and the row stands.
+VariableMissing = Literal['absent', 'neutral']
 
 #: Which way an objective is optimised (the declaration rules).
 ObjectiveSense = Literal['minimize', 'maximize']
@@ -391,7 +409,7 @@ class Cases:
 
 
 @dataclass(frozen=True)
-class Named:
+class NamedExpression:
     """A use of an ``expressions:`` entry, standing where its name was written, with the entry's body under it.
 
     Its value is its body's: a consumer building rows steps through it, as
@@ -430,13 +448,13 @@ Expression = (
     | Translate
     | WindowSum
     | Cases
-    | Named
+    | NamedExpression
 )
 
 
 def children(expression: Expression) -> tuple[Expression, ...]:
     """The sub-expressions of *expression* — what every walk recurses through."""
-    if isinstance(expression, Named):
+    if isinstance(expression, NamedExpression):
         return (expression.body,)
     if isinstance(expression, Negate):
         return (expression.operand,)
@@ -476,6 +494,9 @@ class RelationDeclaration:
 
     columns: tuple[tuple[str, str], ...]
     key: tuple[str, ...]
+    #: What a key the map leaves out means, or ``None`` for a bare relation,
+    #: whose rows are its membership and so have no gap.
+    missing: RelationMissing | None = 'refused'
     description: str | None = None
 
     @property
@@ -674,6 +695,10 @@ class ParameterDeclaration:
 
     dims: tuple[str, ...]
     dtype: ParameterDtype = 'float'
+    #: What a missing row means, or the value it reads as wherever a value is
+    #: read; ``None`` for a given parameter, whose declaring file says. A bare
+    #: numeric name in a ``where`` still asks whether the data has a row.
+    missing: Missing | None = 'refused'
     description: str | None = None
 
 
@@ -687,7 +712,7 @@ class VariableDeclaration:
     #: As [`lower`][], for the other side.
     upper: Expression | None = None
     domain: VariableDomain = 'continuous'
-    absence: VariableAbsence = 'undefined'
+    missing: VariableMissing = 'absent'
     description: str | None = None
 
 
@@ -720,6 +745,9 @@ class GivenTargets:
     constraints: Mapping[str, GivenDeclaration] = Sealed({})
     #: Named expressions the host model defines, by name.
     expressions: Mapping[str, GivenDeclaration] = Sealed({})
+    #: Masks the host model defines, by name. A where reads one as the data it
+    #: is: a [`ParameterDefined`][] of a boolean over its frame.
+    masks: Mapping[str, GivenDeclaration] = Sealed({})
 
     def __post_init__(self) -> None:
         for f in fields(self):
@@ -727,7 +755,7 @@ class GivenTargets:
 
     def __bool__(self) -> bool:
         """Whether the program reads anything it does not build."""
-        return bool(self.parameters or self.variables or self.constraints or self.expressions)
+        return bool(self.parameters or self.variables or self.constraints or self.expressions or self.masks)
 
 
 @dataclass(frozen=True)
@@ -794,6 +822,22 @@ class ExpressionDeclaration:
     description: str | None = None
     #: The sum this entry adds to as a term, or ``None``.
     adds_to: str | None = None
+
+
+@dataclass(frozen=True)
+class MaskDeclaration:
+    """A named predicate — a ``masks:`` entry, read wherever a ``where``, a ``when`` or a ``holds`` names it.
+
+    It builds nothing of its own: every use stands as a [`NamedMask`][] with
+    this predicate under it, so a consumer reading a mask never looks the
+    name up here.
+    """
+
+    where: Mask
+    #: The frame the mask is read over: the dims its predicate carries, in the
+    #: order ``dimensions:`` declares them.
+    dims: tuple[str, ...]
+    description: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1016,11 +1060,14 @@ class Program:
     #: each and refuses with [`assumption_message`][].
     assumptions: Mapping[str, Assumption] = Sealed({})
     #: Declared ``expressions:``, each saying whether the math reads it. None
-    #: builds a row of its own, and one the math reads stands as a [`Named`][]
+    #: builds a row of its own, and one the math reads stands as a [`NamedExpression`][]
     #: where it is read. All are lowered with the program, so a file whose
     #: named expression is outside the language is refused by every verb that
     #: reads the file rather than only by the one that reads the expression.
     expressions: Mapping[str, ExpressionDeclaration] = Sealed({})
+    #: Declared ``masks:``. Each use stands as a [`NamedMask`][] where it is
+    #: read, so a consumer building rows needs nothing from this group.
+    masks: Mapping[str, MaskDeclaration] = Sealed({})
     #: What this program reads and does not build ([`GivenTargets`][]), for a host model to provide.
     given: GivenTargets = GivenTargets()
     #: What the file as a whole is, as its ``description:`` says.
@@ -1383,6 +1430,20 @@ class Or:
     right: Predicate
 
 
+@dataclass(frozen=True)
+class NamedMask:
+    """A use of a ``masks:`` entry, standing where its name was written, with the entry's predicate under it.
+
+    Its truth is its body's: a consumer steps through it, as
+    [`where_children`][] does. It is kept as a node rather than written in so
+    the typesetter can print the symbol where the name stood and define it
+    once, as [`NamedExpression`][] does for an expression.
+    """
+
+    name: str
+    body: Predicate
+
+
 #: Every predicate resolution has typed: it names a declaration and the kind is
 #: settled. Resolution passes these straight through, having nothing left to
 #: decide about them.
@@ -1401,20 +1462,20 @@ TypedPredicate = (
     | JoinedPredicate
 )
 
-#: The boolean connectives, which are the only where nodes that carry other
-#: where nodes, so a walk over a predicate recurses only here. The grammar
-#: builds these classes directly over unresolved leaves, so a tree before
-#: resolution shares them, and resolution then replaces those leaves.
+#: The boolean connectives. With [`NamedMask`][], they are the only where nodes
+#: that carry other where nodes, so a walk over a predicate recurses only here.
+#: The grammar builds these classes directly over unresolved leaves, so a tree
+#: before resolution shares them, and resolution then replaces those leaves.
 Connective = Not | And | Or
 
 #: Every resolved predicate node. The parser's ``Unresolved*`` nodes are not members: they live with the
 #: grammar in [`mathspec._where_parser`][], and resolution rewrites them away
 #: before anything here is asked.
-Predicate = BooleanLiteral | TypedPredicate | Connective
+Predicate = BooleanLiteral | TypedPredicate | Connective | NamedMask
 
 
 def where_children(where: Predicate) -> tuple[Predicate, ...]:
-    """The predicates under *where* — a connective's operands, and nothing under a leaf.
+    """The predicates under *where* — a connective's operands, a named mask's body, and nothing under a leaf.
 
     What every walk over a predicate recurses through, as [`children`][] is
     for an expression. A leaf has nothing under it whether or not it is
@@ -1424,6 +1485,8 @@ def where_children(where: Predicate) -> tuple[Predicate, ...]:
         return (where.operand,)
     if isinstance(where, (And, Or)):
         return (where.left, where.right)
+    if isinstance(where, NamedMask):
+        return (where.body,)
     return ()
 
 
@@ -1437,7 +1500,7 @@ def _atoms(where: Predicate) -> Iterator[TypedPredicate]:
     """
     if isinstance(where, TypedPredicate):
         yield where
-    elif isinstance(where, BooleanLiteral | Connective):
+    elif isinstance(where, BooleanLiteral | Connective | NamedMask):
         for child in where_children(where):
             yield from _atoms(child)
     else:
@@ -1554,7 +1617,8 @@ def _fold(node: Predicate) -> Predicate:
     none, ``NOT True`` is ``False`` and ``NOT NOT X`` is ``X``. What survives
     is a predicate over data, or the one literal the whole mask reduces to —
     the invariant [`Mask`][] applies at construction, so it holds wherever
-    a mask is built.
+    a mask is built. A [`NamedMask`][] is left whole: its body was folded
+    when the entry was read, and refused there where it folded to a literal.
     """
     if isinstance(node, Not):
         operand = _fold(node.operand)
@@ -1639,3 +1703,35 @@ class Mask:
     def __or__(self, other: Mask) -> Mask:
         """Either mask — construction absorbs a literal side rather than burying it."""
         return Mask(Or(self.root, other.root))
+
+
+# --------------------------------------------------------------------------
+# Advice
+# --------------------------------------------------------------------------
+
+
+#: Which pass an [`Advice`][] comes from. The set is closed, like the operator
+#: set, so a tool that filters on it can list every value.
+AdviceKind = Literal['never-an-axis', 'given', 'unbounded']
+
+
+@dataclass(frozen=True)
+class Advice:
+    """One thing the language advises about a file it accepts.
+
+    Never an error: each is what a half-written spec looks like too. A
+    consumer prints it, or filters on ``kind`` and ``subject``; the text is the
+    language's, so no consumer writes its own.
+
+    Attributes:
+        kind: The pass that said it.
+        subject: The declaration it is about — a dimension name, a variable name.
+        text: The sentence, naming the rewrite.
+    """
+
+    kind: AdviceKind
+    subject: str
+    text: str
+
+    def __str__(self) -> str:
+        return self.text

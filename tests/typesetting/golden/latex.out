@@ -11,8 +11,8 @@
 \begin{description}
 \item[{$\mathcal{T}$}] index $t$ --- \texttt{snapshot} (\texttt{int} coordinates) with $\mathrm{season\_of}: \mathcal{T} \to \mathcal{S},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T}$
 \item[{$\mathcal{G}$}] index $g$ --- \texttt{generator} with $\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}$
-\item[{$\mathcal{B}$}] index $b$ --- \texttt{bus} with $\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}$
-\item[{$\mathcal{Z}$}] index $z$ --- \texttt{zone} with $\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}$
+\item[{$\mathcal{B}$}] index $b$ --- \texttt{bus} with $\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}$, \texttt{area\_of} is \texttt{absent} where the data has no row
+\item[{$\mathcal{Z}$}] index $z$ --- \texttt{zone} with $\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}$, \texttt{area\_of} is \texttt{absent} where the data has no row
 \item[{$\mathcal{S}$}] index $s$ --- \texttt{season} with $\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}$
 \item[{$\mathcal{E}$}] index $e$ --- \texttt{technology} with $\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}$
 \item[{$\mathcal{A}$}] index $a$ --- \texttt{bp}
@@ -20,20 +20,20 @@
 
 \paragraph{Parameters}
 \begin{description}
-\item[{$\mathrm{p}^{\mathrm{max}}$}] \texttt{p\_max} over $\mathcal{G}$
+\item[{$\mathrm{p}^{\mathrm{max}}$}] \texttt{p\_max} over $\mathcal{G}$, $\infty$ where the data has no row
 \item[{$\mathrm{p}^{\mathrm{min}}$}] \texttt{p\_min} over $\mathcal{G}$
-\item[{$\mathrm{cost}$}] \texttt{cost} over $\mathcal{G}$
+\item[{$\mathrm{cost}$}] \texttt{cost} over $\mathcal{G}$, \texttt{neutral} where the data has no row
 \item[{$\mathrm{load}$}] \texttt{load} over $\mathcal{T} \times \mathcal{B}$
-\item[{$\mathrm{is\_flexible}$}] \texttt{is\_flexible} over $\mathcal{G}$
+\item[{$\mathrm{is\_flexible}$}] \texttt{is\_flexible} over $\mathcal{G}$, \texttt{false} where the data has no row
 \item[{$\mathrm{zone\_cap}$}] \texttt{zone\_cap} over $\mathcal{Z}$
-\item[{$\mathrm{tech\_cap}$}] \texttt{tech\_cap} over $\mathcal{B} \times \mathcal{E}$
+\item[{$\mathrm{tech\_cap}$}] \texttt{tech\_cap} over $\mathcal{B} \times \mathcal{E}$, \texttt{absent} where the data has no row
 \item[{$\mathrm{min\_up}$}] \texttt{min\_up} over $\mathcal{G}$
 \item[{$\mathrm{eta}$}] \texttt{eta} over $\mathcal{G}$
 \item[{$\mathrm{lead}$}] \texttt{lead} over $\mathcal{G}$
 \item[{$\mathrm{budget}$}] \texttt{budget} (scalar)
 \item[{$\mathrm{growth}$}] \texttt{growth} (scalar)
-\item[{$\mathrm{bp\_x}$}] \texttt{bp\_x} over $\mathcal{G} \times \mathcal{A}$
-\item[{$\mathrm{bp\_y}$}] \texttt{bp\_y} over $\mathcal{G} \times \mathcal{A}$
+\item[{$\mathrm{bp\_x}$}] \texttt{bp\_x} over $\mathcal{G} \times \mathcal{A}$, \texttt{neutral} where the data has no row
+\item[{$\mathrm{bp\_y}$}] \texttt{bp\_y} over $\mathcal{G} \times \mathcal{A}$, \texttt{neutral} where the data has no row
 \item[{$\mathrm{bp\_heat}$}] \texttt{bp\_heat} over $\mathcal{G} \times \mathcal{A}$
 \item[{$\mathrm{bp\_run}$}] \texttt{bp\_run} over $\mathcal{G} \times \mathcal{A}$
 \end{description}
@@ -48,7 +48,7 @@
 \item[{$\mathit{units}$}] \texttt{units} over $\mathcal{G}$
 \item[{$\mathit{spare}$}] \texttt{spare} over $\mathcal{G}$
 \item[{$\mathit{reserve}$}] \texttt{reserve} (scalar)
-\item[{$\mathit{headroom}$}] \texttt{headroom} (scalar)
+\item[{$\mathit{headroom}$}] \texttt{headroom} (scalar), \texttt{neutral} where the mask leaves it out
 \item[{$\mathit{weight}$}] \texttt{weight} over $\mathcal{T} \times \mathcal{G}$
 \item[{$\mathit{fuel}$}] \texttt{fuel} over $\mathcal{T} \times \mathcal{G}$
 \item[{$\mathit{heat}$}] \texttt{heat} over $\mathcal{T} \times \mathcal{G}$
@@ -65,6 +65,12 @@
 \item[{$\mathit{net}$}] \texttt{net} over $\mathcal{T}$ --- what a snapshot spills, less what it lacks
 \item[{$\mathit{marginal\_price}$}] \texttt{marginal\_price} over $\mathcal{T} \times \mathcal{B}$
 \item[{$\mathrm{startup\_cost}$}] \texttt{startup\_cost} over $\mathcal{T} \times \mathcal{G}$ --- what starting a unit in this snapshot costs, which the horizon's edge changes
+\end{description}
+
+\paragraph{Masks}
+\begin{description}
+\item[{$\mathrm{dispatchable}$}] \texttt{dispatchable} over $\mathcal{G}$ --- a unit that dispatches and cannot be turned down
+\item[{$\mathrm{priced\_dispatch}$}] \texttt{priced\_dispatch} over $\mathcal{G}$
 \end{description}
 
 \noindent Upright is what the data supplies --- a parameter such as $\mathrm{p}^{\mathrm{max}}$, a coordinate map, a label --- and italic is what the solver chooses, such as $p$. An index is italic too, being what a quantifier chooses, and a set is script.
@@ -136,6 +142,7 @@
 \text{run\_start} && \mathit{slack}_{t} & \le \mathrm{load}_{t,b} && \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{load}_{t,b} \text{ is defined} \wedge \neg \left( \mathrm{load}_{t - 1,b} \text{ is defined} \right) \\
 \text{zoned} && \theta_{b} & \le \mathrm{budget} && \forall\, b \in \mathcal{B} \,:\, \mathrm{zone\_cap}_{\mathrm{zone\_of}(b)} \text{ is defined} \\
 \text{capped} && p_{t,g} & \le \mathrm{p}^{\mathrm{max}}_{g} && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{spend}^{\mathrm{cap}}_{g} > 0 \vee \neg \mathrm{is\_flexible}_{g} \\
+\text{masked} && p_{t,g} & \le \mathrm{p}^{\mathrm{max}}_{g} && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{priced\_dispatch}_{g} \wedge \mathrm{pos}(t) > 0 \\
 \text{fuel\_curve} && \left( p_{t,g},\ \mathit{fuel}_{t,g},\ \mathit{heat}_{t,g} \right) & \in \mathit{on}_{t,g} \cdot \mathrm{pwl}_{a \in \mathcal{A}}(\mathrm{bp\_x}_{g,a},\ \mathrm{bp\_y}_{g,a},\ \mathrm{bp\_heat}_{g,a}) && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
 \text{cost\_curve} && \mathit{op\_cost}_{t,g} & \ge \begin{cases} \mathit{warm}_{t,g} & \text{if } \mathrm{is\_flexible}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{a \in \mathcal{A} \,:\, \mathrm{bp\_run}_{g,a}}(\mathrm{bp\_x}_{g,a},\ \mathrm{bp\_y}_{g,a})(p_{t,g}) && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
 \text{hull\_curve} && \left( p_{t,g},\ \mathit{fuel}_{t,g} \right) & \in \mathrm{conv}_{a \in \mathcal{A}}(\mathrm{bp\_x}_{g,a},\ \mathrm{bp\_heat}_{g,a}) && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
@@ -152,6 +159,12 @@
 \text{net} && \mathit{net}_{t} & = -\mathit{spill}_{t} + \mathit{slack}_{t} && \forall\, t \in \mathcal{T} \\
 \text{marginal\_price} && \mathit{marginal\_price}_{t,b} & = \lambda_{\mathrm{balance},t,b} && \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \\
 \text{startup\_cost} && \mathrm{startup\_cost}_{t,g} & = \begin{cases} \mathrm{cost}_{g} & \text{if } \mathrm{pos}(t) = 0 \\ \mathrm{cost}_{g} \cdot 2 & \text{if } \mathrm{pos}(t) > 0 \wedge \mathrm{season\_of}(t) = \text{'}\mathrm{winter}\text{'} \\ 0 & \text{otherwise} \end{cases} && \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\end{align}
+
+\paragraph{Masks}
+\begin{align}
+\text{dispatchable} && \mathrm{dispatchable}_{g} & \iff \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} && \forall\, g \in \mathcal{G} \\
+\text{priced\_dispatch} && \mathrm{priced\_dispatch}_{g} & \iff \mathrm{dispatchable}_{g} \wedge \mathrm{spend}^{\mathrm{cap}}_{g} > 0 && \forall\, g \in \mathcal{G}
 \end{align}
 
 \paragraph{Variable domains}

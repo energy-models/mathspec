@@ -2,6 +2,21 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    Line_s_nom: { dims: [scenario, line] }
+    Line_s_nom_extendable: { dims: [line], dtype: bool }
+    Line_s_max_pu: { dims: [scenario, snapshot, line] }
+    Transformer_s_nom: { dims: [scenario, transformer] }
+    Transformer_s_nom_extendable: { dims: [transformer], dtype: bool }
+    Transformer_s_max_pu: { dims: [scenario, snapshot, transformer] }
+  variables:
+    Line_s_nom_ext: { dims: [line] }
+    Transformer_s_nom_ext: { dims: [transformer] }
+  expressions:
+    Line_s_monitored: { dims: [scenario, snapshot, line] }
+    Transformer_s_monitored: { dims: [scenario, snapshot, transformer] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -32,10 +47,12 @@ relations:
     description: the line an outage takes out; an outage of a transformer has no row
     key: outage
     values: line
+    missing: absent
   Outage_transformer:
     description: the transformer an outage takes out; an outage of a line has no row
     key: outage
     values: transformer
+    missing: absent
 
 parameters:
   Line_BODF:
@@ -47,27 +64,14 @@ parameters:
       the outaged line itself. The factors are the same in every scenario,
       because PyPSA takes those of the first scenario (`abstract.py:534`)
     dims: [period, line, outage]
+    missing: neutral
   Transformer_BODF:
     description: >-
       the share of an outaged branch's flow a transformer takes on when that
       branch goes out, as a line's; a row only where the transformer and the
       outage are active in the period and share a sub-network
     dims: [period, transformer, outage]
-
-given:
-  parameters:
-    Line_s_nom: { dims: [scenario, line] }
-    Line_s_nom_extendable: { dims: [line], dtype: bool }
-    Line_s_max_pu: { dims: [scenario, snapshot, line] }
-    Transformer_s_nom: { dims: [scenario, transformer] }
-    Transformer_s_nom_extendable: { dims: [transformer], dtype: bool }
-    Transformer_s_max_pu: { dims: [scenario, snapshot, transformer] }
-  variables:
-    Line_s_nom_ext: { dims: [line] }
-    Transformer_s_nom_ext: { dims: [transformer] }
-  expressions:
-    Line_s_monitored: { dims: [scenario, snapshot, line] }
-    Transformer_s_monitored: { dims: [scenario, snapshot, transformer] }
+    missing: neutral
 
 expressions:
   Outage_s:

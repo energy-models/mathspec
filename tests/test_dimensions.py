@@ -629,7 +629,7 @@ def test_the_frame_check_and_the_reading_walk_the_same_leaves(namespace):
     ('predicate', 'expected'),
     [
         pytest.param('p_max > 0', {'p_max'}, id='a-parameter-comparison-names-the-parameter'),
-        pytest.param('spinup', {'spinup'}, id='a-parameter-bare-names-the-parameter'),
+        pytest.param('cost', {'cost'}, id='a-parameter-bare-names-the-parameter'),
         pytest.param('p', {'p'}, id='a-variable-bare-names-the-variable'),
         pytest.param('snap_bus == "b1"', {'snap_bus'}, id='a-relation-comparison-names-the-relation'),
         pytest.param('gen_bus', {'gen_bus'}, id='a-relation-bare-names-the-relation'),

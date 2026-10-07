@@ -14,7 +14,7 @@ import pytest
 from mathspec import to_spec
 from mathspec.errors import LanguageError
 from mathspec.expansion import parse_and_expand
-from mathspec.program import Axis, Multiply, Named, Parameter, Sum, Translate, Variable
+from mathspec.program import Axis, Multiply, NamedExpression, Parameter, Sum, Translate, Variable
 from mathspec.resolution import Namespace
 from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, comparison_of, expression_of, schema_of
 
@@ -36,7 +36,7 @@ def _resolved(text, ns):
 
 def _bodies(resolved):
     """*resolved* with every named expression's body standing bare where its name was."""
-    if isinstance(resolved, Named):
+    if isinstance(resolved, NamedExpression):
         return _bodies(resolved.body)
     if isinstance(resolved, tuple):
         return tuple(_bodies(part) for part in resolved)
@@ -132,7 +132,7 @@ def _bodies(resolved):
 )
 def test_a_call_expands_to_core_ast(expressions, macros, call, want):
     """The math a call expands to is what `want` spells; a named expression's
-    body arrives under the `Named` node carrying its name, which `_bodies`
+    body arrives under the `NamedExpression` node carrying its name, which `_bodies`
     inlines, as lowering does."""
     ns = Namespace(schema(expressions=expressions, macros=macros))
     assert _bodies(_resolved(call, ns)) == _resolved(want, ns)
@@ -141,9 +141,9 @@ def test_a_call_expands_to_core_ast(expressions, macros, call, want):
 def test_a_named_expression_arrives_under_the_node_carrying_its_name():
     ns = Namespace(schema(expressions={'gen_cost': 'p * cost'}))
     resolved = expression_of('sum(gen_cost, over=generator)', ns, 'e')
-    assert resolved == Sum(Named('gen_cost', Multiply(Variable('p'), Parameter('cost'))), (Axis('generator'),)), (
-        'the body is inlined resolved and the name kept, for the typesetter to define it once'
-    )
+    assert resolved == Sum(
+        NamedExpression('gen_cost', Multiply(Variable('p'), Parameter('cost'))), (Axis('generator'),)
+    ), 'the body is inlined resolved and the name kept, for the typesetter to define it once'
     assert isinstance(resolved, Sum)
     assert resolved.operand is expression_of('gen_cost', ns, 'another use'), 'every use reads the one node'
 
