@@ -163,7 +163,7 @@ def test_a_mask_may_ask_whether_another_variable_exists():
         pytest.param({'masks': {'a': 'nope'}}, "Mask 'a': 'nope' not found", id='an-unknown-name'),
         pytest.param(
             {'masks': {'a': 'c > 0'}, 'variables.r.where': 'a'},
-            "outside the frame ['h']",
+            "outside the declared dims ['h']",
             id='a-use-over-a-frame-the-predicate-leaves',
         ),
     ],
@@ -292,7 +292,7 @@ def test_a_mask_prints_its_symbol_where_it_is_read_and_its_predicate_once(fmt):
 @pytest.mark.parametrize('fmt', sorted(FORMATS))
 def test_a_given_mask_prints_in_the_legend_and_no_line_of_its_own(fmt):
     assert 'a mask another file defines' in typeset(RAMPING, fmt)
-    with pytest.raises(LanguageError, match=r"'stands' is a given mask, and a given declaration prints no line"):
+    with pytest.raises(LanguageError, match=r"'stands' is a given mask, which prints no line of its own"):
         typeset_declaration(RAMPING, 'stands', fmt)
 
 

@@ -68,9 +68,10 @@ how-to guide (`docs/howto/`), reference (`docs/reference/`, and the example page
 in `docs/examples/`) or explanation (`docs/about/`) — the four kinds of
 [Diátaxis](https://diataxis.fr) — and one page is one kind. A page a spec
 writer does not need goes under Development in the nav: building on
-mathspec, contributing, or a proof of concept. The rules each kind has to meet, and the sentence-level
-bar, are in
+mathspec, contributing, or a proof of concept. The rules each kind has to meet are in
 [the docs-writing skill](https://github.com/energy-models/mathspec/blob/main/.claude/skills/docs-writing/SKILL.md).
+The sentence-level bar, for pages, issues and PRs, is in
+[the prose-writing skill](https://github.com/energy-models/mathspec/blob/main/.claude/skills/prose-writing/SKILL.md).
 Every page needs a `nav:` entry in `mkdocs.yml`, links inside `docs/` are
 relative, and a link outside it is the full GitHub URL. `pixi run docs-build`
 is `--strict` and refuses a dead link or a stale anchor; `pixi run test` is

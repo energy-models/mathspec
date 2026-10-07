@@ -5,13 +5,14 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Least-cost dispatch
 
-The smallest file that is a whole spec: generators with a capacity, an hourly
-load to meet, and a cost to minimise. It is the spec on the
-[home page](../index.md).
+This file is the smallest whole spec, and the one on the [home
+page](../index.md). It has generators with a capacity, an hourly load to meet,
+and a cost to minimise.
 
 The `where:` on `dispatch` deletes the rows where a generator has no capacity
 ([absence](../reference/language/absence.md)). `sum(dispatch, over=generator)`
-names the dimension it reduces, so the constraint's `dims` is what remains.
+names the dimension it sums over, so the `dims` of the constraint are the
+dimensions that remain.
 
 <!-- gallery:begin -->
 ```yaml

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generators, the commitment
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Generator`, the commitment rows. It adds a term to `scenario_opex`. It reads `Generator_active`, `Generator_maintenance_capacity`, `Generator_maintenance_pu`, `Generator_maintenance_status`, `Generator_modules_installed`, `Generator_n_mod` and 10 more under [`given`](../../reference/language/declarations.md#given).
+This file states the commitment rows of PyPSA's `Generator`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to the sum `scenario_opex`. It reads `Generator_active`, `Generator_maintenance_capacity`, `Generator_maintenance_pu`, `Generator_maintenance_status`, `Generator_modules_installed`, `Generator_n_mod` and 10 more names that other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml

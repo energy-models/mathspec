@@ -84,7 +84,7 @@ parameters:
     description: PyPSA's `scenario_weightings.weight` — the probability of a future
     dims: [scenario]
   CVaR_omega:
-    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. With none there are no CVaR variables or rows; with `omega = 0` PyPSA builds them, and the optimum is the risk-neutral one
+    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one
     dims: []
     missing: neutral
   period_weight_objective:

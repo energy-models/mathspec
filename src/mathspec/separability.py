@@ -105,14 +105,15 @@ def separabilities(program: Program) -> dict[str, Separability]:
                             'coupled',
                             axis.dimension,
                             label,
-                            f'groups {axis.dimension} into {", ".join(node.operand.columns.added_dims)} — window that dimension instead, or cut only at the group edges',
+                            f'groups {axis.dimension} into {", ".join(node.operand.columns.added_dims)} (window that '
+                            f'dimension instead, or cut only at the group edges)',
                         )
                     elif reductions_couple:
                         report(
                             'coupled',
                             axis.dimension,
                             label,
-                            f'sums over {axis.dimension} — a rolling sum_back(window=n) windows, a total over the horizon does not',
+                            f'sums over {axis.dimension} (use sum_back(window=n) for a rolling sum)',
                         )
             elif isinstance(node, Join) and not node.columns.axes:
                 for dimension in node.columns.dropped_dims:
@@ -124,8 +125,8 @@ def separabilities(program: Program) -> dict[str, Separability]:
                         'coupled',
                         dimension,
                         label,
-                        f'wraps around {dimension}, so its first row reads its last — an opening-state seed at '
-                        f'position({dimension}) == 0 is what a rolling horizon replaces the wrap with',
+                        f'wraps around {dimension} (replace the wrap with an opening state at '
+                        f'position({dimension}) == 0)',
                     )
                     continue
                 if node.partition is not None:
@@ -146,7 +147,7 @@ def separabilities(program: Program) -> dict[str, Separability]:
             'coupled',
             block.along,
             f"set '{name}'",
-            f'is a set along {block.along}, which a window would cut — only a window holding every whole set keeps it',
+            f'is a set along {block.along} (cut only between whole sets)',
         )
 
     def joined(kind: str, dimension: str) -> dict[str, str]:

@@ -5,39 +5,45 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # PyPSA in 24 files
 
-[PyPSA in one file](../pypsa.md) is `examples/pypsa.yaml`, one spec of some
-four thousand lines. This is the same spec as 24 files under
-`examples/pypsa/`, one per topic, and `merge` gives the one file back: the
-two have one [canonical form](../../howto/compare.md).
+You can read the PyPSA spec here one topic at a time.
+[PyPSA in one file](../pypsa.md) states it as `examples/pypsa.yaml`, one spec
+of about four thousand lines. The same spec is split into 24 **fragments**, one file
+per topic under `examples/pypsa/`. `merge` joins the 24 files back into the one
+file, and the two have the same [canonical form](../../howto/compare.md).
 
-Every fragment loads, prints and gets advice on its own. What it reads and does
-not declare, it states under
-[`given`](../../reference/language/declarations.md#given). A component that
-puts something into a sum every component adds to, such as the bus balance or
-the operating cost, names its share as an expression of its own, a
-[term](../../reference/language/declarations.md#terms) whose `adds_to:` names
-the sum. One fragment reads each sum and adds nothing to it, so the terms
-always have a reader. A new component is one new file, and the network does
-not change.
+Each fragment loads and prints on its own, and
+[`advice`](../../reference/api.md#advice) runs on each fragment alone. A
+fragment lists each name that it reads but does not declare under
+[`given`](../../reference/language/declarations.md#given). Some sums take a
+share from every component, such as the bus balance or the operating cost. A
+component names its share of such a sum as an expression of its own, a
+[term](../../reference/language/declarations.md#terms), whose `adds_to:` key
+names the sum. For each sum, one fragment reads it and adds nothing to it, so
+the terms always have a reader. To add a component, you add one file, and the
+network file does not change.
 
-The split is written by `tools/pypsa_split.py` from the one file and checked
-against it, so the two cannot drift. It is a proof of concept: a decision on
-which of the two is the source comes after both land.
+`tools/pypsa_split.py` writes the 24 files from the one file, and a check
+compares them to it, so the two always agree. The split is a proof of concept,
+and which of the two is the source is not decided yet.
 
 ## What each file says
 
-Three kinds of file. A **component** owns PyPSA's class of that name: its
-dimension, its data, its columns, its rows, and its share of each sum. The
-committable classes, `Generator`, `Link` and `Process`, are cut by feature into
-a file each for the class, its commitment, its ramping and its maintenance,
-and the three sets read alike because PyPSA's rows do. An **owner** reads a
-sum with its description, and holds the row that reads it: the network reads
-`Bus_injection`, power flow reads `Cycle_angle_sum`. **Settings** holds what
-every topic reads, the weightings and the flags, and reads the totals whose
-own readers, the cost, the carriers and the global constraints, a model may
-leave out. It also sets the objective, which reads `total_cost`: each
-component adds its capital cost to it, and the cost file adds the operating
-cost at risk.
+The fragments are of three kinds:
+
+- A **component** file owns the PyPSA class of that name: its dimension, its
+  data, its variables, its rows and its share of each sum. The committable
+  classes are `Generator`, `Link` and `Process`. Each of them is cut by feature
+  into four files: the class, its commitment, its ramping and its maintenance.
+  The three sets of four files read alike, because PyPSA builds the same rows
+  for each class.
+- An **owner** file reads a sum with its description, and holds the row that
+  reads it. The network reads `Bus_injection`, and power flow reads
+  `Cycle_angle_sum`.
+- The **settings** file holds the weightings and the flags that every topic
+  reads. It also reads the totals whose own readers a spec may leave out: the
+  cost, the carriers and the global constraints. It sets the objective, which
+  reads `total_cost`. Each component adds its capital cost to `total_cost`, and
+  the cost file adds the operating cost at risk.
 
 <!-- gallery:begin -->
 ### The sums
@@ -87,8 +93,8 @@ cost at risk.
 
 ## Leaving a file out
 
-A model may leave a component family out, or the cost, the carriers, the
-global constraints or security, and what is left is a whole model: nothing
-stays under `given:`. It may not leave the network or power flow out while a
-component is in, because the component's terms would land on no name, and
-`merge` says so.
+You may leave out a component family, the cost, the carriers, the global
+constraints or security. What is left is a whole spec, with nothing left under
+`given:`. You may not leave out the network or power flow while a component is
+in, because the terms of the component would then add to a sum that no fragment
+reads, and `merge` refuses the files.

@@ -4,8 +4,7 @@
 
 description: >-
   Several columns at each end — `sum(array, over=[dim, …], by=relation[c, …])`
-  joins on both key columns at once and groups by both value columns in one
-  join.
+  joins on both key columns and groups by both value columns, all in one join.
 
 dimensions:
   generator: { dtype: str }

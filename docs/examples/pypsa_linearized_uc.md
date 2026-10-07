@@ -5,9 +5,9 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # PyPSA, the relaxed commitment
 
-`n.optimize(linearized_unit_commitment=True)` is a patch over
-[PyPSA in one file](pypsa.md), `examples/variants/pypsa_linearized_uc.yaml`.
-Lay it over the base:
+This page states the model that `n.optimize(linearized_unit_commitment=True)`
+builds, as a patch over [PyPSA in one file](pypsa.md). The patch is
+`examples/variants/pypsa_linearized_uc.yaml`. Lay it over the base file:
 
 ```python
 import mathspec as ms
@@ -18,7 +18,7 @@ spec = ms.override('examples/pypsa.yaml', ['examples/variants/pypsa_linearized_u
 The patch changes only what the keyword changes:
 
 - The status, start and stop of a committable generator, link and process are
-  shares in [0, 1] rather than integers (`variables.py:81-90`, `:132-141`,
+  shares in [0, 1], not integers (`variables.py:81-90`, `:132-141`,
   `:183-192`).
 - Four rows tighten the relaxation of a unit with a fixed build whose start
   and stop cost the same in every snapshot and every scenario
@@ -26,9 +26,11 @@ The patch changes only what the keyword changes:
 - A modular committable unit is refused, as PyPSA refuses it
   (`optimize.py:783-784`).
 
-Every other row is the integer run's, with its scenarios, periods and `active`
-masks. Rungs 12, 44, 47 and 67 solve the patched spec. Each network is the
-spine plus the script's own additions.
+Every other row is a row of the integer run, with its scenarios, periods and
+`active` masks. Rungs 12, 44, 47 and 67 solve the patched spec. A **rung** is
+one step of the PyPSA ladder, which is one `n.optimize()` keyword stated in
+full. Each network is the shared spine, `spine.py`, plus the additions of the
+rung script.
 
 ## Rung 12 — linearized unit commitment
 
@@ -129,12 +131,13 @@ to [PyPSA in one file](pypsa.md), and this rung checks them under the keyword:
   rows (`constraints.py:429-462`). A maintainable unit that is not committable
   loses the same share of its fixed rows (`constraints.py:139-149`).
 
-The rung adds five cheap units under a swinging load. A start costs more than a
-stop, so PyPSA does not tighten them and the rung isolates these rows. Each
-binds: PyPSA solves to `7400.0`. Without the brought-in down time it solves to
-`6540.0`; without the start-up ramp, to `7164.0`; with the missing start-up and
-shut-down ramps read as `0`, to `8060.0`; with the committable unit not
-maintainable, to `7310.0`; with the fixed unit not maintainable, to `7100.0`.
+The rung adds five cheap units under a load that swings. A start costs more than
+a stop, so PyPSA builds no tightening rows for them, and the rung tests only
+these rows. Each row binds. PyPSA solves to `7400.0`, to `6540.0` without the
+down time brought in, and to `7164.0` without the start-up ramp. With the
+missing start-up and shut-down ramps read as `0`, it solves to `8060.0`. With
+the committable unit not maintainable, it solves to `7310.0`, and with the fixed
+unit not maintainable, to `7100.0`.
 
 | PyPSA | status | note |
 | --- | --- | --- |
@@ -215,7 +218,7 @@ def build():
 ## Rung 47 — ramps and signs, as the integer file states them
 
 This rung checks five rows under the keyword, each on fixed builds. The patch
-writes the first; [PyPSA in one file](pypsa.md) states the other four:
+writes the first row, and [PyPSA in one file](pypsa.md) states the other four:
 
 - The four tightening rows read each ramp limit filled to the full build where
   it is missing (`constraints.py:317-322`). They read `Generator_ramp_up_rate`
@@ -238,12 +241,12 @@ The rung adds a relax bus with a tightened unit that has only start-up and
 shut-down ramps, a committable unit whose ramp limit lifts at the third
 snapshot, a dear committable unit that came in running at `p_init=40`, a fixed
 unit with ramp limits, a unit of sign `-1`, a load of sign `1` and a dear
-backup. Each binds: PyPSA solves to `12862.5`. With the missing limits read as
-`0` in the two partly rows, it solves to `14085.64`. With the ramp limit at
-`0.25` in every snapshot, it solves to `14554.75`. Without the `p_init`, it
-solves to `8437.5`. Without the fixed unit's ramp limits, it solves to
-`12800.0`. With the unit's sign at `1`, it solves to `12592.5`. With the load's
-sign at `-1`, it solves to `13887.5`.
+backup. Each of them binds, and PyPSA solves to `12862.5`. With the missing
+limits read as `0` in the two partly rows, it solves to `14085.64`, and with the
+ramp limit at `0.25` in every snapshot, to `14554.75`. Without the `p_init`, it
+solves to `8437.5`, and without the fixed unit's ramp limits, to `12800.0`. With
+the unit's sign at `1`, it solves to `12592.5`, and with the load's sign at
+`-1`, to `13887.5`.
 
 | PyPSA | status | note |
 | --- | --- | --- |
@@ -342,10 +345,10 @@ the extendable link, since the rows read the build as data
 (`constraints.py:617-619`). A dear backup on the east bus keeps the bus
 balanced.
 
-Each tightening binds: PyPSA solves to `47777.33`. With the link's stop
-`1e-7` dearer than its start, so PyPSA does not tighten it, it solves to
-`46554.0`. With the process untightened in the same way, it solves to
-`47465.70`. Without the keyword, it solves to `54013.13`.
+Each tightening row binds, and PyPSA solves to `47777.33`. When the stop of the
+link costs `1e-7` more than its start, PyPSA does not tighten the link, and it
+solves to `46554.0`. When the process is left untightened in the same way, PyPSA
+solves to `47465.70`. Without the keyword, it solves to `54013.13`.
 
 | PyPSA | status | note |
 | --- | --- | --- |
