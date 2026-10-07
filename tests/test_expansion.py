@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Named sub-expressions and macros — YAML-defined, schema-local, expanded to core AST at load."""
+"""Named sub-expressions and macros — YAML-defined, spec-local, expanded to core AST at load."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from mathspec.errors import LanguageError
 from mathspec.expansion import parse_and_expand
 from mathspec.program import Axis, ExpressionReference, Multiply, ParameterReference, Sum, Translate, VariableReference
 from mathspec.resolution import Namespace
-from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, comparison_of, expression_of, schema_of
+from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, comparison_of, expression_of, spec_of
 
 WEIGHTED_SUM = {
     'args': ['array', 'weights'],
@@ -24,7 +24,7 @@ WEIGHTED_SUM = {
     'template': 'sum(array * weights, over=over)',
 }
 
-schema = partial(schema_of, DISPATCH_MODEL)
+spec = partial(spec_of, DISPATCH_MODEL)
 
 
 def _resolved(text, ns):
@@ -134,12 +134,12 @@ def test_a_call_expands_to_core_ast(expressions, macros, call, want):
     """The math a call expands to is what `want` spells; a named expression's
     body arrives under the `ExpressionReference` node carrying its name, which `_bodies`
     inlines, as lowering does."""
-    ns = Namespace(schema(expressions=expressions, macros=macros))
+    ns = Namespace(spec(expressions=expressions, macros=macros))
     assert _bodies(_resolved(call, ns)) == _resolved(want, ns)
 
 
 def test_a_named_expression_arrives_under_the_node_carrying_its_name():
-    ns = Namespace(schema(expressions={'gen_cost': 'p * cost'}))
+    ns = Namespace(spec(expressions={'gen_cost': 'p * cost'}))
     resolved = expression_of('sum(gen_cost, over=generator)', ns, 'e')
     assert resolved == Sum(
         ExpressionReference('gen_cost', Multiply(VariableReference('p'), ParameterReference('cost'))),
@@ -164,7 +164,7 @@ def test_a_named_expression_arrives_under_the_node_carrying_its_name():
 )
 def test_a_bad_named_expression_is_refused_at_load(expressions, match):
     with pytest.raises(LanguageError, match=match):
-        schema(expressions=expressions)
+        spec(expressions=expressions)
 
 
 @pytest.mark.parametrize(
@@ -194,13 +194,13 @@ def test_a_bad_named_expression_is_refused_at_load(expressions, match):
 def test_a_cycle_is_reported_with_the_chain_that_closes_it(expressions, macros, chain):
     """A cycle closed through a macro was reported as `a -> a`, the macro left out, and one closed through a case's `when` was a `RecursionError`."""
     with pytest.raises(LanguageError, match=f'circular expression reference: {chain}$') as exc:
-        schema(expressions=expressions, macros=macros)
+        spec(expressions=expressions, macros=macros)
     assert str(exc.value).count('circular') == 1, 'the cycle is reported once, where it closes'
 
 
 def test_a_refusal_names_its_context_once():
     with pytest.raises(LanguageError) as exc:
-        schema(expressions={'a': 'a + 1'})
+        spec(expressions={'a': 'a + 1'})
     assert str(exc.value).count("Named expression 'a'") == 1, 'the context is prefixed once, not once per pass'
 
 
@@ -213,7 +213,7 @@ def test_a_refusal_names_its_context_once():
 )
 def test_macro_arity_errors(call, match):
     with pytest.raises(LanguageError, match=match):
-        parse_and_expand(call, Namespace(schema(macros={'ws': WEIGHTED_SUM})), 'expression')
+        parse_and_expand(call, Namespace(spec(macros={'ws': WEIGHTED_SUM})), 'expression')
 
 
 @pytest.mark.parametrize(
@@ -249,7 +249,7 @@ def test_macro_arity_errors(call, match):
 def test_macro_collisions_rejected(patch, match):
     """Helper names are reserved for every kind of entry, not just macros."""
     with pytest.raises(LanguageError, match=match):
-        schema(**patch)
+        spec(**patch)
 
 
 @pytest.mark.parametrize(
@@ -314,13 +314,13 @@ def test_macro_templates_validated_even_when_unused(macros, match):
     form of an amount was decided in resolution.
     """
     with pytest.raises(LanguageError, match=match):
-        schema(macros=macros)
+        spec(macros=macros)
 
 
 def test_an_entry_nothing_reads_is_held_to_the_rules_a_use_is():
     """`sum(k)` over a scalar loaded as an unread entry, since the bare sum was only decided where the math read it."""
     with pytest.raises(LanguageError, match=r"Named expression 'e1': sum\(\) with no over= or by=.*already a scalar"):
-        schema_of(SMALL_MODEL, expressions={'e1': 'sum(k)'})
+        spec_of(SMALL_MODEL, expressions={'e1': 'sum(k)'})
 
 
 @pytest.mark.parametrize(
@@ -335,20 +335,20 @@ def test_an_entry_nothing_reads_is_held_to_the_rules_a_use_is():
 def test_a_template_is_held_to_the_rules_a_call_site_is(template, match):
     """A template nothing calls was checked for names only: a label parameter or an unknown column passed load."""
     with pytest.raises(LanguageError, match=match):
-        schema_of(SMALL_MODEL, macros={'m': {'args': ['x'], 'template': template}})
+        spec_of(SMALL_MODEL, macros={'m': {'args': ['x'], 'template': template}})
 
 
 @pytest.mark.parametrize('fragment', ['my_python_helper', 'macros:', 'docs/about/limits.md'])
 def test_an_unknown_operator_is_refused_at_load_with_the_rewrite(fragment):
     with pytest.raises(LanguageError) as exc:
-        schema(constraints={'c': {'dims': ['snapshot'], 'expression': 'my_python_helper(p) <= load'}})
+        spec(constraints={'c': {'dims': ['snapshot'], 'expression': 'my_python_helper(p) <= load'}})
     assert fragment in str(exc.value)
 
 
 def test_an_unknown_operator_names_no_construct_the_language_lacks():
     """The refusal told the author to "use a declared escape", and the schema has no `escape:` key."""
     with pytest.raises(LanguageError) as exc:
-        schema(constraints={'c': {'dims': ['snapshot'], 'expression': 'my_python_helper(p) <= load'}})
+        spec(constraints={'c': {'dims': ['snapshot'], 'expression': 'my_python_helper(p) <= load'}})
     assert 'escape' not in str(exc.value), 'the message points at a key the closed schema refuses'
 
 
@@ -373,9 +373,7 @@ def test_a_formal_stands_where_a_call_site_will_bind_it(formals, template):
     A formal `along=` beside a `within=` was handed to the partition as if it were
     a dimension, and refused as one the relation has no key column over.
     """
-    assert (
-        schema_of(SMALL_MODEL, macros={'m': {'args': formals, 'template': template}}).macros['m'].template == template
-    )
+    assert spec_of(SMALL_MODEL, macros={'m': {'args': formals, 'template': template}}).macros['m'].template == template
 
 
 @pytest.mark.parametrize(
@@ -393,13 +391,13 @@ def test_a_formal_inside_a_list_binds_a_name_or_a_list_of_names(call, match):
     """A list holds names, so what the call binds there is a name, or a list spliced in, and the list is checked once bound."""
     macros = {'tot': {'args': ['x'], 'kwargs': ['d'], 'template': 'sum(x, over=[d, snapshot])'}}
     with pytest.raises(LanguageError, match=match):
-        expression_of(call, Namespace(schema(macros=macros)), 'expression')
+        expression_of(call, Namespace(spec(macros=macros)), 'expression')
 
 
 def test_a_call_binding_the_dimension_a_partition_steps_along_builds_it():
     """The call site is where the formal gets its kind, so the partition is built there."""
     template = 'shift(x, along=d, offset=1, within=lk[h])'
-    ns = Namespace(schema_of(SMALL_MODEL, macros={'m': {'args': ['x', 'd'], 'template': template}}))
+    ns = Namespace(spec_of(SMALL_MODEL, macros={'m': {'args': ['x', 'd'], 'template': template}}))
     node = expression_of('m(p, g)', ns, 'expression')
     assert isinstance(node, Translate) and node.along == 'g'
     assert node.partition is not None and node.partition.name == 'lk', 'the relation is read once along= is bound'
@@ -417,7 +415,7 @@ def test_a_named_expression_is_resolved_once_however_many_uses(monkeypatch):
         return named(name, *args)
 
     monkeypatch.setattr(resolution, '_named', counted)
-    schema(
+    spec(
         expressions={'gen_cost': 'p * cost', 'total': 'sum(gen_cost, over=generator) + sum(gen_cost, over=generator)'},
         constraints={'balance': {'dims': ['snapshot'], 'expression': 'sum(gen_cost, over=generator) >= load'}},
     )
@@ -426,7 +424,7 @@ def test_a_named_expression_is_resolved_once_however_many_uses(monkeypatch):
 
 def test_a_use_of_a_refused_named_expression_names_it_rather_than_repeating_its_fault():
     with pytest.raises(LanguageError) as exc:
-        schema(expressions={'a': 'b + 1', 'b': 'nope'})
+        spec(expressions={'a': 'b + 1', 'b': 'nope'})
     message = str(exc.value)
     assert message.count("'nope' not found") == 1, 'the fault is the entry that holds it'
     assert "Named expression 'a': named expression 'b' does not load" in message

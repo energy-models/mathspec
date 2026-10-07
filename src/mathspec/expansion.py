@@ -84,7 +84,7 @@ def _expand(node: ArithmeticNode, ns: Namespace, context: str, stack: tuple[str,
     """
     if isinstance(node, NameNode) and stack and (refusal := ns.cycle(node.name, context, stack)) is not None:
         raise SchemaError(refusal)
-    if isinstance(node, FunctionCallNode) and node.name in ns.schema.macros:
+    if isinstance(node, FunctionCallNode) and node.name in ns.spec.macros:
         if node.name in stack:
             msg = f'{context}: circular macro reference: {" -> ".join([*stack, node.name])}'
             raise SchemaError(msg)
@@ -94,7 +94,7 @@ def _expand(node: ArithmeticNode, ns: Namespace, context: str, stack: tuple[str,
 
 def _expand_macro(call: FunctionCallNode, ns: Namespace, context: str, stack: tuple[str, ...]) -> ArithmeticNode:
     """Call-by-value: arguments are expanded before substitution, and the substituted body is expanded again."""
-    macro = ns.schema.macros[call.name]
+    macro = ns.spec.macros[call.name]
     signature = macro_signature(call.name, macro)
     if len(call.args) != len(macro.args):
         msg = (

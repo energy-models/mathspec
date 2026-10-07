@@ -58,7 +58,7 @@ class NumberNode:
 
 @dataclass(frozen=True)
 class NameNode:
-    """A bare name whose kind only the schema knows; resolution rewrites every one into a program node."""
+    """A bare name whose kind only the spec knows; resolution rewrites every one into a program node."""
 
     name: str
 

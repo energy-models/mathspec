@@ -73,10 +73,10 @@ def test_the_loader_yields_plain_types(tmp_path):
     raw = read_yaml(_write(tmp_path, MODEL))
     assert type(raw) is dict
 
-    schema = to_spec(raw)
-    assert all(type(name) is str for name in schema.dimensions), 'an entry is keyed by a plain str'
-    assert type(schema.variables['p'].dims) is list
-    assert all(type(d) is str for d in schema.variables['p'].dims)
+    spec = to_spec(raw)
+    assert all(type(name) is str for name in spec.dimensions), 'an entry is keyed by a plain str'
+    assert type(spec.variables['p'].dims) is list
+    assert all(type(d) is str for d in spec.variables['p'].dims)
 
 
 def test_duplicate_key_is_an_error_naming_both_lines(tmp_path):

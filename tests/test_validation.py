@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from mathspec.typesetting import FormatName
 
 
-def _schema(**patch) -> Spec:
+def _spec(**patch) -> Spec:
     return to_spec(varied(SMALL_MODEL, **patch))
 
 
@@ -93,12 +93,12 @@ class TestValidateExpressions:
     )
     def test_a_bad_entry_is_refused_at_load(self, patch, fragments):
         with pytest.raises(LanguageError) as exc:
-            _schema(**patch)
+            _spec(**patch)
         for fragment in fragments:
             assert fragment in str(exc.value)
 
     def test_the_objective_and_a_constraint_take_degree_two(self):
-        _schema(
+        _spec(
             constraints={'floor': {'dims': ['g'], 'expression': 'p * p >= 1'}},
             objective={'expression': 'sum(p * p * c, over=g)'},
         )
@@ -159,7 +159,7 @@ class TestValidateExpressions:
         `test_a_bound_or_where_cannot_name_an_expression`.
         """
         with pytest.raises(LanguageError) as exc:
-            _schema(**_NONLINEAR_ENTRY, **patch)
+            _spec(**_NONLINEAR_ENTRY, **patch)
         for fragment in fragments:
             assert fragment in str(exc.value)
 
@@ -181,7 +181,7 @@ class TestValidateExpressions:
     def test_a_bound_or_where_cannot_name_an_expression(self, patch, fragment):
         """A bound names a parameter and nothing else; a where reads the entry as arithmetic, and a body carrying a variable is refused there."""
         with pytest.raises(LanguageError) as exc:
-            _schema(**_NONLINEAR_ENTRY, **patch)
+            _spec(**_NONLINEAR_ENTRY, **patch)
         assert fragment in str(exc.value)
 
     def test_an_unreferenced_nonlinear_entry_loads_and_is_reported(self):
@@ -370,7 +370,7 @@ class TestDimensionKwargs:
 
     def test_macro_formals_are_not_mistaken_for_dimensions(self):
         """A formal in a dim position is legal inside the template body."""
-        _schema(
+        _spec(
             macros={
                 'ws': {
                     'args': ['array', 'weights'],
@@ -394,7 +394,7 @@ class TestDimensionKwargs:
         """The same guard one construct over (#460): polars reads `snapshot > 0` on a
         datetime as "after the epoch" and silently drops every earlier coordinate."""
         with pytest.raises(LanguageError, match=match):
-            _schema(**{'dimensions.g': {'dtype': dtype}, 'variables.p.where': where})
+            _spec(**{'dimensions.g': {'dtype': dtype}, 'variables.p.where': where})
 
 
 class TestAnUndeclaredKeywordIsRefusedOnce:
@@ -470,9 +470,9 @@ class TestArithmeticDtype:
     """
 
     @staticmethod
-    def _schema_with_typed_a(dtype: str, expression: str) -> Spec:
+    def _spec_with_typed_a(dtype: str, expression: str) -> Spec:
         """`SMALL_MODEL` plus a parameter `a` of *dtype*, standing in the constraint *expression*."""
-        return _schema(
+        return _spec(
             **{
                 'parameters.a': {'dims': ['g'], 'dtype': dtype},
                 'constraints': {'cap': {'dims': ['g'], 'expression': expression}},
@@ -492,11 +492,11 @@ class TestArithmeticDtype:
     )
     def test_a_label_or_a_flag_is_not_a_value(self, dtype, expression):
         with pytest.raises(LanguageError, match=f'declared dtype: {dtype}'):
-            self._schema_with_typed_a(dtype, expression)
+            self._spec_with_typed_a(dtype, expression)
 
     @pytest.mark.parametrize('dtype', ['float', 'int'])
     def test_a_number_is(self, dtype):
-        self._schema_with_typed_a(dtype, 'a * p <= c')
+        self._spec_with_typed_a(dtype, 'a * p <= c')
 
     @pytest.mark.parametrize(
         ('dtype', 'where'),
@@ -508,12 +508,12 @@ class TestArithmeticDtype:
     )
     def test_the_position_it_is_declared_for_still_takes_it(self, dtype, where):
         """The refusal is about arithmetic, not the dtype: selecting with a label and masking with a flag stay."""
-        _schema(**{'parameters.a': {'dims': ['g'], 'dtype': dtype}, 'variables.p.where': where})
+        _spec(**{'parameters.a': {'dims': ['g'], 'dtype': dtype}, 'variables.p.where': where})
 
     def test_a_named_amount_keeps_its_own_sentence(self):
         """`offset=` has a stricter rule of its own — a count of positions is integral — and that sentence arrives."""
         with pytest.raises(SchemaError, match="counts positions, but 'lag' is declared dtype: str"):
-            _schema(
+            _spec(
                 **{
                     'parameters.lag': {'dims': [], 'dtype': 'str'},
                     'objective': {'expression': "sum(shift(p, along=g, offset=lag, edge='wrap'))"},
@@ -537,7 +537,7 @@ class TestVersion:
 
     @pytest.mark.parametrize('top', [pytest.param({}, id='absent'), pytest.param({'version': 0}, id='zero')])
     def test_absent_and_zero_are_the_unstable_surface(self, top):
-        assert _schema(**top).version == 0
+        assert _spec(**top).version == 0
 
     def test_an_unknown_version_is_refused_not_interpreted(self):
         message = _refusal(version=1)
@@ -547,11 +547,11 @@ class TestVersion:
 
     def test_the_version_gates_no_behaviour(self):
         """Two files differing only in a declared supported version build the same model."""
-        assert _schema().model_dump(exclude={'version'}) == _schema(version=0).model_dump(exclude={'version'})
+        assert _spec().model_dump(exclude={'version'}) == _spec(version=0).model_dump(exclude={'version'})
 
 
 #: `position(dim)` needs a relation over *that* dimension, so one over it and one into it.
-POSITION_SCHEMA = to_spec(
+POSITION_SPEC = to_spec(
     {
         'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'period': {'dtype': 'int'}},
         'relations': {
@@ -581,7 +581,7 @@ class TestPositionResolves:
         ids=['first', 'first of each period'],
     )
     def test_it_resolves(self, mask: str, position: int, by: str | None):
-        resolved = where_of(mask, Namespace(POSITION_SCHEMA), 'the mask')
+        resolved = where_of(mask, Namespace(POSITION_SPEC), 'the mask')
         assert resolved is not None
         node = resolved.root
         assert isinstance(node, DimensionPosition)
@@ -607,7 +607,7 @@ class TestPositionResolves:
     )
     def test_it_refuses(self, mask: str, fragments: list[str]):
         with pytest.raises(LanguageError) as excinfo:
-            where_of(mask, Namespace(POSITION_SCHEMA), 'the mask')
+            where_of(mask, Namespace(POSITION_SPEC), 'the mask')
         for fragment in fragments:
             assert fragment in str(excinfo.value)
 
@@ -652,7 +652,7 @@ class TestAWhereSideIsReadInResolution:
 
     def test_a_signed_literal_and_inf_are_numbers_on_a_side(self):
         """`-1` and `inf` are the expression grammar's literals, so a where reads them as it reads any number."""
-        spec = _schema(**{'variables.p.where': 'c > -1 AND c < inf'})
+        spec = _spec(**{'variables.p.where': 'c > -1 AND c < inf'})
         assert spec.variables['p'].where == 'c > -1 AND c < inf'
 
     @pytest.mark.parametrize(
@@ -677,11 +677,11 @@ class TestAWhereSideIsReadInResolution:
         ],
     )
     def test_a_where_comparing_expressions_loads(self, patch, where):
-        spec = _schema(**patch, **{'variables.p.where': where})
+        spec = _spec(**patch, **{'variables.p.where': where})
         assert spec.variables['p'].where == where
 
     def test_a_reduction_on_a_side_leaves_the_frame_it_reduced(self):
-        spec = _schema(
+        spec = _spec(
             constraints={'t': {'dims': [], 'where': 'sum(c, over=g) >= k', 'expression': 'sum(p, over=g) <= k'}}
         )
         assert list(spec.constraints) == ['t'], 'a scalar constraint whose where reduces the frame it lacks loads'
@@ -834,7 +834,7 @@ class TestAPredicateIsAnOperand:
         ],
     )
     def test_a_shape_the_language_admits(self, where):
-        mask = where_of(where, Namespace(_schema()), 'probe')
+        mask = where_of(where, Namespace(_spec()), 'probe')
         assert mask is not None, 'the predicate decides some rows, so it is a mask rather than nothing'
 
     @pytest.mark.parametrize(
@@ -1009,7 +1009,7 @@ class TestAPredicateIsAnOperand:
     )
     def test_a_shape_the_language_refuses(self, where, fragments):
         with pytest.raises(LanguageError) as caught:
-            where_of(where, Namespace(_schema()), 'probe')
+            where_of(where, Namespace(_spec()), 'probe')
         for fragment in fragments:
             assert fragment in str(caught.value)
 
@@ -1028,7 +1028,7 @@ class TestAPredicateIsAnOperand:
         comes back unresolved and the count had walked it anyway.
         """
         with pytest.raises(LanguageError) as caught:
-            where_of(where, Namespace(_schema()), 'probe')
+            where_of(where, Namespace(_spec()), 'probe')
         assert "'nope' not found" in str(caught.value)
 
     def test_a_count_is_undecidable_in_a_case_when(self):
@@ -1073,19 +1073,19 @@ class TestAPredicateIsAnOperand:
     def test_a_read_given_an_edge_is_not_told_about_translations(self):
         """The edge sentence explains a shift; under a read it would explain an operator the file did not write."""
         with pytest.raises(LanguageError) as caught:
-            where_of('at(r, by=lk[h], edge=0)', Namespace(_schema()), 'probe')
+            where_of('at(r, by=lk[h], edge=0)', Namespace(_spec()), 'probe')
         assert 'translation' not in str(caught.value)
 
     def test_a_read_lands_on_the_dims_it_produces_and_reads_the_relation(self):
         """The mask is over what the relation maps onto, and a consumer attaches the relation as well as the operand."""
-        mask = where_of("at(h == 'north', by=lk[h])", Namespace(_schema()), 'probe')
+        mask = where_of("at(h == 'north', by=lk[h])", Namespace(_spec()), 'probe')
         assert mask is not None
         assert sorted(mask.dims) == ['g'], "'h' is read at lk(g), so g is all the mask is over"
         assert mask.names_read == frozenset({'lk'}), 'the relation is data a consumer attaches, the label is not'
 
     def test_a_count_reduces_the_dim_it_counts_along_away(self):
         """The count is one number per remaining coordinate, so a claim about each group needs no word for the group."""
-        mask = where_of('count(q, over=h) >= 2', Namespace(_schema()), 'probe')
+        mask = where_of('count(q, over=h) >= 2', Namespace(_spec()), 'probe')
         assert mask is not None
         assert sorted(mask.dims) == ['g'], "'q' is read over g and h, and h is counted away"
         assert mask.names_read == frozenset({'q'}), 'a consumer attaches what the counted predicate reads'
@@ -1700,7 +1700,7 @@ class TestRulesDecidedWithoutData:
         named = re.search(r'Write (.*?), or group', message)
         assert named is not None, f'the refusal holds out no call to write instead: {message}'
         rewrite = named.group(1).replace('...', operand)
-        _schema(**{'constraints.k': {'dims': ['g'], 'expression': f'{rewrite} >= 0'}}, **patch)
+        _spec(**{'constraints.k': {'dims': ['g'], 'expression': f'{rewrite} >= 0'}}, **patch)
 
     @pytest.mark.parametrize(
         ('patch', 'where'),
@@ -1721,7 +1721,7 @@ class TestRulesDecidedWithoutData:
         message = _refusal(**{'variables.p.where': where}, **patch)
         named = re.search(r'say which the comparison reads: (\S+)\.$', message)
         assert named is not None, f'the refusal holds out no column to read instead: {message}'
-        _schema(**{'variables.p.where': where.replace('lk', named.group(1), 1)}, **patch)
+        _spec(**{'variables.p.where': where.replace('lk', named.group(1), 1)}, **patch)
 
 
 class TestAssumptions:
@@ -1797,12 +1797,12 @@ class TestAssumptions:
         ],
     )
     def test_an_entry_the_language_admits(self, entry):
-        spec = _schema(assumptions={'sound': entry})
+        spec = _spec(assumptions={'sound': entry})
         assert set(spec.assumptions) == {'sound'}, 'the entry loads under the name the file wrote'
 
     def test_an_entry_round_trips_as_the_form_it_was_written_in(self):
         """A bare string stays one, and a mapping keeps only the keys it carried."""
-        spec = _schema(assumptions={'plain': 'c > 0', 'masked': {'holds': 'c > 0', 'where': 'flag'}})
+        spec = _spec(assumptions={'plain': 'c > 0', 'masked': {'holds': 'c > 0', 'where': 'flag'}})
         assert spec.to_dict()['assumptions'] == {'plain': 'c > 0', 'masked': {'holds': 'c > 0', 'where': 'flag'}}, (
             'neither form gains a key the file did not write'
         )
@@ -1857,7 +1857,7 @@ class TestTheFrontDoor:
 
     def test_an_empty_list_survives_the_round_trip(self):
         """`dims: []` is a scalar entry, not an absence — stripping it would put the variable on every dim it names."""
-        model = _schema(**{'variables.p.dims': []})
+        model = _spec(**{'variables.p.dims': []})
         assert model.to_dict()['variables']['p']['dims'] == [], 'the empty frame is written out, not dropped'
         assert to_spec(model.to_dict()).variables['p'].dims == [], 'and reads back as the scalar it declares'
 
@@ -1929,8 +1929,8 @@ class TestExpressionCases:
 
     def test_it_round_trips(self):
         """The mapping form goes back out as it came in, `otherwise:` and all."""
-        schema = to_spec(_cased(description='what is spare'))
-        assert to_spec(schema.to_dict()).to_yaml() == schema.to_yaml()
+        spec = to_spec(_cased(description='what is spare'))
+        assert to_spec(spec.to_dict()).to_yaml() == spec.to_yaml()
 
     def test_the_fallback_is_written_as_the_bare_value(self):
         """`otherwise:` carries nothing but its value, so a mapping around it would be ceremony."""
@@ -2099,16 +2099,16 @@ class TestANumberIsAnExpression:
     """`expression: 0` is a constant, and YAML reads it as an int rather than a string."""
 
     def test_a_number_is_read_as_the_expression_it_writes(self):
-        assert _schema(**{'expressions.always': {'expression': 1}}).expressions['always'].expression == '1'
+        assert _spec(**{'expressions.always': {'expression': 1}}).expressions['always'].expression == '1'
 
     def test_it_survives_the_round_trip_as_the_string_it_became(self):
-        model = _schema(**{'expressions.always': {'expression': 1.5}})
+        model = _spec(**{'expressions.always': {'expression': 1.5}})
         assert to_spec(model.to_dict()).expressions['always'].expression == '1.5'
 
     def test_a_boolean_is_still_not_an_expression(self):
         """`true` is not arithmetic, and an error naming the type reads better than one naming `'True'`."""
         with pytest.raises(SchemaError, match='valid string'):
-            _schema(**{'expressions.always': {'expression': True}})
+            _spec(**{'expressions.always': {'expression': True}})
 
 
 class TestAnEntryIsNamed:
@@ -2174,7 +2174,7 @@ class TestAnEntryIsNamed:
         )
 
     def test_an_ordinary_name_still_loads(self):
-        assert 'headroom_2' in _schema(**{'parameters.headroom_2': {'dims': ['g']}}).parameters
+        assert 'headroom_2' in _spec(**{'parameters.headroom_2': {'dims': ['g']}}).parameters
 
 
 @pytest.mark.parametrize(
@@ -2231,11 +2231,11 @@ def test_a_chain_of_named_expressions_is_held_to_the_resolved_depth_and_costs_no
 
 def test_a_name_may_open_with_an_underscore():
     """`expressions.md` said a name opens with a letter while the schema and the grammar both admitted `_`, so the page refused what the language accepts."""
-    schema = to_spec(
+    spec = to_spec(
         varied(DISPATCH_MODEL, **{'parameters._reserve': {'dims': ['generator']}, 'variables.p.where': '_reserve > 0'})
     )
 
-    assert '_reserve' in schema.parameters, 'a leading underscore is a name, as NAME and the schema both say'
+    assert '_reserve' in spec.parameters, 'a leading underscore is a name, as NAME and the schema both say'
 
 
 def test_each_entry_is_resolved_once_however_many_readers(monkeypatch):

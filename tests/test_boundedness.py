@@ -14,7 +14,7 @@ import pytest
 
 from mathspec.boundedness import unbounded_notes
 from mathspec.operators import BUILTIN_NAMES
-from tests.fixtures import SMALL_MODEL, schema_of, varied
+from tests.fixtures import SMALL_MODEL, spec_of, varied
 
 BASE = varied(
     SMALL_MODEL,
@@ -24,7 +24,7 @@ BASE = varied(
 
 
 def _advice(**patch):
-    return unbounded_notes(schema_of(BASE, **patch).program)
+    return unbounded_notes(spec_of(BASE, **patch).program)
 
 
 def _notes(**patch) -> list[str]:

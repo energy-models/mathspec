@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The schema the tests build from, and the helpers that vary it."""
+"""The spec the tests build from, and the helpers that vary it."""
 
 from __future__ import annotations
 
@@ -86,7 +86,7 @@ def varied(base: dict[str, Any], **patch: Any) -> dict[str, Any]:
     return raw
 
 
-def schema_of(source: str | Path | dict[str, Any], **patch: Any) -> Spec:
+def spec_of(source: str | Path | dict[str, Any], **patch: Any) -> Spec:
     """A ``Spec`` from a YAML path, YAML text, or a raw dict, ``**patch`` applied by :func:`varied`.
 
     ``Path`` means a file, ``str`` means the YAML itself.
@@ -96,9 +96,9 @@ def schema_of(source: str | Path | dict[str, Any], **patch: Any) -> Spec:
 
 
 def expanded(source: str | Path | dict[str, Any] | Spec, *kinds: Any, **patch: Any) -> Spec:
-    """:func:`schema_of` with its formulations written out — what a consumer building rows reads from a model with a curve."""
-    schema = source if isinstance(source, Spec) else schema_of(source, **patch)
-    return schema.expand(*kinds)
+    """:func:`spec_of` with its formulations written out — what a consumer building rows reads from a model with a curve."""
+    spec = source if isinstance(source, Spec) else spec_of(source, **patch)
+    return spec.expand(*kinds)
 
 
 def raw_of(source: str | Path | dict[str, Any]) -> dict[str, Any]:

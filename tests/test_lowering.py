@@ -65,7 +65,7 @@ from mathspec.program import (
 )
 from mathspec.resolution import Namespace
 from mathspec.spec import Spec
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, expanded, expression_of, schema_of, varied, where_of
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, expanded, expression_of, spec_of, varied, where_of
 
 DISPATCH_YAML = EXAMPLES / 'dispatch.yaml'
 
@@ -102,28 +102,28 @@ SHAPES_MODEL = varied(
 )
 
 
-def resolved(text: str, schema: Spec) -> Expression:
+def resolved(text: str, spec: Spec) -> Expression:
     """Parse, expand and resolve — the program tree an entry holds.
 
     The ``'t'`` is the error-context label the resolver stamps on refusals,
     not a dimension.
     """
-    return expression_of(text, Namespace(schema), 't')
+    return expression_of(text, Namespace(spec), 't')
 
 
 @pytest.fixture
-def dispatch_schema() -> Spec:
-    return schema_of(DISPATCH_YAML)
+def dispatch_spec() -> Spec:
+    return spec_of(DISPATCH_YAML)
 
 
 @pytest.fixture
-def dispatch_program(dispatch_schema) -> Program:
-    return dispatch_schema.program
+def dispatch_program(dispatch_spec) -> Program:
+    return dispatch_spec.program
 
 
 @pytest.fixture
-def shapes_schema() -> Spec:
-    return schema_of(SHAPES_MODEL)
+def shapes_spec() -> Spec:
+    return spec_of(SHAPES_MODEL)
 
 
 # ---------------------------------------------------------------------------
@@ -168,7 +168,7 @@ def test_a_file_with_no_objective_lowers_to_no_sense():
 
 def test_a_literal_amount_resolves_to_one_signed_number():
     """`offset=-1` parses as a unary minus over `1`; after resolution it is `-1`, for every reader alike."""
-    ns = Namespace(schema_of(DISPATCH_YAML, **{'dimensions.snapshot': {'dtype': 'int', 'ordered': True}}))
+    ns = Namespace(spec_of(DISPATCH_YAML, **{'dimensions.snapshot': {'dtype': 'int', 'ordered': True}}))
     node = expression_of('shift(dispatch, along=snapshot, offset=-1, edge=+0)', ns, 't')
     assert isinstance(node, Translate)
     assert (node.offset, node.fill) == (-1, 0.0)
@@ -210,12 +210,12 @@ def test_a_literal_amount_resolves_to_one_signed_number():
         ),
     ],
 )
-def test_a_where_is_one_resolved_predicate_with_every_literal_folded(dispatch_schema, where, expected):
+def test_a_where_is_one_resolved_predicate_with_every_literal_folded(dispatch_spec, where, expected):
     """One mask had two lowerings: `True` was dropped at the root and kept under a connective.
 
     A `BooleanLiteral` is a node a consumer meets at the root or nowhere.
     """
-    mask = where_of(where, Namespace(dispatch_schema), 't')
+    mask = where_of(where, Namespace(dispatch_spec), 't')
     assert (mask.root if mask is not None else None) == expected, (
         'the Mask carries exactly the resolved predicate, folded at resolution however the file spelled it'
     )
@@ -223,16 +223,16 @@ def test_a_where_is_one_resolved_predicate_with_every_literal_folded(dispatch_sc
 
 def test_a_folded_mask_reaches_the_entry_the_shorter_spelling_would_have():
     """The fold is the program's, not a helper's: two files, one entry."""
-    written_out = schema_of(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0 AND True'}).program
-    plain = schema_of(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0'}).program
+    written_out = spec_of(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0 AND True'}).program
+    plain = spec_of(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0'}).program
     assert written_out.variables['p'] == plain.variables['p'], 'the same mask, so the same entry'
 
 
-def test_an_unknown_where_name_is_an_error_at_lowering_too(dispatch_schema):
+def test_an_unknown_where_name_is_an_error_at_lowering_too(dispatch_spec):
     """It used to be a scalar-False mask in the eager lane: a model that
     builds, solves, and is silently empty. Resolution makes it a load error."""
     with pytest.raises(LanguageError, match="'no_such_param' not found"):
-        where_of('no_such_param', Namespace(dispatch_schema), 't')
+        where_of('no_such_param', Namespace(dispatch_spec), 't')
 
 
 def test_a_lowered_mask_cannot_be_rewritten_in_place(dispatch_program):
@@ -567,8 +567,8 @@ def test_a_mask_with_no_arithmetic_is_the_same_mask_after_lowering(dispatch_prog
     assert dispatch_program.variables['dispatch'].where == Mask(CAPACITY_POSITIVE)
 
 
-def test_a_power_resolves_to_a_node_of_its_own(dispatch_schema):
-    assert isinstance(resolved('cost ** cost', dispatch_schema), Power), 'a variable-free power has a node of its own'
+def test_a_power_resolves_to_a_node_of_its_own(dispatch_spec):
+    assert isinstance(resolved('cost ** cost', dispatch_spec), Power), 'a variable-free power has a node of its own'
 
 
 @pytest.mark.parametrize(
@@ -647,9 +647,9 @@ def test_a_power_resolves_to_a_node_of_its_own(dispatch_schema):
         ),
     ],
 )
-def test_a_construct_resolves_to_its_node(shapes_schema, expression, expected):
+def test_a_construct_resolves_to_its_node(shapes_spec, expression, expected):
     """Which node each surface construct becomes, and every field it arrives with."""
-    assert resolved(expression, shapes_schema) == expected, 'the whole frozen node, so no field is asserted by omission'
+    assert resolved(expression, shapes_spec) == expected, 'the whole frozen node, so no field is asserted by omission'
 
 
 def test_a_partition_keeps_its_group_when_the_relation_gains_a_value_column():
@@ -765,9 +765,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
 
 
 def test_a_binary_variable_lowers_to_a_binary_domain():
-    program = schema_of(
-        DISPATCH_YAML, **{'variables.dispatch.domain': 'binary', 'variables.dispatch.bounds': {}}
-    ).program
+    program = spec_of(DISPATCH_YAML, **{'variables.dispatch.domain': 'binary', 'variables.dispatch.bounds': {}}).program
     assert program.variables['dispatch'].domain == 'binary'
 
 
@@ -1037,7 +1035,7 @@ def test_the_lowered_regions_are_still_proved_apart():
     the other half: the mask lowering invents for `otherwise` is put through the
     same prover, against each stated case, and must overlap none of them.
     """
-    spec = schema_of(CASED)
+    spec = spec_of(CASED)
     regions = _cases_in(spec.program).regions
     named = {f'region{i}': r.when.root for i, r in enumerate(regions)}
 

@@ -556,16 +556,16 @@ def test_a_parameter_is_upright_and_a_variable_is_italic(name: FormatName, fmt: 
 def test_nothing_the_model_is_given_prints_italic():
     """The convention as a property of the whole document, not of a fragment: a
     rendering path added later reaches the page through its own call."""
-    schema = to_spec(golden.MODEL)
-    computed = set(schema.variables) | chosen_expressions(schema.program)
+    spec = to_spec(golden.MODEL)
+    computed = set(spec.variables) | chosen_expressions(spec.program)
     italic = {m.replace(r'\_', '_') for m in re.findall(r'\\mathit\{([^}]*)\}', to_latex(golden.MODEL))}
     assert italic <= computed, (
         f'{sorted(italic - computed)} print italic and are neither chosen by the solver nor read off its '
         f'solution — upright is what the model is given, italic what it computes'
     )
 
-    symbols = symbols_for(schema.program, LATEX, SymbolTable('latex'))
-    given = {name: symbols.name[name] for name in schema.parameters}
+    symbols = symbols_for(spec.program, LATEX, SymbolTable('latex'))
+    given = {name: symbols.name[name] for name in spec.parameters}
     assert all(symbol.startswith(r'\mathrm{') for symbol in given.values()), (
         f'derived upright for every parameter, but got {sorted(s for s in given.values() if "mathrm" not in s)}'
     )

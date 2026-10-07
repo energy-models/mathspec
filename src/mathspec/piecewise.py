@@ -307,7 +307,7 @@ def leaves_ungated(gate: VariableSpec | Variable | None) -> bool:
     return gate is not None and gate.where is not None and gate.missing != 'neutral'
 
 
-def curve_frame(schema: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expression]) -> tuple[str, ...]:
+def curve_frame(spec: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expression]) -> tuple[str, ...]:
     """The dimensions entry *name* builds one curve per coordinate of: every one its links and its gate carry.
 
     In file order, because iterating a set would vary the emitted
@@ -320,18 +320,18 @@ def curve_frame(schema: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expr
             expression carries.
     """
     context = f"piecewise '{name}'"
-    carried = [(f'link {i} expression', dims_of(node, schema, f'{context} link {i}')) for i, node in enumerate(links)]
+    carried = [(f'link {i} expression', dims_of(node, spec, f'{context} link {i}')) for i, node in enumerate(links)]
     if pw.activity is not None:
-        carried.append(('activity', frozenset(schema.variables[pw.activity].dims)))
+        carried.append(('activity', frozenset(spec.variables[pw.activity].dims)))
     frame: list[str] = []
     for what, found in carried:
-        for d in (d for d in schema.dimensions if d in found):
+        for d in (d for d in spec.dimensions if d in found):
             if d == pw.over:
                 raise DimensionError(f"{context}: {what} already carries the breakpoint dim '{pw.over}'")
             if d not in frame:
                 frame.append(d)
     for i, link in enumerate(pw.links):
-        if stray := [d for d in schema.parameters[link.values].dims if d != pw.over and d not in frame]:
+        if stray := [d for d in spec.parameters[link.values].dims if d != pw.over and d not in frame]:
             raise DimensionError(
                 f"{context}: link {i} values parameter '{link.values}' carries {stray}, which no link "
                 f'expression does — the entry builds one curve per coordinate of {frame}, so a curve '
@@ -339,7 +339,7 @@ def curve_frame(schema: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expr
                 f"it, or drop it from '{link.values}'."
             )
     if pw.points is not None and pw.nominated is None:
-        mask = schema.parameters[pw.points].dims
+        mask = spec.parameters[pw.points].dims
         if stray := [d for d in mask if d != pw.over and d not in frame]:
             raise DimensionError(
                 f"{context}: points parameter '{pw.points}' carries {stray}, which the links do not — "
@@ -355,11 +355,11 @@ class _Expansion:
     curve: the ``bool`` the file named, or one of the entry's own values
     parameters, which as a bare name in a ``where`` is true wherever it has a
     row. Nothing here can fail: every rule an entry is held to was decided when
-    *schema* loaded.
+    *spec* loaded.
     """
 
-    def __init__(self, schema: Spec, raw: dict[str, object], name: str, pw: PiecewiseSpec, curve: Piecewise) -> None:
-        self.schema = schema
+    def __init__(self, spec: Spec, raw: dict[str, object], name: str, pw: PiecewiseSpec, curve: Piecewise) -> None:
+        self.spec = spec
         self.raw = raw
         self.name = name
         #: The entry as the file wrote it, for the link text the rows repeat.
@@ -445,7 +445,7 @@ class _Expansion:
         activity = self.pw.activity
         if activity is None:
             return (('', None, '1'),)
-        if not leaves_ungated(self.schema.variables[activity]):
+        if not leaves_ungated(self.spec.variables[activity]):
             return (('', None, f'({activity})'),)
         return (('', activity, f'({activity})'), (_UNGATED, f'NOT {activity}', '1'))
 
@@ -479,7 +479,7 @@ class _Expansion:
             )
 
 
-def refused_under_points(schema: Spec) -> Iterator[str]:
+def refused_under_points(spec: Spec) -> Iterator[str]:
     """A refusal for each values parameter of a curve with ``points:`` that reads a missing row as ``refused``.
 
     ``points:`` says the curve stops short of the dimension, so its tables
@@ -487,11 +487,11 @@ def refused_under_points(schema: Spec) -> Iterator[str]:
     there: the curve never runs short, and a mask that names the table marks
     every breakpoint.
     """
-    for entry_name, pw in schema.piecewise.items():
+    for entry_name, pw in spec.piecewise.items():
         if pw.points is None:
             continue
         for name in dict.fromkeys(link.values for link in pw.links):
-            if schema.parameters[name].missing == 'refused':
+            if spec.parameters[name].missing == 'refused':
                 yield (
                     f"parameter '{name}' is refused where a row is missing, and piecewise '{entry_name}' reads it under "
                     f"points: '{pw.points}', which stops the curve where its rows stop. Declare missing: neutral, "
@@ -499,25 +499,25 @@ def refused_under_points(schema: Spec) -> Iterator[str]:
                 )
 
 
-def expand_piecewise(schema: Spec) -> Spec:
-    """*schema* with every ``piecewise:`` entry written out — *schema* itself where it declares none.
+def expand_piecewise(spec: Spec) -> Spec:
+    """*spec* with every ``piecewise:`` entry written out — *spec* itself where it declares none.
 
     A ``method: adjacency`` entry states its restriction as the set
     ``method: sos2`` states, and then that set is written out here too: the
     binaries are what the method *is*, so the spec that comes back carries no
     set of its own ([`mathspec.sos.emit`][] is where they are spelled).
-    Each entry's frame and names are read off the program *schema* lowered to.
+    Each entry's frame and names are read off the program *spec* lowered to.
     """
-    if not schema.piecewise:
-        return schema
-    program = schema.program
-    raw = schema.model_dump()
+    if not spec.piecewise:
+        return spec
+    program = spec.program
+    raw = spec.model_dump()
     raw.setdefault('variables', {})
     raw.setdefault('constraints', {})
-    for name, pw in schema.piecewise.items():
-        _Expansion(schema, raw, name, pw, program.piecewise[name]).expand()
+    for name, pw in spec.piecewise.items():
+        _Expansion(spec, raw, name, pw, program.piecewise[name]).expand()
     raw['piecewise'].clear()
-    for name, pw in schema.piecewise.items():
+    for name, pw in spec.piecewise.items():
         if pw.method == 'adjacency':
             sos.emit(raw, name)
     return Spec.model_validate(raw)

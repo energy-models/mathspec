@@ -65,7 +65,7 @@ NameKind = Literal['variable', 'parameter', 'dimension', 'relation']
 
 
 class Namespace:
-    """The declared names of one schema, by kind — the whole of what a file may name, read once.
+    """The declared names of one spec, by kind — the whole of what a file may name, read once.
 
     A name has one kind: validation.py refuses one declared under two sections.
     """
@@ -84,52 +84,52 @@ class Namespace:
         'masks',
         'parameters',
         'relations',
-        'schema',
+        'spec',
         'variables',
     )
 
-    def __init__(self, schema: Spec) -> None:
-        #: The schema the names come from — what an expression is expanded and
+    def __init__(self, spec: Spec) -> None:
+        #: The spec the names come from — what an expression is expanded and
         #: dim-checked against, since macros, named expressions and the dim
         #: rules read entries the flat listing below does not carry.
-        self.schema = schema
-        variables = {**schema.variables, **schema.given.variables, **schema.given.expressions}
-        parameters = {**schema.parameters, **schema.given.parameters}
+        self.spec = spec
+        variables = {**spec.variables, **spec.given.variables, **spec.given.expressions}
+        parameters = {**spec.parameters, **spec.given.parameters}
         self.variables = frozenset(variables)
-        self.bodies = frozenset(schema.expressions)
+        self.bodies = frozenset(spec.expressions)
         #: The declared masks, read by name wherever a where string is.
-        self.masks = frozenset(schema.masks)
+        self.masks = frozenset(spec.masks)
         #: The masks this file reads under ``given:``. A where reads each as
         #: the boolean data it is to this file, so each is a parameter here too.
-        self.given_masks = frozenset(schema.given.masks)
+        self.given_masks = frozenset(spec.given.masks)
         self.parameters = frozenset(parameters) | self.given_masks
-        self.dimensions = frozenset(schema.dimensions)
+        self.dimensions = frozenset(spec.dimensions)
         #: The declared constraint names, off the flat namespace: a bare name
         #: never reaches them, so a spec may name a constraint after a variable.
         #: Consulted only in ``dual()``'s argument position.
-        self.constraints = frozenset({**schema.constraints, **schema.given.constraints})
+        self.constraints = frozenset({**spec.constraints, **spec.given.constraints})
         #: name -> declared dtype, for dimensions, parameters and relations alike;
         #: what a where comparison checks its literal against.
         self.dtypes: dict[str, DeclaredDtype] = {
             **{p: pd.dtype for p, pd in parameters.items()},
-            **{m: cast('DeclaredDtype', 'bool') for m in schema.given.masks},
-            **{d: dd.dtype for d, dd in schema.dimensions.items()},
+            **{m: cast('DeclaredDtype', 'bool') for m in spec.given.masks},
+            **{d: dd.dtype for d, dd in spec.dimensions.items()},
         }
         #: parameter name -> the value its ``missing:`` reads a missing row as,
         #: for the parameters that name one; what a where comparison reads there.
         self.defaults: dict[str, bool | float] = {
-            p: pd.missing for p, pd in schema.parameters.items() if not isinstance(pd.missing, str)
+            p: pd.missing for p, pd in spec.parameters.items() if not isinstance(pd.missing, str)
         }
         #: relation name -> its columns and key, as declared.
         self.relations: dict[str, Relation] = {
-            n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in schema.relations.items()
+            n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()
         }
         #: parameter or variable name -> the dims it is read through —
         #: parameters by their ``dims``, variables by their frame. Stamped onto
         #: each leaf a where names, the way a relation leaf carries ``over``.
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: tuple(pd.dims) for p, pd in parameters.items()},
-            **{m: tuple(md.dims) for m, md in schema.given.masks.items()},
+            **{m: tuple(md.dims) for m, md in spec.given.masks.items()},
             **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
         }
         #: named expression -> its resolved node, or ``None``, and its refusals;
@@ -188,7 +188,7 @@ class Namespace:
         if name not in self._masks:
             self._loading.append(name)
             errors: list[str] = []
-            node = _mask(name, self.schema.masks[name], self, errors)
+            node = _mask(name, self.spec.masks[name], self, errors)
             self._loading.pop()
             self._masks[name] = (node, tuple(errors))
         return self._masks[name]
@@ -214,7 +214,7 @@ class Namespace:
                 self._loading.append(waiting[0])
                 continue
             errors: list[str] = []
-            node = _named(top, self.schema.expressions[top], self, errors)
+            node = _named(top, self.spec.expressions[top], self, errors)
             self._named[top] = (node, tuple(errors))
             self._loading.pop()
         return self._named[name]
@@ -225,7 +225,7 @@ class Namespace:
         A text that does not parse or expand reads nothing here: the
         resolution that follows reports it.
         """
-        entry, context = self.schema.expressions[name], f"Named expression '{name}'"
+        entry, context = self.spec.expressions[name], f"Named expression '{name}'"
         arithmetic: list[ParsedNode] = []
         for text in (entry.expression, *(case.expression for case in (entry.cases or {}).values()), entry.otherwise):
             if text is not None:
@@ -252,7 +252,7 @@ class Namespace:
 
     def unordered(self, name: str) -> bool:
         """Whether the declared dimension *name* is one whose order the file does not declare part of the model."""
-        return not self.schema.dimensions[name].ordered
+        return not self.spec.dimensions[name].ordered
 
     def kind(self, name: str) -> NameKind | None:
         """What *name* was declared as, or ``None`` where the file declares it nowhere."""
@@ -346,7 +346,7 @@ def resolve_expression(
     Returns:
         The tree, or ``None`` once anything failed — appending to *errors*
         rather than raising, so a caller collecting problems across a whole
-        schema reports them together. Also ``None``, with nothing appended,
+        spec reports them together. Also ``None``, with nothing appended,
         where a name in *formals* stands under *node*: a macro template is
         checked by the rules a call site is before anything calls it, and
         only the call site that binds its formals has a tree to build.

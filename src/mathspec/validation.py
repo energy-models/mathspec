@@ -50,7 +50,7 @@ def to_spec(spec: str | Path | Mapping[str, object] | Spec) -> Spec:
             mapping, or a loaded [`Spec`][].
 
     Returns:
-        The schema *as the file declares it*, ``piecewise:`` intact.
+        The spec *as the file declares it*, ``piecewise:`` intact.
 
     Raises:
         LanguageError: Anything the language does not accept, a text that is
@@ -65,8 +65,8 @@ def to_spec(spec: str | Path | Mapping[str, object] | Spec) -> Spec:
     return Spec.model_validate(spec if isinstance(spec, Mapping) else read_spec(spec))
 
 
-def emitted_name_errors(schema: Spec, program: Program) -> list[str]:
-    """Every name a set or curve of *program* would write out that *schema* already declares.
+def emitted_name_errors(spec: Spec, program: Program) -> list[str]:
+    """Every name a set or curve of *program* would write out that *spec* already declares.
 
     Read off the program rather than the file, since what a curve writes is
     decided by the curve as lowered — its links, its method, its mask.
@@ -75,20 +75,20 @@ def emitted_name_errors(schema: Spec, program: Program) -> list[str]:
         *((f"Sos '{name}'", EmittedSet.of(name, entry.sos_type).by_kind) for name, entry in program.sos.items()),
         *((f"piecewise '{name}'", EmittedCurve.of(name, curve).by_kind) for name, curve in program.piecewise.items()),
     ]
-    return [error for context, by_kind in by_entry for error in _collisions(schema, context, by_kind)]
+    return [error for context, by_kind in by_entry for error in _collisions(spec, context, by_kind)]
 
 
-def reference_errors(schema: Spec) -> list[str]:
-    """Every cross-entry rule *schema* breaks, collected rather than raised on the first."""
+def reference_errors(spec: Spec) -> list[str]:
+    """Every cross-entry rule *spec* breaks, collected rather than raised on the first."""
     return [
-        *_name_collisions(schema),
-        *_frame_dimensions(schema),
-        *_relation_targets(schema),
-        *_bound_names(schema),
-        *_sos_shapes(schema),
-        *_sos_bounds(schema),
-        *_piecewise_references(schema),
-        *_given_constraint_collisions(schema),
+        *_name_collisions(spec),
+        *_frame_dimensions(spec),
+        *_relation_targets(spec),
+        *_bound_names(spec),
+        *_sos_shapes(spec),
+        *_sos_bounds(spec),
+        *_piecewise_references(spec),
+        *_given_constraint_collisions(spec),
     ]
 
 
@@ -97,27 +97,27 @@ def undeclared_dimension(kind: str, name: str, dimension: str) -> str:
     return f"{kind} '{name}' references undeclared dimension '{dimension}'. Declare it under 'dimensions:'."
 
 
-def _flat_namespace(schema: Spec) -> list[tuple[str, Iterable[str]]]:
+def _flat_namespace(spec: Spec) -> list[tuple[str, Iterable[str]]]:
     """Each kind of entry whose names share the one namespace an expression reads, in file order."""
     return [
-        ('dimension', schema.dimensions),
-        ('relation', schema.relations),
-        ('parameter', schema.parameters),
-        ('given parameter', schema.given.parameters),
-        ('variable', schema.variables),
-        ('given variable', schema.given.variables),
-        ('named expression', schema.expressions),
-        ('given expression', schema.given.expressions),
-        ('mask', schema.masks),
-        ('given mask', schema.given.masks),
-        ('macro', schema.macros),
+        ('dimension', spec.dimensions),
+        ('relation', spec.relations),
+        ('parameter', spec.parameters),
+        ('given parameter', spec.given.parameters),
+        ('variable', spec.variables),
+        ('given variable', spec.given.variables),
+        ('named expression', spec.expressions),
+        ('given expression', spec.given.expressions),
+        ('mask', spec.masks),
+        ('given mask', spec.given.masks),
+        ('macro', spec.macros),
     ]
 
 
-def _name_collisions(schema: Spec) -> Iterator[str]:
+def _name_collisions(spec: Spec) -> Iterator[str]:
     """A name is declared once, and never as a built-in operator."""
     seen: dict[str, str] = {}
-    for kind, group in _flat_namespace(schema):
+    for kind, group in _flat_namespace(spec):
         for name in group:
             if name in BUILTIN_NAMES:
                 yield (
@@ -134,35 +134,35 @@ def _name_collisions(schema: Spec) -> Iterator[str]:
                 seen[name] = kind
 
 
-def _given_constraint_collisions(schema: Spec) -> Iterator[str]:
+def _given_constraint_collisions(spec: Spec) -> Iterator[str]:
     """A row family is either built here or given, never both.
 
     Constraint names sit outside the flat namespace [`_name_collisions`][]
     walks, so this is the one place the two constraint sections meet.
     """
-    for name in schema.given.constraints:
-        if name in schema.constraints:
+    for name in spec.given.constraints:
+        if name in spec.constraints:
             yield (
                 f"Given constraint '{name}' is also declared under 'constraints:'. A row family is "
                 f'either built by this file or given to it — drop one of the two.'
             )
 
 
-def _frame_dimensions(schema: Spec) -> Iterator[str]:
+def _frame_dimensions(spec: Spec) -> Iterator[str]:
     """Every frame is a product of distinct, declared dimensions."""
     frames = [
-        *(('Parameter', name, p.dims) for name, p in schema.parameters.items()),
-        *(('Variable', name, v.dims) for name, v in schema.variables.items()),
-        *(('Given parameter', name, g.dims) for name, g in schema.given.parameters.items()),
-        *(('Given variable', name, g.dims) for name, g in schema.given.variables.items()),
-        *(('Given expression', name, g.dims) for name, g in schema.given.expressions.items()),
-        *(('Given constraint', name, g.dims) for name, g in schema.given.constraints.items()),
-        *(('Given mask', name, g.dims) for name, g in schema.given.masks.items()),
-        *(('Constraint', name, c.dims) for name, c in schema.constraints.items()),
-        *(('Named expression', name, e.dims or []) for name, e in schema.expressions.items()),
+        *(('Parameter', name, p.dims) for name, p in spec.parameters.items()),
+        *(('Variable', name, v.dims) for name, v in spec.variables.items()),
+        *(('Given parameter', name, g.dims) for name, g in spec.given.parameters.items()),
+        *(('Given variable', name, g.dims) for name, g in spec.given.variables.items()),
+        *(('Given expression', name, g.dims) for name, g in spec.given.expressions.items()),
+        *(('Given constraint', name, g.dims) for name, g in spec.given.constraints.items()),
+        *(('Given mask', name, g.dims) for name, g in spec.given.masks.items()),
+        *(('Constraint', name, c.dims) for name, c in spec.constraints.items()),
+        *(('Named expression', name, e.dims or []) for name, e in spec.expressions.items()),
     ]
     for kind, name, dims in frames:
-        yield from (undeclared_dimension(kind, name, d) for d in dims if d not in schema.dimensions)
+        yield from (undeclared_dimension(kind, name, d) for d in dims if d not in spec.dimensions)
         yield from (
             f"{kind} '{name}' names dimension '{d}' twice. A frame is a product of distinct dimensions."
             for d, count in Counter(dims).items()
@@ -170,9 +170,9 @@ def _frame_dimensions(schema: Spec) -> Iterator[str]:
         )
 
 
-def _relation_targets(schema: Spec) -> Iterator[str]:
+def _relation_targets(spec: Spec) -> Iterator[str]:
     """A relation has at least two columns over declared dimensions, each named once, and a key naming some of them."""
-    for lname, lk in schema.relations.items():
+    for lname, lk in spec.relations.items():
         if len(lk.pairs) < 2:
             yield (
                 f"Relation '{lname}' has {len(lk.pairs)} column(s). A relation relates dimensions, so 'key:' and "
@@ -197,13 +197,13 @@ def _relation_targets(schema: Spec) -> Iterator[str]:
             if role in lk.value_roles
         )
         yield from (
-            undeclared_dimension('Relation', lname, d) for d in dict.fromkeys(lk.dims) if d not in schema.dimensions
+            undeclared_dimension('Relation', lname, d) for d in dict.fromkeys(lk.dims) if d not in spec.dimensions
         )
         yield from (
             f"Relation '{lname}' names column '{role}' after dimension '{role}', but the column is over "
             f"'{dim}'. A column named like a dimension is read as over it — name it after what it holds."
             for role, dim in lk.pairs
-            if role in schema.dimensions and role != dim
+            if role in spec.dimensions and role != dim
         )
         if lk.value_roles:
             yield from (
@@ -216,10 +216,10 @@ def _relation_targets(schema: Spec) -> Iterator[str]:
             )
 
 
-def _bound_names(schema: Spec) -> Iterator[str]:
+def _bound_names(spec: Spec) -> Iterator[str]:
     """A named bound is a numeric parameter, declared here or given."""
-    parameters = {**schema.parameters, **schema.given.parameters}
-    for vname, vdef in schema.variables.items():
+    parameters = {**spec.parameters, **spec.given.parameters}
+    for vname, vdef in spec.variables.items():
         for side in ('lower', 'upper'):
             val = getattr(vdef.bounds, side)
             if not isinstance(val, str):
@@ -241,26 +241,26 @@ def _bound_names(schema: Spec) -> Iterator[str]:
             yield (f"Variable '{vname}' bounds.{side}: {detail}.")
 
 
-def _sos_shapes(schema: Spec) -> Iterator[str]:
+def _sos_shapes(spec: Spec) -> Iterator[str]:
     """A set runs along one dim of one declared variable, and a variable carries one set."""
     claimed: dict[str, str] = {}
-    for sname, entry in schema.sos.items():
+    for sname, entry in spec.sos.items():
         context = f"Sos '{sname}'"
-        if entry.along not in schema.dimensions:
+        if entry.along not in spec.dimensions:
             yield (undeclared_dimension('Sos', sname, entry.along))
-        elif entry.variable not in schema.variables:
+        elif entry.variable not in spec.variables:
             yield (
                 f"{context}: '{entry.variable}' is not a declared variable.\n"
-                f'  Variables: {sorted(schema.variables)}\n'
+                f'  Variables: {sorted(spec.variables)}\n'
                 f'A set is over one variable, so a parameter or an expression cannot carry one.'
             )
-        elif entry.along not in schema.variables[entry.variable].dims:
+        elif entry.along not in spec.variables[entry.variable].dims:
             yield (
                 f"{context}: along '{entry.along}' is not a dim of variable "
-                f"'{entry.variable}' (dims {schema.variables[entry.variable].dims}). The set runs "
+                f"'{entry.variable}' (dims {spec.variables[entry.variable].dims}). The set runs "
                 f"along one of the variable's own dims — one set per coordinate of the rest."
             )
-        elif entry.type == 2 and not schema.dimensions[entry.along].ordered:
+        elif entry.type == 2 and not spec.dimensions[entry.along].ordered:
             yield unordered(context, f'type: 2 along {entry.along}', entry.along)
         elif entry.variable in claimed:
             yield (
@@ -272,7 +272,7 @@ def _sos_shapes(schema: Spec) -> Iterator[str]:
             claimed[entry.variable] = sname
 
 
-def _sos_bounds(schema: Spec) -> Iterator[str]:
+def _sos_bounds(spec: Spec) -> Iterator[str]:
     """A set states what the binaries it expands to state: each side of a member carries a coefficient.
 
     The rewrite holds an unpicked member at zero from both sides, so a side
@@ -281,8 +281,8 @@ def _sos_bounds(schema: Spec) -> Iterator[str]:
     it. Decided here rather than where the rewrite runs, so a set the
     language cannot state twice is refused before any data exists.
     """
-    for sname, entry in schema.sos.items():
-        if (member := schema.variables.get(entry.variable)) is None:
+    for sname, entry in spec.sos.items():
+        if (member := spec.variables.get(entry.variable)) is None:
             continue
         context = f"Sos '{sname}'"
         below, above = coefficients(member.domain, member.bounds.lower, member.bounds.upper)
@@ -300,53 +300,53 @@ def _sos_bounds(schema: Spec) -> Iterator[str]:
             )
 
 
-def _piecewise_references(schema: Spec) -> Iterator[str]:
+def _piecewise_references(spec: Spec) -> Iterator[str]:
     """A curve runs along a declared dimension through numeric values parameters carrying it, gated by a binary, masked by a bool."""
-    for name, pw in schema.piecewise.items():
+    for name, pw in spec.piecewise.items():
         context = f"piecewise '{name}'"
-        if pw.over not in schema.dimensions:
+        if pw.over not in spec.dimensions:
             yield undeclared_dimension('piecewise', name, pw.over)
             continue
-        if not schema.dimensions[pw.over].ordered:
+        if not spec.dimensions[pw.over].ordered:
             yield unordered(context, f'over: {pw.over}', pw.over)
         for i, link in enumerate(pw.links):
-            if link.values not in schema.parameters:
+            if link.values not in spec.parameters:
                 yield f"{context}: link {i} values references undeclared parameter '{link.values}'"
-            elif (dtype := schema.parameters[link.values].dtype) not in NUMERIC_DTYPES:
+            elif (dtype := spec.parameters[link.values].dtype) not in NUMERIC_DTYPES:
                 yield (
                     f"{context}: link {i} values parameter '{link.values}' is declared dtype: {dtype}, and a "
                     f'breakpoint is a number. Declare it dtype: float or int.'
                 )
-            elif pw.over not in schema.parameters[link.values].dims:
+            elif pw.over not in spec.parameters[link.values].dims:
                 yield (
                     f"{context}: link {i} values parameter '{link.values}' must carry dim "
-                    f"'{pw.over}' (has {schema.parameters[link.values].dims})"
+                    f"'{pw.over}' (has {spec.parameters[link.values].dims})"
                 )
         if (activity := pw.activity) is not None:
-            if activity not in schema.variables:
+            if activity not in spec.variables:
                 yield (
                     f"{context}: activity '{activity}' is not a declared variable. A gate is a binary variable; "
                     f'declare it, or drop activity: for weights that sum to 1.'
                 )
-            elif schema.variables[activity].domain != 'binary':
+            elif spec.variables[activity].domain != 'binary':
                 yield f"{context}: activity variable '{activity}' must be binary"
         if (points := pw.points) is None or pw.nominated is not None:
             continue
-        if points not in schema.parameters:
+        if points not in spec.parameters:
             yield f"{context}: points references undeclared parameter '{points}'"
-        elif (dtype := schema.parameters[points].dtype) != 'bool':
+        elif (dtype := spec.parameters[points].dtype) != 'bool':
             yield (
                 f"{context}: points parameter '{points}' is {dtype}, and a mask is a bool parameter — one "
                 f'saying, per breakpoint, whether the curve reaches it. Declare it dtype: bool.'
             )
-        elif pw.over not in schema.parameters[points].dims:
+        elif pw.over not in spec.parameters[points].dims:
             yield (
                 f"{context}: points parameter '{points}' must carry dim '{pw.over}' — "
-                f'it says how far each curve runs along it (has {schema.parameters[points].dims})'
+                f'it says how far each curve runs along it (has {spec.parameters[points].dims})'
             )
 
 
-def _collisions(schema: Spec, context: str, by_kind: Iterable[tuple[str, Iterable[str]]]) -> Iterator[str]:
+def _collisions(spec: Spec, context: str, by_kind: Iterable[tuple[str, Iterable[str]]]) -> Iterator[str]:
     """The refusal for each name *context*'s expansion writes that the file already declares, by kind.
 
     An emitted variable joins the flat namespace, so any entry there
@@ -354,10 +354,10 @@ def _collisions(schema: Spec, context: str, by_kind: Iterable[tuple[str, Iterabl
     """
     sections = {'named expression': 'expressions', 'sos': 'sos', 'given variable': 'given: variables'}
     declared: dict[str, dict[str, str]] = {
-        'variable': {name: kind for kind, group in _flat_namespace(schema) for name in group},
-        'constraint': dict.fromkeys(schema.constraints, 'constraint'),
-        'sos': dict.fromkeys(schema.sos, 'sos'),
-        'assumption': dict.fromkeys(schema.assumptions, 'assumption'),
+        'variable': {name: kind for kind, group in _flat_namespace(spec) for name in group},
+        'constraint': dict.fromkeys(spec.constraints, 'constraint'),
+        'sos': dict.fromkeys(spec.sos, 'sos'),
+        'assumption': dict.fromkeys(spec.assumptions, 'assumption'),
     }
     for kind, names in by_kind:
         yield from (

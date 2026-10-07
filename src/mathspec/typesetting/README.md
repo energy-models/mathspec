@@ -41,7 +41,7 @@ Two rules keep the split honest:
   math with `math()` when it embeds it in prose, so the walk never knows which
   mode it is in.
 - **A format spells; it never decides.** No method in `format.py` takes a
-  syntax-tree node or a schema. If a format had to look at the spec to answer a
+  syntax-tree node or a spec. If a format had to look at the spec to answer a
   question, that question belongs in the walk.
 
 ## Notation

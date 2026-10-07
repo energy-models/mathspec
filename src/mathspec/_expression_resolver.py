@@ -309,7 +309,7 @@ class ExpressionResolver:
     def _at(self, operand: Expression, columns: ColumnsNode) -> Expression | None:
         """``at(x, by=relation[column])``: *operand* read at the value of *columns* each row of the relation holds."""
         try:
-            inner = dims_of(operand, self.ns.schema, self.context)
+            inner = dims_of(operand, self.ns.spec, self.context)
         except DimensionError as e:
             self.errors.append(str(e))
             return None
@@ -350,7 +350,7 @@ class ExpressionResolver:
     def _bare_sum(self, operand: Expression) -> Expression | None:
         """``sum(x)`` with no ``over=`` or ``by=`` reduces every dim the operand carries, which it has to carry some of."""
         try:
-            inner = dims_of(operand, self.ns.schema, self.context)
+            inner = dims_of(operand, self.ns.spec, self.context)
         except DimensionError as e:
             self.errors.append(str(e))
             return None

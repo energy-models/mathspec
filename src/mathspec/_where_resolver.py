@@ -151,7 +151,7 @@ class WhereResolver:
             return node
         match kind:
             case 'parameter':
-                declared = ns.schema.parameters.get(node.name)
+                declared = ns.spec.parameters.get(node.name)
                 if declared is not None and declared.missing == 'refused' and declared.dtype in ('int', 'str'):
                     rewrite = (
                         f'Declare `missing: absent`, or compare the label: where: "{node.name} == \'...\'".'
@@ -395,7 +395,7 @@ class WhereResolver:
         assert len(sides) == 2, 'a side of a where builds or refuses, since a where holds no formal'
         dims: set[str] = set()
         for side in sides:
-            if given := sorted(variables_of(side) & set(ns.schema.given.expressions)):
+            if given := sorted(variables_of(side) & set(ns.spec.given.expressions)):
                 self.errors.append(
                     f'{context}: a where compares expressions, and one side reads the given expression '
                     f'{given[0]!r}. {GIVEN_IN_A_MASK}'
@@ -413,7 +413,7 @@ class WhereResolver:
             else:
                 try:
                     degree.check_expression(side, context)
-                    dims |= dims_of(side, ns.schema, context)
+                    dims |= dims_of(side, ns.spec, context)
                 except LanguageError as e:
                     self.errors.append(str(e))
         if len(self.errors) > found:
@@ -426,7 +426,7 @@ class WhereResolver:
                 f'the comparison.'
             )
             return node
-        return ExpressionComparison(left, node.op, right, tuple(d for d in ns.schema.dimensions if d in dims))
+        return ExpressionComparison(left, node.op, right, tuple(d for d in ns.spec.dimensions if d in dims))
 
     def _position(
         self, call: FunctionCallNode, node: UnresolvedComparisonNode
@@ -485,7 +485,7 @@ class WhereResolver:
                         return node
                     dims = tuple(ns.relations[left_name].dim(k) for k in ns.relations[left_name].key)
                     return RelationPairComparison(left_name, left, right_name, right, plain.op, dims)
-                given = right_name in ns.schema.given.expressions
+                given = right_name in ns.spec.given.expressions
                 self.errors.append(_declared_rhs_error(context, plain, value, rhs_kind, given=given))
                 return node
 
@@ -524,7 +524,7 @@ class WhereResolver:
                 assert column is not None
                 shape = ns.relations[left_name]
                 return RelationComparison(left_name, column, plain.op, value, tuple(shape.dim(k) for k in shape.key))
-            case 'variable' if left_name in ns.schema.given.expressions:
+            case 'variable' if left_name in ns.spec.given.expressions:
                 self.errors.append(f"{context}: where references the given expression '{left_name}'. {GIVEN_IN_A_MASK}")
             case 'variable':
                 self.errors.append(

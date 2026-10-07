@@ -16,13 +16,13 @@ from mathspec.degree import calls_dual, check_binary, check_expression
 from mathspec.errors import LanguageError
 from mathspec.program import carries_variable
 from mathspec.resolution import Namespace
-from tests.fixtures import SMALL_MODEL, expression_of, schema_of
+from tests.fixtures import SMALL_MODEL, expression_of, spec_of
 
-SCHEMA = schema_of(SMALL_MODEL)
+SPEC = spec_of(SMALL_MODEL)
 
 
 def _ast(text: str):
-    return expression_of(text, Namespace(SCHEMA), 'test')
+    return expression_of(text, Namespace(SPEC), 'test')
 
 
 @pytest.mark.parametrize(
@@ -107,8 +107,8 @@ def test_the_context_prefixes_the_sentence_and_an_empty_one_leaves_it_bare(conte
 
 
 def _dual_ast(text: str):
-    schema = schema_of(SMALL_MODEL, **{'constraints.lim': {'dims': ['g'], 'expression': 'p <= c'}})
-    return expression_of(text, Namespace(schema), 'test')
+    spec = spec_of(SMALL_MODEL, **{'constraints.lim': {'dims': ['g'], 'expression': 'p <= c'}})
+    return expression_of(text, Namespace(spec), 'test')
 
 
 def test_a_dual_carries_no_variable():
@@ -138,7 +138,7 @@ def test_calls_dual_finds_a_dual_inside_a_cased_arm():
     dual a non-recursive check — one that only inspected the node it was
     handed — would miss.
     """
-    schema = schema_of(
+    spec = spec_of(
         SMALL_MODEL,
         **{
             'constraints.lim': {'dims': ['g'], 'expression': 'p <= c'},
@@ -149,5 +149,5 @@ def test_calls_dual_finds_a_dual_inside_a_cased_arm():
             },
         },
     )
-    ast = expression_of('dcase', Namespace(schema), 'test')
+    ast = expression_of('dcase', Namespace(spec), 'test')
     assert calls_dual(ast) is True

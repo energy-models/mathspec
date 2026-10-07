@@ -6,7 +6,7 @@
 
 A where string is a boolean algebra over comparisons, and a comparison's
 sides are the expression grammar's own arithmetic. What a side *is* — a
-parameter, a dimension, a relation column, a ``position()`` — only the schema
+parameter, a dimension, a relation column, a ``position()`` — only the spec
 knows, so the grammar hands both sides over bare and
 [`mathspec.resolution`][] reads them. The resolved vocabulary lives in
 [`mathspec.program`][].
@@ -115,7 +115,7 @@ class UnresolvedComparisonNode:
 
 
 #: What resolution rewrites away on the where side — the nodes whose leaves
-#: are still names the schema has not been asked about.
+#: are still names the spec has not been asked about.
 UnresolvedWhereNode = NameNode | UnresolvedComparisonNode | UnresolvedPredicateCallNode | UnresolvedCountNode
 
 #: Every node a parsed where string is built of: the connectives and literals,

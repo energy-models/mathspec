@@ -82,14 +82,14 @@ _SEGMENTS = {
 }
 
 
-def expand_sets(schema: Spec) -> Spec:
-    """*schema* with every ``sos:`` entry written out as binaries and the rows that link them.
+def expand_sets(spec: Spec) -> Spec:
+    """*spec* with every ``sos:`` entry written out as binaries and the rows that link them.
 
     The curves an expansion wrote out ride along, because a spec whose
     curves are already written out is the one this is usually asked of.
     """
-    raw = schema.model_dump()
-    for name in list(schema.sos):
+    raw = spec.model_dump()
+    for name in list(spec.sos):
         emit(raw, name)
     return Spec.model_validate(raw)
 

@@ -19,7 +19,7 @@ from mathspec.errors import LanguageError, SchemaError
 from mathspec.piecewise import expand_piecewise
 from mathspec.program import Assumption, VariableReference, assumption_message
 from mathspec.spec import Curvature
-from tests.fixtures import DISPATCH_MODEL, expanded, raw_of, schema_of, varied
+from tests.fixtures import DISPATCH_MODEL, expanded, raw_of, spec_of, varied
 
 #: Larger than a minimal probe on purpose: a curve that exercises adjacency
 #: binaries and links is not something a smaller one can stand in for.
@@ -92,7 +92,7 @@ TWO_DIM = varied(
 def test_an_emitted_set_may_not_collide_with_a_declared_one():
     """The emitted-name rule, for the one entry kind that is new."""
     with pytest.raises(SchemaError, match="writes sos 'cost_curve', which this file already declares"):
-        schema_of(NONCONVEX_YAML, sos={'cost_curve': {'variable': 'p', 'along': 'snapshot', 'type': 1}})
+        spec_of(NONCONVEX_YAML, sos={'cost_curve': {'variable': 'p', 'along': 'snapshot', 'type': 1}})
 
 
 @pytest.mark.parametrize(
@@ -125,33 +125,33 @@ def test_an_emitted_variable_may_not_take_any_name_the_file_declares(patch, writ
     with pytest.raises(
         SchemaError, match=f"writes variable '{written}', which this file already declares under '{declared}:'"
     ):
-        schema_of(NONCONVEX_YAML, **patch)
+        spec_of(NONCONVEX_YAML, **patch)
 
 
 def test_a_written_name_is_refused_once_the_rest_of_the_file_lowers():
     """The rule reads the curve as lowered, so it waits for every other fault, as a dim rule does."""
     clash = {'parameters.cost_curve_lam': {'dims': ['bp']}}
     with pytest.raises(SchemaError) as first:
-        schema_of(NONCONVEX_YAML, **clash, **{'constraints.balance.expression': 'p == nope'})
+        spec_of(NONCONVEX_YAML, **clash, **{'constraints.balance.expression': 'p == nope'})
     assert 'nope' in str(first.value)
     assert 'writes variable' not in str(first.value), 'the clash is not listed beside a fault that stops lowering'
     with pytest.raises(SchemaError, match="writes variable 'cost_curve_lam'"):
-        schema_of(NONCONVEX_YAML, **clash)
+        spec_of(NONCONVEX_YAML, **clash)
 
 
 @pytest.mark.parametrize('method', [pytest.param('incremental', id='unknown'), pytest.param(['sos2'], id='a list')])
 def test_a_method_this_project_does_not_have_is_refused(method):
     """A list used to escape the membership test as a `TypeError`."""
     with pytest.raises(SchemaError, match='unknown piecewise method'):
-        schema_of(NONCONVEX_YAML, **{'piecewise.cost_curve.method': method})
+        spec_of(NONCONVEX_YAML, **{'piecewise.cost_curve.method': method})
 
 
 def test_the_file_keeps_its_curve_and_the_expansion_has_none():
     """The file is what it says; the expansion is the rows it stands for."""
-    schema = schema_of(NONCONVEX_YAML)
+    spec = spec_of(NONCONVEX_YAML)
 
-    assert 'cost_curve' in schema.piecewise, 'loading a model does not spend its piecewise entries'
-    assert not schema.expand('piecewise').piecewise, 'the entry is spent once the entries it writes are emitted'
+    assert 'cost_curve' in spec.piecewise, 'loading a model does not spend its piecewise entries'
+    assert not spec.expand('piecewise').piecewise, 'the entry is spent once the entries it writes are emitted'
 
 
 def test_a_program_mirrors_the_model_it_was_lowered_from():
@@ -160,8 +160,8 @@ def test_a_program_mirrors_the_model_it_was_lowered_from():
     Writing a formulation out is the caller's: a curve is one thing to a
     consumer printing it and another to one building rows, as a set is.
     """
-    schema = schema_of(NONCONVEX_YAML)
-    program, rows = schema.program, schema.expand('piecewise').program
+    spec = spec_of(NONCONVEX_YAML)
+    program, rows = spec.program, spec.expand('piecewise').program
 
     curve = program.piecewise['cost_curve']
     assert [link.values for link in curve.links] == ['bp_x', 'bp_y'] and curve.frame == ('snapshot',), (
@@ -172,19 +172,19 @@ def test_a_program_mirrors_the_model_it_was_lowered_from():
     assert not rows.piecewise and {'cost_curve_lam', 'p', 'op_cost'} <= set(rows.variables), (
         'the expansion carries the rows and no curve'
     )
-    assert schema.expand().program.sos == {} and rows.sos == {}, (
+    assert spec.expand().program.sos == {} and rows.sos == {}, (
         'an adjacency entry writes its own set out; a caller writes the rest out with expand()'
     )
 
 
 def test_expansion_is_idempotent():
     """One model per set of formulations asked for, and a model with none to expand is its own expansion."""
-    schema = schema_of(NONCONVEX_YAML)
-    expanded = schema.expand('piecewise')
-    assert schema.expand('piecewise') == expanded
+    spec = spec_of(NONCONVEX_YAML)
+    expanded = spec.expand('piecewise')
+    assert spec.expand('piecewise') == expanded
     assert expanded.expand('piecewise') is expanded
 
-    curveless = schema_of(DISPATCH_MODEL)
+    curveless = spec_of(DISPATCH_MODEL)
     assert curveless.expand() is curveless, 'a model with no formulation is the one that comes back'
 
 
@@ -199,8 +199,8 @@ def test_the_emitted_foreach_follows_file_order(order):
     """The frame is a set until something orders it, and a set iterates the
     same way for the same names within one process — so a run that reads the
     set rather than the entry fails one of the two orderings."""
-    schema = schema_of(TWO_DIM, dimensions={d: TWO_DIM['dimensions'][d] for d in order})
-    assert expand_piecewise(schema).variables['cost_curve_lam'].dims == order
+    spec = spec_of(TWO_DIM, dimensions={d: TWO_DIM['dimensions'][d] for d in order})
+    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == order
 
 
 @pytest.mark.parametrize(
@@ -214,13 +214,13 @@ def test_the_emitted_foreach_follows_file_order(order):
 )
 def test_any_affine_expression_is_a_legal_link(link):
     """A link is read as a constraint's expression is — a macro or a named expression in it expands."""
-    schema = schema_of(
+    spec = spec_of(
         NONCONVEX_YAML,
         macros={'twice': {'args': ['x'], 'template': 'x * 2'}},
         expressions={'doubled': 'p * 2'},
         **{'piecewise.cost_curve.links': [[link, 'bp_x'], ['op_cost', 'bp_y']]},
     )
-    assert expand_piecewise(schema).constraints['cost_curve_link0'].expression.startswith(f'({link}) ==')
+    assert expand_piecewise(spec).constraints['cost_curve_link0'].expression.startswith(f'({link}) ==')
 
 
 @pytest.mark.parametrize(
@@ -367,7 +367,7 @@ def test_a_malformed_entry_is_refused(model, patch, match):
     Refused rather than fallen back from: a method written down is a formulation chosen.
     """
     with pytest.raises(LanguageError, match=match):
-        expand_piecewise(schema_of(model, **patch))
+        expand_piecewise(spec_of(model, **patch))
 
 
 @pytest.mark.parametrize(
@@ -380,7 +380,7 @@ def test_a_malformed_entry_is_refused(model, patch, match):
 def test_a_link_outside_the_language_is_named_where_the_user_wrote_it(link_expression, message):
     """Lowering would catch these too, but naming ``cost_curve_link0`` — an entry the user never wrote."""
     with pytest.raises(SchemaError, match=message) as exc:
-        schema_of(NONCONVEX_YAML, **{'piecewise.cost_curve.links': [[link_expression, 'bp_x'], ['op_cost', 'bp_y']]})
+        spec_of(NONCONVEX_YAML, **{'piecewise.cost_curve.links': [[link_expression, 'bp_x'], ['op_cost', 'bp_y']]})
     assert "piecewise 'cost_curve' link 0" in str(exc.value)
 
 
@@ -398,7 +398,7 @@ def test_a_link_outside_the_language_is_named_where_the_user_wrote_it(link_expre
 def test_an_entry_is_refused_on_the_link_the_file_wrote_and_not_on_a_row_it_would_emit(model, patch):
     """Both were refused only once written out, under `cost_curve_increasing` or `cost_curve_domain_lo` — rows the file never declared."""
     with pytest.raises(SchemaError) as exc:
-        schema_of(model, **patch)
+        spec_of(model, **patch)
     assert "piecewise 'cost_curve'" in str(exc.value) and 'link 0' in str(exc.value)
     assert 'cost_curve_' not in str(exc.value), (
         'the refusal names the piecewise entry, not an entry the expansion writes'
@@ -408,7 +408,7 @@ def test_an_entry_is_refused_on_the_link_the_file_wrote_and_not_on_a_row_it_woul
 def test_an_undeclared_breakpoint_dimension_is_refused_once():
     """`over: nope` also said, per link, that the values parameter must carry `nope` — lines that follow from the first."""
     with pytest.raises(SchemaError) as exc:
-        schema_of(NONCONVEX_YAML, **{'piecewise.cost_curve.over': 'nope'})
+        spec_of(NONCONVEX_YAML, **{'piecewise.cost_curve.over': 'nope'})
     assert str(exc.value).splitlines() == [
         "piecewise 'cost_curve' references undeclared dimension 'nope'. Declare it under 'dimensions:'."
     ]
@@ -417,7 +417,7 @@ def test_an_undeclared_breakpoint_dimension_is_refused_once():
 def test_a_link_reading_a_refused_entry_names_it_and_its_refusal_is_listed():
     """A link through a failing entry said `Its refusal is listed with it`, and nothing listed the refusal."""
     with pytest.raises(SchemaError) as exc:
-        schema_of(
+        spec_of(
             NONCONVEX_YAML,
             **{'expressions': {'bad': 'nope'}, 'piecewise.cost_curve.links': [['bad', 'bp_x'], ['op_cost', 'bp_y']]},
         )
@@ -438,7 +438,7 @@ def test_a_link_reading_a_nonlinear_entry_is_refused():
     is `TestValidateExpressions.test_a_nonlinear_entry_is_refused_where_the_math_reads_it`.
     """
     with pytest.raises(SchemaError, match='the divisor contains variables') as exc:
-        schema_of(
+        spec_of(
             NONCONVEX_YAML,
             **{
                 'expressions': {'ratio': 'op_cost / sum(p, over=snapshot)'},
@@ -457,7 +457,7 @@ def test_a_link_reading_a_degree_two_product_entry_is_refused():
     accept degree 2, so they are not the refusing site here.
     """
     with pytest.raises(SchemaError, match='which is degree 2') as exc:
-        schema_of(
+        spec_of(
             NONCONVEX_YAML,
             **{
                 'expressions': {'sq': 'p * op_cost'},
@@ -469,11 +469,11 @@ def test_a_link_reading_a_degree_two_product_entry_is_refused():
 
 def test_an_entry_a_link_reads_is_in_the_math():
     """A link's expression stands inside the constraints its expansion emits, so an entry it names is one the math reads."""
-    schema = schema_of(
+    spec = spec_of(
         NONCONVEX_YAML,
         **{'expressions': {'twice': 'p * 2'}, 'piecewise.cost_curve.links': [['twice', 'bp_x'], ['op_cost', 'bp_y']]},
     )
-    assert schema.expand('piecewise').program.expressions['twice'].in_math is True
+    assert spec.expand('piecewise').program.expressions['twice'].in_math is True
 
 
 def test_a_link_reading_a_dual_entry_is_refused():
@@ -484,7 +484,7 @@ def test_a_link_reading_a_dual_entry_is_refused():
     expansion can build.
     """
     with pytest.raises(SchemaError, match='a dual exists only after a solve'):
-        schema_of(
+        spec_of(
             NONCONVEX_YAML,
             **{
                 'expressions': {'price': 'dual(balance)'},
@@ -504,7 +504,7 @@ def test_a_link_reading_a_dual_entry_is_refused():
 def test_a_gate_that_is_not_a_variable_is_refused(activity, match):
     """Only a variable has an entry to say what its absence means, and the entry needs that answer."""
     with pytest.raises(SchemaError, match=match):
-        expand_piecewise(schema_of(GATED, **{'piecewise.cost_curve.activity': activity}))
+        expand_piecewise(spec_of(GATED, **{'piecewise.cost_curve.activity': activity}))
 
 
 #: ``lp`` bounded the other way: the same curve read as its lower envelope.
@@ -565,7 +565,7 @@ def test_a_masked_lp_curve_sits_its_rows_on_predicates_rather_than_on_parameters
     caller never supplied and a derivation in private state filled. The ``where``
     language writes each of them, so the rows carry the predicate and the program
     declares the file's parameters and no other."""
-    program = schema_of(LP_MASKED).expand('piecewise').program
+    program = spec_of(LP_MASKED).expand('piecewise').program
     rows = {name: program.constraints[f'cost_curve_{name}'].where for name in ('chord', 'domain_lo', 'domain_hi')}
 
     assert set(program.parameters) == {'bp_x', 'bp_y', 'load'}, 'every parameter is one the file declared'
@@ -609,7 +609,7 @@ def test_a_gap_is_explained_by_the_rows_the_method_writes(method, reason):
         if method in {'convex', 'lp'}
         else [['p', 'bp_x'], ['op_cost', 'bp_y']]
     )
-    spec = schema_of(
+    spec = spec_of(
         NONCONVEX_YAML,
         **RAGGED,
         **{

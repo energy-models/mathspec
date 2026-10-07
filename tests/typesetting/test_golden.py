@@ -125,24 +125,24 @@ def _rendered_trees() -> Iterator[object]:
     curve's links are trees of its own, and the rows it stands for are not
     printed at all.
     """
-    schema = to_spec(golden.MODEL)
-    program = schema.program
+    spec = to_spec(golden.MODEL)
+    program = spec.program
     assert program.objective is not None
     yield program.objective.expression
-    for name in schema.constraints:
+    for name in spec.constraints:
         constraint = program.constraints[name]
         yield constraint.lhs
         yield constraint.rhs
         if constraint.where is not None:
             yield constraint.where.root
-    for name in schema.variables:
+    for name in spec.variables:
         if (mask := program.variables[name].where) is not None:
             yield mask.root
     for assumption in program.assumptions.values():
         yield assumption.predicate.root
         if assumption.where is not None:
             yield assumption.where.root
-    for name in schema.expressions:
+    for name in spec.expressions:
         yield program.expressions[name].expression
     for curve in program.piecewise.values():
         yield from (link.expression for link in curve.links)
