@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- fix(language): a patch that changes a dimension is told that a field it leaves out reads as its default ([#857](https://github.com/energy-models/mathspec/pull/857))
 - docs(pypsa): a delayed port under uneven snapshot weights is refused, where PyPSA counts weighted time ([#852](https://github.com/energy-models/mathspec/pull/852))
 - docs: limits.md names that a count compares only against a whole-number literal ([#851](https://github.com/energy-models/mathspec/pull/851))
 - docs: every spec in the docs and examples opens with its given block ([#813](https://github.com/energy-models/mathspec/pull/813))
