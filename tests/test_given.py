@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec import FORMATS, LanguageError, advice, merge, to_markdown, to_spec, typeset
+from mathspec import advice, merge, to_markdown, to_spec, typeset
+from mathspec.errors import LanguageError
+from mathspec.typesetting import FORMATS
 from tests.fixtures import BALANCE
 
 #: One component file: it pins the flow at its own port, and the column it
@@ -214,7 +216,7 @@ PORTS_ONLY = {
     ],
 )
 def test_a_given_declaration_that_disagrees_with_the_introducer_is_refused(misread):
-    with pytest.raises(LanguageError, match=r'says the same as the declaration it is folded into, or less') as raised:
+    with pytest.raises(LanguageError, match=r'Restate the dims as .* declares them, or leave the field out') as raised:
         merge([SURFACE, misread])
     message = str(raised.value)
     assert "'#2'" in message and "'#1'" in message, 'both sides of a disagreement are named'
@@ -295,7 +297,10 @@ def test_a_given_row_family_prints_under_the_given_heading():
 
 def test_a_row_family_both_built_and_given_is_refused():
     both = {**LAYER, 'constraints': {**LAYER['constraints'], 'balance': {'dims': [], 'expression': 'sum(p) >= 0'}}}
-    with pytest.raises(LanguageError, match=r"'balance'.*either built by this file or given to it"):
+    with pytest.raises(
+        LanguageError,
+        match=r"Given constraint 'balance' is also declared under 'constraints:'. Delete one of the two\.",
+    ):
         to_spec(both)
 
 
@@ -562,7 +567,7 @@ def test_a_definition_over_fewer_dimensions_merges_where_the_row_carries_the_res
 
 def test_the_composed_load_refuses_a_row_a_narrower_definition_repeats():
     """With nothing else carrying `snapshot`, the row would repeat per snapshot, which the composed spec refuses."""
-    with pytest.raises(LanguageError, match='repeated across'):
+    with pytest.raises(LanguageError, match='which its dims: declares'):
         merge([BALANCE, FLAT_INJECTOR])
 
 

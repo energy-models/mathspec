@@ -5,8 +5,9 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Typeset the math
 
-`to_latex`, `to_typst` and `to_markdown` print a spec as the equations it
-stands for, from the file alone. No data is attached, and no solver runs.
+`to_latex`, `to_typst` and `to_markdown` print a spec as LaTeX, Typst or
+Markdown equations, from the file alone, without attaching data or running a
+solver.
 
 ```python
 import mathspec as ms
@@ -19,8 +20,9 @@ print(ms.to_markdown(spec))  # renders as-is on GitHub
 ```
 
 Each function takes a path, the YAML, a mapping, a `Spec` or a `Program`, and
-prints the program: the one a spec holds, or the one it was handed.
-From a shell, `python -m mathspec latex spec.yaml` prints the same, and
+prints `spec.program` for a spec or the `Program` it was handed. A
+[program](reading.md#spec-and-program) is what the file means, with every name
+typed. From a shell, `python -m mathspec latex spec.yaml` prints the same, and
 `typst` or `markdown` in place of `latex` picks the format.
 
 [Print a spec as math](../howto/print.md) is the recipe, and
@@ -44,9 +46,10 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
 `-o FILE` writes to a file instead of stdout.
 
 - The spec's `description:` opens the document.
-- A `piecewise:` block prints as one line: the curve it states, over the frame
-  it states one curve per coordinate of. To print its rows, print
-  [`spec.expand()`](api.md#mathspec.Spec.expand) or pass `--expand`
+- A `piecewise:` block prints as one line, which quantifies the curve over the
+  frame of the block, because the block states one curve at each coordinate of
+  that frame. To print its rows, print
+  [`spec.expand()`](spec.md#mathspec.spec.Spec.expand) or pass `--expand`
   ([see an expansion](../howto/see-an-expansion.md)).
 - An [`assumptions:`](language/assumptions.md) entry prints under an
   **Assumptions** heading, last, beside what each curve assumes of its
@@ -57,13 +60,13 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
   `cases:` block, a [reported entry](language/named.md#reported-expressions)
   and a [term](language/declarations.md#terms) keep their definition line
   under either `inline_expressions` setting.
-- A [mask](language/named.md#masks) prints its upright symbol where it is
-  read and its predicate once, under a **Masks** heading, with ⟺. It prints
-  by symbol under either `inline_expressions` setting.
+- A [mask](language/named.md#masks) prints its upright symbol where a file
+  reads it, and its predicate once, under a **Masks** heading, with ⟺. It
+  prints as its symbol under either `inline_expressions` setting.
 - Wherever the math moves an index, which every `shift` does, the document
   prints a line saying what that notation means.
 - A file that does not load does not print.
-- Lines are not broken. A wide equation runs off the page.
+- The typesetter does not break lines, so a wide equation runs off the page.
 
 ## Markdown's delimiters
 
@@ -74,17 +77,17 @@ prints `$…$` or `$$…$$`. For a renderer that reads `$…$` alone, print with
 
 ## Descriptions
 
-A `description:` is **plain prose, with one piece of notation**. A name in
-backticks, such as `` `capital_cost` ``, sets in monospace in every output
-format. Everything else is text, and each format escapes whatever its own
-syntax would read as markup. The legend prints the description of every
+A `description:` prints as plain text, with **one exception**: a name in
+backticks, such as `` `capital_cost` ``, prints in monospace in every output
+format. The typesetter escapes every other character that the output format
+would read as markup. The legend prints the description of every
 dimension, parameter and variable.
 
 ## Printing one declaration on its own
 
-`typeset_declaration` returns the line the document prints for one named
-expression, mask, constraint, assumption, curve or variable, with its
-quantifier and without a document, a label, a number or math delimiters:
+`typeset_declaration` returns the line that the document prints for one named
+expression, mask, constraint, assumption, curve or variable. The line has its
+quantifier, but no document, label, number or math delimiters:
 
 ```python
 ms.typeset_declaration('spec.yaml', 'spend', 'latex')
@@ -102,19 +105,21 @@ line = ms.typeset_declaration('spec.yaml', 'balance', 'markdown')
 print(f'The balance holds: $`{line}`$')
 ```
 
-A line on its own has no _Definitions_ section beside it, so the plain named
-expressions it uses are substituted. A cased expression prints by symbol, and a
-second call with its name prints its block.
+A single line has no _Definitions_ section beside it, so
+`typeset_declaration` substitutes each plain named expression that the line
+uses. A cased expression prints as its symbol, and a second call with its
+name prints its block.
 
-A name that is none of the six kinds is refused with the near miss. A name
-declared as two of them, such as a constraint and a variable, is refused too.
+`typeset_declaration` refuses a name that is none of the six kinds, and names
+the closest match. It also refuses a name declared as two of them, such as a
+constraint and a variable.
 
 ## Symbol tables
 
 With no table, the symbols are **derived** from the names in the file, such as
-$\mathrm{load}_t$ and $\mathrm{capacity}_g$. A symbol table makes the output
-conventional. Pass a path to a YAML file, the same keys as a dict, or a
-`ms.SymbolTable`:
+$\mathrm{load}_t$ and $\mathrm{capacity}_g$. A symbol table replaces them with
+the symbols you choose, such as $\ell$ for `load`. Pass a path to a YAML file,
+the same keys as a dict, or a `ms.SymbolTable`:
 
 ```yaml
 # dispatch.symbols.yaml
@@ -138,8 +143,9 @@ ms.to_latex('dispatch.yaml', symbols='dispatch.symbols.yaml')
 | `dimensions` | For each dimension, an `index` letter and a `set` symbol. Either may be omitted |
 | `names`      | For each parameter, variable or named expression, its symbol                    |
 
-Every spelling is printed as you wrote it, and nothing translates notation, so
-rendering a LaTeX table as Typst is refused. A key that names nothing in the
-spec, and nothing a formulation of it emits, is an error with the near miss.
+The typesetter prints each entry as you wrote it and does not translate
+between notations, so `to_typst` refuses a table with `notation: latex`. A key
+that names nothing in the spec, and nothing that its `piecewise:` or `sos:`
+blocks expand into, is an error that names the closest match.
 
 Nothing in a symbol table changes what the file means.

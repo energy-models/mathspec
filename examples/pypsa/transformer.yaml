@@ -2,6 +2,15 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    scenario_weight: { dims: [scenario] }
+    transmission_losses: { dims: [], dtype: bool }
+  expressions:
+    total_cost: { dims: [] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -62,6 +71,7 @@ parameters:
   Transformer_s_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [transformer]
+    missing: neutral
   Transformer_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, transformer]
@@ -82,9 +92,11 @@ parameters:
   Transformer_s_nom_set:
     description: a given nominal apparent power for an extendable transformer; one without a value has no row here
     dims: [transformer]
+    missing: neutral
   Transformer_s_set:
     description: a given flow schedule; a transformer without one has no row here
     dims: [scenario, snapshot, transformer]
+    missing: neutral
   Transformer_v_ang_max:
     description: >-
       the most the voltage angle difference across a transformer, its phase
@@ -92,6 +104,7 @@ parameters:
       infinite, and so no row, by default. The deprecated `v_ang_min` is
       ignored, as a line's
     dims: [scenario, transformer]
+    missing: neutral
   Transformer_x_pu_eff:
     description: >-
       the transformer's effective series reactance — PyPSA's `x_pu_eff`, `x`
@@ -104,6 +117,7 @@ parameters:
       basis, data prep; a transformer in no cycle has no row. From the first
       scenario only, as a line's
     dims: [period, transformer, cycle]
+    missing: neutral
   Transformer_phase_shift_weight:
     description: >-
       a fixed transformer's phase shift in radians at each snapshot, signed by
@@ -112,13 +126,14 @@ parameters:
       the variable term never both count a shift. A transformer with no shift or
       in no cycle of its snapshot's period has no row
     dims: [snapshot, transformer, cycle]
+    missing: neutral
   Transformer_phase_shift_varying:
     description: >-
       whether a transformer's phase shift is a decision — PyPSA's
       `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a
       fixed shift carried by `phase_shift`. The shift parameters carry no
-      scenario, while PyPSA reads them per scenario (`variables.py:433-443`,
-      `constraints.py:1652`, `:1735`): a parity gap (#783)
+      scenario, but PyPSA reads them per scenario (`variables.py:433-443`,
+      `constraints.py:1652`, `:1735`), so the spec and PyPSA differ here (#783)
     dims: [transformer]
     dtype: bool
   Transformer_phase_shift_min:
@@ -177,7 +192,7 @@ variables:
       lossless
     dims: [scenario, snapshot, transformer]
     where: Transformer_lossy
-    absence: zero
+    missing: neutral
     bounds:
       lower: 0
   Transformer_phase_shift:
@@ -188,7 +203,7 @@ variables:
       where the shift is fixed
     dims: [scenario, snapshot, transformer]
     where: Transformer_phase_shift_varying AND Transformer_active
-    absence: zero
+    missing: neutral
     bounds:
       lower: Transformer_phase_shift_min
       upper: Transformer_phase_shift_max
@@ -205,15 +220,6 @@ variables:
     domain: integer
     bounds:
       lower: 0
-
-given:
-  parameters:
-    scenario_weight: { dims: [scenario] }
-    transmission_losses: { dims: [], dtype: bool }
-  expressions:
-    total_cost: { dims: [] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
-    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
 
 expressions:
   Transformer_capex:

@@ -23,9 +23,10 @@ import pytest
 import yaml
 
 import mathspec.spec as spec_module
-from mathspec import LanguageError, merge, override, to_markdown, to_spec
+from mathspec import merge, override, to_markdown, to_spec
 from mathspec.canonical import canonical_yaml
-from tests.fixtures import DISPATCH_MODEL, varied
+from mathspec.errors import LanguageError
+from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, varied
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -223,6 +224,40 @@ def test_a_dimension_one_fragment_declares_ordered_is_ordered_in_the_composition
     assert merge(fragments).dimensions['snapshot'].ordered, 'ordered is a claim one fragment adds to the space'
 
 
+def _mapped(missing: str | None) -> dict[str, object]:
+    """A fragment that declares only `port_bus`, with *missing* written, or no `missing:` where it is ``None``."""
+    relation = {'key': 'port', 'values': 'bus'} | ({} if missing is None else {'missing': missing})
+    return {'dimensions': {'port': {'dtype': 'str'}, 'bus': {'dtype': 'str'}}, 'relations': {'port_bus': relation}}
+
+
+@pytest.mark.parametrize(
+    ('fragments', 'missing'),
+    [
+        pytest.param([SURFACE, _mapped('refused')], 'refused', id='the-default-written-out'),
+        pytest.param(
+            [varied(SURFACE, **{'relations.port_bus.missing': 'absent'}), _mapped('absent')], 'absent', id='both-absent'
+        ),
+    ],
+)
+def test_two_fragments_that_say_one_missing_agree(fragments, missing):
+    """A written `missing: refused` was refused against an omitted one, as two fragments saying different things."""
+    assert merge(fragments).relations['port_bus'].missing == missing
+
+
+@pytest.mark.parametrize(
+    'fragments',
+    [
+        pytest.param([SURFACE, _mapped('absent')], id='refused-against-absent'),
+        pytest.param([_mapped('absent'), SURFACE], id='absent-against-refused'),
+    ],
+)
+def test_two_fragments_that_read_a_missing_key_apart_are_refused(fragments):
+    """Neither reading settles the other: a key left out is refused under one, and belongs to no group under the other."""
+    with pytest.raises(LanguageError, match=r"say different things about the relation 'port_bus'") as raised:
+        merge(fragments)
+    assert 'Make the two identical' in str(raised.value), 'the refusal names the rewrite'
+
+
 @pytest.mark.parametrize(
     ('owner', 'carried'),
     [
@@ -292,7 +327,7 @@ def test_one_fragment_s_objective_is_carried_as_it_was_written():
 def test_fragments_written_against_two_language_versions_are_refused(monkeypatch):
     """This reader knows one version, so a second is stood up for the fragments to disagree about."""
     monkeypatch.setattr(spec_module, 'SUPPORTED_VERSIONS', (0, 1))
-    with pytest.raises(LanguageError, match=r'One spec has one version') as raised:
+    with pytest.raises(LanguageError, match=r'Write every fragment against the same version') as raised:
         merge([{**SUPPLY, 'version': 0}, {**DEMAND, 'version': 1}])
     assert "'#1' says 0" in str(raised.value) and "'#2' says 1" in str(raised.value), 'both are named'
 
@@ -403,7 +438,7 @@ def test_a_whole_declaration_is_created_and_the_model_loads():
         pytest.param({'parameters': {'co2': {'dtype': 'float'}}}, 'a parameter needs `dims`', id='short-of-its-frame'),
         pytest.param(
             {'expressions': {'spend': {'dims': ['snapshot']}}},
-            'one `expression:` or a set of `cases:`',
+            'has neither `expression:` nor `cases:`',
             id='short-of-what-it-says',
         ),
         pytest.param(
@@ -530,7 +565,7 @@ def test_a_patch_restates_a_dimension_as_the_schema_reads_it(dimension, restated
 def test_a_patch_that_withdraws_ordered_is_refused():
     with pytest.raises(LanguageError, match=r"says the dimension 'snapshot' is not ordered") as raised:
         override(DISPATCH_MODEL, [{'dimensions': {'snapshot': {'dtype': 'int', 'ordered': False}}}])
-    assert 'leave `ordered` out of the patch' in str(raised.value), 'the refusal names the rewrite'
+    assert 'Leave `ordered` out of the patch' in str(raised.value), 'the refusal names the rewrite'
 
 
 @pytest.mark.parametrize(
@@ -538,12 +573,12 @@ def test_a_patch_that_withdraws_ordered_is_refused():
     [
         pytest.param(
             {'dimensions': {'snapshot': {'dtype': 'str'}}},
-            'adjusts the math, not the coordinate space',
+            'Restate the declaration word for word',
             id='declared-as-something-else',
         ),
         pytest.param(
             {'dimensions': {'snapshot': {}}},
-            'restate the declaration word for word',
+            'Restate the declaration word for word',
             id='restated-in-part',
         ),
         pytest.param(
@@ -558,6 +593,57 @@ def test_a_patch_that_rewrites_a_dimension_is_refused(patch, says):
     with pytest.raises(LanguageError) as raised:
         override(DISPATCH_MODEL, [patch])
     assert says in str(raised.value), 'the refusal names the rewrite rather than only what is wrong'
+
+
+#: `SURFACE` with `port_bus` declared `missing: absent`.
+ABSENT_SURFACE = varied(SURFACE, **{'relations.port_bus.missing': 'absent'})
+
+
+@pytest.mark.parametrize(
+    ('base', 'relation', 'missing'),
+    [
+        pytest.param(SURFACE, {'missing': 'absent'}, 'absent', id='the-reading-alone'),
+        pytest.param(SURFACE, {'key': 'port', 'values': 'bus', 'missing': 'absent'}, 'absent', id='restated-absent'),
+        pytest.param(ABSENT_SURFACE, {'missing': 'refused'}, 'refused', id='back-to-the-default'),
+        pytest.param(ABSENT_SURFACE, {'missing': None}, 'refused', id='null-puts-back-the-default'),
+        pytest.param(SURFACE, {'key': 'port', 'values': 'bus', 'missing': 'refused'}, 'refused', id='default-written'),
+        pytest.param(ABSENT_SURFACE, {'key': 'port', 'values': 'bus'}, 'absent', id='restated-without-one'),
+    ],
+)
+def test_a_patch_changes_what_a_key_the_map_leaves_out_means(base, relation, missing):
+    """`missing:` is a claim about the data, not the coordinate space, and a patch that wrote it was refused as one."""
+    assert override(base, [{'relations': {'port_bus': relation}}]).relations['port_bus'].missing == missing
+
+
+@pytest.mark.parametrize(
+    ('base', 'written', 'missing'),
+    [
+        pytest.param(DISPATCH_MODEL, 'neutral', 'neutral', id='a-reading'),
+        pytest.param(
+            varied(DISPATCH_MODEL, **{'parameters.cost.missing': 'absent'}),
+            None,
+            'refused',
+            id='null-puts-back-the-default',
+        ),
+    ],
+)
+def test_a_patch_changes_what_a_missing_row_of_a_parameter_means(base, written, missing):
+    assert override(base, [{'parameters': {'cost': {'missing': written}}}]).parameters['cost'].missing == missing
+
+
+@pytest.mark.parametrize(
+    ('section', 'name', 'declared'),
+    [
+        pytest.param('parameters', 'c', {'dims': ['g']}, id='a-parameter'),
+        pytest.param('relations', 'lk', {'key': 'g', 'values': 'h'}, id='a-relation'),
+    ],
+)
+def test_the_default_missing_written_out_is_the_spec_that_leaves_it_out(section, name, declared):
+    """`missing: refused` loaded to a different spec than no `missing:`, and wrote a different canonical text."""
+    omitted = to_spec(varied(SMALL_MODEL, **{f'{section}.{name}': declared}))
+    written = to_spec(varied(SMALL_MODEL, **{f'{section}.{name}': {**declared, 'missing': 'refused'}}))
+    assert written == omitted, 'the default written out is the default'
+    assert canonical_yaml(written) == canonical_yaml(omitted), 'so both spellings write one text'
 
 
 @pytest.mark.parametrize(
@@ -596,7 +682,9 @@ def test_a_whole_objective_is_created_where_the_base_has_none():
 @pytest.mark.parametrize(
     ('patch', 'says'),
     [
-        pytest.param({'objective': None}, 'already the feasibility problem', id='removing-one-that-is-not-there'),
+        pytest.param(
+            {'objective': None}, "Delete 'objective: null' from the patch", id='removing-one-that-is-not-there'
+        ),
         pytest.param(
             {'objective': {'sense': 'maximize'}}, 'an objective needs `expression`', id='editing-one-that-is-not-there'
         ),

@@ -5,10 +5,18 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Power flow
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: Kirchhoff's voltage law around each cycle. It reads `Cycle_angle_sum` under `given:` and adds nothing to it, and the lines and transformers add their terms to it.
+This file states Kirchhoff's voltage law around each cycle. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads the sum `Cycle_angle_sum` under `given:` and adds nothing to it. The lines and the transformers add their terms to it.
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  expressions:
+    Cycle_angle_sum:
+      dims: [scenario, snapshot, cycle]
+      description: >-
+        the voltage angle differences around a cycle: every branch flow times
+        its cycle weight, and every transformer phase shift
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -22,14 +30,6 @@ dimensions:
       prep. Each period has its own basis, of the branches that stand in it;
       a label is a position in that period's basis, so one label names a
       different cycle in another period
-
-given:
-  expressions:
-    Cycle_angle_sum:
-      dims: [scenario, snapshot, cycle]
-      description: >-
-        the voltage angle differences around a cycle: every branch flow times
-        its cycle weight, and every transformer phase shift
 
 constraints:
   Kirchhoff_Voltage_Law:

@@ -20,8 +20,10 @@ from pathlib import Path
 import pytest
 import yaml
 
-from mathspec import FORMATS, LanguageError, merge, to_spec, typeset
+from mathspec import merge, to_spec, typeset
 from mathspec.canonical import canonical_yaml
+from mathspec.errors import LanguageError
+from mathspec.typesetting import FORMATS
 from tests.fixtures import BALANCE
 from tests.test_terms import DEMAND, FLEET
 from tools.gallery import split_index
@@ -168,5 +170,5 @@ def test_the_split_index_names_a_hub_once_per_fragment_and_needs_a_described_rea
     assert '[`demand_injection`](demand.md), [`curtailment`](fleet.md), [`generator_injection`](fleet.md)' in index, (
         'every term of the fragment, by fragment then by name'
     )
-    with pytest.raises(ValueError, match=r"no fragment reads 'injection' with a description and adds nothing to it"):
+    with pytest.raises(ValueError, match=r"no fragment that reads 'injection' without adding to it describes it"):
         split_index({'fleet': specs['fleet'], 'demand': specs['demand']})

@@ -56,7 +56,7 @@ __all__ = [
     'typeset_declaration',
 ]
 
-#: A format by the name the CLI takes — what every renderer here is asked for.
+#: A format by the name the CLI takes. Every renderer here is asked for one.
 FormatName = Literal['latex', 'markdown', 'typst']
 
 #: Every format, by name. Adding one is a module plus a row.
@@ -120,7 +120,7 @@ def typeset(
             reads and checks the file once rather than once per format, and a
             curve prints as the curve it states. Pass ``spec.expand()`` for the rows a solver holds
             instead.
-        fmt: What spells the math — a key of [`FORMATS`][].
+        fmt: What spells the math — a [`FormatName`][].
         symbols: How names print, as a [`SymbolTable`][], a path or a
             mapping. Names it does not carry are derived, and it must be
             written in *fmt*'s notation.
@@ -188,7 +188,7 @@ def typeset_declaration(
         spec: Anything [`mathspec.to_spec`][] accepts, or a [`Program`][].
         name: A named expression, mask, constraint, assumption,
             ``piecewise:`` block or variable the spec declares.
-        fmt: What spells the math — a key of [`FORMATS`][].
+        fmt: What spells the math — a [`FormatName`][].
         symbols: How names print; see [`typeset`][].
         inline_expressions: Substitute the plain named expressions the line uses, so it
             stands on its own; ``False`` prints their symbols, as the document
@@ -218,9 +218,8 @@ def typeset_declaration(
     given_kind = next((kind for kind, group in givens.items() if name in group), None)
     if given_kind is not None:
         msg = (
-            f"'{name}' is a given {given_kind}, and a given declaration prints no line of its own — "
-            f"this file reads it and does not build it. It prints in the legend, under 'Given', "
-            f'so call typeset() for the whole spec.'
+            f"'{name}' is a given {given_kind}, which prints no line of its own. Call typeset() for the "
+            f"whole spec, and find it in the legend under 'Given'."
         )
         raise SchemaError(msg)
     return walk.format.equation(walk.line(name))

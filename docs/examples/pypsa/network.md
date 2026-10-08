@@ -5,10 +5,19 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The network
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the buses and the balance at each of them. It reads `Bus_injection` under `given:`, and every component adds its injection to it.
+This file states the buses and the balance at each bus. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads the sum `Bus_injection` under `given:`, and every component adds its injection to that sum.
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  expressions:
+    Bus_injection:
+      dims: [scenario, snapshot, bus]
+      description: >-
+        what every component puts into a bus, less what it takes out of it;
+        PyPSA writes each term into the balance, and a load on its right-hand
+        side
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -18,15 +27,6 @@ dimensions:
     ordered: true
   bus:
     description: network nodes
-
-given:
-  expressions:
-    Bus_injection:
-      dims: [scenario, snapshot, bus]
-      description: >-
-        what every component puts into a bus, less what it takes out of it;
-        PyPSA writes each term into the balance, and a load on its right-hand
-        side
 
 constraints:
   Bus_nodal_balance:

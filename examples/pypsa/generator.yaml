@@ -2,6 +2,28 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    Generator_committable: { dims: [generator], dtype: bool }
+    Generator_maintenance_pu: { dims: [scenario, generator] }
+    scenario_weight: { dims: [scenario] }
+    CVaR_omega: { dims: [] }
+    period_weight_objective: { dims: [period] }
+    snapshot_weightings_generators: { dims: [snapshot] }
+  variables:
+    Generator_maintenance: { dims: [scenario, snapshot, generator] }
+    Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
+  expressions:
+    GlobalConstraint_energy_weight: { dims: [scenario, global_constraint, snapshot] }
+    primary_energy: { dims: [scenario, global_constraint] }
+    operational_limit: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -65,6 +87,7 @@ parameters:
   Generator_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [generator]
+    missing: neutral
   Generator_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Generator_p_nom
@@ -93,6 +116,7 @@ parameters:
   Generator_p_set:
     description: a given output schedule; a generator without one has no row here
     dims: [scenario, snapshot, generator]
+    missing: neutral
   Generator_p_nom_min:
     description: least nominal power an extendable generator may be built at
     dims: [scenario, generator]
@@ -110,6 +134,7 @@ parameters:
   Generator_p_nom_set:
     description: a given nominal power for an extendable generator; one without a value has no row here
     dims: [generator]
+    missing: neutral
   Generator_e_sum_min:
     description: least energy over the horizon; minus infinity where no floor is meant
     dims: [scenario, generator]
@@ -122,15 +147,18 @@ parameters:
       `co2_emissions` over the generator's efficiency at the snapshot, data prep; a generator
       of an unweighted carrier has no row
     dims: [scenario, global_constraint, snapshot, generator]
+    missing: neutral
   Generator_operational_limit_weight:
     description: one where the generator is in the row's set — data prep; one outside it has no row
     dims: [scenario, global_constraint, generator]
+    missing: neutral
   Generator_tech_capacity_weight:
     description: >-
       one where the generator is in the row's carrier-and-bus set — data
       prep; one outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [global_constraint, generator]
+    missing: neutral
 
 variables:
   Generator_p:
@@ -150,28 +178,6 @@ variables:
       of the same PyPSA name carries the fixed regime
     dims: [generator]
     where: Generator_p_nom_extendable
-
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    Generator_committable: { dims: [generator], dtype: bool }
-    Generator_maintenance_pu: { dims: [scenario, generator] }
-    scenario_weight: { dims: [scenario] }
-    CVaR_omega: { dims: [] }
-    period_weight_objective: { dims: [period] }
-    snapshot_weightings_generators: { dims: [snapshot] }
-  variables:
-    Generator_maintenance: { dims: [scenario, snapshot, generator] }
-    Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
-  expressions:
-    GlobalConstraint_energy_weight: { dims: [scenario, global_constraint, snapshot] }
-    primary_energy: { dims: [scenario, global_constraint] }
-    operational_limit: { dims: [scenario, global_constraint] }
-    tech_capacity_expansion: { dims: [global_constraint] }
-    scenario_opex: { dims: [scenario] }
-    total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
 
 expressions:
   Generator_p_nom_effective:
@@ -282,9 +288,9 @@ constraints:
 assumptions:
   Generator_marginal_cost_quadratic_without_risk_preference:
     holds: "Generator_marginal_cost_quadratic == 0"
-    where: "CVaR_omega > 0"
+    where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
       refuses quadratic costs under any risk preference
-      (`optimize.py:470-477`). The spec cannot tell no risk preference from
-      one with `omega = 0`, so it refuses only where `omega` is positive
+      (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
+      `CVaR_omega` row only where a risk preference is set

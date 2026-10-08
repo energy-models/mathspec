@@ -5,10 +5,34 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generators, the commitment
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Generator`, the commitment rows. It adds a term to `scenario_opex`. It reads `Generator_active`, `Generator_maintenance_capacity`, `Generator_maintenance_pu`, `Generator_maintenance_status`, `Generator_modules_installed`, `Generator_n_mod` and 10 more under [`given`](../../reference/language/declarations.md#given).
+This file states the commitment rows of PyPSA's `Generator`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to the sum `scenario_opex`. It reads `Generator_active`, `Generator_maintenance_capacity`, `Generator_maintenance_pu`, `Generator_maintenance_status`, `Generator_modules_installed`, `Generator_n_mod` and 10 more names that other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    Generator_p_nom: { dims: [scenario, generator] }
+    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
+    Generator_p_min_pu: { dims: [scenario, snapshot, generator] }
+    Generator_p_max_pu: { dims: [scenario, snapshot, generator] }
+    Generator_p_nom_mod: { dims: [generator] }
+    Generator_modules_installed: { dims: [scenario, generator] }
+    Generator_p_min_pu_nonneg: { dims: [generator], dtype: bool }
+    Generator_maintenance_pu: { dims: [scenario, generator] }
+    period_weight_objective: { dims: [period] }
+    Generator_active: { dims: [snapshot, generator], dtype: bool }
+  variables:
+    Generator_p: { dims: [scenario, snapshot, generator] }
+    Generator_n_mod: { dims: [generator], domain: integer }
+    Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
+    Generator_maintenance_status: { dims: [scenario, snapshot, generator] }
+    Generator_p_nom_ext: { dims: [generator] }
+  expressions:
+    scenario_opex: { dims: [scenario] }
+  masks:
+    Generator_committed: { dims: [snapshot, generator] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -80,6 +104,7 @@ parameters:
       (`components.py:1050-1121`). Below the output a solve wants, it caps that
       output; data prep
     dims: [scenario, generator]
+    missing: neutral
 
 variables:
   Generator_status:
@@ -106,30 +131,6 @@ variables:
     domain: integer
     bounds:
       lower: 0
-
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    Generator_p_nom: { dims: [scenario, generator] }
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
-    Generator_p_min_pu: { dims: [scenario, snapshot, generator] }
-    Generator_p_max_pu: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom_mod: { dims: [generator] }
-    Generator_modules_installed: { dims: [scenario, generator] }
-    Generator_p_min_pu_nonneg: { dims: [generator], dtype: bool }
-    Generator_maintenance_pu: { dims: [scenario, generator] }
-    period_weight_objective: { dims: [period] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
-  variables:
-    Generator_p: { dims: [scenario, snapshot, generator] }
-    Generator_n_mod: { dims: [generator], domain: integer }
-    Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
-    Generator_maintenance_status: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom_ext: { dims: [generator] }
-  expressions:
-    scenario_opex: { dims: [scenario] }
-  masks:
-    Generator_committed: { dims: [snapshot, generator] }
 
 expressions:
   Generator_previous_status:
@@ -325,7 +326,7 @@ constraints:
 | $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$ — the bound a committed extendable generator's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the output a solve wants, it caps that output; data prep |
+| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the bound a committed extendable generator's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the output a solve wants, it caps that output; data prep |
 
 #### Variables
 

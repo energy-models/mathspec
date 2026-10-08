@@ -5,10 +5,20 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Global constraints
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the five system totals PyPSA caps, each a sum the components add to. It reads `operational_limit`, `primary_energy`, `scenario_weight`, `tech_capacity_expansion`, `transmission_expansion_cost`, `transmission_volume_expansion` under [`given`](../../reference/language/declarations.md#given).
+This file states the five system totals that PyPSA caps. Each total is a sum that the components add to. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `operational_limit`, `primary_energy`, `scenario_weight`, `tech_capacity_expansion`, `transmission_expansion_cost` and `transmission_volume_expansion`, which other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    scenario_weight: { dims: [scenario] }
+  expressions:
+    primary_energy: { dims: [scenario, global_constraint] }
+    operational_limit: { dims: [scenario, global_constraint] }
+    transmission_volume_expansion: { dims: [scenario, global_constraint] }
+    transmission_expansion_cost: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -39,16 +49,6 @@ parameters:
       folded in here by data prep. PyPSA reads it per scenario
       (`global_constraints.py:552`, `:750`, `:829`)
     dims: [scenario, global_constraint]
-
-given:
-  parameters:
-    scenario_weight: { dims: [scenario] }
-  expressions:
-    primary_energy: { dims: [scenario, global_constraint] }
-    operational_limit: { dims: [scenario, global_constraint] }
-    transmission_volume_expansion: { dims: [scenario, global_constraint] }
-    transmission_expansion_cost: { dims: [scenario, global_constraint] }
-    tech_capacity_expansion: { dims: [global_constraint] }
 
 constraints:
   GlobalConstraint_primary_energy_ub:

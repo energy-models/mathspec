@@ -70,7 +70,10 @@ def parse_template(name: str, macro: MacroBlock, context: str) -> ArithmeticNode
     """Parse a macro template, rejecting comparisons."""
     body = parse_expression(macro.template)
     if isinstance(body, ComparisonNode):
-        msg = f"{context}: macro '{name}' template must not contain a comparison operator. Got: {macro.template!r}"
+        msg = (
+            f"{context}: macro '{name}' template {macro.template!r} holds a comparison. "
+            f'Move the comparison into the constraint that calls the macro.'
+        )
         raise SchemaError(msg)
     return body
 
@@ -86,7 +89,10 @@ def _expand(node: ArithmeticNode, ns: Namespace, context: str, stack: tuple[str,
         raise SchemaError(refusal)
     if isinstance(node, FunctionCallNode) and node.name in ns.schema.macros:
         if node.name in stack:
-            msg = f'{context}: circular macro reference: {" -> ".join([*stack, node.name])}'
+            msg = (
+                f"{context}: macro '{node.name}' calls itself through {' -> '.join([*stack, node.name])}. "
+                f'Remove one of the calls in that chain.'
+            )
             raise SchemaError(msg)
         return _expand_macro(node, ns, context, stack)
     return with_children(node, lambda child: _expand(child, ns, context, stack))
@@ -99,14 +105,13 @@ def _expand_macro(call: FunctionCallNode, ns: Namespace, context: str, stack: tu
     if len(call.args) != len(macro.args):
         msg = (
             f"{context}: macro '{call.name}' expects {len(macro.args)} "
-            f'positional argument(s), got {len(call.args)}. Signature: {signature}'
+            f'positional argument(s), and the call passes {len(call.args)}. Call it as {signature}.'
         )
         raise SchemaError(msg)
     if set(call.kwargs) != set(macro.kwargs):
         msg = (
-            f"{context}: macro '{call.name}' expects keyword argument(s) "
-            f'{sorted(macro.kwargs)}, got {sorted(call.kwargs)}. '
-            f'Signature: {signature}'
+            f"{context}: macro '{call.name}' expects the keyword argument(s) "
+            f'{sorted(macro.kwargs)}, and the call passes {sorted(call.kwargs)}. Call it as {signature}.'
         )
         raise SchemaError(msg)
 
@@ -141,7 +146,7 @@ def _names(name: str, listed: NameListNode, bindings: dict[str, ArithmeticNode],
         return bound.names
     msg = (
         f"{caller} writes its formal '{name}' in the list {listed}, and the call binds it to {bound}. "
-        f'A list holds names: bind a name, or a list of names.'
+        f'Bind a name, or a list of names.'
     )
     raise SchemaError(msg)
 
@@ -157,8 +162,8 @@ def _substitute_columns(node: ColumnsNode, bindings: dict[str, ArithmeticNode], 
         bound = bindings.get(name)
         if bound is not None and not isinstance(bound, NameNode):
             msg = (
-                f"{caller}: the formal '{name}' stands inside {node}, where only a name fits, and the call "
-                f'passes {bound}. Pass the bare name of a relation or of its column.'
+                f"{caller}: the formal '{name}' is inside {node}, where only a name is allowed, and the call "
+                f'passes {bound}. Pass the name of a relation or of one of its columns.'
             )
             raise SchemaError(msg)
         names.append(name if bound is None else bound.name)

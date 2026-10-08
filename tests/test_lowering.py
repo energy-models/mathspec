@@ -15,8 +15,9 @@ from typing import get_args
 
 import pytest
 
-from mathspec import LanguageError, Spec, to_spec
+from mathspec import to_spec
 from mathspec._where_parser import parse_where
+from mathspec.errors import LanguageError
 from mathspec.exclusivity import overlapping
 from mathspec.program import (
     Add,
@@ -63,6 +64,7 @@ from mathspec.program import (
     where_children,
 )
 from mathspec.resolution import Namespace
+from mathspec.spec import Spec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, expanded, expression_of, schema_of, varied, where_of
 
 DISPATCH_YAML = EXAMPLES / 'dispatch.yaml'
@@ -529,7 +531,7 @@ def test_an_assumption_refuses_in_the_words_the_file_wrote():
 
     assert assumption.description == reason, 'the program carries it, so a consumer needs no second read of the file'
     assert assumption_message('sound', assumption) == (
-        f"assumption 'sound' does not hold for the data attached to 'c', 'k' \N{EM DASH} {reason}"
+        f"assumption 'sound' does not hold for the data attached to 'c', 'k': {reason}"
     ), 'the sentence trails what the author wrote'
 
 
@@ -1031,7 +1033,10 @@ def test_the_lowered_regions_are_still_proved_apart():
     regions = _cases_in(spec.program).regions
     named = {f'region{i}': r.when.root for i, r in enumerate(regions)}
 
-    assert list(overlapping(named, Namespace(spec).dtypes)) == [], 'no two lowered regions can claim one coordinate'
+    namespace = Namespace(spec)
+    assert list(overlapping(named, namespace.dtypes, namespace.defaults)) == [], (
+        'no two lowered regions can claim one coordinate'
+    )
 
 
 def test_a_cased_expression_is_readable_by_the_name_the_file_wrote():

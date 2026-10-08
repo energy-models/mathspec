@@ -5,10 +5,14 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Carriers
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the growth limits per carrier, which read `Carrier_additions`. It reads `Carrier_additions` under [`given`](../../reference/language/declarations.md#given).
+This file states the growth limits of each carrier. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. The limits read the sum `Carrier_additions`, which another fragment declares, and the file lists it under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  expressions:
+    Carrier_additions: { dims: [period, carrier] }
+
 dimensions:
   period:
     description: investment periods — PyPSA's `investment_periods`
@@ -26,15 +30,12 @@ parameters:
       `multi_investment_periods` (`global_constraints.py:220-221`), so data
       prep feeds no value otherwise
     dims: [carrier]
+    missing: neutral
   Carrier_max_relative_growth:
     description: >-
       share of the previous period's additions that may be added on top — the
       least over the scenarios, as PyPSA takes it, data prep
     dims: [carrier]
-
-given:
-  expressions:
-    Carrier_additions: { dims: [period, carrier] }
 
 expressions:
   Carrier_relative_growth:
@@ -73,7 +74,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overline{\Delta}`$ | `Carrier_max_growth` over $`\mathcal{I}`$ — most capacity of a carrier that may be added in a period; no value means no limit. The least over the scenarios, as PyPSA takes it (`global_constraints.py:227-231`), data prep. PyPSA reads it only under `multi_investment_periods` (`global_constraints.py:220-221`), so data prep feeds no value otherwise |
+| $`\overline{\Delta}`$ | `Carrier_max_growth` over $`\mathcal{I}`$, `neutral` where the data has no row — most capacity of a carrier that may be added in a period; no value means no limit. The least over the scenarios, as PyPSA takes it (`global_constraints.py:227-231`), data prep. PyPSA reads it only under `multi_investment_periods` (`global_constraints.py:220-221`), so data prep feeds no value otherwise |
 | $`\mathrm{r}`$ | `Carrier_max_relative_growth` over $`\mathcal{I}`$ — share of the previous period's additions that may be added on top — the least over the scenarios, as PyPSA takes it, data prep |
 
 #### Given

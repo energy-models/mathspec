@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from mathspec.dimensions import check_schema, dims_of
 from mathspec.errors import SchemaError, did_you_mean, prefixed
 from mathspec.expansion import expand, parse_template
-from mathspec.piecewise import assumptions_of, curve_frame, lp_domain_refusal, resolve_links
+from mathspec.piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec.program import (
     Assumption,
     BooleanLiteral,
@@ -114,9 +114,7 @@ def lower(schema: Spec) -> Program:
             errors.append(prefixed(context, e))
             continue
         errors.extend(
-            f"{context}: formal '{f}' collides with declared dimension '{f}'. "
-            f'Rename the formal — a dimension name inside a template is '
-            f'ambiguous with the dimension itself.'
+            f"{context}: formal '{f}' collides with declared dimension '{f}'. Rename the formal."
             for f in sorted(formals & ns.dimensions)
         )
         resolve_expression(body_ast, ns, context, errors, formals=formals)
@@ -154,7 +152,7 @@ def lower(schema: Spec) -> Program:
             lower=lower_bound,
             upper=upper_bound,
             domain=vdef.domain,
-            absence=vdef.absence,
+            missing=vdef.missing,
             description=vdef.description,
         )
 
@@ -217,7 +215,7 @@ def lower(schema: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: ParameterDeclaration(tuple(pdef.dims), pdef.dtype, pdef.description)
+            name: ParameterDeclaration(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description)
             for name, pdef in schema.parameters.items()
         },
         variables=variables,
@@ -247,7 +245,7 @@ def lower(schema: Spec) -> Program:
         masks=masks,
         given=GivenTargets(
             parameters={
-                name: ParameterDeclaration(tuple(g.dims), g.dtype, g.description)
+                name: ParameterDeclaration(tuple(g.dims), g.dtype, None, g.description)
                 for name, g in schema.given.parameters.items()
             },
             variables={
@@ -263,7 +261,7 @@ def lower(schema: Spec) -> Program:
         ),
         description=schema.description,
     )
-    if errors := emitted_name_errors(schema, program):
+    if errors := [*emitted_name_errors(schema, program), *refused_under_points(schema)]:
         raise SchemaError('\n'.join(errors))
     check_schema(schema, program)
     return program
@@ -294,7 +292,7 @@ def _terms(entries: Iterable[str], schema: Spec, ns: Namespace, errors: list[str
         via = f', through {" -> ".join(repr(sum_) for sum_ in through)}' if through else ''
         errors.append(
             f"Named expression '{name}': it reads {target!r}, the sum it adds to{via}, so the sum would define "
-            f'itself. A term is what this file puts in: write it in what this file declares.'
+            f'itself. Write the term from names this file declares, and not from {target!r}.'
         )
     return terms
 
@@ -310,16 +308,15 @@ def _term(name: str, target: str, schema: Spec, ns: Namespace, errors: list[str]
     context = f"Named expression '{name}'"
     if target in schema.expressions:
         errors.append(
-            f'{context}: it adds to {target!r}, which this file defines. A file writes its own body in one '
-            f"place, so a term fills only a name read under 'given: expressions:': write the term into the body of "
-            f'{target!r}, or read {target!r} there and add its body as a term of its own.'
+            f'{context}: it adds to {target!r}, which this file defines. Write the term into the body of '
+            f"{target!r}, or read {target!r} under 'given: expressions:' and add its body as a term."
         )
         return None
     if target not in schema.given.expressions:
         errors.append(
             f"{context}: it adds to {target!r}, which this file does not read under 'given: expressions:'. "
-            f'A term writes into a name this file reads: declare the name there over its frame, or fix '
-            f'the spelling. {did_you_mean(target, schema.given.expressions)}'
+            f'Declare {target!r} there with its dimensions, or fix the spelling. '
+            f'{did_you_mean(target, schema.given.expressions)}'
         )
         return None
     entry = resolve_expression_text(name, ns, context, errors, ceiling=2)
@@ -381,13 +378,12 @@ def _assumption(name: str, block: AssumptionBlock, ns: Namespace, errors: list[s
     if isinstance(where, BooleanLiteral):
         assert block.where is not None, 'a where the file did not write resolves to nothing'
         errors.append(_decided_where(context, block.where, value=where.value))
-    for mask, part in ((holds, 'assumes'), (where, 'is checked where')):
+    for mask, key in ((holds, 'holds'), (where, 'where')):
         if mask is None or isinstance(mask, BooleanLiteral):
             continue
         errors.extend(
-            f"{context}: variable '{atom.name}' stands in what the assumption {part}, and an assumption is "
-            f'about the data — a variable is what the solver decides from it. Name a parameter, or state the '
-            f'rule as a constraint.'
+            f"{context}: variable '{atom.name}' appears in '{key}:', and an assumption checks only data. "
+            f'Name a parameter, or state the rule as a constraint.'
             for atom in Mask(mask).atoms
             if isinstance(atom, VariableDefined)
         )

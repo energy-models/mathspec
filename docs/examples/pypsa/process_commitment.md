@@ -5,10 +5,34 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Processes, the commitment
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Process`, the commitment rows. It adds a term to `scenario_opex`. It reads `Process_active`, `Process_maintenance_capacity`, `Process_maintenance_pu`, `Process_maintenance_status`, `Process_modules_installed`, `Process_n_mod` and 10 more under [`given`](../../reference/language/declarations.md#given).
+This file states the commitment rows of PyPSA's `Process`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to the sum `scenario_opex`. It reads `Process_active`, `Process_maintenance_capacity`, `Process_maintenance_pu`, `Process_maintenance_status`, `Process_modules_installed`, `Process_n_mod` and 10 more names that other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    Process_p_nom: { dims: [scenario, process] }
+    Process_p_nom_extendable: { dims: [process], dtype: bool }
+    Process_p_min_pu: { dims: [scenario, snapshot, process] }
+    Process_p_max_pu: { dims: [scenario, snapshot, process] }
+    Process_p_nom_mod: { dims: [process] }
+    Process_modules_installed: { dims: [scenario, process] }
+    Process_p_min_pu_nonneg: { dims: [process], dtype: bool }
+    Process_maintenance_pu: { dims: [scenario, process] }
+    period_weight_objective: { dims: [period] }
+    Process_active: { dims: [snapshot, process], dtype: bool }
+  variables:
+    Process_p: { dims: [scenario, snapshot, process] }
+    Process_n_mod: { dims: [process], domain: integer }
+    Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
+    Process_maintenance_status: { dims: [scenario, snapshot, process] }
+    Process_p_nom_ext: { dims: [process] }
+  expressions:
+    scenario_opex: { dims: [scenario] }
+  masks:
+    Process_committed: { dims: [snapshot, process] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -80,6 +104,7 @@ parameters:
       (`components.py:1050-1121`). Below the internal power a solve wants, it caps that
       internal power; data prep
     dims: [scenario, process]
+    missing: neutral
 
 variables:
   Process_status:
@@ -106,30 +131,6 @@ variables:
     domain: integer
     bounds:
       lower: 0
-
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    Process_p_nom: { dims: [scenario, process] }
-    Process_p_nom_extendable: { dims: [process], dtype: bool }
-    Process_p_min_pu: { dims: [scenario, snapshot, process] }
-    Process_p_max_pu: { dims: [scenario, snapshot, process] }
-    Process_p_nom_mod: { dims: [process] }
-    Process_modules_installed: { dims: [scenario, process] }
-    Process_p_min_pu_nonneg: { dims: [process], dtype: bool }
-    Process_maintenance_pu: { dims: [scenario, process] }
-    period_weight_objective: { dims: [period] }
-    Process_active: { dims: [snapshot, process], dtype: bool }
-  variables:
-    Process_p: { dims: [scenario, snapshot, process] }
-    Process_n_mod: { dims: [process], domain: integer }
-    Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
-    Process_maintenance_status: { dims: [scenario, snapshot, process] }
-    Process_p_nom_ext: { dims: [process] }
-  expressions:
-    scenario_opex: { dims: [scenario] }
-  masks:
-    Process_committed: { dims: [snapshot, process] }
 
 expressions:
   Process_previous_status:
@@ -325,7 +326,7 @@ constraints:
 | $`\mathrm{c}^{z,\mathrm{up}}`$ | `Process_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{z,\mathrm{dn}}`$ | `Process_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{z,\mathrm{on}}`$ | `Process_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$ — the bound a committed extendable process's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the internal power a solve wants, it caps that internal power; data prep |
+| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the bound a committed extendable process's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the internal power a solve wants, it caps that internal power; data prep |
 
 #### Variables
 

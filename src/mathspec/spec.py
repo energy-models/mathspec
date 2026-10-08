@@ -2,9 +2,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The YAML surface's types — every block a file may contain, rooted at [`Spec`][].
+"""The file: what it says, as every block it may contain, rooted at [`Spec`][].
 
-Nothing here has seen data.
+The first public state. A [`Spec`][] holds one file's sections as the blocks
+below, and [`BUILTIN_NAMES`][] is the closed set of operators an expression in
+one may call. Nothing here has seen data; what the file means is its
+[`program`][mathspec.spec.Spec.program].
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from pydantic import (
     ValidationError,
     ValidationInfo,
     ValidatorFunctionWrapHandler,
+    WithJsonSchema,
     field_validator,
     model_serializer,
     model_validator,
@@ -29,15 +33,18 @@ from pydantic import (
 
 from mathspec._expression_parser import NAME, ComparisonOperator
 from mathspec.errors import did_you_mean, schema_error
+from mathspec.operators import BUILTIN_NAMES
 from mathspec.program import (
     DimensionDtype,
+    MissingReading,
     ObjectiveSense,
     ParameterDtype,
     PiecewiseMethod,
     Program,
+    RelationMissing,
     SosType,
-    VariableAbsence,
     VariableDomain,
+    VariableMissing,
 )
 
 if TYPE_CHECKING:
@@ -46,6 +53,36 @@ if TYPE_CHECKING:
     from pydantic import GetJsonSchemaHandler, SerializerFunctionWrapHandler
     from pydantic.config import ExtraValues
     from pydantic_core import CoreSchema
+
+
+#: What ``mathspec.spec`` promises a consumer, sorted.
+__all__ = [
+    'BUILTIN_NAMES',
+    'AssumptionBlock',
+    'BoundsBlock',
+    'ConstraintBlock',
+    'Curvature',
+    'DimensionBlock',
+    'ExpressionBlock',
+    'ExpressionCase',
+    'Formulation',
+    'GivenBlock',
+    'GivenConstraintBlock',
+    'GivenExpressionBlock',
+    'GivenMaskBlock',
+    'GivenParameterBlock',
+    'GivenVariableBlock',
+    'MacroBlock',
+    'MaskBlock',
+    'ObjectiveBlock',
+    'ParameterBlock',
+    'PiecewiseBlock',
+    'PiecewiseLink',
+    'RelationBlock',
+    'SosBlock',
+    'Spec',
+    'VariableBlock',
+]
 
 
 class _StrictBlock(BaseModel):
@@ -89,13 +126,46 @@ Formulation = Literal['piecewise', 'sos']
 #: The shape a method needs a curve to have to be exact on it, which the
 #: ``<block>_curvature`` assumption states. ``convex`` and ``concave`` name the
 #: side a bounded link binds from; ``either`` is the weaker condition a block
-#: with both links pinned states — any single bend will do, and only a *mixed*
+#: with both links pinned states: any single bend passes, and only a *mixed*
 #: curve fails it.
 Curvature = Literal['convex', 'concave', 'either']
 
-#: The parameter dtypes that stand where a number belongs — a coefficient, a
-#: term, a divisor, a bound. A label selects and a flag masks; neither is one.
+#: The parameter dtypes that may stand where a number belongs, such as a
+#: coefficient, a term, a divisor or a bound. A label selects and a flag masks,
+#: so neither is a number.
 NUMERIC_DTYPES: frozenset[ParameterDtype] = frozenset({'float', 'int'})
+
+#: What a parameter's ``missing:`` is written as. The validator takes ``inf``
+#: and ``-inf`` as the numbers they name, which an editor would otherwise flag.
+_MISSING_SCHEMA: dict[str, object] = {
+    'anyOf': [
+        {'enum': list(get_args(MissingReading))},
+        {'type': 'boolean'},
+        {'type': 'number'},
+        {'enum': ['inf', '-inf']},
+    ],
+}
+
+#: The spellings of a missing row, for a refusal to list.
+_READINGS = ', '.join(get_args(MissingReading))
+
+
+def _without_refused(written: dict[str, object]) -> dict[str, object]:
+    """*written* with ``missing: refused`` left out, so the default written out and left out write one text."""
+    if written.get('missing') == 'refused':
+        written.pop('missing')
+    return written
+
+
+def _as_yaml(v: object) -> str:
+    """*v* as the file spells it, so a refusal quotes the line the author wrote."""
+    return str(v).lower() if isinstance(v, bool) else str(v)
+
+
+def _missing_null(kind: str, rewrite: str) -> ValueError:
+    """``missing: null`` reads as either the default or an absent row, so it is refused for the word that says which."""
+    return ValueError(f'missing: null on {kind} names no reading. {rewrite}')
+
 
 #: Every formulation, in the order [`Spec.expand`][] writes them out: a curve
 #: emits a set, and no set emits a curve.
@@ -151,18 +221,62 @@ class RelationBlock(_StrictBlock):
           connection: {key: [generator, bus]}
 
     A sum joins the table on the columns ``over=`` names and every other key
-    column, and groups by the columns ``by=relation[...]`` names; a lookup
-    joins on the columns it names. The declaration fixes no direction, and a
+    column, and groups by the columns ``by=relation[...]`` names. A lookup
+    joins on the columns it names. The declaration fixes no direction. A
     column is named after its own dimension or after none, so a name in a
-    call reads the same as a column and as a dimension. The map itself is data, and arrives with the rest of it, under
-    the relation's name, one column per role.
+    call reads the same as a column and as a dimension. The map itself is
+    data, and arrives with the rest of it, under the relation's name, one
+    column per role.
     """
 
     _label: ClassVar[str] = 'a relation declaration'
 
     key: str | list[str] | dict[str, str]
     values: str | list[str] | dict[str, str] | None = None
+    #: What a key the map leaves out means: ``refused`` where the file writes
+    #: nothing, and ``None`` for a bare relation, whose rows are its membership.
+    missing: Annotated[RelationMissing | None, WithJsonSchema({'enum': list(get_args(RelationMissing))})] = Field(
+        default=None, json_schema_extra={'default': 'refused'}
+    )
     description: str | None = None
+
+    @field_validator('missing', mode='before')
+    @classmethod
+    def _refused_or_absent(cls, v: object) -> object:
+        """A label is data, so no value fills a gap in a map, and neutral reads as absent wherever a map is read."""
+        if v is None:
+            raise _missing_null(
+                'a relation', 'Write absent for a key the map leaves out, or leave the key out for refused.'
+            )
+        if v not in get_args(RelationMissing):
+            msg = (
+                f'missing: {_as_yaml(v)} on a relation, which takes refused or absent. A label the map leaves out '
+                f'is refused, or belongs to no group.'
+            )
+            raise ValueError(msg)
+        return v
+
+    @model_validator(mode='after')
+    def _a_bare_relation_has_no_gap(self) -> RelationBlock:
+        """A bare relation's rows are its membership, so a key it leaves out is not missing.
+
+        A map left unwritten reads ``refused``, held as the value, so the spec
+        that writes the default and the one that leaves it out are one spec.
+        """
+        if self.missing is not None and self.values is None:
+            msg = (
+                f'missing: {self.missing} on a relation with no `values:`. Its rows are its membership, '
+                f'so a key it leaves out is not missing: drop the key.'
+            )
+            raise ValueError(msg)
+        if self.values is not None and self.missing is None:
+            self.missing = 'refused'
+        return self
+
+    @model_serializer(mode='wrap')
+    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        """``missing`` is written where it is not ``refused``: refused is what leaving it out says."""
+        return _without_refused(cast('dict[str, object]', handler(self)))
 
     @property
     def pairs(self) -> tuple[tuple[str, str], ...]:
@@ -221,13 +335,60 @@ class DimensionBlock(_StrictBlock):
 
 
 class ParameterBlock(_StrictBlock):
-    """A declared parameter with dims and dtype."""
+    """A declared parameter with dims and dtype, and what a missing row of its data means."""
 
     _label: ClassVar[str] = 'a parameter declaration'
 
     dims: list[str]
     dtype: ParameterDtype = 'float'
+    missing: Annotated[MissingReading | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
+
+    @field_validator('missing', mode='before')
+    @classmethod
+    def _a_reading_or_a_value(cls, v: object) -> object:
+        """``inf`` is a string to YAML and a number to the expression grammar, so it is taken as the number."""
+        if v is None:
+            raise _missing_null(
+                'a parameter', 'Write absent for a row that is not there, or leave the key out for refused.'
+            )
+        if v in ('inf', '-inf'):
+            return float(cast('str', v))
+        if isinstance(v, str) and v not in get_args(MissingReading):
+            msg = f'missing is the string {v!r}. It takes {_READINGS}, or a value: a number, true or false.'
+            raise ValueError(msg)
+        if isinstance(v, float) and math.isnan(v):
+            msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _READINGS + '.'
+            raise ValueError(msg)
+        return v
+
+    @model_serializer(mode='wrap')
+    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        """``missing`` is written where it is not ``refused``: refused is what leaving it out says."""
+        return _without_refused(cast('dict[str, object]', handler(self)))
+
+    @model_validator(mode='after')
+    def _a_value_fits_the_dtype(self) -> ParameterBlock:
+        """A value fills rows of the column, so it has the column's dtype, and a label has no neutral value."""
+        v = self.missing
+        if self.dtype == 'str' and v not in ('refused', 'absent'):
+            msg = (
+                f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill, '
+                f'and no neutral one.'
+            )
+            raise ValueError(msg)
+        if isinstance(v, str):
+            return self
+        if self.dtype == 'bool' and not isinstance(v, bool):
+            msg = f'missing: {_as_yaml(v)} on a bool parameter, which takes true or false.'
+            raise ValueError(msg)
+        if self.dtype != 'bool' and isinstance(v, bool):
+            msg = f'missing: {_as_yaml(v)} on a {self.dtype} parameter, which takes a number. Write 1 or 0.'
+            raise ValueError(msg)
+        if self.dtype == 'int' and isinstance(v, float):
+            msg = f'missing: {_as_yaml(v)} on an int parameter, which takes an integer. Write one, or declare dtype: float.'
+            raise ValueError(msg)
+        return self
 
 
 class BoundsBlock(_StrictBlock):
@@ -247,16 +408,13 @@ class BoundsBlock(_StrictBlock):
     @classmethod
     def _a_number_or_a_name(cls, v: object, info: ValidationInfo[object]) -> object:
         if isinstance(v, bool):
-            msg = f'bounds.{info.field_name} is a boolean, and a bound is a number or a parameter name.'
+            msg = f'bounds.{info.field_name} is a boolean. Write a number or a parameter name.'
             raise ValueError(msg)
         if isinstance(v, float) and math.isnan(v):
             msg = f'bounds.{info.field_name} is nan, which no value compares to. Write a number, or omit the bound.'
             raise ValueError(msg)
         if isinstance(v, float | int) and math.isinf(v):
-            msg = (
-                f'bounds.{info.field_name} is {v}, and a bound is finite. An open side is null: '
-                f'write {info.field_name}: null, or leave it out.'
-            )
+            msg = f'bounds.{info.field_name} is {v}. For an open side, write {info.field_name}: null or leave it out.'
             raise ValueError(msg)
         return v
 
@@ -281,17 +439,30 @@ class VariableBlock(_StrictBlock):
     where: str | None = None
     bounds: BoundsBlock = BoundsBlock()
     domain: VariableDomain = 'continuous'
-    absence: VariableAbsence = 'undefined'
+    missing: VariableMissing = 'absent'
     description: str | None = None
 
-    @model_validator(mode='after')
-    def _absence_needs_a_mask(self) -> VariableBlock:
-        """``absence:`` says what a *missing* coordinate means, so one must be missable."""
-        if self.absence != 'undefined' and self.where is None:
+    @field_validator('missing', mode='before')
+    @classmethod
+    def _absent_or_neutral(cls, v: object) -> object:
+        """A variable has no data, so the readings of data do not apply to it."""
+        if v is None:
+            raise _missing_null('a variable', 'Write neutral, or leave the key out for absent.')
+        if v not in get_args(VariableMissing):
             msg = (
-                f'absence: {self.absence} needs a `where:` — a variable with no mask exists at every '
-                f'coordinate of its dims, so there is no absence for it to describe. Add the mask, '
-                f'or drop the key.'
+                f'missing: {_as_yaml(v)} on a variable, which takes absent or neutral. A variable has no data, '
+                f'so refused and a value apply only to a parameter.'
+            )
+            raise ValueError(msg)
+        return v
+
+    @model_validator(mode='after')
+    def _neutral_needs_a_mask(self) -> VariableBlock:
+        """``missing:`` says what a masked-out coordinate means, so one must be missable."""
+        if self.missing != 'absent' and self.where is None:
+            msg = (
+                f'missing: {self.missing} needs a `where:`. A variable with no mask exists at every '
+                f'coordinate of its dims, so nothing is missing. Add a `where:`, or delete `missing:`.'
             )
             raise ValueError(msg)
         return self
@@ -300,9 +471,9 @@ class VariableBlock(_StrictBlock):
 class GivenParameterBlock(_StrictBlock):
     """Data this file reads and another file declares.
 
-    It says what a [`ParameterBlock`][] says, because the frame and the
-    dtype are all a parameter declaration holds: a where compares against the
-    dtype, and the dim rules read the frame.
+    It says the frame and the dtype of a [`ParameterBlock`][], which are what
+    this file reads: a where compares against the dtype, and the dim rules read
+    the frame. What a missing row means is the declaring file's ``missing:``.
     """
 
     _label: ClassVar[str] = 'a given parameter declaration'
@@ -436,7 +607,7 @@ class MacroBlock(_StrictBlock):
     def _check_formals(self) -> MacroBlock:
         formals = [*self.args, *self.kwargs]
         if len(set(formals)) != len(formals):
-            msg = f'duplicate formal names: {formals}'
+            msg = f'formal names repeat in {formals}. Give each formal its own name.'
             raise ValueError(msg)
         return self
 
@@ -503,8 +674,8 @@ class ExpressionBlock(_StrictBlock):
     _label: ClassVar[str] = 'a named expression'
 
     expression: Expression | None = None
-    #: The frame the quantity is read over — required with ``cases:``, and
-    #: the body's own dims where a plain entry leaves it out.
+    #: The dimensions the quantity ranges over. ``cases:`` needs it, and a plain
+    #: entry that leaves it out takes the dims of its body.
     dims: list[str] | None = None
     #: The regions, keyed by the name labelling the row each prints; every ``when`` is proved apart from the others.
     cases: Annotated[dict[str, ExpressionCase], Field(min_length=1)] = {}
@@ -523,37 +694,22 @@ class ExpressionBlock(_StrictBlock):
     def _one_form_or_the_other(self) -> Self:
         """One ``expression:``, or ``cases:`` with the ``otherwise:`` and ``dims:`` they need."""
         if self.cases and self.expression is not None:
-            msg = (
-                'a named expression is one `expression:` or a set of `cases:`, and this has both. '
-                'Cases are for a quantity whose value varies by region; one expression is everything else.'
-            )
+            msg = 'the named expression has both `expression:` and `cases:`. Keep one of them.'
             raise ValueError(msg)
         if not self.cases and self.expression is None:
             msg = (
-                'a named expression is one `expression:` or a set of `cases:`, and this has neither. '
-                'Cases are for a quantity whose value varies by region; one expression is everything else. '
-                "A sum other files add every term to is read under 'given: expressions:', and each file "
-                'names it with `adds_to:` on its term.'
+                'the named expression has neither `expression:` nor `cases:`. Write one of them, or declare '
+                "it under 'given: expressions:' if other files add terms to it with `adds_to:`."
             )
             raise ValueError(msg)
         if self.cases and self.dims is None:
-            msg = (
-                '`cases:` needs a `dims:` — it is the frame the cases are read over, and no one '
-                "case's body gives it, since a case may be a scalar while the condition selecting it is not."
-            )
+            msg = '`cases:` needs a `dims:`. Add `dims:` with the dimensions the cases range over.'
             raise ValueError(msg)
         if self.cases and self.otherwise is None:
-            msg = (
-                'a `cases:` block needs an `otherwise:` — the value wherever no `when` holds, and '
-                'the row that prints as "otherwise". Without it the quantity would have no value '
-                'there, and absence spreads to every constraint that names it.'
-            )
+            msg = 'a `cases:` block needs an `otherwise:`. Add `otherwise:` with the value where no `when` holds.'
             raise ValueError(msg)
         if self.otherwise is not None and not self.cases:
-            msg = (
-                '`otherwise:` is what is left once the `cases:` have taken their regions, and there '
-                'are none here. A value that holds everywhere is a plain `expression:`.'
-            )
+            msg = '`otherwise:` needs a `cases:` block. For one value everywhere, write `expression:` instead.'
             raise ValueError(msg)
         return self
 
@@ -646,12 +802,12 @@ class AssumptionBlock(_StrictBlock):
     _label: ClassVar[str] = 'an assumption declaration'
 
     #: The predicate, in the where grammar. It holds at every coordinate of
-    #: its own frame that ``where`` admits.
+    #: its own dims that ``where`` admits.
     holds: str
     #: Which coordinates it is checked at, in the same grammar; absent means every one.
     where: str | None = None
-    #: Why the rule is there, in the author's words. The sentence a consumer
-    #: refuses with quotes it.
+    #: Why the rule is there, in the author's words. The refusal an engine
+    #: prints quotes it.
     description: str | None = None
 
     @model_validator(mode='before')
@@ -696,7 +852,7 @@ class PiecewiseLink(_StrictBlock):
     def _from_list(cls, data: object) -> object:
         if isinstance(data, list):
             if not 2 <= len(data) <= 3:
-                msg = f'each link must be [expression, values] or [expression, values, sign], got {data!r}'
+                msg = f'each link is [expression, values] or [expression, values, sign], got {data!r}.'
                 raise ValueError(msg)
             return dict(zip(('expression', 'values', 'sign'), data, strict=False))
         return data
@@ -722,8 +878,8 @@ class PiecewiseLink(_StrictBlock):
 PIECEWISE_METHODS = {
     'adjacency': 'a binary per segment, and a row making the two nonzero weights neighbours',
     'sos2': 'the same weights, restricted by a set the solver branches on (the sos rules)',
-    'convex': 'nothing — the weights range over the hull, which is a pure LP',
-    'lp': 'no weights at all — one row per segment line, plus the two rows holding the domain',
+    'convex': 'nothing, so the weights range over the hull, which is a pure LP',
+    'lp': 'no weights, but one row per segment line, plus the two rows holding the domain',
 }
 
 
@@ -745,11 +901,16 @@ class PiecewiseBlock(_StrictBlock):
     links: list[PiecewiseLink]
     #: Which of [`PIECEWISE_METHODS`][] restricts the weights.
     method: PiecewiseMethod = 'adjacency'
-    #: What the weights sum to — 1 where absent, or a binary that pins the formulation to 0 when it is 0.
+    #: What the weights sum to: 1 where absent, or a binary that pins the formulation to 0 when it is 0.
     activity: str | None = None
     #: A boolean parameter saying how far each curve runs, for curves of unequal length.
     points: str | None = None
     description: str | None = None
+
+    @property
+    def consumes(self) -> frozenset[str]:
+        """The parameters the block reads: each link's values, and the ``points:`` mask."""
+        return frozenset({link.values for link in self.links} | ({self.points} if self.points else set()))
 
     @property
     def nominated(self) -> str | None:
@@ -778,19 +939,13 @@ class PiecewiseBlock(_StrictBlock):
     @model_validator(mode='after')
     def _check_method_shape(self) -> PiecewiseBlock:
         if self.method == 'convex' and len(self.links) != 2:
-            msg = (
-                'method: convex requires exactly two links (the hull relaxation '
-                'is only well-defined for a single y=f(x) curve).'
-            )
+            msg = 'method: convex takes exactly two links. Write two links, or choose another method.'
             raise ValueError(msg)
         if self.method == 'lp' and sum(link.sign != '==' for link in self.links) != 1:
-            msg = (
-                "method: lp needs exactly one link bounded by the curve — a '<=' or '>=' third "
-                'element on it. With every link pinned the segment lines have nothing to bound.'
-            )
+            msg = "method: lp needs exactly one link with a '<=' or '>=' sign. Add the sign to one link."
             raise ValueError(msg)
         if self.activity is not None and self.method in ('convex', 'lp'):
-            msg = f'activity is not supported with method: {self.method}.'
+            msg = f'activity: does not work with method: {self.method}. Delete activity:, or choose another method.'
             raise ValueError(msg)
         return self
 
@@ -802,16 +957,15 @@ class PiecewiseBlock(_StrictBlock):
             raise ValueError(msg)
         non_eq = [link.sign for link in v if link.sign != '==']
         if len(non_eq) > 1:
-            msg = "at most one link may carry a non-'==' sign."
+            msg = "only one link may carry '<=' or '>='. Write '==' on the others."
             raise ValueError(msg)
         if non_eq and len(v) != 2:
-            msg = "a non-'==' sign is only supported with exactly two links."
+            msg = "a '<=' or '>=' sign needs exactly two links. Write two links, or use '==' on every link."
             raise ValueError(msg)
         return v
 
 
-#: The orders of special ordered set — nothing else is a construct solvers
-#: have.
+#: The orders of special ordered set that solvers have.
 SOS_TYPES = frozenset(get_args(SosType))
 
 
@@ -840,7 +994,7 @@ class SosBlock(_StrictBlock):
     @classmethod
     def _check_type(cls, v: object, handler: ValidatorFunctionWrapHandler) -> SosType:
         orders = ' or '.join(str(t) for t in sorted(SOS_TYPES))
-        msg = f'sos type must be {orders}, got {v!r}. A set of any other order is not a construct solvers carry.'
+        msg = f'sos type is {v!r}. Write type: {orders}.'
         if type(v) is not int:  # True == 1 == 1.0, and a set of order True is nothing
             raise ValueError(msg)
         try:
@@ -849,10 +1003,10 @@ class SosBlock(_StrictBlock):
             raise ValueError(msg) from None
 
 
-#: The language surfaces this reader understands. A **language** version, not a
-#: package one: it moves when the accepted YAML surface moves, which most
-#: releases do not, so deriving it from the package version would be automatic
-#: and wrong. `0` is the unstable surface — no compatibility promise, per
+#: The language versions this reader can read. A **language** version, not a
+#: package one: it changes when the YAML the language accepts changes, which
+#: most releases do not, so deriving it from the package version would be
+#: automatic and wrong. `0` is unstable, with no compatibility promise, per
 #: *breaking changes are free* in CONTRIBUTING.
 SUPPORTED_VERSIONS: tuple[int, ...] = (0,)
 
@@ -880,7 +1034,7 @@ class Spec(_StrictBlock):
     A ``Spec`` that exists has passed the whole language: constructing one by
     any route — ``to_spec``, [`model_validate`][], the constructor — runs
     every load-time check, expression pass included, and raises
-    [`LanguageError`][] on a spec the language refuses.
+    [`LanguageError`][mathspec.errors.LanguageError] on a spec the language refuses.
     Holding one is the proof, so nothing downstream checks it again.
 
     The API is the thirteen declaration sections plus ``version`` and
@@ -893,20 +1047,20 @@ class Spec(_StrictBlock):
 
     _label: ClassVar[str] = 'the top level of the file'
 
-    #: Which language surface this file is written against. Absent means 0, so
-    #: the field is additive. **0 means unstable** — the surface may change in
-    #: any release — and declaring it is what lets a later reader refuse a file
-    #: it cannot read rather than misinterpret it.
+    #: Which language version this file is written against. Absent means 0, so
+    #: the field is additive. **0 means unstable**, so the YAML it accepts may
+    #: change in any release. Declaring it lets a later reader refuse a file it
+    #: cannot read rather than misinterpret it.
     version: int = 0
     #: What the file as a whole is, in the same plain prose a declaration's
     #: ``description:`` takes. The typeset document opens with it.
     description: str | None = None
+    #: What this file reads and does not build ([`GivenBlock`][]). Empty in a file that stands alone.
+    given: GivenBlock = GivenBlock()
     dimensions: dict[str, DimensionBlock] = {}
     relations: dict[str, RelationBlock] = {}
     parameters: dict[str, ParameterBlock] = {}
     variables: dict[str, VariableBlock] = {}
-    #: What this file reads and does not build ([`GivenBlock`][]). Empty in a file that stands alone.
-    given: GivenBlock = GivenBlock()
     constraints: dict[str, ConstraintBlock] = {}
     objective: ObjectiveBlock | None = None
     expressions: dict[str, ExpressionBlock] = {}
@@ -974,7 +1128,7 @@ class Spec(_StrictBlock):
         supported = ', '.join(str(s) for s in SUPPORTED_VERSIONS)
         msg = (
             f'the spec declares version {v}, and mathspec {installed} understands [{supported}]. '
-            f'Upgrade mathspec, or write the version this file actually targets.'
+            f'Upgrade mathspec, or write the version this file targets.'
         )
         raise ValueError(msg)
 
@@ -1060,9 +1214,8 @@ class Spec(_StrictBlock):
         """
         sections = [*self, *((f'given: {kind}', group) for kind, group in self.given)]
         errors = [
-            f'{section}: {name!r} is not a name. A declaration is named the way an expression '
-            f'writes it — a letter or an underscore, then letters, digits or underscores — so '
-            f'nothing can refer to this one. Rename it.'
+            f'{section}: {name!r} is not a name. Start it with a letter or an underscore, '
+            f'then use only letters, digits or underscores.'
             for section, value in sections
             if isinstance(value, dict)
             for name in value

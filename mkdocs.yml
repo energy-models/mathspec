@@ -87,6 +87,7 @@ nav:
   - Development:
       - Building on mathspec:
           - Reading a spec and its program: reference/reading.md
+          - Spec API: reference/spec.md
           - Program API: reference/program.md
           - What counts as language: about/what-counts-as-language.md
       - Contributing:

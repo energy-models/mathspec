@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec import LanguageError
 from mathspec.degree import calls_dual, check_binary, check_expression
+from mathspec.errors import LanguageError
 from mathspec.program import carries_variable
 from mathspec.resolution import Namespace
 from tests.fixtures import SMALL_MODEL, expression_of, schema_of
@@ -50,8 +50,8 @@ def test_an_affine_expression_passes_everywhere(text):
     [
         pytest.param('p * q', 'which is degree 2', id='a-product-of-two-variables'),
         pytest.param('p * (c * q)', 'which is degree 2', id='a-variable-under-each-factor'),
-        pytest.param('p ** 2', '`**` is not in the language over variables', id='a-variable-base'),
-        pytest.param('k ** p', '`**` is not in the language over variables', id='a-variable-exponent'),
+        pytest.param('p ** 2', '`**` has a variable in its base or exponent', id='a-variable-base'),
+        pytest.param('k ** p', '`**` has a variable in its base or exponent', id='a-variable-exponent'),
         pytest.param('p / q', 'the divisor contains variables', id='a-variable-divisor'),
     ],
 )

@@ -5,27 +5,25 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Compose a spec from several files
 
-Build one spec out of files that each say part of it. `merge` composes
-**fragments**: the files of a component library, each owning part of the math.
-`override` lays **patches** over a **base**: the spec a framework ships, and
-the change a project makes to it. Each loads every fragment and the base with
-[`to_spec`](../reference/language/errors.md#what-to_spec-checks) before it
-composes them, and hands back the composed spec loaded the same way. Each
-takes its files as a list, and the two compose as `override(merge([…]), […])`.
+Build one spec out of files that each state part of it. `merge` joins
+**fragments**, which are the files of a component library and each declare part
+of the math. `override` lays **patches** over a **base**, where the base is the
+spec a framework ships and a patch is the change a project makes to it. Both functions load every fragment and the base with
+[`to_spec`](../reference/language/errors.md#what-to_spec-checks) first, and
+return the composed spec loaded the same way. Both take their files as a list,
+and you can nest them as `override(merge([…]), […])`.
 
 ## A library of components
 
-1. **Write the network as a spec.** It balances the injection at a bus, and
-   reads the injection under
-   [`given`](../reference/language/declarations.md#given): what the components
-   put in is theirs to say. It sets the objective on `total_cost`, which it
-   reads the same way: what each component costs is the component's to say.
-   Nothing in it names a component class.
+1. **Write the network as a spec.** It balances the injection at each bus.
+   It reads the injection under
+   [`given`](../reference/language/declarations.md#given), which declares a
+   name that the file reads and does not build, because the component files
+   build it. It sets the objective on `total_cost`, which it reads the same
+   way, because each component adds its own cost. Nothing in the file names a
+   component class.
 
    ```yaml title="network.yaml"
-   dimensions:
-     snapshot: { dtype: int }
-     bus: { dtype: str }
    given:
      expressions:
        Bus_injection:
@@ -34,6 +32,9 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
        total_cost:
          dims: []
          description: what running the system costs
+   dimensions:
+     snapshot: { dtype: int }
+     bus: { dtype: str }
    constraints:
      Bus_balance:
        dims: [snapshot, bus]
@@ -43,14 +44,18 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      expression: total_cost
    ```
 
-2. **Write each component file against the network.** It declares its own
-   dimension and its own math. It reads `Bus_injection` too, and says what it
-   puts into a bus as a named expression, a
-   [term](../reference/language/declarations.md#terms) whose `adds_to:` names
-   `Bus_injection`. A component that costs something adds its cost to
-   `total_cost` the same way.
+2. **Write each component file against the network.** The file declares its
+   own dimension and its own math, and also reads `Bus_injection`. It states
+   what it puts into a bus as a
+   [term](../reference/language/declarations.md#terms), which is a named
+   expression whose `adds_to:` names `Bus_injection`. A component that costs
+   something adds its cost to `total_cost` the same way.
 
    ```yaml title="generator.yaml"
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus] }
+       total_cost: { dims: [] }
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
@@ -62,10 +67,6 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      Generator_marginal_cost: { dims: [generator] }
    variables:
      Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
-   given:
-     expressions:
-       Bus_injection: { dims: [snapshot, bus] }
-       total_cost: { dims: [] }
    expressions:
      Generator_injection:
        expression: sum(Generator_p, over=generator, by=Generator_bus[bus])
@@ -76,6 +77,9 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    ```
 
    ```yaml title="load.yaml"
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus] }
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
@@ -84,9 +88,6 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      Load_bus: { key: load, values: bus }
    parameters:
      Load_p_set: { dims: [snapshot, load] }
-   given:
-     expressions:
-       Bus_injection: { dims: [snapshot, bus] }
    expressions:
      Load_injection:
        expression: -sum(Load_p_set, over=load, by=Load_bus[bus])
@@ -98,7 +99,7 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    problem.
 
 3. **Merge the files you need.** Give them as a list. A refusal names a file
-   by its path as the list gives it, and a mapping or a loaded spec by its
+   by its path, as the list gives it, and a mapping or a loaded spec by its
    place in the list, such as `'#2'`.
 
    ```python
@@ -110,15 +111,19 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    `spec` defines `Bus_injection` as `Generator_injection + Load_injection`,
    and keeps each term as a named expression. Nothing is left under `given:`,
    so `spec` is fully defined. The objective is the network's, and
-   `total_cost` is `Generator_cost`. The order of the list changes no
-   meaning: [`canonical`](compare.md) writes the same text for every order.
-   A second file that sets an objective is refused: one fragment sets it,
-   and each other one adds its part to the sum it reads.
+   `total_cost` is `Generator_cost`. The order of the list does not
+   change the spec: [`canonical`](compare.md) writes the same text for every
+   order. `merge` refuses a second file that sets an objective, because one
+   fragment sets it and each other fragment adds its part to the sum that the
+   objective reads.
 
 4. **Add a component without touching the network.** A new file adds its own
    term, and `network.yaml` stays as it is.
 
    ```yaml title="store.yaml"
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus] }
    dimensions:
      snapshot: { dtype: int, ordered: true }
      bus: { dtype: str }
@@ -134,9 +139,6 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
      Store_energy_balance:
        dims: [snapshot, store]
        expression: Store_e == shift(Store_e, along=snapshot, offset=1, edge='wrap') - Store_p
-   given:
-     expressions:
-       Bus_injection: { dims: [snapshot, bus] }
    expressions:
      Store_injection:
        expression: sum(Store_p, over=store, by=Store_bus[bus])
@@ -154,11 +156,17 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    `ms.merge([ms.merge(['network.yaml', 'generator.yaml', 'load.yaml']), 'store.yaml'])`
    gives the same sum.
 
-5. **Give the network a part of its own.** Define the sum in one file instead
-   of reading it there. The body that file writes comes first, and every term
-   follows it. The component files stay as they are.
+5. **Add a term that belongs to the network.** Define `Bus_injection` in the
+   network file instead of reading it under `given:`. The body that the network
+   file writes then comes first in the sum, every term follows it, and the
+   component files stay as they are.
 
    ```yaml title="network_slack.yaml"
+   given:
+     expressions:
+       total_cost:
+         dims: []
+         description: what running the system costs
    dimensions:
      snapshot: { dtype: int }
      bus: { dtype: str }
@@ -169,11 +177,6 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
        dims: [snapshot, bus]
        expression: Bus_slack
        description: what the components put into a bus
-   given:
-     expressions:
-       total_cost:
-         dims: []
-         description: what running the system costs
    constraints:
      Bus_balance:
        dims: [snapshot, bus]
@@ -188,8 +191,8 @@ takes its files as a list, and the two compose as `override(merge([…]), […])
    ```
 
    `Bus_injection` is `Bus_slack + Generator_injection + Load_injection`, over
-   the `dims:` and with the description of `network_slack.yaml`. One file at
-   most defines the sum. Each other file reads it under `given:`.
+   the `dims:` and with the description of `network_slack.yaml`. At most one
+   file defines the sum, and each other file reads it under `given:`.
 
 A library can also couple its components through a flow variable per port,
 which each component pins at its own port.
@@ -201,11 +204,12 @@ which each component pins at its own port.
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                     |
 | a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                       |
-| `ordered: true` on a shared dimension             | it is a claim about the dimension rather than the dimension, so the dimension is ordered if one fragment says so                                                                                    |
+| `ordered: true` on a shared dimension             | it says that the members have an order and does not change them, so the dimension is ordered if one fragment says so                                                                                |
+| `missing:` on a shared relation                   | it says what a missing row of the data means, so every fragment that declares the relation gives the same value. `missing: refused` is the same as no `missing:`                                    |
 | any other declaration                             | one fragment declares it, and a second is refused                                                                                                                                                   |
 | an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the declaration where the introducer wrote none                                             |
-| a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                          |
-| a given mask                                      | the reader's `dims` name the dimensions the defining fragment's predicate reads, no more and no fewer                                                                                               |
+| a given expression                                | the body of the definition carries no dimension that the `dims` of the reading fragment do not name                                                                                                 |
+| a given mask                                      | the `dims` of the reading fragment name exactly the dimensions that the predicate of the defining fragment reads                                                                                    |
 | a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                              |
 | an expression with `adds_to:`                     | the sum it names is the body one fragment defines, if any, followed by every term by its name, in the order of the list. [Terms](../reference/language/declarations.md#terms) gives what is refused |
 | `objective`                                       | one fragment sets it, and a second is refused. Several fragments contribute to it as terms of a sum the objective reads                                                                             |
@@ -214,31 +218,32 @@ which each component pins at its own port.
 
 ## A name two fragments declare
 
-Fragments own their math, so a name two of them declare is refused, both
-named. Here two files each say what a generator fleet is:
+Each fragment declares its own math, so `merge` refuses a name that two
+fragments declare, and the message names both files. Here two files each
+declare a generator fleet:
 
 ```text
-fragments 'gas.yaml' and 'coal.yaml' both declare the parameter 'Generator_p_nom'. Two of the same kind of thing are two rows of a dimension rather than two fragments: merge the fragment once, and let the data carry both. Different math under one spelling is a rename: call one of them something else.
+fragments 'gas.yaml' and 'coal.yaml' both declare the parameter 'Generator_p_nom'. If they are two rows of a dimension, merge the fragment once and put both rows in the data. Otherwise, rename one of them.
 ```
 
-A term is a named expression like any other, so the terms of two fragments
-need two names. Name each term after its component, such as
-`Generator_injection` and `Load_injection`.
+A term is a named expression, so the terms of two fragments need two names.
+Name each term after its component, such as `Generator_injection` and
+`Load_injection`.
 
-## A column read one way and introduced another
+## A declaration read one way and introduced another
 
-What a fragment states about a column it reads has to agree with the fragment
-that introduces the column. The reader may say less, such as the frame with no
-`domain`, and may not say something else. Here a file that caps emissions
-reads `Generator_p` as binary:
+A fragment that reads a declaration under `given:` must agree with the fragment
+that introduces it. The reading fragment may say less, such as the dimensions
+with no `domain`, but it may not say something different. Here a file that caps
+emissions reads `Generator_p` as binary:
 
 ```yaml title="emissions.yaml"
-dimensions:
-  snapshot: { dtype: int }
-  generator: { dtype: str }
 given:
   variables:
     Generator_p: { dims: [snapshot, generator], domain: binary }
+dimensions:
+  snapshot: { dtype: int }
+  generator: { dtype: str }
 parameters:
   Generator_co2: { dims: [generator] }
   co2_cap: { dims: [] }
@@ -249,34 +254,36 @@ constraints:
 ```
 
 ```text
-fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'absence': 'undefined'}. A given declaration says the same as the declaration it is folded into, or less: restate the frame as the introducer declares it, or leave the field out.
+fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'missing': 'absent'}. Restate the dims as 'generator.yaml' declares them, or leave the field out.
 ```
 
-Two fragments that both only read a column have to read it the same way, and
-a difference is refused as it is for a dimension.
+Two fragments that both only read a declaration must read it the same way,
+and `merge` refuses a difference, as it does for a dimension.
 
 ## A fragment that does not load on its own
 
 A fragment is a whole spec, so `merge` loads each one before it composes
-them. A fragment `to_spec` refuses is refused under its own name, with the
-refusal `to_spec` gives. A sibling cannot make it load. Here the generator
-declares `Generator_p` and reads it under `given:` as well:
+them. If `to_spec` refuses a fragment, `merge` refuses it under its own name,
+with the message `to_spec` gives. No other fragment in the list can make it
+load. Here the generator declares `Generator_p` and reads it under `given:` as
+well:
 
 ```text
-fragment 'generator.yaml' does not load on its own. A fragment is a whole spec: it declares what it builds, and reads what a sibling builds under 'given:'.
-Given variable 'Generator_p' collides with the variable of the same name. Names share one flat namespace — rename one of them.
+fragment 'generator.yaml' does not load on its own. Declare what it builds, and read under 'given:' what another fragment builds.
+Given variable 'Generator_p' collides with the variable of the same name. Rename one of them.
 ```
 
 ## A base and its patches
 
 1. **Write the base as a spec**, and each patch as the change it makes. A
-   patch names only the fields it changes. A declaration a patch does not name
-   stays as the base wrote it. A named expression the patch writes on one line
-   replaces only the body, `expression:` or `cases:`. The entry keeps its
-   `dims:`, its description and its `adds_to:`, so the new body carries no
-   dimension outside the kept `dims:`. The base loads on its own, and
-   `override` loads it first. A patch is not a spec, so it is laid over as written, and the
-   patched spec is loaded after.
+   patch names only the fields it changes, and a declaration that the patch
+   does not name stays as the base wrote it. A named expression that the patch
+   writes on one line replaces only the body, `expression:` or `cases:`. The
+   entry keeps its `dims:`, its description and its `adds_to:`, so the new body
+   carries no dimension outside the kept `dims:`. The base loads on its own,
+   and `override` loads it first. A patch is not a spec, so `override` does not
+   load it, but lays it over the base as written and then loads the patched
+   spec.
 
    ```yaml title="base.yaml"
    dimensions:
@@ -312,7 +319,7 @@ Given variable 'Generator_p' collides with the variable of the same name. Names 
    ```
 
 2. **Lay the patches on the base.** Give them as a list. A refusal names a
-   patch by its path, as `merge` names a fragment.
+   patch by its path, in the same way that `merge` names a fragment.
 
    ```python
    import mathspec as ms
@@ -332,17 +339,17 @@ Given variable 'Generator_p' collides with the variable of the same name. Names 
    objective: null
    ```
 
-   A `null` makes what it names absent. On a declaration, the declaration is
-   removed. On a field, the field takes its default and the declaration stays:
+   On a declaration, `null` removes the declaration. On a field, the field
+   takes its default and the declaration stays:
    `dispatch: { where: null }` gives that variable no mask, and
-   `dispatch: { bounds: { upper: null } }` leaves it open above. Higher up,
+   `dispatch: { bounds: { upper: null } }` leaves it open above. On a section,
    `constraints: null` is refused, because a section is not a declaration and
-   nulling it removes nothing.
+   a `null` on it removes nothing.
 
 4. **Put a patch that refines another after it.** `override` lays the
    patches in the order of the list, each on the result of the ones before.
    Where two patches write one field, the later one wins. A later patch may
-   also edit or remove a declaration an earlier one creates.
+   also edit or remove a declaration that an earlier one creates.
 
    ```python
    spec = ms.override('base.yaml', ['pathway.yaml', 'project.yaml'])
@@ -359,15 +366,16 @@ Given variable 'Generator_p' collides with the variable of the same name. Names 
 | `null` under a section's name        | it is refused                                                                 |
 | a dimension or a relation            | it is added, or restated as the base declares it                              |
 | `ordered:` on a restated dimension   | `true` makes the dimension ordered; `false` over an ordered one is refused    |
+| `missing:` on a relation             | it changes what a key the map leaves out means, as on a parameter             |
 | an entry under one kind of `given:`  | it is edited, added or removed like any declaration, and the other kinds stay |
 | `version`, `description`             | the patch's value replaces the base's                                         |
 | a field an earlier patch writes      | the later patch's value replaces it                                           |
 
 ## A partial entry on a missing name
 
-An entry naming some fields has to land on a declaration the base or an
-earlier patch has. A mistyped name is refused rather than read as a new
-declaration:
+An entry that names only some fields must edit a declaration that the base or
+an earlier patch has. `override` refuses a mistyped name, and does not read it
+as a new declaration:
 
 ```text
 patch 'project.yaml' edits the constraint 'power_balnce', which its base does not declare. Did you mean 'power_balance'? A patch creates a declaration only by writing it whole, and this one is not: a constraint needs `expression`.
@@ -385,33 +393,38 @@ same as one left out. Changing one under the expressions already written
 over it is refused, and so is removing one:
 
 ```text
-patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch adjusts the math, not the coordinate space the math is already written over: restate the declaration word for word, leave it out, or give the patch a dimension of its own under a name of its own.
+patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. Restate the declaration word for word, leave it out, or give the patch a dimension of its own under a name of its own.
 ```
 
-`ordered` is a claim about the dimension, not the dimension. A patch may add
-it, so a patch that steps along `snapshot` declares it `ordered: true` over a
-base that does not. A patch may not take it back, because the base may
-already step along it:
+`ordered` says that the members of a dimension have an order, and it does not
+change the members. So a patch may add it: a patch that steps along `snapshot`
+declares it `ordered: true` over a base that does not. A patch may not remove
+it, because a construct in the base may already step along `snapshot`:
 
 ```text
-patch 'unordered.yaml' says the dimension 'snapshot' is not ordered, where its base declares it ordered. A construct in the base may step along it, and a patch adds the claim of order but never withdraws it: leave `ordered` out of the patch.
+patch 'unordered.yaml' says the dimension 'snapshot' is not ordered, where its base declares it ordered. A patch can add `ordered: true` but cannot remove it, because a construct in the base may step along it. Leave `ordered` out of the patch.
 ```
+
+`missing:` is a claim about the data, not the coordinate space. A patch may
+change it on a relation as on a parameter, and may name it alone:
+`relations: {gen_bus: {missing: absent}}`. `null` puts the default, `refused`,
+back.
 
 ## A section set to `null`
 
-A `null` removes the declaration it names. A section holds declarations rather
-than being one, so nulling a section is refused rather than read as emptying
-it:
+A section such as `constraints:` holds declarations and is not one, so
+`override` refuses a `null` on it rather than read the `null` as an
+instruction to empty the section:
 
 ```text
-patch 'project.yaml' sets 'constraints' to null, which removes nothing: the removal marker names one declaration, and a section is not one. Remove the declarations one at a time, each under its own name, or leave the section out of the patch.
+patch 'project.yaml' sets 'constraints' to null, which removes nothing. Remove the declarations one at a time, each under its own name, or leave the section out of the patch.
 ```
 
 ## A stale removal
 
-A removal says what the base has, so a removal of a declaration the base does
-not have is refused with the near miss:
+`override` refuses a `null` on a declaration the base does not have, and names
+the closest name the base does have:
 
 ```text
-patch 'stale.yaml' removes the constraint 'power_balnce', which its base does not declare. A removal is a claim about what is there, so a stale one is a patch that no longer describes the spec it lands on. Did you mean 'power_balance'?
+patch 'stale.yaml' removes the constraint 'power_balnce', which its base does not declare. Delete the removal from the patch, or fix the name. Did you mean 'power_balance'?
 ```

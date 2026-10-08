@@ -6,12 +6,14 @@
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
 import pytest
 
 from mathspec.errors import SchemaError
 from mathspec.typesetting import SymbolTable, to_latex, to_markdown, to_typst, typeset
+from mathspec.typesetting.format import number
 from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, varied
 from tests.typesetting.fixtures import EVERY_FORMAT, TYPST_SYMBOLS
@@ -93,6 +95,62 @@ def test_a_named_expression_has_a_legend_row_exactly_while_its_symbol_prints(nam
     """
     assert 'what a snapshot costs' in typeset(DESCRIBED, name)
     assert 'what a snapshot costs' not in typeset(DESCRIBED, name, inline_expressions=True)
+
+
+DEFAULTED = varied(
+    DISPATCH_MODEL,
+    **{
+        'dimensions.bus': {'dtype': 'str'},
+        'relations.gen_bus': {'key': 'generator', 'values': 'bus', 'missing': 'absent'},
+        'parameters.p_max.missing': 'inf',
+        'parameters.cost.missing': 1,
+        'parameters.load.missing': 'neutral',
+        'parameters.floor': {'dims': [], 'missing': '-inf'},
+        'parameters.online': {'dims': ['generator'], 'dtype': 'bool', 'missing': True},
+        'parameters.p_set': {'dims': ['generator'], 'missing': 'absent'},
+        'parameters.ramp': {'dims': ['generator']},
+    },
+)
+
+
+@EVERY_FORMAT
+def test_the_legend_prints_what_a_missing_row_means(name: FormatName, fmt: Format):
+    """The legend printed a value and left out a reading, so `absent`, `neutral` and a partial map looked complete."""
+    out = typeset(DEFAULTED, name)
+    for shown in (
+        fmt.math(number(math.inf, fmt)),
+        fmt.math(number(-math.inf, fmt)),
+        fmt.math('1'),
+        fmt.mono('true'),
+        fmt.mono('neutral'),
+        fmt.mono('absent'),
+        f'{fmt.mono("gen_bus")} is {fmt.mono("absent")}',
+    ):
+        assert f'{shown} where the data has no row' in out
+    assert out.count('where the data has no row') == 8, (
+        'six parameters and the map in each of its two sets say what a missing row means; '
+        '`ramp` keeps the default, refused, and says nothing'
+    )
+
+
+#: The dispatch model with a masked variable of each reading.
+MASKED = varied(
+    DISPATCH_MODEL,
+    **{
+        'parameters.on': {'dims': ['generator'], 'dtype': 'bool', 'missing': 'neutral'},
+        'variables.spill': {'dims': ['snapshot', 'generator'], 'where': 'on', 'missing': 'neutral'},
+        'variables.store': {'dims': ['snapshot', 'generator'], 'where': 'on'},
+    },
+)
+
+
+@EVERY_FORMAT
+def test_the_legend_prints_what_a_masked_out_variable_means(name: FormatName, fmt: Format):
+    """The legend printed a parameter's reading and not a variable's, so `missing: neutral` on a variable was unseen."""
+    out = typeset(MASKED, name)
+    [row] = [line for line in out.splitlines() if fmt.mono('spill') in line and ' over ' in line]
+    assert f'{fmt.mono("spill")} over ' in row and f', {fmt.mono("neutral")} where the mask leaves it out' in row, row
+    assert out.count('where the mask leaves it out') == 1, '`store` keeps the default, absent, and says nothing'
 
 
 #: The dispatch model with a curve on it, so one model has two readings and one
@@ -204,14 +262,14 @@ def test_an_entry_naming_nothing_is_an_error_with_the_near_miss(symbols, match):
         pytest.param(
             to_typst,
             {'notation': 'latex', 'names': {'p_max': r'\bar p'}},
-            'written in latex, but this is a typst render',
+            'written in latex, but this render is typst',
             id='a-latex-table-into-typst',
         ),
-        pytest.param(to_latex, TYPST_SYMBOLS, 'written in typst, but this is a latex render', id='typst-table-latex'),
+        pytest.param(to_latex, TYPST_SYMBOLS, 'written in typst, but this render is latex', id='typst-table-latex'),
         pytest.param(
-            to_markdown, TYPST_SYMBOLS, 'written in typst, but this is a latex render', id='typst-table-markdown'
+            to_markdown, TYPST_SYMBOLS, 'written in typst, but this render is latex', id='typst-table-markdown'
         ),
-        pytest.param(to_latex, {'names': {'p': 'x'}}, "'notation:' is required", id='a-table-that-does-not-say'),
+        pytest.param(to_latex, {'names': {'p': 'x'}}, "'notation:' is missing", id='a-table-that-does-not-say'),
         pytest.param(
             to_latex,
             {'notation': 'latx', 'names': {'p': 'x'}},

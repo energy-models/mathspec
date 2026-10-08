@@ -5,10 +5,25 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Security
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the security-constrained flows over the outages. It reads `Line_s_max_pu`, `Line_s_monitored`, `Line_s_nom`, `Line_s_nom_ext`, `Line_s_nom_extendable`, `Transformer_s_max_pu` and 4 more under [`given`](../../reference/language/declarations.md#given).
+This file states the security-constrained flows over the outages. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Line_s_max_pu`, `Line_s_monitored`, `Line_s_nom`, `Line_s_nom_ext`, `Line_s_nom_extendable`, `Transformer_s_max_pu` and 4 more names that other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    Line_s_nom: { dims: [scenario, line] }
+    Line_s_nom_extendable: { dims: [line], dtype: bool }
+    Line_s_max_pu: { dims: [scenario, snapshot, line] }
+    Transformer_s_nom: { dims: [scenario, transformer] }
+    Transformer_s_nom_extendable: { dims: [transformer], dtype: bool }
+    Transformer_s_max_pu: { dims: [scenario, snapshot, transformer] }
+  variables:
+    Line_s_nom_ext: { dims: [line] }
+    Transformer_s_nom_ext: { dims: [transformer] }
+  expressions:
+    Line_s_monitored: { dims: [scenario, snapshot, line] }
+    Transformer_s_monitored: { dims: [scenario, snapshot, transformer] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
@@ -39,10 +54,12 @@ relations:
     description: the line an outage takes out; an outage of a transformer has no row
     key: outage
     values: line
+    missing: absent
   Outage_transformer:
     description: the transformer an outage takes out; an outage of a line has no row
     key: outage
     values: transformer
+    missing: absent
 
 parameters:
   Line_BODF:
@@ -51,30 +68,17 @@ parameters:
       goes out — PyPSA's `BODF`, from the PTDF of the sub-network the
       period's active branches form, data prep; a row only where the line
       and the outage are active in the period and share a sub-network, -1 at
-      the outaged line itself. The same in every scenario: PyPSA takes the
-      factors of the first scenario (`abstract.py:534`)
+      the outaged line itself. The factors are the same in every scenario,
+      because PyPSA takes those of the first scenario (`abstract.py:534`)
     dims: [period, line, outage]
+    missing: neutral
   Transformer_BODF:
     description: >-
       the share of an outaged branch's flow a transformer takes on when that
       branch goes out, as a line's; a row only where the transformer and the
       outage are active in the period and share a sub-network
     dims: [period, transformer, outage]
-
-given:
-  parameters:
-    Line_s_nom: { dims: [scenario, line] }
-    Line_s_nom_extendable: { dims: [line], dtype: bool }
-    Line_s_max_pu: { dims: [scenario, snapshot, line] }
-    Transformer_s_nom: { dims: [scenario, transformer] }
-    Transformer_s_nom_extendable: { dims: [transformer], dtype: bool }
-    Transformer_s_max_pu: { dims: [scenario, snapshot, transformer] }
-  variables:
-    Line_s_nom_ext: { dims: [line] }
-    Transformer_s_nom_ext: { dims: [transformer] }
-  expressions:
-    Line_s_monitored: { dims: [scenario, snapshot, line] }
-    Transformer_s_monitored: { dims: [scenario, snapshot, transformer] }
+    missing: neutral
 
 expressions:
   Outage_s:
@@ -93,9 +97,9 @@ constraints:
       after any one outage, a fixed line carries at least the negative
       of its rating: its flow takes on its share of the outaged branch's
       flow. PyPSA names one row per outaged component `c` and
-      sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block states them all over the outage
-      dimension
+      sub-network `n`, and under `multi_investment_periods` it appends
+      `-period-{p}` for each period `p`. This block states them all over the
+      outage dimension
     dims: [scenario, snapshot, line, outage]
     where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
     expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom
@@ -104,9 +108,10 @@ constraints:
       `Line-fix-s-upper-security-for-{c}-outage-in-sub-network-{n}` —
       after any one outage, a fixed line carries at most its rating: its
       flow takes on its share of the outaged branch's flow. PyPSA names
-      one row per outaged component `c` and sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block
-      states them all over the outage dimension
+      one row per outaged component `c` and
+      sub-network `n`, and under `multi_investment_periods` it appends
+      `-period-{p}` for each period `p`. This block states them all over the
+      outage dimension
     dims: [scenario, snapshot, line, outage]
     where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
     expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s <= Line_s_max_pu * Line_s_nom
@@ -116,9 +121,10 @@ constraints:
       after any one outage, an extendable line carries at least the
       negative of its rating of the chosen build: its flow takes on its
       share of the outaged branch's flow. PyPSA names one row per
-      outaged component `c` and sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block states them
-      all over the outage dimension
+      outaged component `c` and
+      sub-network `n`, and under `multi_investment_periods` it appends
+      `-period-{p}` for each period `p`. This block states them all over the
+      outage dimension
     dims: [scenario, snapshot, line, outage]
     where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
     expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom_ext
@@ -128,9 +134,9 @@ constraints:
       after any one outage, an extendable line carries at most its rating
       of the chosen build: its flow takes on its share of the outaged
       branch's flow. PyPSA names one row per outaged component `c` and
-      sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block states them all over the outage
-      dimension
+      sub-network `n`, and under `multi_investment_periods` it appends
+      `-period-{p}` for each period `p`. This block states them all over the
+      outage dimension
     dims: [scenario, snapshot, line, outage]
     where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
     expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s <= Line_s_max_pu * Line_s_nom_ext
@@ -140,9 +146,9 @@ constraints:
       — after any one outage, a fixed transformer carries at least the
       negative of its rating: its flow takes on its share of the outaged
       branch's flow. PyPSA names one row per outaged component `c` and
-      sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block states them all over the outage
-      dimension
+      sub-network `n`, and under `multi_investment_periods` it appends
+      `-period-{p}` for each period `p`. This block states them all over the
+      outage dimension
     dims: [scenario, snapshot, transformer, outage]
     where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
     expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom
@@ -151,9 +157,10 @@ constraints:
       `Transformer-fix-s-upper-security-for-{c}-outage-in-sub-network-{n}`
       — after any one outage, a fixed transformer carries at most its
       rating: its flow takes on its share of the outaged branch's flow.
-      PyPSA names one row per outaged component `c` and sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`;
-      this block states them all over the outage dimension
+      PyPSA names one row per outaged component `c` and
+      sub-network `n`, and under `multi_investment_periods` it appends
+      `-period-{p}` for each period `p`. This block states them all over the
+      outage dimension
     dims: [scenario, snapshot, transformer, outage]
     where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
     expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom
@@ -163,9 +170,10 @@ constraints:
       — after any one outage, an extendable transformer carries at least
       the negative of its rating of the chosen build: its flow takes on
       its share of the outaged branch's flow. PyPSA names one row per
-      outaged component `c` and sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block states them
-      all over the outage dimension
+      outaged component `c` and
+      sub-network `n`, and under `multi_investment_periods` it appends
+      `-period-{p}` for each period `p`. This block states them all over the
+      outage dimension
     dims: [scenario, snapshot, transformer, outage]
     where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
     expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom_ext
@@ -175,8 +183,9 @@ constraints:
       — after any one outage, an extendable transformer carries at most
       its rating of the chosen build: its flow takes on its share of the
       outaged branch's flow. PyPSA names one row per outaged component
-      `c` and sub-network `n`, with `-period-{p}` appended per period `p` under
-      `multi_investment_periods`; this block states them all over the
+      `c` and
+      sub-network `n`, and under `multi_investment_periods` it appends
+      `-period-{p}` for each period `p`. This block states them all over the
       outage dimension
     dims: [scenario, snapshot, transformer, outage]
     where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
@@ -189,17 +198,17 @@ constraints:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
-| $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K}`$ — passive branches, each between two buses, their flow set by impedance |
-| $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$ — passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised |
-| $`\mathcal{K}^{\mathrm{out}}`$ | index $`\kappa`$ — `outage` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K},\ \mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$ — the passive branches a security-constrained run takes out one at a time — PyPSA's `branch_outages`, each a line or a transformer; none on a plain run |
+| $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K}`$, `Outage_line` is `absent` where the data has no row — passive branches, each between two buses, their flow set by impedance |
+| $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$, `Outage_transformer` is `absent` where the data has no row — passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised |
+| $`\mathcal{K}^{\mathrm{out}}`$ | index $`\kappa`$ — `outage` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K},\ \mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$, `Outage_line` is `absent` where the data has no row, `Outage_transformer` is `absent` where the data has no row — the passive branches a security-constrained run takes out one at a time — PyPSA's `branch_outages`, each a line or a transformer; none on a plain run |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
-| $`\beta`$ | `Line_BODF` over $`\mathcal{Y} \times \mathcal{K} \times \mathcal{K}^{\mathrm{out}}`$ — the share of an outaged branch's flow a line takes on when that branch goes out — PyPSA's `BODF`, from the PTDF of the sub-network the period's active branches form, data prep; a row only where the line and the outage are active in the period and share a sub-network, -1 at the outaged line itself. The same in every scenario: PyPSA takes the factors of the first scenario (`abstract.py:534`) |
-| $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{K}^{\mathrm{out}}`$ — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's; a row only where the transformer and the outage are active in the period and share a sub-network |
+| $`\beta`$ | `Line_BODF` over $`\mathcal{Y} \times \mathcal{K} \times \mathcal{K}^{\mathrm{out}}`$, `neutral` where the data has no row — the share of an outaged branch's flow a line takes on when that branch goes out — PyPSA's `BODF`, from the PTDF of the sub-network the period's active branches form, data prep; a row only where the line and the outage are active in the period and share a sub-network, -1 at the outaged line itself. The factors are the same in every scenario, because PyPSA takes those of the first scenario (`abstract.py:534`) |
+| $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{K}^{\mathrm{out}}`$, `neutral` where the data has no row — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's; a row only where the transformer and the outage are active in the period and share a sub-network |
 
 #### Given
 
