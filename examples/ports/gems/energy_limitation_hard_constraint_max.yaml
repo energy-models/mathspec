@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: >-
+  GEMS `energy_limitation_hard_constraint_max`. It caps the energy that the
+  connected ports generate over the horizon, in each scenario.
+dimensions:
+  scenario: { dtype: int, description: scenarios of the data }
+  energy_limit_hard:
+    description: "`energy_limitation_hard_constraint_max` components: energy caps with no slack"
+parameters:
+  Energy_limit_hard: { dims: [energy_limit_hard], description: largest generation over the horizon }
+given:
+  expressions:
+    Energy_limit_hard_port_energy:
+      dims: [scenario, energy_limit_hard]
+      description: "`sum_connections(energy_port.cumulative_energy)`: what the connected ports generate"
+constraints:
+  Energy_limit_hard_max_generation_hard:
+    dims: [scenario, energy_limit_hard]
+    description: "`energy_limitation_hard_constraint_max.max_generation_hard`"
+    expression: Energy_limit_hard_port_energy <= Energy_limit_hard

@@ -25,5 +25,9 @@ that PyPSA builds, as a proof of concept, and they sit in the Development
 section. [PyPSA in 24 files](pypsa/index.md) composes the same spec from
 fragments.
 
+[GEMS in ten files](gems/index.md) is a proof of concept too. It states the
+basic models of GEMS (the component modelling language of RTE) as ten fragments
+that `merge` joins into one spec.
+
 To print the math of your own spec, see
 [Typeset the math](../reference/typeset.md).

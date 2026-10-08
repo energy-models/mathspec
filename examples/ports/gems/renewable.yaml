@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: GEMS `renewable`. A renewable gives a fixed generation through its `balance_port`.
+dimensions:
+  time: { dtype: int, ordered: true, description: "time steps of the horizon, counted from 0" }
+  scenario: { dtype: int, description: scenarios of the data }
+  bus: { description: "`bus` components: nodes where flows balance" }
+  renewable: { description: "`renewable` components: fixed generation" }
+relations:
+  Renewable_balance_port:
+    key: [renewable, bus]
+    description: "connections from a renewable's `balance_port` to a bus"
+parameters:
+  Renewable_generation: { dims: [time, scenario, renewable], description: generation }
+given:
+  expressions:
+    Bus_balance_port_flow: { dims: [time, scenario, bus] }
+expressions:
+  Renewable_balance_port_flow:
+    description: "`balance_port.flow` of a renewable, `generation`"
+    expression: sum(Renewable_generation, over=renewable, by=Renewable_balance_port[bus])
+    adds_to: Bus_balance_port_flow

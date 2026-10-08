@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: >-
+  GEMS `link`. A link carries a flow between two buses, out of `out_port` and
+  into `in_port`. The flow is the direct part minus the indirect part.
+dimensions:
+  time: { dtype: int, ordered: true, description: "time steps of the horizon, counted from 0" }
+  scenario: { dtype: int, description: scenarios of the data }
+  bus: { description: "`bus` components: nodes where flows balance" }
+  link: { description: "`link` components: flows between two buses" }
+relations:
+  Link_out_port: { key: [link, bus], description: "connections from a link's `out_port` to a bus" }
+  Link_in_port: { key: [link, bus], description: "connections from a link's `in_port` to a bus" }
+parameters:
+  Link_capacity_direct: { dims: [time, scenario, link], description: largest flow out of `out_port` }
+  Link_capacity_indirect: { dims: [time, scenario, link], description: largest flow out of `in_port` }
+variables:
+  Link_flow_direct:
+    dims: [time, scenario, link]
+    bounds: { lower: 0, upper: Link_capacity_direct }
+    description: flow out of `out_port`
+  Link_flow_indirect:
+    dims: [time, scenario, link]
+    bounds: { lower: 0, upper: Link_capacity_indirect }
+    description: flow out of `in_port`
+  Link_flow:
+    dims: [time, scenario, link]
+    bounds: { upper: Link_capacity_direct }
+    description: net flow out of `out_port`
+given:
+  expressions:
+    Bus_balance_port_flow: { dims: [time, scenario, bus] }
+expressions:
+  Link_out_port_flow:
+    description: "`out_port.flow` of a link, `flow`"
+    expression: sum(Link_flow, over=link, by=Link_out_port[bus])
+    adds_to: Bus_balance_port_flow
+  Link_in_port_flow:
+    description: "`in_port.flow` of a link, `-flow`"
+    expression: sum(-Link_flow, over=link, by=Link_in_port[bus])
+    adds_to: Bus_balance_port_flow
+constraints:
+  Link_flow_direct_indirect:
+    dims: [time, scenario, link]
+    description: "`link.flow_direct_indirect`"
+    expression: Link_flow == Link_flow_direct - Link_flow_indirect
+  Link_flow_floor:
+    dims: [time, scenario, link]
+    description: >-
+      the GEMS lower bound `-capacity_indirect` on `flow`. A bound is a number
+      or a parameter name, so this constraint states the negated bound
+    expression: Link_flow >= -Link_capacity_indirect

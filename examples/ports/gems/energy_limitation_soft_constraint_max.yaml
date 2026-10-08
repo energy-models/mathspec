@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: >-
+  GEMS `energy_limitation_soft_constraint_max`. It caps the energy that the
+  connected ports generate over the horizon, and a slack variable can lift the
+  cap at a cost. A GEMS variable has a time dimension unless it says
+  otherwise, so the slack and the cap repeat in each time step.
+dimensions:
+  time: { dtype: int, ordered: true, description: "time steps of the horizon, counted from 0" }
+  scenario: { dtype: int, description: scenarios of the data }
+  energy_limit_soft:
+    description: "`energy_limitation_soft_constraint_max` components: energy caps with a priced slack"
+parameters:
+  Energy_limit_soft: { dims: [energy_limit_soft], description: generation over the horizon above which the slack is paid }
+  Energy_limit_soft_slack_penalty: { dims: [energy_limit_soft], description: cost of one unit of slack }
+variables:
+  Energy_limit_soft_slack:
+    dims: [time, scenario, energy_limit_soft]
+    bounds: { lower: 0 }
+    description: generation above the soft cap
+given:
+  expressions:
+    Energy_limit_soft_port_energy:
+      dims: [scenario, energy_limit_soft]
+      description: "`sum_connections(energy_port.cumulative_energy)`: what the connected ports generate"
+    total_cost: { dims: [scenario] }
+expressions:
+  Energy_limit_soft_objective:
+    description: "`energy_limitation_soft_constraint_max.objective`"
+    expression: sum(Energy_limit_soft_slack * Energy_limit_soft_slack_penalty, over=[time, energy_limit_soft])
+    adds_to: total_cost
+constraints:
+  Energy_limit_soft_max_generation_soft:
+    dims: [time, scenario, energy_limit_soft]
+    description: "`energy_limitation_soft_constraint_max.max_generation_soft`"
+    expression: Energy_limit_soft_port_energy <= Energy_limit_soft + Energy_limit_soft_slack
