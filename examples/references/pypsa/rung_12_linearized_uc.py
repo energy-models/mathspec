@@ -2,13 +2,13 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Rung 12: linearized unit commitment — the status a share in [0, 1], stated by `pypsa_linearized_uc.yaml`."""
+"""Rung 12: linearized unit commitment — the status a share in [0, 1], stated by the patch `variants/pypsa_linearized_uc.yaml`."""
 
 from __future__ import annotations
 
 import spine
 
-MODEL = 'pypsa_linearized_uc.yaml'
+PATCH = 'variants/pypsa_linearized_uc.yaml'
 OPTIMIZE = {'linearized_unit_commitment': True}
 
 

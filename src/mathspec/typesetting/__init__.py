@@ -56,7 +56,7 @@ __all__ = [
     'typeset_declaration',
 ]
 
-#: A format by the name the CLI takes — what every renderer here is asked for.
+#: A format by the name the CLI takes. Every renderer here is asked for one.
 FormatName = Literal['latex', 'markdown', 'typst']
 
 #: Every format, by name. Adding one is a module plus a row.
@@ -120,7 +120,7 @@ def typeset(
             reads and checks the file once rather than once per format, and a
             curve prints as the curve it states. Pass ``spec.expand()`` for the rows a solver holds
             instead.
-        fmt: What spells the math — a key of [`FORMATS`][].
+        fmt: What spells the math — a [`FormatName`][].
         symbols: How names print, as a [`SymbolTable`][], a path or a
             mapping. Names it does not carry are derived, and it must be
             written in *fmt*'s notation.
@@ -176,8 +176,8 @@ def typeset_declaration(
     """Render one declaration as the bare line the document prints for it.
 
     The line the whole-spec render prints for it — a named expression's
-    definition, a constraint, an assumption, a ``piecewise:`` curve, or a
-    variable's domain, quantifier included —
+    or a mask's definition, a constraint, an assumption, a ``piecewise:``
+    curve, or a variable's domain, quantifier included —
     with no document, label, equation number or math delimiters around it, for
     a math context the caller lays out: a docstring, a table cell. A line on
     its own has no Definitions section beside it, so the plain named
@@ -186,9 +186,9 @@ def typeset_declaration(
 
     Args:
         spec: Anything [`mathspec.to_spec`][] accepts, or a [`Program`][].
-        name: A named expression, constraint, assumption, ``piecewise:``
-            block or variable the spec declares.
-        fmt: What spells the math — a key of [`FORMATS`][].
+        name: A named expression, mask, constraint, assumption,
+            ``piecewise:`` block or variable the spec declares.
+        fmt: What spells the math — a [`FormatName`][].
         symbols: How names print; see [`typeset`][].
         inline_expressions: Substitute the plain named expressions the line uses, so it
             stands on its own; ``False`` prints their symbols, as the document
@@ -201,7 +201,7 @@ def typeset_declaration(
     Raises:
         ValueError: *fmt* names no format.
         LanguageError: A spec that does not compile; it does not print.
-        SchemaError: *name* is declared as none of the five, as two — a
+        SchemaError: *name* is declared as none of the six, as two — a
             constraint may share a variable's name — or under ``given:``, which
             prints in the legend rather than as a line; or a symbol table entry
             names nothing in the spec.
@@ -213,13 +213,13 @@ def typeset_declaration(
         'variable': given.variables,
         'expression': given.expressions,
         'constraint': given.constraints,
+        'mask': given.masks,
     }
     given_kind = next((kind for kind, group in givens.items() if name in group), None)
     if given_kind is not None:
         msg = (
-            f"'{name}' is a given {given_kind}, and a given declaration prints no line of its own — "
-            f"this file reads it and does not build it. It prints in the legend, under 'Given', "
-            f'so call typeset() for the whole spec.'
+            f"'{name}' is a given {given_kind}, which prints no line of its own. Call typeset() for the "
+            f"whole spec, and find it in the legend under 'Given'."
         )
         raise SchemaError(msg)
     return walk.format.equation(walk.line(name))

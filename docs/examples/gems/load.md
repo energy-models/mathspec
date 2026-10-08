@@ -5,13 +5,16 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Loads
 
-One of the [ten fragments](index.md) of the GEMS port: the GEMS `load` model. It adds `-load` to `Bus_balance_port_flow` through the relation `Load_balance_port`, and has no variable of its own.
+This file states the GEMS `load` model. It is one of the [ten fragments](index.md)
+of the GEMS port. It adds `-load` to `Bus_balance_port_flow`
+through the relation `Load_balance_port`, which connects each load to a bus. A
+load has no variable of its own.
 
 <!-- gallery:begin -->
 ```yaml
-description: GEMS `load`. A fixed demand, taken through its `balance_port`.
+description: GEMS `load`. A load takes a fixed demand through its `balance_port`.
 dimensions:
-  time: { dtype: int, description: "time steps of the horizon, counted from 0" }
+  time: { dtype: int, ordered: true, description: "time steps of the horizon, counted from 0" }
   scenario: { dtype: int, description: scenarios of the data }
   bus: { description: "`bus` components: nodes where flows balance" }
   load: { description: "`load` components: fixed demands" }
@@ -25,11 +28,11 @@ given:
 expressions:
   Load_balance_port_flow:
     description: "`balance_port.flow` of a load, `-load`"
-    expression: sum(-Load_load, by=Load_balance_port, over=load, into=bus)
+    expression: sum(-Load_load, over=load, by=Load_balance_port[bus])
     adds_to: Bus_balance_port_flow
 ```
 
-GEMS `load`. A fixed demand, taken through its `balance_port`.
+GEMS `load`. A load takes a fixed demand through its `balance_port`.
 
 #### Sets
 

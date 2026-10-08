@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 from mathspec import merge, override, to_spec, typeset_declaration
-from mathspec.program import Add, Constant, Named
+from mathspec.program import Add, Constant, NamedExpression
 from mathspec.typesetting import to_markdown
 from tools._page import ROOT, sidecar_for, splice, tab, without_header
 from tools._page import main as page_main
@@ -96,12 +96,21 @@ COMPOSED = {
     'gems/composed.md': (GEMS_FRAGMENTS, {}, None),
 }
 
-#: Page -> the spec it shows one declaration at a time — its YAML, then the
+#: Page -> the spec it shows one declaration at a time: its YAML, then the
 #: equation it renders, headed by the name the other side gives it, read from
 #: the declaration's own description.
 DECLARED = {
     'pypsa.md': ROOT / 'examples' / 'pypsa.yaml',
-    'pypsa_linearized_uc.md': ROOT / 'examples' / 'pypsa_linearized_uc.yaml',
+}
+
+#: Page -> the base and the patch laid over it, shown one declaration of the
+#: patch at a time — its YAML, then the line it prints in the patched spec.
+#: The rest of the patched spec is the base's page.
+PATCHED = {
+    'pypsa_linearized_uc.md': (
+        ROOT / 'examples' / 'pypsa.yaml',
+        ROOT / 'examples' / 'variants' / 'pypsa_linearized_uc.yaml',
+    ),
 }
 
 #: One PyPSA reference network per rung, run out of band with the versions
@@ -129,6 +138,8 @@ def symbols_for(model: Spec, table_path: Path = LIBRARY_SYMBOLS) -> dict[str, An
         *given.variables,
         *given.expressions,
         *given.constraints,
+        *model.masks,
+        *given.masks,
     }
     return {
         'notation': table['notation'],
@@ -174,8 +185,8 @@ def split_index(specs: Mapping[str, Spec]) -> str:
     if unread := sorted(set(terms) - set(readers)):
         spelled = ', '.join(f'{hub!r}' for hub in unread)
         msg = (
-            f'no fragment reads {spelled} with a description and adds nothing to it, so the index has no reader '
-            f"to name: describe each under 'given: expressions:' in the fragment that reads it."
+            f'no fragment that reads {spelled} without adding to it describes it. '
+            f"Describe each under 'given: expressions:' in the fragment that reads it."
         )
         raise ValueError(msg)
     sums = ['| Sum | Over | Read in | The terms, by the fragment that adds each |', '| --- | --- | --- | --- |']
@@ -267,9 +278,7 @@ def _names_for(name: str, description: str | None) -> list[str]:
     head = text.split(' — ', 1)[0] if ' — ' in text else (re.match(r'`[^`]+`', text) or [''])[0]
     names = re.findall(r'`([^`]+)`', head)
     if not names:
-        msg = (
-            f'{name}: a declaration on a declared page opens its description with the name it stands for, in backticks'
-        )
+        msg = f'{name}: the description does not start with a name in backticks. Start it with the name it stands for.'
         raise ValueError(msg)
     return names
 
@@ -314,6 +323,29 @@ def declared_block(path: Path) -> str:
     return '\n\n'.join(parts)
 
 
+def patched_block(base: Path, patch: Path) -> str:
+    """The patch's description, then every declaration it writes as YAML beside the line it prints once laid over *base*."""
+    text = without_header(patch)
+    model = override(base, [patch])
+    written = yaml.safe_load(text)
+    headings = {
+        'variables': {name: _stands_for(name, block.description) for name, block in model.variables.items()},
+        'constraints': {name: _stands_for(name, block.description) for name, block in model.constraints.items()},
+        'assumptions': {name: name for name in model.assumptions},
+    }
+    parts = [model.description]
+    for section, heading_of in headings.items():
+        for name in written.get(section, {}):
+            line = typeset_declaration(model, name, 'markdown', symbols=sidecar_for(base), inline_expressions=False)
+            parts.append(
+                f'### `{heading_of[name]}`\n\n'
+                f'`{name}`\n\n'
+                f'```yaml\n{declaration(text, section, name)}\n```\n\n'
+                f'```math\n{line}\n```'
+            )
+    return '\n\n'.join(parts)
+
+
 def _summands(node: object) -> list[object]:
     """The terms of *node* read as a flat sum."""
     return [*_summands(node.left), *_summands(node.right)] if isinstance(node, Add) else [node]
@@ -329,10 +361,10 @@ def _reads_a_sum(model: Spec, name: str) -> bool:
     row = model.program.constraints[name]
     lhs, rhs = row.lhs, row.rhs
     return (
-        isinstance(lhs, Named)
+        isinstance(lhs, NamedExpression)
         and isinstance(rhs, Constant)
         and rhs.value == 0
-        and all(isinstance(term, Named) for term in _summands(lhs.body))
+        and all(isinstance(term, NamedExpression) for term in _summands(lhs.body))
         and len(_summands(lhs.body)) > 1
     )
 
@@ -405,6 +437,8 @@ def block(page: str) -> str:
         return probe_block()
     if page in DECLARED:
         return declared_block(DECLARED[page])
+    if page in PATCHED:
+        return patched_block(*PATCHED[page])
     if page in COMPOSED:
         return composed_block(*COMPOSED[page])
     if page in SPLIT_INDEXES:
@@ -418,13 +452,13 @@ def block(page: str) -> str:
 
 def rendered(page: str, text: str) -> str:
     text = splice(text, BEGIN, END, block(page))
-    if page in DECLARED:
+    if page in DECLARED or page in PATCHED:
         text = with_references(text)
     return text
 
 
 def pages() -> list[str]:
-    return [*MODELS, *COMPOSED, *DECLARED, 'operators.md', *SPLIT_INDEXES]
+    return [*MODELS, *COMPOSED, *DECLARED, *PATCHED, 'operators.md', *SPLIT_INDEXES]
 
 
 def main(argv: list[str] | None = None) -> int:

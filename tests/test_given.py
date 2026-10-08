@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec import FORMATS, LanguageError, advice, merge, to_markdown, to_spec, typeset
+from mathspec import advice, merge, to_markdown, to_spec, typeset
+from mathspec.errors import LanguageError
+from mathspec.typesetting import FORMATS
 from tests.fixtures import BALANCE
 
 #: One component file: it pins the flow at its own port, and the column it
@@ -31,7 +33,7 @@ SUPPLY = {
     'constraints': {
         'gen_injects': {
             'dims': ['snapshot', 'generator'],
-            'expression': 'at(flow, by=gen_port, over=port, into=generator) == gen_p',
+            'expression': 'at(flow, by=gen_port[port]) == gen_p',
         }
     },
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p * gen_cost)'},
@@ -43,16 +45,16 @@ SURFACE = {
     'relations': {'port_bus': {'key': 'port', 'values': 'bus'}},
     'variables': {'flow': {'dims': ['snapshot', 'port'], 'bounds': {'lower': -1000, 'upper': 1000}}},
     'constraints': {
-        'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, by=port_bus, over=port, into=bus) == 0'}
+        'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, over=port, by=port_bus[bus]) == 0'}
     },
 }
 
 
-def test_given_holds_four_kinds_and_refuses_a_fifth():
+def test_given_holds_five_kinds_and_refuses_a_sixth():
     """The section is closed, so a kind nobody has admitted yet is the schema's own refusal."""
     with pytest.raises(LanguageError) as raised:
         to_spec({**SUPPLY, 'given': {'macros': {'twice': {'params': ['x'], 'template': '2 * x'}}}})
-    assert 'Valid keys: constraints, expressions, parameters, variables' in str(raised.value), (
+    assert 'Valid keys: constraints, expressions, masks, parameters, variables' in str(raised.value), (
         'the refusal names what the block takes'
     )
 
@@ -214,7 +216,7 @@ PORTS_ONLY = {
     ],
 )
 def test_a_given_declaration_that_disagrees_with_the_introducer_is_refused(misread):
-    with pytest.raises(LanguageError, match=r'says the same as the declaration it is folded into, or less') as raised:
+    with pytest.raises(LanguageError, match=r'Restate the dims as .* declares them, or leave the field out') as raised:
         merge([SURFACE, misread])
     message = str(raised.value)
     assert "'#2'" in message and "'#1'" in message, 'both sides of a disagreement are named'
@@ -295,7 +297,10 @@ def test_a_given_row_family_prints_under_the_given_heading():
 
 def test_a_row_family_both_built_and_given_is_refused():
     both = {**LAYER, 'constraints': {**LAYER['constraints'], 'balance': {'dims': [], 'expression': 'sum(p) >= 0'}}}
-    with pytest.raises(LanguageError, match=r"'balance'.*either built by this file or given to it"):
+    with pytest.raises(
+        LanguageError,
+        match=r"Given constraint 'balance' is also declared under 'constraints:'. Delete one of the two\.",
+    ):
         to_spec(both)
 
 
@@ -480,7 +485,7 @@ INJECTOR = {
     'relations': {'gen_bus': {'key': 'generator', 'values': 'bus'}},
     'parameters': {'load': {'dims': ['snapshot', 'bus']}},
     'variables': {'gen_p': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}}},
-    'expressions': {'injection': {'expression': 'sum(gen_p, by=gen_bus, over=generator, into=bus) - load'}},
+    'expressions': {'injection': {'expression': 'sum(gen_p, over=generator, by=gen_bus[bus]) - load'}},
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p)'},
 }
 
@@ -544,7 +549,7 @@ FLAT_INJECTOR = {
     'dimensions': {'bus': {'dtype': 'str'}, 'generator': {'dtype': 'str'}},
     'relations': {'gen_bus': {'key': 'generator', 'values': 'bus'}},
     'variables': {'gen_p': {'dims': ['generator'], 'bounds': {'lower': 0}}},
-    'expressions': {'injection': {'expression': 'sum(gen_p, by=gen_bus, over=generator, into=bus)'}},
+    'expressions': {'injection': {'expression': 'sum(gen_p, over=generator, by=gen_bus[bus])'}},
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p)'},
 }
 
@@ -562,7 +567,7 @@ def test_a_definition_over_fewer_dimensions_merges_where_the_row_carries_the_res
 
 def test_the_composed_load_refuses_a_row_a_narrower_definition_repeats():
     """With nothing else carrying `snapshot`, the row would repeat per snapshot, which the composed spec refuses."""
-    with pytest.raises(LanguageError, match='repeated across'):
+    with pytest.raises(LanguageError, match='which its dims: declares'):
         merge([BALANCE, FLAT_INJECTOR])
 
 
@@ -587,7 +592,7 @@ def test_the_composed_model_holds_a_definition_to_the_rules_of_where_it_is_read(
     }
     squared = {
         **INJECTOR,
-        'expressions': {'injection': {'expression': 'sum(gen_p * gen_p, by=gen_bus, over=generator, into=bus)'}},
+        'expressions': {'injection': {'expression': 'sum(gen_p * gen_p, over=generator, by=gen_bus[bus])'}},
     }
     assert to_spec(squares) and to_spec(squared), 'each file loads on its own'
     with pytest.raises(LanguageError, match='degree'):

@@ -5,19 +5,10 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The network
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the buses and the balance at each of them. It reads `Bus_injection` under `given:`, and every component adds its injection to it.
+This file states the buses and the balance at each bus. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads the sum `Bus_injection` under `given:`, and every component adds its injection to that sum.
 
 <!-- gallery:begin -->
 ```yaml
-dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-  bus:
-    description: network nodes
-
 given:
   expressions:
     Bus_injection:
@@ -26,6 +17,16 @@ given:
         what every component puts into a bus, less what it takes out of it;
         PyPSA writes each term into the balance, and a load on its right-hand
         side
+
+dimensions:
+  scenario:
+    description: the futures dispatch is chosen in, each with a weight
+  snapshot:
+    description: dispatch periods
+    dtype: datetime
+    ordered: true
+  bus:
+    description: network nodes
 
 constraints:
   Bus_nodal_balance:
@@ -37,7 +38,7 @@ constraints:
       carrying its flow, meets the load there, less half of every incident
       line's and transformer's loss — PyPSA dissipates a branch's loss half at
       either end. Each generator, storage unit, store and load term enters
-      with its component's `sign` (`constraints.py:1428-1429`, `:1538`), and
+      with its component's `sign` (`constraints.py:1404-1405`, `:1514`), and
       an inactive load not at all. A bus nothing is attached to has no row; PyPSA refuses one that
       carries load, and this file does not yet.
     dims: [scenario, snapshot, bus]

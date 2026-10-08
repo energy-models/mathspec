@@ -11,6 +11,7 @@ are about the verb rather than about either formulation — those are in
 
 from __future__ import annotations
 
+import copy
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -18,7 +19,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mathspec import piecewise, to_spec
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, schema_of, varied
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, schema_of, varied
 from tests.test_sos import CURVE
 from tools.render_tex import models
 
@@ -30,6 +31,8 @@ if TYPE_CHECKING:
 MASKED = varied(
     CURVE,
     **{
+        'parameters.bp_x.missing': 'neutral',
+        'parameters.bp_y.missing': 'neutral',
         'piecewise.cost_curve.method': 'lp',
         'piecewise.cost_curve.points': 'bp_x',
         'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '>=']],
@@ -122,7 +125,9 @@ def test_an_expansion_declares_exactly_the_parameters_the_file_declared():
     schema = schema_of(MASKED)
     expanded = schema.expand()
 
-    assert expanded.parameters == schema.parameters, 'a curve emits no parameter, so the same data attaches to both'
+    assert {name: (p.dims, p.dtype) for name, p in expanded.parameters.items()} == {
+        name: (p.dims, p.dtype) for name, p in schema.parameters.items()
+    }, 'a curve emits no parameter, so the same data attaches to both'
     assert schema_of(expanded.to_yaml()).to_dict() == expanded.to_dict(), (
         'the expansion is a file like any other, and loading it back changes nothing'
     )
@@ -176,3 +181,54 @@ def test_a_model_with_no_formulation_expands_to_itself():
     spec = schema_of(DISPATCH_MODEL)
 
     assert spec.expand() is spec, 'nothing to write out returns the same object, not a copy'
+
+
+#: `fixtures.SMALL_MODEL` plus a two-link curve over its second dimension, so a
+#: block's own parameters stand beside ordinary ones in one model.
+SMALL_CURVE = {
+    'parameters.bx': {'dims': ['h']},
+    'parameters.by': {'dims': ['h']},
+    'variables.s': {'dims': ['g']},
+    'piecewise.curve': {'over': 'h', 'links': [['p', 'bx'], ['s', 'by']], 'method': 'convex'},
+}
+
+
+#: A curve under `points:` names what a missing row of each values table means.
+UNDER_POINTS = {'piecewise.curve.points': 'bx', 'parameters.bx.missing': 'neutral', 'parameters.by.missing': 'neutral'}
+
+
+@pytest.mark.parametrize(
+    'points',
+    [
+        pytest.param(UNDER_POINTS, id='a-curve-that-says-how-far-it-runs'),
+        pytest.param(
+            {**UNDER_POINTS, 'parameters.run': {'dims': ['h'], 'dtype': 'bool'}, 'piecewise.curve.points': 'run'},
+            id='a-boolean-mask',
+        ),
+        pytest.param({}, id='a-curve-over-every-breakpoint'),
+    ],
+)
+def test_a_spec_and_its_expansion_read_a_missing_row_alike(points):
+    """Lowering reported `None` for every parameter a block consumes, and the expansion declared it `neutral`."""
+    spec = schema_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **points))
+    declared = {name: p.missing for name, p in spec.program.parameters.items()}
+    expanded = {name: p.missing for name, p in spec.expand('piecewise').program.parameters.items()}
+    assert declared == expanded, 'a spec and its expansion read a missing row of every parameter alike'
+
+
+@pytest.mark.parametrize('missing', ['absent', 'neutral', 0])
+def test_a_curve_parameter_takes_the_missing_it_declares(missing):
+    """`missing:` on a curve's parameter was refused at load, so a row outside the curve could not say what it reads."""
+    spec = to_spec(
+        varied(
+            SMALL_MODEL,
+            **copy.deepcopy(SMALL_CURVE),
+            **{
+                **UNDER_POINTS,
+                'constraints.cap': {'dims': ['h'], 'expression': 'r <= by'},
+                'parameters.by.missing': missing,
+            },
+        )
+    )
+    assert spec.program.parameters['by'].missing == missing
+    assert spec.expand('piecewise').program.parameters['by'].missing == missing

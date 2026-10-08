@@ -5,12 +5,14 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Unit commitment
 
-This spec adds a commitment decision and a start-up ramp to least-cost
-dispatch. Read `previous_status` first, then `ramp_up`: the state a unit
-carries into a snapshot has three regimes, stated once as a
-[`cases:`](../reference/language/named.md#cases) block, and `ramp_up` reads it
-the way it reads a parameter. The block prints once below, under
-**Definitions**.
+This spec adds an on/off decision per unit and a start-up ramp to [least-cost
+dispatch](dispatch.md). Read `previous_status` first, then `ramp_up`.
+`previous_status` is the state that a unit carries into a snapshot, and the file
+states its three regimes once, in a
+[`cases:`](../reference/language/named.md#cases) block. `ramp_up` reads
+`previous_status` as it reads a parameter, so one inequality covers a running
+unit and a starting unit. The typesetter prints the block once, under
+**Definitions** below.
 
 <!-- gallery:begin -->
 ```yaml
@@ -22,7 +24,7 @@ description: >-
   inequality is written once.
 
 dimensions:
-  snapshot: { dtype: int, description: dispatch periods }
+  snapshot: { dtype: int, description: dispatch periods, ordered: true }
   generator: { description: generating units }
 
 parameters:

@@ -5,27 +5,27 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Loads
 
-PyPSA's `Load`, and the fragment that shows what a file may leave out. It
-declares no variable and no objective. `Load_p_set` is data, and the only thing
-the file says is what the load's port withdraws.
+This fragment states PyPSA's `Load`, and shows what a file may leave out: it
+declares no variable and no objective. `Load_p_set` is data, and the file states
+only what the port of the load withdraws.
 
-The minus sign is the whole of its relation to the sign convention. A
-withdrawal is a negative injection.
+The minus sign is the only link to the sign convention, under which a withdrawal
+is a negative injection.
 
 <!-- gallery:begin -->
 ```yaml
 description: PyPSA's `Load`, wired to a port rather than straight to a bus. What it takes is data, so it decides nothing.
+given:
+  variables:
+    Port_p:
+      dims: [snapshot, port]
+      description: the surface introduces this flow, and this file pins it at its own ports
 dimensions:
   snapshot: { dtype: datetime, description: dispatch periods }
   port: { dtype: str, description: "the connections components make, one label per connection" }
   load: { dtype: str, description: "demands, each on one port" }
 relations:
   Load_port: { key: load, values: port }
-given:
-  variables:
-    Port_p:
-      dims: [snapshot, port]
-      description: the surface introduces this flow, and this file pins it at its own ports
 parameters:
   Load_p_set: { dims: [snapshot, load], description: "`Load-p_set` — what a load takes in a snapshot" }
 constraints:
@@ -34,7 +34,7 @@ constraints:
       what a load takes is what its port withdraws. No PyPSA row stands for
       this: PyPSA writes the load into the balance instead
     dims: [snapshot, load]
-    expression: at(Port_p, by=Load_port, over=port, into=load) == -Load_p_set
+    expression: at(Port_p, by=Load_port[port]) == -Load_p_set
 ```
 
 PyPSA's `Load`, wired to a port rather than straight to a bus. What it takes is data, so it decides nothing.

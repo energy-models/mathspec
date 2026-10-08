@@ -40,10 +40,12 @@ from mathspec.program import (
     Cases,
     Expression,
     Mask,
-    Named,
+    NamedExpression,
+    NamedMask,
     Predicate,
     Region,
     RelationDeclaration,
+    VariableDefined,
     carries_variable,
 )
 
@@ -53,7 +55,7 @@ if TYPE_CHECKING:
     from mathspec._expression_parser import ComparisonOperator, ParsedNode
     from mathspec._where_parser import ParsedWhere
     from mathspec.program import DeclaredDtype
-    from mathspec.spec import ExpressionBlock, Spec
+    from mathspec.spec import ExpressionBlock, MaskBlock, Spec
 
 
 #: What a name a file may write turns out to be. Answered by
@@ -70,12 +72,16 @@ class Namespace:
 
     __slots__ = (
         '_loading',
+        '_masks',
         '_named',
         'bodies',
         'constraints',
+        'defaults',
         'dimensions',
         'dtypes',
+        'given_masks',
         'leaf_dims',
+        'masks',
         'parameters',
         'relations',
         'schema',
@@ -83,15 +89,20 @@ class Namespace:
     )
 
     def __init__(self, schema: Spec) -> None:
-        #: The schema the names come from — what an expression is expanded and
-        #: dim-checked against, since macros, named expressions and the dim
-        #: rules read declarations the flat listing below does not carry.
+        #: The schema the names come from. Expressions are expanded and
+        #: dim-checked against it, because macros, named expressions and the dim
+        #: rules read declarations that the flat listing below does not carry.
         self.schema = schema
         variables = {**schema.variables, **schema.given.variables, **schema.given.expressions}
         parameters = {**schema.parameters, **schema.given.parameters}
         self.variables = frozenset(variables)
         self.bodies = frozenset(schema.expressions)
-        self.parameters = frozenset(parameters)
+        #: The declared masks, read by name wherever a where string is.
+        self.masks = frozenset(schema.masks)
+        #: The masks this file reads under ``given:``. A where reads each as
+        #: the boolean data it is to this file, so each is a parameter here too.
+        self.given_masks = frozenset(schema.given.masks)
+        self.parameters = frozenset(parameters) | self.given_masks
         self.dimensions = frozenset(schema.dimensions)
         #: The declared constraint names, off the flat namespace: a bare name
         #: never reaches them, so a spec may name a constraint after a variable.
@@ -101,27 +112,38 @@ class Namespace:
         #: what a where comparison checks its literal against.
         self.dtypes: dict[str, DeclaredDtype] = {
             **{p: pd.dtype for p, pd in parameters.items()},
+            **{m: cast('DeclaredDtype', 'bool') for m in schema.given.masks},
             **{d: dd.dtype for d, dd in schema.dimensions.items()},
+        }
+        #: parameter name -> the value its ``missing:`` reads a missing row as,
+        #: for the parameters that name one; what a where comparison reads there.
+        self.defaults: dict[str, bool | float] = {
+            p: pd.missing for p, pd in schema.parameters.items() if not isinstance(pd.missing, str)
         }
         #: relation name -> its columns and key, as declared.
         self.relations: dict[str, RelationDeclaration] = {
-            n: RelationDeclaration(lk.pairs, lk.key_roles, lk.description) for n, lk in schema.relations.items()
+            n: RelationDeclaration(lk.pairs, lk.key_roles, lk.missing, lk.description)
+            for n, lk in schema.relations.items()
         }
-        #: parameter or variable name -> the dims it is read through —
-        #: parameters by their ``dims``, variables by their frame. Stamped onto
+        #: parameter or variable name -> the ``dims`` it is read through. Stamped onto
         #: each leaf a where names, the way a relation leaf carries ``over``.
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: tuple(pd.dims) for p, pd in parameters.items()},
+            **{m: tuple(md.dims) for m, md in schema.given.masks.items()},
             **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
         }
         #: named expression -> its resolved node, or ``None``, and its refusals;
         #: filled the first time anything reads the name.
-        self._named: dict[str, tuple[Named | None, tuple[str, ...]]] = {}
-        #: The named expressions waiting to be resolved, the one asked for
-        #: first — each above the entries it reads, so it is a cycle's chain.
+        self._named: dict[str, tuple[NamedExpression | None, tuple[str, ...]]] = {}
+        #: The named expressions and masks waiting to be resolved, the first one
+        #: asked for at the bottom. Each sits above the entries it reads, so the
+        #: list is a cycle's chain.
         self._loading: list[str] = []
+        #: mask -> its resolved node, or ``None``, and its refusals; filled
+        #: the first time anything reads the name.
+        self._masks: dict[str, tuple[NamedMask | None, tuple[str, ...]]] = {}
 
-    def named(self, name: str, context: str) -> Named:
+    def named(self, name: str, context: str) -> NamedExpression:
         """The ``expressions:`` entry *name* as the node that stands where its name is written.
 
         Resolved under the entry's own context the first time it is asked
@@ -134,18 +156,45 @@ class Namespace:
             raise SchemaError(refusal)
         node, _ = self.named_entry(name)
         if node is None:
-            msg = f"{context}: named expression '{name}' does not load. Its refusal is listed with it."
+            msg = f"{context}: named expression '{name}' does not load. Fix the error listed for '{name}' first."
             raise SchemaError(msg)
         return node
 
-    def cycle(self, name: str, context: str, through: Iterable[str] = ()) -> str | None:
+    def cycle(self, name: str, context: str, through: Iterable[str] = (), *, noun: str = 'expression') -> str | None:
         """The refusal for reading *name* while it is being resolved, or ``None``; *through* names the macros the read went through."""
         if name not in self._loading:
             return None
         chain = ' -> '.join([*self._loading[self._loading.index(name) :], *through, name])
-        return f'{context}: circular expression reference: {chain}'
+        return f'{context}: circular {noun} reference: {chain}. Remove one reference.'
 
-    def named_entry(self, name: str) -> tuple[Named | None, tuple[str, ...]]:
+    def mask(self, name: str, context: str) -> NamedMask:
+        """The ``masks:`` entry *name* as the node that stands where its name is written.
+
+        Resolved under the entry's own context the first time it is asked
+        for, and read from then on, so a fault in it is reported once.
+
+        Raises:
+            SchemaError: The entry reads itself, or does not load.
+        """
+        if (refusal := self.cycle(name, context, noun='mask')) is not None:
+            raise SchemaError(refusal)
+        node, _ = self.mask_entry(name)
+        if node is None:
+            msg = f"{context}: mask '{name}' does not load. Its refusal is listed with it."
+            raise SchemaError(msg)
+        return node
+
+    def mask_entry(self, name: str) -> tuple[NamedMask | None, tuple[str, ...]]:
+        """The ``masks:`` entry *name* resolved, or ``None``, with every refusal it earned."""
+        if name not in self._masks:
+            self._loading.append(name)
+            errors: list[str] = []
+            node = _mask(name, self.schema.masks[name], self, errors)
+            self._loading.pop()
+            self._masks[name] = (node, tuple(errors))
+        return self._masks[name]
+
+    def named_entry(self, name: str) -> tuple[NamedExpression | None, tuple[str, ...]]:
         """The ``expressions:`` entry *name* resolved, or ``None``, with every refusal it earned.
 
         The entries it reads are resolved before it, walked from a stack that
@@ -202,6 +251,10 @@ class Namespace:
         names = (n.name for n in nodes(*arithmetic) if isinstance(n, NameNode) and n.name in self.bodies)
         return tuple(dict.fromkeys(names))
 
+    def unordered(self, name: str) -> bool:
+        """Whether the declared dimension *name* is one whose order the file does not declare part of the model."""
+        return not self.schema.dimensions[name].ordered
+
     def kind(self, name: str) -> DeclarationKind | None:
         """What *name* was declared as, or ``None`` where the file declares it nowhere."""
         if name in self.variables:
@@ -228,16 +281,21 @@ class Namespace:
         """
         shown: list[tuple[str, Iterable[str]]] = [('Formals', formals)] if formals else []
         shown += (
-            [('Parameters', self.parameters), ('Dimensions', self.dimensions), ('Relations', self.relations)]
+            [
+                ('Parameters', self.parameters),
+                ('Dimensions', self.dimensions),
+                ('Relations', self.relations),
+                *([('Masks', self.masks)] if self.masks else []),
+            ]
             if allow_dims
             else [('Variables', self.variables), ('Parameters', self.parameters)]
         )
         listing = '\n'.join(f'  {kind}: {sorted(names)}' for kind, names in shown)
-        return f"{context}: '{name}' not found.\n{listing}\nCheck for typos, or ensure '{name}' is declared."
+        return f"{context}: '{name}' not found.\n{listing}\nCheck the spelling, or declare '{name}'."
 
     def unknown_constraint(self, name: str, context: str, *, formals: Iterable[str] = ()) -> str:
         """The refusal for a ``dual(name)`` naming no constraint — nor, inside a template, a formal."""
-        also = ' or a formal of this macro' if formals else ''
+        also = ' or a formal argument of this macro' if formals else ''
         return (
             f"{context}: dual({name}): '{name}' is not a declared constraint{also}.\n"
             f'  Constraints: {sorted(self.constraints)}\n'
@@ -247,7 +305,7 @@ class Namespace:
 
 
 # ---------------------------------------------------------------------------
-# the seam the rest of the package uses
+# the functions the rest of the package calls
 # ---------------------------------------------------------------------------
 
 
@@ -361,7 +419,7 @@ def resolve_expression_text(
     if ast is None:
         return None
     if isinstance(ast, ComparisonNode):
-        errors.append(f'{context}: expression must not contain a comparison operator.\nGot: {text!r}')
+        errors.append(f'{context}: the expression holds a comparison operator.\nGot: {text!r}\nRemove the comparison.')
         return None
     resolved = resolve_expression(ast, ns, context, errors)
     if resolved is None or ceiling is None:
@@ -383,7 +441,7 @@ def resolve_constraint_text(
         return None
     if not isinstance(ast, ComparisonNode):
         errors.append(
-            f'{context}: expression must contain exactly one comparison operator (<=, >=, ==).\nGot: {text!r}'
+            f'{context}: the constraint has no comparison operator.\nGot: {text!r}\nWrite <=, >= or == between two sides.'
         )
         return None
     found = len(errors)
@@ -397,9 +455,7 @@ def resolve_constraint_text(
         errors.append(
             f'{context}: neither side of the comparison carries a variable, so the row decides nothing.\n'
             f'Got: {text!r}\n'
-            f'A constraint is a claim about a decision, and a comparison of numbers and parameters '
-            f'is settled before the solve — no consumer builds a row for it. Name the variable it should '
-            f'bound, or state the fact under `assumptions:`, where the consumer attaching the data checks it.'
+            f'Name the variable it bounds, or state the fact under `assumptions:`.'
         )
         return None
     return left, ast.op, right
@@ -424,7 +480,7 @@ def _over_the_ceiling(node: Expression, context: str, errors: list[str], *, ceil
     return False
 
 
-def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) -> Named | None:
+def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) -> NamedExpression | None:
     """One ``expressions:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
 
     A cased entry's arms are checked one by one, so every fault is collected
@@ -437,7 +493,7 @@ def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) 
     if not block.cases:
         assert block.expression is not None
         body = resolve_expression_text(block.expression, ns, context, errors, ceiling=None)
-        return None if body is None else Named(name, body)
+        return None if body is None else NamedExpression(name, body)
 
     found = len(errors)
     regions: list[Region] = []
@@ -456,11 +512,47 @@ def _named(name: str, block: ExpressionBlock, ns: Namespace, errors: list[str]) 
     fallback = resolve_expression_text(block.otherwise, ns, case_context(name, None), errors, ceiling=None)
     if len(errors) > found or fallback is None:
         return None
-    errors.extend(f'{context}: {problem}' for problem in overlapping(masks, ns.dtypes))
+    errors.extend(f'{context}: {problem}' for problem in overlapping(masks, ns.dtypes, ns.defaults))
     if len(errors) > found:
         return None
     left_over = Region(remainder(region.when for region in regions), fallback)
-    return Named(name, Cases((*regions, left_over)))
+    return NamedExpression(name, Cases((*regions, left_over)))
+
+
+def _mask(name: str, block: MaskBlock, ns: Namespace, errors: list[str]) -> NamedMask | None:
+    """One ``masks:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
+
+    A predicate the connectives decide is refused, since a name for every row
+    or for none narrows nothing a where could not say plainly.
+    """
+    context = f"Mask '{name}'"
+    body = resolve_where_text(block.where, ns, context, errors)
+    if body is None:
+        return None
+    if isinstance(body, BooleanLiteral):
+        errors.append(
+            f'{context}: the predicate {block.where!r} folds to {str(body.value).lower()}, so the mask '
+            f'{"admits every row" if body.value else "admits no row"} and names nothing a where needs. '
+            f'Delete it, or write the predicate over the data.'
+        )
+        return None
+    return NamedMask(name, body)
+
+
+def self_existence(where: Predicate, variable: str, context: str) -> str | None:
+    """The refusal for a variable whose own where asks, through a mask, whether it exists — or ``None``.
+
+    The where resolver refuses the bare name; a mask's predicate is resolved
+    under its own name, so the check runs again on the tree with every mask's
+    predicate in it.
+    """
+    if not any(isinstance(atom, VariableDefined) and atom.name == variable for atom in Mask(where).atoms):
+        return None
+    return (
+        f"{context}: variable '{variable}' asks whether it exists in its own where, through a mask, which "
+        f'nothing can answer — the mask is what decides where it exists. Test a parameter, or another '
+        f'variable declared before it.'
+    )
 
 
 def _constant_arm(context: str, *, value: bool) -> str:

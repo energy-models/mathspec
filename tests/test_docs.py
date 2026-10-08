@@ -267,6 +267,7 @@ def test_every_page_under_docs_has_a_nav_entry():
 #: page of its own: `mathspec` re-exports what a consumer calls from it.
 API_PAGES = {
     'mathspec': Path('docs') / 'reference' / 'api.md',
+    'mathspec.spec': Path('docs') / 'reference' / 'spec.md',
     'mathspec.program': Path('docs') / 'reference' / 'program.md',
 }
 

@@ -4,10 +4,8 @@
 
 """Rung 51: a carrier's growth limit counts an asset in the first period it stands in only, not again after it retires.
 
-PyPSA 1.3.0 counts an asset that retires in every later period too (PyPSA/PyPSA#1938).
-The oracle gives each build its own carrier with the same limit: each carrier
-then has one asset, which PyPSA counts in its first period, and a retired one
-counted again repeats a row it already has.
+The old unit retires before the new one is built, so each builds to the
+limit in its own period.
 """
 
 from __future__ import annotations
@@ -16,7 +14,6 @@ from datetime import datetime
 
 import pandas as pd
 
-ISSUE = 1938
 OPTIMIZE = {'multi_investment_periods': True}
 
 
@@ -57,8 +54,3 @@ def network(carriers: dict[str, str]):
 def build():
     """Both solar units under one carrier with `max_growth = 10`; the old one retires after 2020."""
     return network({'solar_old': 'solar', 'solar_new': 'solar'})
-
-
-def oracle():
-    """The same network with a carrier per build: PyPSA counts each build in its first period only."""
-    return [(1.0, network({'solar_old': 'solar20', 'solar_new': 'solar30'}))]

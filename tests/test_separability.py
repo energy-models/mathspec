@@ -24,7 +24,12 @@ from mathspec.program import Reach
 FIXTURE = Path(__file__).resolve().parent / 'fixtures' / 'every_program_node.yaml'
 
 BASE: dict[str, Any] = {
-    'dimensions': {'h': {'dtype': 'int'}, 'u': {'dtype': 'str'}, 'zone': {'dtype': 'str'}, 'day': {'dtype': 'int'}},
+    'dimensions': {
+        'h': {'dtype': 'int', 'ordered': True},
+        'u': {'dtype': 'str', 'ordered': True},
+        'zone': {'dtype': 'str'},
+        'day': {'dtype': 'int'},
+    },
     'relations': {'zone_of': {'key': 'u', 'values': 'zone'}, 'day_of': {'key': 'h', 'values': 'day'}},
     'parameters': {
         'cost': {'dims': ['u']},
@@ -82,7 +87,7 @@ def test_a_model_the_axis_ties_together_names_what_ties_it(patch, fragment):
     ('patch', 'reach'),
     [
         pytest.param(
-            _rows('p >= shift(p, along=h, offset=1, by=day_of, within=day, edge=0)'),
+            _rows('p >= shift(p, along=h, offset=1, within=day_of[day], edge=0)'),
             Reach("constraint 'k'", 'day_of', 'partition'),
             id='a-shift-inside-groups',
         ),
@@ -133,7 +138,7 @@ def test_resolving_keeps_the_static_reach_and_what_a_relation_decides():
             'named': {'dims': ['h', 'u'], 'expression': 'p >= shift(p, along=h, offset=width, edge=0)'},
             'grouped': {
                 'dims': ['h', 'u'],
-                'expression': 'p >= shift(p, along=h, offset=1, by=day_of, within=day, edge=0)',
+                'expression': 'p >= shift(p, along=h, offset=1, within=day_of[day], edge=0)',
             },
         }
     ).resolved({'width': -1})
@@ -145,17 +150,35 @@ def test_resolving_keeps_the_static_reach_and_what_a_relation_decides():
 
 
 def test_resolving_a_name_nothing_waits_on_is_refused():
-    with pytest.raises(KeyError, match="'depth' is not a parameter an undecided reach along 'h' waits on"):
+    with pytest.raises(KeyError, match="'depth' is not a parameter that an undecided reach along 'h' waits on"):
         _verdict(**_rows('p >= shift(p, along=h, offset=width, edge=0)')).resolved({'depth': 0})
 
 
 def test_a_read_through_a_relation_is_undecided_on_the_axis_it_reads():
-    """`at(cap, by=zone_of, over=zone, into=u)` reads `zone` at whatever coordinate the relation
+    """`at(cap, by=zone_of[zone])` reads `zone` at whatever coordinate the relation
     chooses, so how far that reaches along `zone` is the relation's data to say."""
-    verdict = _verdict('zone', **_rows('p - at(cap, by=zone_of, over=zone, into=u) <= 0'))
+    verdict = _verdict('zone', **_rows('p - at(cap, by=zone_of[zone]) <= 0'))
     assert not verdict.windowable and not verdict.coupled, 'undecided until the relation is attached'
     assert verdict.undecided == (Reach("constraint 'k'", 'zone_of', 'coordinate'),), (
         'the report names the relation a driver has to read'
+    )
+
+
+def test_a_sum_over_a_lookup_is_a_sum_and_a_lookup_not_a_grouping():
+    """A plain `sum` over an `at` lowered to the `Sum` over a `Join` that a grouped sum lowered to.
+
+    Separability read the shape, so it reported a grouping of `u` into `u` and
+    lost the read of `zone` the lookup waits on. Which call a join is comes
+    from its columns, not from the node above it.
+    """
+    variables = {**BASE['variables'], 'q': {'dims': ['h', 'zone'], 'bounds': {'lower': 0}}}
+    rows = _rows('sum(at(q, by=zone_of[zone]), over=u) <= budget', dims=['h'])
+    program = to_spec({**BASE, 'variables': variables, **rows}).program
+    assert list(program.separability['u'].coupled.values()) == [
+        'sums over u (use sum_back(window=n) for a rolling sum)'
+    ], 'the sum over u is a plain sum, reported as one'
+    assert program.separability['zone'].undecided == (Reach("constraint 'k'", 'zone_of', 'coordinate'),), (
+        'the lookup under it still reads zone at a coordinate the relation chooses'
     )
 
 
@@ -212,15 +235,19 @@ def test_the_lookahead_is_the_widest_reach_of_any_block():
     assert verdict.ahead == 5, 'one window must see past its last row as far as any block reads'
 
 
-def test_a_grouping_that_consumes_the_axis_couples_it():
+def test_a_grouping_that_sums_the_axis_away_couples_it():
     program = to_spec(
         {
             **BASE,
-            'constraints': {'z': {'dims': ['h', 'zone'], 'expression': 'sum(p, by=zone_of, over=u, into=zone) <= cap'}},
+            'constraints': {'z': {'dims': ['h', 'zone'], 'expression': 'sum(p, over=u, by=zone_of[zone]) <= cap'}},
         }
     ).program
     verdict = program.separability['u']
-    assert not verdict.windowable, 'the grouping consumes u, so a window of u is a different sum'
+    assert not verdict.windowable, 'the grouping sums u away, so a window of u is a different sum'
+    assert verdict.coupled == {
+        "constraint 'z'": 'groups u into zone (window that dimension instead, or cut only at the group edges)'
+    }, 'the sum over the join is the grouping, reported once'
+    assert not verdict.undecided, 'the join under the sum is not also a lookup waiting on the relation'
 
 
 def test_every_declared_axis_has_a_verdict_and_nothing_else_does():
@@ -247,7 +274,7 @@ def test_a_reduction_over_several_axes_couples_every_one_of_them():
     so the verdict for each of them has to say so — a walk that read only the
     first would call the rest windowable."""
     program = to_spec({**BASE, 'constraints': {'all': {'dims': [], 'expression': 'sum(p) <= budget'}}}).program
-    assert not program.separability['h'].windowable, 'the reduction consumes h'
+    assert not program.separability['h'].windowable, 'the reduction sums h away'
     assert not program.separability['u'].windowable, 'and u, in the same node'
 
 

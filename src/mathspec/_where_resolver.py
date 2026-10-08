@@ -22,13 +22,11 @@ from mathspec._expression_parser import (
     ArithmeticNode,
     FunctionCallNode,
     KeywordNode,
-    NameListNode,
     NameNode,
     literal_number,
-    names_in,
     nodes,
 )
-from mathspec._expression_resolver import ExpressionResolver
+from mathspec._expression_resolver import ExpressionResolver, mask_compared
 from mathspec._where_parser import (
     ColumnNode,
     UnresolvedComparisonNode,
@@ -36,12 +34,9 @@ from mathspec._where_parser import (
     UnresolvedPredicateCallNode,
     UnresolvedWhereNode,
 )
-from mathspec.dimensions import dims_of, pulled_back_dims
-from mathspec.errors import DimensionError, LanguageError, did_you_mean, prefixed
+from mathspec.dimensions import dims_of, join_dims
+from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
 from mathspec.expansion import expand
-from mathspec.operators import (
-    PARTITION_NAMES_ITS_GROUP,
-)
 from mathspec.program import (
     Add,
     And,
@@ -50,12 +45,13 @@ from mathspec.program import (
     CountComparison,
     DimensionComparison,
     DimensionPosition,
-    Direction,
     Divide,
     Expression,
     ExpressionComparison,
+    JoinedPredicate,
     Mask,
     Multiply,
+    NamedMask,
     Negate,
     Not,
     Or,
@@ -64,7 +60,6 @@ from mathspec.program import (
     Power,
     Predicate,
     PredicateOperator,
-    PulledBackPredicate,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -82,9 +77,9 @@ if TYPE_CHECKING:
     from mathspec.program import DeclaredDtype
     from mathspec.resolution import Namespace
 
-#: Why a mask may not read a given expression. The namespace files a given
-#: expression with the variables, since it is read as a column, so the refusal
-#: names it apart.
+#: Why a mask may not read a given expression. The namespace stores a given
+#: expression with the variables, because it is read as a column, so this
+#: refusal names it separately.
 GIVEN_IN_A_MASK = (
     'A given expression may hold a variable, and a where mask is built before variables exist — it may test '
     'parameters and dimension coordinates only.'
@@ -114,7 +109,7 @@ class WhereResolver:
 
     def where(self, node: Predicate | UnresolvedWhereNode) -> Predicate | UnresolvedWhereNode:
         """One predicate node typed, or returned unresolved with its refusal appended."""
-        if isinstance(node, BooleanLiteral | TypedPredicate):
+        if isinstance(node, BooleanLiteral | TypedPredicate | NamedMask):
             return node
         if isinstance(node, NameNode):
             return self._where_name(node)
@@ -132,24 +127,48 @@ class WhereResolver:
             return Or(self._child(node.left), self._child(node.right))
         assert_never(node)
 
+    @property
+    def masks(self) -> frozenset[str]:
+        """Every mask this file names, defined or given."""
+        return self.ns.masks | self.ns.given_masks
+
     def _child(self, node: Predicate | UnresolvedWhereNode) -> Predicate:
         """A connective's child, typed as resolved: an unresolved one survives only with its refusal appended."""
         return cast('Predicate', self.where(node))
 
     def _where_name(self, node: NameNode) -> Predicate | UnresolvedWhereNode:
-        """A bare name: a parameter's or relation's definedness, or a variable's existence."""
+        """A bare name: a mask's predicate, a parameter's or relation's definedness, or a variable's existence."""
         ns, context = self.ns, self.context
+        if node.name in ns.masks:
+            try:
+                return ns.mask(node.name, context)
+            except SchemaError as e:
+                self.errors.append(str(e))
+                return node
         kind = ns.kind(node.name)
         if kind is None:
             self.errors.append(ns.unknown(node.name, context, allow_dims=True))
             return node
         match kind:
             case 'parameter':
+                declared = ns.schema.parameters.get(node.name)
+                if declared is not None and declared.missing == 'refused' and declared.dtype in ('int', 'str'):
+                    rewrite = (
+                        f'Declare `missing: absent`, or compare the label: where: "{node.name} == \'...\'".'
+                        if declared.dtype == 'str'
+                        else f'Declare `missing: neutral` or `absent`, or compare the value: where: "{node.name} > 0".'
+                    )
+                    self.errors.append(
+                        f"{context}: '{node.name}' is declared dtype: {declared.dtype} and missing: refused, so it "
+                        f'has a row at every coordinate and the bare name is true at every coordinate — the mask '
+                        f'has no effect. {rewrite}'
+                    )
+                    return node
                 return ParameterDefined(node.name, ns.leaf_dims[node.name])
             case 'dimension':
                 self.errors.append(
                     f"{context}: '{node.name}' is a dimension, and a bare dimension "
-                    f'name is true at every coordinate — the mask has no effect. '
+                    f'name is true at every coordinate. '
                     f'Remove it, or compare it: where: "{node.name} > 0".'
                 )
             case 'relation':
@@ -158,24 +177,23 @@ class WhereResolver:
                 if len(set(dims)) < len(dims):
                     self.errors.append(
                         f"{context}: '{node.name}' has two columns over one dimension ({list(shape.roles)}), so a "
-                        f'bare name cannot say which the frame supplies. Compare a column: '
-                        f'{node.name}.{shape.values[0] if shape.values else shape.roles[-1]} == ....'
+                        f'bare name is ambiguous. Compare a column: '
+                        f'{node.name}[{shape.values[0] if shape.values else shape.roles[-1]}] == ....'
                     )
                     return node
                 return RelationDefined(node.name, dims)
             case 'variable':
                 if node.name == self.self_variable:
                     self.errors.append(
-                        f"{context}: variable '{node.name}' asks whether it exists in its own "
-                        f'where, which nothing can answer — the mask is what decides where it '
-                        f'exists. Test a parameter, or another variable declared before it.'
+                        f"{context}: variable '{node.name}' tests itself in its own where. "
+                        f'Test a parameter, or another variable declared before it.'
                     )
                 else:
                     return VariableDefined(node.name, ns.leaf_dims[node.name])
         return node
 
     def _predicate_call(self, node: UnresolvedPredicateCallNode) -> Predicate | UnresolvedWhereNode:
-        """``shift(<predicate>, along=, offset=)`` or ``at(<predicate>, by=, over=, into=)`` — the two operators that read a predicate and answer one.
+        """``shift(<predicate>, along=, offset=)`` or ``at(<predicate>, by=relation[column])`` — the two operators that read a predicate and answer one.
 
         ``count`` answers a number, so it stands on a comparison's side and
         [`_count`][] reads it there. Anything else naming a predicate is
@@ -194,8 +212,7 @@ class WhereResolver:
             return node
         if node.name not in ('shift', 'at'):
             self.errors.append(
-                f"{context}: '{node.name}()' does not read a predicate. `shift` and `at` read one and answer "
-                f'one, `count` reads one and answers a number, and every other operator reads arithmetic. '
+                f"{context}: '{node.name}()' does not read a predicate, and only shift(), at() and count() do. "
                 f'Compare the predicate, or name a parameter carrying it.'
             )
             return node
@@ -203,7 +220,7 @@ class WhereResolver:
         if len(self.errors) > found:
             return node
         if node.name == 'at':
-            return self._pulled_back(node, Mask(operand))
+            return self._joined(node, Mask(operand))
         if (refusal := _kwargs_error(context, 'shift', node.kwargs, required=('along', 'offset'))) is not None:
             self.errors.append(refusal)
             return node
@@ -211,47 +228,47 @@ class WhereResolver:
         offset = literal_number(node.kwargs['offset'])
         if not isinstance(along, NameNode) or self.ns.kind(along.name) != 'dimension':
             self.errors.append(
-                f'{context}: shift(<predicate>, along=) names the dimension the predicate is read back along. '
-                f'Name a declared dimension.'
+                f'{context}: shift(<predicate>, along=) is not a declared dimension. Name a declared dimension.'
             )
             return node
         if offset is None or not offset.value.is_integer():
             self.errors.append(
-                f'{context}: shift(<predicate>, offset=) counts whole coordinates back along '
-                f"'{along.name}'. Write an integer."
+                f'{context}: shift(<predicate>, offset=) is not a literal whole number. Write an integer.'
             )
             return node
         mask = Mask(operand)
         if along.name not in mask.dims:
             self.errors.append(
-                f"{context}: shift(<predicate>, along='{along.name}') reads the predicate back along a dimension "
-                f'it does not carry — it reads {_listed(sorted(mask.dims))}. Translate it along one of those.'
+                f"{context}: shift(<predicate>, along='{along.name}') steps along a dimension the predicate does "
+                f'not read. Step along one of {_listed(sorted(mask.dims))}.'
             )
+            return node
+        if self.ns.unordered(along.name):
+            self.errors.append(unordered(context, f'shift(<predicate>, along={along.name})', along.name))
             return node
         return TranslatedPredicate(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
 
-    def _pulled_back(self, node: UnresolvedPredicateCallNode, mask: Mask) -> Predicate | UnresolvedWhereNode:
-        """``at(<predicate>, by=, over=, into=)`` — the predicate read through a relation, as ``at`` reads an array.
+    def _joined(self, node: UnresolvedPredicateCallNode, mask: Mask) -> Predicate | UnresolvedWhereNode:
+        """``at(<predicate>, by=relation[column])`` — the predicate read through a relation, as ``at`` reads an array.
 
-        The relation and its two ends are read by the rules an expression's
-        ``at`` is, so the one refusal a file meets for a bad read is the same
-        in a ``where:`` and in an expression.
+        The columns are read by the rules an expression's ``at`` is, so the one
+        refusal a file meets for a bad read is the same in a ``where:`` and in
+        an expression.
         """
         context = self.context
-        if (refusal := _kwargs_error(context, 'at', node.kwargs, required=('by', 'over', 'into'))) is not None:
+        if (refusal := _kwargs_error(context, 'at', node.kwargs, required=('by',))) is not None:
             self.errors.append(refusal)
             return node
-        found = len(self.errors)
-        roles = {key: node.kwargs[key] for key in ('over', 'into')}
-        by = self._expressions.relation_ref(node.kwargs['by'], 'at', 'by', roles, None)
-        if len(self.errors) > found or not isinstance(by, Direction):
+        columns = self._expressions.columns_ref(node.kwargs['by'], 'at', 'by')
+        by = None if columns is None else self._expressions.lookup(columns, mask.dims)
+        if by is None:
             return node
         try:
-            dims = pulled_back_dims(by, mask.dims, context, 'the predicate')
+            dims = join_dims(by, mask.dims, context, 'the predicate')
         except DimensionError as refusal:
             self.errors.append(str(refusal))
             return node
-        return PulledBackPredicate(mask, by, tuple(sorted(dims)))
+        return JoinedPredicate(mask, by, tuple(sorted(dims)))
 
     def _count(self, node: UnresolvedCountNode) -> Predicate | UnresolvedWhereNode:
         """``count(<predicate>, over=<dim>) <op> <integer>`` — how many coordinates the predicate admits.
@@ -270,14 +287,13 @@ class WhereResolver:
         over = node.call.kwargs['over']
         if not isinstance(over, NameNode) or self.ns.kind(over.name) != 'dimension':
             self.errors.append(
-                f'{context}: count(<predicate>, over=) names the dimension the coordinates are counted along. '
-                f'Name a declared dimension.'
+                f'{context}: count(<predicate>, over=) is not a declared dimension. Name a declared dimension.'
             )
             return node
         value = literal_number(node.value)
         if value is None or not value.value.is_integer():
             self.errors.append(
-                f'{context}: a count is a whole number of coordinates, so it is compared against one. '
+                f'{context}: a count is compared against a value that is not a literal whole number. '
                 f'Write count(…, over={over.name}) {node.op} <integer>.'
             )
             return node
@@ -291,7 +307,7 @@ class WhereResolver:
         if over.name not in mask.dims:
             self.errors.append(
                 f"{context}: count(<predicate>, over='{over.name}') counts along a dimension the predicate does "
-                f'not carry — it reads {_listed(sorted(mask.dims))}. Count along one of those.'
+                f'not read. Count along one of {_listed(sorted(mask.dims))}.'
             )
             return node
         dims = tuple(sorted(mask.dims - {over.name}))
@@ -308,6 +324,10 @@ class WhereResolver:
         """
         if isinstance(node.left, FunctionCallNode) and node.left.name == 'position':
             return self._position(node.left, node)
+        compared = [name for side in (node.left, node.right) if (name := _side_name_or_none(side)) is not None]
+        if masked := [name for name in compared if name in self.masks]:
+            self.errors.append(mask_compared(masked[0], self.context))
+            return node
         plain = self._plain(node)
         if plain is None:
             return self._expression_comparison(node)
@@ -354,8 +374,8 @@ class WhereResolver:
                 continue
             if any(isinstance(n, FunctionCallNode) and n.name == 'count' for n in nodes(side)):
                 self.errors.append(
-                    f'{context}: count() stands on the left of its comparison, and reads a predicate rather than '
-                    f'arithmetic. Write count(<predicate>, over=<dimension>) <op> <integer>.'
+                    f'{context}: count() is not alone on the left of its comparison. '
+                    f'Write count(<predicate>, over=<dimension>) <op> <integer>.'
                 )
                 continue
             try:
@@ -377,13 +397,13 @@ class WhereResolver:
                 )
             elif carries_variable(side):
                 self.errors.append(
-                    f'{context}: a where compares expressions, and one side names a variable. A where mask '
-                    f'is built before variables exist — it may test parameters and dimension coordinates only.'
+                    f'{context}: a where compares expressions, and one side names a variable. Test only '
+                    f'parameters and dimension coordinates.'
                 )
             elif degree.calls_dual(side):
                 self.errors.append(
-                    f'{context}: a where compares expressions, and one side reads a dual, which only a solve '
-                    f'produces. A mask is built before it — test the data instead.'
+                    f'{context}: a where compares expressions, and one side reads a dual. Test only parameters '
+                    f'and dimension coordinates.'
                 )
             else:
                 try:
@@ -396,9 +416,8 @@ class WhereResolver:
         left, right = sides
         if all(_is_number(side) for side in sides):
             self.errors.append(
-                f"{context}: '{node.left} {node.op} {node.right}' compares two numbers, so it is decided before any "
-                f'data arrives and admits every row or none. Name the parameter one side stands for, or drop '
-                f'the comparison.'
+                f"{context}: '{node.left} {node.op} {node.right}' compares two numbers. Name the parameter one "
+                f'side stands for, or remove the comparison.'
             )
             return node
         return ExpressionComparison(left, node.op, right, tuple(d for d in ns.schema.dimensions if d in dims))
@@ -406,21 +425,21 @@ class WhereResolver:
     def _position(
         self, call: FunctionCallNode, node: UnresolvedComparisonNode
     ) -> DimensionPosition | UnresolvedComparisonNode:
-        """``position(dim[, by=relation, within=columns]) <op> i``: the name a dimension, ``by=`` a relation keyed over it."""
+        """``position(dim[, within=relation[column]]) <op> i``: the name a dimension, the relation keyed over it."""
         ns, context = self.ns, self.context
         shape = _position_shape(call)
         if shape is None:
             self.errors.append(
-                f'{context}: position() is written position(<dim>[, by=<relation>, within=<column>]), and this '
-                f'call is not of that shape. It takes the dimension it counts along and nothing else beside by= and within=.'
+                f'{context}: this position() call is not of the form '
+                f'position(<dim>[, within=<relation>[<column>]]). Write it in that form.'
             )
             return node
-        dimension, by, into = shape
+        dimension, within = shape
         index = None if isinstance(node.right, ColumnNode | KeywordNode) else literal_number(node.right)
         if index is None or not index.value.is_integer():
             self.errors.append(
-                f'{context}: position({dimension}) is compared against an integer index, where 0 is first and a '
-                f'negative number counts from the end. Write position({dimension}) {node.op} <integer>.'
+                f'{context}: position({dimension}) is compared against a value that is not a literal integer. '
+                f'Write position({dimension}) {node.op} <integer>, where 0 is first and -1 is last.'
             )
             return node
         position = int(index.value)
@@ -431,20 +450,13 @@ class WhereResolver:
                 f'{did_you_mean(dimension, ns.dimensions, label="Dimensions")}'
             )
             return node
-        if by is None:
+        if ns.unordered(dimension):
+            self.errors.append(unordered(context, f'position({dimension})', dimension))
+            return node
+        if within is None:
             return DimensionPosition(dimension, node.op, position)
-        if (problem := self._expressions.not_a_relation(by, 'position', 'by')) is not None:
-            self.errors.append(problem)
-            return node
-        spelled = f'position({dimension}, by={by})'
-        if into is None:
-            self.errors.append(
-                f'{context}: {spelled} leaves within= unsaid. {PARTITION_NAMES_ITS_GROUP} Write '
-                f"position({dimension}, by={by}, within=<column>) — the value columns of '{by}' "
-                f'are {list(ns.relations[by].values)}.'
-            )
-            return node
-        partition = self._expressions.partition(by, 'position', dimension, into)
+        columns = self._expressions.columns_ref(within, 'position', 'within')
+        partition = None if columns is None else self._expressions.partition(columns, 'position', dimension)
         if partition is None:
             return node
         return DimensionPosition(dimension, node.op, position, partition)
@@ -453,9 +465,9 @@ class WhereResolver:
         """``name <op> literal``, or the one structural form ``relation <op> relation``."""
         ns, context = self.ns, self.context
         value = plain.value
-        left_name, _, left_column = plain.name.partition('.')
+        left_name, left_column = _split_column(plain.name)
         if not plain.quoted and isinstance(value, str):
-            right_name, _, right_column = value.partition('.')
+            right_name, right_column = _split_column(value)
             if (rhs_kind := ns.kind(right_name)) is not None:
                 if rhs_kind == 'relation' and ns.kind(left_name) == 'relation':
                     left = self._relation_column(left_name, left_column or None, plain.name, plain.op)
@@ -510,9 +522,8 @@ class WhereResolver:
                 self.errors.append(f"{context}: where references the given expression '{left_name}'. {GIVEN_IN_A_MASK}")
             case 'variable':
                 self.errors.append(
-                    f"{context}: where references variable '{left_name}'. A where "
-                    f'mask is built before variables exist — it may test parameters '
-                    f'and dimension coordinates only.'
+                    f"{context}: where references variable '{left_name}'. Test only parameters "
+                    f'and dimension coordinates.'
                 )
         return node
 
@@ -527,16 +538,15 @@ class WhereResolver:
         shape = ns.relations[name]
         if not shape.values:
             self.errors.append(
-                f"{context}: '{spelling}' compares a column of '{name}', a bare relation — every column is in its "
-                f'key — so it has no one value per coordinate to compare. Declare that column under values:, or '
-                f"test the bare name — '{name}' — for whether a row exists."
+                f"{context}: '{spelling}' compares a column of '{name}', which has every column in its key. "
+                f"Declare that column under values:, or test the bare name '{name}' for whether a row exists."
             )
             return None
         if column is None:
             if len(shape.values) != 1:
                 self.errors.append(
                     f"{context}: '{spelling}': '{name}' has {len(shape.values)} value columns ({list(shape.values)}), "
-                    f'so say which the comparison reads: {name}.{shape.values[0] if shape.values else "..."}.'
+                    f'so name one: {name}[{shape.values[0]}].'
                 )
                 return None
             return shape.values[0]
@@ -547,8 +557,8 @@ class WhereResolver:
             return None
         if column in shape.key:
             self.errors.append(
-                f"{context}: '{spelling}': '{column}' is a key column of '{name}', which the frame supplies rather "
-                f"than reads. Compare the frame's own coordinate — {shape.dim(column)} {op} ... — or a value column."
+                f"{context}: '{spelling}': '{column}' is a key column of '{name}'. Compare the coordinate itself, "
+                f'{shape.dim(column)} {op} ..., or a value column.'
             )
             return None
         return column
@@ -569,8 +579,7 @@ class WhereResolver:
             if not text:
                 self.errors.append(
                     f"{context}: '{node.name}' is a datetime dimension, so comparing it to "
-                    f'{value!r} compares against the epoch — {node.name} > 0 means "after '
-                    f'1970-01-01", not what it looks like. Quote an ISO date instead: '
+                    f'{value!r} compares against 1970-01-01. Quote an ISO date instead: '
                     f"{node.name} {node.op} '2030-01-01'."
                 )
                 return None
@@ -625,8 +634,13 @@ class _Plain(NamedTuple):
     quoted: bool
 
 
+def _side_name_or_none(side: ArithmeticNode | ColumnNode | KeywordNode) -> str | None:
+    """The bare name a side spells, or ``None`` — a quoted label is no name."""
+    return side.name if isinstance(side, NameNode) else None
+
+
 def _side_name(side: ArithmeticNode | ColumnNode) -> str | None:
-    """The name a side of a where-comparison spells — bare or ``relation.column`` — or ``None`` where it is arithmetic."""
+    """The name a side of a where-comparison spells — bare or ``relation[column]`` — or ``None`` where it is arithmetic."""
     if isinstance(side, NameNode):
         return side.name
     if isinstance(side, ColumnNode):
@@ -634,17 +648,17 @@ def _side_name(side: ArithmeticNode | ColumnNode) -> str | None:
     return None
 
 
-def _position_shape(call: FunctionCallNode) -> tuple[str, str | None, tuple[str, ...] | None] | None:
-    """``(dim, by, within)`` off a ``position(...)`` call, or ``None`` where the call is not of that shape."""
-    if len(call.args) != 1 or not isinstance(call.args[0], NameNode) or set(call.kwargs) - {'by', 'within'}:
+def _split_column(name: str) -> tuple[str, str]:
+    """``relation[column]`` as its two names, and a bare name with an empty column: the one reader of a side's spelling."""
+    relation, _, column = name.partition('[')
+    return relation, column.removesuffix(']')
+
+
+def _position_shape(call: FunctionCallNode) -> tuple[str, ArithmeticNode | None] | None:
+    """``(dim, within)`` off a ``position(...)`` call, or ``None`` where the call is not of that shape."""
+    if len(call.args) != 1 or not isinstance(call.args[0], NameNode) or set(call.kwargs) - {'within'}:
         return None
-    by, within = call.kwargs.get('by'), call.kwargs.get('within')
-    if by is not None and not isinstance(by, NameNode):
-        return None
-    if within is not None and not isinstance(within, NameNode | NameListNode):
-        return None
-    into = names_in(within) if within is not None else None
-    return call.args[0].name, by.name if by is not None else None, into
+    return call.args[0].name, call.kwargs.get('within')
 
 
 def _kwargs_error(
@@ -653,7 +667,7 @@ def _kwargs_error(
     """Why *kwargs* is not what *name* takes over a predicate, or ``None`` where it is.
 
     A predicate-reading call takes exactly the keywords named here. The
-    arithmetic forms of these operators take more — an ``edge=``, a ``by=`` —
+    arithmetic forms of these operators take more — an ``edge=``, a ``within=`` —
     and each is refused rather than ignored, since a predicate answers the
     vacated coordinate itself and a grouped form has nobody asking for it yet.
     """
@@ -661,11 +675,9 @@ def _kwargs_error(
     if missing:
         return f'{context}: {name}(<predicate>) needs {_listed([f"{key}=" for key in missing])}.'
     if extra := sorted(set(kwargs) - set(required)):
-        edge = ' A predicate is false where a translation vacates, so there is no edge to state.'
         return (
             f'{context}: {name}(<predicate>) does not take {_listed([f"{key}=" for key in extra])}. '
-            f'It takes {_listed([f"{key}=" for key in required])}, and nothing else.'
-            f'{edge if "edge" in extra and name == "shift" else ""}'
+            f'It takes only {_listed([f"{key}=" for key in required])}.'
         )
     return None
 
@@ -700,9 +712,8 @@ def _not_arithmetic(context: str, side: ColumnNode | KeywordNode) -> str:
     """Why a relation column or a quoted label may not stand on a side of a comparison of expressions."""
     if isinstance(side, ColumnNode):
         return (
-            f"{context}: '{side.shown}' is a column of a relation, which is compared against a literal or a "
-            f'second column and is not read in arithmetic. Compare it on its own, or carry the value in a '
-            f'parameter and test that.'
+            f"{context}: '{side.shown}' is a relation column in arithmetic. Compare it alone against a literal "
+            f'or a column, or carry the value in a parameter.'
         )
     return (
         f"{context}: '{side.value}' is a quoted label, which is compared against one name. Put the name alone on "
@@ -721,20 +732,16 @@ def _declared_rhs_error(context: str, node: _Plain, value: str, kind: str, *, gi
     if kind == 'variable':
         return (
             f'{context}: {comparison} compares against variable {value!r}. '
-            f'A where mask is built before variables exist.'
+            f'Test only parameters and dimension coordinates.'
         )
     if kind == 'relation':
         return (
-            f'{context}: {comparison} compares {node.name!r} against relation {value!r}, and a '
-            f'relation is structure rather than data — a where tests values: a name against a literal, '
-            f'or arithmetic over parameters. A relation stands on the right-hand side only against a '
-            f'relation on the left sharing its dimension and its target.'
+            f'{context}: {comparison} compares {node.name!r} against relation {value!r}. Compare against a '
+            f'literal, or put a relation over the same dimensions on the left.'
         )
     return (
-        f'{context}: {comparison} compares against dimension {value!r}, which the RHS reads '
-        f'as the literal coordinate {value!r} and so masks everything out. Comparing two '
-        f'dimensions is not in the language; if {value!r} is a coordinate rather than the '
-        f'dimension, rename one of the two.'
+        f'{context}: {comparison} compares against dimension {value!r}, and two dimensions cannot be '
+        f'compared. If {value!r} is a coordinate, rename the dimension or the coordinate.'
     )
 
 
@@ -747,21 +754,18 @@ def _relation_pair_error(context: str, node: _Plain, other: str, ns: Namespace, 
     answers are silent, and a build's data library decides which one.
     """
     comparison = f"'{node.name} {node.op} {other}'"
-    left_name, right_name = node.name.partition('.')[0], other.partition('.')[0]
+    left_name, right_name = _split_column(node.name)[0], _split_column(other)[0]
     ls, rs = ns.relations[left_name], ns.relations[right_name]
     left_keys, right_keys = {ls.dim(k) for k in ls.key}, {rs.dim(k) for k in rs.key}
     if left_keys != right_keys:
         return (
             f'{context}: {comparison} compares relations keyed over different dimensions '
-            f"('{left_name}' by {sorted(left_keys)}, '{right_name}' by {sorted(right_keys)}) — there is no row "
-            f'carrying both, so the comparison has nothing to test. Two relations may be compared only '
-            f'where their keys are over the same dimensions.'
+            f"('{left_name}' by {sorted(left_keys)}, '{right_name}' by {sorted(right_keys)}). Compare relations "
+            f'whose keys are over the same dimensions.'
         )
     if ls.dim(left) != rs.dim(right):
         return (
             f"{context}: {comparison} compares '{node.name}' (a column over '{ls.dim(left)}') with "
-            f"'{other}' (a column over '{rs.dim(right)}'). No value of one is ever a value of the other, so "
-            f'the predicate can only mask everything out. Two columns may be compared only '
-            f'where they are over the same dimension.'
+            f"'{other}' (a column over '{rs.dim(right)}'). Compare two columns over the same dimension."
         )
     return None

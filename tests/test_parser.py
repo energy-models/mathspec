@@ -19,6 +19,7 @@ import pytest
 import mathspec.program as program_module
 from mathspec._expression_parser import (
     BinaryOperatorNode,
+    ColumnsNode,
     ComparisonNode,
     FunctionCallNode,
     KeywordNode,
@@ -162,10 +163,10 @@ def test_a_call_copies_the_kwargs_it_is_handed():
 @pytest.mark.parametrize(
     ('text', 'rewrite'),
     [
-        pytest.param('p < p_max', r'the senses are <=, >= and ==\. Write the bound inclusive', id='strict-less'),
-        pytest.param('p > 0', r'the senses are <=, >= and ==\. Write the bound inclusive', id='strict-greater'),
-        pytest.param('status != 0', r'write the test in where:, where != is legal', id='not-equals-is-a-where-matter'),
-        pytest.param('p = p_max', r'Equality between two sides is written ==', id='a-lone-equals'),
+        pytest.param('p < p_max', r"Write '<=' instead", id='strict-less'),
+        pytest.param('p > 0', r"Write '>=' instead", id='strict-greater'),
+        pytest.param('status != 0', r'move the != test to where:', id='not-equals-is-a-where-matter'),
+        pytest.param('p = p_max', r'Write == for equality', id='a-lone-equals'),
         pytest.param('p ^ 2', r"power is written '\*\*', not '\^'", id='caret-for-power'),
         pytest.param('0 <= p <= p_max', r'Split the chain into two constraints', id='a-chained-comparison'),
     ],
@@ -178,7 +179,7 @@ def test_a_parse_failure_names_the_rewrite(text, rewrite):
 
 @pytest.mark.parametrize(
     'fragment',
-    [pytest.param('Failed to parse', id='the-refusal'), pytest.param('Expected', id='the-grammar-s-complaint')],
+    [pytest.param('Cannot parse', id='the-refusal'), pytest.param('Expected', id='the-grammar-s-complaint')],
 )
 def test_a_failure_with_no_diagnosis_still_shows_the_grammar_s_complaint(fragment):
     with pytest.raises(SchemaError, match=fragment):
@@ -215,7 +216,7 @@ def test_a_list_of_names_is_a_kwarg_value():
 )
 def test_a_list_the_grammar_cannot_read_is_refused_at_load(text):
     """A list is a kwarg value and nothing else, and the last three say so."""
-    with pytest.raises(SchemaError, match='Failed to parse expression'):
+    with pytest.raises(SchemaError, match='Cannot parse the expression'):
         parse_expression(text)
 
 
@@ -318,13 +319,28 @@ def test_a_quoted_right_hand_side_is_a_label(text, right):
     assert node.right == right
 
 
-def test_a_relation_column_is_named_with_a_dot():
-    """`ends.bus0` is the one place the language names a column, and only a where side admits it."""
-    assert parse_where('ends.bus0 != ends.bus1') == UnresolvedComparisonNode(
+def test_a_relation_column_is_named_in_brackets():
+    """`ends[bus0]` names a column on a where side, and a side reads one column, so a list of them is refused."""
+    assert parse_where('ends[bus0] != ends[bus1]') == UnresolvedComparisonNode(
         ColumnNode('ends', 'bus0'), '!=', ColumnNode('ends', 'bus1')
     )
-    with pytest.raises(SchemaError, match='Failed to parse where string'):
-        parse_where('ends.bus0 + 1 > 0')
+    with pytest.raises(SchemaError, match='Cannot parse the where string'):
+        parse_where('ends[bus0] + 1 > 0')
+    with pytest.raises(SchemaError, match=r'Compare each column on its own: ends\[bus0\] == … AND ends\[bus1\] == …'):
+        parse_where("ends[bus0, bus1] == 'x'")
+
+
+@pytest.mark.parametrize(
+    ('text', 'columns'),
+    [
+        pytest.param('at(x, by=gen_bus[bus])', ColumnsNode('gen_bus', ('bus',)), id='one-column'),
+        pytest.param('at(x, by=slot_of[bus, tech])', ColumnsNode('slot_of', ('bus', 'tech')), id='several-columns'),
+        pytest.param('at(x, by = slot_of [ bus , tech ])', ColumnsNode('slot_of', ('bus', 'tech')), id='spaced'),
+    ],
+)
+def test_a_column_selection_names_one_relation_and_its_columns(text, columns):
+    """The relation is written once, before its columns, so a kwarg cannot name columns of two tables."""
+    assert parse_expression(text).kwargs['by'] == columns, 'one relation, its columns in the order written'
 
 
 @pytest.mark.parametrize(
@@ -335,12 +351,17 @@ def test_a_relation_column_is_named_with_a_dot():
         ('position(snapshot) > 0', '>', NumberNode(0), {}),
         ('position(snapshot) <= -2', '<=', UnaryOperatorNode('-', NumberNode(2)), {}),
         ('position(snapshot) == -1', '==', UnaryOperatorNode('-', NumberNode(1)), {}),
-        ('position(snapshot, by=period_of) == 0', '==', NumberNode(0), {'by': NameNode('period_of')}),
         (
-            'position(snapshot, by=period_of, within=[a, b]) == 0',
+            'position(snapshot, within=period_of[a]) == 0',
             '==',
             NumberNode(0),
-            {'by': NameNode('period_of'), 'within': NameListNode(('a', 'b'))},
+            {'within': ColumnsNode('period_of', ('a',))},
+        ),
+        (
+            'position(snapshot, within=period_of[a, b]) == 0',
+            '==',
+            NumberNode(0),
+            {'within': ColumnsNode('period_of', ('a', 'b'))},
         ),
     ],
     ids=['first', 'not first', 'after the first', 'band from the back', 'last', 'grouped', 'grouped within columns'],
@@ -386,13 +407,13 @@ def test_a_where_side_is_held_to_the_depth_an_expression_is():
 @pytest.mark.parametrize(
     ('text', 'rewrite'),
     [
-        pytest.param('p_max > 0 & committable', r'written AND', id='ampersand'),
-        pytest.param('p_max > 0 && committable', r'written AND', id='doubled-ampersand'),
-        pytest.param('p_max > 0 | committable', r'written OR', id='pipe'),
-        pytest.param('p_max > 0 || committable', r'written OR', id='doubled-pipe'),
-        pytest.param('~committable', r'written NOT, before the predicate', id='tilde'),
-        pytest.param('!committable', r'written NOT, before the predicate', id='bang'),
-        pytest.param('status = 0', r'equality is written ==', id='a-lone-equals'),
+        pytest.param('p_max > 0 & committable', r'Write AND', id='ampersand'),
+        pytest.param('p_max > 0 && committable', r'Write AND', id='doubled-ampersand'),
+        pytest.param('p_max > 0 | committable', r'Write OR', id='pipe'),
+        pytest.param('p_max > 0 || committable', r'Write OR', id='doubled-pipe'),
+        pytest.param('~committable', r'Write NOT before the predicate', id='tilde'),
+        pytest.param('!committable', r'Write NOT before the predicate', id='bang'),
+        pytest.param('status = 0', r'is not a comparison. Write ==', id='a-lone-equals'),
     ],
 )
 def test_a_where_parse_failure_names_the_rewrite(text, rewrite):

@@ -23,7 +23,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from mathspec._yaml import read_spec
-from mathspec.errors import SchemaError
+from mathspec.errors import SchemaError, unordered
 from mathspec.operators import BUILTIN_NAMES
 from mathspec.piecewise import Emitted as EmittedCurve
 from mathspec.sos import Emitted as EmittedSet
@@ -58,7 +58,7 @@ def to_spec(spec: str | Path | Mapping[str, object] | Spec) -> Spec:
         FileNotFoundError: A ``str`` with no newline that names no file.
     """
     if isinstance(spec, (list, tuple)):
-        msg = 'a spec is one file, one dict or one Spec, never a list of them; merge the declarations into one dict.'
+        msg = 'to_spec takes one file, one dict or one Spec, not a list. Merge the declarations into one dict.'
         raise SchemaError(msg)
     if isinstance(spec, Spec):
         return spec
@@ -108,6 +108,8 @@ def _flat_namespace(schema: Spec) -> list[tuple[str, Iterable[str]]]:
         ('given variable', schema.given.variables),
         ('named expression', schema.expressions),
         ('given expression', schema.given.expressions),
+        ('mask', schema.masks),
+        ('given mask', schema.given.masks),
         ('macro', schema.macros),
     ]
 
@@ -118,15 +120,10 @@ def _name_collisions(schema: Spec) -> Iterator[str]:
     for kind, group in _flat_namespace(schema):
         for name in group:
             if name in BUILTIN_NAMES:
-                yield (
-                    f"{kind.capitalize()} '{name}' collides with the built-in operator "
-                    f"'{name}'. The operator set is closed and its names are reserved; "
-                    f'rename the {kind}.'
-                )
+                yield f"{kind.capitalize()} '{name}' collides with the built-in operator '{name}'. Rename the {kind}."
             if name in seen:
                 yield (
-                    f"{kind.capitalize()} '{name}' collides with the {seen[name]} of "
-                    f'the same name. Names share one flat namespace — rename one of them.'
+                    f"{kind.capitalize()} '{name}' collides with the {seen[name]} of the same name. Rename one of them."
                 )
             else:
                 seen[name] = kind
@@ -140,10 +137,7 @@ def _given_constraint_collisions(schema: Spec) -> Iterator[str]:
     """
     for name in schema.given.constraints:
         if name in schema.constraints:
-            yield (
-                f"Given constraint '{name}' is also declared under 'constraints:'. A row family is "
-                f'either built by this file or given to it — drop one of the two.'
-            )
+            yield f"Given constraint '{name}' is also declared under 'constraints:'. Delete one of the two."
 
 
 def _frame_dimensions(schema: Spec) -> Iterator[str]:
@@ -155,13 +149,14 @@ def _frame_dimensions(schema: Spec) -> Iterator[str]:
         *(('Given variable', name, g.dims) for name, g in schema.given.variables.items()),
         *(('Given expression', name, g.dims) for name, g in schema.given.expressions.items()),
         *(('Given constraint', name, g.dims) for name, g in schema.given.constraints.items()),
+        *(('Given mask', name, g.dims) for name, g in schema.given.masks.items()),
         *(('Constraint', name, c.dims) for name, c in schema.constraints.items()),
         *(('Named expression', name, e.dims or []) for name, e in schema.expressions.items()),
     ]
     for kind, name, dims in frames:
         yield from (undeclared_dimension(kind, name, d) for d in dims if d not in schema.dimensions)
         yield from (
-            f"{kind} '{name}' names dimension '{d}' twice. A frame is a product of distinct dimensions."
+            f"{kind} '{name}' names dimension '{d}' twice. Delete one."
             for d, count in Counter(dims).items()
             if count > 1
         )
@@ -172,14 +167,11 @@ def _relation_targets(schema: Spec) -> Iterator[str]:
     for lname, lk in schema.relations.items():
         if len(lk.pairs) < 2:
             yield (
-                f"Relation '{lname}' has {len(lk.pairs)} column(s). A relation relates dimensions, so 'key:' and "
-                f"'values:' name at least two between them — a label on one dimension is a parameter over it."
+                f"Relation '{lname}' has {len(lk.pairs)} column(s), and needs at least two under 'key:' and "
+                f"'values:'. For a label on one dimension, declare a parameter instead."
             )
         if not lk.key_roles:
-            yield (
-                f"Relation '{lname}' names no key column. A relation is keyed by the columns a row is identified "
-                f"by — name them under 'key:', and leave the columns they determine to 'values:'."
-            )
+            yield f"Relation '{lname}' names no key column. Name the columns that identify a row under 'key:'."
         for side, written in (('key', lk.key), ('values', lk.values)):
             yield from (
                 f"Relation '{lname}' names dimension '{d}' twice under '{side}:'. Give the two columns roles: "
@@ -188,8 +180,8 @@ def _relation_targets(schema: Spec) -> Iterator[str]:
                 if count > 1 and not isinstance(written, dict)
             )
         yield from (
-            f"Relation '{lname}' names column '{role}' under both 'key:' and 'values:'. A relation names each "
-            f'column once — name the value column after what it holds: values: {{<name>: {dict(lk.pairs)[role]}}}.'
+            f"Relation '{lname}' names column '{role}' under both 'key:' and 'values:'. Rename the value column: "
+            f'values: {{<name>: {dict(lk.pairs)[role]}}}.'
             for role in dict.fromkeys(lk.key_roles)
             if role in lk.value_roles
         )
@@ -198,16 +190,15 @@ def _relation_targets(schema: Spec) -> Iterator[str]:
         )
         yield from (
             f"Relation '{lname}' names column '{role}' after dimension '{role}', but the column is over "
-            f"'{dim}'. A column named like a dimension is read as over it — name it after what it holds."
+            f"'{dim}'. Rename the column after what it holds."
             for role, dim in lk.pairs
             if role in schema.dimensions and role != dim
         )
         if lk.value_roles:
             yield from (
                 f"Relation '{lname}' has two key columns over '{d}' "
-                f'({[k for k in lk.key_roles if dict(lk.pairs)[k] == d]}). A key that determines a value is read '
-                f'its dimensions, and no frame carries a dimension twice — key the table by one column over '
-                f'each, or leave one of them a value column.'
+                f'({[k for k in lk.key_roles if dict(lk.pairs)[k] == d]}). Key the table by one column over '
+                f"each dimension, or move one of them to 'values:'."
                 for d, count in Counter(dict(lk.pairs)[k] for k in lk.key_roles).items()
                 if count > 1
             )
@@ -225,17 +216,17 @@ def _bound_names(schema: Spec) -> Iterator[str]:
                 dtype = parameters[val].dtype
                 if dtype not in NUMERIC_DTYPES:
                     yield (
-                        f"Variable '{vname}' bounds.{side}: '{val}' is a {dtype} parameter, and a bound "
-                        f'is a number. Declare it dtype: float or int, or bound the variable by another.'
+                        f"Variable '{vname}' bounds.{side}: '{val}' is a {dtype} parameter. Declare it "
+                        f'dtype: float or int, or bound the variable by a numeric parameter.'
                     )
                 continue
             detail = (
-                f"'{val}' is not a declared parameter"
+                f"'{val}' is not a declared parameter. Declare it under 'parameters:', or write a number"
                 if val.isidentifier()
-                else f'bounds accept a parameter name or a number, not an expression (got {val!r}). '
+                else f'bounds take a parameter name or a number, not an expression (got {val!r}). '
                 f'Precompute it as a parameter'
             )
-            yield (f"Variable '{vname}' bounds.{side}: {detail}.")
+            yield f"Variable '{vname}' bounds.{side}: {detail}."
 
 
 def _sos_shapes(schema: Spec) -> Iterator[str]:
@@ -249,19 +240,21 @@ def _sos_shapes(schema: Spec) -> Iterator[str]:
             yield (
                 f"{context}: '{block.variable}' is not a declared variable.\n"
                 f'  Variables: {sorted(schema.variables)}\n'
-                f'A set is over one variable, so a parameter or an expression cannot carry one.'
+                "Name a variable declared under 'variables:'."
             )
         elif block.along not in schema.variables[block.variable].dims:
             yield (
                 f"{context}: along '{block.along}' is not a dim of variable "
-                f"'{block.variable}' (dims {schema.variables[block.variable].dims}). The set runs "
-                f"along one of the variable's own dims — one set per coordinate of the rest."
+                f"'{block.variable}' (dims {schema.variables[block.variable].dims}). Set 'along:' "
+                f'to one of these dims.'
             )
+        elif block.type == 2 and not schema.dimensions[block.along].ordered:
+            yield unordered(context, f'type: 2 along {block.along}', block.along)
         elif block.variable in claimed:
             yield (
                 f"{context}: variable '{block.variable}' already carries the set declared by "
-                f"'{claimed[block.variable]}'. A variable holds one set — declare a second "
-                f'variable, or state the other restriction as a constraint.'
+                f"'{claimed[block.variable]}'. Declare a second variable, "
+                f'or write the other restriction as a constraint.'
             )
         else:
             claimed[block.variable] = sname
@@ -302,9 +295,11 @@ def _piecewise_references(schema: Spec) -> Iterator[str]:
         if pw.over not in schema.dimensions:
             yield undeclared_dimension('piecewise', name, pw.over)
             continue
+        if not schema.dimensions[pw.over].ordered:
+            yield unordered(context, f'over: {pw.over}', pw.over)
         for i, link in enumerate(pw.links):
             if link.values not in schema.parameters:
-                yield f"{context}: link {i} values references undeclared parameter '{link.values}'"
+                yield f"{context}: link {i} values references undeclared parameter '{link.values}'. Declare it under 'parameters:'."
             elif (dtype := schema.parameters[link.values].dtype) not in NUMERIC_DTYPES:
                 yield (
                     f"{context}: link {i} values parameter '{link.values}' is declared dtype: {dtype}, and a "
@@ -312,30 +307,30 @@ def _piecewise_references(schema: Spec) -> Iterator[str]:
                 )
             elif pw.over not in schema.parameters[link.values].dims:
                 yield (
-                    f"{context}: link {i} values parameter '{link.values}' must carry dim "
-                    f"'{pw.over}' (has {schema.parameters[link.values].dims})"
+                    f"{context}: link {i} values parameter '{link.values}' has dims "
+                    f"{schema.parameters[link.values].dims}, without '{pw.over}'. Add '{pw.over}' to its dims."
                 )
         if (activity := pw.activity) is not None:
             if activity not in schema.variables:
                 yield (
-                    f"{context}: activity '{activity}' is not a declared variable. A gate is a binary variable; "
-                    f'declare it, or drop activity: for weights that sum to 1.'
+                    f"{context}: activity '{activity}' is not a declared variable. Declare it as a binary "
+                    f'variable, or delete activity:.'
                 )
             elif schema.variables[activity].domain != 'binary':
-                yield f"{context}: activity variable '{activity}' must be binary"
+                yield (
+                    f"{context}: activity variable '{activity}' is {schema.variables[activity].domain}. "
+                    f'Declare it domain: binary.'
+                )
         if (points := pw.points) is None or pw.nominated is not None:
             continue
         if points not in schema.parameters:
-            yield f"{context}: points references undeclared parameter '{points}'"
+            yield f"{context}: points references undeclared parameter '{points}'. Declare it under 'parameters:'."
         elif (dtype := schema.parameters[points].dtype) != 'bool':
-            yield (
-                f"{context}: points parameter '{points}' is {dtype}, and a mask is a bool parameter — one "
-                f'saying, per breakpoint, whether the curve reaches it. Declare it dtype: bool.'
-            )
+            yield f"{context}: points parameter '{points}' is {dtype}. Declare it dtype: bool."
         elif pw.over not in schema.parameters[points].dims:
             yield (
-                f"{context}: points parameter '{points}' must carry dim '{pw.over}' — "
-                f'it says how far each curve runs along it (has {schema.parameters[points].dims})'
+                f"{context}: points parameter '{points}' has dims {schema.parameters[points].dims}, "
+                f"without '{pw.over}'. Add '{pw.over}' to its dims."
             )
 
 

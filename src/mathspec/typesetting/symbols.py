@@ -33,9 +33,9 @@ __all__ = ['SymbolTable', 'Symbols', 'symbols_for']
 _INDEX_ALIASES = {'snapshot': 't', 'snapshots': 't', 'time': 't', 'timestep': 't', 'timesteps': 't'}
 
 
-#: Names that are a Greek letter written out. Lower case only — every one has
-#: a letter in LaTeX and in Typst, which the capitals do not — and ``omicron``
-#: is left out because LaTeX spells it ``o``.
+#: Names that are a Greek letter written out. Lower case only, because every
+#: lower-case letter has a symbol in LaTeX and in Typst and the capitals do not.
+#: ``omicron`` is left out because LaTeX spells it ``o``.
 _GREEK = frozenset(
     {
         'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta',
@@ -104,7 +104,8 @@ class Symbols:
     Attributes:
         overridden: Names the table spelled; the convention note quotes only
             derived symbols.
-        name: Each parameter's, variable's and expression's symbol.
+        name: Each parameter's, variable's, expression's and mask's symbol.
+            A mask is upright, being read off the data as a parameter is.
         constraint: Each constraint's symbol, the subscript ``dual(c)`` prints
             λ against. Off the flat namespace, like the constraints themselves
             — a spec may name a constraint after a variable, so this is its
@@ -129,8 +130,8 @@ def symbols_for(program: Program, fmt: Format, table: SymbolTable) -> Symbols:
     """
     if table.notation != fmt.notation:
         msg = (
-            f'symbol table: written in {table.notation}, but this is a {fmt.notation} render '
-            f'and nothing translates between notations — write a {fmt.notation} table.'
+            f'symbol table: written in {table.notation}, but this render is {fmt.notation}. '
+            f'Write a {fmt.notation} table.'
         )
         raise SchemaError(msg)
     chosen = (
@@ -146,6 +147,8 @@ def symbols_for(program: Program, fmt: Format, table: SymbolTable) -> Symbols:
         *program.given.variables,
         *program.expressions,
         *program.given.expressions,
+        *program.masks,
+        *program.given.masks,
     )
     declared = frozenset(names)
 
@@ -235,7 +238,7 @@ class SymbolTable:
             msg = f'symbol table: unknown section(s) {sorted(unknown)}. Valid sections: notation, dimensions, names.'
             raise SchemaError(msg)
         if 'notation' not in raw:
-            msg = "symbol table: 'notation:' is required — latex or typst, the language the entries are written in."
+            msg = "symbol table: 'notation:' is missing. Write notation: latex or notation: typst."
             raise SchemaError(msg)
         notation = str(raw['notation']).lower()
         if notation not in NOTATIONS:
@@ -291,6 +294,8 @@ def _declared(program: Program) -> set[str]:
         | set(program.given.variables)
         | set(program.expressions)
         | set(program.given.expressions)
+        | set(program.masks)
+        | set(program.given.masks)
         | set(program.constraints)
         | set(program.given.constraints)
     )

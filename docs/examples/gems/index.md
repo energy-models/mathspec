@@ -5,21 +5,23 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # GEMS in ten files
 
-This is the `basic_models_library` 1.0.0 of
-[GEMS v0.4.0](https://github.com/AntaresSimulatorTeam/GEMS/releases/tag/v0.4.0),
-RTE's component modelling language, written as ten files under
-`examples/ports/gems/`. Each GEMS model is one
-[fragment](../../howto/compose.md#a-library-of-components), named after the
-model, and `system.yaml` holds what a GEMS interpreter supplies: the time and
-scenario axes, and the objective.
+You can read a GEMS component library here as mathspec files, one GEMS model
+at a time. [GEMS v0.4.0](https://github.com/AntaresSimulatorTeam/GEMS/releases/tag/v0.4.0)
+is the component modelling language of RTE (the French grid operator). Its
+`basic_models_library` 1.0.0 is written here as ten files under
+`examples/ports/gems/`, the
+[fragments](../../howto/compose.md#a-library-of-components). Each GEMS model is
+one fragment, named after the model. `system.yaml` declares what a GEMS interpreter supplies: the `scenario`
+dimension and the objective.
 
-A GEMS port maps to a sum. The model that receives through a port reads a
-[given](../../reference/language/declarations.md#given) expression, such as
-`Bus_balance_port_flow`, and names no model that connects to it. Each model
-that sends through the port adds a
+Each GEMS port becomes a sum. The model at the receiving end of a port reads
+the sum as a [`given`](../../reference/language/declarations.md#given)
+expression, such as `Bus_balance_port_flow`, and names no model that connects
+to it. Each model at the sending end adds a
 [term](../../reference/language/declarations.md#terms) to that sum with
-`adds_to:`, through a relation that holds its connections. `merge` of the
-files you use is the system, and [the composed spec](composed.md) shows it.
+`adds_to:`. The term sums over a relation that holds the connections of the
+port. `merge` joins the files that you pick into one spec, and
+[the composed spec](composed.md) shows the result for all ten files.
 [mathspec and GEMS](../../about/gems.md) compares the two languages.
 
 <!-- gallery:begin -->

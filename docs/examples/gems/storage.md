@@ -5,16 +5,20 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Storage
 
-One of the [ten fragments](index.md) of the GEMS port: the GEMS `storage` model. Read `Storage_level_equation`: GEMS wraps `level[t+1]` at the end of the horizon by default, and `edge='wrap'` states that in the file.
+This file states the GEMS `storage` model. It is one of the [ten fragments](index.md)
+of the GEMS port. At the last time step, GEMS reads
+`level[t+1]` as the level at the first time step. The constraint
+`Storage_level_equation` states this with
+[`shift`](../../reference/language/operators.md#shift) and `edge='wrap'`.
 
 <!-- gallery:begin -->
 ```yaml
 description: >-
-  GEMS `storage`. A reservoir that injects and withdraws through its
-  `injection_port`. GEMS wraps `level[t+1]` at the end of the horizon by
-  default, so the shift wraps too.
+  GEMS `storage`. A storage is a reservoir that injects and withdraws through
+  its `injection_port`. At the last time step, GEMS reads `level[t+1]` as the
+  level at the first time step, so the shift uses `edge='wrap'`.
 dimensions:
-  time: { dtype: int, description: "time steps of the horizon, counted from 0" }
+  time: { dtype: int, ordered: true, description: "time steps of the horizon, counted from 0" }
   scenario: { dtype: int, description: scenarios of the data }
   bus: { description: "`bus` components: nodes where flows balance" }
   storage: { description: "`storage` components: reservoirs that inject and withdraw" }
@@ -52,7 +56,7 @@ expressions:
     description: "`injection_port.flow` of a storage, `p_withdrawal - p_injection`"
     expression: >-
       sum(Storage_p_withdrawal - Storage_p_injection,
-      by=Storage_injection_port, over=storage, into=bus)
+      over=storage, by=Storage_injection_port[bus])
     adds_to: Bus_balance_port_flow
 constraints:
   Storage_initial_level_constraint:
@@ -71,7 +75,7 @@ constraints:
         along=time, offset=1, edge='wrap')
 ```
 
-GEMS `storage`. A reservoir that injects and withdraws through its `injection_port`. GEMS wraps `level[t+1]` at the end of the horizon by default, so the shift wraps too.
+GEMS `storage`. A storage is a reservoir that injects and withdraws through its `injection_port`. At the last time step, GEMS reads `level[t+1]` as the level at the first time step, so the shift uses `edge='wrap'`.
 
 #### Sets
 

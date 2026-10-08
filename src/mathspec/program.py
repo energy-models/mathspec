@@ -7,13 +7,14 @@
 The second public state, and the one a consumer reads. A [`Program`][] is
 the file typed, section for section: every declaration it makes, with names
 resolved, shapes fixed and every rule decidable without data checked, and no
-data at all. Lowering, as a [`Spec`][] loads, is the only
+data at all. Lowering, as a [`Spec`][mathspec.spec.Spec] loads, is the only
 thing that builds one, so nothing here re-checks a hand-built one.
 
 Node and declaration classes are matched with ``isinstance``. The rules a
 node's structure does not show is [`children`][]; the questions over the walk
 are [`walk_regions`][], [`walk`][] and the filters beside them. A
-resolved ``where`` arrives as a [`Mask`][]. Frozen dataclasses only — no
+resolved ``where`` arrives as a [`Mask`][], and what
+[`advice`][mathspec.advice] says about a program as [`Advice`][]. Frozen dataclasses only — no
 execution logic, and nothing imported from a consumer. How a consumer reads
 one: ``docs/reference/reading.md``.
 """
@@ -34,13 +35,17 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
-#: What ``mathspec.program`` promises a consumer, sorted.
+#: The public names of ``mathspec.program``, sorted.
 __all__ = [
     'Add',
+    'Advice',
+    'AdviceKind',
     'And',
     'Assumption',
+    'Axis',
     'BooleanLiteral',
     'Cases',
+    'Column',
     'Connective',
     'Constant',
     'ConstraintDeclaration',
@@ -51,7 +56,6 @@ __all__ = [
     'DimensionDeclaration',
     'DimensionDtype',
     'DimensionPosition',
-    'Direction',
     'Divide',
     'Dual',
     'Expression',
@@ -60,11 +64,17 @@ __all__ = [
     'Footprint',
     'GivenDeclaration',
     'GivenTargets',
-    'GroupSum',
+    'Join',
+    'JoinColumns',
+    'JoinedPredicate',
     'Link',
     'Mask',
+    'MaskDeclaration',
+    'Missing',
+    'MissingReading',
     'Multiply',
-    'Named',
+    'NamedExpression',
+    'NamedMask',
     'Negate',
     'Not',
     'ObjectiveDeclaration',
@@ -82,14 +92,13 @@ __all__ = [
     'Predicate',
     'PredicateOperator',
     'Program',
-    'Pullback',
-    'PulledBackPredicate',
     'QuadraticPosition',
     'Reach',
     'Region',
     'RelationComparison',
     'RelationDeclaration',
     'RelationDefined',
+    'RelationMissing',
     'RelationPairComparison',
     'Separability',
     'SosDeclaration',
@@ -99,10 +108,10 @@ __all__ = [
     'TranslatedPredicate',
     'TypedPredicate',
     'Variable',
-    'VariableAbsence',
     'VariableDeclaration',
     'VariableDefined',
     'VariableDomain',
+    'VariableMissing',
     'WindowSum',
     'assumption_message',
     'carries_variable',
@@ -124,30 +133,38 @@ ConstraintSense = ComparisonOperator
 QuadraticPosition = Literal['objective', 'constraint']
 
 #: The dtype a dimension index may declare (the declaration rules), and what
-#: its labels are. ``datetime`` is a dimension's alone — labels on a timeline
-#: order and compare, where a *value* of that type is a moment nothing
-#: computes with.
+#: its labels are. Only a dimension may declare ``datetime``, because labels
+#: on a timeline order and compare, but no expression computes with a moment.
 DimensionDtype = Literal['float', 'int', 'str', 'datetime']
 
 #: The dtype a parameter may declare (the declaration rules), and what its bound
-#: column must be. ``bool`` is a parameter's alone — a value column may be a
-#: flag a mask reads, where a label set of two members is a dimension nothing
-#: indexes by.
+#: column must be. Only a parameter may declare ``bool``, because a mask reads
+#: a flag column, and nothing indexes by a dimension of two labels.
 ParameterDtype = Literal['float', 'int', 'bool', 'str']
 
-#: What a *name* a where comparison tests may be — a parameter's dtype or a
-#: dimension's, since a relation's is its target's. The union rather than either
-#: half, because a mask names all three kinds and reads the dtype the same way.
+#: The dtype of a *name* that a where comparison tests: a parameter's or a
+#: dimension's, because a relation takes its target's dtype. It is the union of
+#: both, because a mask names all three kinds and reads the dtype the same way.
 DeclaredDtype = ParameterDtype | DimensionDtype
 
 #: The domain a variable may declare.
 VariableDomain = Literal['continuous', 'integer', 'binary']
 
-#: What a masked variable's non-existence *means* where it does not exist.
-#: ``undefined`` is the absence rules' default — a term carrying it takes its
-#: row. ``zero`` says the quantity *is* zero there, so the term contributes
-#: nothing and the row stands.
-VariableAbsence = Literal['undefined', 'zero']
+#: What a missing row means. ``refused`` refuses the data. ``absent`` removes
+#: the row of a term that reads it. ``neutral`` reads the value that contributes
+#: nothing: ``0`` as a coefficient, ``false`` in a ``where``.
+MissingReading = Literal['refused', 'absent', 'neutral']
+
+#: A parameter's ``missing:``: a reading, or the value a missing row reads as.
+Missing = MissingReading | bool | float
+
+#: A relation's ``missing:``. A label the map leaves out is refused, or belongs to no group.
+RelationMissing = Literal['refused', 'absent']
+
+#: What a masked variable means where its ``where`` masks it out. ``absent`` is
+#: the default: a term that carries it removes its row. ``neutral`` says the
+#: quantity *is* zero there, so the term contributes nothing and the row stands.
+VariableMissing = Literal['absent', 'neutral']
 
 #: Which way an objective is optimised (the declaration rules).
 ObjectiveSense = Literal['minimize', 'maximize']
@@ -247,38 +264,69 @@ class Divide:
 
 
 @dataclass(frozen=True)
+class Column:
+    """One column of a relation: the relation's name, and the column's name in its declaration."""
+
+    relation: str
+    name: str
+
+    def __str__(self) -> str:
+        """The column as a file writes it, ``relation[column]``."""
+        return f'{self.relation}[{self.name}]'
+
+
+@dataclass(frozen=True)
+class Axis:
+    """A position in a frame: the dimension whose labels it runs over, and the relation column it stands for.
+
+    A declared dimension is the axis ``Axis(dimension)``. A [`Join`][]
+    opens ``Axis(dimension, column)`` for each column it drops, so a column
+    dropped and a column added over one dimension are two axes of one frame.
+    Two axes are equal where both fields are, so a frame holds a dimension's
+    own axis at most once however many join axes run over the same labels.
+    """
+
+    dimension: str
+    column: Column | None = None
+
+    def __str__(self) -> str:
+        """The dimension's name, or the column's ``relation[column]`` for a join's axis."""
+        return self.dimension if self.column is None else str(self.column)
+
+
+@dataclass(frozen=True)
 class Sum:
-    """Sum ``operand`` over the named dims, removing them from the result."""
+    """Sum ``operand`` over the axes in ``over``, removing them from the result.
 
-    operand: Expression
-    over: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class GroupSum:
-    """Sum ``operand`` through a relation: the dims ``direction`` consumes go, the dims it produces arrive, the dims it joins on stay.
-
-    The join keys on the consumed columns and every joined column, and the
-    operand carries every dim consumed or joined on.
+    An axis in ``over`` is a dimension's own, or one a [`Join`][] under it
+    opens ([`JoinColumns.axes`][]): ``sum(x, over=a, by=relation[b])``
+    lowers to a ``Sum`` over a ``Join``, over the axis of each column the join
+    does not group by. This node is the group-by that follows the join.
     """
 
     operand: Expression
-    direction: Direction
+    over: tuple[Axis, ...]
 
 
 @dataclass(frozen=True)
-class Pullback:
-    """Read ``operand`` through a relation — the adjoint of [`GroupSum`][].
+class Join:
+    """Join ``operand`` to a relation on the columns ``columns`` joins on, one row per matching row of the relation.
 
-    The dims ``direction`` consumes go and the dims it produces arrive, one
-    value per coordinate because the read takes value columns at a key the
-    result fixes, which the loader checks. The join fans out, many
-    produced tuples sharing one consumed tuple — at each coordinate of the
-    joined columns, which the operand carries and the result keeps.
+    The operand carries every dim joined on. The result has the operand's
+    dims, less the dims joined on, plus the dims grouped by, plus one axis
+    per column joined on and not grouped by ([`JoinColumns.axes`][]), which
+    stands for the relation's column and runs over its dimension. So a column
+    dropped and a column added over one dimension stay two axes. A [`Sum`][] over
+    those axes is the group-by that follows the join, which is how
+    ``sum(x, over=a, by=relation[b])`` lowers. Where the grouped columns
+    hold the relation's whole key, they determine every other column, the
+    join opens no axis, and the bare ``Join`` is ``at(x,
+    by=relation[a])``: one value per row of the result, fanned out where
+    several key tuples share the values joined on.
     """
 
     operand: Expression
-    direction: Direction
+    columns: JoinColumns
 
 
 @dataclass(frozen=True)
@@ -361,7 +409,7 @@ class Cases:
 
 
 @dataclass(frozen=True)
-class Named:
+class NamedExpression:
     """A use of an ``expressions:`` entry, standing where its name was written, with the entry's body under it.
 
     Its value is its body's: a consumer building rows steps through it, as
@@ -376,7 +424,7 @@ class Named:
 
 
 #: Every expression node, as one type — what a walk takes. The set is
-#: *closed*: nothing registers into it, so a consumer that walks it ends in
+#: *closed*: nothing registers into it, so a tool that walks it ends in
 #: ``assert_never`` and a node added without a branch is a type error at the
 #: site that must grow one, rather than a ``LanguageError`` raised at the first
 #: spec that uses it. The degree rules (``mathspec.degree``) hold on every
@@ -396,18 +444,17 @@ Expression = (
     | Power
     | Divide
     | Sum
-    | GroupSum
-    | Pullback
+    | Join
     | Translate
     | WindowSum
     | Cases
-    | Named
+    | NamedExpression
 )
 
 
 def children(expression: Expression) -> tuple[Expression, ...]:
     """The sub-expressions of *expression* — what every walk recurses through."""
-    if isinstance(expression, Named):
+    if isinstance(expression, NamedExpression):
         return (expression.body,)
     if isinstance(expression, Negate):
         return (expression.operand,)
@@ -417,7 +464,7 @@ def children(expression: Expression) -> tuple[Expression, ...]:
         return (expression.numerator, expression.divisor)
     if isinstance(expression, Power):
         return (expression.base, expression.exponent)
-    if isinstance(expression, (Sum, GroupSum, Pullback, Translate, WindowSum)):
+    if isinstance(expression, (Sum, Join, Translate, WindowSum)):
         return (expression.operand,)
     if isinstance(expression, Cases):
         return tuple(region.value for region in expression.regions)
@@ -447,6 +494,9 @@ class RelationDeclaration:
 
     columns: tuple[tuple[str, str], ...]
     key: tuple[str, ...]
+    #: What a key the map leaves out means, or ``None`` for a bare relation,
+    #: whose rows are its membership and so have no gap.
+    missing: RelationMissing | None = 'refused'
     description: str | None = None
 
     @property
@@ -472,59 +522,104 @@ class RelationDeclaration:
 
 
 @dataclass(frozen=True)
-class Direction:
-    """One relation as one call reads it — which columns are consumed, which produced, which joined on.
+class JoinColumns:
+    """One relation as one call joins it: the columns joined on, and the columns grouped by.
 
     The declaration fixes no direction; the call does, and this is the one it
     named. ``name`` is the relation's, as [`Program.relations`][] keys it.
-    ``consumed``, ``produced`` and ``joined`` are *roles* — column names of
-    ``relation``, which maps every role to its dimension and names the key.
-    ``joined`` is the key roles the call did not name (every role, for a bare
-    relation): the join keys on them, and a value role left unnamed is not
-    read.
+    ``joined`` and ``grouped`` are *roles*, which are column names of
+    ``relation``. ``relation`` maps every role to its dimension and names the
+    key. ``joined`` is
+    every column the join matches the operand on: the columns that leave the
+    frame, then every key column the call does not name. ``grouped`` is every
+    column of the relation the result keeps: the columns that arrive, then the
+    same unnamed key columns. A column in neither is not read, so a relation
+    may gain a value column without changing what a call means.
+
+    A column both joined on and grouped by stays in the frame. One joined on
+    and not grouped by is [`dropped`][], and one grouped by and not joined
+    on is [`added`][], so the frame after the call is the operand's dims,
+    less the dims joined on, plus the dims grouped by.
     """
 
     name: str
     relation: RelationDeclaration
-    consumed: tuple[str, ...]
-    produced: tuple[str, ...]
     joined: tuple[str, ...]
+    grouped: tuple[str, ...]
 
     def dim(self, role: str) -> str:
         """The dimension *role* ranges over."""
         return self.relation.dim(role)
 
     @property
-    def consumed_dims(self) -> tuple[str, ...]:
-        return tuple(self.dim(role) for role in self.consumed)
+    def dropped(self) -> tuple[str, ...]:
+        """The roles joined on and not grouped by: what the call sums away or looks up."""
+        return tuple(role for role in self.joined if role not in self.grouped)
 
     @property
-    def produced_dims(self) -> tuple[str, ...]:
-        return tuple(self.dim(role) for role in self.produced)
+    def added(self) -> tuple[str, ...]:
+        """The roles grouped by and not joined on: what the call brings into the frame."""
+        return tuple(role for role in self.grouped if role not in self.joined)
+
+    @property
+    def kept(self) -> tuple[str, ...]:
+        """The roles both joined on and grouped by: the key columns the call did not name."""
+        return tuple(role for role in self.joined if role in self.grouped)
 
     @property
     def joined_dims(self) -> tuple[str, ...]:
         return tuple(self.dim(role) for role in self.joined)
 
+    @property
+    def grouped_dims(self) -> tuple[str, ...]:
+        return tuple(self.dim(role) for role in self.grouped)
+
+    @property
+    def dropped_dims(self) -> tuple[str, ...]:
+        return tuple(self.dim(role) for role in self.dropped)
+
+    @property
+    def added_dims(self) -> tuple[str, ...]:
+        return tuple(self.dim(role) for role in self.added)
+
+    @property
+    def one_row_per_group(self) -> bool:
+        """Whether the grouped columns hold the relation's whole key, so each group is one row: a lookup, not a sum."""
+        return set(self.relation.key) <= set(self.grouped)
+
+    @property
+    def axes(self) -> tuple[Axis, ...]:
+        """The axis the join opens for each column it drops, empty where each group is one row.
+
+        Each runs over the column's dimension and stands for the column, so it
+        never equals that dimension's own axis. A column the grouped columns
+        determine opens none: in a lookup they hold the key, and the key
+        determines every column.
+        """
+        if self.one_row_per_group:
+            return ()
+        return tuple(Axis(self.dim(role), Column(self.name, role)) for role in self.dropped)
+
 
 @dataclass(frozen=True)
 class Partition:
-    """One relation as a partition steps along it — the key column stepped along, the group columns, and the key columns joined on.
+    """One relation as a partition steps along it: the key column it steps along, the columns it partitions by, and the key columns it joins on.
 
     ``name`` is the relation's, as [`Program.relations`][] keys it.
-    ``along``, ``group`` and ``joined`` are *roles* — column names of
-    ``relation``, which maps every role to its dimension and names the key.
+    ``along``, ``grouped`` and ``joined`` are *roles*, which are column names
+    of ``relation``. ``relation`` maps every role to its dimension and names
+    the key.
     ``along`` is the one key column over the dimension stepped along, and
-    the frame keeps it. ``group`` is the value columns ``within=`` named,
-    read at the row's key. ``joined`` is the other key columns, whose
-    dimensions the frame carries. Nothing is consumed and nothing is
-    produced: the frame does not change.
+    the frame keeps it. ``grouped`` is the value columns ``within=`` named,
+    read at the row's key: the partition's group. ``joined`` is the other key
+    columns, whose dimensions the frame carries. No column is dropped and
+    none is added: the frame does not change.
     """
 
     name: str
     relation: RelationDeclaration
     along: str
-    group: tuple[str, ...]
+    grouped: tuple[str, ...]
     joined: tuple[str, ...]
 
     def dim(self, role: str) -> str:
@@ -546,9 +641,11 @@ class DimensionDeclaration:
 
     #: What the labels are, as the file declares them. A dimension is read from
     #: whatever table carries it, so the declared type is what that column is
-    #: checked against — the same claim ``ParameterDeclaration.dtype`` makes
-    #: about a value column, one axis over.
+    #: checked against, as ``ParameterDeclaration.dtype`` is for a value column.
     dtype: DimensionDtype = 'str'
+    #: Whether the order of the labels is part of the model. Where it is, a
+    #: tool keeps the labels in the order the data gives them.
+    ordered: bool = False
     description: str | None = None
 
 
@@ -582,7 +679,7 @@ def assumption_message(name: str, assumption: Assumption) -> str:
     """
     read = ', '.join(f"'{n}'" for n in sorted(assumption.predicate.names_read))
     sentence = f"assumption '{name}' does not hold for the data attached to {read}"
-    return f'{sentence} — {assumption.description}' if assumption.description else sentence
+    return f'{sentence}: {assumption.description}' if assumption.description else sentence
 
 
 @dataclass(frozen=True)
@@ -598,6 +695,10 @@ class ParameterDeclaration:
 
     dims: tuple[str, ...]
     dtype: ParameterDtype = 'float'
+    #: What a missing row means, or the value it reads as wherever a value is
+    #: read; ``None`` for a given parameter, whose declaring file says. A bare
+    #: numeric name in a ``where`` still asks whether the data has a row.
+    missing: Missing | None = 'refused'
     description: str | None = None
 
 
@@ -606,12 +707,12 @@ class VariableDeclaration:
     dims: tuple[str, ...]
     where: Mask | None = None
     #: A number or a parameter, or ``None`` where that side is open. What stands
-    #: for an open side in a solve is the consumer's to choose.
+    #: for an open side in a solve is the engine's choice.
     lower: Expression | None = None
     #: As [`lower`][], for the other side.
     upper: Expression | None = None
     domain: VariableDomain = 'continuous'
-    absence: VariableAbsence = 'undefined'
+    missing: VariableMissing = 'absent'
     description: str | None = None
 
 
@@ -644,6 +745,9 @@ class GivenTargets:
     constraints: Mapping[str, GivenDeclaration] = Sealed({})
     #: Named expressions the host model defines, by name.
     expressions: Mapping[str, GivenDeclaration] = Sealed({})
+    #: Masks the host model defines, by name. A where reads one as the data it
+    #: is: a [`ParameterDefined`][] of a boolean over its frame.
+    masks: Mapping[str, GivenDeclaration] = Sealed({})
 
     def __post_init__(self) -> None:
         for f in fields(self):
@@ -651,7 +755,7 @@ class GivenTargets:
 
     def __bool__(self) -> bool:
         """Whether the program reads anything it does not build."""
-        return bool(self.parameters or self.variables or self.constraints or self.expressions)
+        return bool(self.parameters or self.variables or self.constraints or self.expressions or self.masks)
 
 
 @dataclass(frozen=True)
@@ -718,6 +822,22 @@ class ExpressionDeclaration:
     description: str | None = None
     #: The sum this entry adds to as a term, or ``None``.
     adds_to: str | None = None
+
+
+@dataclass(frozen=True)
+class MaskDeclaration:
+    """A named predicate — a ``masks:`` entry, read wherever a ``where``, a ``when`` or a ``holds`` names it.
+
+    It builds nothing of its own: every use stands as a [`NamedMask`][] with
+    this predicate under it, so a consumer reading a mask never looks the
+    name up here.
+    """
+
+    where: Mask
+    #: The frame the mask is read over: the dims its predicate carries, in the
+    #: order ``dimensions:`` declares them.
+    dims: tuple[str, ...]
+    description: str | None = None
 
 
 @dataclass(frozen=True)
@@ -839,7 +959,7 @@ class Separability:
             is pointwise; a ``shift`` of ``-2`` is ``2``.
         coupled: Each declaration that ties the axis together, to what ties it
             and the one change to the spec that would not: a sum over the axis
-            in a constraint, a grouping that consumes it, a wrapped
+            in a constraint, a grouping that sums it away, a wrapped
             translation, a set. No window satisfies these, and no rewrite here
             would keep the spec's meaning, so the remedy is named rather than
             applied.
@@ -902,7 +1022,7 @@ class Separability:
         for name in least:
             if name not in waiting:
                 raise KeyError(
-                    f"'{name}' is not a parameter an undecided reach along '{self.dimension}' waits on. "
+                    f"'{name}' is not a parameter that an undecided reach along '{self.dimension}' waits on. "
                     + did_you_mean(name, sorted(waiting))
                 )
         folded = {reach for reach in self.undecided if reach.kind == 'offset' and reach.name in least}
@@ -924,8 +1044,8 @@ class Program:
     parameters: Mapping[str, ParameterDeclaration]
     variables: Mapping[str, VariableDeclaration]
     constraints: Mapping[str, ConstraintDeclaration]
-    #: ``None`` where the file declares no objective — a feasibility problem,
-    #: whose answer is whether the constraints can be met at all.
+    #: ``None`` where the file declares no objective. The solve then only asks
+    #: whether the constraints can be met.
     objective: ObjectiveDeclaration | None
     dimensions: Mapping[str, DimensionDeclaration] = Sealed({})
     relations: Mapping[str, RelationDeclaration] = Sealed({})
@@ -936,15 +1056,18 @@ class Program:
     #: What the data has to satisfy for the answer to mean anything, by the
     #: name a refusal quotes: every ``assumptions:`` entry the file wrote, then
     #: what each ``piecewise:`` block's method assumes of its breakpoints. The
-    #: language decides none of it, so the consumer attaching the data checks
+    #: language decides none of it, so the tool that attaches the data checks
     #: each and refuses with [`assumption_message`][].
     assumptions: Mapping[str, Assumption] = Sealed({})
     #: Declared ``expressions:``, each saying whether the math reads it. None
-    #: builds a row of its own — one the math reads stands as a [`Named`][]
-    #: where it is read — but all are lowered with the program, so a file whose
+    #: builds a row of its own, and one the math reads stands as a [`NamedExpression`][]
+    #: where it is read. All are lowered with the program, so a file whose
     #: named expression is outside the language is refused by every verb that
     #: reads the file rather than only by the one that reads the expression.
     expressions: Mapping[str, ExpressionDeclaration] = Sealed({})
+    #: Declared ``masks:``. Each use stands as a [`NamedMask`][] where it is
+    #: read, so a consumer building rows needs nothing from this group.
+    masks: Mapping[str, MaskDeclaration] = Sealed({})
     #: What this program reads and does not build ([`GivenTargets`][]), for a host model to provide.
     given: GivenTargets = GivenTargets()
     #: What the file as a whole is, as its ``description:`` says.
@@ -1275,17 +1398,18 @@ class TranslatedPredicate:
 
 
 @dataclass(frozen=True)
-class PulledBackPredicate:
-    """*operand* read through a relation — ``at(has_curve, by=converter_of, over=converter, into=flow)``.
+class JoinedPredicate:
+    """*operand* read through a relation, written ``at(has_curve, by=converter_of[converter])``: a lookup [`Join`][] of a predicate.
 
     True at a coordinate where the relation has a row and *operand* holds at
     the coordinate that row reads. False where the relation has no row, which
-    is what a missing row already means in a mask. The dims ``direction``
-    consumes go and the dims it produces arrive, as [`Pullback`][]'s do.
+    is what a missing row already means in a mask. The dims ``columns``
+    joins on go and the dims it groups by arrive, as a lookup
+    [`Join`][]'s do.
     """
 
     operand: Mask
-    direction: Direction
+    columns: JoinColumns
     dims: tuple[str, ...]
 
 
@@ -1306,6 +1430,20 @@ class Or:
     right: Predicate
 
 
+@dataclass(frozen=True)
+class NamedMask:
+    """A use of a ``masks:`` entry, standing where its name was written, with the entry's predicate under it.
+
+    Its truth is its body's: a consumer steps through it, as
+    [`where_children`][] does. It is kept as a node rather than written in so
+    the typesetter can print the symbol where the name stood and define it
+    once, as [`NamedExpression`][] does for an expression.
+    """
+
+    name: str
+    body: Predicate
+
+
 #: Every predicate resolution has typed: it names a declaration and the kind is
 #: settled. Resolution passes these straight through, having nothing left to
 #: decide about them.
@@ -1321,23 +1459,23 @@ TypedPredicate = (
     | RelationDefined
     | CountComparison
     | TranslatedPredicate
-    | PulledBackPredicate
+    | JoinedPredicate
 )
 
-#: The boolean connectives — the only where nodes carrying other where nodes,
-#: and so the only place a walk over a predicate recurses. The grammar builds
-#: these classes directly, over leaves still unresolved, so a pre-resolution
-#: tree shares them — the transient impurity resolution normalizes away.
+#: The boolean connectives. With [`NamedMask`][], they are the only where nodes
+#: that carry other where nodes, so a walk over a predicate recurses only here.
+#: The grammar builds these classes directly over unresolved leaves, so a tree
+#: before resolution shares them, and resolution then replaces those leaves.
 Connective = Not | And | Or
 
 #: Every resolved predicate node. The parser's ``Unresolved*`` nodes are not members: they live with the
 #: grammar in [`mathspec._where_parser`][], and resolution rewrites them away
 #: before anything here is asked.
-Predicate = BooleanLiteral | TypedPredicate | Connective
+Predicate = BooleanLiteral | TypedPredicate | Connective | NamedMask
 
 
 def where_children(where: Predicate) -> tuple[Predicate, ...]:
-    """The predicates under *where* — a connective's operands, and nothing under a leaf.
+    """The predicates under *where* — a connective's operands, a named mask's body, and nothing under a leaf.
 
     What every walk over a predicate recurses through, as [`children`][] is
     for an expression. A leaf has nothing under it whether or not it is
@@ -1347,6 +1485,8 @@ def where_children(where: Predicate) -> tuple[Predicate, ...]:
         return (where.operand,)
     if isinstance(where, (And, Or)):
         return (where.left, where.right)
+    if isinstance(where, NamedMask):
+        return (where.body,)
     return ()
 
 
@@ -1360,7 +1500,7 @@ def _atoms(where: Predicate) -> Iterator[TypedPredicate]:
     """
     if isinstance(where, TypedPredicate):
         yield where
-    elif isinstance(where, BooleanLiteral | Connective):
+    elif isinstance(where, BooleanLiteral | Connective | NamedMask):
         for child in where_children(where):
             yield from _atoms(child)
     else:
@@ -1391,7 +1531,7 @@ def _atom_dims(atom: TypedPredicate) -> frozenset[str]:
             | RelationComparison()
             | RelationPairComparison()
             | RelationDefined()
-            | PulledBackPredicate()
+            | JoinedPredicate()
         ):
             return frozenset(atom.dims)
         case DimensionComparison():
@@ -1424,8 +1564,8 @@ def _atom_names(atom: TypedPredicate) -> frozenset[str]:
             return atom.predicate.names_read
         case TranslatedPredicate():
             return atom.operand.names_read
-        case PulledBackPredicate():
-            return atom.operand.names_read | {atom.direction.name}
+        case JoinedPredicate():
+            return atom.operand.names_read | {atom.columns.name}
         case DimensionComparison() | DimensionPosition():
             return frozenset()
         case _:
@@ -1436,7 +1576,7 @@ def _names_under(*expressions: Expression) -> frozenset[str]:
     """Every parameter and relation the data has to supply for *expressions* — what a mask's ``names_read`` promises.
 
     [`parameters_of`][] alone misses the data an operator reads beside its
-    operand: the relation a grouping or a pullback reads through, the one a
+    operand: the relation a grouping or a lookup reads through, the one a
     translation or a window is partitioned by, the parameter a named offset or
     width is read from, and whatever decides which region of a cased value
     applies.
@@ -1445,8 +1585,8 @@ def _names_under(*expressions: Expression) -> frozenset[str]:
     for node in walk(*expressions):
         if isinstance(node, Cases):
             names.update(*(region.when.names_read for region in node.regions))
-        elif isinstance(node, (GroupSum, Pullback)):
-            names.add(node.direction.name)
+        elif isinstance(node, Join):
+            names.add(node.columns.name)
         elif isinstance(node, (Translate, WindowSum)):
             if node.partition is not None:
                 names.add(node.partition.name)
@@ -1477,7 +1617,8 @@ def _fold(node: Predicate) -> Predicate:
     none, ``NOT True`` is ``False`` and ``NOT NOT X`` is ``X``. What survives
     is a predicate over data, or the one literal the whole mask reduces to —
     the invariant [`Mask`][] applies at construction, so it holds wherever
-    a mask is built.
+    a mask is built. A [`NamedMask`][] is left whole: its body was folded
+    when the entry was read, and refused there where it folded to a literal.
     """
     if isinstance(node, Not):
         operand = _fold(node.operand)
@@ -1562,3 +1703,35 @@ class Mask:
     def __or__(self, other: Mask) -> Mask:
         """Either mask — construction absorbs a literal side rather than burying it."""
         return Mask(Or(self.root, other.root))
+
+
+# --------------------------------------------------------------------------
+# Advice
+# --------------------------------------------------------------------------
+
+
+#: Which pass an [`Advice`][] comes from. The set is closed, like the operator
+#: set, so a tool that filters on it can list every value.
+AdviceKind = Literal['never-an-axis', 'given', 'unbounded']
+
+
+@dataclass(frozen=True)
+class Advice:
+    """One thing the language advises about a file it accepts.
+
+    Never an error: each is what a half-written spec looks like too. A
+    consumer prints it, or filters on ``kind`` and ``subject``; the text is the
+    language's, so no consumer writes its own.
+
+    Attributes:
+        kind: The pass that said it.
+        subject: The declaration it is about — a dimension name, a variable name.
+        text: The sentence, naming the rewrite.
+    """
+
+    kind: AdviceKind
+    subject: str
+    text: str
+
+    def __str__(self) -> str:
+        return self.text

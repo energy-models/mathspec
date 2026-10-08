@@ -12,7 +12,7 @@ import pytest
 
 from mathspec.dimensions import DimensionError, _check_where_dims, dims_of
 from mathspec.errors import SchemaError
-from mathspec.program import Mask, RelationPairComparison
+from mathspec.program import Axis, Column, Join, Mask, RelationPairComparison, Sum
 from mathspec.resolution import Namespace
 from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, expression_of, schema_of, varied, where_of
@@ -28,8 +28,8 @@ if TYPE_CHECKING:
 #: over a dim `p` does not carry, so it is readable only through a `by=`.
 BASE = {
     'dimensions': {
-        'snapshot': {'dtype': 'int'},
-        'generator': {'dtype': 'str'},
+        'snapshot': {'dtype': 'int', 'ordered': True},
+        'generator': {'dtype': 'str', 'ordered': True},
         'bus': {'dtype': 'str'},
         'zone': {'dtype': 'str'},
     },
@@ -56,7 +56,7 @@ BASE = {
     'constraints': {
         'balance': {
             'dims': ['snapshot', 'bus'],
-            'expression': 'sum(p, by=gen_bus, over=generator, into=bus) == load',
+            'expression': 'sum(p, over=generator, by=gen_bus[bus]) == load',
         }
     },
     'objective': {'sense': 'minimize', 'expression': 'sum(p * cost)'},
@@ -96,96 +96,100 @@ def namespace() -> Namespace:
         ('sum(p * cost, over=generator)', {'snapshot'}),
         pytest.param('sum(p, over=[snapshot, generator])', set(), id='a-list-sums-every-dim-it-names'),
         pytest.param('sum(p, over=[generator])', {'snapshot'}, id='a-list-of-one-is-that-dim'),
-        ('sum(p, by=gen_bus, over=generator, into=bus)', {'snapshot', 'bus'}),
+        ('sum(p, over=generator, by=gen_bus[bus])', {'snapshot', 'bus'}),
         ("shift(p, along=snapshot, offset=1, edge='wrap')", {'snapshot', 'generator'}),
         ("shift(p, along=snapshot, offset=spinup, edge='wrap')", {'snapshot', 'generator'}),
         ('sum_back(p, along=snapshot, window=spinup)', {'snapshot', 'generator'}),
         pytest.param(
-            "shift(p, along=snapshot, offset=bus_lead, edge='wrap', by=snap_bus, within=bus)",
+            "shift(p, along=snapshot, offset=bus_lead, edge='wrap', within=snap_bus[bus])",
             {'snapshot', 'generator'},
             id='a-by-makes-an-offset-over-another-dim-readable-one-lag-per-group',
         ),
         pytest.param(
-            'sum_back(p, along=snapshot, window=bus_lead, by=snap_bus, within=bus)',
+            'sum_back(p, along=snapshot, window=bus_lead, within=snap_bus[bus])',
             {'snapshot', 'generator'},
             id='a-by-makes-a-width-over-another-dim-readable-one-window-per-group',
         ),
         pytest.param('p + 1', {'snapshot', 'generator'}, id='a-scalar-broadcasts'),
         pytest.param(
-            'sum(p, by=gen_zone, over=generator, into=zone)',
+            'sum(p, over=generator, by=gen_zone[zone])',
             {'snapshot', 'zone'},
-            id='a-two-key-relation-consumes-the-key-it-names-and-keeps-the-other',
+            id='a-two-key-relation-sums-away-the-key-it-names-and-keeps-the-other',
         ),
         pytest.param(
-            'sum(p, by=gen_zone, over=snapshot, into=zone)',
+            'sum(p, over=snapshot, by=gen_zone[zone])',
             {'generator', 'zone'},
             id='the-same-table-read-along-its-other-key',
         ),
         pytest.param(
-            'at(zone_load, by=gen_zone, into=generator, over=zone)',
+            'at(zone_load, by=gen_zone[zone])',
             {'snapshot', 'generator'},
-            id='its-pullback-keeps-the-joined-key-too',
+            id='its-lookup-keeps-the-joined-key-too',
         ),
         pytest.param(
-            "shift(p, along=generator, offset=1, edge='wrap', by=gen_zone, within=zone)",
+            "shift(p, along=generator, offset=1, edge='wrap', within=gen_zone[zone])",
             {'snapshot', 'generator'},
             id='a-partition-along-one-key-joined-on-the-other',
         ),
         pytest.param(
-            "shift(p, along=generator, offset=1, edge='wrap', by=gen_bz, within=bus)",
+            "shift(p, along=generator, offset=1, edge='wrap', within=gen_bz[bus])",
             {'snapshot', 'generator'},
             id='a-partition-grouped-by-one-value-column-of-a-two-value-table',
         ),
         pytest.param(
-            'sum_back(p, along=generator, window=2, by=gen_bz, within=[bus, zone])',
+            'sum_back(p, along=generator, window=2, within=gen_bz[bus, zone])',
             {'snapshot', 'generator'},
             id='a-window-grouped-by-both-value-columns-named',
         ),
         pytest.param(
-            "shift(p, along=generator, offset=1, edge='wrap', by=pair, within=[b0, b1])",
+            "shift(p, along=generator, offset=1, edge='wrap', within=pair[b0, b1])",
             {'snapshot', 'generator'},
-            id='a-partition-grouped-by-two-columns-over-one-dimension-lands-nothing',
+            id='a-partition-grouped-by-two-columns-over-one-dimension-adds-nothing',
         ),
         pytest.param(
-            'sum(p, by=gen_bus, over=generator, into=bus)',
+            'sum(p, over=generator, by=gen_bus[bus])',
             {'snapshot', 'bus'},
             id='the-dot-is-legal-on-a-one-key-relation',
         ),
         pytest.param(
-            'sum(p, by=gen_bz, into=[bus, zone], over=generator)',
+            'sum(p, over=generator, by=gen_bz[bus, zone])',
             {'snapshot', 'bus', 'zone'},
             id='a-to-list-lands-on-a-product-from-one-table',
         ),
         pytest.param(
-            'at(bz, by=gen_bz, over=[bus, zone], into=generator)',
+            'at(bz, by=gen_bz[bus, zone])',
             {'generator'},
             id='a-from-list-reads-two-value-columns-at-once',
         ),
         pytest.param(
-            'sum(p, by=gen_zone, over=[generator, snapshot], into=zone)',
+            'sum(p, over=[generator, snapshot], by=gen_zone[zone])',
             {'zone'},
-            id='a-from-list-consumes-two-key-columns-at-once',
+            id='an-over-list-joins-on-two-key-columns-at-once',
         ),
         pytest.param(
-            'sum(p, by=gen_bz, into=bus, over=generator)',
+            'sum(p, over=generator, by=gen_bz[bus])',
             {'snapshot', 'bus'},
             id='a-value-column-not-named-is-not-read',
         ),
         pytest.param(
-            'sum(p, by=gen_bz, over=generator, into=bus)',
+            'sum(p, over=generator, by=gen_bz[bus])',
             {'snapshot', 'bus'},
             id='by-and-over-compose',
         ),
         pytest.param(
-            'sum(p, by=rep_of, over=snapshot, into=rep)',
+            'sum(p, over=snapshot, by=rep_of[rep])',
             {'snapshot', 'generator'},
             id='a-map-into-its-own-dimension-keeps-the-frame',
         ),
+        pytest.param('at(p, by=rep_of[rep])', {'snapshot', 'generator'}, id='and-so-does-its-lookup'),
+        pytest.param('sum(p, over=[generator, snapshot])', set(), id='a-plain-sum-over-a-list'),
         pytest.param(
-            'at(p, by=rep_of, over=rep, into=snapshot)', {'snapshot', 'generator'}, id='and-so-does-its-pullback'
+            'sum(p, over=[generator, snapshot], by=gen_bus[bus])',
+            {'bus'},
+            id='a-dim-the-relation-has-no-column-over-is-summed-after-the-group-by',
         ),
         pytest.param(
-            "shift(p, along=snapshot, offset=1, edge='wrap', by=rep_of, within=rep)",
+            "shift(p, along=snapshot, offset=1, edge='wrap', within=rep_of[rep])",
             {'snapshot', 'generator'},
             id='a-partition-into-its-own-dimension',
         ),
@@ -204,35 +208,65 @@ def _dims_with(expr: str, **overrides) -> frozenset[str]:
     ('expr', 'expected'),
     [
         pytest.param(
-            'sum(p, by=connection, over=generator, into=bus)',
+            'sum(p, over=generator, by=connection[bus])',
             {'snapshot', 'bus'},
-            id='a-sum-through-a-bare-relation-lands-on-a-key-column',
+            id='a-sum-through-a-bare-relation-groups-by-a-key-column',
         ),
         pytest.param(
-            'sum(load, by=connection, over=bus, into=generator)',
+            'sum(load, over=bus, by=connection[generator])',
             {'snapshot', 'generator'},
             id='and-the-same-table-summed-the-other-way',
         ),
     ],
 )
 def test_a_bare_relation_is_summed_between_its_key_columns(expr, expected):
-    """A bare relation holds no value column, so the column a sum lands on is a key column."""
+    """A bare relation holds no value column, so the column a sum groups by is a key column."""
     assert _dims_with(expr, **{'relations.connection': {'key': ['generator', 'bus']}}) == expected
 
 
-def test_a_read_carries_the_whole_key_and_what_the_operand_brings_beside_it():
-    """A read lands on the key however the call splits it, and a dim the operand carries and the read does not consume rides along.
+def test_a_value_column_added_to_a_relation_changes_no_call():
+    """A name in `over=` is a column of the relation, so `rep_of` gaining `alt` over `snapshot` leaves every call as it was.
 
-    `gen_bz` is keyed by `generator` alone, so the key is produced whole; the
-    operand's `snapshot` is neither consumed nor part of the key, and the
+    `over=snapshot` read as a dimension would match two columns once `alt`
+    arrives, and the call that loaded would stop loading. Read as a column,
+    it is the key column either way, and the new column is named where it
+    is meant.
+    """
+    wider = {'relations.rep_of': {'key': 'snapshot', 'values': {'rep': 'snapshot', 'alt': 'snapshot'}}}
+    before = _dims('sum(p, over=snapshot, by=rep_of[rep])')
+    assert _dims_with('sum(p, over=snapshot, by=rep_of[rep])', **wider) == before == {'snapshot', 'generator'}
+    assert _dims_with('sum(p, over=snapshot, by=rep_of[alt])', **wider) == before, (
+        'the new column is grouped by where it is named'
+    )
+
+
+def test_a_lookup_carries_the_whole_key_and_what_the_operand_brings_beside_it():
+    """A lookup groups by the key however the call splits it, and a dim the operand carries and the lookup does not join on rides along.
+
+    `gen_bz` is keyed by `generator` alone, so the whole key is grouped by; the
+    operand's `snapshot` is neither joined on nor part of the key, and the
     result keeps it.
     """
-    assert _dims('at(zone_load, by=gen_bz, over=zone, into=generator)') == {'generator', 'snapshot'}
+    assert _dims('at(zone_load, by=gen_bz[zone])') == {'generator', 'snapshot'}
 
 
-def test_a_sum_consumes_a_key_column_and_a_value_column_together():
-    """A sum's consumed end is not one kind of column: it needs one key column, and may name a value column beside it."""
-    assert _dims('sum(p * load, by=gen_bz, over=[generator, bus], into=zone)') == {'snapshot', 'zone'}
+def test_a_join_opens_an_axis_for_the_column_it_drops_and_the_sum_over_it_closes_it():
+    """A map into its own dimension drops and adds one dimension, so the axis the join opens stands for the column.
+
+    The dropped column's axis runs over `snapshot` and stands for
+    `rep_of[snapshot]`, so it is not the dimension's own axis. The sum over
+    the join closes it, and the frame keeps the `snapshot` the row groups by.
+    """
+    s = _schema()
+    node = expression_of('sum(p, over=snapshot, by=rep_of[rep])', Namespace(s), 't')
+    assert isinstance(node, Sum) and isinstance(node.operand, Join)
+    assert node.over == (Axis('snapshot', Column('rep_of', 'snapshot')),), 'the sum stands over the axis the join opens'
+    assert dims_of(node, s, 't') == {'generator', 'snapshot'}, 'and the sum over it leaves the frame the row keeps'
+
+
+def test_a_sum_joins_on_a_key_column_and_a_value_column_together():
+    """The columns a sum joins on and sums away are not one kind: it needs one key column, and may name a value column beside it."""
+    assert _dims('sum(p * load, over=[generator, bus], by=gen_bz[zone])') == {'snapshot', 'zone'}
 
 
 def test_a_dual_carries_the_constraints_own_frame():
@@ -254,43 +288,43 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
         pytest.param(
             'sum(p, over=bus)',
             DimensionError,
-            r'sum\(over=bus\) but the expression has dims',
-            id='sum-consuming-an-absent-dim-is-an-error-not-a-noop',
+            r'sum\(over=bus\) but the expression has only the dims',
+            id='sum-over-an-absent-dim-is-an-error-not-a-noop',
         ),
         pytest.param(
             'sum(p, over=[generator, bus])',
             DimensionError,
-            r'sum\(over=bus\) but the expression has dims',
+            r'sum\(over=bus\) but the expression has only the dims',
             id='and-so-is-one-absent-dim-in-a-list',
         ),
         pytest.param(
             'sum(sum(p))',
             SchemaError,
-            r'the expression is already a scalar',
+            r'its operand has no dimensions to sum over',
             id='a-bare-sum-of-a-scalar-is-an-error-not-a-noop',
         ),
         pytest.param(
             'sum(sum(p, over=bus))',
             SchemaError,
-            r'sum\(over=bus\) but the expression has dims',
+            r'sum\(over=bus\) but the expression has only the dims',
             id='a-dim-fault-under-a-bare-sum-is-met-while-the-sum-is-built',
         ),
         pytest.param(
             'sum(sum(p, over=bus), over=generator)',
             DimensionError,
-            r'sum\(over=bus\) but the expression has dims',
+            r'sum\(over=bus\) but the expression has only the dims',
             id='and-the-same-fault-under-a-sum-over-a-named-dim-is-the-dim-rules',
         ),
         pytest.param(
-            'sum(load, by=gen_bus, over=generator, into=bus)',
+            'sum(load, over=generator, by=gen_bus[bus])',
             DimensionError,
-            r"sum\(by=gen_bus\) consumes \['generator'\], the dims it reads from",
+            r"sum\(by=gen_bus\[bus\]\) joins on \['generator'\] to sum it away",
             id='sum-requires-the-grouped-dim',
         ),
         pytest.param(
             "shift(cost, along=snapshot, offset=1, edge='wrap')",
             DimensionError,
-            r'shift\(along=snapshot\) but the expression has dims',
+            r'shift\(along=snapshot\) but the expression has only the dims',
             id='shift-requires-the-dim',
         ),
         pytest.param(
@@ -302,7 +336,7 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
         pytest.param(
             "shift(p, along=snapshot, offset=horizon, edge='wrap')",
             DimensionError,
-            r'varies over the axis it steps along is a permutation rather than a lag',
+            r"Declare 'horizon' over dims without 'snapshot'",
             id='a-named-offset-does-not-span-the-axis-it-steps-along',
         ),
         pytest.param(
@@ -314,7 +348,7 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
         pytest.param(
             'sum_back(p, along=snapshot, window=horizon)',
             DimensionError,
-            r'no longer "the last n"',
+            r"sum_back\(window=horizon\) steps along 'snapshot'",
             id='a-named-width-does-not-span-the-summed-axis',
         ),
         pytest.param(
@@ -326,31 +360,25 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
         pytest.param(
             'sum_back(p, along=snapshot, window=-spinup)',
             SchemaError,
-            r'which way a window reaches is the operator',
+            r'A width has no sign',
             id='a-named-width-has-no-direction-to-negate',
         ),
         pytest.param(
             "shift(p, along=snapshot, offset=bus_lead, edge='wrap')",
             DimensionError,
-            r"varies over \['bus'\], which that coordinate does not carry",
+            r"varies over \['bus'\], which the expression does not carry",
             id='a-named-offset-is-read-where-the-expression-has-a-coordinate',
         ),
         pytest.param(
-            'sum(cost, by=gen_zone, over=generator, into=zone)',
+            'sum(cost, over=generator, by=gen_zone[zone])',
             DimensionError,
-            r"sum\(by=gen_zone\) joins on \['snapshot'\]",
+            r"sum\(by=gen_zone\[zone\]\) joins on \['snapshot'\]",
             id='a-grouped-sum-needs-the-keys-it-joins-on',
         ),
         pytest.param(
-            'at(zone_cap, by=gen_zone, into=generator, over=zone)',
+            "shift(cost, along=generator, offset=1, edge='wrap', within=gen_zone[zone])",
             DimensionError,
-            r"at\(by=gen_zone\) joins on \['snapshot'\]",
-            id='a-pullback-needs-the-keys-it-joins-on',
-        ),
-        pytest.param(
-            "shift(cost, along=generator, offset=1, edge='wrap', by=gen_zone, within=zone)",
-            DimensionError,
-            r"by=gen_zone\) joins on \['snapshot'\]",
+            r"within=gen_zone\[zone\]\) joins on \['snapshot'\]",
             id='a-partition-needs-the-keys-it-joins-on',
         ),
     ],
@@ -370,29 +398,46 @@ def test_an_ill_dimensioned_expression_is_rejected(expr, error, match):
     ('expr', 'diag'),
     [
         pytest.param(
-            'sum(p, by=diag, over=k, into=z)',
+            'sum(p, over=k, by=diag[z])',
             {'key': {'k': 'generator', 'j': 'generator', 'z': 'zone'}},
-            id='a-sum-consuming-a-column-over-the-dimension-it-joins-on',
-        ),
-        pytest.param(
-            'at(load, by=diag, over=rep, into=generator)',
-            {'key': ['snapshot', 'generator'], 'values': {'rep': 'snapshot'}},
-            id='a-read-consuming-a-column-over-the-dimension-it-joins-on',
+            id='a-sum-summing-away-a-column-over-a-dimension-it-also-joins-on',
         ),
     ],
 )
-def test_a_joined_column_is_not_also_consumed(expr, diag):
-    """The operand carries one coordinate per dimension, so a column consumed and a column joined on cannot share one.
-
-    The `at` case passed: the check asked whether a joined dimension was
-    *produced*, which the landing check already refuses, and not whether it
-    was consumed. `at(load, by=diag, over=rep, into=generator)` then read
-    `rep` at the operand's snapshot and joined on the key's snapshot at the
-    same coordinate, and landed on `[bus, generator]` with the joined
-    dimension gone.
-    """
+def test_two_joined_columns_do_not_share_a_dimension(expr, diag):
+    """The operand carries one coordinate per dimension, so the `over=` column and an unnamed key column cannot share one."""
     with pytest.raises(DimensionError, match=r"joins 'diag' on \[.*\] through more than one column"):
         _dims_with(expr, **{'relations.diag': diag})
+
+
+@pytest.mark.parametrize(
+    ('expr', 'relation', 'expected'),
+    [
+        pytest.param(
+            'at(zone_cap, by=gen_zone[zone])',
+            {'key': ['generator', 'snapshot'], 'values': 'zone'},
+            {'generator', 'snapshot'},
+            id='a-key-column-the-operand-lacks-arrives',
+        ),
+        pytest.param(
+            'at(load, by=gen_zone[rep])',
+            {'key': ['snapshot', 'generator'], 'values': {'rep': 'snapshot'}},
+            {'bus', 'snapshot', 'generator'},
+            id='a-key-column-over-the-dimension-the-read-column-matches-arrives',
+        ),
+    ],
+)
+def test_a_lookup_joins_on_the_key_columns_the_operand_carries_and_the_read_does_not_match(expr, relation, expected):
+    """`at` joins on each key column over a dim the operand carries, unless the column it reads already matches that dim.
+
+    `at(load, by=diag, over=rep, into=generator)` once joined on the key's
+    `snapshot` beside `rep`, at the operand's one snapshot coordinate. The
+    call names only the column it reads now, so the key's `snapshot` arrives
+    and the result is `load` read at `rep(t, g)` for every `(t, g)`.
+    """
+    assert _dims_with(expr, **{'relations.gen_zone': relation}) == frozenset(expected), (
+        'the frame is the operand less the dim read, plus the key'
+    )
 
 
 def test_an_outer_product_is_legal_and_carries_both_dim_sets():
@@ -453,7 +498,7 @@ class TestTheEdgeRulesAreDecidedAtLoad:
     """
 
     BASE: ClassVar[dict[str, Any]] = {
-        'dimensions': {'t': {'dtype': 'int'}, 'g': {'dtype': 'str'}},
+        'dimensions': {'t': {'dtype': 'int', 'ordered': True}, 'g': {'dtype': 'str', 'ordered': True}},
         'parameters': {'cap': {'dims': ['g']}, 'lead': {'dims': ['g'], 'dtype': 'int'}},
         'variables': {'p': {'dims': ['t', 'g'], 'bounds': {'lower': 0, 'upper': 1}}},
         'constraints': {'k': {'dims': ['t', 'g'], 'expression': 'p <= 1'}},
@@ -471,17 +516,17 @@ class TestTheEdgeRulesAreDecidedAtLoad:
         [
             pytest.param(
                 'p <= shift(cap, along=g, offset=1)',
-                'leaves vacated positions with no value',
+                'leaves the vacated positions with no value',
                 id='a-shift-over-data-with-no-edge',
             ),
             pytest.param(
                 'p <= shift(p, along=t, offset=lead)',
-                'per-entity offset cannot say yet',
+                'a named offset cannot leave its vacated positions absent yet',
                 id='a-named-offset-with-no-edge',
             ),
             pytest.param(
                 'p <= shift(p, along=t, offset=1, edge=2)',
-                'only fill=0 is representable',
+                'over a variable only edge=0 is allowed',
                 id='a-nonzero-edge-over-a-variable',
             ),
             pytest.param(
@@ -534,15 +579,15 @@ class TestTheEdgeRulesAreDecidedAtLoad:
         pytest.param('gen_zone', {'generator', 'snapshot'}, id='a-bare-two-key-relation-the-same'),
         pytest.param('rep_of == 3', {'snapshot'}, id='a-map-into-its-own-dimension-through-its-key'),
         pytest.param(
-            'position(snapshot, by=rep_of, within=rep) == 0', {'snapshot'}, id='a-position-within-a-representative'
+            'position(snapshot, within=rep_of[rep]) == 0', {'snapshot'}, id='a-position-within-a-representative'
         ),
         pytest.param(
-            'position(generator, by=gen_zone, within=zone) == 0',
+            'position(generator, within=gen_zone[zone]) == 0',
             {'generator', 'snapshot'},
             id='a-position-within-a-group-of-a-two-key-relation-reads-both-keys',
         ),
         pytest.param(
-            'position(generator, by=gen_bz, within=zone) == 0',
+            'position(generator, within=gen_bz[zone]) == 0',
             {'generator'},
             id='a-position-within-one-named-value-column-reads-the-key',
         ),
@@ -584,7 +629,7 @@ def test_the_frame_check_and_the_reading_walk_the_same_leaves(namespace):
     ('predicate', 'expected'),
     [
         pytest.param('p_max > 0', {'p_max'}, id='a-parameter-comparison-names-the-parameter'),
-        pytest.param('spinup', {'spinup'}, id='a-parameter-bare-names-the-parameter'),
+        pytest.param('cost', {'cost'}, id='a-parameter-bare-names-the-parameter'),
         pytest.param('p', {'p'}, id='a-variable-bare-names-the-variable'),
         pytest.param('snap_bus == "b1"', {'snap_bus'}, id='a-relation-comparison-names-the-relation'),
         pytest.param('gen_bus', {'gen_bus'}, id='a-relation-bare-names-the-relation'),
@@ -649,5 +694,5 @@ def test_a_declared_frame_is_read_at_every_coordinate_where_the_body_is_narrower
     row = {'constraints.capped': {'dims': ['snapshot', 'generator'], 'expression': 'limit <= 10'}}
     assert to_spec(varied(FRAMED, **row)).program.constraints['capped'].dims == ('snapshot', 'generator')
     undeclared = varied(FRAMED, **row, **{'expressions.limit': 'build * p_max'})
-    with pytest.raises(DimensionError, match=r"would be repeated across \['snapshot'\]"):
+    with pytest.raises(DimensionError, match=r"does not carry \['snapshot'\], which its dims: declares"):
         to_spec(undeclared)

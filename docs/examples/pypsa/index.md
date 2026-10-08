@@ -5,39 +5,45 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # PyPSA in 24 files
 
-[PyPSA in one file](../pypsa.md) is `examples/pypsa.yaml`, one spec of some
-four thousand lines. This is the same spec as 24 files under
-`examples/pypsa/`, one per topic, and `merge` gives the one file back: the
-two have one [canonical form](../../howto/compare.md).
+You can read the PyPSA spec here one topic at a time.
+[PyPSA in one file](../pypsa.md) states it as `examples/pypsa.yaml`, one spec
+of about four thousand lines. The same spec is split into 24 **fragments**, one file
+per topic under `examples/pypsa/`. `merge` joins the 24 files back into the one
+file, and the two have the same [canonical form](../../howto/compare.md).
 
-Every fragment loads, prints and gets advice on its own. What it reads and does
-not declare, it states under
-[`given`](../../reference/language/declarations.md#given). A component that
-puts something into a sum every component adds to, such as the bus balance or
-the operating cost, names its share as an expression of its own, a
-[term](../../reference/language/declarations.md#terms) whose `adds_to:` names
-the sum. One fragment reads each sum and adds nothing to it, so the terms
-always have a reader. A new component is one new file, and the network does
-not change.
+Each fragment loads and prints on its own, and
+[`advice`](../../reference/api.md#advice) runs on each fragment alone. A
+fragment lists each name that it reads but does not declare under
+[`given`](../../reference/language/declarations.md#given). Some sums take a
+share from every component, such as the bus balance or the operating cost. A
+component names its share of such a sum as an expression of its own, a
+[term](../../reference/language/declarations.md#terms), whose `adds_to:` key
+names the sum. For each sum, one fragment reads it and adds nothing to it, so
+the terms always have a reader. To add a component, you add one file, and the
+network file does not change.
 
-The split is written by `tools/pypsa_split.py` from the one file and checked
-against it, so the two cannot drift. It is a proof of concept: a decision on
-which of the two is the source comes after both land.
+`tools/pypsa_split.py` writes the 24 files from the one file, and a check
+compares them to it, so the two always agree. The split is a proof of concept,
+and which of the two is the source is not decided yet.
 
 ## What each file says
 
-Three kinds of file. A **component** owns PyPSA's class of that name: its
-dimension, its data, its columns, its rows, and its share of each sum. The
-committable classes, `Generator`, `Link` and `Process`, are cut by feature into
-a file each for the class, its commitment, its ramping and its maintenance,
-and the three sets read alike because PyPSA's rows do. An **owner** reads a
-sum with its description, and holds the row that reads it: the network reads
-`Bus_injection`, power flow reads `Cycle_angle_sum`. **Settings** holds what
-every topic reads, the weightings and the flags, and reads the totals whose
-own readers, the cost, the carriers and the global constraints, a model may
-leave out. It also sets the objective, which reads `total_cost`: each
-component adds its capital cost to it, and the cost file adds the operating
-cost at risk.
+The fragments are of three kinds:
+
+- A **component** file owns the PyPSA class of that name: its dimension, its
+  data, its variables, its rows and its share of each sum. The committable
+  classes are `Generator`, `Link` and `Process`. Each of them is cut by feature
+  into four files: the class, its commitment, its ramping and its maintenance.
+  The three sets of four files read alike, because PyPSA builds the same rows
+  for each class.
+- An **owner** file reads a sum with its description, and holds the row that
+  reads it. The network reads `Bus_injection`, and power flow reads
+  `Cycle_angle_sum`.
+- The **settings** file holds the weightings and the flags that every topic
+  reads. It also reads the totals whose own readers a spec may leave out: the
+  cost, the carriers and the global constraints. It sets the objective, which
+  reads `total_cost`. Each component adds its capital cost to `total_cost`, and
+  the cost file adds the operating cost at risk.
 
 <!-- gallery:begin -->
 ### The sums
@@ -66,29 +72,29 @@ cost at risk.
 | [generator_maintenance](generator_maintenance.md) | 5 | 4 | 13 | 9 |  |
 | [generator_ramping](generator_ramping.md) | 5 | 0 | 6 | 14 |  |
 | [global_constraints](global_constraints.md) | 3 | 0 | 15 | 6 |  |
-| [line](line.md) | 18 | 3 | 11 | 9 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
-| [link](link.md) | 23 | 3 | 9 | 15 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [line](line.md) | 21 | 4 | 14 | 9 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
+| [link](link.md) | 23 | 3 | 9 | 16 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
 | [link_commitment](link_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
 | [link_maintenance](link_maintenance.md) | 5 | 4 | 13 | 9 |  |
 | [link_ramping](link_ramping.md) | 5 | 0 | 6 | 14 |  |
 | [load](load.md) | 3 | 0 | 0 | 1 | `Bus_injection` |
 | [network](network.md) | 0 | 0 | 1 | 1 |  |
 | [power_flow](power_flow.md) | 0 | 0 | 1 | 1 |  |
-| [process](process.md) | 21 | 3 | 9 | 13 | `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [process](process.md) | 21 | 3 | 9 | 14 | `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
 | [process_commitment](process_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
 | [process_maintenance](process_maintenance.md) | 5 | 4 | 13 | 9 |  |
 | [process_ramping](process_ramping.md) | 5 | 0 | 6 | 14 |  |
 | [security](security.md) | 2 | 0 | 8 | 10 |  |
 | [settings](settings.md) | 9 | 0 | 0 | 8 |  |
-| [storage_unit](storage_unit.md) | 34 | 5 | 20 | 15 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [store](store.md) | 27 | 3 | 10 | 15 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [transformer](transformer.md) | 19 | 4 | 11 | 5 | `total_cost`, `Bus_injection`, `Cycle_angle_sum` |
+| [storage_unit](storage_unit.md) | 35 | 6 | 21 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [store](store.md) | 28 | 4 | 11 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [transformer](transformer.md) | 23 | 5 | 16 | 5 | `total_cost`, `Bus_injection`, `Cycle_angle_sum` |
 <!-- gallery:end -->
 
 ## Leaving a file out
 
-A model may leave a component family out, or the cost, the carriers, the
-global constraints or security, and what is left is a whole model: nothing
-stays under `given:`. It may not leave the network or power flow out while a
-component is in, because the component's terms would land on no name, and
-`merge` says so.
+You may leave out a component family, the cost, the carriers, the global
+constraints or security. What is left is a whole spec, with nothing left under
+`given:`. You may not leave out the network or power flow while a component is
+in, because the terms of the component would then add to a sum that no fragment
+reads, and `merge` refuses the files.

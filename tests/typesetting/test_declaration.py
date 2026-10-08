@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from mathspec import LanguageError, SchemaError, typeset_declaration
+from mathspec import typeset_declaration
+from mathspec.errors import LanguageError, SchemaError
 from tests.fixtures import DISPATCH_MODEL as DISPATCH
 from tests.fixtures import varied
 from tests.typesetting.fixtures import EVERY_FORMAT
@@ -161,7 +162,7 @@ GIVEN = varied(
         pytest.param(
             PLAIN,
             'spent',
-            r"'spent' is not a named expression, constraint, assumption, curve or variable.*spend",
+            r"'spent' is not a named expression, mask, constraint, assumption, curve or variable.*spend",
             id='a-near-miss',
         ),
         pytest.param(PLAIN, 'objective', r"'objective' is not a named expression", id='the-objective-has-no-name'),

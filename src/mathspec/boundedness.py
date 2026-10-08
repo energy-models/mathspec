@@ -15,21 +15,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, assert_never
 
-from mathspec.errors import Advice
 from mathspec.program import (
     Add,
+    Advice,
     Cases,
     Constant,
     Divide,
     Dual,
     Expression,
-    GroupSum,
+    Join,
     Multiply,
-    Named,
+    NamedExpression,
     Negate,
     Parameter,
     Power,
-    Pullback,
     Sum,
     Translate,
     Variable,
@@ -87,9 +86,8 @@ def unbounded_notes(program: Program) -> list[Advice]:
                     'unbounded',
                     vname,
                     f"Variable '{vname}' makes this spec unbounded: no constraint names it, and "
-                    f'bounds.{side} is open, which is the direction a {sign}{vname} term '
-                    f'improves a {program.objective.sense} objective in. No data can change that, so '
-                    f'the solve would answer `unbounded` and name nothing.\n'
+                    f'bounds.{side} is open, and the {sign}{vname} term in the {program.objective.sense} '
+                    f'objective improves toward it.\n'
                     f'Give it a finite bounds.{side}, or the constraint that was meant to define it.',
                 )
             )
@@ -122,7 +120,7 @@ def _coefficient_sign(node: Expression) -> Sign:
     """
     if isinstance(node, Negate):
         return _flip(_coefficient_sign(node.operand))
-    if isinstance(node, Named):
+    if isinstance(node, NamedExpression):
         return _coefficient_sign(node.body)
     if isinstance(node, Constant) and node.value != 0:
         return '+' if node.value > 0 else '-'
@@ -163,7 +161,7 @@ def _record_signs(node: Expression, sign: Sign, signs: dict[str, Sign]) -> None:
         _record_signs(node.base, None, signs)
         _record_signs(node.exponent, None, signs)
         return
-    if isinstance(node, Sum | GroupSum | Pullback | Translate | WindowSum | Cases | Named):
+    if isinstance(node, Sum | Join | Translate | WindowSum | Cases | NamedExpression):
         for child in children(node):
             _record_signs(child, sign, signs)
         return

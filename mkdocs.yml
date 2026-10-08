@@ -53,7 +53,7 @@ nav:
           - Dimensions: reference/language/dimensions.md
           - Relations: reference/language/relations.md
           - Expressions: reference/language/expressions.md
-          - Named expressions and macros: reference/language/named.md
+          - Named expressions, masks and macros: reference/language/named.md
           - Operators: reference/language/operators.md
           - Piecewise curves and SOS: reference/language/piecewise.md
           - Assumptions: reference/language/assumptions.md
@@ -77,6 +77,7 @@ nav:
       - The limits: about/limits.md
       - mathspec and GEMS: about/gems.md
       - Versions: about/versions.md
+      - Relations as linear maps: about/relations-as-linear-maps.md
       - Changelog: changelog.md
   # Everything a spec writer does not need, grouped by reader: whoever
   # writes a tool against `Spec` and `Program` (an engine such as specsolve, a
@@ -87,6 +88,7 @@ nav:
   - Development:
       - Building on mathspec:
           - Reading a spec and its program: reference/reading.md
+          - Spec API: reference/spec.md
           - Program API: reference/program.md
           - What counts as language: about/what-counts-as-language.md
       - Contributing:

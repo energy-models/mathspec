@@ -5,48 +5,10 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Processes, the ramping
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Process`, the ramping rows. It reads `Process_active`, `Process_big_m`, `Process_committable`, `Process_p`, `Process_p_nom_committed`, `Process_p_nom_effective` and 8 more under [`given`](../../reference/language/declarations.md#given).
+This file states the ramping rows of PyPSA's `Process`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Process_active`, `Process_big_m`, `Process_committable`, `Process_p`, `Process_p_nom_committed`, `Process_p_nom_effective` and 8 more names that other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
-dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-  process:
-    description: generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate
-  period:
-    description: investment periods — PyPSA's `investment_periods`
-    dtype: int
-
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
-
-parameters:
-  Process_ramp_limit_up:
-    description: most a process may raise its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
-    dims: [scenario, snapshot, process]
-  Process_ramp_limit_down:
-    description: most a process may lower its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
-    dims: [scenario, snapshot, process]
-  Process_ramp_limit_start_up:
-    description: most internal power in the snapshot a process starts, per unit of nominal power
-    dims: [scenario, process]
-  Process_ramp_limit_shut_down:
-    description: most internal power in the snapshot before a process stops, per unit of nominal power
-    dims: [scenario, process]
-  Process_p_init:
-    description: >-
-      the internal power a process brought into the horizon — PyPSA's `p_init`, read
-      only where the process came in running; no value means it is unknown, so
-      the process carries no ramp row at the first snapshot
-    dims: [scenario, process]
-
 given:
   parameters:
     Process_p_nom_extendable: { dims: [process], dtype: bool }
@@ -65,6 +27,53 @@ given:
     Process_p_nom_effective: { dims: [scenario, process] }
     Process_previous_status: { dims: [scenario, snapshot, process] }
     Process_p_nom_committed: { dims: [scenario, process] }
+  masks:
+    Process_com_ext: { dims: [snapshot, process] }
+
+dimensions:
+  scenario:
+    description: the futures dispatch is chosen in, each with a weight
+  snapshot:
+    description: dispatch periods
+    dtype: datetime
+    ordered: true
+  process:
+    description: generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate
+  period:
+    description: investment periods — PyPSA's `investment_periods`
+    dtype: int
+    ordered: true
+
+relations:
+  snapshot_period:
+    description: the investment period a snapshot falls in
+    key: snapshot
+    values: period
+
+parameters:
+  Process_ramp_limit_up:
+    description: most a process may raise its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
+    dims: [scenario, snapshot, process]
+    missing: neutral
+  Process_ramp_limit_down:
+    description: most a process may lower its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
+    dims: [scenario, snapshot, process]
+    missing: neutral
+  Process_ramp_limit_start_up:
+    description: most internal power in the snapshot a process starts, per unit of nominal power; no value means no limit
+    dims: [scenario, process]
+    missing: neutral
+  Process_ramp_limit_shut_down:
+    description: most internal power in the snapshot before a process stops, per unit of nominal power; no value means no limit
+    dims: [scenario, process]
+    missing: neutral
+  Process_p_init:
+    description: >-
+      the internal power a process brought into the horizon — PyPSA's `p_init`, read
+      only where the process came in running; no value means it is unknown, so
+      the process carries no ramp row at the first snapshot
+    dims: [scenario, process]
+    missing: neutral
 
 expressions:
   Process_previous_p:
@@ -137,6 +146,16 @@ expressions:
           * (Process_previous_status - Process_status)
     otherwise: Process_ramp_down_rate * Process_p_nom_effective
 
+masks:
+  Process_ramps_from_previous:
+    description: >-
+      a snapshot whose ramp reads a previous output — any snapshot but its
+      period's first, and the horizon's first where the process comes in off
+      or carries an initial output
+    where: >-
+      position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
+      (Process_status_initial == 0 OR Process_p_init))
+
 constraints:
   Process_p_ramp_limit_up_run_big_m:
     description: >-
@@ -144,11 +163,7 @@ constraints:
       raises internal power no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns on
     dims: [scenario, snapshot, process]
-    where: >-
-      Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
-      AND (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
-      AND Process_active
+    where: Process_com_ext AND (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND Process_ramps_from_previous
     expression: >-
       Process_p - Process_previous_p <=
       Process_ramp_up_rate * Process_p_nom_ext
@@ -159,11 +174,7 @@ constraints:
       committed extendable process ramps no further than its start-up ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, process]
-    where: >-
-      Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
-      AND (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
-      AND Process_active
+    where: Process_com_ext AND (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND Process_ramps_from_previous
     expression: >-
       Process_p - Process_previous_p <=
       Process_start_up_rate * Process_p_nom_ext
@@ -175,10 +186,9 @@ constraints:
       releases the row in the snapshot it turns off
     dims: [scenario, snapshot, process]
     where: >-
-      Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
+      Process_com_ext
       AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
-      AND Process_active
+      AND Process_ramps_from_previous
     expression: >-
       Process_previous_p - Process_p <=
       Process_ramp_down_rate * Process_p_nom_ext
@@ -190,10 +200,9 @@ constraints:
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, process]
     where: >-
-      Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
+      Process_com_ext
       AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
-      AND Process_active
+      AND Process_ramps_from_previous
     expression: >-
       Process_previous_p - Process_p <=
       Process_shut_down_rate * Process_p_nom_ext
@@ -210,7 +219,7 @@ constraints:
     where: >-
       (Process_ramp_limit_up OR Process_ramp_limit_start_up)
       AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND Process_ramps_from_previous
       AND Process_active
     expression: Process_p - Process_previous_p <= Process_ramp_up_allowance
   Process_p_ramp_limit_down:
@@ -225,20 +234,22 @@ constraints:
     where: >-
       (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
       AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-      AND (position(snapshot, by=snapshot_period, within=period) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init)))
+      AND Process_ramps_from_previous
       AND Process_active
     expression: Process_previous_p - Process_p <= Process_ramp_down_allowance
 
 assumptions:
   Process_came_in_running_unless_committable:
     holds: "Process_status_initial == 1"
-    where: "NOT Process_committable AND (Process_ramp_limit_up OR Process_ramp_limit_down)"
+    where: "NOT Process_committable AND (Process_ramp_limit_up OR Process_ramp_limit_down OR Process_ramp_limit_start_up OR Process_ramp_limit_shut_down)"
     description: >-
       PyPSA reads `up_time_before` of a process that is not committable in its
-      ramp rows. Where it is zero, PyPSA builds a row at the first snapshot
-      with nothing carried in, and caps the process there at zero, or at its
-      start-up ramp where another process of the component is committable with a
-      fixed build (`constraints.py:1091-1094`, `1110-1112`). PyPSA documents
+      ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp
+      alone builds (`constraints.py:1018-1019`). Where it is zero, PyPSA
+      builds a row at the first snapshot with nothing carried in, and caps
+      the process there at zero, or at its start-up ramp where another process of
+      the component is committable with a fixed build
+      (`constraints.py:1063-1066`, `1082-1084`). PyPSA documents
       the attribute as read only for a committable process and does not check
       it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
       spec does not state that row, so it refuses the data
@@ -257,11 +268,11 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{ru}^{z}`$ | `Process_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — most a process may raise its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{rd}^{z}`$ | `Process_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — most a process may lower its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{ru}^{z,\mathrm{up}}`$ | `Process_ramp_limit_start_up` over $`\Xi \times \mathcal{J}`$ — most internal power in the snapshot a process starts, per unit of nominal power |
-| $`\mathrm{rd}^{z,\mathrm{dn}}`$ | `Process_ramp_limit_shut_down` over $`\Xi \times \mathcal{J}`$ — most internal power in the snapshot before a process stops, per unit of nominal power |
-| $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\Xi \times \mathcal{J}`$ — the internal power a process brought into the horizon — PyPSA's `p_init`, read only where the process came in running; no value means it is unknown, so the process carries no ramp row at the first snapshot |
+| $`\mathrm{ru}^{z}`$ | `Process_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — most a process may raise its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{rd}^{z}`$ | `Process_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — most a process may lower its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{ru}^{z,\mathrm{up}}`$ | `Process_ramp_limit_start_up` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — most internal power in the snapshot a process starts, per unit of nominal power; no value means no limit |
+| $`\mathrm{rd}^{z,\mathrm{dn}}`$ | `Process_ramp_limit_shut_down` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — most internal power in the snapshot before a process stops, per unit of nominal power; no value means no limit |
+| $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the internal power a process brought into the horizon — PyPSA's `p_init`, read only where the process came in running; no value means it is unknown, so the process carries no ramp row at the first snapshot |
 
 #### Given
 
@@ -281,6 +292,7 @@ assumptions:
 | $`\widetilde{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_effective` over $`\Xi \times \mathcal{J}`$, an expression another file defines |
 | $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, an expression another file defines |
 | $`\widehat{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_committed` over $`\Xi \times \mathcal{J}`$, an expression another file defines |
+| $`\mathrm{on}^{z,\mathrm{com,ext}}`$ | `Process_com_ext` over $`\mathcal{T} \times \mathcal{J}`$, a mask another file defines |
 
 #### Definitions
 
@@ -294,6 +306,12 @@ assumptions:
 | $`\Delta^{z,+}`$ | `Process_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — how far a process may raise internal power between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
 | $`\Delta^{z,-}`$ | `Process_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — how far a process may lower internal power between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 
+#### Masks
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{prev}^{z}`$ | `Process_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the process comes in off or carries an initial output |
+
 $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own order — the order `shift` steps along, not the order labels sort in — counted from $`0`$. The index itself stays the coordinate, so $`t`$ compares against labels and $`\mathrm{pos}(t)`$ against positions.
 
 $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ counts within the group a relation puts $`t`$ in: the subscript names the map, $`\mathcal{T}_{\mathrm{relation}(t)}`$ is the group it lands in, and that group has a first position of its own.
@@ -303,37 +321,37 @@ $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ counts within the group a relation pu
 **`Process_p_ramp_limit_up_run_big_m`**
 
 ```math
-z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \overleftarrow{u}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{\xi,j} = 0 \vee \mathrm{z}^{0}_{\xi,j} \text{ is defined} \right) \right) \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \overleftarrow{u}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j}
 ```
 
 **`Process_p_ramp_limit_up_start_big_m`**
 
 ```math
-z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{up}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{\xi,j} = 0 \vee \mathrm{z}^{0}_{\xi,j} \text{ is defined} \right) \right) \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{up}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j}
 ```
 
 **`Process_p_ramp_limit_down_run_big_m`**
 
 ```math
-\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{\xi,j} = 0 \vee \mathrm{z}^{0}_{\xi,j} \text{ is defined} \right) \right) \wedge \mathrm{on}^{z}_{t,j}
+\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j}
 ```
 
 **`Process_p_ramp_limit_down_shut_big_m`**
 
 ```math
-\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{dn}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{\xi,j} = 0 \vee \mathrm{z}^{0}_{\xi,j} \text{ is defined} \right) \right) \wedge \mathrm{on}^{z}_{t,j}
+\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{dn}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j}
 ```
 
 **`Process_p_ramp_limit_up`**
 
 ```math
-z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \Delta^{z,+}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{\xi,j} = 0 \vee \mathrm{z}^{0}_{\xi,j} \text{ is defined} \right) \right) \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \Delta^{z,+}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \mathrm{prev}^{z}_{\xi,t,j} \wedge \mathrm{on}^{z}_{t,j}
 ```
 
 **`Process_p_ramp_limit_down`**
 
 ```math
-\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \Delta^{z,-}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \left( \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{\xi,j} = 0 \vee \mathrm{z}^{0}_{\xi,j} \text{ is defined} \right) \right) \wedge \mathrm{on}^{z}_{t,j}
+\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \Delta^{z,-}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \mathrm{prev}^{z}_{\xi,t,j} \wedge \mathrm{on}^{z}_{t,j}
 ```
 
 #### Definitions
@@ -380,11 +398,19 @@ z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \Delta^{z,+}_{\xi,t,j} \qquad \for
 \Delta^{z,-}_{\xi,t,j} = \begin{cases} \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot u^{z}_{\xi,t,j} + \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \left( \overleftarrow{u}^{z}_{\xi,t,j} - u^{z}_{\xi,t,j} \right) & \text{if } \mathrm{com}^{z}_{j} \\ \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot \widetilde{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
 ```
 
+#### Masks
+
+**`Process_ramps_from_previous`**
+
+```math
+\mathrm{prev}^{z}_{\xi,t,j} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{\xi,j} = 0 \vee \mathrm{z}^{0}_{\xi,j} \text{ is defined} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
 #### Assumptions
 
 **`Process_came_in_running_unless_committable`**
 
 ```math
-\mathrm{u}^{z,0}_{\xi,j} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \neg \mathrm{com}^{z}_{j} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \right)
+\mathrm{u}^{z,0}_{\xi,j} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \neg \mathrm{com}^{z}_{j} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right)
 ```
 <!-- gallery:end -->

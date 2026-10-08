@@ -141,14 +141,15 @@ def test_the_declarations_of_a_section_are_sorted_by_name():
 SECTIONS = [
     'version',
     'description',
+    'given',
     'dimensions',
     'relations',
     'parameters',
     'variables',
-    'given',
     'constraints',
     'objective',
     'expressions',
+    'masks',
     'macros',
     'piecewise',
     'sos',
@@ -491,14 +492,20 @@ def test_the_form_declares_the_same_spec(path):
 
 def test_a_named_expression_written_on_one_line_is_normalised_too():
     """`name: a + b` serialises back as a bare string, which the form passed through as written."""
-    frame = {'dimensions': {'t': {'dtype': 'int'}}, 'variables': {'a': {'dims': ['t']}, 'b': {'dims': ['t']}}}
+    frame = {
+        'dimensions': {'t': {'dtype': 'int', 'ordered': True}},
+        'variables': {'a': {'dims': ['t']}, 'b': {'dims': ['t']}},
+    }
     one, other = ({**frame, 'expressions': {'total': text}} for text in ('a + b', 'b + a'))
     assert ms.to_spec(one).to_yaml(canonical=True) == ms.to_spec(other).to_yaml(canonical=True)
 
 
 def test_the_names_a_file_reads_are_sorted_like_the_names_it_declares():
     """`given:` nests its kinds one level below a section, so sorting the sections alone left them in file order."""
-    frame = {'dimensions': {'t': {'dtype': 'int'}}, 'constraints': {'c': {'dims': ['t'], 'expression': 'a + b >= 0'}}}
+    frame = {
+        'dimensions': {'t': {'dtype': 'int', 'ordered': True}},
+        'constraints': {'c': {'dims': ['t'], 'expression': 'a + b >= 0'}},
+    }
     one, other = (
         {**frame, 'given': {'variables': dict(entries)}}
         for entries in (

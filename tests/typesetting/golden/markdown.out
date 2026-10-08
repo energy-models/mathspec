@@ -8,8 +8,8 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 |---|---|
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T}`$ |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$ |
-| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$ |
-| $`\mathcal{Z}`$ | index $`z`$ — `zone` with $`\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$ |
+| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `area_of` is `absent` where the data has no row |
+| $`\mathcal{Z}`$ | index $`z`$ — `zone` with $`\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$ |
 | $`\mathcal{A}`$ | index $`a`$ — `bp` |
@@ -18,20 +18,20 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$ |
+| $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
-| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$ |
+| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, `neutral` where the data has no row |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{T} \times \mathcal{B}`$ |
-| $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$ |
+| $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
-| $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{B} \times \mathcal{E}`$ |
+| $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{B} \times \mathcal{E}`$, `absent` where the data has no row |
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{eta}`$ | `eta` over $`\mathcal{G}`$ |
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
 | $`\mathrm{budget}`$ | `budget` (scalar) |
 | $`\mathrm{growth}`$ | `growth` (scalar) |
-| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{G} \times \mathcal{A}`$ |
-| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{G} \times \mathcal{A}`$ |
+| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{G} \times \mathcal{A}`$, `neutral` where the data has no row |
+| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{G} \times \mathcal{A}`$, `neutral` where the data has no row |
 | $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{G} \times \mathcal{A}`$ |
 | $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{G} \times \mathcal{A}`$ |
 
@@ -47,7 +47,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathit{units}`$ | `units` over $`\mathcal{G}`$ |
 | $`\mathit{spare}`$ | `spare` over $`\mathcal{G}`$ |
 | $`\mathit{reserve}`$ | `reserve` (scalar) |
-| $`\mathit{headroom}`$ | `headroom` (scalar) |
+| $`\mathit{headroom}`$ | `headroom` (scalar), `neutral` where the mask leaves it out |
 | $`\mathit{weight}`$ | `weight` over $`\mathcal{T} \times \mathcal{G}`$ |
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{T} \times \mathcal{G}`$ |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{T} \times \mathcal{G}`$ |
@@ -66,13 +66,20 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{T} \times \mathcal{B}`$ |
 | $`\mathrm{startup\_cost}`$ | `startup_cost` over $`\mathcal{T} \times \mathcal{G}`$ — what starting a unit in this snapshot costs, which the horizon's edge changes |
 
+#### Masks
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{dispatchable}`$ | `dispatchable` over $`\mathcal{G}`$ — a unit that dispatches and cannot be turned down |
+| $`\mathrm{priced\_dispatch}`$ | `priced_dispatch` over $`\mathcal{G}`$ |
+
 Upright is what the data supplies — a parameter such as $`\mathrm{p}^{\mathrm{max}}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`p`$. An index is italic too, being what a quantifier chooses, and a set is script.
 
 $`t \ominus k`$ denotes cyclic translation: index $`t-k`$ taken modulo the size of the dimension (`roll`). Plain $`t-k`$ (`shift`) has no wraparound — terms translated past the edge are simply absent.
 
 $`t \boxminus_{v} k`$ denotes translation with $`v`$ standing where index $`t-k`$ leaves the dimension (`shift(edge=v)`), so the row at that boundary is built and carries $`v`$ rather than being dropped.
 
-$`t \ominus^{\mathrm{relation}(t)} k`$ denotes a translation counted inside the group a relation puts $`t`$ in (`shift(by=relation)`), so a term never crosses out of its own group. The two modifiers take different slots — the group above, the fill below — so $`t \boxminus_{v}^{\mathrm{relation}(t)} k`$ is both at once.
+$`t \ominus^{\mathrm{relation}(t)} k`$ denotes a translation counted inside the group a relation puts $`t`$ in (`shift(within=relation[c])`), so a term never crosses out of its own group. The two modifiers take different slots — the group above, the fill below — so $`t \boxminus_{v}^{\mathrm{relation}(t)} k`$ is both at once.
 
 $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own order — the order `shift` steps along, not the order labels sort in — counted from $`0`$. The index itself stays the coordinate, so $`t`$ compares against labels and $`\mathrm{pos}(t)`$ against positions.
 
@@ -190,7 +197,7 @@ p_{t,g} \le p_{t \boxminus_{0}^{\mathrm{season\_of}(t)} 1,g} \qquad \forall\, t 
 \sum_{t' \in \mathcal{T} \,:\, 0 \le t -^{\mathrm{season\_of}(t)} t' < 3} \mathit{on}_{t',g} \le \mathit{units}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
-**`pullback`**
+**`lookup`**
 
 ```math
 \mathit{spill}_{t} \le \mathrm{zone\_cap}_{\mathrm{zone\_of}(b)} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
@@ -202,7 +209,7 @@ p_{t,g} \le p_{t \boxminus_{0}^{\mathrm{season\_of}(t)} 1,g} \qquad \forall\, t 
 \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bt.bus}(g) = b \wedge \mathrm{gen\_bt.technology}(g) = e} p_{t,g} \le \mathrm{tech\_cap}_{b,e} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B},\ e \in \mathcal{E}
 ```
 
-**`pulled_back_once`**
+**`looked_up_once`**
 
 ```math
 \mathit{units}_{g} \le \mathrm{tech\_cap}_{\mathrm{gen\_bt.bus}(g),\mathrm{gen\_bt.technology}(g)} \qquad \forall\, g \in \mathcal{G}
@@ -250,7 +257,7 @@ p_{t,g} \le \mathrm{load}_{t,b} \qquad \forall\, t \in \mathcal{T},\ g \in \math
 \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_zone}(g,\ t) \text{ is defined}} \mathit{units}_{g} \le \mathrm{budget} \qquad \forall\, t \in \mathcal{T}
 ```
 
-**`zonal_pullback`**
+**`zonal_lookup`**
 
 ```math
 p_{t,g} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ t)} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{gen\_zone}(g,\ t) = \text{'}\mathrm{north}\text{'} \wedge \mathrm{pos}_{\mathrm{gen\_zone}(g,\ t)}(g) = 0
@@ -376,6 +383,12 @@ p_{t,g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, t \in \mathcal{T},\ g
 p_{t,g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{spend}^{\mathrm{cap}}_{g} > 0 \vee \neg \mathrm{is\_flexible}_{g}
 ```
 
+**`masked`**
+
+```math
+p_{t,g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{priced\_dispatch}_{g} \wedge \mathrm{pos}(t) > 0
+```
+
 **`fuel_curve`**
 
 ```math
@@ -448,6 +461,20 @@ p_{t,g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, t \in \mathcal{T},\ g
 
 ```math
 \mathrm{startup\_cost}_{t,g} = \begin{cases} \mathrm{cost}_{g} & \text{if } \mathrm{pos}(t) = 0 \\ \mathrm{cost}_{g} \cdot 2 & \text{if } \mathrm{pos}(t) > 0 \wedge \mathrm{season\_of}(t) = \text{'}\mathrm{winter}\text{'} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+#### Masks
+
+**`dispatchable`**
+
+```math
+\mathrm{dispatchable}_{g} \iff \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} \qquad \forall\, g \in \mathcal{G}
+```
+
+**`priced_dispatch`**
+
+```math
+\mathrm{priced\_dispatch}_{g} \iff \mathrm{dispatchable}_{g} \wedge \mathrm{spend}^{\mathrm{cap}}_{g} > 0 \qquad \forall\, g \in \mathcal{G}
 ```
 
 #### Variable domains

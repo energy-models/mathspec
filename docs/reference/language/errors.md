@@ -5,28 +5,31 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Errors and limits
 
+`to_spec` refuses a broken file before you attach data, and `advice` warns
+about a file that loads but looks wrong.
+
 ## What `to_spec` checks
 
 `to_spec` attaches no data. Before it returns a `Spec`, it parses the file,
 resolves every name, checks every dimension rule and every degree, and reads
 every `where` string and every macro template, including the templates that
 nothing calls. A `piecewise:` block is checked against every rule its expansion
-would be held to. Anything the language refuses is refused there.
+would be held to. Everything the language refuses, `to_spec` refuses there.
 
 Every message names what went wrong and what to do about it:
 
 ```text
-Constraint 'balance', equation 0: 'p_charge' not found.
+Constraint 'balance': 'p_charge' not found.
   Variables: ['dispatch', 'soc']
-  Parameters: ['capacity', 'load', 'efficiency']
-Check for typos, or ensure 'p_charge' is declared.
+  Parameters: ['capacity', 'efficiency', 'load']
+Check the spelling, or declare 'p_charge'.
 ```
 
 ## What `advice` warns about
 
-`ms.advice(spec)` returns a tuple of `ms.Advice`, one per warning, and
-`python -m mathspec check spec.yaml` prints them. Advice is a warning: the file
-loads.
+`ms.advice(spec)` returns a tuple of `mathspec.program.Advice`, one per
+warning, and `python -m mathspec check spec.yaml` prints them. Advice is only a
+warning, so the file still loads.
 
 | `kind`          | The file has…                                                                                                     | The advice says…                                                      |
 | --------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
@@ -36,9 +39,8 @@ loads.
 
 ```text
 Variable 'slack' makes this spec unbounded: no constraint names it, and
-bounds.lower is open, which is the direction a +slack term improves a minimize
-objective in. No data can change that, so the solve would answer `unbounded`
-and name nothing.
+bounds.lower is open, and the +slack term in the minimize objective improves
+toward it.
 Give it a finite bounds.lower, or the constraint that was meant to define it.
 ```
 
@@ -55,9 +57,9 @@ variable with no constraint row.
 | `SchemaError`    | `LanguageError` | Something in the file: an unknown key, a malformed declaration, or a bad symbol table                                           |
 | `DimensionError` | `LanguageError` | Dimensions that disagree, such as a constraint whose expression does not equal its `dims`                                       |
 
-Every one of these is reproducible from the YAML alone.
+You can reproduce each of these errors from the YAML alone.
 
 ## What the language will not express
 
-What the language refuses, and what to write instead, is in
-[the limits](../../about/limits.md#deliberate-non-primitives).
+[The limits](../../about/limits.md#requests-the-language-refuses) list what the
+language refuses, and what to write instead.

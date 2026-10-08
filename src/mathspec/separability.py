@@ -11,9 +11,8 @@ from typing import TYPE_CHECKING, Literal, NamedTuple
 from mathspec.program import (
     Cases,
     DimensionPosition,
-    GroupSum,
+    Join,
     Mask,
-    Pullback,
     Reach,
     Separability,
     Sum,
@@ -99,25 +98,26 @@ def separabilities(program: Program) -> dict[str, Separability]:
             if isinstance(node, Cases):
                 masks.extend(region.when for region in node.regions)
             elif isinstance(node, Sum):
-                if reductions_couple:
-                    for dimension in node.over:
+                for axis in node.over:
+                    if axis.column is not None:
+                        assert isinstance(node.operand, Join), 'a join axis is opened by the join the sum stands over'
                         report(
                             'coupled',
-                            dimension,
+                            axis.dimension,
                             label,
-                            f'sums over {dimension} — a rolling sum_back(window=n) windows, a total over the horizon does not',
+                            f'groups {axis.dimension} into {", ".join(node.operand.columns.added_dims)} (window that '
+                            f'dimension instead, or cut only at the group edges)',
                         )
-            elif isinstance(node, GroupSum):
-                for dimension in node.direction.consumed_dims:
-                    report(
-                        'coupled',
-                        dimension,
-                        label,
-                        f'groups {dimension} into {", ".join(node.direction.produced_dims)} — window that dimension instead, or cut only at the group edges',
-                    )
-            elif isinstance(node, Pullback):
-                for dimension in node.direction.consumed_dims:
-                    waits_on(dimension, label, node.direction.name, 'coordinate')
+                    elif reductions_couple:
+                        report(
+                            'coupled',
+                            axis.dimension,
+                            label,
+                            f'sums over {axis.dimension} (use sum_back(window=n) for a rolling sum)',
+                        )
+            elif isinstance(node, Join) and not node.columns.axes:
+                for dimension in node.columns.dropped_dims:
+                    waits_on(dimension, label, node.columns.name, 'coordinate')
             elif isinstance(node, (Translate, WindowSum)):
                 dimension = node.along
                 if node.wrap:
@@ -125,8 +125,8 @@ def separabilities(program: Program) -> dict[str, Separability]:
                         'coupled',
                         dimension,
                         label,
-                        f'wraps around {dimension}, so its first row reads its last — an opening-state seed at '
-                        f'position({dimension}) == 0 is what a rolling horizon replaces the wrap with',
+                        f'wraps around {dimension} (replace the wrap with an opening state at '
+                        f'position({dimension}) == 0)',
                     )
                     continue
                 if node.partition is not None:
@@ -147,7 +147,7 @@ def separabilities(program: Program) -> dict[str, Separability]:
             'coupled',
             block.along,
             f"set '{name}'",
-            f'is a set along {block.along}, which a window would cut — only a window holding every whole set keeps it',
+            f'is a set along {block.along} (cut only between whole sets)',
         )
 
     def joined(kind: str, dimension: str) -> dict[str, str]:

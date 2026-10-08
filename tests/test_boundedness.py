@@ -73,7 +73,7 @@ def test_a_variable_the_objective_drives_unopposed_is_named_with_its_side(patch,
 )
 def test_a_named_constant_coefficient_carries_its_sign(objective, side):
     """A coefficient written as an ``expressions:`` entry reaches the pass as a
-    ``Named`` node over its constant. The sign was read off the node alone, so a
+    ``NamedExpression`` node over its constant. The sign was read off the node alone, so a
     named ``2`` claimed nothing and the unbounded variable went unnamed."""
     notes = _notes(
         **{
@@ -103,7 +103,7 @@ def test_a_named_constant_coefficient_carries_its_sign(objective, side):
         ),
         pytest.param(
             {
-                'dimensions.bp': {'dtype': 'int'},
+                'dimensions.bp': {'dtype': 'int', 'ordered': True},
                 'parameters.bp_x': {'dims': ['bp']},
                 'parameters.bp_y': {'dims': ['bp']},
                 'piecewise': {'curve': {'over': 'bp', 'links': [['v', 'bp_x'], ['w', 'bp_y']]}},
@@ -137,7 +137,7 @@ THROUGH_EACH_OPERATOR = {
     'shift': {'objective.expression': 'sum(shift(v, along=g, offset=1), over=g)'},
     'sum_back': {'objective.expression': 'sum(sum_back(v, along=g, window=2), over=g)'},
     # `at` reads onto the relation's source, so the variable it drives is on `h`
-    'at': {'variables.u': {'dims': ['h']}, 'objective.expression': 'sum(at(u, by=lk, over=h, into=g), over=g)'},
+    'at': {'variables.u': {'dims': ['h']}, 'objective.expression': 'sum(at(u, by=lk[h]), over=g)'},
 }
 
 #: `dual` is refused in any objective, and boundedness walks the objective —

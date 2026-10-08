@@ -5,16 +5,21 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Buses
 
-One of the [ten fragments](index.md) of the GEMS port: the GEMS `bus` model. It reads `Bus_balance_port_flow`, the sum that the connected ports add to, and names no model that connects to it. It adds its spillage and unsupplied-energy costs to `total_cost`.
+This file states the GEMS `bus` model. It is one of the [ten fragments](index.md)
+of the GEMS port. It reads `Bus_balance_port_flow` under
+[`given`](../../reference/language/declarations.md#given). Each connected port adds a term to that sum, so
+the bus names no model that connects to it. The bus adds its spillage and
+unsupplied-energy costs to `total_cost`.
 
 <!-- gallery:begin -->
 ```yaml
 description: >-
-  GEMS `bus`. What the connected ports put in is spilled, or is short of the
-  demand. The bus reads the sum of its `balance_port` and names no model
-  that connects to it.
+  GEMS `bus`. When the connected ports put in more than they take out, the bus
+  spills the surplus. When they take out more, the bus records the shortfall
+  as unsupplied energy. The bus reads the sum of its `balance_port` and names
+  no model that connects to it.
 dimensions:
-  time: { dtype: int, description: "time steps of the horizon, counted from 0" }
+  time: { dtype: int, ordered: true, description: "time steps of the horizon, counted from 0" }
   scenario: { dtype: int, description: scenarios of the data }
   bus: { description: "`bus` components: nodes where flows balance" }
 parameters:
@@ -41,7 +46,7 @@ constraints:
     expression: Bus_balance_port_flow == Bus_spillage - Bus_unsupplied_energy
 ```
 
-GEMS `bus`. What the connected ports put in is spilled, or is short of the demand. The bus reads the sum of its `balance_port` and names no model that connects to it.
+GEMS `bus`. When the connected ports put in more than they take out, the bus spills the surplus. When they take out more, the bus records the shortfall as unsupplied energy. The bus reads the sum of its `balance_port` and names no model that connects to it.
 
 #### Sets
 

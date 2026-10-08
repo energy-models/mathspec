@@ -5,77 +5,10 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Settings
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the weightings, the risk preference and the flags every topic reads. It reads the eight totals whose readers may be left out, `total_cost`, `scenario_opex`, `Carrier_additions` and the five global-constraint sums, under `given:`, so the terms the components add to them always have a reader. It sets the objective, which reads `total_cost`.
+This file states the weightings, the risk preference and the flags that every topic reads. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It also reads eight totals under `given:`: `total_cost`, `scenario_opex`, `Carrier_additions` and the five global-constraint sums. A model may leave out the other readers of these totals, so this file makes sure that the terms the components add always have a reader. It sets the objective, which reads `total_cost`.
 
 <!-- gallery:begin -->
 ```yaml
-dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-  global_constraint:
-    description: PyPSA's `GlobalConstraint` rows, one label per declared limit
-  period:
-    description: investment periods — PyPSA's `investment_periods`
-    dtype: int
-  carrier:
-    description: energy carriers, what a growth limit is set per
-
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
-
-parameters:
-  snapshot_weightings_objective:
-    description: PyPSA's `snapshot_weightings.objective` — hours a snapshot stands for in the cost
-    dims: [snapshot]
-  scenario_weight:
-    description: PyPSA's `scenario_weightings.weight` — the probability of a future
-    dims: [scenario]
-  CVaR_omega:
-    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation; zero recovers the risk-neutral model
-    dims: []
-  period_weight_objective:
-    description: PyPSA's `investment_period_weightings.objective` — what a period's cost weighs
-    dims: [period]
-  period_weight_years:
-    description: >-
-      PyPSA's `investment_period_weightings.years` — what a period's energy
-      weighs in a `primary_energy` or `operational_limit` row; PyPSA reads it
-      only under `multi_investment_periods`, so data prep feeds one otherwise
-    dims: [period]
-  snapshot_weightings_stores:
-    description: PyPSA's `snapshot_weightings.stores` — hours a snapshot stands for in a storage balance
-    dims: [snapshot]
-  snapshot_weightings_generators:
-    description: PyPSA's `snapshot_weightings.generators` — hours a snapshot stands for in an energy total
-    dims: [snapshot]
-  transmission_losses:
-    description: >-
-      whether the network dissipates transmission losses — PyPSA's
-      `transmission_losses` read as a flag; its mode, tangents or secants,
-      only decides how data prep fills the `segment` axis, the rows are the
-      same; false with no segments is a lossless run. A security-constrained
-      run over a network with passive branches builds no loss: PyPSA does not
-      hand the keyword to `create_model` (`abstract.py:437-441`) but to the
-      solver (`:491`), so data prep feeds false there
-    dims: []
-    dtype: bool
-  GlobalConstraint_counts_snapshot:
-    description: >-
-      whether a row counts a snapshot in a scenario — PyPSA's `investment_period`: every
-      snapshot where the row names none, and only that period's where it
-      names one, data prep. A row that names a period the run does not model
-      has no label here, as PyPSA skips it (`global_constraints.py:377`);
-      PyPSA reads the column only under `multi_investment_periods`, and fails
-      on a row that names a period without it (`global_constraints.py:375`)
-    dims: [scenario, global_constraint, snapshot]
-    dtype: bool
-
 given:
   expressions:
     primary_energy:
@@ -113,7 +46,7 @@ given:
         what a future costs to run — every operating term, weighted by the
         snapshot's hours and its period, before the scenario's own weight; a
         start and a stop cost what they cost, unweighted, as PyPSA adds them
-        (`optimize.py:414-429`)
+        (`optimize.py:415-432`)
     total_cost:
       dims: []
       description: >-
@@ -128,6 +61,81 @@ given:
         PyPSA, it sums only the components that carry a carrier attribute, so a
         transformer, which has none, counts in no carrier
 
+dimensions:
+  scenario:
+    description: the futures dispatch is chosen in, each with a weight
+  snapshot:
+    description: dispatch periods
+    dtype: datetime
+    ordered: true
+  global_constraint:
+    description: PyPSA's `GlobalConstraint` rows, one label per declared limit
+  period:
+    description: investment periods — PyPSA's `investment_periods`
+    dtype: int
+    ordered: true
+  carrier:
+    description: energy carriers, what a growth limit is set per
+
+relations:
+  snapshot_period:
+    description: the investment period a snapshot falls in
+    key: snapshot
+    values: period
+
+parameters:
+  snapshot_weightings_objective:
+    description: PyPSA's `snapshot_weightings.objective` — hours a snapshot stands for in the cost
+    dims: [snapshot]
+  scenario_weight:
+    description: PyPSA's `scenario_weightings.weight` — the probability of a future
+    dims: [scenario]
+  CVaR_omega:
+    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one
+    dims: []
+    missing: neutral
+  period_weight_objective:
+    description: >-
+      PyPSA's `investment_period_weightings.objective` — what a period's cost
+      weighs; PyPSA reads it only under `multi_investment_periods`, so data
+      prep feeds one otherwise, whatever the column holds
+      (`optimize.py:205-207`, `:264-266`)
+    dims: [period]
+  period_weight_years:
+    description: >-
+      PyPSA's `investment_period_weightings.years` — what a period's energy
+      weighs in a `primary_energy` or `operational_limit` row; PyPSA reads it
+      only under `multi_investment_periods`, so data prep feeds one otherwise
+    dims: [period]
+  snapshot_weightings_stores:
+    description: PyPSA's `snapshot_weightings.stores` — hours a snapshot stands for in a storage balance
+    dims: [snapshot]
+  snapshot_weightings_generators:
+    description: PyPSA's `snapshot_weightings.generators` — hours a snapshot stands for in an energy total
+    dims: [snapshot]
+  transmission_losses:
+    description: >-
+      whether the network dissipates transmission losses — PyPSA's
+      `transmission_losses` read as a flag; its mode, tangents or secants,
+      only decides how data prep fills the `segment` axis, the rows are the
+      same; false with no segments is a lossless run. A security-constrained
+      run over a network with passive branches builds no loss: PyPSA does not
+      hand the keyword to `create_model` (`abstract.py:528-532`) but to the
+      solver (`:548`), so data prep feeds false there
+    dims: []
+    dtype: bool
+  GlobalConstraint_counts_snapshot:
+    description: >-
+      whether a row counts a snapshot in a scenario — PyPSA's `investment_period`: every
+      snapshot where the row names none, and only that period's where it
+      names one, data prep. A row that names a period the run does not model
+      has no label here, as PyPSA skips it (`global_constraints.py:372`);
+      PyPSA reads the column only under `multi_investment_periods`, and fails
+      on a row that names a period without it (`global_constraints.py:364-369`)
+    dims: [scenario, global_constraint, snapshot]
+    dtype: bool
+    missing: neutral
+
 expressions:
   GlobalConstraint_energy_weight:
     description: >-
@@ -138,15 +146,7 @@ expressions:
     cases:
       counted:
         when: GlobalConstraint_counts_snapshot
-        expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period, over=period, into=snapshot)
-    otherwise: 0
-  GlobalConstraint_snapshot_closes:
-    description: one at the last snapshot a row counts, and zero elsewhere
-    dims: [scenario, global_constraint, snapshot]
-    cases:
-      last_counted:
-        when: GlobalConstraint_counts_snapshot AND NOT shift(GlobalConstraint_counts_snapshot, along=snapshot, offset=-1)
-        expression: 1
+        expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
     otherwise: 0
 
 objective:
@@ -170,13 +170,13 @@ objective:
 |---|---|
 | $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.objective` — hours a snapshot stands for in the cost |
 | $`\pi`$ | `scenario_weight` over $`\Xi`$ — PyPSA's `scenario_weightings.weight` — the probability of a future |
-| $`\omega`$ | `CVaR_omega` (scalar) — PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation; zero recovers the risk-neutral model |
-| $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.objective` — what a period's cost weighs |
+| $`\omega`$ | `CVaR_omega` (scalar), `neutral` where the data has no row — PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one |
+| $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.objective` — what a period's cost weighs; PyPSA reads it only under `multi_investment_periods`, so data prep feeds one otherwise, whatever the column holds (`optimize.py:205-207`, `:264-266`) |
 | $`\mathrm{w}^{\mathrm{yr}}`$ | `period_weight_years` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.years` — what a period's energy weighs in a `primary_energy` or `operational_limit` row; PyPSA reads it only under `multi_investment_periods`, so data prep feeds one otherwise |
 | $`\mathrm{w}^{\mathrm{sto}}`$ | `snapshot_weightings_stores` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.stores` — hours a snapshot stands for in a storage balance |
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.generators` — hours a snapshot stands for in an energy total |
-| $`\mathrm{lossy}`$ | `transmission_losses` (scalar) — whether the network dissipates transmission losses — PyPSA's `transmission_losses` read as a flag; its mode, tangents or secants, only decides how data prep fills the `segment` axis, the rows are the same; false with no segments is a lossless run. A security-constrained run over a network with passive branches builds no loss: PyPSA does not hand the keyword to `create_model` (`abstract.py:437-441`) but to the solver (`:491`), so data prep feeds false there |
-| $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — whether a row counts a snapshot in a scenario — PyPSA's `investment_period`: every snapshot where the row names none, and only that period's where it names one, data prep. A row that names a period the run does not model has no label here, as PyPSA skips it (`global_constraints.py:377`); PyPSA reads the column only under `multi_investment_periods`, and fails on a row that names a period without it (`global_constraints.py:375`) |
+| $`\mathrm{lossy}`$ | `transmission_losses` (scalar) — whether the network dissipates transmission losses — PyPSA's `transmission_losses` read as a flag; its mode, tangents or secants, only decides how data prep fills the `segment` axis, the rows are the same; false with no segments is a lossless run. A security-constrained run over a network with passive branches builds no loss: PyPSA does not hand the keyword to `create_model` (`abstract.py:528-532`) but to the solver (`:548`), so data prep feeds false there |
+| $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$, `neutral` where the data has no row — whether a row counts a snapshot in a scenario — PyPSA's `investment_period`: every snapshot where the row names none, and only that period's where it names one, data prep. A row that names a period the run does not model has no label here, as PyPSA skips it (`global_constraints.py:372`); PyPSA reads the column only under `multi_investment_periods`, and fails on a row that names a period without it (`global_constraints.py:364-369`) |
 
 #### Given
 
@@ -187,7 +187,7 @@ objective:
 | $`\mathit{transmission\_volume\_expansion}`$ | `transmission_volume_expansion` over $`\Xi \times \mathcal{G}`$, an expression another file defines — what a `transmission_volume_expansion_limit` row totals — length times the chosen build of the row's branches |
 | $`\mathit{transmission\_expansion\_cost}`$ | `transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$, an expression another file defines — what a `transmission_expansion_cost_limit` row totals — capital cost times the chosen build of the row's branches |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression another file defines — what a `tech_capacity_expansion_limit` row totals — the chosen build of the row's carrier-and-bus set |
-| $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression another file defines — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:414-429`) |
+| $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression another file defines — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:415-432`) |
 | $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression another file defines — what the system costs — capacity once per active period at its expected cost over the scenarios, operation in expectation over the scenarios, and a share of it at the tail |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression another file defines — what a carrier adds in a period — every extendable component of that carrier, counting each build in the first period it stands in. Like PyPSA, it sums only the components that carry a carrier attribute, so a transformer, which has none, counts in no carrier |
 
@@ -196,7 +196,6 @@ objective:
 | Symbol | Meaning |
 |---|---|
 | $`\mathit{w}^{\mathrm{gc}}`$ | `GlobalConstraint_energy_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — what one unit of power at a snapshot counts for in a row — the generator weighting times the years of the snapshot's period, where the row counts the snapshot, and nothing where it does not |
-| $`\mathit{last}`$ | `GlobalConstraint_snapshot_closes` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — one at the last snapshot a row counts, and zero elsewhere |
 
 #### Objective
 
@@ -210,11 +209,5 @@ objective:
 
 ```math
 \mathit{w}^{\mathrm{gc}}_{\xi,g,t} = \begin{cases} \mathrm{w}^{\mathrm{gen}}_{t} \cdot \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{in}_{\xi,g,t} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T}
-```
-
-**`GlobalConstraint_snapshot_closes`**
-
-```math
-\mathit{last}_{\xi,g,t} = \begin{cases} 1 & \text{if } \mathrm{in}_{\xi,g,t} \wedge \neg \mathrm{in}_{\xi,g,t + 1} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->

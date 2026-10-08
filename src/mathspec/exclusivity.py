@@ -29,14 +29,15 @@ from mathspec.program import (
     DimensionComparison,
     DimensionPosition,
     ExpressionComparison,
+    JoinedPredicate,
     Mask,
+    NamedMask,
     Negate,
     Not,
     Or,
     Parameter,
     ParameterComparison,
     ParameterDefined,
-    PulledBackPredicate,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -50,7 +51,7 @@ if TYPE_CHECKING:
 
     from mathspec.program import DeclaredDtype, Expression, Predicate, PredicateOperator
 
-#: The most cells one pair may multiply out to; a pair past it is several expressions.
+#: The most cells one pair of masks may multiply out to. Split a larger pair into several expressions.
 CELL_BUDGET = 8192
 
 #: The dtypes an ordering is decided against. Everything else compares only
@@ -62,7 +63,11 @@ class Undecidable(Exception):  # noqa: N818
     """A pair this procedure will not reason about. Carries the rewrite."""
 
 
-def overlapping(cases: Mapping[str, Predicate], dtypes: Mapping[str, DeclaredDtype]) -> Iterator[str]:
+def overlapping(
+    cases: Mapping[str, Predicate],
+    dtypes: Mapping[str, DeclaredDtype],
+    defaults: Mapping[str, bool | float],
+) -> Iterator[str]:
     """One refusal per pair of cases that could both claim a coordinate.
 
     Args:
@@ -70,6 +75,8 @@ def overlapping(cases: Mapping[str, Predicate], dtypes: Mapping[str, DeclaredDty
             block's ``otherwise`` is not among them: it claims what the rest
             leave, so it overlaps nothing by construction.
         dtypes: The declared dtype of every name a mask compares against.
+        defaults: The value a missing row reads as, for every parameter whose
+            ``missing:`` names one.
 
     Yields:
         A sentence per pair, naming both cases and either a coordinate they
@@ -78,31 +85,31 @@ def overlapping(cases: Mapping[str, Predicate], dtypes: Mapping[str, DeclaredDty
     """
     for (first, left), (second, right) in itertools.combinations(cases.items(), 2):
         try:
-            witness = _witness(left, right, dtypes)
+            witness = _witness(left, right, dtypes, defaults)
         except Undecidable as exc:
-            yield (
-                f"cases '{first}' and '{second}' cannot be told apart before the data arrives: {exc}. "
-                f'Two cases claiming one coordinate would give it two values, so this is refused '
-                f'the way a proven overlap is.'
-            )
+            yield (f"cases '{first}' and '{second}' cannot be told apart before the data arrives: {exc}.")
             continue
         if witness is not None:
             yield (
                 f"cases '{first}' and '{second}' both claim the value where {witness}. "
-                f'A coordinate two cases claim has two values, so it has none — narrow one of the '
-                f'two `when:` strings by the negation of the other, or drop the wider one and let '
-                f'`otherwise:` carry that region.'
+                f'Narrow one of the two `when:` strings by the negation of the other, or drop the wider one '
+                f'and let `otherwise:` cover that region.'
             )
 
 
-def _witness(first: Predicate, second: Predicate, dtypes: Mapping[str, DeclaredDtype]) -> str | None:
+def _witness(
+    first: Predicate,
+    second: Predicate,
+    dtypes: Mapping[str, DeclaredDtype],
+    defaults: Mapping[str, bool | float],
+) -> str | None:
     """A coordinate both masks claim, rendered — ``None`` where no cell holds both."""
     masks = (Mask(first), Mask(second))
-    grid = _Grid.of(masks, dtypes)
+    grid = _Grid.of(masks, dtypes, defaults)
     if grid.size > CELL_BUDGET:
         msg = (
-            f'{grid.size} regions to check exceeds the budget of {CELL_BUDGET} — '
-            f'split this into fewer, wider cases, or into named expressions of its own'
+            f'{grid.size} regions to check exceeds the budget of {CELL_BUDGET}. '
+            f'Split this into fewer, wider cases, or into named expressions of its own'
         )
         raise Undecidable(msg)
     for cell in grid.cells():
@@ -121,11 +128,11 @@ class Special(Enum):
 
     #: No row in the table: compares false under every comparator, and is not `defined`.
     NULL = 'null'
-    #: A magnitude every comparison reads normally, and the one that is not `defined`.
+    #: Positive infinity: every comparison reads it as a number, and it is not `defined`.
     POS_INF = '+inf'
-    #: Its negative twin.
+    #: Negative infinity, read the same way.
     NEG_INF = '-inf'
-    #: A label none of the masks names — every such label at once.
+    #: A label none of the masks names, which stands for every such label at once.
     OTHER = 'other'
 
 
@@ -143,7 +150,7 @@ class Subject:
 
     ``kind`` separates the namespaces that could otherwise collide: a
     dimension's coordinates and its *rank* are two subjects over one name, and
-    a rank is further split by the ``by=`` relation it is counted within.
+    a rank is further split by the ``within=`` columns it is counted within.
     """
 
     kind: Literal['param', 'expression', 'dim', 'rank', 'relation', 'relation_pair', 'variable']
@@ -171,9 +178,12 @@ class _Grid:
 
     domains: dict[Subject, list[Cell]]
     subjects: dict[int, Subject]
+    defaults: Mapping[str, bool | float]
 
     @classmethod
-    def of(cls, masks: Iterable[Mask], dtypes: Mapping[str, DeclaredDtype]) -> _Grid:
+    def of(
+        cls, masks: Iterable[Mask], dtypes: Mapping[str, DeclaredDtype], defaults: Mapping[str, bool | float]
+    ) -> _Grid:
         values: dict[Subject, set[_Literal]] = {}
         subjects: dict[int, Subject] = {}
         for mask in masks:
@@ -181,7 +191,7 @@ class _Grid:
                 subject = _subject_of(node)
                 subjects[id(node)] = subject
                 _observe(node, subject, values.setdefault(subject, set()), dtypes)
-        return cls({s: _cells_for(s, seen, dtypes) for s, seen in values.items()}, subjects)
+        return cls({s: _cells_for(s, seen, dtypes) for s, seen in values.items()}, subjects, defaults)
 
     @property
     def size(self) -> int:
@@ -192,7 +202,7 @@ class _Grid:
             yield dict(zip(self.domains, combination, strict=True))
 
     def witness(self, cell: dict[Subject, Cell]) -> str:
-        return ', '.join(f'{subject} is {_shown(subject, value)}' for subject, value in cell.items())
+        return ', '.join(_clause(subject, value) for subject, value in cell.items())
 
 
 #: A comparator against its mirror, for a test written with its sides swapped.
@@ -219,12 +229,12 @@ def _expression_rewrite(node: ExpressionComparison) -> str:
     number = _signed_literal(left)
     if number is not None and isinstance(right, Parameter):
         return (
-            f'the literal is on the left, and a comparison is read as arithmetic there — write it as '
-            f'the same test the other way round, {right.name} {_FLIPPED[node.op]} '
+            f'the literal is on the left, where a comparison reads as arithmetic. Write the same test '
+            f'the other way round, {right.name} {_FLIPPED[node.op]} '
             f'{int(number) if number.is_integer() else number}'
         )
     return (
-        'it compares expressions, whose values only the data decides — compare one parameter against a '
+        'it compares expressions, whose values only the data decides. Compare one parameter against a '
         'literal, or precompute the test as a boolean parameter and test that'
     )
 
@@ -250,20 +260,20 @@ def _observe(
         raise Undecidable(_expression_rewrite(node))
     if isinstance(node, CountComparison):
         msg = (
-            'it counts the coordinates a predicate admits, which only the data decides — test a parameter '
+            'it counts the coordinates a predicate admits, which only the data decides. Test a parameter '
             'against a literal, or precompute the count as a parameter and test that'
         )
         raise Undecidable(msg)
     if isinstance(node, TranslatedPredicate):
         msg = (
-            'it reads a predicate at a neighbouring coordinate, and which rows that admits only the data '
-            'decides — test this row, or precompute the neighbour as a boolean parameter and test that'
+            'it reads a predicate at a neighbouring coordinate, which only the data decides. '
+            'Test this row, or precompute the neighbour as a boolean parameter and test that'
         )
         raise Undecidable(msg)
-    if isinstance(node, PulledBackPredicate):
+    if isinstance(node, JoinedPredicate):
         msg = (
-            f"it reads a predicate through '{node.direction.name}', and which rows that admits only the data "
-            'decides — test this row, or precompute the read as a boolean parameter and test that'
+            f"it reads a predicate through '{node.columns.name}', which only the data decides. "
+            'Test this row, or precompute the read as a boolean parameter and test that'
         )
         raise Undecidable(msg)
     if isinstance(node, DimensionPosition):
@@ -271,16 +281,15 @@ def _observe(
     elif isinstance(node, RelationPairComparison):
         if node.op not in ('==', '!='):
             msg = (
-                f'{subject} is ordered with {node.op!r}, and two relations carry no order '
-                f'against each other — compare them with == or !=, or precompute the '
-                f'ordering as a boolean parameter and test that'
+                f'{subject} is ordered with {node.op!r}, and two relations have no order. '
+                f'Compare them with == or !=, or precompute the ordering as a boolean parameter and test that'
             )
             raise Undecidable(msg)
     elif isinstance(node, ParameterComparison | DimensionComparison | RelationComparison):
         if node.op not in ('==', '!=') and dtypes.get(subject.name) not in _ORDERED_DTYPES:
             msg = (
                 f'{subject} has dtype {dtypes.get(subject.name)!r} and is ordered with '
-                f'{node.op!r}, which puts no two of its values in order — compare it with '
+                f'{node.op!r}, which puts no two of its values in order. Compare it with '
                 f'== or !=, or declare it as a number'
             )
             raise Undecidable(msg)
@@ -298,7 +307,7 @@ def _subject_of(node: TypedPredicate) -> Subject:
         case DimensionPosition(name=name, partition=partition):
             if partition is None:
                 return Subject('rank', name)
-            return Subject('rank', name, partition.name, partition.group)
+            return Subject('rank', name, partition.name, partition.grouped)
         case RelationDefined(name=name) | RelationComparison(name=name):
             return Subject('relation', name)
         case RelationPairComparison(name=name, other=other):
@@ -309,7 +318,7 @@ def _subject_of(node: TypedPredicate) -> Subject:
             return Subject('expression', 'a count of the coordinates a predicate admits')
         case TranslatedPredicate():
             return Subject('expression', 'a predicate read at a neighbouring coordinate')
-        case PulledBackPredicate():
+        case JoinedPredicate():
             return Subject('expression', 'a predicate read through a relation')
         case _:
             assert_never(node)
@@ -328,10 +337,7 @@ def _cells_for(subject: Subject, values: set[_Literal], dtypes: Mapping[str, Dec
     dtype = dtypes.get(subject.name)
     if dtype == 'bool':
         if values:
-            msg = (
-                f'{subject} has dtype bool and is compared to a literal, which reads as a '
-                f'magnitude rather than as truth — write the bare name, or `not {subject}`'
-            )
+            msg = f'{subject} has dtype bool and is compared to a literal. Write the bare name, or `not {subject}`'
             raise Undecidable(msg)
         return [True, False, Special.NULL]
     numeric = _numeric(dtype, values)
@@ -437,8 +443,8 @@ def _rank_cells(subject: Subject, positions_seen: set[int]) -> list[Cell]:
         within = f' within each {subject.qualifier} group' if subject.qualifier else ''
         msg = (
             f'{subject.name} is split at positions counted from both ends{within} '
-            f'({", ".join(str(position) for position in positions)}), and how many members it has '
-            f'is data, so they are the same row on a one-member axis — count from one end only'
+            f'({", ".join(str(position) for position in positions)}), which name the same row when it '
+            f'has one member. Count from one end only'
         )
         raise Undecidable(msg)
     if not positions:
@@ -451,9 +457,16 @@ def _rank_cells(subject: Subject, positions_seen: set[int]) -> list[Cell]:
         if following is not None and following - position > 1:
             cells.append(position + 1)
     if positions[-1] != -1:
-        # nothing follows -1, so the open end is only ever past the front frame
+        # nothing follows -1, so the open end is only ever after the last position counted from the front
         cells.append(positions[-1] + 1)
     return cells
+
+
+def _clause(subject: Subject, value: Cell) -> str:
+    """*subject* in one cell, in words. A null cell says the data has no row, never a ``missing:`` reading's name."""
+    if value is Special.NULL:
+        return f'{subject} has no value' if subject.kind == 'expression' else f'{subject} has no row'
+    return f'{subject} is {_shown(subject, value)}'
 
 
 def _shown(subject: Subject, value: Cell) -> str:
@@ -462,7 +475,7 @@ def _shown(subject: Subject, value: Cell) -> str:
     if subject.kind == 'relation_pair':
         return 'equal' if value else 'different'
     if isinstance(value, Special):
-        return {Special.NULL: 'absent', Special.OTHER: 'anything else'}.get(value, value.value)
+        return 'anything else' if value is Special.OTHER else value.value
     if isinstance(value, bool):
         return 'true' if value else 'false'
     return f'{value!r}'
@@ -486,13 +499,15 @@ def _evaluate(node: Predicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             return _evaluate(left, cell, grid) and _evaluate(right, cell, grid)
         case Or(left=left, right=right):
             return _evaluate(left, cell, grid) or _evaluate(right, cell, grid)
+        case NamedMask(body=body):
+            return _evaluate(body, cell, grid)
         case _:
             assert_never(node)
 
 
 def _atom(node: TypedPredicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
     subject = grid.subjects[id(node)]
-    value = cell[subject]
+    value = _read(node, cell[subject], grid)
     match node:
         case ParameterDefined() | RelationDefined():
             if isinstance(value, bool):
@@ -505,7 +520,7 @@ def _atom(node: TypedPredicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
         case ExpressionComparison():
             msg = 'a comparison of expressions is refused as undecidable before any cell is read'
             raise AssertionError(msg)
-        case CountComparison() | TranslatedPredicate() | PulledBackPredicate():
+        case CountComparison() | TranslatedPredicate() | JoinedPredicate():
             msg = (
                 'a predicate read as a count, at a neighbour or through a relation is refused as undecidable '
                 'before any cell is read'
@@ -523,6 +538,20 @@ def _atom(node: TypedPredicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             assert_never(node)
 
 
+def _read(node: TypedPredicate, value: Cell, grid: _Grid) -> Cell:
+    """What *node* reads in a cell where its parameter has no row: in a comparison, the value ``missing:`` names.
+
+    A bare name keeps the null. A numeric one asks whether the data has a row.
+    A ``bool`` one reads that value there, and the cell holding that value is
+    already in the grid, so the null cell adds no witness either way.
+    """
+    if value is Special.NULL and isinstance(node, ParameterComparison):
+        default = grid.defaults.get(node.name)
+        if default is not None:
+            return default
+    return value
+
+
 def _compare(value: Cell, op: PredicateOperator, literal: _Literal) -> bool:
     """One atom's truth in one cell. Both sides are already this cell's frame.
 
@@ -535,7 +564,7 @@ def _compare(value: Cell, op: PredicateOperator, literal: _Literal) -> bool:
             # a label none of the masks names sorts nowhere
             if op in ('==', '!='):
                 return op == '!='
-            msg = f'a label neither case names is ordered with {op!r} — compare labels with == or != instead'
+            msg = f'a label neither case names is ordered with {op!r}. Compare labels with == or != instead'
             raise Undecidable(msg)
         value = math.inf if value is Special.POS_INF else -math.inf
     if isinstance(value, int | float) and isinstance(literal, int | float):

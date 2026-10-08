@@ -7,7 +7,8 @@ SPDX-License-Identifier: CC-BY-4.0
 
 `assumptions:` states what the spec expects of the data attached to it. The
 language types each predicate and prints it in the
-[typeset document](../typeset.md). The consumer that attaches the numbers runs it.
+[typeset document](../typeset.md), but the tool that attaches the data, such
+as an engine, runs the check.
 
 ```yaml
 dimensions:
@@ -34,8 +35,8 @@ $$\mathrm{p}^{\mathrm{min}}_{g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall
 
 ## The entry
 
-An entry is one where string, or a mapping once it carries more than the
-predicate.
+Write an entry as one `where` string, or as a mapping when it carries more than
+the predicate.
 
 | Field         |                                                                               |                |
 | ------------- | ----------------------------------------------------------------------------- | -------------- |
@@ -46,18 +47,19 @@ predicate.
 `bounds_do_not_cross: "p_min <= p_max"` above is the short form of
 `bounds_do_not_cross: { holds: "p_min <= p_max" }`.
 
-There is no `dims:`. The predicate holds at every coordinate of the product of
-the dimensions its two masks name. A predicate narrower than that broadcasts,
-as it does in any `where`.
+An entry has no `dims:`. Its predicate must hold at every coordinate of the
+dimensions that `holds` and `where` name together, and a predicate narrower
+than that broadcasts, as it does in any `where`.
 
 ## What a predicate may say
 
-Everything the [where grammar](expressions.md#where-strings) admits, which
-includes arithmetic on either side:
+A predicate may use everything the
+[where grammar](expressions.md#where-strings) accepts, including arithmetic on
+either side:
 
 ```yaml
 dimensions:
-  snapshot: { dtype: int }
+  snapshot: { dtype: int, ordered: true }
   generator: { dtype: str }
 parameters:
   eta: { dims: [generator] }
@@ -85,12 +87,12 @@ assumptions:
     description: the first snapshot has no predecessor to ramp from
 ```
 
-A parameter supplied only where it applies takes a `where:`, so the rows it has
-no value at are not checked.
+Give an entry a `where:` when its parameter has data only where it applies, so
+that the rows where the parameter has no value are not checked.
 
 ## What the loader refuses
 
-**A predicate the connectives already decide:**
+The loader refuses a predicate that the connectives already decide:
 
 > `Assumption 'sound'`: the predicate `'c > 0 OR true'` folds to true, so it
 > assumes nothing of the data. Delete it, or name a parameter it constrains.
@@ -98,20 +100,20 @@ no value at are not checked.
 A `where:` the connectives decide is refused the same way: one that folds to
 true narrows nothing, and one that folds to false checks the entry on no row.
 
-**A variable:**
+The loader refuses a variable in a predicate:
 
-> `Assumption 'sound'`: variable `'p'` stands in what the assumption assumes,
-> and an assumption is about the data — a variable is what the solver decides
-> from it. Name a parameter, or state the rule as a constraint.
+> `Assumption 'sound'`: variable `'p'` appears in `'holds:'`, and an
+> assumption checks only data. Name a parameter, or state the rule as a
+> constraint.
 
 A constraint whose sides carry no variable is refused, and its message names
 this section.
 
 ## What a curve assumes
 
-A [`piecewise:`](piecewise.md) block `curve` adds its own assumptions, derived
-from its `method:`, its `points:` and the sign on its links. They print under
-the same _Assumptions_ heading as the written ones.
+A [`piecewise:`](piecewise.md) block named `curve` adds its own assumptions,
+which `to_spec` derives from its `method:`, its `points:` and the sign on its
+links. They print under the same _Assumptions_ heading as the written ones.
 
 | Entry               | Added for         | Holds                                                                                                 |
 | ------------------- | ----------------- | ----------------------------------------------------------------------------------------------------- |
@@ -121,5 +123,5 @@ the same _Assumptions_ heading as the written ones.
 | `curve_breakpoints` | `lp`              | each curve has at least two breakpoints                                                               |
 | `curve_contiguous`  | a block `points:` | the marked breakpoints are one consecutive run of at least one                                        |
 
-[Reading a spec and its program](../reading.md#what-the-data-has-to-satisfy) says how
-a consumer runs them.
+[Reading a spec and its program](../reading.md#what-the-data-has-to-satisfy)
+says how a tool runs them.

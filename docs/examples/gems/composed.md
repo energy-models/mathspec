@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The composed spec
 
-What the [ten fragments](index.md) make together:
+`merge` joins the [ten fragments](index.md) of the GEMS port into one spec:
 
 ```python
 import mathspec as ms
@@ -27,7 +27,7 @@ spec = ms.merge(
 ```
 
 The file below is `spec`, written as YAML with every default spelled out. No
-fragment holds it. `Bus_balance_port_flow` is defined here as the sum of the
+file in the repository holds it. `Bus_balance_port_flow` is defined here as the sum of the
 six port terms, and `total_cost` as the sum of the three objective terms.
 
 <!-- gallery:begin -->
@@ -35,7 +35,7 @@ six port terms, and `total_cost` as the sum of the three objective terms.
 version: 0
 dimensions:
   scenario: {dtype: int, description: scenarios of the data}
-  time: {dtype: int, description: 'time steps of the horizon, counted from 0'}
+  time: {dtype: int, ordered: true, description: 'time steps of the horizon, counted from 0'}
   bus: {dtype: str, description: '`bus` components: nodes where flows balance'}
   load: {dtype: str, description: '`load` components: fixed demands'}
   link: {dtype: str, description: '`link` components: flows between two buses'}
@@ -108,11 +108,11 @@ parameters:
   Generator_p_min:
     dims: [time, scenario, generator]
     dtype: float
-    description: least generation
+    description: smallest generation
   Generator_p_max:
     dims: [time, scenario, generator]
     dtype: float
-    description: most generation
+    description: largest generation
   Generator_generation_cost:
     dims: [generator]
     dtype: float
@@ -166,61 +166,61 @@ variables:
     dims: [time, scenario, bus]
     bounds: {lower: 0.0}
     domain: continuous
-    absence: undefined
+    missing: absent
     description: injection that the bus cannot use
   Bus_unsupplied_energy:
     dims: [time, scenario, bus]
     bounds: {lower: 0.0}
     domain: continuous
-    absence: undefined
+    missing: absent
     description: demand that the bus cannot meet
   Link_flow_direct:
     dims: [time, scenario, link]
     bounds: {lower: 0.0, upper: Link_capacity_direct}
     domain: continuous
-    absence: undefined
+    missing: absent
     description: flow out of `out_port`
   Link_flow_indirect:
     dims: [time, scenario, link]
     bounds: {lower: 0.0, upper: Link_capacity_indirect}
     domain: continuous
-    absence: undefined
+    missing: absent
     description: flow out of `in_port`
   Link_flow:
     dims: [time, scenario, link]
     bounds: {upper: Link_capacity_direct}
     domain: continuous
-    absence: undefined
+    missing: absent
     description: net flow out of `out_port`
   Generator_generation:
     dims: [time, scenario, generator]
     bounds: {lower: Generator_p_min, upper: Generator_p_max}
     domain: continuous
-    absence: undefined
+    missing: absent
     description: generation
   Storage_p_injection:
     dims: [time, scenario, storage]
     bounds: {lower: 0.0, upper: Storage_injection_nominal_capacity}
     domain: continuous
-    absence: undefined
+    missing: absent
     description: power taken from the bus into the reservoir
   Storage_p_withdrawal:
     dims: [time, scenario, storage]
     bounds: {lower: 0.0, upper: Storage_withdrawal_nominal_capacity}
     domain: continuous
-    absence: undefined
+    missing: absent
     description: power given from the reservoir to the bus
   Storage_level:
     dims: [time, scenario, storage]
     bounds: {lower: 0.0, upper: Storage_reservoir_capacity}
     domain: continuous
-    absence: undefined
+    missing: absent
     description: energy in the reservoir
   Energy_limit_soft_slack:
     dims: [time, scenario, energy_limit_soft]
     bounds: {lower: 0.0}
     domain: continuous
-    absence: undefined
+    missing: absent
     description: generation above the soft cap
 constraints:
   Bus_balance:
@@ -234,8 +234,8 @@ constraints:
   Link_flow_floor:
     dims: [time, scenario, link]
     expression: Link_flow >= -Link_capacity_indirect
-    description: the GEMS lower bound `-capacity_indirect` on `flow`. A bound here is a name, so the negated
-      bound is a row
+    description: the GEMS lower bound `-capacity_indirect` on `flow`. A bound is a number or a parameter
+      name, so this constraint states the negated bound
   Storage_initial_level_constraint:
     dims: [time, scenario, storage]
     where: position(time) == 0
@@ -262,29 +262,30 @@ objective: {sense: minimize, expression: 'sum(total_cost * Scenario_weight, over
 expressions:
   Bus_objective: {expression: 'sum(Bus_spillage_cost * Bus_spillage + Bus_unsupplied_energy_cost * Bus_unsupplied_energy,
       over=[time, bus])', description: '`bus.objective`'}
-  Load_balance_port_flow: {expression: 'sum(-Load_load, by=Load_balance_port, over=load, into=bus)', description: '`balance_port.flow`
+  Load_balance_port_flow: {expression: 'sum(-Load_load, over=load, by=Load_balance_port[bus])', description: '`balance_port.flow`
       of a load, `-load`'}
-  Link_out_port_flow: {expression: 'sum(Link_flow, by=Link_out_port, over=link, into=bus)', description: '`out_port.flow`
+  Link_out_port_flow: {expression: 'sum(Link_flow, over=link, by=Link_out_port[bus])', description: '`out_port.flow`
       of a link, `flow`'}
-  Link_in_port_flow: {expression: 'sum(-Link_flow, by=Link_in_port, over=link, into=bus)', description: '`in_port.flow`
+  Link_in_port_flow: {expression: 'sum(-Link_flow, over=link, by=Link_in_port[bus])', description: '`in_port.flow`
       of a link, `-flow`'}
-  Renewable_balance_port_flow: {expression: 'sum(Renewable_generation, by=Renewable_balance_port, over=renewable,
-      into=bus)', description: '`balance_port.flow` of a renewable, `generation`'}
-  Generator_balance_port_flow: {expression: 'sum(Generator_generation, by=Generator_balance_port, over=generator,
-      into=bus)', description: '`balance_port.flow` of a generator, `generation`'}
+  Renewable_balance_port_flow: {expression: 'sum(Renewable_generation, over=renewable, by=Renewable_balance_port[bus])',
+    description: '`balance_port.flow` of a renewable, `generation`'}
+  Generator_balance_port_flow: {expression: 'sum(Generator_generation, over=generator, by=Generator_balance_port[bus])',
+    description: '`balance_port.flow` of a generator, `generation`'}
   Generator_emission_port_co2: {expression: 'sum(sum(Generator_generation * Generator_co2_emission_factor,
-      over=time), by=Generator_emission_port, over=generator, into=emission_limit)', description: '`emission_port.co2`
+      over=time), over=generator, by=Generator_emission_port[emission_limit])', description: '`emission_port.co2`
       of a generator, `sum(generation * co2_emission_factor)`'}
-  Generator_cumulative_energy_hard: {expression: 'sum(sum(Generator_generation, over=time), by=Generator_energy_port_hard,
-      over=generator, into=energy_limit_hard)', description: '`energy_port.cumulative_energy` of a generator,
-      `sum(generation)`, at a hard cap'}
-  Generator_cumulative_energy_soft: {expression: 'sum(sum(Generator_generation, over=time), by=Generator_energy_port_soft,
-      over=generator, into=energy_limit_soft)', description: '`energy_port.cumulative_energy` of a generator,
-      `sum(generation)`, at a soft cap'}
+  Generator_cumulative_energy_hard: {expression: 'sum(sum(Generator_generation, over=time), over=generator,
+      by=Generator_energy_port_hard[energy_limit_hard])', description: '`energy_port.cumulative_energy`
+      of a generator, `sum(generation)`, at a hard cap'}
+  Generator_cumulative_energy_soft: {expression: 'sum(sum(Generator_generation, over=time), over=generator,
+      by=Generator_energy_port_soft[energy_limit_soft])', description: '`energy_port.cumulative_energy`
+      of a generator, `sum(generation)`, at a soft cap'}
   Generator_objective: {expression: 'sum(Generator_generation_cost * Generator_generation, over=[time,
       generator])', description: '`generator.objective`'}
-  Storage_injection_port_flow: {expression: 'sum(Storage_p_withdrawal - Storage_p_injection, by=Storage_injection_port,
-      over=storage, into=bus)', description: '`injection_port.flow` of a storage, `p_withdrawal - p_injection`'}
+  Storage_injection_port_flow: {expression: 'sum(Storage_p_withdrawal - Storage_p_injection, over=storage,
+      by=Storage_injection_port[bus])', description: '`injection_port.flow` of a storage, `p_withdrawal
+      - p_injection`'}
   Energy_limit_soft_objective: {expression: 'sum(Energy_limit_soft_slack * Energy_limit_soft_slack_penalty,
       over=[time, energy_limit_soft])', description: '`energy_limitation_soft_constraint_max.objective`'}
   total_cost:
@@ -339,8 +340,8 @@ expressions:
     | $`\mathrm{Link\_capacity\_direct}`$ | `Link_capacity_direct` over $`\mathcal{T} \times \mathcal{S} \times \mathcal{I}`$ — largest flow out of `out_port` |
     | $`\mathrm{Link\_capacity\_indirect}`$ | `Link_capacity_indirect` over $`\mathcal{T} \times \mathcal{S} \times \mathcal{I}`$ — largest flow out of `in_port` |
     | $`\mathrm{Renewable\_generation}`$ | `Renewable_generation` over $`\mathcal{T} \times \mathcal{S} \times \mathcal{R}`$ — generation |
-    | $`\mathrm{Generator\_p\_min}`$ | `Generator_p_min` over $`\mathcal{T} \times \mathcal{S} \times \mathcal{G}`$ — least generation |
-    | $`\mathrm{Generator\_p\_max}`$ | `Generator_p_max` over $`\mathcal{T} \times \mathcal{S} \times \mathcal{G}`$ — most generation |
+    | $`\mathrm{Generator\_p\_min}`$ | `Generator_p_min` over $`\mathcal{T} \times \mathcal{S} \times \mathcal{G}`$ — smallest generation |
+    | $`\mathrm{Generator\_p\_max}`$ | `Generator_p_max` over $`\mathcal{T} \times \mathcal{S} \times \mathcal{G}`$ — largest generation |
     | $`\mathrm{Generator\_generation\_cost}`$ | `Generator_generation_cost` over $`\mathcal{G}`$ — cost of one unit of generation |
     | $`\mathrm{Generator\_co2\_emission\_factor}`$ | `Generator_co2_emission_factor` over $`\mathcal{G}`$ — CO2 released by one unit of generation |
     | $`\mathrm{Storage\_reservoir\_capacity}`$ | `Storage_reservoir_capacity` over $`\mathcal{O}`$ — largest level |

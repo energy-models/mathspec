@@ -25,6 +25,11 @@ What that means for each section:
 * **A dimension or a relation every fragment may declare**, and the ones that
   do have to say the same thing about it. Prose is not a claim, so two
   descriptions of one dimension agree, and the first one given is carried.
+  ``ordered`` is a claim about the space, not the space, so a dimension one
+  fragment declares ordered is ordered.
+  A relation's ``missing:`` is a claim about the data, and the fragments
+  agree on it: ``absent`` and ``refused`` change the result differently, so
+  neither folds into the other. ``missing: refused`` is the same as none.
 * **Every other declaration is owned.** A name two fragments declare is refused,
   both named.
 * **One fragment sets the objective.** A second one is refused, both named.
@@ -45,8 +50,9 @@ What that means for each section:
   reads its own sum through another fragment is refused, both named.
 * **A given declaration is folded** into the declaration that introduces the
   name, once the reader is checked to say the same as the introducer or less.
-  A given expression's body may carry no dimension its reader does not state,
-  and a name read as one kind and introduced as another is refused. A
+  A given expression's body may carry no dimension its reader does not
+  state. A given mask states exactly the dims its definer's predicate reads.
+  A name read as one kind and introduced as another is refused. A
   reader's description fills a declaration its owner left undescribed.
   Two fragments that both read a name have to read it over one frame, as a
   set. What no fragment introduces stays under ``given:`` until a host model
@@ -74,8 +80,11 @@ What a patch may say, and what is refused:
   earlier patch laid on it, so a later patch wins a field an earlier one
   writes, and edits or removes a declaration an earlier one creates.
 * **A patch adjusts the math, not the coordinate space.** A ``dimensions`` or
-  ``relations`` entry may be added or restated word for word, never changed and
-  never removed.
+  ``relations`` entry may be added or restated as the schema reads its base,
+  never changed and never removed. A restated dimension may add
+  ``ordered: true``, and may not write it false over a base that makes it.
+  A relation's ``missing:`` is a claim about the data, not the space: a
+  patch may change it as it changes a parameter's, and may name it alone.
 * ``null`` **makes what it names absent.** A declaration set to ``null`` is
   removed, and a removal of what the base does not declare is refused. A field
   set to ``null`` is dropped, and takes its default when the result loads:
@@ -118,6 +127,7 @@ GIVEN_KINDS = {
     'variables': 'given variable',
     'constraints': 'given constraint',
     'expressions': 'given expression',
+    'masks': 'given mask',
 }
 
 #: What a fragment, a base or a patch may be given as.
@@ -170,7 +180,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
             merged[section] = agreed
     asked = {name: spec.given.model_dump(exclude_unset=True) for name, spec in loaded.items()}
     readings = {
-        kind: _agreed(asked, kind, label, 'read it over one frame', claims=_reading_claims)
+        kind: _agreed(asked, kind, label, 'read it over the same dims', claims=_reading_claims)
         for kind, label in GIVEN_KINDS.items()
     }
     for section in OWNED_SECTIONS:
@@ -211,8 +221,8 @@ def _fragment(name: str, source: Source) -> Spec:
         return to_spec(source)
     except LanguageError as e:
         msg = (
-            f"fragment '{name}' does not load on its own. A fragment is a whole spec: it declares "
-            f"what it builds, and reads what a sibling builds under 'given:'.\n{e}"
+            f"fragment '{name}' does not load on its own. Declare what it builds, and read under 'given:' "
+            f'what another fragment builds.\n{e}'
         )
         raise type(e)(msg) from None
 
@@ -223,8 +233,8 @@ def _one_version(read: Mapping[str, dict[str, object]]) -> int:
     if len(set(declared.values())) > 1:
         spelled = ', '.join(f"'{name}' says {version}" for name, version in declared.items())
         raise LanguageError(
-            f'the fragments are written against different language versions: {spelled}. One spec has '
-            f'one version, so write every fragment against the same one.'
+            f'the fragments are written against different language versions: {spelled}. Write every '
+            f'fragment against the same version.'
         )
     return next(iter(declared.values()), 0)
 
@@ -271,22 +281,50 @@ def _agreed(
     neither declaration is the one being restated, so a field only one of them
     writes is a difference nothing settles. *claims* says what a block claims;
     a reading's frame is a set. Prose is not a claim, so the first description
-    given is carried.
+    given is carried. A dimension's ``ordered`` folds by [`_joined`][].
     """
     merged: dict[str, object] = {}
     for name, sections in read.items():
         for key, block in _mapping(sections.get(section)).items():
-            if key in merged and claims(merged[key]) != claims(block):
+            if key not in merged:
+                merged[key] = block
+            elif (joined := _joined(section, merged[key], block, claims)) is None:
                 raise LanguageError(
                     f"fragments '{_author_of(read, section, key)}' and '{name}' say different things about "
-                    f'the {label} {key!r}: {merged[key]!r} against {block!r}. A declaration two fragments '
-                    f'share is one both say the same thing about: make the two identical, or {repair}.'
+                    f'the {label} {key!r}: {merged[key]!r} against {block!r}. Make the two identical, '
+                    f'or {repair}.'
                 )
-            merged.setdefault(key, block)
+            else:
+                merged[key] = joined
     for key, block in merged.items():
         if said := _said(read, section, key):
             merged[key] = {**_mapping(block), 'description': said}
     return merged
+
+
+def _joined(section: str, kept: object, block: object, claims: Callable[[object], object] = _claims) -> object | None:
+    """*kept* and *block* as the one declaration both say, or ``None`` where they say different things.
+
+    A dimension's ``ordered`` is a claim about the space, not the space: it
+    lets a construct read the order the data gives, and the coordinates are
+    the same either way. So one declaration that makes the claim joins one
+    that does not, and the two are one ordered dimension. Every other field
+    is the space itself, and has to be equal under *claims*.
+    """
+    if section != 'dimensions':
+        return kept if claims(kept) == claims(block) else None
+    if claims(_without(kept, 'ordered')) != claims(_without(block, 'ordered')):
+        return None
+    ordered = bool(_mapping(kept).get('ordered') or _mapping(block).get('ordered'))
+    return {**_mapping(kept), 'ordered': True} if ordered else kept
+
+
+def _declared(section: str, block: object) -> dict[str, object]:
+    """*block* as the schema reads it, so a field written at its default says what leaving it out says."""
+    try:
+        return _entry_class(Spec, section).model_validate(block).model_dump()
+    except ValidationError as e:
+        raise schema_error(e) from None
 
 
 def _claimed(read: Mapping[str, dict[str, object]], section: str) -> dict[str, object]:
@@ -299,20 +337,19 @@ def _claimed(read: Mapping[str, dict[str, object]], section: str) -> dict[str, o
                 if section == 'expressions' and (target := _adds(read[author], key) or _adds(sections, key)):
                     raise LanguageError(
                         f"fragments '{author}' and '{name}' both declare the expression {key!r}, which a fragment "
-                        f'adds to {target!r} as a term. A term shares one namespace with every named expression: '
-                        f"name each fragment's term apart, such as after its component."
+                        f"adds to {target!r} as a term. Give each fragment's term a name of its own, such as "
+                        f'one after its component.'
                     )
                 hint = (
-                    ' A sum several fragments add to is defined by one of them at most: each other reads it '
-                    "under 'given: expressions:' and adds its part with `adds_to:`."
+                    ' At most one fragment defines a sum: the others read it under '
+                    "'given: expressions:' and add their part with `adds_to:`."
                     if section == 'expressions'
                     else ''
                 )
                 raise LanguageError(
                     f"fragments '{author}' and '{name}' both declare the "
-                    f'{_singular(section)} {key!r}. Two of the same kind of thing are two rows of a dimension '
-                    f'rather than two fragments: merge the fragment once, and let the data carry both. '
-                    f'Different math under one spelling is a rename: call one of them something else.{hint}'
+                    f'{_singular(section)} {key!r}. If they are two rows of a dimension, merge the fragment '
+                    f'once and put both rows in the data. Otherwise, rename one of them.{hint}'
                 )
             merged[key] = block
     return merged
@@ -378,13 +415,12 @@ def _undeclared(read: Mapping[str, dict[str, object]], merged: Mapping[str, obje
         if not _as_mapping(_mapping(merged['expressions'])[key]).get('cases'):
             return
         raise LanguageError(
-            f"fragment '{author}' defines {key!r} as `cases:`, and fragment '{adder}' adds a term to it. A term "
-            f'follows one body, and a set of cases is no one body: name the cased body as its own expression, '
-            f'and define {key!r} as that name.'
+            f"fragment '{author}' defines {key!r} as `cases:`, and fragment '{adder}' adds a term to it. "
+            f'Declare the cased body as an expression of its own, and define {key!r} as that name.'
         )
     raise LanguageError(
         f"fragment '{author}' declares {key!r} as a {_singular(section)}, and fragment '{adder}' adds a term to "
-        f'it. A term adds to a named expression: give the sum a name of its own, or read the '
+        f'it. Give the sum a name of its own, or read the '
         f"{_singular(section)} under 'given: {section}:' and add no term to it."
     )
 
@@ -414,8 +450,8 @@ def _acyclic(loaded: Mapping[str, Spec], terms: Mapping[str, list[tuple[str, str
             )
             raise LanguageError(
                 f"fragment '{adder}' adds {term!r} to {key!r}, and {term!r} reads {key!r} back through "
-                f'{through}, so the sum would define itself. A term may not read what reads its sum: write '
-                f'{term!r} from something else, or define {path[-2]!r} without {key!r}.'
+                f'{through}, so the sum would define itself. Write {term!r} from something else, or define '
+                f'{path[-2]!r} without {key!r}.'
             )
 
 
@@ -450,9 +486,8 @@ def _frame(read: Mapping[str, dict[str, object]], key: str) -> list[str]:
     for name, other in rest:
         if other != dims:
             raise LanguageError(
-                f"fragments '{first}' and '{name}' read the sum {key!r} over {dims} and {other}. No fragment "
-                f'defines the sum, so its frame is the order its readers write: write the dims in one order '
-                f'in every file.'
+                f"fragments '{first}' and '{name}' read the sum {key!r} over {dims} and {other}. "
+                f'Write `dims:` in the same order in every file.'
             )
     return dims
 
@@ -479,9 +514,8 @@ def _read_elsewhere(loaded: Mapping[str, Spec], key: str, contributors: list[str
     who = f"fragments {spelled} and '{contributors[-1]}' add" if spelled else f"fragment '{contributors[0]}' adds"
     near = f' {hint}' if (hint := did_you_mean(key, known - {key}, listing=False)) else ''
     raise LanguageError(
-        f'{who} a term to {key!r}, and no other fragment reads it: none reads it without adding to it, or '
-        f'uses it in its math. A term writes into a sum the rest of the spec reads: add the fragment that '
-        f"reads it, or fix the spelling under 'given:'.{near}"
+        f'{who} a term to {key!r}, and no other fragment reads it. Add the fragment that reads {key!r}, '
+        f"or fix the spelling under 'given:'.{near}"
     )
 
 
@@ -557,26 +591,30 @@ def _fits(
     """Refuse a reading that says more than the declaration it folds into.
 
     A reading states the frame its introducer declares, and every other field
-    it writes is the introducer's. A given expression is the one kind whose
-    frame may be wider than the composed body: a body over fewer dimensions
-    broadcasts, and the composed load refuses a row it would repeat.
+    it writes is the introducer's. A mask declares no frame, so its reader
+    states the dims the predicate reads. A given expression is the one kind
+    whose frame may be wider than the composed body: a body over fewer
+    dimensions broadcasts, and the composed load refuses a row it would repeat.
     """
     stated = set(cast('list[str]', _mapping(reading)['dims']))
     if kind == 'expressions':
         frame = set(_definer_frame(loaded, key))
         fits = frame <= stated
+    elif kind == 'masks':
+        frame = set(next(spec.program.masks[key].dims for spec in loaded.values() if key in spec.program.masks))
+        fits = frame == stated
     else:
         frame = set(cast('list[str]', _mapping(introduced)['dims']))
         fits = frame == stated
     fields = {f: v for f, v in _mapping(_claims(reading)).items() if f != 'dims'}
     if fits and all(_mapping(introduced).get(f) == v for f, v in fields.items()):
         return
-    how = f'over {sorted(frame)}' if kind == 'expressions' else f'as {introduced!r}'
+    how = f'over {sorted(frame)}' if kind in ('expressions', 'masks') else f'as {introduced!r}'
+    author = _author_of(read, kind, key)
     raise LanguageError(
         f"fragment '{_reader_of(read, kind, key)}' reads the {GIVEN_KINDS[kind]} {key!r} as {reading!r}, where "
-        f"'{_author_of(read, kind, key)}' introduces it {how}. A given declaration says the same as the "
-        f'declaration it is folded into, or less: restate the frame as the introducer declares it, or leave '
-        f'the field out.'
+        f"'{author}' introduces it {how}. Restate the dims as '{author}' declares them, or leave the "
+        f'field out.'
     )
 
 
@@ -593,7 +631,7 @@ def _definer_frame(loaded: Mapping[str, Spec], key: str) -> frozenset[str]:
     return frozenset(frame)
 
 
-READ_KINDS = ('parameters', 'variables', 'expressions')
+READ_KINDS = ('parameters', 'variables', 'expressions', 'masks')
 
 
 def _same_kind(read: Mapping[str, dict[str, object]], merged: Mapping[str, object], kind: str, key: str) -> None:
@@ -604,8 +642,8 @@ def _same_kind(read: Mapping[str, dict[str, object]], merged: Mapping[str, objec
         if other != kind and key in _mapping(merged.get(other)):
             raise LanguageError(
                 f"fragment '{_reader_of(read, kind, key)}' reads {key!r} as a {GIVEN_KINDS[kind]}, where "
-                f"'{_author_of(read, other, key)}' introduces it under '{other}:'. A given declaration reads a "
-                f"name as the kind of thing its introducer declares: move it under 'given: {other}:'."
+                f"'{_author_of(read, other, key)}' introduces it under '{other}:'. Move it under "
+                f"'given: {other}:'."
             )
 
 
@@ -620,9 +658,8 @@ def _one_objective(read: Mapping[str, dict[str, object]]) -> object | None:
     if len(declared) > 1:
         first, second, *_ = declared
         raise LanguageError(
-            f"fragments '{first}' and '{second}' both set the objective. A composed spec has one objective, "
-            f"and one fragment sets it: read a sum under 'given: expressions:' in that fragment, and add "
-            f'each part to it with `adds_to:`.'
+            f"fragments '{first}' and '{second}' both set the objective. Set it in one fragment, read a sum "
+            f"under 'given: expressions:' there, and add each part to it with `adds_to:`."
         )
     return read[declared[0]]['objective'] if declared else None
 
@@ -773,8 +810,8 @@ def _section(value: object, where: str, name: str) -> dict[str, object]:
     """
     if value is None:
         raise LanguageError(
-            f"patch '{name}' sets '{where}' to null, which removes nothing: the removal marker names one "
-            f'declaration, and a section is not one. Remove the declarations one at a time, each under its '
+            f"patch '{name}' sets '{where}' to null, which removes nothing. "
+            f'Remove the declarations one at a time, each under its '
             f'own name, or leave the section out of the patch.'
         )
     return cast('dict[str, object]', value)
@@ -800,29 +837,52 @@ def _given(declared: dict[str, object], patch: dict[str, object], name: str) -> 
 def _shared(declared: dict[str, object], patch: dict[str, object], section: str, name: str) -> dict[str, object]:
     """One ``dimensions`` or ``relations`` block: a patch adds one or restates one, never changes or drops it.
 
-    The restatement is compared for equality rather than field by field: a
-    patch that names half a declaration is as much a second reading of the
-    coordinate space as one that names another value.
+    The restatement is compared as the schema reads both sides rather than
+    field by field: a patch that names half a declaration is as much a second
+    reading of the coordinate space as one that names another value, and a
+    field written at its default is no change. A dimension's ``ordered`` folds
+    by [`_joined`][], so a patch may add the claim; writing it false over a
+    base that makes it is the one narrowing [`_joined`][] cannot see. A
+    relation's ``missing:`` is laid over as a field and left out of the
+    comparison, being a claim about the data.
     """
     out = dict(declared)
     singular = _singular(section)
     for key, block in patch.items():
         if block is None:
             raise LanguageError(
-                f"patch '{name}' removes the {singular} '{key}'. The coordinate space is what the math is "
-                f'written over, and a patch adjusts the math rather than the space: leave the {singular} out '
-                f'of the patch, and remove the declarations written over it one at a time.'
+                f"patch '{name}' removes the {singular} '{key}', which a patch cannot change. Leave the "
+                f'{singular} out of the patch, and remove the declarations written over it one at a time.'
             )
         if key not in out:
             out[key] = block
-        elif out[key] != block:
+            continue
+        if section == 'relations' and 'missing' in _mapping(block):
+            out[key] = _reread(out[key], _mapping(block))
+            block = _without(block, 'missing')
+            if not block:
+                continue
+        base, laid = _declared(section, out[key]), _declared(section, block)
+        if base.get('ordered') and _mapping(block).get('ordered') is False:
+            raise LanguageError(
+                f"patch '{name}' says the {singular} '{key}' is not ordered, where its base declares it "
+                f'ordered. A patch can add `ordered: true` but cannot remove it, because a construct in the base '
+                f'may step along it. Leave `ordered` out of the patch.'
+            )
+        if (joined := _joined(section, base, laid, lambda written: _without(written, 'missing'))) is None:
             raise LanguageError(
                 f"patch '{name}' declares the {singular} '{key}' as {block!r}, where its base "
-                f'declares {out[key]!r}. A patch adjusts the math, not the coordinate space the math is '
-                f'already written over: restate the declaration word for word, leave it out, or give the '
-                f'patch {_a(singular)} of its own under a name of its own.'
+                f'declares {out[key]!r}. Restate the declaration word for word, leave it out, or give '
+                f'the patch {_a(singular)} of its own under a name of its own.'
             )
+        out[key] = joined
     return out
+
+
+def _reread(declared: object, patch: dict[str, object]) -> dict[str, object]:
+    """*declared* reading a missing key as *patch* says, where ``null`` puts back the default."""
+    kept = _mapping(_without(declared, 'missing'))
+    return kept if patch['missing'] is None else {**kept, 'missing': patch['missing']}
 
 
 def _owned(
@@ -851,8 +911,7 @@ def _removed(out: dict[str, object], key: str, label: str, name: str) -> None:
     if key not in out:
         raise LanguageError(
             f"patch '{name}' removes the {label} '{key}', which its base does not declare. "
-            f'A removal is a claim about what is there, so a stale one is a patch that no longer describes '
-            f'the spec it lands on. ' + did_you_mean(key, list(out))
+            f'Delete the removal from the patch, or fix the name. ' + did_you_mean(key, list(out))
         )
     del out[key]
 
@@ -865,9 +924,8 @@ def _objective(laid: dict[str, object], patch: object, name: str) -> dict[str, o
     if patch is None:
         if standing is None:
             raise LanguageError(
-                f"patch '{name}' removes the objective, which its base does not declare. A removal is a "
-                f'claim about what is there, and a spec with no objective is already the feasibility '
-                f'problem this patch is asking for.'
+                f"patch '{name}' removes the objective, which its base does not declare. "
+                f"Delete 'objective: null' from the patch."
             )
         del out['objective']
     elif standing is not None:

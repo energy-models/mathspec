@@ -5,12 +5,15 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Emission caps
 
-One of the [ten fragments](index.md) of the GEMS port: the GEMS `emission_constraint` model. It reads `Emission_port_co2`, the CO2 that the connected generators release over the horizon, and caps it in each scenario.
+This file states the GEMS `emission_constraint` model. It is one of the [ten fragments](index.md)
+of the GEMS port. It reads
+`Emission_port_co2`, which sums the CO2 that the connected generators release
+over the horizon, and caps it in each scenario.
 
 <!-- gallery:begin -->
 ```yaml
 description: >-
-  GEMS `emission_constraint`. A cap on the CO2 that the connected ports
+  GEMS `emission_constraint`. It caps the CO2 that the connected ports
   release over the horizon, in each scenario.
 dimensions:
   scenario: { dtype: int, description: scenarios of the data }
@@ -29,7 +32,7 @@ constraints:
     expression: Emission_port_co2 <= Emission_limit
 ```
 
-GEMS `emission_constraint`. A cap on the CO2 that the connected ports release over the horizon, in each scenario.
+GEMS `emission_constraint`. It caps the CO2 that the connected ports release over the horizon, in each scenario.
 
 #### Sets
 

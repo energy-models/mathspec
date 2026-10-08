@@ -5,16 +5,20 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generators
 
-One of the [ten fragments](index.md) of the GEMS port: the GEMS `generator` model. It has three ports, so it adds a term to four sums: the bus balance, the CO2 caps, and the hard and soft energy caps. It adds its generation cost to `total_cost`.
+This file states the GEMS `generator` model. It is one of the [ten fragments](index.md)
+of the GEMS port. A generator has three ports, and
+they add a term to four sums: the bus balance, the CO2 cap, and the hard and
+soft energy caps. The `energy_port` adds to both energy caps. The generator
+also adds its generation cost to `total_cost`.
 
 <!-- gallery:begin -->
 ```yaml
 description: >-
-  GEMS `generator`. A dispatchable unit with three ports: its generation
-  through `balance_port`, its energy over the horizon through
-  `energy_port`, and its CO2 through `emission_port`.
+  GEMS `generator`. A generator is a dispatchable unit with three ports. It
+  sends its generation through `balance_port`, its energy over the horizon
+  through `energy_port`, and its CO2 through `emission_port`.
 dimensions:
-  time: { dtype: int, description: "time steps of the horizon, counted from 0" }
+  time: { dtype: int, ordered: true, description: "time steps of the horizon, counted from 0" }
   scenario: { dtype: int, description: scenarios of the data }
   bus: { description: "`bus` components: nodes where flows balance" }
   generator: { description: "`generator` components: dispatchable units" }
@@ -37,8 +41,8 @@ relations:
     key: [generator, energy_limit_soft]
     description: "connections from a generator's `energy_port` to a soft energy cap"
 parameters:
-  Generator_p_min: { dims: [time, scenario, generator], description: least generation }
-  Generator_p_max: { dims: [time, scenario, generator], description: most generation }
+  Generator_p_min: { dims: [time, scenario, generator], description: smallest generation }
+  Generator_p_max: { dims: [time, scenario, generator], description: largest generation }
   Generator_generation_cost: { dims: [generator], description: cost of one unit of generation }
   Generator_co2_emission_factor: { dims: [generator], description: CO2 released by one unit of generation }
 variables:
@@ -56,25 +60,25 @@ given:
 expressions:
   Generator_balance_port_flow:
     description: "`balance_port.flow` of a generator, `generation`"
-    expression: sum(Generator_generation, by=Generator_balance_port, over=generator, into=bus)
+    expression: sum(Generator_generation, over=generator, by=Generator_balance_port[bus])
     adds_to: Bus_balance_port_flow
   Generator_emission_port_co2:
     description: "`emission_port.co2` of a generator, `sum(generation * co2_emission_factor)`"
     expression: >-
       sum(sum(Generator_generation * Generator_co2_emission_factor, over=time),
-      by=Generator_emission_port, over=generator, into=emission_limit)
+      over=generator, by=Generator_emission_port[emission_limit])
     adds_to: Emission_port_co2
   Generator_cumulative_energy_hard:
     description: "`energy_port.cumulative_energy` of a generator, `sum(generation)`, at a hard cap"
     expression: >-
       sum(sum(Generator_generation, over=time),
-      by=Generator_energy_port_hard, over=generator, into=energy_limit_hard)
+      over=generator, by=Generator_energy_port_hard[energy_limit_hard])
     adds_to: Energy_limit_hard_port_energy
   Generator_cumulative_energy_soft:
     description: "`energy_port.cumulative_energy` of a generator, `sum(generation)`, at a soft cap"
     expression: >-
       sum(sum(Generator_generation, over=time),
-      by=Generator_energy_port_soft, over=generator, into=energy_limit_soft)
+      over=generator, by=Generator_energy_port_soft[energy_limit_soft])
     adds_to: Energy_limit_soft_port_energy
   Generator_objective:
     description: "`generator.objective`"
@@ -82,7 +86,7 @@ expressions:
     adds_to: total_cost
 ```
 
-GEMS `generator`. A dispatchable unit with three ports: its generation through `balance_port`, its energy over the horizon through `energy_port`, and its CO2 through `emission_port`.
+GEMS `generator`. A generator is a dispatchable unit with three ports. It sends its generation through `balance_port`, its energy over the horizon through `energy_port`, and its CO2 through `emission_port`.
 
 #### Sets
 
@@ -100,8 +104,8 @@ GEMS `generator`. A dispatchable unit with three ports: its generation through `
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{Generator\_p\_min}`$ | `Generator_p_min` over $`\mathcal{T} \times \mathcal{S} \times \mathcal{G}`$ — least generation |
-| $`\mathrm{Generator\_p\_max}`$ | `Generator_p_max` over $`\mathcal{T} \times \mathcal{S} \times \mathcal{G}`$ — most generation |
+| $`\mathrm{Generator\_p\_min}`$ | `Generator_p_min` over $`\mathcal{T} \times \mathcal{S} \times \mathcal{G}`$ — smallest generation |
+| $`\mathrm{Generator\_p\_max}`$ | `Generator_p_max` over $`\mathcal{T} \times \mathcal{S} \times \mathcal{G}`$ — largest generation |
 | $`\mathrm{Generator\_generation\_cost}`$ | `Generator_generation_cost` over $`\mathcal{G}`$ — cost of one unit of generation |
 | $`\mathrm{Generator\_co2\_emission\_factor}`$ | `Generator_co2_emission_factor` over $`\mathcal{G}`$ — CO2 released by one unit of generation |
 
