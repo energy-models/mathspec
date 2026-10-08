@@ -1,6 +1,6 @@
 description: The GEMS storage level equation, with its wrap at the end of the horizon.
 dimensions:
-  time: { dtype: int, description: time steps }
+  time: { dtype: int, ordered: true, description: time steps }
   storage: { description: reservoirs }
 parameters:
   initial_level: { dims: [storage], description: "first level, as a share of the reservoir capacity" }

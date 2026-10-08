@@ -82,7 +82,7 @@ investment period, and each time step reads the capacity of its period.
     constraints:
       within_capacity:
         dims: [time, generator]
-        expression: generation <= at(capacity, by=period_of, over=period, into=time)
+        expression: generation <= at(capacity, by=period_of[period])
       meets_demand:
         dims: [time]
         expression: sum(generation, over=generator) == demand
@@ -170,7 +170,7 @@ GEMS library.
     ```yaml
     description: The GEMS storage level equation, with its wrap at the end of the horizon.
     dimensions:
-      time: { dtype: int, description: time steps }
+      time: { dtype: int, ordered: true, description: time steps }
       storage: { description: reservoirs }
     parameters:
       initial_level: { dims: [storage], description: "first level, as a share of the reservoir capacity" }
@@ -252,7 +252,7 @@ the data gets a ramp row. GEMS has no excerpt to show.
       Generation exists only where a generator has capacity, and a ramp limit
       holds only for the generators the data gives one.
     dimensions:
-      time: { dtype: int, description: time steps }
+      time: { dtype: int, ordered: true, description: time steps }
       generator: { description: dispatchable units }
     parameters:
       p_max: { dims: [generator], description: most generation }
@@ -326,8 +326,8 @@ by hand.
 The two languages say the same thing here. A GEMS port carries an expression
 from one component to another, and `sum_connections` adds what all the
 connections of a port bring. A relation holds the same connections as data,
-and [`sum`](../reference/language/operators.md#sum) with `by=`, `over=` and
-`into=` adds over them. The spec below is the GEMS bus and load. In
+and [`sum`](../reference/language/operators.md#sum) with `over=` and `by=`
+adds over them. The spec below is the GEMS bus and load. In
 [GEMS in ten files](../examples/gems/index.md), each GEMS model is a file of
 its own. There a port is a given expression, and each connected file adds a
 [term](../reference/language/declarations.md#terms) to it with `adds_to:`. So
@@ -400,7 +400,7 @@ the bus file names no model that connects to it, as in GEMS.
       Bus_balance:
         dims: [time, bus]
         expression: >-
-          sum(Load_balance_port_flow, by=Load_balance_port, over=load, into=bus)
+          sum(Load_balance_port_flow, over=load, by=Load_balance_port[bus])
           == Bus_spillage - Bus_unsupplied_energy
     objective:
       sense: minimize

@@ -18,7 +18,7 @@ variables:
 constraints:
   within_capacity:
     dims: [time, generator]
-    expression: generation <= at(capacity, by=period_of, over=period, into=time)
+    expression: generation <= at(capacity, by=period_of[period])
   meets_demand:
     dims: [time]
     expression: sum(generation, over=generator) == demand

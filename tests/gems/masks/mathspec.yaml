@@ -2,7 +2,7 @@ description: >-
   Generation exists only where a generator has capacity, and a ramp limit
   holds only for the generators the data gives one.
 dimensions:
-  time: { dtype: int, description: time steps }
+  time: { dtype: int, ordered: true, description: time steps }
   generator: { description: dispatchable units }
 parameters:
   p_max: { dims: [generator], description: most generation }

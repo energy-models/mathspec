@@ -22,7 +22,7 @@ constraints:
   Bus_balance:
     dims: [time, bus]
     expression: >-
-      sum(Load_balance_port_flow, by=Load_balance_port, over=load, into=bus)
+      sum(Load_balance_port_flow, over=load, by=Load_balance_port[bus])
       == Bus_spillage - Bus_unsupplied_energy
 objective:
   sense: minimize
