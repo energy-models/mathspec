@@ -13,7 +13,7 @@ generators produce over the horizon, and caps it in each scenario.
 <!-- gallery:begin -->
 ```yaml
 description: >-
-  GEMS `energy_limitation_hard_constraint_max`. A cap on the energy that the
+  GEMS `energy_limitation_hard_constraint_max`. It caps the energy that the
   connected ports generate over the horizon, in each scenario.
 dimensions:
   scenario: { dtype: int, description: scenarios of the data }
@@ -33,7 +33,7 @@ constraints:
     expression: Energy_limit_hard_port_energy <= Energy_limit_hard
 ```
 
-GEMS `energy_limitation_hard_constraint_max`. A cap on the energy that the connected ports generate over the horizon, in each scenario.
+GEMS `energy_limitation_hard_constraint_max`. It caps the energy that the connected ports generate over the horizon, in each scenario.
 
 #### Sets
 

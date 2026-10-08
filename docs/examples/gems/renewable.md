@@ -11,9 +11,9 @@ of the GEMS port. It adds its fixed generation to
 
 <!-- gallery:begin -->
 ```yaml
-description: GEMS `renewable`. A fixed generation, given through its `balance_port`.
+description: GEMS `renewable`. A renewable gives a fixed generation through its `balance_port`.
 dimensions:
-  time: { dtype: int, description: "time steps of the horizon, counted from 0" }
+  time: { dtype: int, ordered: true, description: "time steps of the horizon, counted from 0" }
   scenario: { dtype: int, description: scenarios of the data }
   bus: { description: "`bus` components: nodes where flows balance" }
   renewable: { description: "`renewable` components: fixed generation" }
@@ -29,11 +29,11 @@ given:
 expressions:
   Renewable_balance_port_flow:
     description: "`balance_port.flow` of a renewable, `generation`"
-    expression: sum(Renewable_generation, by=Renewable_balance_port, over=renewable, into=bus)
+    expression: sum(Renewable_generation, over=renewable, by=Renewable_balance_port[bus])
     adds_to: Bus_balance_port_flow
 ```
 
-GEMS `renewable`. A fixed generation, given through its `balance_port`.
+GEMS `renewable`. A renewable gives a fixed generation through its `balance_port`.
 
 #### Sets
 

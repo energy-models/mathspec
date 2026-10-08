@@ -8,7 +8,7 @@ description: >-
   cap at a cost. A GEMS variable has a time dimension unless it says
   otherwise, so the slack and the cap repeat in each time step.
 dimensions:
-  time: { dtype: int, description: "time steps of the horizon, counted from 0" }
+  time: { dtype: int, ordered: true, description: "time steps of the horizon, counted from 0" }
   scenario: { dtype: int, description: scenarios of the data }
   energy_limit_soft:
     description: "`energy_limitation_soft_constraint_max` components: energy caps with a priced slack"

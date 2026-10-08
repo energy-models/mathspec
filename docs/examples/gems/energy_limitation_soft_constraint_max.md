@@ -16,12 +16,12 @@ each time step.
 <!-- gallery:begin -->
 ```yaml
 description: >-
-  GEMS `energy_limitation_soft_constraint_max`. A cap on the energy that the
-  connected ports generate over the horizon, with a priced slack. A GEMS
-  variable carries time unless it says otherwise, so the slack and the row
-  repeat in each time step.
+  GEMS `energy_limitation_soft_constraint_max`. It caps the energy that the
+  connected ports generate over the horizon, and a slack variable can lift the
+  cap at a cost. A GEMS variable has a time dimension unless it says
+  otherwise, so the slack and the cap repeat in each time step.
 dimensions:
-  time: { dtype: int, description: "time steps of the horizon, counted from 0" }
+  time: { dtype: int, ordered: true, description: "time steps of the horizon, counted from 0" }
   scenario: { dtype: int, description: scenarios of the data }
   energy_limit_soft:
     description: "`energy_limitation_soft_constraint_max` components: energy caps with a priced slack"
@@ -51,7 +51,7 @@ constraints:
     expression: Energy_limit_soft_port_energy <= Energy_limit_soft + Energy_limit_soft_slack
 ```
 
-GEMS `energy_limitation_soft_constraint_max`. A cap on the energy that the connected ports generate over the horizon, with a priced slack. A GEMS variable carries time unless it says otherwise, so the slack and the row repeat in each time step.
+GEMS `energy_limitation_soft_constraint_max`. It caps the energy that the connected ports generate over the horizon, and a slack variable can lift the cap at a cost. A GEMS variable has a time dimension unless it says otherwise, so the slack and the cap repeat in each time step.
 
 #### Sets
 

@@ -15,10 +15,10 @@ bound as the constraint `Link_flow_floor` instead.
 <!-- gallery:begin -->
 ```yaml
 description: >-
-  GEMS `link`. A flow between two buses, out of `out_port` and into
-  `in_port`, made of a direct and an indirect part.
+  GEMS `link`. A link carries a flow between two buses, out of `out_port` and
+  into `in_port`. The flow is the direct part minus the indirect part.
 dimensions:
-  time: { dtype: int, description: "time steps of the horizon, counted from 0" }
+  time: { dtype: int, ordered: true, description: "time steps of the horizon, counted from 0" }
   scenario: { dtype: int, description: scenarios of the data }
   bus: { description: "`bus` components: nodes where flows balance" }
   link: { description: "`link` components: flows between two buses" }
@@ -47,11 +47,11 @@ given:
 expressions:
   Link_out_port_flow:
     description: "`out_port.flow` of a link, `flow`"
-    expression: sum(Link_flow, by=Link_out_port, over=link, into=bus)
+    expression: sum(Link_flow, over=link, by=Link_out_port[bus])
     adds_to: Bus_balance_port_flow
   Link_in_port_flow:
     description: "`in_port.flow` of a link, `-flow`"
-    expression: sum(-Link_flow, by=Link_in_port, over=link, into=bus)
+    expression: sum(-Link_flow, over=link, by=Link_in_port[bus])
     adds_to: Bus_balance_port_flow
 constraints:
   Link_flow_direct_indirect:
@@ -61,12 +61,12 @@ constraints:
   Link_flow_floor:
     dims: [time, scenario, link]
     description: >-
-      the GEMS lower bound `-capacity_indirect` on `flow`. A bound here is a
-      name, so the negated bound is a row
+      the GEMS lower bound `-capacity_indirect` on `flow`. A bound is a number
+      or a parameter name, so this constraint states the negated bound
     expression: Link_flow >= -Link_capacity_indirect
 ```
 
-GEMS `link`. A flow between two buses, out of `out_port` and into `in_port`, made of a direct and an indirect part.
+GEMS `link`. A link carries a flow between two buses, out of `out_port` and into `in_port`. The flow is the direct part minus the indirect part.
 
 #### Sets
 

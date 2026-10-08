@@ -19,7 +19,7 @@ description: >-
   as unsupplied energy. The bus reads the sum of its `balance_port` and names
   no model that connects to it.
 dimensions:
-  time: { dtype: int, description: "time steps of the horizon, counted from 0" }
+  time: { dtype: int, ordered: true, description: "time steps of the horizon, counted from 0" }
   scenario: { dtype: int, description: scenarios of the data }
   bus: { description: "`bus` components: nodes where flows balance" }
 parameters:
