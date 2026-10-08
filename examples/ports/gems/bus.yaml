@@ -3,9 +3,10 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  GEMS `bus`. What the connected ports put in is spilled, or is short of the
-  demand. The bus reads the sum of its `balance_port` and names no model
-  that connects to it.
+  GEMS `bus`. When the connected ports put in more than they take out, the bus
+  spills the surplus. When they take out more, the bus records the shortfall
+  as unsupplied energy. The bus reads the sum of its `balance_port` and names
+  no model that connects to it.
 dimensions:
   time: { dtype: int, description: "time steps of the horizon, counted from 0" }
   scenario: { dtype: int, description: scenarios of the data }

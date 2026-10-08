@@ -5,7 +5,9 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Renewables
 
-One of the [ten fragments](index.md) of the GEMS port: the GEMS `renewable` model. It adds its fixed generation to `Bus_balance_port_flow`.
+This file states the GEMS `renewable` model. It is one of the [ten fragments](index.md)
+of the GEMS port. It adds its fixed generation to
+`Bus_balance_port_flow`, and has no variable of its own.
 
 <!-- gallery:begin -->
 ```yaml

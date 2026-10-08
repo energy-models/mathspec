@@ -5,7 +5,11 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Storage
 
-One of the [ten fragments](index.md) of the GEMS port: the GEMS `storage` model. Read `Storage_level_equation`: GEMS wraps `level[t+1]` at the end of the horizon by default, and `edge='wrap'` states that in the file.
+This file states the GEMS `storage` model. It is one of the [ten fragments](index.md)
+of the GEMS port. At the last time step, GEMS reads
+`level[t+1]` as the level at the first time step. The constraint
+`Storage_level_equation` states this with
+[`shift`](../../reference/language/operators.md#shift) and `edge='wrap'`.
 
 <!-- gallery:begin -->
 ```yaml

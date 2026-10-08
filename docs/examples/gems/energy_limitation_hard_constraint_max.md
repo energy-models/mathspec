@@ -5,7 +5,10 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Hard energy caps
 
-One of the [ten fragments](index.md) of the GEMS port: the GEMS `energy_limitation_hard_constraint_max` model. It reads `Energy_limit_hard_port_energy` and caps it in each scenario.
+This file states the GEMS `energy_limitation_hard_constraint_max` model. It is one of the [ten fragments](index.md)
+of the GEMS port. It reads
+`Energy_limit_hard_port_energy`, which sums the energy that the connected
+generators produce over the horizon, and caps it in each scenario.
 
 <!-- gallery:begin -->
 ```yaml

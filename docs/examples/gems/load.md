@@ -5,7 +5,10 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Loads
 
-One of the [ten fragments](index.md) of the GEMS port: the GEMS `load` model. It adds `-load` to `Bus_balance_port_flow` through the relation `Load_balance_port`, and has no variable of its own.
+This file states the GEMS `load` model. It is one of the [ten fragments](index.md)
+of the GEMS port. It adds `-load` to `Bus_balance_port_flow`
+through the relation `Load_balance_port`, which connects each load to a bus. A
+load has no variable of its own.
 
 <!-- gallery:begin -->
 ```yaml

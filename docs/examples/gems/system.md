@@ -5,14 +5,19 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The system
 
-One of the [ten fragments](index.md) of the GEMS port. It holds what a GEMS interpreter supplies around the library: the `time` and `scenario` dimensions, and the objective. The objective weighs `total_cost` in each scenario, which is the average GEMS takes.
+This file is one of the [ten fragments](index.md) of the GEMS port. It
+declares what a GEMS interpreter supplies around the models: the `scenario`
+dimension, the weight of each scenario, and the objective. The objective sums
+`total_cost` over the scenarios, each multiplied by `Scenario_weight`. GEMS
+takes the average, so each weight is one over the number of scenarios.
 
 <!-- gallery:begin -->
 ```yaml
 description: >-
-  What a GEMS interpreter supplies around the library: the time and scenario
-  axes, and an objective that averages over the scenarios what each model
-  adds to `total_cost`. Nothing here names a model.
+  What a GEMS interpreter supplies around the library: the scenario
+  dimension, and an objective. The objective averages `total_cost` over the
+  scenarios, and each model adds its cost to `total_cost`. This file names no
+  model.
 dimensions:
   scenario: { dtype: int, description: scenarios of the data }
 parameters:
@@ -31,7 +36,7 @@ objective:
   expression: sum(total_cost * Scenario_weight, over=scenario)
 ```
 
-What a GEMS interpreter supplies around the library: the time and scenario axes, and an objective that averages over the scenarios what each model adds to `total_cost`. Nothing here names a model.
+What a GEMS interpreter supplies around the library: the scenario dimension, and an objective. The objective averages `total_cost` over the scenarios, and each model adds its cost to `total_cost`. This file names no model.
 
 #### Sets
 

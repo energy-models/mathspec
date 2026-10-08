@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  GEMS `storage`. A reservoir that injects and withdraws through its
-  `injection_port`. GEMS wraps `level[t+1]` at the end of the horizon by
-  default, so the shift wraps too.
+  GEMS `storage`. A storage is a reservoir that injects and withdraws through
+  its `injection_port`. At the last time step, GEMS reads `level[t+1]` as the
+  level at the first time step, so the shift uses `edge='wrap'`.
 dimensions:
   time: { dtype: int, description: "time steps of the horizon, counted from 0" }
   scenario: { dtype: int, description: scenarios of the data }

@@ -5,7 +5,11 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generators
 
-One of the [ten fragments](index.md) of the GEMS port: the GEMS `generator` model. It has three ports, so it adds a term to four sums: the bus balance, the CO2 caps, and the hard and soft energy caps. It adds its generation cost to `total_cost`.
+This file states the GEMS `generator` model. It is one of the [ten fragments](index.md)
+of the GEMS port. A generator has three ports, and
+they add a term to four sums: the bus balance, the CO2 cap, and the hard and
+soft energy caps. The `energy_port` adds to both energy caps. The generator
+also adds its generation cost to `total_cost`.
 
 <!-- gallery:begin -->
 ```yaml

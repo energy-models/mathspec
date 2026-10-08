@@ -5,7 +5,12 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Links
 
-One of the [ten fragments](index.md) of the GEMS port: the GEMS `link` model. It adds two terms to `Bus_balance_port_flow`, one for each port. The GEMS lower bound `-capacity_indirect` is the row `Link_flow_floor`, because a bound is a name.
+This file states the GEMS `link` model. It is one of the [ten fragments](index.md)
+of the GEMS port. It adds two terms to `Bus_balance_port_flow`,
+one for each port. GEMS bounds `flow` below by `-capacity_indirect`. A
+[bound](../../reference/language/declarations.md#variables) is a number or the
+name of a parameter, so it cannot hold the minus sign. The file states that
+bound as the constraint `Link_flow_floor` instead.
 
 <!-- gallery:begin -->
 ```yaml

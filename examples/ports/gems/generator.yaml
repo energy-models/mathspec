@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  GEMS `generator`. A dispatchable unit with three ports: its generation
-  through `balance_port`, its energy over the horizon through
-  `energy_port`, and its CO2 through `emission_port`.
+  GEMS `generator`. A generator is a dispatchable unit with three ports. It
+  sends its generation through `balance_port`, its energy over the horizon
+  through `energy_port`, and its CO2 through `emission_port`.
 dimensions:
   time: { dtype: int, description: "time steps of the horizon, counted from 0" }
   scenario: { dtype: int, description: scenarios of the data }
@@ -30,8 +30,8 @@ relations:
     key: [generator, energy_limit_soft]
     description: "connections from a generator's `energy_port` to a soft energy cap"
 parameters:
-  Generator_p_min: { dims: [time, scenario, generator], description: least generation }
-  Generator_p_max: { dims: [time, scenario, generator], description: most generation }
+  Generator_p_min: { dims: [time, scenario, generator], description: smallest generation }
+  Generator_p_max: { dims: [time, scenario, generator], description: largest generation }
   Generator_generation_cost: { dims: [generator], description: cost of one unit of generation }
   Generator_co2_emission_factor: { dims: [generator], description: CO2 released by one unit of generation }
 variables:

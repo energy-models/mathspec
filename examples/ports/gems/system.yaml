@@ -3,9 +3,10 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  What a GEMS interpreter supplies around the library: the time and scenario
-  axes, and an objective that averages over the scenarios what each model
-  adds to `total_cost`. Nothing here names a model.
+  What a GEMS interpreter supplies around the library: the scenario
+  dimension, and an objective. The objective averages `total_cost` over the
+  scenarios, and each model adds its cost to `total_cost`. This file names no
+  model.
 dimensions:
   scenario: { dtype: int, description: scenarios of the data }
 parameters:

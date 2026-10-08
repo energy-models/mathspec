@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The composed spec
 
-What the [ten fragments](index.md) make together:
+`merge` joins the [ten fragments](index.md) of the GEMS port into one spec:
 
 ```python
 import mathspec as ms
@@ -27,7 +27,7 @@ spec = ms.merge(
 ```
 
 The file below is `spec`, written as YAML with every default spelled out. No
-fragment holds it. `Bus_balance_port_flow` is defined here as the sum of the
+file in the repository holds it. `Bus_balance_port_flow` is defined here as the sum of the
 six port terms, and `total_cost` as the sum of the three objective terms.
 
 <!-- gallery:begin -->

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  GEMS `emission_constraint`. A cap on the CO2 that the connected ports
+  GEMS `emission_constraint`. It caps the CO2 that the connected ports
   release over the horizon, in each scenario.
 dimensions:
   scenario: { dtype: int, description: scenarios of the data }

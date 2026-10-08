@@ -5,7 +5,13 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Soft energy caps
 
-One of the [ten fragments](index.md) of the GEMS port: the GEMS `energy_limitation_soft_constraint_max` model. A GEMS variable carries time unless it says otherwise, so the slack and the cap repeat in each time step. The slack cost goes to `total_cost`.
+This file states the GEMS `energy_limitation_soft_constraint_max` model. It is one of the [ten fragments](index.md)
+of the GEMS port. It caps
+`Energy_limit_soft_port_energy` as the
+[hard cap](energy_limitation_hard_constraint_max.md) does, but a slack variable
+can lift the cap, at a cost that goes to `total_cost`. A GEMS variable has a
+time dimension unless it says otherwise, so the slack and the cap repeat in
+each time step.
 
 <!-- gallery:begin -->
 ```yaml
