@@ -459,4 +459,4 @@ the bus file names no model that connects to it, as in GEMS.
 - **GEMS aggregates results.** A taxonomy file, a metrics catalog and a view
   configuration turn a solved run into views. The language refuses a
   vocabulary for tracked metrics, and a named expression does the same work
-  ([the limits](limits.md#deliberate-non-primitives)).
+  ([the limits](limits.md#requests-the-language-refuses)).
