@@ -22,6 +22,7 @@ to it. Each model at the sending end adds a
 `adds_to:`. The term sums over a relation that holds the connections of the
 port. `merge` joins the files that you pick into one spec, and
 [the composed spec](composed.md) shows the result for all ten files.
+[mathspec and GEMS](../../about/gems.md) compares the two languages.
 
 <!-- gallery:begin -->
 ### The sums

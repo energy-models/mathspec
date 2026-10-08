@@ -1,0 +1,29 @@
+description: >-
+  The GEMS bus and load. A relation holds the connections, and a sum through
+  it is `sum_connections`.
+dimensions:
+  time: { dtype: int, description: time steps }
+  bus: { description: "`bus` components" }
+  load: { description: "`load` components" }
+relations:
+  Load_balance_port: { key: [load, bus], description: "connections from a load's `balance_port` to a bus" }
+parameters:
+  Bus_spillage_cost: { dims: [bus], description: cost of one unit of spillage }
+  Bus_unsupplied_energy_cost: { dims: [bus], description: cost of one unit of unsupplied energy }
+  Load_load: { dims: [time, load], description: demand }
+variables:
+  Bus_spillage: { dims: [time, bus], bounds: { lower: 0 }, description: spillage }
+  Bus_unsupplied_energy: { dims: [time, bus], bounds: { lower: 0 }, description: unsupplied energy }
+expressions:
+  Load_balance_port_flow:
+    expression: -Load_load
+    description: "`balance_port.flow` of a load"
+constraints:
+  Bus_balance:
+    dims: [time, bus]
+    expression: >-
+      sum(Load_balance_port_flow, over=load, by=Load_balance_port[bus])
+      == Bus_spillage - Bus_unsupplied_energy
+objective:
+  sense: minimize
+  expression: sum(Bus_spillage_cost * Bus_spillage + Bus_unsupplied_energy_cost * Bus_unsupplied_energy)

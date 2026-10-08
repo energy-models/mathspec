@@ -75,6 +75,7 @@ nav:
               - The composed spec: examples/library/composed.md
   - About:
       - The limits: about/limits.md
+      - mathspec and GEMS: about/gems.md
       - Versions: about/versions.md
       - Relations as linear maps: about/relations-as-linear-maps.md
       - Changelog: changelog.md

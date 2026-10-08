@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs: a page compares mathspec with GEMS ([#805](https://github.com/energy-models/mathspec/pull/805))
 - docs(examples): the GEMS basic models library is written as one fragment per GEMS model ([#819](https://github.com/energy-models/mathspec/pull/819))
 - docs: Update prose in docs using an updated Claude Skill file, to improve readability ([#840](https://github.com/energy-models/mathspec/pull/840))
 - docs(pypsa): a delayed port under uneven snapshot weights is refused, where PyPSA counts weighted time ([#852](https://github.com/energy-models/mathspec/pull/852))

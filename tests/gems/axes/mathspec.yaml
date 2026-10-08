@@ -1,0 +1,27 @@
+description: >-
+  Generation capped by the capacity of its investment period. The file
+  declares the period dimension, and a relation places each time step in a
+  period.
+dimensions:
+  time: { dtype: int, description: time steps }
+  period: { dtype: int, description: investment periods }
+  generator: { description: dispatchable units }
+relations:
+  period_of: { key: time, values: period }
+parameters:
+  investment_cost: { dims: [period, generator], description: cost of one unit of capacity }
+  generation_cost: { dims: [generator], description: cost of one unit of generation }
+  demand: { dims: [time], description: demand to be met }
+variables:
+  capacity: { dims: [period, generator], bounds: { lower: 0 }, description: capacity in service }
+  generation: { dims: [time, generator], bounds: { lower: 0 }, description: generation }
+constraints:
+  within_capacity:
+    dims: [time, generator]
+    expression: generation <= at(capacity, by=period_of[period])
+  meets_demand:
+    dims: [time]
+    expression: sum(generation, over=generator) == demand
+objective:
+  sense: minimize
+  expression: sum(investment_cost * capacity) + sum(generation_cost * generation)

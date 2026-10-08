@@ -1,0 +1,28 @@
+description: >-
+  Generation exists only where a generator has capacity, and a ramp limit
+  holds only for the generators the data gives one.
+dimensions:
+  time: { dtype: int, ordered: true, description: time steps }
+  generator: { description: dispatchable units }
+parameters:
+  p_max: { dims: [generator], description: most generation }
+  ramp_limit: { dims: [generator], description: largest rise from one time step to the next }
+  demand: { dims: [time], description: demand to be met }
+  generation_cost: { dims: [generator], description: cost of one unit of generation }
+variables:
+  generation:
+    dims: [time, generator]
+    where: "p_max > 0"
+    bounds: { lower: 0, upper: p_max }
+    description: generation
+constraints:
+  ramp_up:
+    dims: [time, generator]
+    where: ramp_limit
+    expression: generation - shift(generation, along=time, offset=1) <= ramp_limit
+  meets_demand:
+    dims: [time]
+    expression: sum(generation, over=generator) == demand
+objective:
+  sense: minimize
+  expression: sum(generation_cost * generation)

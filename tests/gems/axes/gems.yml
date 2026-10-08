@@ -1,0 +1,13 @@
+# GEMS v0.4.0, libraries/basic_models_library.yml, lines 106-117
+- id: p_min
+  scenario-dependent: true
+  time-dependent: true
+- id: p_max
+  scenario-dependent: true
+  time-dependent: true
+- id: generation_cost
+  scenario-dependent: false
+  time-dependent: false
+- id: co2_emission_factor
+  scenario-dependent: false
+  time-dependent: false
