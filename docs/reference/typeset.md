@@ -88,7 +88,7 @@ dimension, parameter and variable.
 ## Printing one declaration on its own
 
 `typeset_declaration` returns the line the document prints for one named
-expression, mask, constraint, assumption, curve or variable, with its
+expression, mask, constraint, special ordered set, curve, assumption or variable, with its
 quantifier and without a document, a label, a number or math delimiters:
 
 ```python
@@ -111,7 +111,7 @@ A line on its own has no _Definitions_ section beside it, so the plain named
 expressions it uses are substituted. A cased expression prints by symbol, and a
 second call with its name prints its block.
 
-A name that is none of the six kinds is refused with the near miss. A name
+A name that is none of the seven kinds is refused with the near miss. A name
 declared as two of them, such as a constraint and a variable, is refused too.
 
 ## Symbol tables

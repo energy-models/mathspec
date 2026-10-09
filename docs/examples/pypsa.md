@@ -5943,6 +5943,269 @@ $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ counts within the group a relation pu
 
 $`\lvert \mathcal{T} \rvert`$ denotes the size of the set being counted along, and a position counted from the end prints against it — $`\lvert \mathcal{T} \rvert - 1`$ is the last position, one less than the size because the first is $`0`$.
 
+### `Generator_com_ext`
+
+```yaml
+Generator_com_ext:
+  description: >-
+    a committable generator with an extendable, non-modular build that
+    stands in the snapshot's period — PyPSA's `com-ext` rows, whose status
+    is relaxed against the chosen build
+  where: >-
+    Generator_committable
+    AND Generator_p_nom_extendable
+    AND NOT (Generator_p_nom_mod > 0)
+    AND Generator_active
+```
+
+```math
+\mathrm{on}^{\mathrm{com,ext}}_{t,g} \iff \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+### `Generator_maint_ext`
+
+```yaml
+Generator_maint_ext:
+  description: >-
+    a maintainable generator with an extendable build, unless it is
+    committable and modular, that stands in the snapshot's period — the
+    maintenance rows against the chosen build
+  where: >-
+    Generator_maintainable
+    AND Generator_p_nom_extendable
+    AND NOT (Generator_committable AND Generator_p_nom_mod > 0)
+    AND Generator_active
+```
+
+```math
+\mathrm{on}^{\mathrm{mnt,ext}}_{t,g} \iff \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+### `Generator_committed`
+
+```yaml
+Generator_committed:
+  description: >-
+    a committable generator that stands in the snapshot's period — every
+    unit-commitment row's set
+  where: Generator_committable AND Generator_active
+```
+
+```math
+\mathrm{on}^{\mathrm{com}}_{t,g} \iff \mathrm{com}_{g} \wedge \mathrm{on}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+### `Generator_ramps_from_previous`
+
+```yaml
+Generator_ramps_from_previous:
+  description: >-
+    a snapshot whose ramp reads a previous output — any snapshot but its
+    period's first, and the horizon's first where the generator comes in off
+    or carries an initial output
+  where: >-
+    position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
+    (Generator_status_initial == 0 OR Generator_p_init))
+```
+
+```math
+\mathrm{prev}_{\xi,t,g} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+### `Link_com_ext`
+
+```yaml
+Link_com_ext:
+  description: >-
+    a committable link with an extendable, non-modular build that stands in
+    the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed
+    against the chosen build
+  where: >-
+    Link_committable
+    AND Link_p_nom_extendable
+    AND NOT (Link_p_nom_mod > 0)
+    AND Link_active
+```
+
+```math
+\mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \iff \mathrm{com}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Link_maint_ext`
+
+```yaml
+Link_maint_ext:
+  description: >-
+    a maintainable link with an extendable build, unless it is committable
+    and modular, that stands in the snapshot's period — the maintenance rows
+    against the chosen build
+  where: >-
+    Link_maintainable
+    AND Link_p_nom_extendable
+    AND NOT (Link_committable AND Link_p_nom_mod > 0)
+    AND Link_active
+```
+
+```math
+\mathrm{on}^{f,\mathrm{mnt,ext}}_{t,l} \iff \mathrm{mnt}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{com}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Link_committed`
+
+```yaml
+Link_committed:
+  description: >-
+    a committable link that stands in the snapshot's period — every
+    unit-commitment row's set
+  where: Link_committable AND Link_active
+```
+
+```math
+\mathrm{on}^{f,\mathrm{com}}_{t,l} \iff \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Link_ramps_from_previous`
+
+```yaml
+Link_ramps_from_previous:
+  description: >-
+    a snapshot whose ramp reads a previous output — any snapshot but its
+    period's first, and the horizon's first where the link comes in off or
+    carries an initial output
+  where: >-
+    position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
+    (Link_status_initial == 0 OR Link_p_init))
+```
+
+```math
+\mathrm{prev}^{f}_{\xi,t,l} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{f,0}_{\xi,l} = 0 \vee \mathrm{f}^{0}_{\xi,l} \text{ is defined} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Process_com_ext`
+
+```yaml
+Process_com_ext:
+  description: >-
+    a committable process with an extendable, non-modular build that stands
+    in the snapshot's period — PyPSA's `com-ext` rows, whose status is
+    relaxed against the chosen build
+  where: >-
+    Process_committable
+    AND Process_p_nom_extendable
+    AND NOT (Process_p_nom_mod > 0)
+    AND Process_active
+```
+
+```math
+\mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \iff \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+### `Process_maint_ext`
+
+```yaml
+Process_maint_ext:
+  description: >-
+    a maintainable process with an extendable build, unless it is
+    committable and modular, that stands in the snapshot's period — the
+    maintenance rows against the chosen build
+  where: >-
+    Process_maintainable
+    AND Process_p_nom_extendable
+    AND NOT (Process_committable AND Process_p_nom_mod > 0)
+    AND Process_active
+```
+
+```math
+\mathrm{on}^{z,\mathrm{mnt,ext}}_{t,j} \iff \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+### `Process_committed`
+
+```yaml
+Process_committed:
+  description: >-
+    a committable process that stands in the snapshot's period — every
+    unit-commitment row's set
+  where: Process_committable AND Process_active
+```
+
+```math
+\mathrm{on}^{z,\mathrm{com}}_{t,j} \iff \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+### `Process_ramps_from_previous`
+
+```yaml
+Process_ramps_from_previous:
+  description: >-
+    a snapshot whose ramp reads a previous output — any snapshot but its
+    period's first, and the horizon's first where the process comes in off
+    or carries an initial output
+  where: >-
+    position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
+    (Process_status_initial == 0 OR Process_p_init))
+```
+
+```math
+\mathrm{prev}^{z}_{\xi,t,j} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{\xi,j} = 0 \vee \mathrm{z}^{0}_{\xi,j} \text{ is defined} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+### `StorageUnit_fix`
+
+```yaml
+StorageUnit_fix:
+  description: >-
+    a storage unit with a fixed build that stands in the snapshot's period —
+    PyPSA's `fix` rows
+  where: NOT StorageUnit_p_nom_extendable AND StorageUnit_active
+```
+
+```math
+\mathrm{on}^{h,\mathrm{fix}}_{t,s} \iff \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S}
+```
+
+### `StorageUnit_ext`
+
+```yaml
+StorageUnit_ext:
+  description: >-
+    a storage unit with an extendable build that stands in the snapshot's
+    period — PyPSA's `ext` rows
+  where: StorageUnit_p_nom_extendable AND StorageUnit_active
+```
+
+```math
+\mathrm{on}^{h,\mathrm{ext}}_{t,s} \iff \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S}
+```
+
+### `Line_lossy`
+
+```yaml
+Line_lossy:
+  description: >-
+    a line that stands in the snapshot's period, where the run models
+    transmission losses
+  where: transmission_losses AND Line_active
+```
+
+```math
+\mathrm{on}^{s,\mathrm{lossy}}_{t,k} \iff \mathrm{lossy} \wedge \mathrm{on}^{s}_{t,k} \qquad \forall\, t \in \mathcal{T},\ k \in \mathcal{K}
+```
+
+### `Transformer_lossy`
+
+```yaml
+Transformer_lossy:
+  description: >-
+    a transformer that stands in the snapshot's period, where the run models
+    transmission losses
+  where: transmission_losses AND Transformer_active
+```
+
+```math
+\mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m} \iff \mathrm{lossy} \wedge \mathrm{on}^{\sigma}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}
+```
+
 #### Variable domains
 
 **`Generator_p`**

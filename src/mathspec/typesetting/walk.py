@@ -764,14 +764,14 @@ class Walk:
         )
 
     def line(self, name: str) -> Line:
-        """The one line *name* prints as: a named expression, a mask, a constraint, an assumption, a curve, or a variable's domain.
+        """The one line *name* prints as: a named expression, a mask, a constraint, a set, a curve, an assumption, or a variable's domain.
 
         An assumption is looked up where the document prints it from, so a
         condition a curve's method states is a line a reader can ask for
         before the curve is written out.
 
         Raises:
-            SchemaError: *name* is declared as none of the six, or as two — a
+            SchemaError: *name* is declared as none of the seven, or as two — a
                 constraint may share a variable's name, and one line prints
                 one of them.
         """
@@ -780,16 +780,17 @@ class Walk:
             'named expression': (program.expressions, self.definition),
             'mask': (program.masks, self.mask),
             'constraint': (program.constraints, self._constraint),
-            'assumption': (program.assumptions, self._assumption),
+            'special ordered set': (program.sos, self._sos),
             'curve': (program.piecewise, self._piecewise),
+            'assumption': (program.assumptions, self._assumption),
             'variable': (program.variables, self._variable),
         }
         found = [kind for kind, (group, _) in kinds.items() if name in group]
         if not found:
             everything = {n for group, _ in kinds.values() for n in group}
             msg = (
-                f"'{name}' is not a named expression, mask, constraint, assumption, curve or variable. "
-                f'{did_you_mean(name, everything)}'
+                f"'{name}' is not a named expression, mask, constraint, special ordered set, curve, assumption "
+                f'or variable. {did_you_mean(name, everything)}'
             )
             raise SchemaError(msg)
         if len(found) > 1:

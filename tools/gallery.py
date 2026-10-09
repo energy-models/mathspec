@@ -261,17 +261,21 @@ def _stands_for(name: str, description: str | None) -> str:
 
 
 def declared_block(path: Path) -> str:
-    """The legend, the domains, every named expression, the objective, then every constraint as YAML beside its equation."""
+    """The legend, then every declaration that prints a line, as YAML beside that line, in the document's order."""
     text = without_header(path)
     model = to_spec(path)
-    page = to_markdown(model, symbols=sidecar_for(path), numbered=False)
-    legend, math = split_math(page)
+    legend, math = split_math(model, symbols=sidecar_for(path), numbered=False)
     objective = _section(math, 'Objective').strip().removeprefix('#### Objective').strip()
     equation = equations(_section(math, 'Subject to'))
     definition = equations(_section(math, 'Definitions')) if model.expressions else {}
+    mask = equations(_section(math, 'Masks')) if model.masks else {}
     domains = _section(math, 'Variable domains').strip()
     assumption = equations(_section(math, 'Assumptions')) if model.assumptions else {}
-    parts = [legend.strip(), domains]
+    parts = [legend.strip()]
+    parts.extend(
+        f'### `{name}`\n\n```yaml\n{declaration(text, "masks", name)}\n```\n\n{mask[name]}' for name in model.masks
+    )
+    parts.append(domains)
     parts.extend(
         f'### `{name}`\n\n```yaml\n{declaration(text, "expressions", name)}\n```\n\n{definition[name]}'
         for name in model.expressions
@@ -288,6 +292,11 @@ def declared_block(path: Path) -> str:
             f'```yaml\n{declaration(text, "constraints", name)}\n```\n\n'
             f'{printed}'
         )
+    parts.extend(
+        f'### `{name}`\n\n```yaml\n{declaration(text, section, name)}\n```\n\n{equation[name]}'
+        for section, group in (('sos', model.sos), ('piecewise', model.piecewise))
+        for name in group
+    )
     parts.extend(
         f'### `{name}`\n\n```yaml\n{declaration(text, "assumptions", name)}\n```\n\n{assumption[name]}'
         for name in model.assumptions

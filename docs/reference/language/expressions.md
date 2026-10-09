@@ -91,8 +91,12 @@ Position decides which kinds of name are legal:
 A bare word in the value of a keyword argument is a name to resolve. A
 keyword's key is never a name.
 
-Constraints and assumptions sit outside the flat namespace, so a constraint or
-an assumption may share a variable's name.
+Four sections sit outside the flat namespace: `constraints`, `assumptions`,
+`sos` and `piecewise`. No expression reads them by a bare name, so a name in one
+of them may be the name of a declaration in the flat namespace, or of a
+declaration in one of the other three. `dual()` is the one reader of a
+constraint, by its name. A term `adds_to` a named expression, and never to a
+constraint of the same name.
 
 ## How dimensions combine
 

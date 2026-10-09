@@ -407,19 +407,26 @@ def _summed(
 
 
 def _undeclared(read: Mapping[str, dict[str, object]], merged: Mapping[str, object], key: str, adder: str) -> None:
-    """Refuse a term on a name a fragment declares as something a term cannot follow, naming what declares it."""
-    section = next((section for section in OWNED_SECTIONS if key in _mapping(merged.get(section))), None)
-    if section is None:
-        return
-    author = _author_of(read, section, key)
-    if section == 'expressions':
-        if not _as_mapping(_mapping(merged['expressions'])[key]).get('cases'):
+    """Refuse a term on a name a fragment declares as something a term cannot follow, naming what declares it.
+
+    A named expression of that name is what the term adds to, whatever else
+    shares the name: a constraint, an assumption, a set or a curve sits outside the
+    flat namespace.
+    """
+    defined = _mapping(merged.get('expressions'))
+    if key in defined:
+        if not _as_mapping(defined[key]).get('cases'):
             return
+        author = _author_of(read, 'expressions', key)
         raise LanguageError(
             f"fragment '{author}' defines {key!r} as `cases:`, and fragment '{adder}' adds a term to it. A term "
             f'follows one body, and a set of cases is no one body: name the cased body as its own expression, '
             f'and define {key!r} as that name.'
         )
+    section = next((section for section in OWNED_SECTIONS if key in _mapping(merged.get(section))), None)
+    if section is None:
+        return
+    author = _author_of(read, section, key)
     raise LanguageError(
         f"fragment '{author}' declares {key!r} as a {_singular(section)}, and fragment '{adder}' adds a term to "
         f'it. A term adds to a named expression: give the sum a name of its own, or read the '

@@ -260,6 +260,12 @@ def equations(rendered: str) -> dict[str, str]:
 
     The objective's line carries no label — the block has no name — so it is
     keyed by the section it is the only member of.
+
+    Raises:
+        ValueError: Two lines print under one label. A constraint, a set, a
+            curve and an assumption sit outside the flat namespace, so each may
+            share a name with a declaration in it, and a page keyed by the label
+            alone would show one line under the other's heading.
     """
     found = {}
     label = None
@@ -269,18 +275,21 @@ def equations(rendered: str) -> dict[str, str]:
         elif match := re.fullmatch(r'\*\*`(.+)`\*\*', block.strip()):
             label = match[1]
         elif block.startswith('```math'):
+            if label in found:
+                msg = f'two lines print under the label {label!r}: rename one, so each prints under its own heading'
+                raise ValueError(msg)
             found[label] = block.strip()
     return found
 
 
-def legend(rendered: str) -> str:
+def legend() -> str:
     """The tables and the translation notes, without the spec's description.
 
     The description is the fixture's own — a line of escaping torture, there so
     CI's LaTeX run proves the escapes right — and it says nothing about
     notation, which is what this page is for.
     """
-    head, _ = split_math(rendered)
+    head, _ = split_math(MODEL, numbered=False)
     return head[head.index('#### ') :].strip()
 
 
@@ -307,7 +316,7 @@ def block() -> str:
         'A dimension, a relation and a parameter declare no equation; what they '
         'print is the legend every spec opens with.',
         f'```yaml\n{preamble(MODEL.read_text())}\n```',
-        legend(rendered),
+        legend(),
     ]
     printed = equations(rendered)
     written = equations(to_markdown(to_spec(MODEL).expand('sos'), numbered=False))

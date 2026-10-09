@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import re
 
-from mathspec.typesetting import to_markdown
 from tools._page import ROOT, inlined, splice, split_math
 from tools._page import main as page_main
 
@@ -63,12 +62,11 @@ def rendered_probe(name: str) -> tuple[str, list[str]]:
     definition, whose constraint is scaffolding for the reference. The
     assertion says so rather than silently taking the first of several.
     """
-    page = to_markdown(PROBES / f'{name}.yaml', numbered=False)
-    _, math = split_math(page)
+    legend, math = split_math(PROBES / f'{name}.yaml', numbered=False)
     title = 'Definitions' if '#### Definitions' in math else 'Subject to'
     equations = re.findall(r'^```math\n.+?\n```$', _section(math, title), re.DOTALL | re.MULTILINE)
     assert len(equations) == 1, f'{name}.yaml should feature exactly one equation; it rendered {len(equations)}'
-    notes = [block.strip() for block in page.split('\n\n') if 'denotes' in block]
+    notes = [block.strip() for block in legend.split('\n\n') if 'denotes' in block]
     return inlined(equations[0]), notes
 
 
