@@ -117,6 +117,13 @@ Take a look at their documentation for more information on configuring this.
 We require all new contributions to have docstrings for all modules, classes and methods.
 When adding docstrings, we request you use the [Google docstring style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
 
+### Benchmarks
+
+[`benchmarks/`](https://github.com/energy-models/mathspec/tree/main/benchmarks)
+measures each public verb. `pixi run test` calls each benchmark once, and
+`pixi run pytest benchmarks --codspeed` measures them. A change that claims to
+make a verb faster puts the before and after numbers in its pull request.
+
 ## Releases
 
 A release is a PR that renames `## Upcoming version` in `CHANGELOG.md` to the
