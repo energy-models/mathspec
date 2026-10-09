@@ -99,20 +99,6 @@ constraints:
 |---|---|
 | $`\mathit{risk\_weighted\_opex}`$ | `risk_weighted_opex` (scalar) |
 
-#### Subject to
-
-**`CVaR_excess`**
-
-```math
-a_{\xi} - \mathit{scenario\_opex}_{\xi} + \theta \ge 0 \qquad \forall\, \xi \in \Xi \,:\, \omega \text{ is defined}
-```
-
-**`CVaR_def`**
-
-```math
-\theta + \frac{1}{1 - \alpha} \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot a_{\xi} \right) \le CVaR \qquad \text{where } \omega \text{ is defined}
-```
-
 #### Variable domains
 
 **`CVaR_a`**
@@ -139,5 +125,19 @@ CVaR \in \mathbb{R} \qquad \text{where } \omega \text{ is defined}
 
 ```math
 \mathit{risk\_weighted\_opex} = \left( 1 - \omega \right) \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi} \right) + \omega \cdot CVaR
+```
+
+#### Subject to
+
+**`CVaR_excess`**
+
+```math
+a_{\xi} - \mathit{scenario\_opex}_{\xi} + \theta \ge 0 \qquad \forall\, \xi \in \Xi \,:\, \omega \text{ is defined}
+```
+
+**`CVaR_def`**
+
+```math
+\theta + \frac{1}{1 - \alpha} \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot a_{\xi} \right) \le CVaR \qquad \text{where } \omega \text{ is defined}
 ```
 <!-- gallery:end -->

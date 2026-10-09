@@ -1084,15 +1084,15 @@ class Spec(_StrictBlock):
     dimensions: dict[str, DimensionBlock] = {}
     relations: dict[str, RelationBlock] = {}
     parameters: dict[str, ParameterBlock] = {}
+    masks: dict[str, MaskBlock] = {}
     variables: dict[str, VariableBlock] = {}
+    expressions: dict[str, ExpressionBlock] = {}
     objective: ObjectiveBlock | None = None
     constraints: dict[str, ConstraintBlock] = {}
     sos: dict[str, SosBlock] = {}
     piecewise: dict[str, PiecewiseBlock] = {}
-    macros: dict[str, MacroBlock] = {}
-    expressions: dict[str, ExpressionBlock] = {}
-    masks: dict[str, MaskBlock] = {}
     assumptions: dict[str, AssumptionBlock] = {}
+    macros: dict[str, MacroBlock] = {}
 
     @cached_property
     def program(self) -> Program:

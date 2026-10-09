@@ -75,6 +75,12 @@ variables:
     domain: continuous
     missing: absent
     description: '`Generator-p` — what a generator produces in a snapshot'
+expressions:
+  Generator_cost: sum(Generator_p * Generator_marginal_cost)
+  total_cost:
+    dims: []
+    expression: Generator_cost
+    description: what running the system costs
 objective: {sense: minimize, expression: total_cost}
 constraints:
   Bus_nodal_balance:
@@ -91,12 +97,6 @@ constraints:
     expression: at(Port_p, by=Load_port[port]) == -Load_p_set
     description: 'what a load takes is what its port withdraws. No PyPSA row stands for this: PyPSA writes
       the load into the balance instead'
-expressions:
-  Generator_cost: sum(Generator_p * Generator_marginal_cost)
-  total_cost:
-    dims: []
-    expression: Generator_cost
-    description: what running the system costs
 ```
 
 === "As composed"
@@ -133,32 +133,6 @@ expressions:
     | $`\mathit{Generator\_cost}`$ | `Generator_cost` (scalar) |
     | $`\mathit{total\_cost}`$ | `total_cost` (scalar) — what running the system costs |
 
-    #### Objective
-
-    ```math
-    \min \mathit{total\_cost}
-    ```
-
-    #### Subject to
-
-    **`Bus_nodal_balance`**
-
-    ```math
-    \sum_{j \in \mathcal{J} \,:\, \mathrm{Port\_bus}(j) = n} f_{t,j} = 0 \qquad \forall\, t \in \mathcal{T},\ n \in \mathcal{N}
-    ```
-
-    **`Generator_injection`**
-
-    ```math
-    f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-    ```
-
-    **`Load_withdrawal`**
-
-    ```math
-    f_{t,\mathrm{Load\_port}(d)} = -\mathrm{load}_{t,d} \qquad \forall\, t \in \mathcal{T},\ d \in \mathcal{D}
-    ```
-
     #### Variable domains
 
     **`Port_p`**
@@ -185,6 +159,32 @@ expressions:
 
     ```math
     \mathit{total\_cost} = \mathit{Generator\_cost}
+    ```
+
+    #### Objective
+
+    ```math
+    \min \mathit{total\_cost}
+    ```
+
+    #### Subject to
+
+    **`Bus_nodal_balance`**
+
+    ```math
+    \sum_{j \in \mathcal{J} \,:\, \mathrm{Port\_bus}(j) = n} f_{t,j} = 0 \qquad \forall\, t \in \mathcal{T},\ n \in \mathcal{N}
+    ```
+
+    **`Generator_injection`**
+
+    ```math
+    f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    ```
+
+    **`Load_withdrawal`**
+
+    ```math
+    f_{t,\mathrm{Load\_port}(d)} = -\mathrm{load}_{t,d} \qquad \forall\, t \in \mathcal{T},\ d \in \mathcal{D}
     ```
 
 === "With commitment"
@@ -243,6 +243,40 @@ expressions:
     | $`\mathit{Generator\_cost}`$ | `Generator_cost` (scalar) |
     | $`\mathit{total\_cost}`$ | `total_cost` (scalar) — what running the system costs |
 
+    #### Variable domains
+
+    **`Port_p`**
+
+    ```math
+    f_{t,j} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+    ```
+
+    **`Generator_p`**
+
+    ```math
+    p_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    ```
+
+    **`Generator_status`**
+
+    ```math
+    u_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    ```
+
+    #### Definitions
+
+    **`Generator_cost`**
+
+    ```math
+    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+    ```
+
+    **`total_cost`**
+
+    ```math
+    \mathit{total\_cost} = \mathit{Generator\_cost}
+    ```
+
     #### Objective
 
     ```math
@@ -279,39 +313,5 @@ expressions:
 
     ```math
     p_{t,g} \ge \underline{\mathrm{p}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-    ```
-
-    #### Variable domains
-
-    **`Port_p`**
-
-    ```math
-    f_{t,j} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
-    ```
-
-    **`Generator_p`**
-
-    ```math
-    p_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-    ```
-
-    **`Generator_status`**
-
-    ```math
-    u_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-    ```
-
-    #### Definitions
-
-    **`Generator_cost`**
-
-    ```math
-    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
-    ```
-
-    **`total_cost`**
-
-    ```math
-    \mathit{total\_cost} = \mathit{Generator\_cost}
     ```
 <!-- gallery:end -->

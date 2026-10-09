@@ -30,6 +30,10 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("bp_heat")$: `bp_heat` over $cal(G) times cal(A)$
 / $upright("bp_run")$: `bp_run` over $cal(G) times cal(A)$
 
+== Masks
+/ $upright("dispatchable")$: `dispatchable` over $cal(G)$ --- a unit that dispatches and cannot be turned down
+/ $upright("priced_dispatch")$: `priced_dispatch` over $cal(G)$
+
 == Variables
 / $p$: `p` over $cal(T) times cal(G)$
 / $italic("spill")$: `spill` over $cal(T)$
@@ -55,10 +59,6 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $italic("marginal_price")$: `marginal_price` over $cal(T) times cal(B)$
 / $upright("startup_cost")$: `startup_cost` over $cal(T) times cal(G)$ --- what starting a unit in this snapshot costs, which the horizon's edge changes
 
-== Masks
-/ $upright("dispatchable")$: `dispatchable` over $cal(G)$ --- a unit that dispatches and cannot be turned down
-/ $upright("priced_dispatch")$: `priced_dispatch` over $cal(G)$
-
 Upright is what the data supplies --- a parameter such as $upright("p")^(upright("max"))$, a coordinate map, a label --- and italic is what the solver chooses, such as $p$. An index is italic too, being what a quantifier chooses, and a set is script.
 
 $t minus.o k$ denotes cyclic translation: index $t-k$ taken modulo the size of the dimension (`roll`). Plain $t-k$ (`shift`) has no wraparound --- terms translated past the edge are simply absent.
@@ -72,6 +72,38 @@ $upright("pos")(t)$ denotes where index $t$ sits along its dimension's own order
 $upright("pos")_(upright("relation")(t))(t)$ counts within the group a relation puts $t$ in: the subscript names the map, $cal(T)_(upright("relation")(t))$ is the group it lands in, and that group has a first position of its own.
 
 $abs(cal(T))$ denotes the size of the set being counted along, and a position counted from the end prints against it --- $abs(cal(T)) - 1$ is the last position, one less than the size because the first is $0$.
+
+== Masks
+#set math.equation(numbering: "(1)")
+$ upright("dispatchable") & upright("dispatchable")_(g) & arrow.l.r.double.long upright("p")^(upright("max"))_(g) > 0 and not upright("is_flexible")_(g) & forall g in cal(G) \
+  upright("priced_dispatch") & upright("priced_dispatch")_(g) & arrow.l.r.double.long upright("dispatchable")_(g) and upright("spend")^(upright("cap"))_(g) > 0 & forall g in cal(G) $
+
+== Variable domains
+#set math.equation(numbering: "(1)")
+$ upright("p") & upright("p")^(upright("min"))_(g) <= p_(t,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) colon upright("p")^(upright("max"))_(g) > 0 and not upright("is_flexible")_(g) or upright("p")^(upright("min"))_(g) > 0 \
+  upright("spill") & italic("spill")_(t) & >= 0 & forall t in cal(T) \
+  upright("slack") & italic("slack")_(t) & <= 100 & forall t in cal(T) \
+  upright("theta") & theta_(b) & in RR & forall b in cal(B) \
+  upright("on") & italic("on")_(t,g) & in {0, 1} & forall t in cal(T), g in cal(G) \
+  upright("units") & 0 <= italic("units")_(g) & <= 10, italic("units")_(g) in ZZ & forall g in cal(G) \
+  upright("spare") & italic("spare")_(g) & in ZZ & forall g in cal(G) \
+  upright("reserve") & italic("reserve") & >= 0 \
+  upright("headroom") & italic("headroom") & >= 0 & upright("where ") upright("budget") upright(" is defined") \
+  upright("weight") & 0 <= italic("weight")_(t,g) & <= 1 & forall t in cal(T), g in cal(G) \
+  upright("fuel") & italic("fuel")_(t,g) & >= 0 & forall t in cal(T), g in cal(G) \
+  upright("heat") & italic("heat")_(t,g) & >= 0 & forall t in cal(T), g in cal(G) \
+  upright("op_cost") & italic("op_cost")_(t,g) & >= 0 & forall t in cal(T), g in cal(G) \
+  upright("warm") & italic("warm")_(t,g) & in {0, 1} & forall t in cal(T), g in cal(G) colon upright("is_flexible")_(g) $
+
+== Definitions
+#set math.equation(numbering: "(1)")
+$ upright("spend_cap") & upright("spend")^(upright("cap"))_(g) & = upright("cost")_(g) dot 2 & forall g in cal(G) \
+  upright("spend") & italic("spend")_(t) & = sum_(g in cal(G)) p_(t,g) dot upright("cost")_(g) & forall t in cal(T) \
+  upright("rating") & upright("rating")_(g,t) & = upright("eta")_(g) dot upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
+  upright("lcoe") & italic("lcoe") & = frac(sum_(t in cal(T), g in cal(G)) p_(t,g) dot upright("cost")_(g), sum_(t in cal(T), g in cal(G)) p_(t,g)) \
+  upright("net") & italic("net")_(t) & = -italic("spill")_(t) + italic("slack")_(t) & forall t in cal(T) \
+  upright("marginal_price") & italic("marginal_price")_(t,b) & = lambda_(upright("balance"),t,b) & forall t in cal(T), b in cal(B) \
+  upright("startup_cost") & upright("startup_cost")_(t,g) & = cases(upright("cost")_(g) & upright("if ") upright("pos")(t) = 0, upright("cost")_(g) dot 2 & upright("if ") upright("pos")(t) > 0 and upright("season_of")(t) = upright("'winter'"), 0 & upright("otherwise")) & forall t in cal(T), g in cal(G) $
 
 == Objective
 #set math.equation(numbering: "(1)")
@@ -134,38 +166,6 @@ $ upright("budgeted") & italic("spend")_(t) & <= upright("budget") & forall t in
   upright("hull_curve") & (p_(t,g), italic("fuel")_(t,g)) & in upright("conv")_(a in cal(A))(upright("bp_x")_(g,a), upright("bp_heat")_(g,a)) & forall t in cal(T), g in cal(G) \
   upright("lp_curve") & italic("fuel")_(t,g) & >= upright("pwl")_(a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined"))(upright("bp_x")_(g,a), upright("bp_y")_(g,a))(p_(t,g)) & forall t in cal(T), g in cal(G) \
   upright("ramp_curve") & italic("heat")_(t,g) & <= upright("pwl")_(a in cal(A))(upright("bp_x")_(g,a), upright("bp_heat")_(g,a))(p_(t,g)) & forall t in cal(T), g in cal(G) $
-
-== Variable domains
-#set math.equation(numbering: "(1)")
-$ upright("p") & upright("p")^(upright("min"))_(g) <= p_(t,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) colon upright("p")^(upright("max"))_(g) > 0 and not upright("is_flexible")_(g) or upright("p")^(upright("min"))_(g) > 0 \
-  upright("spill") & italic("spill")_(t) & >= 0 & forall t in cal(T) \
-  upright("slack") & italic("slack")_(t) & <= 100 & forall t in cal(T) \
-  upright("theta") & theta_(b) & in RR & forall b in cal(B) \
-  upright("on") & italic("on")_(t,g) & in {0, 1} & forall t in cal(T), g in cal(G) \
-  upright("units") & 0 <= italic("units")_(g) & <= 10, italic("units")_(g) in ZZ & forall g in cal(G) \
-  upright("spare") & italic("spare")_(g) & in ZZ & forall g in cal(G) \
-  upright("reserve") & italic("reserve") & >= 0 \
-  upright("headroom") & italic("headroom") & >= 0 & upright("where ") upright("budget") upright(" is defined") \
-  upright("weight") & 0 <= italic("weight")_(t,g) & <= 1 & forall t in cal(T), g in cal(G) \
-  upright("fuel") & italic("fuel")_(t,g) & >= 0 & forall t in cal(T), g in cal(G) \
-  upright("heat") & italic("heat")_(t,g) & >= 0 & forall t in cal(T), g in cal(G) \
-  upright("op_cost") & italic("op_cost")_(t,g) & >= 0 & forall t in cal(T), g in cal(G) \
-  upright("warm") & italic("warm")_(t,g) & in {0, 1} & forall t in cal(T), g in cal(G) colon upright("is_flexible")_(g) $
-
-== Definitions
-#set math.equation(numbering: "(1)")
-$ upright("spend_cap") & upright("spend")^(upright("cap"))_(g) & = upright("cost")_(g) dot 2 & forall g in cal(G) \
-  upright("spend") & italic("spend")_(t) & = sum_(g in cal(G)) p_(t,g) dot upright("cost")_(g) & forall t in cal(T) \
-  upright("rating") & upright("rating")_(g,t) & = upright("eta")_(g) dot upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
-  upright("lcoe") & italic("lcoe") & = frac(sum_(t in cal(T), g in cal(G)) p_(t,g) dot upright("cost")_(g), sum_(t in cal(T), g in cal(G)) p_(t,g)) \
-  upright("net") & italic("net")_(t) & = -italic("spill")_(t) + italic("slack")_(t) & forall t in cal(T) \
-  upright("marginal_price") & italic("marginal_price")_(t,b) & = lambda_(upright("balance"),t,b) & forall t in cal(T), b in cal(B) \
-  upright("startup_cost") & upright("startup_cost")_(t,g) & = cases(upright("cost")_(g) & upright("if ") upright("pos")(t) = 0, upright("cost")_(g) dot 2 & upright("if ") upright("pos")(t) > 0 and upright("season_of")(t) = upright("'winter'"), 0 & upright("otherwise")) & forall t in cal(T), g in cal(G) $
-
-== Masks
-#set math.equation(numbering: "(1)")
-$ upright("dispatchable") & upright("dispatchable")_(g) & arrow.l.r.double.long upright("p")^(upright("max"))_(g) > 0 and not upright("is_flexible")_(g) & forall g in cal(G) \
-  upright("priced_dispatch") & upright("priced_dispatch")_(g) & arrow.l.r.double.long upright("dispatchable")_(g) and upright("spend")^(upright("cap"))_(g) > 0 & forall g in cal(G) $
 
 == Assumptions
 #set math.equation(numbering: "(1)")

@@ -44,12 +44,11 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
 `-o FILE` writes to a file instead of stdout.
 
 - The spec's `description:` opens the document.
-- The legend lists Given, Sets, Parameters, Variables, Definitions and Masks.
-  The math follows under Objective, Subject to, Variable domains, Definitions,
-  Masks and Assumptions. Under Subject to, the constraints come first, then the
-  special ordered sets, then the curves. Each part keeps the order of the
-  file's sections. The one exception is Variable domains, which prints after
-  the rows.
+- The legend lists Given, Sets, Parameters, Masks, Variables and Definitions.
+  The math follows under Masks, Variable domains, Definitions, Objective,
+  Subject to and Assumptions. Under Subject to, the constraints come first,
+  then the special ordered sets, then the curves. Each part keeps the order of
+  the file's sections.
 - A `piecewise:` block prints as one line: the curve it states, over the frame
   it states one curve per coordinate of. To print its rows, print
   [`spec.expand()`](spec.md#mathspec.spec.Spec.expand) or pass `--expand`

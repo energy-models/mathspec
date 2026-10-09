@@ -102,14 +102,6 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 |---|---|
 | $`\mathit{Generator\_cost}`$ | `Generator_cost` (scalar) |
 
-#### Subject to
-
-**`Generator_injection`**
-
-```math
-f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
 #### Variable domains
 
 **`Generator_p`**
@@ -124,5 +116,13 @@ f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\
 
 ```math
 \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+```
+
+#### Subject to
+
+**`Generator_injection`**
+
+```math
+f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 <!-- gallery:end -->

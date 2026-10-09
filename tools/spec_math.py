@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 
 from mathspec.typesetting import to_markdown
-from tools._page import ROOT, inlined, splice
+from tools._page import ROOT, inlined, splice, split_math
 from tools._page import main as page_main
 
 PAGE = ROOT / 'docs' / 'reference' / 'language' / 'operators.md'
@@ -64,7 +64,7 @@ def rendered_probe(name: str) -> tuple[str, list[str]]:
     assertion says so rather than silently taking the first of several.
     """
     page = to_markdown(PROBES / f'{name}.yaml', numbered=False)
-    math = page[page.index('#### Objective') :]
+    _, math = split_math(page)
     title = 'Definitions' if '#### Definitions' in math else 'Subject to'
     equations = re.findall(r'^```math\n.+?\n```$', _section(math, title), re.DOTALL | re.MULTILINE)
     assert len(equations) == 1, f'{name}.yaml should feature exactly one equation; it rendered {len(equations)}'

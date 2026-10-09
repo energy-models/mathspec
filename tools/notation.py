@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from mathspec.spec import PIECEWISE_METHODS
 from mathspec.typesetting import to_markdown
 from mathspec.validation import to_spec
-from tools._page import ROOT, sidecar_for, splice, without_header
+from tools._page import ROOT, sidecar_for, splice, split_math, without_header
 from tools._page import main as page_main
 
 if TYPE_CHECKING:
@@ -262,9 +262,11 @@ def equations(rendered: str) -> dict[str, str]:
     keyed by the section it is the only member of.
     """
     found = {}
-    label = 'objective'
+    label = None
     for block in rendered.split('\n\n'):
-        if match := re.fullmatch(r'\*\*`(.+)`\*\*', block.strip()):
+        if block.startswith('#### '):
+            label = 'objective' if block.strip() == '#### Objective' else None
+        elif match := re.fullmatch(r'\*\*`(.+)`\*\*', block.strip()):
             label = match[1]
         elif block.startswith('```math'):
             found[label] = block.strip()
@@ -278,10 +280,8 @@ def legend(rendered: str) -> str:
     CI's LaTeX run proves the escapes right — and it says nothing about
     notation, which is what this page is for.
     """
-    blocks = rendered.split('\n\n')
-    start = next(i for i, block in enumerate(blocks) if block.startswith('#### '))
-    end = next(i for i, block in enumerate(blocks) if block.startswith('#### Objective'))
-    return '\n\n'.join(blocks[start:end]).strip()
+    head, _ = split_math(rendered)
+    return head[head.index('#### ') :].strip()
 
 
 #: What the legend is made of. No equation comes from these, so they are shown

@@ -45,6 +45,16 @@ def inlined(markdown: str) -> str:
     return FENCE.sub(lambda m: f'$`{" ".join(m[1].splitlines())}`$', markdown)
 
 
+def split_math(page: str) -> tuple[str, str]:
+    """A rendered Markdown page cut where its equations start: the description and legend, then the math.
+
+    The legend and the equations share section titles (Masks, Definitions), so
+    the cut is the first section whose body is not a legend table.
+    """
+    match = re.search(r'^#### .+\n\n(?!\|)', page, re.MULTILINE)
+    return (page, '') if match is None else (page[: match.start()], page[match.start() :])
+
+
 def tab(title: str, body: str) -> str:
     """One tab of a tabbed block: its title, and its body indented into it."""
     return f'=== "{title}"\n\n{textwrap.indent(body, "    ")}'

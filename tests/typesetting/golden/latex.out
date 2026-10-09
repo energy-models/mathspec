@@ -38,6 +38,12 @@
 \item[{$\mathrm{bp\_run}$}] \texttt{bp\_run} over $\mathcal{G} \times \mathcal{A}$
 \end{description}
 
+\paragraph{Masks}
+\begin{description}
+\item[{$\mathrm{dispatchable}$}] \texttt{dispatchable} over $\mathcal{G}$ --- a unit that dispatches and cannot be turned down
+\item[{$\mathrm{priced\_dispatch}$}] \texttt{priced\_dispatch} over $\mathcal{G}$
+\end{description}
+
 \paragraph{Variables}
 \begin{description}
 \item[{$p$}] \texttt{p} over $\mathcal{T} \times \mathcal{G}$
@@ -67,12 +73,6 @@
 \item[{$\mathrm{startup\_cost}$}] \texttt{startup\_cost} over $\mathcal{T} \times \mathcal{G}$ --- what starting a unit in this snapshot costs, which the horizon's edge changes
 \end{description}
 
-\paragraph{Masks}
-\begin{description}
-\item[{$\mathrm{dispatchable}$}] \texttt{dispatchable} over $\mathcal{G}$ --- a unit that dispatches and cannot be turned down
-\item[{$\mathrm{priced\_dispatch}$}] \texttt{priced\_dispatch} over $\mathcal{G}$
-\end{description}
-
 \noindent Upright is what the data supplies --- a parameter such as $\mathrm{p}^{\mathrm{max}}$, a coordinate map, a label --- and italic is what the solver chooses, such as $p$. An index is italic too, being what a quantifier chooses, and a set is script.
 
 \noindent $t \ominus k$ denotes cyclic translation: index $t-k$ taken modulo the size of the dimension (\texttt{roll}). Plain $t-k$ (\texttt{shift}) has no wraparound --- terms translated past the edge are simply absent.
@@ -86,6 +86,41 @@
 \noindent $\mathrm{pos}_{\mathrm{relation}(t)}(t)$ counts within the group a relation puts $t$ in: the subscript names the map, $\mathcal{T}_{\mathrm{relation}(t)}$ is the group it lands in, and that group has a first position of its own.
 
 \noindent $\lvert \mathcal{T} \rvert$ denotes the size of the set being counted along, and a position counted from the end prints against it --- $\lvert \mathcal{T} \rvert - 1$ is the last position, one less than the size because the first is $0$.
+
+\paragraph{Masks}
+\begin{align}
+\text{dispatchable} && \mathrm{dispatchable}_{g} & \iff \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} && \forall\, g \in \mathcal{G} \\
+\text{priced\_dispatch} && \mathrm{priced\_dispatch}_{g} & \iff \mathrm{dispatchable}_{g} \wedge \mathrm{spend}^{\mathrm{cap}}_{g} > 0 && \forall\, g \in \mathcal{G}
+\end{align}
+
+\paragraph{Variable domains}
+\begin{align}
+\text{p} && \mathrm{p}^{\mathrm{min}}_{g} \le p_{t,g} & \le \mathrm{p}^{\mathrm{max}}_{g} && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} \vee \mathrm{p}^{\mathrm{min}}_{g} > 0 \\
+\text{spill} && \mathit{spill}_{t} & \ge 0 && \forall\, t \in \mathcal{T} \\
+\text{slack} && \mathit{slack}_{t} & \le 100 && \forall\, t \in \mathcal{T} \\
+\text{theta} && \theta_{b} & \in \mathbb{R} && \forall\, b \in \mathcal{B} \\
+\text{on} && \mathit{on}_{t,g} & \in \{0, 1\} && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
+\text{units} && 0 \le \mathit{units}_{g} & \le 10, \mathit{units}_{g} \in \mathbb{Z} && \forall\, g \in \mathcal{G} \\
+\text{spare} && \mathit{spare}_{g} & \in \mathbb{Z} && \forall\, g \in \mathcal{G} \\
+\text{reserve} && \mathit{reserve} & \ge 0 \\
+\text{headroom} && \mathit{headroom} & \ge 0 && \text{where } \mathrm{budget} \text{ is defined} \\
+\text{weight} && 0 \le \mathit{weight}_{t,g} & \le 1 && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
+\text{fuel} && \mathit{fuel}_{t,g} & \ge 0 && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
+\text{heat} && \mathit{heat}_{t,g} & \ge 0 && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
+\text{op\_cost} && \mathit{op\_cost}_{t,g} & \ge 0 && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
+\text{warm} && \mathit{warm}_{t,g} & \in \{0, 1\} && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{is\_flexible}_{g}
+\end{align}
+
+\paragraph{Definitions}
+\begin{align}
+\text{spend\_cap} && \mathrm{spend}^{\mathrm{cap}}_{g} & = \mathrm{cost}_{g} \cdot 2 && \forall\, g \in \mathcal{G} \\
+\text{spend} && \mathit{spend}_{t} & = \sum_{g \in \mathcal{G}} p_{t,g} \cdot \mathrm{cost}_{g} && \forall\, t \in \mathcal{T} \\
+\text{rating} && \mathrm{rating}_{g,t} & = \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
+\text{lcoe} && \mathit{lcoe} & = \frac{\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{cost}_{g}}{\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g}} \\
+\text{net} && \mathit{net}_{t} & = -\mathit{spill}_{t} + \mathit{slack}_{t} && \forall\, t \in \mathcal{T} \\
+\text{marginal\_price} && \mathit{marginal\_price}_{t,b} & = \lambda_{\mathrm{balance},t,b} && \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \\
+\text{startup\_cost} && \mathrm{startup\_cost}_{t,g} & = \begin{cases} \mathrm{cost}_{g} & \text{if } \mathrm{pos}(t) = 0 \\ \mathrm{cost}_{g} \cdot 2 & \text{if } \mathrm{pos}(t) > 0 \wedge \mathrm{season\_of}(t) = \text{'}\mathrm{winter}\text{'} \\ 0 & \text{otherwise} \end{cases} && \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\end{align}
 
 \paragraph{Objective}
 \begin{align}
@@ -149,41 +184,6 @@
 \text{hull\_curve} && \left( p_{t,g},\ \mathit{fuel}_{t,g} \right) & \in \mathrm{conv}_{a \in \mathcal{A}}(\mathrm{bp\_x}_{g,a},\ \mathrm{bp\_heat}_{g,a}) && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
 \text{lp\_curve} && \mathit{fuel}_{t,g} & \ge \mathrm{pwl}_{a \in \mathcal{A} \,:\, \mathrm{bp\_x}_{g,a} \text{ is defined}}(\mathrm{bp\_x}_{g,a},\ \mathrm{bp\_y}_{g,a})(p_{t,g}) && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
 \text{ramp\_curve} && \mathit{heat}_{t,g} & \le \mathrm{pwl}_{a \in \mathcal{A}}(\mathrm{bp\_x}_{g,a},\ \mathrm{bp\_heat}_{g,a})(p_{t,g}) && \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-\end{align}
-
-\paragraph{Variable domains}
-\begin{align}
-\text{p} && \mathrm{p}^{\mathrm{min}}_{g} \le p_{t,g} & \le \mathrm{p}^{\mathrm{max}}_{g} && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} \vee \mathrm{p}^{\mathrm{min}}_{g} > 0 \\
-\text{spill} && \mathit{spill}_{t} & \ge 0 && \forall\, t \in \mathcal{T} \\
-\text{slack} && \mathit{slack}_{t} & \le 100 && \forall\, t \in \mathcal{T} \\
-\text{theta} && \theta_{b} & \in \mathbb{R} && \forall\, b \in \mathcal{B} \\
-\text{on} && \mathit{on}_{t,g} & \in \{0, 1\} && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
-\text{units} && 0 \le \mathit{units}_{g} & \le 10, \mathit{units}_{g} \in \mathbb{Z} && \forall\, g \in \mathcal{G} \\
-\text{spare} && \mathit{spare}_{g} & \in \mathbb{Z} && \forall\, g \in \mathcal{G} \\
-\text{reserve} && \mathit{reserve} & \ge 0 \\
-\text{headroom} && \mathit{headroom} & \ge 0 && \text{where } \mathrm{budget} \text{ is defined} \\
-\text{weight} && 0 \le \mathit{weight}_{t,g} & \le 1 && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
-\text{fuel} && \mathit{fuel}_{t,g} & \ge 0 && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
-\text{heat} && \mathit{heat}_{t,g} & \ge 0 && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
-\text{op\_cost} && \mathit{op\_cost}_{t,g} & \ge 0 && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \\
-\text{warm} && \mathit{warm}_{t,g} & \in \{0, 1\} && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{is\_flexible}_{g}
-\end{align}
-
-\paragraph{Definitions}
-\begin{align}
-\text{spend\_cap} && \mathrm{spend}^{\mathrm{cap}}_{g} & = \mathrm{cost}_{g} \cdot 2 && \forall\, g \in \mathcal{G} \\
-\text{spend} && \mathit{spend}_{t} & = \sum_{g \in \mathcal{G}} p_{t,g} \cdot \mathrm{cost}_{g} && \forall\, t \in \mathcal{T} \\
-\text{rating} && \mathrm{rating}_{g,t} & = \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
-\text{lcoe} && \mathit{lcoe} & = \frac{\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{cost}_{g}}{\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g}} \\
-\text{net} && \mathit{net}_{t} & = -\mathit{spill}_{t} + \mathit{slack}_{t} && \forall\, t \in \mathcal{T} \\
-\text{marginal\_price} && \mathit{marginal\_price}_{t,b} & = \lambda_{\mathrm{balance},t,b} && \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \\
-\text{startup\_cost} && \mathrm{startup\_cost}_{t,g} & = \begin{cases} \mathrm{cost}_{g} & \text{if } \mathrm{pos}(t) = 0 \\ \mathrm{cost}_{g} \cdot 2 & \text{if } \mathrm{pos}(t) > 0 \wedge \mathrm{season\_of}(t) = \text{'}\mathrm{winter}\text{'} \\ 0 & \text{otherwise} \end{cases} && \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-\end{align}
-
-\paragraph{Masks}
-\begin{align}
-\text{dispatchable} && \mathrm{dispatchable}_{g} & \iff \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} && \forall\, g \in \mathcal{G} \\
-\text{priced\_dispatch} && \mathrm{priced\_dispatch}_{g} & \iff \mathrm{dispatchable}_{g} \wedge \mathrm{spend}^{\mathrm{cap}}_{g} > 0 && \forall\, g \in \mathcal{G}
 \end{align}
 
 \paragraph{Assumptions}

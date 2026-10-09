@@ -172,6 +172,14 @@ python -m mathspec markdown dispatch.yaml
 
     Upright is what the data supplies — a parameter such as $`\mathrm{capacity}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{dispatch}`$. An index is italic too, being what a quantifier chooses, and a set is script.
 
+    #### Variable domains
+
+    **`dispatch`**
+
+    ```math
+    0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{capacity}_{g} > 0
+    ```
+
     #### Objective
 
     ```math
@@ -184,14 +192,6 @@ python -m mathspec markdown dispatch.yaml
 
     ```math
     \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
-    ```
-
-    #### Variable domains
-
-    **`dispatch`**
-
-    ```math
-    0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{capacity}_{g} > 0
     ```
 
 ## Where to next
