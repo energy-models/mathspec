@@ -19,7 +19,7 @@ from mathspec.program import DimensionPosition
 from mathspec.resolution import Namespace
 from mathspec.typesetting import FORMATS, to_markdown, typeset_declaration
 from mathspec.validation import to_spec
-from tests.fixtures import DISPATCH_MODEL, OPERATOR_PROBES, SMALL_MODEL, varied, where_of
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SMALL_MODEL, schema_of, varied, where_of
 
 if TYPE_CHECKING:
     from mathspec.spec import Spec
@@ -2654,3 +2654,31 @@ def test_a_dump_that_leaves_ordered_out_still_writes_the_dimension(dump):
     """The serializer dropped `ordered` with `del`, so a dump that had already left it out raised a KeyError."""
     spec = to_spec({'dimensions': {'t': {'dtype': 'int'}}})
     assert spec.model_dump(**dump)['dimensions'] == {'t': {'dtype': 'int'}}
+
+
+#: A row of ``examples/sos.yaml``, the spec every case below patches.
+_ROW = {'dims': ['snapshot'], 'expression': 'sum(dispatch, over=generator) >= load'}
+
+
+@pytest.mark.parametrize(
+    'patch',
+    [
+        pytest.param({'constraints.dispatch': _ROW}, id='a-constraint-named-after-a-variable'),
+        pytest.param({'assumptions.load': {'holds': 'load >= 0'}}, id='an-assumption-named-after-a-parameter'),
+        pytest.param(
+            {'sos.dispatch': {'variable': 'dispatch', 'along': 'generator', 'type': 1}},
+            id='a-set-named-after-its-variable',
+        ),
+        pytest.param(
+            {'piecewise.load': {'over': 'bp', 'links': [['dispatch', 'bp_x'], ['op_cost', 'bp_y']]}},
+            id='a-curve-named-after-a-parameter',
+        ),
+        pytest.param(
+            {'constraints.cost_curve': _ROW, 'assumptions.cost_curve': {'holds': 'load >= 0'}},
+            id='a-constraint-an-assumption-and-a-curve-of-one-name',
+        ),
+    ],
+)
+def test_a_row_a_set_a_curve_and_an_assumption_sit_outside_the_flat_namespace(patch):
+    """What the language reference states under name resolution: none of these four is read by a bare name."""
+    schema_of(EXAMPLES / 'sos.yaml', **patch)

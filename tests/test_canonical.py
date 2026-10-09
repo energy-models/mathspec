@@ -145,15 +145,15 @@ SECTIONS = [
     'dimensions',
     'relations',
     'parameters',
-    'variables',
-    'constraints',
-    'objective',
-    'expressions',
     'masks',
-    'macros',
-    'piecewise',
+    'variables',
+    'expressions',
+    'objective',
+    'constraints',
     'sos',
+    'piecewise',
     'assumptions',
+    'macros',
 ]
 
 

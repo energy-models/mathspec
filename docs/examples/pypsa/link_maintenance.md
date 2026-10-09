@@ -243,6 +243,21 @@ assumptions:
       (`constraints.py:504-507`)
 ```
 
+#### Given
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$, data another file declares |
+| $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$, data another file declares |
+| $`\mathrm{f}^{\mathrm{mod}}`$ | `Link_p_nom_mod` over $`\mathcal{L}`$, data another file declares |
+| $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{T} \times \mathcal{L}`$, data another file declares |
+| $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
+| $`\underline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_min` over $`\Xi \times \mathcal{L}`$, data another file declares |
+| $`\overline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_max` over $`\Xi \times \mathcal{L}`$, data another file declares |
+| $`u^{f}`$ | `Link_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
+| $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ |
+| $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{T} \times \mathcal{L}`$, a mask another file defines |
+
 #### Sets
 
 | Symbol | Meaning |
@@ -261,6 +276,12 @@ assumptions:
 | $`\tau^{f,\mathrm{mnt}}`$ | `Link_maintenance_duration` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the link is not maintainable. No row reads it: data prep turns it into `Link_maintenance_cover` and `Link_maintenance_start_blocked`, and the assumptions hold it to the horizon |
 | $`\mathrm{blk}^{f}`$ | `Link_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the link does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 
+#### Masks
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{f,\mathrm{mnt,ext}}`$ | `Link_maint_ext` over $`\mathcal{T} \times \mathcal{L}`$ — a maintainable link with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
+
 #### Variables
 
 | Symbol | Meaning |
@@ -270,26 +291,39 @@ assumptions:
 | $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `Link-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
 | $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `Link-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
 
-#### Given
-
-| Symbol | Meaning |
-|---|---|
-| $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$, data another file declares |
-| $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$, data another file declares |
-| $`\mathrm{f}^{\mathrm{mod}}`$ | `Link_p_nom_mod` over $`\mathcal{L}`$, data another file declares |
-| $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{T} \times \mathcal{L}`$, data another file declares |
-| $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
-| $`\underline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_min` over $`\Xi \times \mathcal{L}`$, data another file declares |
-| $`\overline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_max` over $`\Xi \times \mathcal{L}`$, data another file declares |
-| $`u^{f}`$ | `Link_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
-| $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ |
-| $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{T} \times \mathcal{L}`$, a mask another file defines |
-
 #### Masks
 
-| Symbol | Meaning |
-|---|---|
-| $`\mathrm{on}^{f,\mathrm{mnt,ext}}`$ | `Link_maint_ext` over $`\mathcal{T} \times \mathcal{L}`$ — a maintainable link with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
+**`Link_maint_ext`**
+
+```math
+\mathrm{on}^{f,\mathrm{mnt,ext}}_{t,l} \iff \mathrm{mnt}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{com}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+#### Variable domains
+
+**`Link_maintenance`**
+
+```math
+0 \le \mu^{f}_{\xi,t,l} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+```
+
+**`Link_maintenance_start`**
+
+```math
+\mu^{f,\mathrm{up}}_{\xi,t,l} \in \{0, 1\} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+```
+
+**`Link_maintenance_capacity`**
+
+```math
+\mu^{f,\mathrm{nom}}_{\xi,t,l} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{mnt,ext}}_{t,l}
+```
+
+**`Link_maintenance_status`**
+
+```math
+\mu^{f,u}_{\xi,t,l} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \right)
+```
 
 #### Subject to
 
@@ -369,40 +403,6 @@ assumptions:
 
 ```math
 \mu^{f,u}_{\xi,t,l} \ge u^{f}_{\xi,t,l} - \frac{\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l}}{\mathrm{f}^{\mathrm{mod}}_{l}} \cdot \left( 1 - \mu^{f}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
-```
-
-#### Masks
-
-**`Link_maint_ext`**
-
-```math
-\mathrm{on}^{f,\mathrm{mnt,ext}}_{t,l} \iff \mathrm{mnt}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{com}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
-```
-
-#### Variable domains
-
-**`Link_maintenance`**
-
-```math
-0 \le \mu^{f}_{\xi,t,l} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
-```
-
-**`Link_maintenance_start`**
-
-```math
-\mu^{f,\mathrm{up}}_{\xi,t,l} \in \{0, 1\} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
-```
-
-**`Link_maintenance_capacity`**
-
-```math
-\mu^{f,\mathrm{nom}}_{\xi,t,l} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{mnt,ext}}_{t,l}
-```
-
-**`Link_maintenance_status`**
-
-```math
-\mu^{f,u}_{\xi,t,l} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \right)
 ```
 
 #### Assumptions

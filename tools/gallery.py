@@ -24,7 +24,7 @@ import yaml
 from mathspec import merge, override, to_spec, typeset_declaration
 from mathspec.program import Add, Constant, NamedExpression
 from mathspec.typesetting import to_markdown
-from tools._page import ROOT, sidecar_for, splice, tab, without_header
+from tools._page import ROOT, sidecar_for, splice, split_math, tab, without_header
 from tools._page import main as page_main
 from tools.notation import equations
 from tools.spec_math import OPERATORS, PROBES, _section, rendered_probe
@@ -259,17 +259,26 @@ def _stands_for(name: str, description: str | None) -> str:
 
 
 def declared_block(path: Path) -> str:
-    """The legend, the objective, then every constraint and every named expression as YAML beside its equation."""
+    """The legend, then every declaration that prints a line, as YAML beside that line, in the document's order."""
     text = without_header(path)
     model = to_spec(path)
-    page = to_markdown(model, symbols=sidecar_for(path), numbered=False)
-    legend = page[: page.index('#### Objective')].strip()
-    objective = _section(page, 'Objective').strip().removeprefix('#### Objective').strip()
-    equation = equations(_section(page, 'Subject to'))
-    definition = equations(_section(page[page.index('#### Objective') :], 'Definitions')) if model.expressions else {}
-    domains = _section(page, 'Variable domains').strip()
-    assumption = equations(_section(page, 'Assumptions')) if model.assumptions else {}
-    parts = [legend, f'### Objective\n\n```yaml\n{declaration(text, "objective")}\n```\n\n{objective}']
+    legend, math = split_math(model, symbols=sidecar_for(path), numbered=False)
+    objective = _section(math, 'Objective').strip().removeprefix('#### Objective').strip()
+    equation = equations(_section(math, 'Subject to'))
+    definition = equations(_section(math, 'Definitions')) if model.expressions else {}
+    mask = equations(_section(math, 'Masks')) if model.masks else {}
+    domains = _section(math, 'Variable domains').strip()
+    assumption = equations(_section(math, 'Assumptions')) if model.assumptions else {}
+    parts = [legend.strip()]
+    parts.extend(
+        f'### `{name}`\n\n```yaml\n{declaration(text, "masks", name)}\n```\n\n{mask[name]}' for name in model.masks
+    )
+    parts.append(domains)
+    parts.extend(
+        f'### `{name}`\n\n```yaml\n{declaration(text, "expressions", name)}\n```\n\n{definition[name]}'
+        for name in model.expressions
+    )
+    parts.append(f'### Objective\n\n```yaml\n{declaration(text, "objective")}\n```\n\n{objective}')
     for name, block in model.constraints.items():
         printed = equation[name]
         if _reads_a_sum(model, name):
@@ -282,10 +291,10 @@ def declared_block(path: Path) -> str:
             f'{printed}'
         )
     parts.extend(
-        f'### `{name}`\n\n```yaml\n{declaration(text, "expressions", name)}\n```\n\n{definition[name]}'
-        for name in model.expressions
+        f'### `{name}`\n\n```yaml\n{declaration(text, section, name)}\n```\n\n{equation[name]}'
+        for section, group in (('sos', model.sos), ('piecewise', model.piecewise))
+        for name in group
     )
-    parts.append(domains)
     parts.extend(
         f'### `{name}`\n\n```yaml\n{declaration(text, "assumptions", name)}\n```\n\n{assumption[name]}'
         for name in model.assumptions

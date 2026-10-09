@@ -15,6 +15,9 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mathspec.spec import PIECEWISE_METHODS
+from mathspec.typesetting import to_markdown
+from mathspec.validation import to_spec
+from tests.fixtures import EXAMPLES
 from tools import expansion_math, gallery, home_math, notation, spec_math
 
 if TYPE_CHECKING:
@@ -78,6 +81,35 @@ def test_every_piecewise_method_has_a_model_on_the_notation_page():
     assert set(notation.PIECEWISE) == set(PIECEWISE_METHODS), (
         'a method added to the language lands here as a missing key rather than as a formulation the page omits'
     )
+
+
+def test_a_mask_and_a_constraint_of_one_name_are_refused_rather_than_merged_into_one_line():
+    """`notation.equations` keyed every line by its label, so a constraint sharing a mask's name replaced the mask's line (#848)."""
+    spec = to_spec(EXAMPLES / 'sos.yaml')
+    shared = to_spec(
+        {
+            **spec.to_dict(),
+            'masks': {'busy': {'where': 'load > 0'}},
+            'constraints': {'busy': {'dims': ['snapshot'], 'expression': 'sum(dispatch, over=generator) >= load'}},
+        }
+    )
+    with pytest.raises(ValueError, match="two lines print under the label 'busy'"):
+        notation.equations(to_markdown(shared, numbered=False))
+
+
+def test_a_declared_page_prints_every_set_and_curve_beside_its_line(tmp_path: Path):
+    """A set and a curve moved from Variable domains to Subject to, and the declared page read only the constraints there (#848)."""
+    text = (
+        (EXAMPLES / 'sos.yaml')
+        .read_text()
+        .replace('  balance:\n', '  balance:\n    description: "`balance` — demand met"\n')
+    )
+    spec = tmp_path / 'declared.yaml'
+    spec.write_text(f'{text}\nsos:\n  one_unit:\n    variable: dispatch\n    along: generator\n    type: 1\n')
+    block = gallery.declared_block(spec)
+    for name in ('one_unit', 'cost_curve'):
+        assert f'### `{name}`\n\n```yaml\n{name}:' in block, f'{name} prints under its own heading'
+    assert r'\mathrm{SOS}1' in block and r'\mathrm{pwl}' in block, 'the set and the curve print as math'
 
 
 def _card_bodies(page: Path) -> list[tuple[int, str]]:

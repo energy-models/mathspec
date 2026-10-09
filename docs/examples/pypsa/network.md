@@ -45,6 +45,12 @@ constraints:
     expression: Bus_injection == 0
 ```
 
+#### Given
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression another file defines — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
+
 #### Sets
 
 | Symbol | Meaning |
@@ -52,12 +58,6 @@ constraints:
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 | $`\mathcal{N}`$ | index $`n`$ — `bus` — network nodes |
-
-#### Given
-
-| Symbol | Meaning |
-|---|---|
-| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression another file defines — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
 
 #### Subject to
 

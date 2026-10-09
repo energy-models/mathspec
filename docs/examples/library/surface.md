@@ -53,6 +53,12 @@ objective:
 
 The coupling surface every component in this library is written against: one flow per port, one balance per bus, and one cost to minimise. A component is wired to a port, the port to a bus, and the balance names no component class. A flow is positive where the port injects into its bus. A component that costs something adds its cost to `total_cost`.
 
+#### Given
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression another file defines — what running the system costs |
+
 #### Sets
 
 | Symbol | Meaning |
@@ -67,11 +73,13 @@ The coupling surface every component in this library is written against: one flo
 |---|---|
 | $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — what a port puts into its bus in a snapshot, negative for a withdrawal |
 
-#### Given
+#### Variable domains
 
-| Symbol | Meaning |
-|---|---|
-| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression another file defines — what running the system costs |
+**`Port_p`**
+
+```math
+f_{t,j} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
 
 #### Objective
 
@@ -85,13 +93,5 @@ The coupling surface every component in this library is written against: one flo
 
 ```math
 \sum_{j \in \mathcal{J} \,:\, \mathrm{Port\_bus}(j) = n} f_{t,j} = 0 \qquad \forall\, t \in \mathcal{T},\ n \in \mathcal{N}
-```
-
-#### Variable domains
-
-**`Port_p`**
-
-```math
-f_{t,j} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
 ```
 <!-- gallery:end -->

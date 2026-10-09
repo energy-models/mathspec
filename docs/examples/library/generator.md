@@ -68,6 +68,13 @@ expressions:
 
 PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to what a dispatch spec needs: a fixed build, no availability profile, no ramp limits.
 
+#### Given
+
+| Symbol | Meaning |
+|---|---|
+| $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — the surface introduces this flow, and this file pins it at its own ports |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Generator_cost` to |
+
 #### Sets
 
 | Symbol | Meaning |
@@ -89,25 +96,18 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 |---|---|
 | $`p`$ | `Generator_p` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-p` — what a generator produces in a snapshot |
 
-#### Given
-
-| Symbol | Meaning |
-|---|---|
-| $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — the surface introduces this flow, and this file pins it at its own ports |
-| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Generator_cost` to |
-
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
 | $`\mathit{Generator\_cost}`$ | `Generator_cost` (scalar) |
 
-#### Subject to
+#### Variable domains
 
-**`Generator_injection`**
+**`Generator_p`**
 
 ```math
-f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+0 \le p_{t,g} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 #### Definitions
@@ -118,11 +118,11 @@ f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\
 \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
 ```
 
-#### Variable domains
+#### Subject to
 
-**`Generator_p`**
+**`Generator_injection`**
 
 ```math
-0 \le p_{t,g} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 <!-- gallery:end -->

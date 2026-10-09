@@ -359,6 +359,16 @@ constraints:
     expression: Transformer_loss - Transformer_loss_slope * Transformer_s >= Transformer_loss_offset
 ```
 
+#### Given
+
+| Symbol | Meaning |
+|---|---|
+| $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
+| $`\mathrm{lossy}`$ | `transmission_losses` (scalar), data another file declares |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Transformer_capex` to |
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Transformer_injection` to |
+| $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$, an expression this file adds `Transformer_angle_sum` to |
+
 #### Sets
 
 | Symbol | Meaning |
@@ -399,6 +409,12 @@ constraints:
 | $`\mathrm{a}^{\sigma}`$ | `Transformer_loss_slope` over $`\Xi \times \mathcal{T} \times \mathcal{M} \times \mathcal{S}`$ — the slope of a cut to a transformer's loss curve — a tangent's `2 * r_pu_eff * p_k`, a secant's `r_pu_eff * (p_k + p_k+1)`, as a line's, over the transformer's own `r_pu_eff` and rating, data prep |
 | $`\mathrm{b}^{\sigma}`$ | `Transformer_loss_offset` over $`\Xi \times \mathcal{T} \times \mathcal{M} \times \mathcal{S}`$ — where that cut meets the loss axis — a tangent's `loss_k - slope_k * p_k`, a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep |
 
+#### Masks
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{\sigma,\mathrm{lossy}}`$ | `Transformer_lossy` over $`\mathcal{T} \times \mathcal{M}`$ — a transformer that stands in the snapshot's period, where the run models transmission losses |
+
 #### Variables
 
 | Symbol | Meaning |
@@ -409,16 +425,6 @@ constraints:
 | $`\Sigma`$ | `Transformer_s_nom_ext` over $`\mathcal{M}`$ — `Transformer-s_nom` — nominal apparent power where it is a decision; the parameter of the same PyPSA name carries the fixed regime |
 | $`N^{\sigma}`$ | `Transformer_n_mod` over $`\mathcal{M}`$ — `Transformer-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot |
 
-#### Given
-
-| Symbol | Meaning |
-|---|---|
-| $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
-| $`\mathrm{lossy}`$ | `transmission_losses` (scalar), data another file declares |
-| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Transformer_capex` to |
-| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Transformer_injection` to |
-| $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$, an expression this file adds `Transformer_angle_sum` to |
-
 #### Definitions
 
 | Symbol | Meaning |
@@ -428,13 +434,73 @@ constraints:
 | $`\mathit{Transformer\_injection}`$ | `Transformer_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 | $`\mathit{Transformer\_angle\_sum}`$ | `Transformer_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ |
 
+Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\_phase\_shift\_varying}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{Transformer\_phase\_shift}`$. An index is italic too, being what a quantifier chooses, and a set is script.
+
 #### Masks
 
-| Symbol | Meaning |
-|---|---|
-| $`\mathrm{on}^{\sigma,\mathrm{lossy}}`$ | `Transformer_lossy` over $`\mathcal{T} \times \mathcal{M}`$ — a transformer that stands in the snapshot's period, where the run models transmission losses |
+**`Transformer_lossy`**
 
-Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\_phase\_shift\_varying}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{Transformer\_phase\_shift}`$. An index is italic too, being what a quantifier chooses, and a set is script.
+```math
+\mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m} \iff \mathrm{lossy} \wedge \mathrm{on}^{\sigma}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}
+```
+
+#### Variable domains
+
+**`Transformer_s`**
+
+```math
+\sigma_{\xi,t,m} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma}_{t,m}
+```
+
+**`Transformer_loss`**
+
+```math
+\ell^{\sigma}_{\xi,t,m} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m}
+```
+
+**`Transformer_phase_shift`**
+
+```math
+\mathrm{Transformer\_phase\_shift\_min}_{m} \le \mathit{Transformer\_phase\_shift}_{\xi,t,m} \le \mathrm{Transformer\_phase\_shift\_max}_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+```
+
+**`Transformer_s_nom_ext`**
+
+```math
+\Sigma_{m} \in \mathbb{R} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m}
+```
+
+**`Transformer_n_mod`**
+
+```math
+N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{\sigma}_{t,m} \} \rvert > 0
+```
+
+#### Definitions
+
+**`Transformer_capex`**
+
+```math
+\mathit{Transformer\_capex} = \sum_{\xi \in \Xi,\ m \in \mathcal{M}} \pi_{\xi} \cdot \Sigma_{m} \cdot \mathrm{c}^{\mathrm{cap},\sigma}_{\xi,m} \cdot \mathrm{W}^{\sigma}_{m}
+```
+
+**`Transformer_s_monitored`**
+
+```math
+\check{\sigma}_{\xi,t,m} = \begin{cases} \sigma_{\xi,t,m} & \text{if } \mathrm{on}^{\sigma}_{t,m} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M}
+```
+
+**`Transformer_injection`**
+
+```math
+\mathit{Transformer\_injection}_{\xi,t,n} = -\left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus0}(m) = n} \sigma_{\xi,t,m} \right) + \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus1}(m) = n} \sigma_{\xi,t,m} - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus0}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus1}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+```
+
+**`Transformer_angle_sum`**
+
+```math
+\mathit{Transformer\_angle\_sum}_{\xi,t,c} = \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{\mathrm{snapshot\_period}(t),m,c} + \sum_{m \in \mathcal{M}} \vartheta_{t,m,c} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{\mathrm{snapshot\_period}(t),m,c} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
+```
 
 #### Subject to
 
@@ -532,71 +598,5 @@ Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\
 
 ```math
 \ell^{\sigma}_{\xi,t,m} - \mathrm{a}^{\sigma}_{\xi,t,m,s} \cdot \sigma_{\xi,t,m} \ge \mathrm{b}^{\sigma}_{\xi,t,m,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ s \in \mathcal{S} \,:\, \mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m}
-```
-
-#### Definitions
-
-**`Transformer_capex`**
-
-```math
-\mathit{Transformer\_capex} = \sum_{\xi \in \Xi,\ m \in \mathcal{M}} \pi_{\xi} \cdot \Sigma_{m} \cdot \mathrm{c}^{\mathrm{cap},\sigma}_{\xi,m} \cdot \mathrm{W}^{\sigma}_{m}
-```
-
-**`Transformer_s_monitored`**
-
-```math
-\check{\sigma}_{\xi,t,m} = \begin{cases} \sigma_{\xi,t,m} & \text{if } \mathrm{on}^{\sigma}_{t,m} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M}
-```
-
-**`Transformer_injection`**
-
-```math
-\mathit{Transformer\_injection}_{\xi,t,n} = -\left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus0}(m) = n} \sigma_{\xi,t,m} \right) + \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus1}(m) = n} \sigma_{\xi,t,m} - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus0}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus1}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
-```
-
-**`Transformer_angle_sum`**
-
-```math
-\mathit{Transformer\_angle\_sum}_{\xi,t,c} = \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{\mathrm{snapshot\_period}(t),m,c} + \sum_{m \in \mathcal{M}} \vartheta_{t,m,c} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{\mathrm{snapshot\_period}(t),m,c} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
-```
-
-#### Masks
-
-**`Transformer_lossy`**
-
-```math
-\mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m} \iff \mathrm{lossy} \wedge \mathrm{on}^{\sigma}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}
-```
-
-#### Variable domains
-
-**`Transformer_s`**
-
-```math
-\sigma_{\xi,t,m} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma}_{t,m}
-```
-
-**`Transformer_loss`**
-
-```math
-\ell^{\sigma}_{\xi,t,m} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m}
-```
-
-**`Transformer_phase_shift`**
-
-```math
-\mathrm{Transformer\_phase\_shift\_min}_{m} \le \mathit{Transformer\_phase\_shift}_{\xi,t,m} \le \mathrm{Transformer\_phase\_shift\_max}_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
-```
-
-**`Transformer_s_nom_ext`**
-
-```math
-\Sigma_{m} \in \mathbb{R} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m}
-```
-
-**`Transformer_n_mod`**
-
-```math
-N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{\sigma}_{t,m} \} \rvert > 0
 ```
 <!-- gallery:end -->

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from mathspec.spec import PIECEWISE_METHODS
 from mathspec.typesetting import to_markdown
 from mathspec.validation import to_spec
-from tools._page import ROOT, sidecar_for, splice, without_header
+from tools._page import ROOT, sidecar_for, splice, split_math, without_header
 from tools._page import main as page_main
 
 if TYPE_CHECKING:
@@ -260,28 +260,37 @@ def equations(rendered: str) -> dict[str, str]:
 
     The objective's line carries no label — the block has no name — so it is
     keyed by the section it is the only member of.
+
+    Raises:
+        ValueError: Two lines print under one label. A constraint, a set, a
+            curve and an assumption sit outside the flat namespace, so each may
+            share a name with a declaration in it, and a page keyed by the label
+            alone would show one line under the other's heading.
     """
     found = {}
-    label = 'objective'
+    label = None
     for block in rendered.split('\n\n'):
-        if match := re.fullmatch(r'\*\*`(.+)`\*\*', block.strip()):
+        if block.startswith('#### '):
+            label = 'objective' if block.strip() == '#### Objective' else None
+        elif match := re.fullmatch(r'\*\*`(.+)`\*\*', block.strip()):
             label = match[1]
         elif block.startswith('```math'):
+            if label in found:
+                msg = f'two lines print under the label {label!r}: rename one, so each prints under its own heading'
+                raise ValueError(msg)
             found[label] = block.strip()
     return found
 
 
-def legend(rendered: str) -> str:
+def legend() -> str:
     """The tables and the translation notes, without the spec's description.
 
     The description is the fixture's own — a line of escaping torture, there so
     CI's LaTeX run proves the escapes right — and it says nothing about
     notation, which is what this page is for.
     """
-    blocks = rendered.split('\n\n')
-    start = next(i for i, block in enumerate(blocks) if block.startswith('#### '))
-    end = next(i for i, block in enumerate(blocks) if block.startswith('#### Objective'))
-    return '\n\n'.join(blocks[start:end]).strip()
+    head, _ = split_math(MODEL, numbered=False)
+    return head[head.index('#### ') :].strip()
 
 
 #: What the legend is made of. No equation comes from these, so they are shown
@@ -307,7 +316,7 @@ def block() -> str:
         'A dimension, a relation and a parameter declare no equation; what they '
         'print is the legend every spec opens with.',
         f'```yaml\n{preamble(MODEL.read_text())}\n```',
-        legend(rendered),
+        legend(),
     ]
     printed = equations(rendered)
     written = equations(to_markdown(to_spec(MODEL).expand('sos'), numbered=False))
@@ -335,8 +344,8 @@ def block() -> str:
             continue
         if family == 'Special ordered sets':
             parts.append(
-                'A set prints beside the variable it restricts, because it restricts that variable rather than '
-                'adding a row of its own. Under it are the rows it is written out as.'
+                'A set prints under Subject to, after the constraints and before the curves, because a solver '
+                'holds it as a constraint. Under it are the rows it is written out as.'
             )
             parts += [
                 f'{_row(found[name], heading, printed)}\n\n{_written_out(name, written)}'
