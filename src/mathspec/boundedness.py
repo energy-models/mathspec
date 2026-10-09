@@ -86,9 +86,8 @@ def unbounded_notes(program: Program) -> list[Advice]:
                     'unbounded',
                     vname,
                     f"Variable '{vname}' makes this spec unbounded: no constraint names it, and "
-                    f'bounds.{side} is open, which is the direction a {sign}{vname} term '
-                    f'improves a {program.objective.sense} objective in. No data can change that, so '
-                    f'the solve would answer `unbounded` and name nothing.\n'
+                    f'bounds.{side} is open, and the {sign}{vname} term in the {program.objective.sense} '
+                    f'objective improves toward it.\n'
                     f'Give it a finite bounds.{side}, or the constraint that was meant to define it.',
                 )
             )

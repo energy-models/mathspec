@@ -150,7 +150,7 @@ def test_resolving_keeps_the_static_reach_and_what_a_relation_decides():
 
 
 def test_resolving_a_name_nothing_waits_on_is_refused():
-    with pytest.raises(KeyError, match="'depth' is not a parameter an undecided reach along 'h' waits on"):
+    with pytest.raises(KeyError, match="'depth' is not a parameter that an undecided reach along 'h' waits on"):
         _verdict(**_rows('p >= shift(p, along=h, offset=width, edge=0)')).resolved({'depth': 0})
 
 
@@ -175,7 +175,7 @@ def test_a_sum_over_a_lookup_is_a_sum_and_a_lookup_not_a_grouping():
     rows = _rows('sum(at(q, by=zone_of[zone]), over=u) <= budget', dims=['h'])
     program = to_spec({**BASE, 'variables': variables, **rows}).program
     assert list(program.separability['u'].coupled.values()) == [
-        'sums over u — a rolling sum_back(window=n) windows, a total over the horizon does not'
+        'sums over u (use sum_back(window=n) for a rolling sum)'
     ], 'the sum over u is a plain sum, reported as one'
     assert program.separability['zone'].undecided == (Reach("constraint 'k'", 'zone_of', 'coordinate'),), (
         'the lookup under it still reads zone at a coordinate the relation chooses'
@@ -245,7 +245,7 @@ def test_a_grouping_that_sums_the_axis_away_couples_it():
     verdict = program.separability['u']
     assert not verdict.windowable, 'the grouping sums u away, so a window of u is a different sum'
     assert verdict.coupled == {
-        "constraint 'z'": 'groups u into zone — window that dimension instead, or cut only at the group edges'
+        "constraint 'z'": 'groups u into zone (window that dimension instead, or cut only at the group edges)'
     }, 'the sum over the join is the grouping, reported once'
     assert not verdict.undecided, 'the join under the sum is not also a lookup waiting on the relation'
 

@@ -98,7 +98,7 @@ def main(argv: list[str] | None, pages: Mapping[Path, Callable[[str], str]], too
         elif updated != text:
             stale.append(str(path.relative_to(ROOT)))
     if stale:
-        print(f'{", ".join(stale)} stale — run `pixi run python -m tools.{tool}`', file=sys.stderr)
+        print(f'stale: {", ".join(stale)}. Run `pixi run python -m tools.{tool}`.', file=sys.stderr)
         return 1
     if check:
         print(f'{len(pages)} page(s) current')

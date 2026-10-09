@@ -100,7 +100,7 @@ _PREDICATES: dict[PredicateOperator, OperatorName] = {
 }
 
 
-#: Edge policy -> the operator pair that renders it, backward then forward —
+#: Edge policy -> the operator pair that renders it, backward then forward:
 #: the vacated row dropped, wrapped, or filled.
 _TRANSLATIONS: dict[TranslationPolicy, tuple[OperatorName, OperatorName]] = {
     'plain': ('minus', 'plus'),
@@ -794,7 +794,7 @@ class Walk:
             )
             raise SchemaError(msg)
         if len(found) > 1:
-            msg = f"'{name}' is declared twice, as {found[0]} and as {found[1]}, and one line prints one of them — rename one."
+            msg = f"'{name}' is declared twice, as {found[0]} and as {found[1]}. Rename one."
             raise SchemaError(msg)
         return kinds[found[0]][1](name)
 

@@ -6,9 +6,9 @@ SPDX-License-Identifier: CC-BY-4.0
 # See what a curve or a set expands to
 
 A [`piecewise:`](../reference/language/piecewise.md) block and a `sos:` block
-each stand for plain variables and constraints. Write them out to review a
-formulation, to teach one, or to hand the spec to an engine that has no
-concept of a set.
+(a special ordered set) each stand for plain variables and constraints. Write
+them out to review a formulation, to teach one, or to hand the spec to an
+engine that cannot read a `sos:` block.
 
 ## 1. Write the formulation out
 
@@ -31,7 +31,8 @@ prints the result as a file.
     ```
 
 The command line prints the expansion as math rather than as YAML. Pass
-`'piecewise'` or `'sos'` to write out one kind and keep the other.
+`'piecewise'` or `'sos'` to `expand()` to write out one kind and keep the
+other.
 
 ## 2. Read a set
 
@@ -247,9 +248,8 @@ the set out too.
             holds: x_bp AND y_bp
             description: >-
               piecewise 'curve': every breakpoint the curve runs through needs a row in
-              'x_bp', 'y_bp' — a missing row does not shorten the
-              curve. Attach the rows, or declare
-              points: to say how far the curve runs.
+              'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows, or declare points: to say how far the curve
+              runs.
         ```
 
     === "Math"
@@ -354,9 +354,8 @@ the set out too.
             holds: x_bp AND y_bp
             description: >-
               piecewise 'curve': every breakpoint the curve runs through needs a row in
-              'x_bp', 'y_bp' — a missing row does not shorten the
-              curve. Attach the rows, or declare
-              points: to say how far the curve runs.
+              'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows, or declare points: to say how far the curve
+              runs.
         ```
 
     === "Math"

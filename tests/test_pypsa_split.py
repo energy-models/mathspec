@@ -170,5 +170,5 @@ def test_the_split_index_names_a_hub_once_per_fragment_and_needs_a_described_rea
     assert '[`demand_injection`](demand.md), [`curtailment`](fleet.md), [`generator_injection`](fleet.md)' in index, (
         'every term of the fragment, by fragment then by name'
     )
-    with pytest.raises(ValueError, match=r"no fragment reads 'injection' with a description and adds nothing to it"):
+    with pytest.raises(ValueError, match=r"no fragment that reads 'injection' without adding to it describes it"):
         split_index({'fleet': specs['fleet'], 'demand': specs['demand']})

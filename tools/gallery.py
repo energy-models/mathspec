@@ -71,7 +71,7 @@ COMPOSED = {
     ),
 }
 
-#: Page -> the spec it shows one declaration at a time — its YAML, then the
+#: Page -> the spec it shows one declaration at a time: its YAML, then the
 #: equation it renders, headed by the name the other side gives it, read from
 #: the declaration's own description.
 DECLARED = {
@@ -160,8 +160,8 @@ def split_index(specs: Mapping[str, Spec]) -> str:
     if unread := sorted(set(terms) - set(readers)):
         spelled = ', '.join(f'{hub!r}' for hub in unread)
         msg = (
-            f'no fragment reads {spelled} with a description and adds nothing to it, so the index has no reader '
-            f"to name: describe each under 'given: expressions:' in the fragment that reads it."
+            f'no fragment that reads {spelled} without adding to it describes it. '
+            f"Describe each under 'given: expressions:' in the fragment that reads it."
         )
         raise ValueError(msg)
     sums = ['| Sum | Over | Read in | The terms, by the fragment that adds each |', '| --- | --- | --- | --- |']
@@ -248,9 +248,7 @@ def _names_for(name: str, description: str | None) -> list[str]:
     head = text.split(' — ', 1)[0] if ' — ' in text else (re.match(r'`[^`]+`', text) or [''])[0]
     names = re.findall(r'`([^`]+)`', head)
     if not names:
-        msg = (
-            f'{name}: a declaration on a declared page opens its description with the name it stands for, in backticks'
-        )
+        msg = f'{name}: the description does not start with a name in backticks. Start it with the name it stands for.'
         raise ValueError(msg)
     return names
 

@@ -114,13 +114,13 @@ class UnresolvedComparisonNode:
     right: ArithmeticNode | ColumnNode | KeywordNode
 
 
-#: What resolution rewrites away on the where side — the nodes whose leaves
-#: are still names the schema has not been asked about.
+#: The where nodes that resolution replaces: their leaves are names not yet
+#: looked up in the spec.
 UnresolvedWhereNode = NameNode | UnresolvedComparisonNode | UnresolvedPredicateCallNode | UnresolvedCountNode
 
 #: Every node a parsed where string is built of: the connectives and literals,
 #: the unresolved leaves, and the arithmetic and the two side nodes under a
-#: comparison. What the depth measurement walks.
+#: comparison. The depth check walks these.
 ParsedWhere = Predicate | UnresolvedWhereNode | ArithmeticNode | ColumnNode | KeywordNode
 
 
@@ -236,13 +236,13 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     """
     rest = text[loc:].lstrip()
     if rest.startswith('&'):
-        return "'&' is not the conjunction — both predicates at once is written AND."
+        return "'&' is not a where operator. Write AND."
     if rest.startswith('|'):
-        return "'|' is not the disjunction — either predicate is written OR."
+        return "'|' is not a where operator. Write OR."
     if rest.startswith(('~', '!')) and not rest.startswith('!='):
-        return f"'{rest[0]}' is not the negation — it is written NOT, before the predicate."
+        return f"'{rest[0]}' is not a where operator. Write NOT before the predicate."
     if rest.startswith('=') and not rest.startswith('=='):
-        return "'=' compares nothing — equality is written ==."
+        return "'=' is not a comparison. Write ==."
     if (listed := re.match(rf'\[\s*({NAME}(?:\s*,\s*{NAME})+)\s*\]', rest)) and (
         before := re.search(rf'({NAME})\s*$', text[:loc])
     ):
@@ -252,9 +252,8 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     return None
 
 
-#: The rewrite an over-deep where string is given. A long chain of predicates
-#: is a test the file could carry as data instead, which is the language's own
-#: answer before the general one.
+#: The rewrite for a where string that nests too deep. The file can carry part
+#: of a long chain of predicates as data, so this rewrite comes first.
 _DEEP_REWRITE = (
     'Declare a parameter or relation carrying part of the test and name that here, or split the '
     'declaration into two, each masked by one half.'
