@@ -220,20 +220,6 @@ print(ms.to_markdown(spec, legend=False))
 
 !!! example "Rendered output"
 
-    #### Objective
-
-    ```math
-    \min \mathit{total\_cost}
-    ```
-
-    #### Subject to
-
-    **`balance`**
-
-    ```math
-    \mathit{injection}_{t,b} = 0 \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
-    ```
-
     #### Variable domains
 
     **`dispatch`**
@@ -272,6 +258,20 @@ print(ms.to_markdown(spec, legend=False))
 
     ```math
     \mathit{total\_cost} = \mathit{generation}^{\mathrm{cost}}
+    ```
+
+    #### Objective
+
+    ```math
+    \min \mathit{total\_cost}
+    ```
+
+    #### Subject to
+
+    **`balance`**
+
+    ```math
+    \mathit{injection}_{t,b} = 0 \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
     ```
 
 ## Add a component

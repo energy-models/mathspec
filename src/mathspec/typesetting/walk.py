@@ -657,11 +657,11 @@ class Walk:
     def equations(self) -> list[tuple[str, list[Line]]]:
         """Every titled section of equations."""
         return [
-            ('Objective', self._objective()),
-            ('Subject to', self._constraints()),
+            ('Masks', [self.mask(name) for name in self.program.masks]),
             ('Variable domains', [self._variable(name) for name in self.program.variables]),
             ('Definitions', self._definitions()),
-            ('Masks', [self.mask(name) for name in self.program.masks]),
+            ('Objective', self._objective()),
+            ('Subject to', self._constraints()),
             ('Assumptions', self._assumptions()),
         ]
 

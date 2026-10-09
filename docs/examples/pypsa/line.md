@@ -396,6 +396,12 @@ constraints:
 | $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$, `neutral` where the data has no row — the line's capital cost where its carrier is in the row's set, times the objective weights of the periods it stands in where the row names no `investment_period` under `multi_investment_periods` — data prep; a line outside the set, or one that does not stand in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Line_capital_cost` without `fom_cost` (`components.py:1151-1169`, `global_constraints.py:870-879`) |
 | $`\mathrm{m}^{l}`$ | `Line_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{K}`$, `neutral` where the data has no row — one where the line is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
+#### Masks
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{s,\mathrm{lossy}}`$ | `Line_lossy` over $`\mathcal{T} \times \mathcal{K}`$ — a line that stands in the snapshot's period, where the run models transmission losses |
+
 #### Variables
 
 | Symbol | Meaning |
@@ -420,9 +426,87 @@ constraints:
 
 #### Masks
 
-| Symbol | Meaning |
-|---|---|
-| $`\mathrm{on}^{s,\mathrm{lossy}}`$ | `Line_lossy` over $`\mathcal{T} \times \mathcal{K}`$ — a line that stands in the snapshot's period, where the run models transmission losses |
+**`Line_lossy`**
+
+```math
+\mathrm{on}^{s,\mathrm{lossy}}_{t,k} \iff \mathrm{lossy} \wedge \mathrm{on}^{s}_{t,k} \qquad \forall\, t \in \mathcal{T},\ k \in \mathcal{K}
+```
+
+#### Variable domains
+
+**`Line_s`**
+
+```math
+s_{\xi,t,k} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s}_{t,k}
+```
+
+**`Line_loss`**
+
+```math
+\ell_{\xi,t,k} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{t,k}
+```
+
+**`Line_s_nom_ext`**
+
+```math
+S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k}
+```
+
+**`Line_n_mod`**
+
+```math
+N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{s}_{t,k} \} \rvert > 0
+```
+
+#### Definitions
+
+**`Line_transmission_volume_expansion`**
+
+```math
+\mathit{Line\_transmission\_volume\_expansion}_{\xi,g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{len}_{\xi,g,k} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+```
+
+**`Line_transmission_expansion_cost`**
+
+```math
+\mathit{Line\_transmission\_expansion\_cost}_{\xi,g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{cc}_{\xi,g,k} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+```
+
+**`Line_tech_capacity_expansion`**
+
+```math
+\mathit{Line\_tech\_capacity\_expansion}_{g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{m}^{l}_{g,k} \qquad \forall\, g \in \mathcal{G}
+```
+
+**`Line_capex`**
+
+```math
+\mathit{Line\_capex} = \sum_{\xi \in \Xi,\ k \in \mathcal{K}} \pi_{\xi} \cdot S_{k} \cdot \mathrm{c}^{\mathrm{cap},s}_{\xi,k} \cdot \mathrm{W}^{s}_{k}
+```
+
+**`Line_additions`**
+
+```math
+\mathit{Line\_additions}_{y,i} = \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_carrier}(k) = i} S_{k} \cdot \mathrm{new}^{s}_{y,k} \qquad \forall\, y \in \mathcal{Y},\ i \in \mathcal{I}
+```
+
+**`Line_s_monitored`**
+
+```math
+\check{s}_{\xi,t,k} = \begin{cases} s_{\xi,t,k} & \text{if } \mathrm{on}^{s}_{t,k} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K}
+```
+
+**`Line_injection`**
+
+```math
+\mathit{Line\_injection}_{\xi,t,n} = -\left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} s_{\xi,t,k} \right) + \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} s_{\xi,t,k} - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} \ell_{\xi,t,k} \right) - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} \ell_{\xi,t,k} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+```
+
+**`Line_angle_sum`**
+
+```math
+\mathit{Line\_angle\_sum}_{\xi,t,c} = \sum_{k \in \mathcal{K}} s_{\xi,t,k} \cdot \mathrm{x}_{\mathrm{snapshot\_period}(t),k,c} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
+```
 
 #### Subject to
 
@@ -508,89 +592,5 @@ s_{\xi,t,k} \le \frac{\overline{\delta}_{\xi,k} \cdot \frac{3.141592653589793}{1
 
 ```math
 \ell_{\xi,t,k} - \mathrm{a}_{\xi,t,k,e} \cdot s_{\xi,t,k} \ge \mathrm{b}_{\xi,t,k,e} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ e \in \mathcal{E} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{t,k}
-```
-
-#### Variable domains
-
-**`Line_s`**
-
-```math
-s_{\xi,t,k} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s}_{t,k}
-```
-
-**`Line_loss`**
-
-```math
-\ell_{\xi,t,k} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{t,k}
-```
-
-**`Line_s_nom_ext`**
-
-```math
-S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k}
-```
-
-**`Line_n_mod`**
-
-```math
-N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{s}_{t,k} \} \rvert > 0
-```
-
-#### Definitions
-
-**`Line_transmission_volume_expansion`**
-
-```math
-\mathit{Line\_transmission\_volume\_expansion}_{\xi,g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{len}_{\xi,g,k} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
-```
-
-**`Line_transmission_expansion_cost`**
-
-```math
-\mathit{Line\_transmission\_expansion\_cost}_{\xi,g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{cc}_{\xi,g,k} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
-```
-
-**`Line_tech_capacity_expansion`**
-
-```math
-\mathit{Line\_tech\_capacity\_expansion}_{g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{m}^{l}_{g,k} \qquad \forall\, g \in \mathcal{G}
-```
-
-**`Line_capex`**
-
-```math
-\mathit{Line\_capex} = \sum_{\xi \in \Xi,\ k \in \mathcal{K}} \pi_{\xi} \cdot S_{k} \cdot \mathrm{c}^{\mathrm{cap},s}_{\xi,k} \cdot \mathrm{W}^{s}_{k}
-```
-
-**`Line_additions`**
-
-```math
-\mathit{Line\_additions}_{y,i} = \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_carrier}(k) = i} S_{k} \cdot \mathrm{new}^{s}_{y,k} \qquad \forall\, y \in \mathcal{Y},\ i \in \mathcal{I}
-```
-
-**`Line_s_monitored`**
-
-```math
-\check{s}_{\xi,t,k} = \begin{cases} s_{\xi,t,k} & \text{if } \mathrm{on}^{s}_{t,k} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K}
-```
-
-**`Line_injection`**
-
-```math
-\mathit{Line\_injection}_{\xi,t,n} = -\left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} s_{\xi,t,k} \right) + \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} s_{\xi,t,k} - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} \ell_{\xi,t,k} \right) - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} \ell_{\xi,t,k} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
-```
-
-**`Line_angle_sum`**
-
-```math
-\mathit{Line\_angle\_sum}_{\xi,t,c} = \sum_{k \in \mathcal{K}} s_{\xi,t,k} \cdot \mathrm{x}_{\mathrm{snapshot\_period}(t),k,c} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
-```
-
-#### Masks
-
-**`Line_lossy`**
-
-```math
-\mathrm{on}^{s,\mathrm{lossy}}_{t,k} \iff \mathrm{lossy} \wedge \mathrm{on}^{s}_{t,k} \qquad \forall\, t \in \mathcal{T},\ k \in \mathcal{K}
 ```
 <!-- gallery:end -->

@@ -65,9 +65,9 @@ def test_a_cased_expression_is_the_exception_that_keeps_its_name(name: FormatNam
         'one use and one definition, no more — counted indexed, because Typst spells a row label and an upright '
         'symbol the same way and only the symbol carries the dims'
     )
-    sections = [title for title in ('Objective', 'Subject to', 'Definitions', 'Variable domains') if title in rendered]
-    assert sections == ['Objective', 'Subject to', 'Definitions', 'Variable domains'], (
-        'the definition has a section of its own, after the constraints and before the domains'
+    titles = ('Variable domains', 'Definitions', 'Objective', 'Subject to')
+    assert sorted(titles, key=rendered.find) == list(titles), (
+        'the definition has a section of its own, after the domains and before the objective'
     )
 
 
@@ -158,6 +158,6 @@ def test_the_definitions_print_in_declaration_order():
     """
     declared = ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot']
     tex = to_latex(varied(CASED, **{f'expressions.{n}': BY_REGION for n in declared}), legend=False)
-    section = tex[tex.index('Definitions') :]
+    section = tex[tex.index('Definitions') : tex.index('Objective')]
     labels = re.findall(r'^\\text\{(\w+)\} &&', section, flags=re.MULTILINE)
     assert labels == ['headroom', *declared], "declaration order, the file's own"

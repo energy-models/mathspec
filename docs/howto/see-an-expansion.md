@@ -64,20 +64,20 @@ names each row the expansion adds.
 
     === "Math"
 
-        _Subject to_
-
-        **`pick`**
-
-        ```math
-        \left( p_{g} \right)_{g \in \mathcal{G}} \in \mathrm{SOS}1
-        ```
-
         _Variable domains_
 
         **`p`**
 
         ```math
         0 \le p_{g} \le 10 \qquad \forall\, g \in \mathcal{G}
+        ```
+
+        _Subject to_
+
+        **`pick`**
+
+        ```math
+        \left( p_{g} \right)_{g \in \mathcal{G}} \in \mathrm{SOS}1
         ```
 
 === "`expand()`"
@@ -108,20 +108,6 @@ names each row the expansion adds.
 
     === "Math"
 
-        _Subject to_
-
-        **`pick_pick`**
-
-        ```math
-        \sum_{g \in \mathcal{G}} \mathit{pick\_seg}_{g} \le 1
-        ```
-
-        **`pick_nonzero`**
-
-        ```math
-        p_{g} \le 10 \cdot \mathit{pick\_seg}_{g} \qquad \forall\, g \in \mathcal{G}
-        ```
-
         _Variable domains_
 
         **`p`**
@@ -134,6 +120,20 @@ names each row the expansion adds.
 
         ```math
         \mathit{pick\_seg}_{g} \in \{0, 1\} \qquad \forall\, g \in \mathcal{G}
+        ```
+
+        _Subject to_
+
+        **`pick_pick`**
+
+        ```math
+        \sum_{g \in \mathcal{G}} \mathit{pick\_seg}_{g} \le 1
+        ```
+
+        **`pick_nonzero`**
+
+        ```math
+        p_{g} \le 10 \cdot \mathit{pick\_seg}_{g} \qquad \forall\, g \in \mathcal{G}
         ```
 
 <!-- expansion:set:end -->
@@ -175,14 +175,6 @@ the set out too.
 
     === "Math"
 
-        _Subject to_
-
-        **`curve`**
-
-        ```math
-        \left( x,\ y \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}^{\mathrm{bp}}_{b},\ \mathrm{y}^{\mathrm{bp}}_{b})
-        ```
-
         _Variable domains_
 
         **`x`**
@@ -195,6 +187,14 @@ the set out too.
 
         ```math
         y \ge 0
+        ```
+
+        _Subject to_
+
+        **`curve`**
+
+        ```math
+        \left( x,\ y \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}^{\mathrm{bp}}_{b},\ \mathrm{y}^{\mathrm{bp}}_{b})
         ```
 
         _Assumptions_
@@ -254,6 +254,26 @@ the set out too.
 
     === "Math"
 
+        _Variable domains_
+
+        **`x`**
+
+        ```math
+        x \ge 0
+        ```
+
+        **`y`**
+
+        ```math
+        y \ge 0
+        ```
+
+        **`curve_lam`**
+
+        ```math
+        0 \le \mathit{curve\_lam}_{b} \le 1 \qquad \forall\, b \in \mathcal{B}
+        ```
+
         _Subject to_
 
         **`curve_convexity`**
@@ -278,26 +298,6 @@ the set out too.
 
         ```math
         \left( \mathit{curve\_lam}_{b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2
-        ```
-
-        _Variable domains_
-
-        **`x`**
-
-        ```math
-        x \ge 0
-        ```
-
-        **`y`**
-
-        ```math
-        y \ge 0
-        ```
-
-        **`curve_lam`**
-
-        ```math
-        0 \le \mathit{curve\_lam}_{b} \le 1 \qquad \forall\, b \in \mathcal{B}
         ```
 
         _Assumptions_
@@ -361,6 +361,32 @@ the set out too.
 
     === "Math"
 
+        _Variable domains_
+
+        **`x`**
+
+        ```math
+        x \ge 0
+        ```
+
+        **`y`**
+
+        ```math
+        y \ge 0
+        ```
+
+        **`curve_lam`**
+
+        ```math
+        0 \le \mathit{curve\_lam}_{b} \le 1 \qquad \forall\, b \in \mathcal{B}
+        ```
+
+        **`curve_seg`**
+
+        ```math
+        \mathit{curve\_seg}_{b} \in \{0, 1\} \qquad \forall\, b \in \mathcal{B}
+        ```
+
         _Subject to_
 
         **`curve_convexity`**
@@ -391,32 +417,6 @@ the set out too.
 
         ```math
         \mathit{curve\_lam}_{b} \le \mathit{curve\_seg}_{b} + \mathit{curve\_seg}_{b \boxminus_{0} 1} \qquad \forall\, b \in \mathcal{B}
-        ```
-
-        _Variable domains_
-
-        **`x`**
-
-        ```math
-        x \ge 0
-        ```
-
-        **`y`**
-
-        ```math
-        y \ge 0
-        ```
-
-        **`curve_lam`**
-
-        ```math
-        0 \le \mathit{curve\_lam}_{b} \le 1 \qquad \forall\, b \in \mathcal{B}
-        ```
-
-        **`curve_seg`**
-
-        ```math
-        \mathit{curve\_seg}_{b} \in \{0, 1\} \qquad \forall\, b \in \mathcal{B}
         ```
 
         _Assumptions_
