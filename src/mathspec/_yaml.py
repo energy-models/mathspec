@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 import yaml
 
@@ -138,8 +138,27 @@ def parse_yaml(text: str, origin: str = '<string>') -> dict[str, object]:
     return data
 
 
+#: The space between two sentences: one space after a full stop, a question mark or an exclamation mark, and
+#: before a capital letter or a backtick, so the space in ``e.g. the`` is not one.
+_SENTENCE_BREAK = re.compile(r'(?<=[.!?]) (?=[A-Z`])')
+
+
 class _Dumper(yaml.SafeDumper):
-    """A dumper writing short lists and mappings on one line and a multi-line string as a block scalar."""
+    """A dumper writing short lists and mappings on one line, and prose one sentence to a line."""
+
+    @override
+    def write_folded(self, text: str) -> None:
+        """Write *text* as a folded scalar with one sentence on each line.
+
+        YAML folds a line break between two lines of text into one space, so
+        the file reads back as the single-line string it came from.
+        """
+        self.write_indicator('>' + self.determine_block_hints(text), True)
+        for sentence in _SENTENCE_BREAK.split(text):
+            self.write_line_break()
+            self.write_indent()
+            self.stream.write(sentence)
+            self.column += len(sentence)
 
 
 #: A value a one-line mapping may hold: a number, a boolean, or a name such as ``p_max``, ``binary`` or ``-inf``.
@@ -184,7 +203,10 @@ def _one_line_scalar(value: object) -> bool:
 
 
 def _string(dumper: yaml.SafeDumper, text: str) -> yaml.ScalarNode:
-    return dumper.represent_scalar('tag:yaml.org,2002:str', text, style='|' if '\n' in text else None)
+    if '\n' in text:
+        return dumper.represent_scalar('tag:yaml.org,2002:str', text, style='|')
+    prose = text == text.strip() and _SENTENCE_BREAK.search(text) is not None
+    return dumper.represent_scalar('tag:yaml.org,2002:str', text, style='>' if prose else None)
 
 
 def _sequence(dumper: yaml.SafeDumper, items: list[object]) -> yaml.SequenceNode:
@@ -204,8 +226,9 @@ def dump_yaml(data: dict[str, object]) -> str:
     """*data* as YAML text, in the one layout every spec this package writes shares.
 
     A short list, and a short mapping of numbers and names, is written on one
-    line, as ``dims: [day, hour]`` and ``bounds: {lower: 0}``. A multi-line string is
-    a block scalar. No line is wrapped, so an edit to a long description
-    changes one line of a diff.
+    line, as ``dims: [day, hour]`` and ``bounds: {lower: 0}``. Text of two or
+    more sentences is a folded scalar with one sentence on each line, and a
+    multi-line string is a literal block scalar. No sentence is wrapped, so an
+    edit to one sentence changes one line of a diff.
     """
     return yaml.dump(data, Dumper=_Dumper, sort_keys=False, allow_unicode=True, width=float('inf'))

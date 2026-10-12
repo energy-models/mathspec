@@ -67,6 +67,26 @@ LONG = 'a description that runs past the eighty columns a terminal shows, and ke
             'links:\n- - |-\n    p\n    + q\n  - bp_x\n',
             id='nor-is-a-list-holding-a-multi-line-string',
         ),
+        pytest.param(
+            {'p': {'description': 'Output of a unit. It is never negative.'}},
+            'p:\n  description: >-\n    Output of a unit.\n    It is never negative.\n',
+            id='prose-is-one-sentence-to-a-line',
+        ),
+        pytest.param(
+            {'p': {'description': 'Output, e.g. the power a unit sends.'}},
+            'p:\n  description: Output, e.g. the power a unit sends.\n',
+            id='an-abbreviation-does-not-end-a-sentence',
+        ),
+        pytest.param(
+            {'p': {'description': 'Output of a unit.  It is never negative.'}},
+            'p:\n  description: Output of a unit.  It is never negative.\n',
+            id='two-spaces-between-sentences-keep-the-text-on-one-line',
+        ),
+        pytest.param(
+            {'p': {'description': 'Output of a unit. It is never negative. '}},
+            "p:\n  description: 'Output of a unit. It is never negative. '\n",
+            id='a-trailing-space-keeps-the-text-on-one-line',
+        ),
     ],
 )
 def test_the_layout(data, written):
@@ -78,5 +98,6 @@ def test_the_layout(data, written):
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
 def test_every_spec_written_back_out_reads_as_itself(path):
+    """A folded description reads back as the one-line string it was, so the spec is equal, not merely alike."""
     spec = ms.to_spec(path)
     assert ms.to_spec(spec.to_yaml()) == spec
