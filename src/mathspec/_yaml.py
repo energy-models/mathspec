@@ -146,22 +146,34 @@ def _one_line(value: object) -> bool:
     """Whether *value* is a list or a mapping that is written on one line.
 
     A list is, when it holds only one-line scalars and such lists. A mapping is,
-    when it holds only numbers, booleans, single words and such lists, as
-    ``bounds`` does. A declaration with a description or an expression of
-    several words in it keeps one key on each line, so its text is never quoted
-    to fit a flow mapping. Either one must also fit in 80 characters. A
-    multi-line string is a block scalar, which a flow collection cannot hold.
+    when it holds only numbers, booleans, names and such lists, as ``bounds``
+    does. A declaration with a description or an expression in it keeps one key
+    on each line, so its text is never quoted to fit a flow mapping. Either one
+    must also fit in 80 characters, counted as Python prints each value: a
+    quote the emitter adds is not counted, so no line is written twice to
+    measure it.
     """
-    if isinstance(value, list):
-        held = all(_one_line(item) if isinstance(item, list) else _plain(item) for item in value)
-    elif isinstance(value, dict):
-        held = all(
-            _one_line(item) if isinstance(item, list) else _plain(item) and not (isinstance(item, str) and ' ' in item)
-            for item in value.values()
-        )
-    else:
+    if _width(value) > 80:
         return False
-    return held and len(yaml.safe_dump(value, default_flow_style=True, width=float('inf')).rstrip('\n')) <= 80
+    if isinstance(value, list):
+        return all(_one_line(item) if isinstance(item, list) else _plain(item) for item in value)
+    return isinstance(value, dict) and all(
+        _one_line(item) if isinstance(item, list) else _plain(item) and _NAME.fullmatch(str(item)) is not None
+        for item in value.values()
+    )
+
+
+#: A value a one-line mapping may hold: a number, a boolean, or a name such as ``p_max``, ``binary`` or ``-inf``.
+_NAME = re.compile(r'[\w.+-]+')
+
+
+def _width(value: object) -> int:
+    """How wide *value* is on one line, brackets and separators included, each scalar as ``str`` prints it."""
+    if isinstance(value, list):
+        return sum(_width(item) + 2 for item in value) or 2
+    if isinstance(value, dict):
+        return sum(len(str(key)) + _width(item) + 4 for key, item in value.items()) or 2
+    return len(str(value))
 
 
 def _plain(value: object) -> bool:

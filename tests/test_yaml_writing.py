@@ -42,6 +42,16 @@ LONG = 'a description that runs past the eighty columns a terminal shows, and ke
             id='a-declaration-with-an-expression-of-several-words-keeps-a-key-to-a-line',
         ),
         pytest.param(
+            {'objective': {'sense': 'minimize', 'expression': 'sum(p)'}},
+            'objective:\n  sense: minimize\n  expression: sum(p)\n',
+            id='an-expression-of-one-word-keeps-a-key-to-a-line',
+        ),
+        pytest.param(
+            {'labels': ['München', 'Zürich', 'Göteborg', 'Kraków', 'Łódź', 'Málaga', 'Thessaloníki', 'Ålesund']},
+            'labels: [München, Zürich, Göteborg, Kraków, Łódź, Málaga, Thessaloníki, Ålesund]\n',
+            id='a-name-with-an-accent-counts-as-its-characters',
+        ),
+        pytest.param(
             {'labels': ['north_sea_offshore_wind', 'baltic_offshore_wind', 'iberian_solar', 'alpine_run_of_river']},
             'labels:\n- north_sea_offshore_wind\n- baltic_offshore_wind\n- iberian_solar\n- alpine_run_of_river\n',
             id='a-list-past-80-characters-is-one-item-to-a-line',
