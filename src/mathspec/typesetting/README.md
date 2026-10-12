@@ -84,7 +84,7 @@ words.
 
 1. Add a module here with a class that satisfies `Format`. That means atoms,
    structure, document, and a spelling for every name in `OPERATOR_NAMES`.
-2. Add a row to `FORMATS` in `__init__.py`. The command-line verb comes from the
+2. Add a row to `FORMATS` in `__init__.py`. The `python -m mathspec` command comes from the
    key.
 3. Change nothing in `walk.py`. If you find that you need to, then either the
    walk is making a syntax decision that it should not make, or `format.py` is

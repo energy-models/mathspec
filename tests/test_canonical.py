@@ -243,7 +243,7 @@ def test_the_dump_that_keeps_the_file_as_written_is_unchanged():
 
 
 def test_the_shell_writes_the_form_a_reviewer_diffs(tmp_path, capsys):
-    """The verb is the whole point of the form: a reviewer works in a shell and
+    """The command is the whole point of the form: a reviewer works in a shell and
     a version control diff, not in Python."""
     model = tmp_path / 'spec.yaml'
     model.write_text(ms.to_spec(DISPATCH_MODEL).to_yaml())
