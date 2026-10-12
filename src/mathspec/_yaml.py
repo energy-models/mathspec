@@ -192,11 +192,8 @@ def _one_line(value: object) -> bool:
     may, when it holds only numbers, booleans, names and such lists, as
     ``bounds`` does. A declaration with a description or an expression in it
     keeps one key on each line, so its text is never quoted to fit a flow
-    mapping. Whether the line fits is the emitter's to decide; one wider than
-    the limit cannot fit, so it is turned away before the items are walked.
+    mapping. Whether the line fits is for the emitter to decide.
     """
-    if _width(value) > _LINE_LIMIT:
-        return False
     if isinstance(value, list):
         return all(_one_line(item) if isinstance(item, list) else _one_line_scalar(item) for item in value)
     return isinstance(value, dict) and all(
@@ -258,9 +255,9 @@ def dump_yaml(data: dict[str, object]) -> str:
 
     A list, and a mapping of numbers and names, is written on one line when
     the whole line holds 100 characters or fewer, as ``dims: [day, hour]`` and
-    ``bounds: {lower: 0}``. Text of two or
-    more sentences is a folded scalar with one sentence on each line, and a
-    multi-line string is a literal block scalar. No sentence is wrapped, so an
-    edit to one sentence changes one line of a diff.
+    ``bounds: {lower: 0}``. Text of two or more sentences is a folded scalar
+    with one sentence on each line, and a multi-line string is a literal block
+    scalar. No sentence is wrapped, so an edit to one sentence changes one line
+    of a diff.
     """
     return yaml.dump(data, Dumper=_Dumper, sort_keys=False, allow_unicode=True, width=float('inf'))
