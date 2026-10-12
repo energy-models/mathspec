@@ -12,7 +12,7 @@ import mathspec as ms
 from mathspec._yaml import dump_yaml
 from tests.fixtures import SPECS
 
-LONG = 'a description that runs past the eighty columns a terminal shows, and keeps going after it'
+LONG = 'a description that runs past the hundred columns a line of lists holds to, and keeps going after it for a while'
 
 
 @pytest.mark.parametrize(
@@ -51,10 +51,14 @@ LONG = 'a description that runs past the eighty columns a terminal shows, and ke
             'labels: [München, Zürich, Göteborg, Kraków, Łódź, Málaga, Thessaloníki, Ålesund]\n',
             id='a-name-with-an-accent-counts-as-its-characters',
         ),
+        pytest.param({'labels': ['a' * 90]}, f'labels: [{"a" * 90}]\n', id='a-line-of-100-characters-holds-its-list'),
         pytest.param(
-            {'labels': ['north_sea_offshore_wind', 'baltic_offshore_wind', 'iberian_solar', 'alpine_run_of_river']},
-            'labels:\n- north_sea_offshore_wind\n- baltic_offshore_wind\n- iberian_solar\n- alpine_run_of_river\n',
-            id='a-list-past-80-characters-is-one-item-to-a-line',
+            {'labels': ['a' * 91]}, f'labels:\n- {"a" * 91}\n', id='a-line-of-101-characters-is-one-item-to-a-line'
+        ),
+        pytest.param(
+            {'p': {'labels': ['a' * 89]}},
+            f'p:\n  labels:\n  - {"a" * 89}\n',
+            id='the-indent-and-the-key-count-toward-the-line',
         ),
         pytest.param({'p': {'description': LONG}}, f'p:\n  description: {LONG}\n', id='a-long-line-is-not-wrapped'),
         pytest.param(
