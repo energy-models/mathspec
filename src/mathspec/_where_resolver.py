@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import datetime
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, NamedTuple, assert_never, cast
 
 import mathspec.degree as degree
@@ -102,6 +102,9 @@ class WhereResolver:
     context: str
     errors: list[str]
     self_variable: str | None = None
+    #: Inside ``count``, ``shift`` or ``at``, where a name true at every
+    #: coordinate still counts, steps off an edge, or joins.
+    operand: bool = False
 
     @property
     def _expressions(self) -> ExpressionResolver:
@@ -136,6 +139,10 @@ class WhereResolver:
         """A connective's child, typed as resolved: an unresolved one survives only with its refusal appended."""
         return cast('Predicate', self.where(node))
 
+    def _operand(self, node: Predicate | UnresolvedWhereNode) -> Predicate:
+        """The predicate that ``count``, ``shift`` or ``at`` reads, typed by a walk that knows it is one."""
+        return replace(self, operand=True)._child(node)
+
     def _where_name(self, node: NameNode) -> Predicate | UnresolvedWhereNode:
         """A bare name: a mask's predicate, a parameter's or relation's definedness, or a variable's existence."""
         ns, context = self.ns, self.context
@@ -152,7 +159,12 @@ class WhereResolver:
         match kind:
             case 'parameter':
                 declared = ns.schema.parameters.get(node.name)
-                if declared is not None and declared.missing == 'refused' and declared.dtype in ('int', 'str'):
+                if (
+                    not self.operand
+                    and declared is not None
+                    and declared.missing == 'refused'
+                    and declared.dtype != 'bool'
+                ):
                     rewrite = (
                         f'Declare `missing: absent`, or compare the label: where: "{node.name} == \'...\'".'
                         if declared.dtype == 'str'
@@ -216,7 +228,7 @@ class WhereResolver:
                 f'Compare the predicate, or name a parameter carrying it.'
             )
             return node
-        operand = self._child(node.operand)
+        operand = self._operand(node.operand)
         if len(self.errors) > found:
             return node
         if node.name == 'at':
@@ -278,7 +290,7 @@ class WhereResolver:
         word for the group.
         """
         context, found = self.context, len(self.errors)
-        operand = self._child(node.call.operand)
+        operand = self._operand(node.call.operand)
         if len(self.errors) > found:
             return node
         if (refusal := _kwargs_error(context, 'count', node.call.kwargs, required=('over',))) is not None:

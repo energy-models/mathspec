@@ -63,11 +63,11 @@ def test_a_where_lands_on_the_quantifier_not_in_the_equation(name: FormatName, f
     assert masked[0].index(forall) < masked[0].index(such_that), 'the mask follows the quantifier, not the equation'
 
 
-def _masked(dtype: str) -> dict[str, object]:
-    """One model per mask dtype: a bare parameter atom is the whole `where`."""
+def _masked(declared: dict[str, str]) -> dict[str, object]:
+    """One model per mask declaration: a bare parameter atom is the whole `where`."""
     return {
         'dimensions': {'g': {'dtype': 'str', 'ordered': True}},
-        'parameters': {'flag': {'dims': ['g'], 'dtype': dtype}},
+        'parameters': {'flag': {'dims': ['g'], **declared}},
         'variables': {
             'keep': {'dims': ['g'], 'where': 'flag', 'bounds': {'lower': 0, 'upper': 1}},
             'drop': {'dims': ['g'], 'where': 'NOT flag', 'bounds': {'lower': 0, 'upper': 1}},
@@ -78,26 +78,26 @@ def _masked(dtype: str) -> dict[str, object]:
 
 @EVERY_FORMAT
 @pytest.mark.parametrize(
-    ('dtype', 'defined'),
+    ('declared', 'defined'),
     [
-        pytest.param('bool', False, id='a-boolean-is-the-predicate'),
-        pytest.param('float', True, id='any-other-dtype-is-definedness'),
+        pytest.param({'dtype': 'bool'}, False, id='a-boolean-is-the-predicate'),
+        pytest.param({'dtype': 'float', 'missing': 'absent'}, True, id='any-other-dtype-is-definedness'),
     ],
 )
 def test_a_mask_reads_as_definedness_unless_its_parameter_is_boolean(
-    name: FormatName, fmt: Format, dtype: str, defined: bool
+    name: FormatName, fmt: Format, declared: dict[str, str], defined: bool
 ):
     """`where: flag` on a bool keeps the true rows, not the present ones (#834).
 
     A bool that is present and false is excluded, so "is defined" describes a
     different model than the one that solves, and a reader deriving from the
     page cannot tell. Every other dtype genuinely does mean "wherever a value
-    exists" — `tsp_mtz`'s `where: distance`. `NOT flag` negates whichever
+    exists" — a `float` under `missing: absent`. `NOT flag` negates whichever
     reading applies: `¬` takes no bracket, so before #834 the prose sat outside
     it and the line printed `¬ flag is defined` — read as "flag is missing",
     the opposite grouping to the one the model builds.
     """
-    text = typeset(_masked(dtype), name, legend=False)
+    text = typeset(_masked(declared), name, legend=False)
     negated = f'{fmt.operators["not"]} {fmt.subscript(fmt.upright("flag"), ["g"])}'
     assert (fmt.prose(' is defined') in text) is defined, 'a boolean mask filters on truth, any other on presence'
     assert (negated in text) is not defined, 'the negation sits on the bare predicate only where that is the whole mask'
@@ -900,7 +900,11 @@ def test_a_count_prints_as_the_size_of_the_set_the_predicate_admits(name: Format
 def test_a_translated_predicate_prints_at_the_index_it_reads(name: FormatName, fmt: Format):
     """The translation shows at the leaf, as it does for arithmetic — it emits no operator of its own."""
     model = varied(
-        DISPATCH_MODEL, **{'constraints.balance.where': 'load AND NOT shift(load, along=snapshot, offset=1)'}
+        DISPATCH_MODEL,
+        **{
+            'parameters.load.missing': 'absent',
+            'constraints.balance.where': 'load AND NOT shift(load, along=snapshot, offset=1)',
+        },
     )
     text = typeset(model, name, legend=False)
     assert f'{fmt.subscript(fmt.upright("load"), ["t"])} {fmt.prose(" is defined")}' in text

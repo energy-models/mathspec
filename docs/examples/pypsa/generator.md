@@ -128,8 +128,9 @@ parameters:
     description: least nominal power an extendable generator may be built at
     dims: [scenario, generator]
   Generator_p_nom_max:
-    description: most nominal power an extendable generator may be built at
+    description: most nominal power an extendable generator may be built at; one with no cap has no row
     dims: [scenario, generator]
+    missing: absent
   Generator_capital_cost:
     description: >-
       cost of one unit of nominal power for the modelled horizon —
@@ -143,11 +144,13 @@ parameters:
     dims: [generator]
     missing: neutral
   Generator_e_sum_min:
-    description: least energy over the horizon; minus infinity where no floor is meant
+    description: least energy over the horizon; a generator with no floor has no row
     dims: [scenario, generator]
+    missing: absent
   Generator_e_sum_max:
-    description: most energy over the horizon — a fuel or emission budget in energy terms; infinity where no cap is meant
+    description: most energy over the horizon — a fuel or emission budget in energy terms; a generator with no budget has no row
     dims: [scenario, generator]
+    missing: absent
   Generator_primary_energy_weight:
     description: >-
       the constrained attribute per unit of energy at the bus — the carrier's
@@ -262,7 +265,7 @@ constraints:
     where: Generator_p_nom_extendable
     expression: Generator_p_nom_ext >= Generator_p_nom_min
   Generator_ext_p_nom_upper:
-    description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, generator]
     where: Generator_p_nom_extendable AND Generator_p_nom_max
     expression: Generator_p_nom_ext <= Generator_p_nom_max
@@ -272,12 +275,12 @@ constraints:
     where: Generator_p_nom_extendable AND Generator_p_nom_set
     expression: Generator_p_nom_ext == Generator_p_nom_set
   Generator_e_sum_min:
-    description: "`Generator-e_sum_min` — energy over the horizon is at least its floor; a floor of minus infinity is no row"
+    description: "`Generator-e_sum_min` — energy over the horizon is at least its floor, wherever it has one"
     dims: [scenario, generator]
     where: Generator_e_sum_min
     expression: sum(Generator_p * snapshot_weightings_generators, over=snapshot) >= Generator_e_sum_min
   Generator_e_sum_max:
-    description: "`Generator-e_sum_max` — energy over the horizon is at most its budget; a budget of infinity is no row"
+    description: "`Generator-e_sum_max` — energy over the horizon is at most its budget, wherever it has one"
     dims: [scenario, generator]
     where: Generator_e_sum_max
     expression: sum(Generator_p * snapshot_weightings_generators, over=snapshot) <= Generator_e_sum_max
@@ -356,11 +359,11 @@ assumptions:
 | $`\mathrm{new}`$ | `Generator_first_active` over $`\mathcal{Y} \times \mathcal{G}`$ — one in the first period a generator stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\mathrm{p}^{\mathrm{set}}`$ | `Generator_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — a given output schedule; a generator without one has no row here |
 | $`\underline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_min` over $`\Xi \times \mathcal{G}`$ — least nominal power an extendable generator may be built at |
-| $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\Xi \times \mathcal{G}`$ — most nominal power an extendable generator may be built at |
+| $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\Xi \times \mathcal{G}`$, `absent` where the data has no row — most nominal power an extendable generator may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap}}`$ | `Generator_capital_cost` over $`\Xi \times \mathcal{G}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{p}^{\mathrm{nom,set}}`$ | `Generator_p_nom_set` over $`\mathcal{G}`$, `neutral` where the data has no row — a given nominal power for an extendable generator; one without a value has no row here |
-| $`\underline{\mathrm{E}}`$ | `Generator_e_sum_min` over $`\Xi \times \mathcal{G}`$ — least energy over the horizon; minus infinity where no floor is meant |
-| $`\overline{\mathrm{E}}`$ | `Generator_e_sum_max` over $`\Xi \times \mathcal{G}`$ — most energy over the horizon — a fuel or emission budget in energy terms; infinity where no cap is meant |
+| $`\underline{\mathrm{E}}`$ | `Generator_e_sum_min` over $`\Xi \times \mathcal{G}`$, `absent` where the data has no row — least energy over the horizon; a generator with no floor has no row |
+| $`\overline{\mathrm{E}}`$ | `Generator_e_sum_max` over $`\Xi \times \mathcal{G}`$, `absent` where the data has no row — most energy over the horizon — a fuel or emission budget in energy terms; a generator with no budget has no row |
 | $`\mathrm{a}`$ | `Generator_primary_energy_weight` over $`\Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — the constrained attribute per unit of energy at the bus — the carrier's `co2_emissions` over the generator's efficiency at the snapshot, data prep; a generator of an unweighted carrier has no row |
 | $`\mathrm{b}`$ | `Generator_operational_limit_weight` over $`\Xi \times \mathcal{L} \times \mathcal{G}`$, `neutral` where the data has no row — one where the generator is in the row's set — data prep; one outside it has no row |
 | $`\mathrm{m}`$ | `Generator_tech_capacity_weight` over $`\mathcal{L} \times \mathcal{G}`$, `neutral` where the data has no row — one where the generator is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |

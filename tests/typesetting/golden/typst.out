@@ -88,7 +88,7 @@ $ upright("p") & upright("p")^(upright("min"))_(g) <= p_(t,g) & <= upright("p")^
   upright("units") & 0 <= italic("units")_(g) & <= 10, italic("units")_(g) in ZZ & forall g in cal(G) \
   upright("spare") & italic("spare")_(g) & in ZZ & forall g in cal(G) \
   upright("reserve") & italic("reserve") & >= 0 \
-  upright("headroom") & italic("headroom") & >= 0 & upright("where ") upright("budget") upright(" is defined") \
+  upright("headroom") & italic("headroom") & >= 0 & upright("where ") upright("budget") > 0 \
   upright("weight") & 0 <= italic("weight")_(t,g) & <= 1 & forall t in cal(T), g in cal(G) \
   upright("fuel") & italic("fuel")_(t,g) & >= 0 & forall t in cal(T), g in cal(G) \
   upright("heat") & italic("heat")_(t,g) & >= 0 & forall t in cal(T), g in cal(G) \
@@ -156,7 +156,7 @@ $ upright("budgeted") & italic("spend")_(t) & <= upright("budget") & forall t in
   upright("covered") & sum_(t in cal(T), g in cal(G)) p_(t,g) & <= upright("budget") & upright("where ") sum_(g in cal(G)) upright("p")^(upright("max"))_(g) >= upright("budget") \
   upright("counted") & theta_(b) & <= upright("budget") & forall b in cal(B) colon abs({e in cal(E) colon upright("tech_cap")_(b,e) > 0}) >= 2 \
   upright("counted_here") & theta_(b) & <= upright("tech_cap")_(b,e) & forall b in cal(B), e in cal(E) colon abs({e' in cal(E) colon upright("tech_cap")_(b,e') > 0}) >= 2 \
-  upright("run_start") & italic("slack")_(t) & <= upright("load")_(t,b) & forall t in cal(T), b in cal(B) colon upright("load")_(t,b) upright(" is defined") and not (upright("load")_(t - 1,b) upright(" is defined")) \
+  upright("run_start") & italic("slack")_(t) & <= upright("load")_(t,b) & forall t in cal(T), b in cal(B) colon not (upright("load")_(t - 1,b) upright(" is defined")) \
   upright("zoned") & theta_(b) & <= upright("budget") & forall b in cal(B) colon upright("zone_cap")_(upright("zone_of")(b)) upright(" is defined") \
   upright("capped") & p_(t,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) colon upright("spend")^(upright("cap"))_(g) > 0 or not upright("is_flexible")_(g) \
   upright("masked") & p_(t,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) colon upright("priced_dispatch")_(g) and upright("pos")(t) > 0 \
@@ -177,10 +177,10 @@ $ upright("bounds_do_not_cross") & upright("p")^(upright("min"))_(g) & <= uprigh
   upright("ramps_are_gentle") & upright("load")_(t,b) - upright("load")_(t minus.square_(0) 1,b) & <= upright("budget") & forall t in cal(T), b in cal(B) colon upright("pos")(t) > 0 \
   upright("flexible_units_have_headroom") & upright("p")^(upright("min"))_(g) & < upright("p")^(upright("max"))_(g) & forall g in cal(G) colon upright("is_flexible")_(g) \
   upright("northern_demand_is_real") & upright("load")_(t,b) & >= 0 & forall t in cal(T), b in cal(B) colon upright("zone_of")(b) = upright("'north'") \
-  upright("fuel_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_y")_(g,a) upright(" is defined") and upright("bp_heat")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) \
+  upright("fuel_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_y")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) \
   upright("cost_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_y")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) colon upright("bp_run")_(g,a) \
   upright("cost_curve_contiguous") & abs({a in cal(A) colon upright("bp_run")_(g,a) and not upright("bp_run")_(g,a - 1)}) & = 1 & forall g in cal(G) \
-  upright("hull_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_heat")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) \
+  upright("hull_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) \
   upright("hull_curve_increasing") & upright("bp_x")_(g,a minus.square_(0) 1) & < upright("bp_x")_(g,a) & forall g in cal(G), a in cal(A) colon upright("pos")(a) > 0 \
   upright("hull_curve_curvature") & abs({a in cal(A) colon (upright("bp_heat")_(g,a) - upright("bp_heat")_(g,a minus.square_(0) 1)) dot (upright("bp_x")_(g,a plus.square_(0) 1) - upright("bp_x")_(g,a)) > (upright("bp_heat")_(g,a plus.square_(0) 1) - upright("bp_heat")_(g,a)) dot (upright("bp_x")_(g,a) - upright("bp_x")_(g,a minus.square_(0) 1)) and upright("pos")(a) > 0 and upright("pos")(a) != abs(cal(A)) - 1}) = 0 or abs({a in cal(A) colon (upright("bp_heat")_(g,a) - upright("bp_heat")_(g,a minus.square_(0) 1)) dot (upright("bp_x")_(g,a plus.square_(0) 1) - upright("bp_x")_(g,a)) < (upright("bp_heat")_(g,a plus.square_(0) 1) - upright("bp_heat")_(g,a)) dot (upright("bp_x")_(g,a) - upright("bp_x")_(g,a minus.square_(0) 1)) and upright("pos")(a) > 0 and upright("pos")(a) != abs(cal(A)) - 1}) = 0 &  & forall g in cal(G) \
   upright("lp_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_y")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined") \
@@ -188,7 +188,7 @@ $ upright("bounds_do_not_cross") & upright("p")^(upright("min"))_(g) & <= uprigh
   upright("lp_curve_curvature") & (upright("bp_y")_(g,a) - upright("bp_y")_(g,a minus.square_(0) 1)) dot (upright("bp_x")_(g,a plus.square_(0) 1) - upright("bp_x")_(g,a)) & <= (upright("bp_y")_(g,a plus.square_(0) 1) - upright("bp_y")_(g,a)) dot (upright("bp_x")_(g,a) - upright("bp_x")_(g,a minus.square_(0) 1)) & forall g in cal(G), a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined") and upright("bp_x")_(g,a - 1) upright(" is defined") and upright("bp_x")_(g,a + 1) upright(" is defined") \
   upright("lp_curve_breakpoints") & abs({a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined")}) & >= 2 & forall g in cal(G) \
   upright("lp_curve_contiguous") & abs({a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined") and not (upright("bp_x")_(g,a - 1) upright(" is defined"))}) & = 1 & forall g in cal(G) \
-  upright("ramp_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_heat")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) \
+  upright("ramp_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) \
   upright("ramp_curve_increasing") & upright("bp_x")_(g,a minus.square_(0) 1) & < upright("bp_x")_(g,a) & forall g in cal(G), a in cal(A) colon upright("pos")(a) > 0 \
   upright("ramp_curve_curvature") & (upright("bp_heat")_(g,a) - upright("bp_heat")_(g,a minus.square_(0) 1)) dot (upright("bp_x")_(g,a plus.square_(0) 1) - upright("bp_x")_(g,a)) & >= (upright("bp_heat")_(g,a plus.square_(0) 1) - upright("bp_heat")_(g,a)) dot (upright("bp_x")_(g,a) - upright("bp_x")_(g,a minus.square_(0) 1)) & forall g in cal(G), a in cal(A) colon upright("pos")(a) > 0 and upright("pos")(a) != abs(cal(A)) - 1 \
   upright("ramp_curve_breakpoints") & abs({a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined")}) & >= 2 & forall g in cal(G) $

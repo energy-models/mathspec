@@ -639,10 +639,25 @@ def test_a_block_assumes_of_its_data_what_the_method_implies():
         'the x-axis is what increases, and the condition reads it and nothing else'
     )
 
-    plain = expanded(NONCONVEX_YAML, 'piecewise').program
+    plain = expanded(NONCONVEX_YAML, 'piecewise', **RAGGED).program
     assert list(plain.assumptions) == ['cost_curve_complete'], (
         'adjacency is exact for a curve of any shape, so it states nothing about the shape — but every '
         'curve states that its breakpoints are there, whatever the method'
+    )
+
+
+def test_a_curve_whose_tables_are_refused_states_no_completeness():
+    """`refused` tables already have a row at every breakpoint, and `holds: bp_x AND bp_y` read them as bare names.
+
+    A bare name under `refused` in a mask is refused at load, so the claim the block wrote for itself stopped the
+    file it was written for from loading.
+    """
+    program = expanded(NONCONVEX_YAML, 'piecewise').program
+    assert list(program.assumptions) == [], 'attaching the data already refuses a missing breakpoint'
+
+    one = expanded(NONCONVEX_YAML, 'piecewise', **{'parameters.bp_y.missing': 'neutral'}).program
+    assert one.assumptions['cost_curve_complete'].predicate.names_read == frozenset({'bp_y'}), (
+        'the claim names only the table that may lack a row'
     )
 
 

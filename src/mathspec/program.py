@@ -689,8 +689,8 @@ class ParameterDeclaration:
     ``dtype`` is what the declaration claims the values are, and a consumer
     attaching data refuses a column that is not it — so the *declaration* is
     what is read, rather than whatever the column happens to hold. It
-    refuses a null or NaN value too: a coordinate with no value has no row,
-    and ``inf`` is a value.
+    refuses a null, NaN or infinite value too: a coordinate with no value has
+    no row, and ``missing`` says what a missing row means.
     """
 
     dims: tuple[str, ...]
@@ -1249,7 +1249,7 @@ class BooleanLiteral:
 
 @dataclass(frozen=True)
 class ParameterDefined:
-    """True wherever the named parameter is non-null and finite.
+    """True wherever the data has a row of the named parameter.
 
     ``dims`` is the parameter's own, copied off the declaration during
     resolution; every leaf below that names a declaration carries its dims

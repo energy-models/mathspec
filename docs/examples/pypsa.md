@@ -5576,7 +5576,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{rd}^{z}`$ | `Process_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — most a process may lower its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
 | $`\mathrm{z}^{\mathrm{set}}`$ | `Process_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — a given internal power schedule; a process without one has no row here |
 | $`\underline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_min` over $`\Xi \times \mathcal{J}`$ — least nominal power an extendable process may be built at |
-| $`\overline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_max` over $`\Xi \times \mathcal{J}`$ — most nominal power an extendable process may be built at |
+| $`\overline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_max` over $`\Xi \times \mathcal{J}`$, `absent` where the data has no row — most nominal power an extendable process may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap},z}`$ | `Process_capital_cost` over $`\Xi \times \mathcal{J}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{z}^{\mathrm{nom,set}}`$ | `Process_p_nom_set` over $`\mathcal{J}`$, `neutral` where the data has no row — a given nominal power for an extendable process; one without a value has no row here |
 | $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$ — whether internal power is gated by an on/off status decision |
@@ -5635,21 +5635,21 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{w}^{\mathrm{sto}}`$ | `snapshot_weightings_stores` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.stores` — hours a snapshot stands for in a storage balance |
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.generators` — hours a snapshot stands for in an energy total |
 | $`\underline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_min` over $`\Xi \times \mathcal{G}`$ — least nominal power an extendable generator may be built at |
-| $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\Xi \times \mathcal{G}`$ — most nominal power an extendable generator may be built at |
+| $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\Xi \times \mathcal{G}`$, `absent` where the data has no row — most nominal power an extendable generator may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap}}`$ | `Generator_capital_cost` over $`\Xi \times \mathcal{G}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{p}^{\mathrm{nom,set}}`$ | `Generator_p_nom_set` over $`\mathcal{G}`$, `neutral` where the data has no row — a given nominal power for an extendable generator; one without a value has no row here |
-| $`\underline{\mathrm{E}}`$ | `Generator_e_sum_min` over $`\Xi \times \mathcal{G}`$ — least energy over the horizon; minus infinity where no floor is meant |
-| $`\overline{\mathrm{E}}`$ | `Generator_e_sum_max` over $`\Xi \times \mathcal{G}`$ — most energy over the horizon — a fuel or emission budget in energy terms; infinity where no cap is meant |
+| $`\underline{\mathrm{E}}`$ | `Generator_e_sum_min` over $`\Xi \times \mathcal{G}`$, `absent` where the data has no row — least energy over the horizon; a generator with no floor has no row |
+| $`\overline{\mathrm{E}}`$ | `Generator_e_sum_max` over $`\Xi \times \mathcal{G}`$, `absent` where the data has no row — most energy over the horizon — a fuel or emission budget in energy terms; a generator with no budget has no row |
 | $`\underline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_min` over $`\Xi \times \mathcal{L}`$ — least nominal power an extendable link may be built at |
-| $`\overline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_max` over $`\Xi \times \mathcal{L}`$ — most nominal power an extendable link may be built at |
+| $`\overline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_max` over $`\Xi \times \mathcal{L}`$, `absent` where the data has no row — most nominal power an extendable link may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap},f}`$ | `Link_capital_cost` over $`\Xi \times \mathcal{L}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{f}^{\mathrm{nom,set}}`$ | `Link_p_nom_set` over $`\mathcal{L}`$, `neutral` where the data has no row — a given nominal power for an extendable link; one without a value has no row here |
 | $`\underline{\mathrm{h}}^{\mathrm{nom}}`$ | `StorageUnit_p_nom_min` over $`\Xi \times \mathcal{S}`$ — least nominal power an extendable storage unit may be built at |
-| $`\overline{\mathrm{h}}^{\mathrm{nom}}`$ | `StorageUnit_p_nom_max` over $`\Xi \times \mathcal{S}`$ — most nominal power an extendable storage unit may be built at |
+| $`\overline{\mathrm{h}}^{\mathrm{nom}}`$ | `StorageUnit_p_nom_max` over $`\Xi \times \mathcal{S}`$, `absent` where the data has no row — most nominal power an extendable storage unit may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap},h}`$ | `StorageUnit_capital_cost` over $`\Xi \times \mathcal{S}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{h}^{\mathrm{nom,set}}`$ | `StorageUnit_p_nom_set` over $`\mathcal{S}`$, `neutral` where the data has no row — a given nominal power for an extendable storage unit; one without a value has no row here |
 | $`\underline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_min` over $`\Xi \times \mathcal{V}`$ — least nominal capacity an extendable store may be built at |
-| $`\overline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_max` over $`\Xi \times \mathcal{V}`$ — most nominal capacity an extendable store may be built at |
+| $`\overline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_max` over $`\Xi \times \mathcal{V}`$, `absent` where the data has no row — most nominal capacity an extendable store may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap},e}`$ | `Store_capital_cost` over $`\Xi \times \mathcal{V}`$ — cost of one unit of nominal capacity for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{e}^{\mathrm{nom,set}}`$ | `Store_e_nom_set` over $`\mathcal{V}`$, `neutral` where the data has no row — a given nominal capacity for an extendable store; one without a value has no row here |
 | $`\mathrm{h}^{\mathrm{nom}}`$ | `StorageUnit_p_nom` over $`\Xi \times \mathcal{S}`$ — nominal power |
@@ -5700,7 +5700,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{s}^{\mathrm{mod}}`$ | `Line_s_nom_mod` over $`\mathcal{K}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of; no value means the build is continuous |
 | $`\overline{\mathrm{s}}`$ | `Line_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — most flow either way, per unit of nominal apparent power |
 | $`\underline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_min` over $`\Xi \times \mathcal{K}`$ — least nominal apparent power an extendable line may be built at |
-| $`\overline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_max` over $`\Xi \times \mathcal{K}`$ — most nominal apparent power an extendable line may be built at |
+| $`\overline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_max` over $`\Xi \times \mathcal{K}`$, `absent` where the data has no row — most nominal apparent power an extendable line may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\Xi \times \mathcal{K}`$ — cost of one unit of nominal apparent power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{s}^{\mathrm{nom,set}}`$ | `Line_s_nom_set` over $`\mathcal{K}`$, `neutral` where the data has no row — a given nominal apparent power for an extendable line; one without a value has no row here |
 | $`\mathrm{s}^{\mathrm{set}}`$ | `Line_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$, `neutral` where the data has no row — a given flow schedule; a line without one has no row here |
@@ -5717,7 +5717,7 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\sigma^{\mathrm{mod}}`$ | `Transformer_s_nom_mod` over $`\mathcal{M}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of; no value means the build is continuous |
 | $`\overline{\sigma}`$ | `Transformer_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — most flow either way, per unit of nominal apparent power |
 | $`\underline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_min` over $`\Xi \times \mathcal{M}`$ — least nominal apparent power an extendable transformer may be built at |
-| $`\overline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_max` over $`\Xi \times \mathcal{M}`$ — most nominal apparent power an extendable transformer may be built at |
+| $`\overline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_max` over $`\Xi \times \mathcal{M}`$, `absent` where the data has no row — most nominal apparent power an extendable transformer may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\sigma^{\mathrm{nom,set}}`$ | `Transformer_s_nom_set` over $`\mathcal{M}`$, `neutral` where the data has no row — a given nominal apparent power for an extendable transformer; one without a value has no row here |
 | $`\sigma^{\mathrm{set}}`$ | `Transformer_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, `neutral` where the data has no row — a given flow schedule; a transformer without one has no row here |
@@ -8369,7 +8369,7 @@ P_{g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in
 
 ```yaml
 Generator_ext_p_nom_upper:
-  description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+  description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
   dims: [scenario, generator]
   where: Generator_p_nom_extendable AND Generator_p_nom_max
   expression: Generator_p_nom_ext <= Generator_p_nom_max
@@ -8401,7 +8401,7 @@ P_{g} = \mathrm{p}^{\mathrm{nom,set}}_{g} \qquad \forall\, g \in \mathcal{G} \,:
 
 ```yaml
 Generator_e_sum_min:
-  description: "`Generator-e_sum_min` — energy over the horizon is at least its floor; a floor of minus infinity is no row"
+  description: "`Generator-e_sum_min` — energy over the horizon is at least its floor, wherever it has one"
   dims: [scenario, generator]
   where: Generator_e_sum_min
   expression: sum(Generator_p * snapshot_weightings_generators, over=snapshot) >= Generator_e_sum_min
@@ -8417,7 +8417,7 @@ Generator_e_sum_min:
 
 ```yaml
 Generator_e_sum_max:
-  description: "`Generator-e_sum_max` — energy over the horizon is at most its budget; a budget of infinity is no row"
+  description: "`Generator-e_sum_max` — energy over the horizon is at most its budget, wherever it has one"
   dims: [scenario, generator]
   where: Generator_e_sum_max
   expression: sum(Generator_p * snapshot_weightings_generators, over=snapshot) <= Generator_e_sum_max
@@ -8481,7 +8481,7 @@ F_{l} \ge \underline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \qquad \forall\, \xi \in
 
 ```yaml
 Link_ext_p_nom_upper:
-  description: "`Link-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+  description: "`Link-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
   dims: [scenario, link]
   where: Link_p_nom_extendable AND Link_p_nom_max
   expression: Link_p_nom_ext <= Link_p_nom_max
@@ -8593,7 +8593,7 @@ Z_{j} \ge \underline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \qquad \forall\, \xi \in
 
 ```yaml
 Process_ext_p_nom_upper:
-  description: "`Process-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+  description: "`Process-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
   dims: [scenario, process]
   where: Process_p_nom_extendable AND Process_p_nom_max
   expression: Process_p_nom_ext <= Process_p_nom_max
@@ -10831,7 +10831,7 @@ S_{k} \ge \underline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in
 
 ```yaml
 Line_ext_s_nom_upper:
-  description: "`Line-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+  description: "`Line-ext-s_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
   dims: [scenario, line]
   where: Line_s_nom_extendable AND Line_s_nom_max
   expression: Line_s_nom_ext <= Line_s_nom_max
@@ -11066,7 +11066,7 @@ Transformer_ext_s_nom_lower:
 
 ```yaml
 Transformer_ext_s_nom_upper:
-  description: "`Transformer-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+  description: "`Transformer-ext-s_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
   dims: [scenario, transformer]
   where: Transformer_s_nom_extendable AND Transformer_s_nom_max
   expression: Transformer_s_nom_ext <= Transformer_s_nom_max
@@ -11740,7 +11740,7 @@ H_{s} \ge \underline{\mathrm{h}}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in
 
 ```yaml
 StorageUnit_ext_p_nom_upper:
-  description: "`StorageUnit-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+  description: "`StorageUnit-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
   dims: [scenario, storage_unit]
   where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_max
   expression: StorageUnit_p_nom_ext <= StorageUnit_p_nom_max
@@ -11892,7 +11892,7 @@ E_{v} \ge \underline{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in
 
 ```yaml
 Store_ext_e_nom_upper:
-  description: "`Store-ext-e_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+  description: "`Store-ext-e_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
   dims: [scenario, store]
   where: Store_e_nom_extendable AND Store_e_nom_max
   expression: Store_e_nom_ext <= Store_e_nom_max
@@ -12483,33 +12483,33 @@ Generator_maintenance_events_fit_the_horizon:
 
 ```yaml
 Generator_maintenance_build_cap_is_finite:
-  holds: "Generator_p_nom_max < inf"
+  holds: "Generator_p_nom_max"
   where: "Generator_maintainable AND Generator_p_nom_extendable"
   description: >-
     the `maintcap` rows hold the chosen build in maintenance against
-    `p_nom_max`, so an infinite cap is an infinite coefficient — PyPSA
+    `p_nom_max`, so one with no cap has an infinite coefficient — PyPSA
     refuses it (`consistency.py:1528`)
 ```
 
 ```math
-\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} < \infty \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g}
+\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{ext}_{g}
 ```
 
 ### `Generator_maintenance_module_count_is_finite`
 
 ```yaml
 Generator_maintenance_module_count_is_finite:
-  holds: "Generator_p_nom_max < inf"
+  holds: "Generator_p_nom_max"
   where: "Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_p_nom_mod > 0"
   description: >-
     the `maint-modstatus` rows bound the modules on in maintenance by
-    `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
+    `p_nom_max / p_nom_mod`, so one with no cap has an infinite
     coefficient. PyPSA does not check it, and HiGHS refuses the model
     (`constraints.py:504-507`)
 ```
 
 ```math
-\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} < \infty \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 ### `Link_maintenance_events_positive`
@@ -12578,33 +12578,33 @@ Link_maintenance_events_fit_the_horizon:
 
 ```yaml
 Link_maintenance_build_cap_is_finite:
-  holds: "Link_p_nom_max < inf"
+  holds: "Link_p_nom_max"
   where: "Link_maintainable AND Link_p_nom_extendable"
   description: >-
     the `maintcap` rows hold the chosen build in maintenance against
-    `p_nom_max`, so an infinite cap is an infinite coefficient — PyPSA
+    `p_nom_max`, so one with no cap has an infinite coefficient — PyPSA
     refuses it (`consistency.py:1528`)
 ```
 
 ```math
-\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} < \infty \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{ext}^{f}_{l}
+\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{ext}^{f}_{l}
 ```
 
 ### `Link_maintenance_module_count_is_finite`
 
 ```yaml
 Link_maintenance_module_count_is_finite:
-  holds: "Link_p_nom_max < inf"
+  holds: "Link_p_nom_max"
   where: "Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND Link_p_nom_mod > 0"
   description: >-
     the `maint-modstatus` rows bound the modules on in maintenance by
-    `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
+    `p_nom_max / p_nom_mod`, so one with no cap has an infinite
     coefficient. PyPSA does not check it, and HiGHS refuses the model
     (`constraints.py:504-507`)
 ```
 
 ```math
-\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} < \infty \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 
 ### `Process_maintenance_events_positive`
@@ -12673,33 +12673,33 @@ Process_maintenance_events_fit_the_horizon:
 
 ```yaml
 Process_maintenance_build_cap_is_finite:
-  holds: "Process_p_nom_max < inf"
+  holds: "Process_p_nom_max"
   where: "Process_maintainable AND Process_p_nom_extendable"
   description: >-
     the `maintcap` rows hold the chosen build in maintenance against
-    `p_nom_max`, so an infinite cap is an infinite coefficient — PyPSA
+    `p_nom_max`, so one with no cap has an infinite coefficient — PyPSA
     refuses it (`consistency.py:1528`)
 ```
 
 ```math
-\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} < \infty \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j}
+\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j}
 ```
 
 ### `Process_maintenance_module_count_is_finite`
 
 ```yaml
 Process_maintenance_module_count_is_finite:
-  holds: "Process_p_nom_max < inf"
+  holds: "Process_p_nom_max"
   where: "Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_p_nom_mod > 0"
   description: >-
     the `maint-modstatus` rows bound the modules on in maintenance by
-    `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
+    `p_nom_max / p_nom_mod`, so one with no cap has an infinite
     coefficient. PyPSA does not check it, and HiGHS refuses the model
     (`constraints.py:504-507`)
 ```
 
 ```math
-\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} < \infty \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 ### `Link_output_delay_under_uniform_weighting`

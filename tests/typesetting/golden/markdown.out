@@ -154,7 +154,7 @@ $`\lvert \mathcal{T} \rvert`$ denotes the size of the set being counted along, a
 **`headroom`**
 
 ```math
-\mathit{headroom} \ge 0 \qquad \text{where } \mathrm{budget} \text{ is defined}
+\mathit{headroom} \ge 0 \qquad \text{where } \mathrm{budget} > 0
 ```
 
 **`weight`**
@@ -512,7 +512,7 @@ p_{t,g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, t \in \mathcal{T},\ g
 **`run_start`**
 
 ```math
-\mathit{slack}_{t} \le \mathrm{load}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{load}_{t,b} \text{ is defined} \wedge \neg \left( \mathrm{load}_{t - 1,b} \text{ is defined} \right)
+\mathit{slack}_{t} \le \mathrm{load}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \neg \left( \mathrm{load}_{t - 1,b} \text{ is defined} \right)
 ```
 
 **`zoned`**
@@ -622,7 +622,7 @@ p_{t,g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, t \in \mathcal{T},\ g
 **`fuel_curve_complete`**
 
 ```math
-\mathrm{bp\_x}_{g,a} \text{ is defined} \wedge \mathrm{bp\_y}_{g,a} \text{ is defined} \wedge \mathrm{bp\_heat}_{g,a} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ a \in \mathcal{A}
+\mathrm{bp\_x}_{g,a} \text{ is defined} \wedge \mathrm{bp\_y}_{g,a} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ a \in \mathcal{A}
 ```
 
 **`cost_curve_complete`**
@@ -640,7 +640,7 @@ p_{t,g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, t \in \mathcal{T},\ g
 **`hull_curve_complete`**
 
 ```math
-\mathrm{bp\_x}_{g,a} \text{ is defined} \wedge \mathrm{bp\_heat}_{g,a} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ a \in \mathcal{A}
+\mathrm{bp\_x}_{g,a} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ a \in \mathcal{A}
 ```
 
 **`hull_curve_increasing`**
@@ -688,7 +688,7 @@ p_{t,g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, t \in \mathcal{T},\ g
 **`ramp_curve_complete`**
 
 ```math
-\mathrm{bp\_x}_{g,a} \text{ is defined} \wedge \mathrm{bp\_heat}_{g,a} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ a \in \mathcal{A}
+\mathrm{bp\_x}_{g,a} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ a \in \mathcal{A}
 ```
 
 **`ramp_curve_increasing`**

@@ -96,8 +96,9 @@ parameters:
     description: least nominal apparent power an extendable line may be built at
     dims: [scenario, line]
   Line_s_nom_max:
-    description: most nominal apparent power an extendable line may be built at
+    description: most nominal apparent power an extendable line may be built at; one with no cap has no row
     dims: [scenario, line]
+    missing: absent
   Line_capital_cost:
     description: >-
       cost of one unit of nominal apparent power for the modelled horizon —
@@ -278,7 +279,7 @@ constraints:
     where: Line_s_nom_extendable
     expression: Line_s_nom_ext >= Line_s_nom_min
   Line_ext_s_nom_upper:
-    description: "`Line-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Line-ext-s_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, line]
     where: Line_s_nom_extendable AND Line_s_nom_max
     expression: Line_s_nom_ext <= Line_s_nom_max

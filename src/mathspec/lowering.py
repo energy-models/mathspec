@@ -20,7 +20,14 @@ from typing import TYPE_CHECKING
 from mathspec.dimensions import check_schema, dims_of
 from mathspec.errors import SchemaError, did_you_mean, prefixed
 from mathspec.expansion import expand, parse_template
-from mathspec.piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
+from mathspec.piecewise import (
+    assumptions_of,
+    curve_frame,
+    lp_domain_refusal,
+    refused_tables,
+    refused_under_points,
+    resolve_links,
+)
 from mathspec.program import (
     Assumption,
     BooleanLiteral,
@@ -208,7 +215,11 @@ def lower(schema: Spec) -> Program:
             points=pdef.points,
             description=pdef.description,
         )
-        for aname, assumed in assumptions_of(pname, piecewise[pname]).items():
+    if refusals := list(refused_under_points(schema)):
+        raise SchemaError('\n'.join(refusals))
+    refused = refused_tables(schema)
+    for pname, curve in piecewise.items():
+        for aname, assumed in assumptions_of(pname, curve, refused=refused).items():
             assumption = _assumption(aname, assumed, ns, errors)
             assert assumption is not None and not errors, 'what a method assumes is stated in the language'
             assumptions[aname] = assumption
@@ -261,7 +272,7 @@ def lower(schema: Spec) -> Program:
         ),
         description=schema.description,
     )
-    if errors := [*emitted_name_errors(schema, program), *refused_under_points(schema)]:
+    if errors := emitted_name_errors(schema, program):
         raise SchemaError('\n'.join(errors))
     check_schema(schema, program)
     return program

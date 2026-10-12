@@ -1612,6 +1612,14 @@ class TestRulesDecidedWithoutData:
                 id='where-a-bare-int-parameter-under-refused',
             ),
             pytest.param(
+                {'parameters.n': {'dims': ['g']}, 'variables.p.where': 'n'},
+                (
+                    "'n' is declared dtype: float and missing: refused",
+                    'Declare `missing: neutral` or `absent`, or compare the value',
+                ),
+                id='where-a-bare-float-parameter-under-refused',
+            ),
+            pytest.param(
                 {'variables.p.where': 'tag'},
                 (
                     "'tag' is declared dtype: str and missing: refused",
@@ -2304,7 +2312,7 @@ def test_each_declaration_is_resolved_once_however_many_readers(monkeypatch):
                 'constraints.spare': {'dims': ['snapshot', 'generator'], 'expression': 'p <= headroom'},
                 'dimensions.bp': {'dtype': 'int', 'ordered': True},
                 'parameters.bp_x': {'dims': ['generator', 'bp']},
-                'parameters.bp_y': {'dims': ['generator', 'bp']},
+                'parameters.bp_y': {'dims': ['generator', 'bp'], 'missing': 'neutral'},
                 'variables.op_cost': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}},
                 'piecewise.curve': {'over': 'bp', 'links': [['p', 'bp_x'], ['op_cost', 'bp_y']]},
             },
@@ -2465,7 +2473,6 @@ def test_a_values_table_under_points_is_not_refused(parameter, declared):
 @pytest.mark.parametrize(
     'patch',
     [
-        pytest.param({'parameters.n': {'dims': ['g']}}, id='a-float-may-hold-inf'),
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'bool'}}, id='a-flag-reads-its-value'),
         pytest.param(
             {'parameters.n': {'dims': ['g'], 'dtype': 'int', 'missing': 'neutral'}}, id='an-int-under-neutral'
@@ -2479,6 +2486,34 @@ def test_a_bare_parameter_whose_answer_needs_the_data_loads(patch):
     """The declaring file owns a given parameter's `missing:`, so this file cannot decide its rows."""
     spec = to_spec(varied(SMALL_MODEL, **patch, **{'variables.p.where': 'n'}))
     assert spec.program.variables['p'].where is not None, 'the bare name stays a mask'
+
+
+@pytest.mark.parametrize('dtype', ['float', 'int', 'str'])
+@pytest.mark.parametrize(
+    'where',
+    [
+        pytest.param('count(n, over=g) >= 2', id='counted'),
+        pytest.param('NOT shift(n, along=g, offset=1)', id='shifted'),
+        pytest.param('at(m, by=lk[h])', id='read-through-a-relation'),
+    ],
+)
+def test_a_bare_name_under_refused_loads_inside_count_shift_and_at(dtype, where):
+    """A row at every coordinate still counts, steps off the edge, and joins, so the name is not a mask with no effect.
+
+    `count(scenario_weight, over=scenario)` counts the scenarios. The bare-name refusal fired inside the operand too,
+    and refused it for an `int` or a `str`.
+    """
+    spec = to_spec(
+        varied(
+            SMALL_MODEL,
+            **{
+                'parameters.n': {'dims': ['g'], 'dtype': dtype},
+                'parameters.m': {'dims': ['h'], 'dtype': dtype},
+                'variables.p.where': where,
+            },
+        )
+    )
+    assert spec.program.variables['p'].where is not None, 'the operand stays a mask'
 
 
 def test_a_given_parameter_has_no_missing():

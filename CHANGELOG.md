@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language)!: a parameter value that is infinite is refused when the data is attached, and a where that names a parameter with a row everywhere is refused at load ([#869](https://github.com/energy-models/mathspec/pull/869))
 - feat!: a spec written back out and its typeset document follow one section order ([#848](https://github.com/energy-models/mathspec/pull/848))
 - docs: Update prose in docs using an updated Claude Skill file, to improve readability ([#840](https://github.com/energy-models/mathspec/pull/840))
 - docs(pypsa): a delayed port under uneven snapshot weights is refused, where PyPSA counts weighted time ([#852](https://github.com/energy-models/mathspec/pull/852))

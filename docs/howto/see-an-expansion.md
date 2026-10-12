@@ -198,14 +198,6 @@ the set out too.
         \left( x,\ y \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}^{\mathrm{bp}}_{b},\ \mathrm{y}^{\mathrm{bp}}_{b})
         ```
 
-        _Assumptions_
-
-        **`curve_complete`**
-
-        ```math
-        \mathrm{x}^{\mathrm{bp}}_{b} \text{ is defined} \wedge \mathrm{y}^{\mathrm{bp}}_{b} \text{ is defined} \qquad \forall\, b \in \mathcal{B}
-        ```
-
 === "`expand('piecewise')`"
 
     === "YAML"
@@ -242,14 +234,6 @@ the set out too.
             variable: curve_lam
             along: bp
             type: 2
-
-        assumptions:
-          curve_complete:
-            holds: x_bp AND y_bp
-            description: >-
-              piecewise 'curve': every breakpoint the curve runs through needs a row in
-              'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows, or declare points: to say how far the curve
-              runs.
         ```
 
     === "Math"
@@ -300,14 +284,6 @@ the set out too.
         \left( \mathit{curve\_lam}_{b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2
         ```
 
-        _Assumptions_
-
-        **`curve_complete`**
-
-        ```math
-        \mathrm{x}^{\mathrm{bp}}_{b} \text{ is defined} \wedge \mathrm{y}^{\mathrm{bp}}_{b} \text{ is defined} \qquad \forall\, b \in \mathcal{B}
-        ```
-
 === "`expand()`"
 
     === "YAML"
@@ -348,14 +324,6 @@ the set out too.
           curve_adjacency:
             dims: [bp]
             expression: curve_lam <= (curve_seg + shift(curve_seg, along=bp, offset=1, edge=0))
-
-        assumptions:
-          curve_complete:
-            holds: x_bp AND y_bp
-            description: >-
-              piecewise 'curve': every breakpoint the curve runs through needs a row in
-              'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows, or declare points: to say how far the curve
-              runs.
         ```
 
     === "Math"
@@ -416,14 +384,6 @@ the set out too.
 
         ```math
         \mathit{curve\_lam}_{b} \le \mathit{curve\_seg}_{b} + \mathit{curve\_seg}_{b \boxminus_{0} 1} \qquad \forall\, b \in \mathcal{B}
-        ```
-
-        _Assumptions_
-
-        **`curve_complete`**
-
-        ```math
-        \mathrm{x}^{\mathrm{bp}}_{b} \text{ is defined} \wedge \mathrm{y}^{\mathrm{bp}}_{b} \text{ is defined} \qquad \forall\, b \in \mathcal{B}
         ```
 
 <!-- expansion:curve:end -->

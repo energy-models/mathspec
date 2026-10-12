@@ -71,8 +71,9 @@ parameters:
     description: least nominal capacity an extendable store may be built at
     dims: [scenario, store]
   Store_e_nom_max:
-    description: most nominal capacity an extendable store may be built at
+    description: most nominal capacity an extendable store may be built at; one with no cap has no row
     dims: [scenario, store]
+    missing: absent
   Store_capital_cost:
     description: >-
       cost of one unit of nominal capacity for the modelled horizon —
@@ -319,7 +320,7 @@ constraints:
     where: Store_e_nom_extendable
     expression: Store_e_nom_ext >= Store_e_nom_min
   Store_ext_e_nom_upper:
-    description: "`Store-ext-e_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Store-ext-e_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, store]
     where: Store_e_nom_extendable AND Store_e_nom_max
     expression: Store_e_nom_ext <= Store_e_nom_max
