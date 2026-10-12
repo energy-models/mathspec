@@ -39,6 +39,12 @@ constraints:
 
 PyPSA's `Load`, wired to a port rather than straight to a bus. What it takes is data, so it decides nothing.
 
+#### Given
+
+| Symbol | Meaning |
+|---|---|
+| $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — the surface introduces this flow, and this file pins it at its own ports |
+
 #### Sets
 
 | Symbol | Meaning |
@@ -52,12 +58,6 @@ PyPSA's `Load`, wired to a port rather than straight to a bus. What it takes is 
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{load}`$ | `Load_p_set` over $`\mathcal{T} \times \mathcal{D}`$ — `Load-p_set` — what a load takes in a snapshot |
-
-#### Given
-
-| Symbol | Meaning |
-|---|---|
-| $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — the surface introduces this flow, and this file pins it at its own ports |
 
 #### Subject to
 

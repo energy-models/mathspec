@@ -11,10 +11,14 @@ import re
 import sys
 import textwrap
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from mathspec.typesetting import to_markdown
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
+
+    from mathspec.composition import Source
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -43,6 +47,21 @@ def inlined(markdown: str) -> str:
     space, so the joined lines print the same math.
     """
     return FENCE.sub(lambda m: f'$`{" ".join(m[1].splitlines())}`$', markdown)
+
+
+def split_math(spec: Source, **options: Any) -> tuple[str, str]:
+    """*spec*'s Markdown page cut where its equations start: the description and legend, then the math.
+
+    The legend and the math share section titles (Masks, Definitions), so no
+    heading marks the cut. The page without its legend is the description, then
+    the math from its first heading on, and that math ends the whole page.
+    """
+    page = to_markdown(spec, **options)
+    bare = to_markdown(spec, **{**options, 'legend': False})
+    first = re.search(r'^#### ', bare, re.MULTILINE)
+    math = '' if first is None else bare[first.start() :]
+    assert page.endswith(math), 'the legend prints before the math, so the page ends with what prints without it'
+    return page.removesuffix(math), math
 
 
 def tab(title: str, body: str) -> str:

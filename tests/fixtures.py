@@ -86,6 +86,17 @@ def varied(base: dict[str, Any], **patch: Any) -> dict[str, Any]:
     return raw
 
 
+def section(markdown: str, title: str) -> str:
+    """The body under ``#### title``, up to the next heading of that level.
+
+    A split on the title alone carried every section after it, so a name
+    printed under the wrong heading still passed.
+    """
+    _, found, after = markdown.partition(f'#### {title}\n')
+    assert found, f'no section {title!r} printed'
+    return after.split('\n#### ', 1)[0]
+
+
 def schema_of(source: str | Path | dict[str, Any], **patch: Any) -> Spec:
     """A ``Spec`` from a YAML path, YAML text, or a raw dict, ``**patch`` applied by :func:`varied`.
 

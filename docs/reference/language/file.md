@@ -14,15 +14,15 @@ A spec file is a YAML mapping with **thirteen declaration keys**, plus
 | `dimensions`  | the dimensions ([dimensions](dimensions.md))                                                      |
 | `relations`   | named relations between dimensions ([relations](relations.md))                                    |
 | `parameters`  | the data the spec expects ([declarations](declarations.md))                                       |
-| `variables`   | what the solver decides                                                                           |
-| `constraints` | the rules those decisions obey                                                                    |
-| `objective`   | what is minimised or maximised                                                                    |
-| `expressions` | named quantities, reusable in the math and readable after a solve ([named expressions](named.md)) |
 | `masks`       | named `where` predicates, read by name wherever a `where` string is ([masks](named.md#masks))     |
-| `macros`      | templates that take arguments ([macros](named.md#macros))                                         |
-| `piecewise`   | piecewise-linear curves ([piecewise](piecewise.md))                                               |
+| `variables`   | what the solver decides                                                                           |
+| `expressions` | named quantities, reusable in the math and readable after a solve ([named expressions](named.md)) |
+| `objective`   | what is minimised or maximised                                                                    |
+| `constraints` | the rules those decisions obey                                                                    |
 | `sos`         | special-ordered sets ([sos](piecewise.md#sos))                                                    |
+| `piecewise`   | piecewise-linear curves ([piecewise](piecewise.md))                                               |
 | `assumptions` | what the spec expects of its data ([assumptions](assumptions.md))                                 |
+| `macros`      | templates that take arguments ([macros](named.md#macros))                                         |
 
 A file with no `objective` is a **feasibility problem**: it asks whether the
 constraints can all be met.

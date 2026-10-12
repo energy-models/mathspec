@@ -19,7 +19,7 @@ import pytest
 from mathspec import advice, merge, to_markdown, to_spec, typeset
 from mathspec.errors import LanguageError
 from mathspec.typesetting import FORMATS
-from tests.fixtures import BALANCE
+from tests.fixtures import BALANCE, section
 
 #: One component file: it pins the flow at its own port, and the column it
 #: pins belongs to another fragment.
@@ -89,7 +89,7 @@ def test_a_fragment_prints_as_math_in_every_format(fmt):
 def test_the_given_column_prints_under_its_own_heading():
     printed = to_markdown(SUPPLY)
     assert '#### Given' in printed, 'the legend says which symbols the file does not introduce'
-    assert '`flow`' in printed.split('#### Given')[1]
+    assert '`flow`' in section(printed, 'Given')
 
 
 def test_a_program_carries_the_column_it_reads_apart_from_the_ones_it_builds():
@@ -290,7 +290,7 @@ def test_the_dual_takes_its_frame_from_the_given_declaration():
 
 
 def test_a_given_row_family_prints_under_the_given_heading():
-    given = to_markdown(LAYER).split('#### Given')[1]
+    given = section(to_markdown(LAYER), 'Given')
     assert '`balance`' in given
     assert 'reads the dual of' in given, 'the legend says what the file may do with it'
 
@@ -411,7 +411,7 @@ def test_a_given_parameter_is_read_in_a_bound_as_any_parameter_is():
 
 
 def test_a_given_parameter_prints_under_the_given_heading():
-    given = to_markdown(PRICED).split('#### Given')[1]
+    given = section(to_markdown(PRICED), 'Given')
     assert '`gen_cost`' in given and '`gen_on`' in given
 
 
@@ -503,7 +503,7 @@ def test_a_program_carries_the_expression_it_reads_apart_from_the_ones_it_define
 
 
 def test_a_given_expression_prints_under_the_given_heading():
-    given = to_markdown(BALANCE).split('#### Given')[1]
+    given = section(to_markdown(BALANCE), 'Given')
     assert '`injection`' in given
     assert 'an expression another file defines' in given, 'the legend says what kind of thing the file reads'
 
