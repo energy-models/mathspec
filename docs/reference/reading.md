@@ -301,9 +301,10 @@ that says the declaration is a scalar.
 It also writes a short mapping of numbers and names on one line, such as
 `bounds: {lower: 0, upper: p_max}`. A declaration with a description or an
 expression keeps one key on each line, even for an expression as short as
-`sum(p)`. The writer puts a list or a mapping on one line only when that line
-holds 80 characters or fewer. It does not wrap a long line, and it writes a
-multi-line expression as a block scalar (`|-`). It writes a description of two
+`sum(p)`. The writer puts a list or a mapping on one line only when the whole
+line, indent and key included, holds 100 characters or fewer. It does not wrap a
+long line, and it writes a multi-line expression as a block scalar (`|-`). It
+writes a description of two
 or more sentences as a folded block (`>-`) with one sentence on each line, and
 YAML reads the line breaks back as single spaces. `to_yaml(canonical=True)`
 writes the same layout.
