@@ -10,35 +10,92 @@ request renames that heading to the version and the day, such as
 `## 0.1.0 (2026-10-01)`, and edits the section into the release notes. Merging
 it releases that version ([RELEASING.md](https://github.com/energy-models/mathspec/blob/main/RELEASING.md)).
 
-## Upcoming version
+## 0.3.0 (2026-10-12)
 
-- feat!: a spec written back out and its typeset document follow one section order ([#848](https://github.com/energy-models/mathspec/pull/848))
-- docs: Update prose in docs using an updated Claude Skill file, to improve readability ([#840](https://github.com/energy-models/mathspec/pull/840))
-- docs(pypsa): a delayed port under uneven snapshot weights is refused, where PyPSA counts weighted time ([#852](https://github.com/energy-models/mathspec/pull/852))
-- docs: limits.md names that a count compares only against a whole-number literal ([#851](https://github.com/energy-models/mathspec/pull/851))
-- docs: every spec in the docs and examples opens with its given block ([#813](https://github.com/energy-models/mathspec/pull/813))
-- feat(spec)!: a spec written back out puts its given block first ([#818](https://github.com/energy-models/mathspec/pull/818))
+A file now says what a missing row means. A parameter declares `missing:`,
+and a table that is short of a row is refused when the data is attached,
+unless the file says otherwise. A `masks:` entry names a `where` predicate
+once, and another file reads it under `given: masks:`. A call names the
+columns of a relation as `relation[column]`, so one call reads one table.
+A spec written back out, and its typeset document, follow one section order.
+
+This release breaks a 0.2.1 file in five ways:
+
+- A call writes a relation column as `R[c]`: `sum(x, over=d, by=R[c])`,
+  `at(x, by=R[c])`, `within=R[c]`, and `R[c]` in a `where`. `by=R`, `R.c`, and
+  the `over=` and `into=` of `at` no longer load
+  ([#664](https://github.com/energy-models/mathspec/pull/664)).
+- A dimension that `shift`, `sum_back`, `position()`, a piecewise `over:` or a
+  special ordered set's `along:` steps along declares `ordered: true`. The
+  loader refuses the file until it does, and the message names the declaration
+  to add ([#793](https://github.com/energy-models/mathspec/pull/793)).
+- A variable's `absence: undefined` is now `missing: absent`, and
+  `absence: zero` is now `missing: neutral`
+  ([#810](https://github.com/energy-models/mathspec/pull/810)).
+- A parameter row that the data does not have is refused when the data is
+  attached, where 0.2.1 read it as `0`. Declare `missing: neutral` to read `0`
+  again, `missing: absent` to drop the row, or `missing: <value>` to read that
+  value ([#810](https://github.com/energy-models/mathspec/pull/810)).
+- `to_yaml()`, the canonical form, and the specs that `merge` and `override`
+  return write the sections in this order: given, dimensions, relations,
+  parameters, masks, variables, expressions, objective, constraints, sos,
+  piecewise, assumptions, macros. The typeset document follows the same order.
+  `canonical --check` fails a file that passed under 0.2.1 until `canonical`
+  writes it again
+  ([#818](https://github.com/energy-models/mathspec/pull/818),
+  [#848](https://github.com/energy-models/mathspec/pull/848)).
+
+It also breaks an import in three ways:
+
+- The top level of `mathspec` holds only what you call. `Spec`, its blocks and
+  `BUILTIN_NAMES` are in `mathspec.spec`. `Advice` and `AdviceKind` are in
+  `mathspec.program`. `MathSpecError`, `LanguageError`, `SchemaError`,
+  `DimensionError` and `did_you_mean` are in `mathspec.errors`. `FORMATS` is no
+  longer at the top level, and `FormatName` is
+  ([#837](https://github.com/energy-models/mathspec/pull/837)).
+- `mathspec.program.Named` is now `NamedExpression`
+  ([#822](https://github.com/energy-models/mathspec/pull/822)).
+- `mathspec.program.PulledBackPredicate` is now `JoinedPredicate`. An axis that
+  a join opens is an `Axis(dimension, column)`, not a dotted name
+  ([#664](https://github.com/energy-models/mathspec/pull/664)).
+
+The pull requests in this release:
+
+### Language
+
 - feat(language)!: `missing:` says what a missing row means, a table short of a row is refused unless the file says otherwise, and a variable's `absence:` is now `missing:` ([#810](https://github.com/energy-models/mathspec/pull/810))
+- feat(language)!: a call names the columns of a relation as relation[column], and a sum through a relation is a sum over the axes its join opens ([#664](https://github.com/energy-models/mathspec/pull/664))
+- feat(language)!: a construct that reads the order of a dimension needs the dimension declared ordered ([#793](https://github.com/energy-models/mathspec/pull/793))
+- feat(language): a where predicate is named once under `masks:`, and another file reads it under `given: masks:` ([#821](https://github.com/energy-models/mathspec/pull/821))
+- feat!: a spec written back out and its typeset document follow one section order, with the given block first ([#818](https://github.com/energy-models/mathspec/pull/818), [#848](https://github.com/energy-models/mathspec/pull/848))
+
+### Python API
+
+- refactor(api)!: the top level holds what you call, and spec, program and errors hold what you get back or catch ([#837](https://github.com/energy-models/mathspec/pull/837))
+- refactor(program)!: the node a use of a named expression stands as is `NamedExpression`, beside `NamedMask`, and `Named` is gone ([#822](https://github.com/energy-models/mathspec/pull/822))
+
+### Documentation
+
+- docs: every spec in the docs and examples opens with its given block ([#813](https://github.com/energy-models/mathspec/pull/813))
+- docs: limits.md names that a count compares only against a whole-number literal ([#851](https://github.com/energy-models/mathspec/pull/851))
+- docs: the documentation pages are reworded in plainer sentences ([#840](https://github.com/energy-models/mathspec/pull/840))
+
+### The PyPSA spec
+
+- docs(pypsa): the pypsa references are recorded against pypsa master, at 51986084, where the eight rungs that diverged now match ([#786](https://github.com/energy-models/mathspec/pull/786), [#806](https://github.com/energy-models/mathspec/pull/806), [#844](https://github.com/energy-models/mathspec/pull/844))
+- docs(pypsa): the pypsa spec names its repeated row conditions as masks, and its topic files read them under `given: masks:` ([#825](https://github.com/energy-models/mathspec/pull/825))
+- docs(pypsa): the linearized unit commitment is a patch over pypsa.yaml, and relaxes a committable link and process too ([#835](https://github.com/energy-models/mathspec/pull/835))
+- docs(pypsa): the pypsa page lists six more refusals and eight data-prep steps, and a capital cost says where fom_cost and overnight_cost enter ([#816](https://github.com/energy-models/mathspec/pull/816))
+- docs(pypsa): a delayed port under uneven snapshot weights is refused, where PyPSA counts weighted time ([#852](https://github.com/energy-models/mathspec/pull/852))
 - docs(pypsa): a risk preference with weight zero builds the CVaR variables and refuses quadratic costs, as in PyPSA ([#849](https://github.com/energy-models/mathspec/pull/849))
 - docs(pypsa): storage that retires before the last counted snapshot closes a global limit at its last active level ([#850](https://github.com/energy-models/mathspec/pull/850))
-- refactor(api): the top level holds what you call, and spec, program and errors hold what you get back or catch ([#837](https://github.com/energy-models/mathspec/pull/837))
-- refactor(program)!: the node a use of a named expression stands as is `NamedExpression`, beside `NamedMask`, and `Named` is gone ([#822](https://github.com/energy-models/mathspec/pull/822))
-- docs(pypsa): the pypsa spec names its repeated row conditions as masks, and its topic files read them under `given: masks:` ([#825](https://github.com/energy-models/mathspec/pull/825))
-- feat(language): a where predicate is named once under `masks:`, and another file reads it under `given: masks:` ([#821](https://github.com/energy-models/mathspec/pull/821))
-- feat(language)!: a construct that reads the order of a dimension needs the dimension declared ordered ([#793](https://github.com/energy-models/mathspec/pull/793))
-- docs(pypsa): the pypsa reference targets master at 51986084, where the eight rungs that diverged now match ([#844](https://github.com/energy-models/mathspec/pull/844))
-- feat(language)!: a call names the columns of a relation as relation[column], and a sum through a relation is a sum over the axes its join opens ([#664](https://github.com/energy-models/mathspec/pull/664))
-- docs(pypsa): the linearized unit commitment is a patch over pypsa.yaml, and relaxes a committable link and process too ([#835](https://github.com/energy-models/mathspec/pull/835))
 - docs(pypsa): the outage factors of a security-constrained run come from each investment period's own branches ([#834](https://github.com/energy-models/mathspec/pull/834))
-- docs(pypsa): the pypsa page lists six more refusals and eight data-prep steps, and a capital cost says where fom_cost and overnight_cost enter ([#816](https://github.com/energy-models/mathspec/pull/816))
 - docs(pypsa): a committable unit built in a later period starts from off, and the big M follows pypsa for an infinite build cap ([#817](https://github.com/energy-models/mathspec/pull/817))
+- docs(pypsa): a fixed modular committable unit gets only its per-module commitment rows, as in pypsa master ([#787](https://github.com/energy-models/mathspec/pull/787))
 - docs(pypsa): a line, a transformer, a storage unit and a store may be built in whole modules, and a unit that is not active counts no modules ([#815](https://github.com/energy-models/mathspec/pull/815))
 - docs(pypsa): the cycle rows read each investment period's own cycle basis ([#814](https://github.com/energy-models/mathspec/pull/814))
 - docs(pypsa): a start-up or shut-down cost may change from snapshot to snapshot, as in pypsa master ([#807](https://github.com/energy-models/mathspec/pull/807))
 - docs(pypsa): a line or transformer limits its voltage angle difference, as in pypsa master ([#808](https://github.com/energy-models/mathspec/pull/808))
-- docs(pypsa): the pypsa line references point at pypsa master ([#806](https://github.com/energy-models/mathspec/pull/806))
-- docs(pypsa): a fixed modular committable unit gets only its per-module commitment rows, as in pypsa master ([#787](https://github.com/energy-models/mathspec/pull/787))
-- docs(pypsa): the pypsa references are recorded against pypsa master ([#786](https://github.com/energy-models/mathspec/pull/786))
 
 ## 0.2.1 (2026-10-01)
 
