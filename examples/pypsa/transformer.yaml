@@ -79,8 +79,9 @@ parameters:
     description: least nominal apparent power an extendable transformer may be built at
     dims: [scenario, transformer]
   Transformer_s_nom_max:
-    description: most nominal apparent power an extendable transformer may be built at
+    description: most nominal apparent power an extendable transformer may be built at; one with no cap has no row
     dims: [scenario, transformer]
+    missing: absent
   Transformer_capital_cost:
     description: >-
       cost of one unit of nominal apparent power for the modelled horizon —
@@ -279,7 +280,7 @@ constraints:
     where: Transformer_s_nom_extendable
     expression: Transformer_s_nom_ext >= Transformer_s_nom_min
   Transformer_ext_s_nom_upper:
-    description: "`Transformer-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Transformer-ext-s_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, transformer]
     where: Transformer_s_nom_extendable AND Transformer_s_nom_max
     expression: Transformer_s_nom_ext <= Transformer_s_nom_max

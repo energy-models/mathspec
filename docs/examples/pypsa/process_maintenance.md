@@ -230,18 +230,18 @@ assumptions:
       weightings, cannot all be scheduled — PyPSA refuses it
       (`consistency.py:1516`)
   Process_maintenance_build_cap_is_finite:
-    holds: "Process_p_nom_max < inf"
+    holds: "Process_p_nom_max"
     where: "Process_maintainable AND Process_p_nom_extendable"
     description: >-
       the `maintcap` rows hold the chosen build in maintenance against
-      `p_nom_max`, so an infinite cap is an infinite coefficient — PyPSA
+      `p_nom_max`, so one with no cap has an infinite coefficient — PyPSA
       refuses it (`consistency.py:1528`)
   Process_maintenance_module_count_is_finite:
-    holds: "Process_p_nom_max < inf"
+    holds: "Process_p_nom_max"
     where: "Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_p_nom_mod > 0"
     description: >-
       the `maint-modstatus` rows bound the modules on in maintenance by
-      `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
+      `p_nom_max / p_nom_mod`, so one with no cap has an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
       (`constraints.py:504-507`)
 ```
@@ -437,12 +437,12 @@ assumptions:
 **`Process_maintenance_build_cap_is_finite`**
 
 ```math
-\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} < \infty \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j}
+\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j}
 ```
 
 **`Process_maintenance_module_count_is_finite`**
 
 ```math
-\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} < \infty \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 <!-- gallery:end -->

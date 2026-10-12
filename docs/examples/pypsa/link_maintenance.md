@@ -227,18 +227,18 @@ assumptions:
       weightings, cannot all be scheduled — PyPSA refuses it
       (`consistency.py:1516`)
   Link_maintenance_build_cap_is_finite:
-    holds: "Link_p_nom_max < inf"
+    holds: "Link_p_nom_max"
     where: "Link_maintainable AND Link_p_nom_extendable"
     description: >-
       the `maintcap` rows hold the chosen build in maintenance against
-      `p_nom_max`, so an infinite cap is an infinite coefficient — PyPSA
+      `p_nom_max`, so one with no cap has an infinite coefficient — PyPSA
       refuses it (`consistency.py:1528`)
   Link_maintenance_module_count_is_finite:
-    holds: "Link_p_nom_max < inf"
+    holds: "Link_p_nom_max"
     where: "Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND Link_p_nom_mod > 0"
     description: >-
       the `maint-modstatus` rows bound the modules on in maintenance by
-      `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
+      `p_nom_max / p_nom_mod`, so one with no cap has an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
       (`constraints.py:504-507`)
 ```
@@ -434,12 +434,12 @@ assumptions:
 **`Link_maintenance_build_cap_is_finite`**
 
 ```math
-\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} < \infty \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{ext}^{f}_{l}
+\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{ext}^{f}_{l}
 ```
 
 **`Link_maintenance_module_count_is_finite`**
 
 ```math
-\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} < \infty \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 <!-- gallery:end -->

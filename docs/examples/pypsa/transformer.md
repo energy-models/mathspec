@@ -86,8 +86,9 @@ parameters:
     description: least nominal apparent power an extendable transformer may be built at
     dims: [scenario, transformer]
   Transformer_s_nom_max:
-    description: most nominal apparent power an extendable transformer may be built at
+    description: most nominal apparent power an extendable transformer may be built at; one with no cap has no row
     dims: [scenario, transformer]
+    missing: absent
   Transformer_capital_cost:
     description: >-
       cost of one unit of nominal apparent power for the modelled horizon —
@@ -286,7 +287,7 @@ constraints:
     where: Transformer_s_nom_extendable
     expression: Transformer_s_nom_ext >= Transformer_s_nom_min
   Transformer_ext_s_nom_upper:
-    description: "`Transformer-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Transformer-ext-s_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, transformer]
     where: Transformer_s_nom_extendable AND Transformer_s_nom_max
     expression: Transformer_s_nom_ext <= Transformer_s_nom_max
@@ -392,7 +393,7 @@ constraints:
 | $`\sigma^{\mathrm{mod}}`$ | `Transformer_s_nom_mod` over $`\mathcal{M}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of; no value means the build is continuous |
 | $`\overline{\sigma}`$ | `Transformer_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — most flow either way, per unit of nominal apparent power |
 | $`\underline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_min` over $`\Xi \times \mathcal{M}`$ — least nominal apparent power an extendable transformer may be built at |
-| $`\overline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_max` over $`\Xi \times \mathcal{M}`$ — most nominal apparent power an extendable transformer may be built at |
+| $`\overline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_max` over $`\Xi \times \mathcal{M}`$, `absent` where the data has no row — most nominal apparent power an extendable transformer may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\sigma^{\mathrm{nom,set}}`$ | `Transformer_s_nom_set` over $`\mathcal{M}`$, `neutral` where the data has no row — a given nominal apparent power for an extendable transformer; one without a value has no row here |
 | $`\sigma^{\mathrm{set}}`$ | `Transformer_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, `neutral` where the data has no row — a given flow schedule; a transformer without one has no row here |

@@ -103,8 +103,9 @@ parameters:
     description: least nominal apparent power an extendable line may be built at
     dims: [scenario, line]
   Line_s_nom_max:
-    description: most nominal apparent power an extendable line may be built at
+    description: most nominal apparent power an extendable line may be built at; one with no cap has no row
     dims: [scenario, line]
+    missing: absent
   Line_capital_cost:
     description: >-
       cost of one unit of nominal apparent power for the modelled horizon —
@@ -285,7 +286,7 @@ constraints:
     where: Line_s_nom_extendable
     expression: Line_s_nom_ext >= Line_s_nom_min
   Line_ext_s_nom_upper:
-    description: "`Line-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Line-ext-s_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, line]
     where: Line_s_nom_extendable AND Line_s_nom_max
     expression: Line_s_nom_ext <= Line_s_nom_max
@@ -382,7 +383,7 @@ constraints:
 | $`\mathrm{s}^{\mathrm{mod}}`$ | `Line_s_nom_mod` over $`\mathcal{K}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of; no value means the build is continuous |
 | $`\overline{\mathrm{s}}`$ | `Line_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — most flow either way, per unit of nominal apparent power |
 | $`\underline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_min` over $`\Xi \times \mathcal{K}`$ — least nominal apparent power an extendable line may be built at |
-| $`\overline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_max` over $`\Xi \times \mathcal{K}`$ — most nominal apparent power an extendable line may be built at |
+| $`\overline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_max` over $`\Xi \times \mathcal{K}`$, `absent` where the data has no row — most nominal apparent power an extendable line may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\Xi \times \mathcal{K}`$ — cost of one unit of nominal apparent power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{s}^{\mathrm{nom,set}}`$ | `Line_s_nom_set` over $`\mathcal{K}`$, `neutral` where the data has no row — a given nominal apparent power for an extendable line; one without a value has no row here |
 | $`\mathrm{s}^{\mathrm{set}}`$ | `Line_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$, `neutral` where the data has no row — a given flow schedule; a line without one has no row here |

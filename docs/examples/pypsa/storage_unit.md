@@ -78,8 +78,9 @@ parameters:
     description: least nominal power an extendable storage unit may be built at
     dims: [scenario, storage_unit]
   StorageUnit_p_nom_max:
-    description: most nominal power an extendable storage unit may be built at
+    description: most nominal power an extendable storage unit may be built at; one with no cap has no row
     dims: [scenario, storage_unit]
+    missing: absent
   StorageUnit_capital_cost:
     description: >-
       cost of one unit of nominal power for the modelled horizon —
@@ -428,7 +429,7 @@ constraints:
     where: StorageUnit_p_nom_extendable
     expression: StorageUnit_p_nom_ext >= StorageUnit_p_nom_min
   StorageUnit_ext_p_nom_upper:
-    description: "`StorageUnit-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`StorageUnit-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, storage_unit]
     where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_max
     expression: StorageUnit_p_nom_ext <= StorageUnit_p_nom_max
@@ -567,7 +568,7 @@ assumptions:
 | $`\mathrm{W}^{h}`$ | `StorageUnit_capital_weight` over $`\mathcal{S}`$ — the sum of period weights a storage unit stands in — PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{new}^{h}`$ | `StorageUnit_first_active` over $`\mathcal{Y} \times \mathcal{S}`$ — one in the first period a storage unit stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\underline{\mathrm{h}}^{\mathrm{nom}}`$ | `StorageUnit_p_nom_min` over $`\Xi \times \mathcal{S}`$ — least nominal power an extendable storage unit may be built at |
-| $`\overline{\mathrm{h}}^{\mathrm{nom}}`$ | `StorageUnit_p_nom_max` over $`\Xi \times \mathcal{S}`$ — most nominal power an extendable storage unit may be built at |
+| $`\overline{\mathrm{h}}^{\mathrm{nom}}`$ | `StorageUnit_p_nom_max` over $`\Xi \times \mathcal{S}`$, `absent` where the data has no row — most nominal power an extendable storage unit may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap},h}`$ | `StorageUnit_capital_cost` over $`\Xi \times \mathcal{S}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{h}^{\mathrm{nom,set}}`$ | `StorageUnit_p_nom_set` over $`\mathcal{S}`$, `neutral` where the data has no row — a given nominal power for an extendable storage unit; one without a value has no row here |
 | $`\mathrm{h}^{\mathrm{nom}}`$ | `StorageUnit_p_nom` over $`\Xi \times \mathcal{S}`$ — nominal power |

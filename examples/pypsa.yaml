@@ -453,8 +453,9 @@ parameters:
     description: least nominal power an extendable process may be built at
     dims: [scenario, process]
   Process_p_nom_max:
-    description: most nominal power an extendable process may be built at
+    description: most nominal power an extendable process may be built at; one with no cap has no row
     dims: [scenario, process]
+    missing: absent
   Process_capital_cost:
     description: >-
       cost of one unit of nominal power for the modelled horizon —
@@ -731,8 +732,9 @@ parameters:
     description: least nominal power an extendable generator may be built at
     dims: [scenario, generator]
   Generator_p_nom_max:
-    description: most nominal power an extendable generator may be built at
+    description: most nominal power an extendable generator may be built at; one with no cap has no row
     dims: [scenario, generator]
+    missing: absent
   Generator_capital_cost:
     description: >-
       cost of one unit of nominal power for the modelled horizon —
@@ -746,17 +748,20 @@ parameters:
     dims: [generator]
     missing: neutral
   Generator_e_sum_min:
-    description: least energy over the horizon; minus infinity where no floor is meant
+    description: least energy over the horizon; a generator with no floor has no row
     dims: [scenario, generator]
+    missing: absent
   Generator_e_sum_max:
-    description: most energy over the horizon — a fuel or emission budget in energy terms; infinity where no cap is meant
+    description: most energy over the horizon — a fuel or emission budget in energy terms; a generator with no budget has no row
     dims: [scenario, generator]
+    missing: absent
   Link_p_nom_min:
     description: least nominal power an extendable link may be built at
     dims: [scenario, link]
   Link_p_nom_max:
-    description: most nominal power an extendable link may be built at
+    description: most nominal power an extendable link may be built at; one with no cap has no row
     dims: [scenario, link]
+    missing: absent
   Link_capital_cost:
     description: >-
       cost of one unit of nominal power for the modelled horizon —
@@ -773,8 +778,9 @@ parameters:
     description: least nominal power an extendable storage unit may be built at
     dims: [scenario, storage_unit]
   StorageUnit_p_nom_max:
-    description: most nominal power an extendable storage unit may be built at
+    description: most nominal power an extendable storage unit may be built at; one with no cap has no row
     dims: [scenario, storage_unit]
+    missing: absent
   StorageUnit_capital_cost:
     description: >-
       cost of one unit of nominal power for the modelled horizon —
@@ -791,8 +797,9 @@ parameters:
     description: least nominal capacity an extendable store may be built at
     dims: [scenario, store]
   Store_e_nom_max:
-    description: most nominal capacity an extendable store may be built at
+    description: most nominal capacity an extendable store may be built at; one with no cap has no row
     dims: [scenario, store]
+    missing: absent
   Store_capital_cost:
     description: >-
       cost of one unit of nominal capacity for the modelled horizon —
@@ -1006,8 +1013,9 @@ parameters:
     description: least nominal apparent power an extendable line may be built at
     dims: [scenario, line]
   Line_s_nom_max:
-    description: most nominal apparent power an extendable line may be built at
+    description: most nominal apparent power an extendable line may be built at; one with no cap has no row
     dims: [scenario, line]
+    missing: absent
   Line_capital_cost:
     description: >-
       cost of one unit of nominal apparent power for the modelled horizon —
@@ -1098,8 +1106,9 @@ parameters:
     description: least nominal apparent power an extendable transformer may be built at
     dims: [scenario, transformer]
   Transformer_s_nom_max:
-    description: most nominal apparent power an extendable transformer may be built at
+    description: most nominal apparent power an extendable transformer may be built at; one with no cap has no row
     dims: [scenario, transformer]
+    missing: absent
   Transformer_capital_cost:
     description: >-
       cost of one unit of nominal apparent power for the modelled horizon —
@@ -2774,7 +2783,7 @@ constraints:
     where: Generator_p_nom_extendable
     expression: Generator_p_nom_ext >= Generator_p_nom_min
   Generator_ext_p_nom_upper:
-    description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, generator]
     where: Generator_p_nom_extendable AND Generator_p_nom_max
     expression: Generator_p_nom_ext <= Generator_p_nom_max
@@ -2784,12 +2793,12 @@ constraints:
     where: Generator_p_nom_extendable AND Generator_p_nom_set
     expression: Generator_p_nom_ext == Generator_p_nom_set
   Generator_e_sum_min:
-    description: "`Generator-e_sum_min` — energy over the horizon is at least its floor; a floor of minus infinity is no row"
+    description: "`Generator-e_sum_min` — energy over the horizon is at least its floor, wherever it has one"
     dims: [scenario, generator]
     where: Generator_e_sum_min
     expression: sum(Generator_p * snapshot_weightings_generators, over=snapshot) >= Generator_e_sum_min
   Generator_e_sum_max:
-    description: "`Generator-e_sum_max` — energy over the horizon is at most its budget; a budget of infinity is no row"
+    description: "`Generator-e_sum_max` — energy over the horizon is at most its budget, wherever it has one"
     dims: [scenario, generator]
     where: Generator_e_sum_max
     expression: sum(Generator_p * snapshot_weightings_generators, over=snapshot) <= Generator_e_sum_max
@@ -2809,7 +2818,7 @@ constraints:
     where: Link_p_nom_extendable
     expression: Link_p_nom_ext >= Link_p_nom_min
   Link_ext_p_nom_upper:
-    description: "`Link-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Link-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, link]
     where: Link_p_nom_extendable AND Link_p_nom_max
     expression: Link_p_nom_ext <= Link_p_nom_max
@@ -2844,7 +2853,7 @@ constraints:
     where: Process_p_nom_extendable
     expression: Process_p_nom_ext >= Process_p_nom_min
   Process_ext_p_nom_upper:
-    description: "`Process-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Process-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, process]
     where: Process_p_nom_extendable AND Process_p_nom_max
     expression: Process_p_nom_ext <= Process_p_nom_max
@@ -3685,7 +3694,7 @@ constraints:
     where: Line_s_nom_extendable
     expression: Line_s_nom_ext >= Line_s_nom_min
   Line_ext_s_nom_upper:
-    description: "`Line-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Line-ext-s_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, line]
     where: Line_s_nom_extendable AND Line_s_nom_max
     expression: Line_s_nom_ext <= Line_s_nom_max
@@ -3766,7 +3775,7 @@ constraints:
     where: Transformer_s_nom_extendable
     expression: Transformer_s_nom_ext >= Transformer_s_nom_min
   Transformer_ext_s_nom_upper:
-    description: "`Transformer-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Transformer-ext-s_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, transformer]
     where: Transformer_s_nom_extendable AND Transformer_s_nom_max
     expression: Transformer_s_nom_ext <= Transformer_s_nom_max
@@ -4077,7 +4086,7 @@ constraints:
     where: StorageUnit_p_nom_extendable
     expression: StorageUnit_p_nom_ext >= StorageUnit_p_nom_min
   StorageUnit_ext_p_nom_upper:
-    description: "`StorageUnit-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`StorageUnit-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, storage_unit]
     where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_max
     expression: StorageUnit_p_nom_ext <= StorageUnit_p_nom_max
@@ -4130,7 +4139,7 @@ constraints:
     where: Store_e_nom_extendable
     expression: Store_e_nom_ext >= Store_e_nom_min
   Store_ext_e_nom_upper:
-    description: "`Store-ext-e_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Store-ext-e_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, store]
     where: Store_e_nom_extendable AND Store_e_nom_max
     expression: Store_e_nom_ext <= Store_e_nom_max
@@ -4337,18 +4346,18 @@ assumptions:
       weightings, cannot all be scheduled — PyPSA refuses it
       (`consistency.py:1516`)
   Generator_maintenance_build_cap_is_finite:
-    holds: "Generator_p_nom_max < inf"
+    holds: "Generator_p_nom_max"
     where: "Generator_maintainable AND Generator_p_nom_extendable"
     description: >-
       the `maintcap` rows hold the chosen build in maintenance against
-      `p_nom_max`, so an infinite cap is an infinite coefficient — PyPSA
+      `p_nom_max`, so one with no cap has an infinite coefficient — PyPSA
       refuses it (`consistency.py:1528`)
   Generator_maintenance_module_count_is_finite:
-    holds: "Generator_p_nom_max < inf"
+    holds: "Generator_p_nom_max"
     where: "Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_p_nom_mod > 0"
     description: >-
       the `maint-modstatus` rows bound the modules on in maintenance by
-      `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
+      `p_nom_max / p_nom_mod`, so one with no cap has an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
       (`constraints.py:504-507`)
   Link_maintenance_events_positive:
@@ -4378,18 +4387,18 @@ assumptions:
       weightings, cannot all be scheduled — PyPSA refuses it
       (`consistency.py:1516`)
   Link_maintenance_build_cap_is_finite:
-    holds: "Link_p_nom_max < inf"
+    holds: "Link_p_nom_max"
     where: "Link_maintainable AND Link_p_nom_extendable"
     description: >-
       the `maintcap` rows hold the chosen build in maintenance against
-      `p_nom_max`, so an infinite cap is an infinite coefficient — PyPSA
+      `p_nom_max`, so one with no cap has an infinite coefficient — PyPSA
       refuses it (`consistency.py:1528`)
   Link_maintenance_module_count_is_finite:
-    holds: "Link_p_nom_max < inf"
+    holds: "Link_p_nom_max"
     where: "Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND Link_p_nom_mod > 0"
     description: >-
       the `maint-modstatus` rows bound the modules on in maintenance by
-      `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
+      `p_nom_max / p_nom_mod`, so one with no cap has an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
       (`constraints.py:504-507`)
   Process_maintenance_events_positive:
@@ -4419,18 +4428,18 @@ assumptions:
       weightings, cannot all be scheduled — PyPSA refuses it
       (`consistency.py:1516`)
   Process_maintenance_build_cap_is_finite:
-    holds: "Process_p_nom_max < inf"
+    holds: "Process_p_nom_max"
     where: "Process_maintainable AND Process_p_nom_extendable"
     description: >-
       the `maintcap` rows hold the chosen build in maintenance against
-      `p_nom_max`, so an infinite cap is an infinite coefficient — PyPSA
+      `p_nom_max`, so one with no cap has an infinite coefficient — PyPSA
       refuses it (`consistency.py:1528`)
   Process_maintenance_module_count_is_finite:
-    holds: "Process_p_nom_max < inf"
+    holds: "Process_p_nom_max"
     where: "Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_p_nom_mod > 0"
     description: >-
       the `maint-modstatus` rows bound the modules on in maintenance by
-      `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
+      `p_nom_max / p_nom_mod`, so one with no cap has an infinite
       coefficient. PyPSA does not check it, and HiGHS refuses the model
       (`constraints.py:504-507`)
   Link_output_delay_under_uniform_weighting:

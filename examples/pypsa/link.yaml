@@ -154,8 +154,9 @@ parameters:
     description: least nominal power an extendable link may be built at
     dims: [scenario, link]
   Link_p_nom_max:
-    description: most nominal power an extendable link may be built at
+    description: most nominal power an extendable link may be built at; one with no cap has no row
     dims: [scenario, link]
+    missing: absent
   Link_capital_cost:
     description: >-
       cost of one unit of nominal power for the modelled horizon —
@@ -308,7 +309,7 @@ constraints:
     where: Link_p_nom_extendable
     expression: Link_p_nom_ext >= Link_p_nom_min
   Link_ext_p_nom_upper:
-    description: "`Link-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Link-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, link]
     where: Link_p_nom_extendable AND Link_p_nom_max
     expression: Link_p_nom_ext <= Link_p_nom_max

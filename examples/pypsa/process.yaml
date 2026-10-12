@@ -121,8 +121,9 @@ parameters:
     description: least nominal power an extendable process may be built at
     dims: [scenario, process]
   Process_p_nom_max:
-    description: most nominal power an extendable process may be built at
+    description: most nominal power an extendable process may be built at; one with no cap has no row
     dims: [scenario, process]
+    missing: absent
   Process_capital_cost:
     description: >-
       cost of one unit of nominal power for the modelled horizon —
@@ -278,7 +279,7 @@ constraints:
     where: Process_p_nom_extendable
     expression: Process_p_nom_ext >= Process_p_nom_min
   Process_ext_p_nom_upper:
-    description: "`Process-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Process-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, process]
     where: Process_p_nom_extendable AND Process_p_nom_max
     expression: Process_p_nom_ext <= Process_p_nom_max

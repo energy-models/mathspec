@@ -78,8 +78,9 @@ parameters:
     description: least nominal capacity an extendable store may be built at
     dims: [scenario, store]
   Store_e_nom_max:
-    description: most nominal capacity an extendable store may be built at
+    description: most nominal capacity an extendable store may be built at; one with no cap has no row
     dims: [scenario, store]
+    missing: absent
   Store_capital_cost:
     description: >-
       cost of one unit of nominal capacity for the modelled horizon —
@@ -326,7 +327,7 @@ constraints:
     where: Store_e_nom_extendable
     expression: Store_e_nom_ext >= Store_e_nom_min
   Store_ext_e_nom_upper:
-    description: "`Store-ext-e_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Store-ext-e_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, store]
     where: Store_e_nom_extendable AND Store_e_nom_max
     expression: Store_e_nom_ext <= Store_e_nom_max
@@ -450,7 +451,7 @@ assumptions:
 | $`\mathrm{W}^{e}`$ | `Store_capital_weight` over $`\mathcal{V}`$ — the sum of period weights a store stands in — PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{new}^{e}`$ | `Store_first_active` over $`\mathcal{Y} \times \mathcal{V}`$ — one in the first period a store stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\underline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_min` over $`\Xi \times \mathcal{V}`$ — least nominal capacity an extendable store may be built at |
-| $`\overline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_max` over $`\Xi \times \mathcal{V}`$ — most nominal capacity an extendable store may be built at |
+| $`\overline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_max` over $`\Xi \times \mathcal{V}`$, `absent` where the data has no row — most nominal capacity an extendable store may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap},e}`$ | `Store_capital_cost` over $`\Xi \times \mathcal{V}`$ — cost of one unit of nominal capacity for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{e}^{\mathrm{nom,set}}`$ | `Store_e_nom_set` over $`\mathcal{V}`$, `neutral` where the data has no row — a given nominal capacity for an extendable store; one without a value has no row here |
 | $`\mathrm{e}^{\mathrm{nom}}`$ | `Store_e_nom` over $`\Xi \times \mathcal{V}`$ — nominal energy capacity |

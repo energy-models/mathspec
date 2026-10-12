@@ -161,8 +161,9 @@ parameters:
     description: least nominal power an extendable link may be built at
     dims: [scenario, link]
   Link_p_nom_max:
-    description: most nominal power an extendable link may be built at
+    description: most nominal power an extendable link may be built at; one with no cap has no row
     dims: [scenario, link]
+    missing: absent
   Link_capital_cost:
     description: >-
       cost of one unit of nominal power for the modelled horizon —
@@ -315,7 +316,7 @@ constraints:
     where: Link_p_nom_extendable
     expression: Link_p_nom_ext >= Link_p_nom_min
   Link_ext_p_nom_upper:
-    description: "`Link-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Link-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, link]
     where: Link_p_nom_extendable AND Link_p_nom_max
     expression: Link_p_nom_ext <= Link_p_nom_max
@@ -411,7 +412,7 @@ assumptions:
 | $`\mathrm{new}^{f}`$ | `Link_first_active` over $`\mathcal{Y} \times \mathcal{L}`$ — one in the first period a link stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\mathrm{f}^{\mathrm{set}}`$ | `Link_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — a given flow schedule; a link without one has no row here |
 | $`\underline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_min` over $`\Xi \times \mathcal{L}`$ — least nominal power an extendable link may be built at |
-| $`\overline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_max` over $`\Xi \times \mathcal{L}`$ — most nominal power an extendable link may be built at |
+| $`\overline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_max` over $`\Xi \times \mathcal{L}`$, `absent` where the data has no row — most nominal power an extendable link may be built at; one with no cap has no row |
 | $`\mathrm{c}^{\mathrm{cap},f}`$ | `Link_capital_cost` over $`\Xi \times \mathcal{L}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{f}^{\mathrm{nom,set}}`$ | `Link_p_nom_set` over $`\mathcal{L}`$, `neutral` where the data has no row — a given nominal power for an extendable link; one without a value has no row here |
 | $`\mathrm{len}^{f}`$ | `Link_volume_weight` over $`\Xi \times \mathcal{G} \times \mathcal{L}`$, `neutral` where the data has no row — the link's length in each scenario where its carrier is in the row's set (`global_constraints.py:847-848`) — data prep; a link outside it, or one that does not stand in the row's `investment_period`, has no row |

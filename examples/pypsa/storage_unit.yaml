@@ -71,8 +71,9 @@ parameters:
     description: least nominal power an extendable storage unit may be built at
     dims: [scenario, storage_unit]
   StorageUnit_p_nom_max:
-    description: most nominal power an extendable storage unit may be built at
+    description: most nominal power an extendable storage unit may be built at; one with no cap has no row
     dims: [scenario, storage_unit]
+    missing: absent
   StorageUnit_capital_cost:
     description: >-
       cost of one unit of nominal power for the modelled horizon —
@@ -421,7 +422,7 @@ constraints:
     where: StorageUnit_p_nom_extendable
     expression: StorageUnit_p_nom_ext >= StorageUnit_p_nom_min
   StorageUnit_ext_p_nom_upper:
-    description: "`StorageUnit-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`StorageUnit-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, storage_unit]
     where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_max
     expression: StorageUnit_p_nom_ext <= StorageUnit_p_nom_max

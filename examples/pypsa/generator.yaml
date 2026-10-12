@@ -121,8 +121,9 @@ parameters:
     description: least nominal power an extendable generator may be built at
     dims: [scenario, generator]
   Generator_p_nom_max:
-    description: most nominal power an extendable generator may be built at
+    description: most nominal power an extendable generator may be built at; one with no cap has no row
     dims: [scenario, generator]
+    missing: absent
   Generator_capital_cost:
     description: >-
       cost of one unit of nominal power for the modelled horizon —
@@ -136,11 +137,13 @@ parameters:
     dims: [generator]
     missing: neutral
   Generator_e_sum_min:
-    description: least energy over the horizon; minus infinity where no floor is meant
+    description: least energy over the horizon; a generator with no floor has no row
     dims: [scenario, generator]
+    missing: absent
   Generator_e_sum_max:
-    description: most energy over the horizon — a fuel or emission budget in energy terms; infinity where no cap is meant
+    description: most energy over the horizon — a fuel or emission budget in energy terms; a generator with no budget has no row
     dims: [scenario, generator]
+    missing: absent
   Generator_primary_energy_weight:
     description: >-
       the constrained attribute per unit of energy at the bus — the carrier's
@@ -255,7 +258,7 @@ constraints:
     where: Generator_p_nom_extendable
     expression: Generator_p_nom_ext >= Generator_p_nom_min
   Generator_ext_p_nom_upper:
-    description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario, wherever it has one"
     dims: [scenario, generator]
     where: Generator_p_nom_extendable AND Generator_p_nom_max
     expression: Generator_p_nom_ext <= Generator_p_nom_max
@@ -265,12 +268,12 @@ constraints:
     where: Generator_p_nom_extendable AND Generator_p_nom_set
     expression: Generator_p_nom_ext == Generator_p_nom_set
   Generator_e_sum_min:
-    description: "`Generator-e_sum_min` — energy over the horizon is at least its floor; a floor of minus infinity is no row"
+    description: "`Generator-e_sum_min` — energy over the horizon is at least its floor, wherever it has one"
     dims: [scenario, generator]
     where: Generator_e_sum_min
     expression: sum(Generator_p * snapshot_weightings_generators, over=snapshot) >= Generator_e_sum_min
   Generator_e_sum_max:
-    description: "`Generator-e_sum_max` — energy over the horizon is at most its budget; a budget of infinity is no row"
+    description: "`Generator-e_sum_max` — energy over the horizon is at most its budget, wherever it has one"
     dims: [scenario, generator]
     where: Generator_e_sum_max
     expression: sum(Generator_p * snapshot_weightings_generators, over=snapshot) <= Generator_e_sum_max

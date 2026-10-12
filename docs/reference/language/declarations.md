@@ -41,8 +41,9 @@ The column has to match the `dtype`:
 | `bool`   | a boolean column                  | `1` and `0` are not booleans. Cast the column |
 | `str`    | a string column                   |                                               |
 
-A null or NaN value is **refused** when the data is attached, so a coordinate
-with no value has no row. `inf` and `-inf` are values.
+A null, NaN or infinite value is **refused** when the data is attached, so a
+coordinate with no value has no row. [`missing:`](#a-missing-row) says what a
+missing row means, and `missing: .inf` reads one as infinite.
 
 Only `float` and `int` are values. A `str` parameter is a label and a `bool`
 parameter is a mask, and each selects rows in a
@@ -81,8 +82,8 @@ every missing coordinate.
 
 A bare numeric name in a `where` asks whether the data has a row, whatever the
 `missing:`, so `where: p_nom_max` selects the rows the data gives. Under
-`refused` every coordinate has a row, so a bare `float` name asks only "is it
-finite?", and a bare `int` or `str` name is a load error. A comparison reads the
+`refused` every coordinate has a row, so a bare `float` name is true at every
+coordinate, and a bare `int` or `str` name is a load error. A comparison reads the
 value, so `where: efficiency <= 1` is true at a missing row of `efficiency`
 above, which reads `1` there. Under `absent` and `neutral`, a comparison at a
 missing row is false. A bare `bool` name reads its value, so `where: active`
@@ -90,12 +91,12 @@ reads `true` at a missing row.
 
 A value has the parameter's dtype:
 
-| `dtype` | a value                                                  |
-| ------- | -------------------------------------------------------- |
-| `float` | a number. `.inf`, `inf`, `-.inf` and `-inf` are numbers  |
-| `int`   | an integer. An integer column cannot hold `inf`          |
-| `bool`  | `true` or `false`                                        |
-| `str`   | none. A label has no value to fill, and no `neutral` one |
+| `dtype` | a value                                                                         |
+| ------- | ------------------------------------------------------------------------------- |
+| `float` | a number. `.inf`, `inf`, `-.inf` and `-inf` are numbers, which data cannot hold |
+| `int`   | an integer. An integer column cannot hold `inf`                                 |
+| `bool`  | `true` or `false`                                                               |
+| `str`   | none. A label has no value to fill, and no `neutral` one                        |
 
 A NaN, a quoted number and `missing: null` are refused. A `given:` parameter
 has no `missing:`, because the file that declares the parameter owns it. A
