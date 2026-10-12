@@ -172,8 +172,6 @@ python -m mathspec markdown dispatch.yaml
     |---|---|
     | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{T} \times \mathcal{G}`$ — output of a generator in a snapshot |
 
-    Upright is what the data supplies — a parameter such as $`\mathrm{capacity}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{dispatch}`$. An index is italic too, being what a quantifier chooses, and a set is script.
-
     #### Variable domains
 
     **`dispatch`**

@@ -38,7 +38,7 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
 | -------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `symbols`            | `--symbols FILE`       | How the names print. See [symbol tables](#symbol-tables). Default: derived from the names in the file                           |
 | `standalone`         | `--standalone`         | Emit a document that compiles. Default: a fragment to include                                                                   |
-| `legend`             | `--no-legend`          | Print the table of sets, parameters, variables and definitions above the math. Default: on                                      |
+| `legend`             | `--no-legend`          | Print the tables of symbols and notation above the math. Default: on                                                            |
 | `numbered`           | `--no-numbers`         | Number the equations. Default: on                                                                                               |
 | `inline_expressions` | `--inline-expressions` | Substitute each named expression that the math reads into the equations that read it, instead of defining it once. Default: off |
 | —                    | `--expand`             | Print the variables and constraints the `piecewise:` and `sos:` blocks state, rather than the blocks. Default: off              |
@@ -46,8 +46,10 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
 `-o FILE` writes to a file instead of stdout.
 
 - The spec's `description:` opens the document.
-- The legend lists Given, Sets, Parameters, Masks, Variables and Definitions.
-  The math follows under Masks, Variable domains, Definitions, Objective,
+- The legend lists Given, Sets, Parameters, Masks, Variables, Definitions and
+  Notation. Notation has a row for each translation or position symbol that
+  the equations print, with the spec spelling that it stands for. The math
+  follows under Masks, Variable domains, Definitions, Objective,
   Subject to and Assumptions. Under Subject to, the constraints come first,
   then the special ordered sets, then the curves. Each part keeps the order of
   the file's sections.

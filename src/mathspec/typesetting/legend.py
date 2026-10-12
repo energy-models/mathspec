@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The legend: the glossary of symbols, and a note for each notation the equations use.
+"""The legend: the glossary of symbols, and a row for each notation the equations use.
 
 What the equations use is read off the program before anything prints
 ([`notice`][]), so the legend explains every symbol the walk will print and
@@ -132,7 +132,7 @@ _MASKED_OUT = 'where the mask leaves it out'
 
 @dataclass(frozen=True)
 class Legend:
-    """The glossary and the notes, spelled with one program's symbols in one format."""
+    """The glossary, spelled with one program's symbols in one format."""
 
     program: Program
     symbols: Symbols
@@ -142,7 +142,7 @@ class Legend:
         return self.format.operators[name]
 
     def glossaries(self, noticed: Noticed, defined: Iterable[str]) -> list[tuple[str, list[Entry]]]:
-        """The given declarations, sets, parameters, masks, variables and definitions, each with its symbol, its dims and its description.
+        """The given declarations, sets, parameters, masks, variables and definitions, each with its symbol, its dims and its description, then the notation.
 
         *defined* names the expressions that print under their own symbol, so
         a legend row stands exactly where a symbol does.
@@ -232,6 +232,7 @@ class Legend:
             ('Masks', masks),
             ('Variables', variables),
             ('Definitions', definitions),
+            ('Notation', self._notation(noticed)),
         )
         return [(title, entries) for title, entries in groups if entries]
 
@@ -286,87 +287,51 @@ class Legend:
             )
         return ''.join(clauses)
 
-    def convention_notes(self) -> list[str]:
-        """What the two faces mean, with the spec's own symbols.
+    def _notation(self, noticed: Noticed) -> list[Entry]:
+        """A row for each translation and position symbol printed; plain ``t-k`` needs none.
 
-        Only where the spec has both, and quoting only derived symbols: a
-        table is the author's to write, so a symbol it supplies is not one this
-        note governs.
+        The meaning is the spec spelling the symbol stands for, so the row
+        holds no claim the language reference does not already make.
         """
-        derived = [
-            next((n for n in names if n not in self.symbols.overridden), None)
-            for names in (self.program.parameters, self.program.variables)
-        ]
-        if not all(derived):
-            return []
-        given, chosen = (self.format.math(self.symbols.name[n]) for n in derived if n is not None)
-        return [
-            f'Upright is what the data supplies {self.format.dash} a parameter such as {given}, a coordinate '
-            f'map, a label {self.format.dash} and italic is what the solver chooses, such as {chosen}. '
-            f'An index is italic too, being what a quantifier chooses, and a set is script.'
-        ]
-
-    def translation_notes(self, noticed: Noticed) -> list[str]:
-        """A sentence for each translation symbol printed; plain ``t-k`` needs none."""
-        notes = []
+        fmt, dash = self.format, self.format.dash
+        relation = fmt.apply(fmt.upright('relation'), 't')
+        shifted, t = fmt.math('t-k'), fmt.math('t')
+        entries = []
         if 'wrap' in noticed.policies:
-            cyclic = self.format.math(f't {self._op("cyclic_minus")} k')
-            notes.append(
-                f'{cyclic} denotes cyclic translation: index {self.format.math("t-k")} taken modulo the size of '
-                f'the dimension ({self.format.mono("roll")}). Plain {self.format.math("t-k")} '
-                f'({self.format.mono("shift")}) has no wraparound {self.format.dash} terms translated past '
-                f'the edge are simply absent.'
-            )
+            cyclic = fmt.mono("edge='wrap'")
+            entries.append(Entry(f't {self._op("cyclic_minus")} k', f'{cyclic} {dash} {shifted}, cyclic'))
         if 'edge' in noticed.policies:
-            filled = self.format.math(f't {self.format.subscript(self._op("edge_minus"), ["v"])} k')
-            notes.append(
-                f'{filled} denotes translation with {self.format.math("v")} standing where index '
-                f'{self.format.math("t-k")} leaves the dimension ({self.format.mono("shift(edge=v)")}), so the row '
-                f'at that boundary is built and carries {self.format.math("v")} rather than being dropped.'
+            entries.append(
+                Entry(
+                    f't {fmt.subscript(self._op("edge_minus"), ["v"])} k',
+                    f'{fmt.mono("edge=v")} {dash} {shifted}, and {fmt.math("v")} past the edge',
+                )
             )
         if noticed.grouped:
-            applied = self.format.apply(self.format.upright('relation'), 't')
-            counted = self.format.math(f't {self.format.superscript(self._op("cyclic_minus"), applied)} k')
-            note = (
-                f'{counted} denotes a translation counted inside the group a relation puts {self.format.math("t")} '
-                f'in ({self.format.mono("shift(within=relation[c])")}), so a term never crosses out of its own group.'
-            )
-            if 'edge' in noticed.policies:
-                both = self.format.superscript(self.format.subscript(self._op('edge_minus'), ['v']), applied)
-                note += (
-                    f' The two modifiers take different slots {self.format.dash} the group above, the fill '
-                    f'below {self.format.dash} so {self.format.math(f"t {both} k")} is both at once.'
+            entries.append(
+                Entry(
+                    f't {fmt.superscript(self._op("cyclic_minus"), relation)} k',
+                    f'{fmt.mono("within=relation[...]")} {dash} {shifted} inside the group of {t}',
                 )
-            notes.append(note)
-        return notes
-
-    def position_notes(self, noticed: Noticed) -> list[str]:
-        """A sentence for each positional symbol printed; the first says which of ``pos(t)`` and ``t`` is the position."""
-        notes = []
+            )
         if noticed.positions:
-            index = self.format.math('t')
-            place = self.format.math(self.format.apply(self._op('position'), 't'))
-            dash = self.format.dash
-            notes.append(
-                f"{place} denotes where index {index} sits along its dimension's own order {dash} the order "
-                f'{self.format.mono("shift")} steps along, not the order labels sort in {dash} counted from '
-                f'{self.format.math("0")}. The index itself stays the coordinate, so {index} compares against '
-                f'labels and {place} against positions.'
+            entries.append(
+                Entry(
+                    fmt.apply(self._op('position'), 't'),
+                    f'{fmt.mono("position()")} {dash} the position of {t}, counted from {fmt.math("0")}; {t} is the label',
+                )
             )
         if 'grouped' in noticed.positions:
-            applied = self.format.apply(self.format.upright('relation'), 't')
-            grouped = self.format.math(self.format.apply(self.format.subscript(self._op('position'), [applied]), 't'))
-            group = self.format.math(self.format.subscript(self.format.script('T'), [applied]))
-            notes.append(
-                f'{grouped} counts within the group a relation puts {self.format.math("t")} in: the subscript names '
-                f'the map, {group} is the group it lands in, and that group has a first position of its own.'
+            entries.append(
+                Entry(
+                    fmt.apply(fmt.subscript(self._op('position'), [relation]), 't'),
+                    f'{fmt.mono("position(within=relation[...])")} {dash} the position of {t} inside its group',
+                )
             )
         if 'from_end' in noticed.positions:
-            size = self.format.cardinality(self.format.script('T'))
-            last = self.format.math(f'{size} {self._op("minus")} 1')
-            notes.append(
-                f'{self.format.math(size)} denotes the size of the set being counted along, and a position '
-                f'counted from the end prints against it {self.format.dash} {last} is the last position, one '
-                f'less than the size because the first is {self.format.math("0")}.'
+            size = fmt.cardinality(fmt.script('T'))
+            last = f'{size} {self._op("minus")} 1'
+            entries.append(
+                Entry(size, f'the size of {fmt.math(fmt.script("T"))}; {fmt.math(last)} is the last position')
             )
-        return notes
+        return entries
