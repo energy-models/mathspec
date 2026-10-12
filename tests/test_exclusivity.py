@@ -41,8 +41,8 @@ STORAGE: dict[str, Any] = {
         'cyclic': {'dims': ['storage'], 'dtype': 'bool'},
         'committable': {'dims': ['storage'], 'dtype': 'bool'},
         'kind': {'dims': ['storage'], 'dtype': 'str', 'missing': 'absent'},
-        'soc_initial': {'dims': ['storage']},
-        'capacity': {'dims': ['storage']},
+        'soc_initial': {'dims': ['storage'], 'missing': 'absent'},
+        'capacity': {'dims': ['storage'], 'missing': 'absent'},
         'age': {'dims': ['storage'], 'dtype': 'int'},
     },
     'variables': {'soc': {'dims': ['snapshot', 'storage']}},
@@ -354,7 +354,7 @@ class TestAMissingRow:
         assert 'efficiency has no row' in refusal, 'the witness is the missing row'
         assert 'absent' not in refusal, 'the witness does not use the name of a reading for a missing row'
 
-    @pytest.mark.parametrize('reading', ['refused', 'absent', 'neutral'])
+    @pytest.mark.parametrize('reading', ['absent', 'neutral'])
     def test_under_a_reading_a_missing_row_compares_false(self, reading: str):
         schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': reading}}))
         assert refusals(schema, self.CASES) == [], 'a missing row with no value is in neither case'

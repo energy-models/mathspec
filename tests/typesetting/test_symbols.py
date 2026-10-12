@@ -198,7 +198,7 @@ def _names(spec: Spec) -> set[str]:
         ),
         pytest.param(
             {
-                'variables.u': {'dims': ['generator'], 'domain': 'binary', 'where': 'p_max'},
+                'variables.u': {'dims': ['generator'], 'domain': 'binary', 'where': 'p_max > 0'},
                 'piecewise.curve.activity': 'u',
             },
             id='a-gate-that-leaves-coordinates-ungated',

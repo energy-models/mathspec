@@ -210,12 +210,14 @@ def test_a_literal_amount_resolves_to_one_signed_number():
         ),
     ],
 )
-def test_a_where_is_one_resolved_predicate_with_every_literal_folded(dispatch_schema, where, expected):
+def test_a_where_is_one_resolved_predicate_with_every_literal_folded(where, expected):
     """One mask had two lowerings: `True` was dropped at the root and kept under a connective.
 
-    A `BooleanLiteral` is a node a consumer meets at the root or nowhere.
+    A `BooleanLiteral` is a node a consumer meets at the root or nowhere. `capacity` and `load` may lack a row, so a
+    bare name of either is a mask.
     """
-    mask = where_of(where, Namespace(dispatch_schema), 't')
+    schema = schema_of(DISPATCH_YAML, **{'parameters.capacity.missing': 'absent', 'parameters.load.missing': 'absent'})
+    mask = where_of(where, Namespace(schema), 't')
     assert (mask.root if mask is not None else None) == expected, (
         'the Mask carries exactly the resolved predicate, folded at resolution however the file spelled it'
     )
@@ -497,11 +499,10 @@ def test_assumptions_carry_the_file_s_entries_and_the_curves_behind_them():
         'a method states its conditions in the language the file writes, so one kind stands in the mapping'
     )
     assert derived == [
-        'cost_curve_complete',
         'cost_curve_increasing',
         'cost_curve_curvature',
         'cost_curve_breakpoints',
-    ], 'an lp curve over a whole axis assumes four things of its breakpoints, completeness first'
+    ], 'an lp curve over a whole axis of refused tables assumes three things of its breakpoints'
 
 
 def test_an_assumption_lowers_both_of_its_masks():

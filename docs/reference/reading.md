@@ -112,7 +112,7 @@ does not meet:
 ```python
 from mathspec.program import Assumption, assumption_message
 
-sorted(program.assumptions)  # ['cost_is_never_negative', 'curve_complete', 'curve_curvature', 'curve_increasing']
+sorted(program.assumptions)  # ['cost_is_never_negative', 'curve_curvature', 'curve_increasing']
 isinstance(program.assumptions['curve_increasing'], Assumption)  # True
 message = assumption_message('curve_increasing', program.assumptions['curve_increasing'])
 message  # "assumption 'curve_increasing' does not hold for the data attached to 'bp_x': piecewise 'curve': method: convex requires strictly increasing breakpoints in 'bp_x' along 'bp'"

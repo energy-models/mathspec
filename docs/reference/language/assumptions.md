@@ -115,13 +115,13 @@ A [`piecewise:`](piecewise.md) block named `curve` adds its own assumptions,
 which `to_spec` derives from its `method:`, its `points:` and the sign on its
 links. They print under the same _Assumptions_ heading as the written ones.
 
-| Entry               | Added for         | Holds                                                                                                 |
-| ------------------- | ----------------- | ----------------------------------------------------------------------------------------------------- |
-| `curve_complete`    | every block       | every values parameter has a row at every breakpoint the curve runs through                           |
-| `curve_increasing`  | `convex`, `lp`    | the pinned link's breakpoints (the first link's, when both are pinned) strictly increase along `over` |
-| `curve_curvature`   | `convex`, `lp`    | with a `>=` link the curve is convex, with `<=` concave; with both links pinned it bends one way only |
-| `curve_breakpoints` | `lp`              | each curve has at least two breakpoints                                                               |
-| `curve_contiguous`  | a block `points:` | the marked breakpoints are one consecutive run of at least one                                        |
+| Entry               | Added for                            | Holds                                                                                                 |
+| ------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `curve_complete`    | a values table that is not `refused` | each such table has a row at every breakpoint the curve runs through                                  |
+| `curve_increasing`  | `convex`, `lp`                       | the pinned link's breakpoints (the first link's, when both are pinned) strictly increase along `over` |
+| `curve_curvature`   | `convex`, `lp`                       | with a `>=` link the curve is convex, with `<=` concave; with both links pinned it bends one way only |
+| `curve_breakpoints` | `lp`                                 | each curve has at least two breakpoints                                                               |
+| `curve_contiguous`  | a block `points:`                    | the marked breakpoints are one consecutive run of at least one                                        |
 
 [Reading a spec and its program](../reading.md#what-the-data-has-to-satisfy)
 says how a tool runs them.

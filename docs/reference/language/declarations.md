@@ -82,8 +82,11 @@ every missing coordinate.
 
 A bare numeric name in a `where` asks whether the data has a row, whatever the
 `missing:`, so `where: p_nom_max` selects the rows the data gives. Under
-`refused` every coordinate has a row, so a bare `float` name is true at every
-coordinate, and a bare `int` or `str` name is a load error. A comparison reads the
+`refused` every coordinate has a row, so a bare `float`, `int` or `str` name is
+true at every coordinate. Where it stands in the mask itself, alone or under
+`AND`, `OR` or `NOT`, it is a load error. Inside `count`, `shift` and `at` it
+loads: there it counts the coordinates, is false where the shift has no
+coordinate to read, and is false where the relation has no row. A comparison reads the
 value, so `where: efficiency <= 1` is true at a missing row of `efficiency`
 above, which reads `1` there. Under `absent` and `neutral`, a comparison at a
 missing row is false. A bare `bool` name reads its value, so `where: active`

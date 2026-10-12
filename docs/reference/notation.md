@@ -275,13 +275,13 @@ scalar too, but masked, so the condition stands with no set beside it; neutral, 
 variables:
   headroom:
     dims: []
-    where: "budget"
+    where: "budget > 0"
     missing: neutral
     bounds: { lower: 0 }
 ```
 
 ```math
-\mathit{headroom} \ge 0 \qquad \text{where } \mathrm{budget} \text{ is defined}
+\mathit{headroom} \ge 0 \qquad \text{where } \mathrm{budget} > 0
 ```
 
 #### Variable in a special ordered set
@@ -1095,10 +1095,6 @@ Written out by `spec.expand()`:
 \lambda_{p,m,b} \le \delta_{p,m,b} + \delta_{p,m,b \boxminus_{0} 1} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M},\ b \in \mathcal{B}
 ```
 
-```math
-\mathrm{x}_{b} \text{ is defined} \wedge \mathrm{y}_{b} \text{ is defined} \qquad \forall\, b \in \mathcal{B}
-```
-
 #### SOS2 method
 
 `method: sos2` — the same weights, restricted by a set the solver branches on (the sos rules), in `examples/sos.yaml`.
@@ -1150,10 +1146,6 @@ Written out by `spec.expand()`:
 \left( \lambda_{t,g,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
-```math
-\mathrm{x}_{g,b} \text{ is defined} \wedge \mathrm{y}_{g,b} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B}
-```
-
 #### Convex method
 
 `method: convex` — nothing, so the weights range over the hull, which is a pure LP, in `examples/piecewise.yaml`.
@@ -1199,10 +1191,6 @@ Written out by `spec.expand()`:
 
 ```math
 \mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
-```math
-\mathrm{x}_{g,b} \text{ is defined} \wedge \mathrm{y}_{g,b} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B}
 ```
 
 ```math
@@ -1253,10 +1241,6 @@ Written out by `spec.expand()`:
 
 ```math
 \mathit{dispatch}_{t,g} \le \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = \lvert \mathcal{B} \rvert - 1
-```
-
-```math
-\mathrm{x}_{g,b} \text{ is defined} \wedge \mathrm{y}_{g,b} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B}
 ```
 
 ```math
@@ -1629,18 +1613,18 @@ constraints:
 
 #### Predicate at the previous coordinate
 
-a predicate read one coordinate back, which is false where the translation vacates
+a predicate read one coordinate back, which is false where the translation vacates: the first snapshot
 
 ```yaml
 constraints:
   run_start:
     dims: [snapshot, bus]
-    where: "load AND NOT shift(load, along=snapshot, offset=1)"
+    where: "NOT shift(load, along=snapshot, offset=1)"
     expression: slack <= load
 ```
 
 ```math
-\mathit{slack}_{t} \le \mathrm{load}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{load}_{t,b} \text{ is defined} \wedge \neg \left( \mathrm{load}_{t - 1,b} \text{ is defined} \right)
+\mathit{slack}_{t} \le \mathrm{load}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \neg \left( \mathrm{load}_{t - 1,b} \text{ is defined} \right)
 ```
 
 #### Predicate through a relation

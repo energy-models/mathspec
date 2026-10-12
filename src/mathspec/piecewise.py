@@ -26,7 +26,7 @@ from mathspec.resolution import resolve_expression_text
 from mathspec.spec import AssumptionBlock, Curvature, PiecewiseBlock, Spec, VariableBlock
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Collection, Iterable, Iterator
 
     from mathspec.program import Expression
     from mathspec.resolution import Namespace
@@ -90,11 +90,13 @@ def lp_domain_refusal(name: str, pw: PiecewiseBlock, links: tuple[Expression, ..
     )
 
 
-def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, AssumptionBlock]:
+def assumptions_of(block: str, pw: PiecewiseDeclaration, *, refused: Collection[str]) -> dict[str, AssumptionBlock]:
     """What *block* assumes of its numbers, by the name the document prints and a refusal quotes.
 
     Every curve assumes its breakpoints are there, because a missing row does
-    not shorten a curve. Under ``points:`` its tables are not ``refused``, so
+    not shorten a curve. A table in *refused* already has a row at every
+    breakpoint, so the claim names the others, and a block with none states
+    none. Under ``points:`` its tables are not ``refused``, so
     a breakpoint missing inside the mask would read as their ``missing:`` and,
     under ``neutral``, sit the curve on the origin. A curve has an x-axis only where two
     links tie it, so the increasing condition — and the shape it is checked
@@ -110,17 +112,18 @@ def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, Assumption
     """
     d, mask = pw.over, pw.points
     assumed: dict[str, AssumptionBlock] = {}
-    assumed[f'{block}_complete'] = AssumptionBlock(
-        holds=' AND '.join(dict.fromkeys(link.values for link in pw.links)),
-        where=mask,
-        description=f"piecewise '{block}': every breakpoint the curve runs through needs a row in "
-        f'{_quoted(link.values for link in pw.links)}. A missing row does not shorten the curve. '
-        + (
-            f"Attach the rows, or narrow points: '{mask}' to where the curve runs."
-            if mask is not None
-            else 'Attach the rows, or declare points: to say how far the curve runs.'
-        ),
-    )
+    if tables := [name for name in dict.fromkeys(link.values for link in pw.links) if name not in refused]:
+        assumed[f'{block}_complete'] = AssumptionBlock(
+            holds=' AND '.join(tables),
+            where=mask,
+            description=f"piecewise '{block}': every breakpoint the curve runs through needs a row in "
+            f'{_quoted(tables)}. A missing row does not shorten the curve. '
+            + (
+                f"Attach the rows, or narrow points: '{mask}' to where the curve runs."
+                if mask is not None
+                else 'Attach the rows, or declare points: to say how far the curve runs.'
+            ),
+        )
     curvature = _curvature_required(pw)
     if curvature is not None:
         x, y = (link.values for link in pw.curve)
@@ -256,7 +259,7 @@ class Emitted:
             f'{name}_domain_lo',
             f'{name}_domain_hi',
             tuple(f'{name}_link{i}' for i in range(len(pw.links))),
-            tuple(assumptions_of(name, pw)),
+            tuple(assumptions_of(name, pw, refused=())),
         )
 
     def written(self, method: PiecewiseMethod, *, ungated: bool) -> tuple[str, ...]:
@@ -387,7 +390,7 @@ class _Block:
         as something a consumer has to know to ask for.
         """
         assumptions = sos.section(self.raw, 'assumptions')
-        for name, assumed in assumptions_of(self.name, self.curve).items():
+        for name, assumed in assumptions_of(self.name, self.curve, refused=refused_tables(self.schema)).items():
             assumptions[name] = assumed.model_dump()
 
     # -- emitters ----------------------------------------------------------
@@ -478,6 +481,11 @@ class _Block:
             self._constraint(
                 cname, [*self.frame, d], f'({x_link.expression}) {sense} {x_link.values}', _edge(d, self.mask, end)
             )
+
+
+def refused_tables(schema: Spec) -> frozenset[str]:
+    """The parameters with a row at every coordinate, whose rows a curve's completeness claim need not name."""
+    return frozenset(name for name, declared in schema.parameters.items() if declared.missing == 'refused')
 
 
 def refused_under_points(schema: Spec) -> Iterator[str]:

@@ -77,7 +77,7 @@ variables:
     bounds: { lower: 0 }
   headroom: # scalar too, but masked, so the condition stands with no set beside it; neutral, so the legend names the reading
     dims: []
-    where: "budget"
+    where: "budget > 0"
     missing: neutral
     bounds: { lower: 0 }
   weight: # the family a sos runs along
@@ -322,9 +322,9 @@ constraints:
     dims: [bus, technology]
     where: "count(tech_cap > 0, over=technology) >= 2"
     expression: theta <= tech_cap
-  run_start: # a predicate read one coordinate back, which is false where the translation vacates
+  run_start: # a predicate read one coordinate back, which is false where the translation vacates: the first snapshot
     dims: [snapshot, bus]
-    where: "load AND NOT shift(load, along=snapshot, offset=1)"
+    where: "NOT shift(load, along=snapshot, offset=1)"
     expression: slack <= load
   zoned: # a predicate read through a relation: a bus is held only where its zone has a cap at all
     dims: [bus]
