@@ -1158,12 +1158,12 @@ class Spec(_StrictBlock):
                 equal [`Spec`][mathspec.spec.Spec], a reprinted expression
                 being a different string.
         """
-        from mathspec._yaml import dump_yaml
-
         if canonical:
             from mathspec.canonical import canonical_yaml
 
             return canonical_yaml(self)
+        from mathspec._yaml import dump_yaml
+
         return dump_yaml(self.to_dict())
 
     def expand(self, *kinds: Formulation) -> Spec:

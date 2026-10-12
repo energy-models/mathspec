@@ -142,6 +142,10 @@ class _Dumper(yaml.SafeDumper):
     """A dumper writing short lists and mappings on one line and a multi-line string as a block scalar."""
 
 
+#: A value a one-line mapping may hold: a number, a boolean, or a name such as ``p_max``, ``binary`` or ``-inf``.
+_WORD = re.compile(r'[\w.+-]+')
+
+
 def _one_line(value: object) -> bool:
     """Whether *value* is a list or a mapping that is written on one line.
 
@@ -156,19 +160,17 @@ def _one_line(value: object) -> bool:
     if _width(value) > 80:
         return False
     if isinstance(value, list):
-        return all(_one_line(item) if isinstance(item, list) else _plain(item) for item in value)
+        return all(_one_line(item) if isinstance(item, list) else _one_line_scalar(item) for item in value)
     return isinstance(value, dict) and all(
-        _one_line(item) if isinstance(item, list) else _plain(item) and _NAME.fullmatch(str(item)) is not None
-        for item in value.values()
+        _one_line(item) if isinstance(item, list) else _WORD.fullmatch(str(item)) is not None for item in value.values()
     )
 
 
-#: A value a one-line mapping may hold: a number, a boolean, or a name such as ``p_max``, ``binary`` or ``-inf``.
-_NAME = re.compile(r'[\w.+-]+')
-
-
 def _width(value: object) -> int:
-    """How wide *value* is on one line, brackets and separators included, each scalar as ``str`` prints it."""
+    """How wide *value* is on one line, brackets and separators included, each scalar as ``str`` prints it.
+
+    An empty list or mapping is its two brackets wide.
+    """
     if isinstance(value, list):
         return sum(_width(item) + 2 for item in value) or 2
     if isinstance(value, dict):
@@ -176,8 +178,8 @@ def _width(value: object) -> int:
     return len(str(value))
 
 
-def _plain(value: object) -> bool:
-    """Whether *value* is a scalar written on one line, which a flow collection can hold."""
+def _one_line_scalar(value: object) -> bool:
+    """Whether *value* is a scalar with no line break, which a flow collection can hold."""
     return not isinstance(value, (dict, list)) and not (isinstance(value, str) and '\n' in value)
 
 
@@ -201,8 +203,8 @@ _Dumper.add_representer(dict, _mapping)
 def dump_yaml(data: dict[str, object]) -> str:
     """*data* as YAML text, in the one layout every spec this package writes shares.
 
-    A short list or mapping of plain values is written on one line, as
-    ``dims: [day, hour]`` and ``bounds: {lower: 0}``. A multi-line string is
+    A short list, and a short mapping of numbers and names, is written on one
+    line, as ``dims: [day, hour]`` and ``bounds: {lower: 0}``. A multi-line string is
     a block scalar. No line is wrapped, so an edit to a long description
     changes one line of a diff.
     """
