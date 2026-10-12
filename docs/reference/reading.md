@@ -352,3 +352,13 @@ rewrites the file in the form, and `--check` exits with status 1 if the file is
 not in the form. The form holds no YAML comments, so `--write` drops them.
 [Compare two specs](../howto/compare.md) shows how to diff two files in this
 form.
+
+A new mathspec release can change the normal form, for example how it lays out
+a list. So compare two normal forms that the same mathspec wrote. Do not store
+a normal form, or a hash of one, as the identity of a spec. To compare with a
+file that an older mathspec wrote, load the file with `to_spec` and write its
+normal form again:
+
+```python
+to_spec('curve.yaml').to_yaml(canonical=True) == spec.to_yaml(canonical=True)  # True
+```

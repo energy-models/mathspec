@@ -75,6 +75,10 @@ lists what the form sorts and what it keeps.
    exit $status
    ```
 
+   A new mathspec release can change the form. Then `--check` fails on files
+   that passed before, and `--write` brings them up to date. Run it in the
+   same commit that raises the mathspec version.
+
 5. **Compare from Python** where the comparison is one step of a longer
    script. [`to_yaml`](../reference/spec.md#mathspec.spec.Spec.to_yaml) writes the
    same text with `canonical=True`:
