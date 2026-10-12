@@ -297,6 +297,14 @@ that data as a file. Both round-trip, so `to_spec(spec.to_dict()) == spec`.
 leaves out a `null` and an empty section, but it writes `dims: []`, because
 that says the declaration is a scalar.
 
+`to_yaml()` writes a short list on one line, such as `dims: [snapshot, generator]`.
+It also writes a short mapping of numbers and single words on one line, such as
+`bounds: {lower: 0, upper: p_max}`. A declaration with a description, or with an
+expression of several words, keeps one key on each line. The writer puts a list
+or a mapping on one line only when that line holds 80 characters or fewer. It
+does not wrap a long line, and it writes a multi-line expression as a block
+scalar (`|-`). `to_yaml(canonical=True)` writes the same layout.
+
 ## Comparing two specs
 
 `to_yaml(canonical=True)` writes the normal form. Every file that states the

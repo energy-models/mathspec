@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""How this project reads a YAML file.
+"""How this project reads and writes a YAML file.
 
 `yaml.safe_load` implements YAML 1.1, and two of its rules are wrong for a
 language whose scalars are user data; both are fixed here:
@@ -16,6 +16,8 @@ language whose scalars are user data; both are fixed here:
 
 The output is plain ``dict``/``str``: no loader wrapper reaches the schema
 or the AST.
+
+Every spec this package writes is laid out by ``dump_yaml``.
 """
 
 from __future__ import annotations
@@ -134,3 +136,62 @@ def parse_yaml(text: str, origin: str = '<string>') -> dict[str, object]:
         msg = f'{origin}: the file holds a {type(data).__name__}, not a mapping of sections. Write sections such as dimensions: at the top level.'
         raise SchemaError(msg)
     return data
+
+
+class _Dumper(yaml.SafeDumper):
+    """A dumper writing short lists and mappings on one line and a multi-line string as a block scalar."""
+
+
+def _one_line(value: object) -> bool:
+    """Whether *value* is a list or a mapping that is written on one line.
+
+    A list is, when it holds only one-line scalars and such lists. A mapping is,
+    when it holds only numbers, booleans, single words and such lists, as
+    ``bounds`` does. A declaration with a description or an expression of
+    several words in it keeps one key on each line, so its text is never quoted
+    to fit a flow mapping. Either one must also fit in 80 characters. A
+    multi-line string is a block scalar, which a flow collection cannot hold.
+    """
+    if isinstance(value, list):
+        held = all(_one_line(item) if isinstance(item, list) else _plain(item) for item in value)
+    elif isinstance(value, dict):
+        held = all(
+            _one_line(item) if isinstance(item, list) else _plain(item) and not (isinstance(item, str) and ' ' in item)
+            for item in value.values()
+        )
+    else:
+        return False
+    return held and len(yaml.safe_dump(value, default_flow_style=True, width=float('inf')).rstrip('\n')) <= 80
+
+
+def _plain(value: object) -> bool:
+    """Whether *value* is a scalar written on one line, which a flow collection can hold."""
+    return not isinstance(value, (dict, list)) and not (isinstance(value, str) and '\n' in value)
+
+
+def _string(dumper: yaml.SafeDumper, text: str) -> yaml.ScalarNode:
+    return dumper.represent_scalar('tag:yaml.org,2002:str', text, style='|' if '\n' in text else None)
+
+
+def _sequence(dumper: yaml.SafeDumper, items: list[object]) -> yaml.SequenceNode:
+    return dumper.represent_sequence('tag:yaml.org,2002:seq', items, flow_style=_one_line(items))
+
+
+def _mapping(dumper: yaml.SafeDumper, entries: dict[object, object]) -> yaml.MappingNode:
+    return dumper.represent_mapping('tag:yaml.org,2002:map', entries, flow_style=_one_line(entries))
+
+
+_Dumper.add_representer(str, _string)
+_Dumper.add_representer(list, _sequence)
+_Dumper.add_representer(dict, _mapping)
+
+
+def dump_yaml(data: dict[str, object]) -> str:
+    """*data* as YAML text, in the one layout every spec this package writes shares.
+
+    A short list or mapping of plain values is written on one line, as
+    ``dims: [day, hour]`` and ``bounds: {lower: 0}``. A multi-line string is
+    a block scalar. No line is wrapped, so an edit to a long description
+    changes one line of a diff.
+    """
+    return yaml.dump(data, Dumper=_Dumper, sort_keys=False, allow_unicode=True, width=float('inf'))
