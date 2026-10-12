@@ -21,12 +21,16 @@ lists what the form sorts and what it keeps.
    `-o canonical.yaml`. A file the language refuses prints its message on
    stderr and exits with status 1.
 
-2. **Diff two files once.** Give each file to the command, and diff the two
-   outputs:
+2. **Diff two files once.** Give both files to `diff`:
 
    ```bash
-   diff <(python -m mathspec canonical before.yaml) <(python -m mathspec canonical after.yaml)
+   python -m mathspec diff before.yaml after.yaml
    ```
+
+   The command writes each spec in the canonical form and prints a unified
+   diff of the two. It exits with status 0 when the specs are the same, and
+   with status 1 when they differ, as `diff` does. A file the language refuses
+   prints its message on stderr and exits with status 2.
 
 3. **Make `git diff` show the canonical form.** Tell git which files are
    specs, and which command writes them out:
@@ -52,32 +56,19 @@ lists what the form sorts and what it keeps.
    every file the pattern matches, and a YAML file that is not a spec fails to
    load.
 
-4. **Keep specs in the canonical form in CI.** Then a plain diff of the files
-   shows what the form shows, with no git setup. `--write` rewrites a file in
-   the form, and drops its YAML comments because the form holds none:
+4. **Check in CI that a change leaves the spec as it was.** A change that only
+   moves declarations or reorders the terms of a sum states the same spec.
+   Compare the file on the main branch with the file in the change:
 
    ```bash
-   python -m mathspec canonical --write spec.yaml
+   git show origin/main:spec.yaml > before.yaml
+   python -m mathspec diff before.yaml spec.yaml
    ```
 
-   `--check` writes nothing, but exits with status 1 if the file is not in the
-   form, and names the rewrite:
-
-   ```text
-   spec.yaml is not in the canonical form. Run `python -m mathspec canonical --write spec.yaml` to rewrite it.
-   ```
-
-   Check every spec, and fail the job if one of them fails:
-
-   ```bash
-   status=0
-   for spec in specs/*.yaml; do python -m mathspec canonical --check "$spec" || status=1; done
-   exit $status
-   ```
-
-   A new mathspec release can change the form. Then `--check` fails on files
-   that passed before, and `--write` brings them up to date. Run it in the
-   same commit that raises the mathspec version.
+   The job fails when the specs differ, and its log shows the lines that
+   changed. The files in the repository stay as you wrote them, with their
+   comments. The same mathspec writes both forms when the job runs, so a new
+   mathspec release does not make the job fail.
 
 5. **Compare from Python** where the comparison is one step of a longer
    script. [`to_yaml`](../reference/spec.md#mathspec.spec.Spec.to_yaml) writes the

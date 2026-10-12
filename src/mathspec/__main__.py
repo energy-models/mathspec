@@ -5,8 +5,8 @@
 """``python -m mathspec <verb> spec.yaml`` — the shell front.
 
 ``check`` loads the file and prints the language's advice; ``canonical``
-writes the spec in the form two files that state the same spec share, or with
-``--check`` asks whether the file is already in that form; one further verb per
+writes the spec in the form two files that state the same spec share; ``diff``
+writes two specs in that form and prints where they differ; one further verb per
 typeset format, read off [`mathspec.typesetting.FORMATS`][]. Every verb reads
 the file as written, and nothing here writes a formulation out unasked.
 The typeset verbs take ``--expand``, because a shell cannot compose
@@ -18,6 +18,7 @@ as the rows it states.
 from __future__ import annotations
 
 import argparse
+import difflib
 import sys
 from pathlib import Path
 
@@ -37,10 +38,11 @@ def parser() -> argparse.ArgumentParser:
 
     canonical = verbs.add_parser('canonical', help='write a spec in the form two files that state it share')
     canonical.add_argument('spec', help='path to a mathspec YAML file')
-    target = canonical.add_mutually_exclusive_group()
-    target.add_argument('-o', '--out', help='write here instead of stdout')
-    target.add_argument('--write', action='store_true', help='rewrite the file in the form, dropping its comments')
-    target.add_argument('--check', action='store_true', help='exit 1 if the file is not in the form, writing nothing')
+    canonical.add_argument('-o', '--out', help='write here instead of stdout')
+
+    diff = verbs.add_parser('diff', help='print where two specs differ in the canonical form, and exit 1 if they do')
+    diff.add_argument('before', help='path to a mathspec YAML file')
+    diff.add_argument('after', help='path to a mathspec YAML file')
 
     for name in FORMATS:
         verb = verbs.add_parser(name, help=f'render a spec as {name}')
@@ -61,26 +63,31 @@ def parser() -> argparse.ArgumentParser:
     return front
 
 
-def _checked(path: str, text: str) -> int:
-    """Exit status 0 if the file at *path* already holds *text*, the form, and 1 with the rewrite on stderr if not.
+def _diff(before: str, after: str) -> int:
+    """Print a unified diff of the canonical forms of *before* and *after*, and return ``diff``'s exit status.
 
-    A CI job runs this, so it compares bytes and writes nothing: the job fails,
-    and the author runs the rewrite the message names.
+    The status is 0 when the two specs are the same, 1 when they differ, and 2
+    when the language refuses either file, so a CI job reads it as it reads
+    ``diff``. Both forms are written now, by this mathspec, so a release that
+    changes the form changes both sides alike.
     """
-    if Path(path).read_text(encoding='utf-8') == text:
-        return 0
-    sys.stderr.write(
-        f'{path} is not in the canonical form. Run `python -m mathspec canonical --write {path}` to rewrite it.\n'
+    try:
+        old, new = (to_spec(path).to_yaml(canonical=True) for path in (before, after))
+    except MathSpecError as e:
+        sys.stderr.write(f'{e}\n')
+        return 2
+    sys.stdout.writelines(
+        difflib.unified_diff(old.splitlines(keepends=True), new.splitlines(keepends=True), before, after)
     )
-    return 1
+    return int(old != new)
 
 
 def main(argv: list[str] | None = None) -> int:
     """Run one verb; a refused file is its message on stderr and exit status 1.
 
-    Advice is not a refusal: ``check`` prints it and exits 0. A file that
-    ``canonical --check`` finds out of the form exits 1, with the rewrite on
-    stderr.
+    Advice is not a refusal: ``check`` prints it and exits 0. ``diff`` keeps
+    ``diff``'s exit statuses, so two specs that differ exit 1 and a refused file
+    exits 2.
     """
     args = parser().parse_args(argv)
     if args.verb == 'check':
@@ -91,17 +98,14 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         sys.stdout.write(''.join(f'{note}\n' for note in notes))
         return 0
+    if args.verb == 'diff':
+        return _diff(args.before, args.after)
     if args.verb == 'canonical':
         try:
             text = to_spec(args.spec).to_yaml(canonical=True)
         except MathSpecError as e:
             sys.stderr.write(f'{e}\n')
             return 1
-        if args.check:
-            return _checked(args.spec, text)
-        if args.write:
-            Path(args.spec).write_text(text, encoding='utf-8')
-            return 0
     else:
         spec = to_spec(args.spec).expand() if args.expand else args.spec
         text = typeset(

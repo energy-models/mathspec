@@ -347,11 +347,10 @@ The normal form states the same spec, but it does not load to a `Spec` equal
 to the original, because a reprinted expression is a different string. Writing
 the normal form out again gives the same text, as the line above shows.
 
-`python -m mathspec canonical spec.yaml` writes it from a shell. `--write`
-rewrites the file in the form, and `--check` exits with status 1 if the file is
-not in the form. The form holds no YAML comments, so `--write` drops them.
-[Compare two specs](../howto/compare.md) shows how to diff two files in this
-form.
+`python -m mathspec canonical spec.yaml` writes it from a shell, and
+`python -m mathspec diff before.yaml after.yaml` prints where two specs differ
+in it. [Compare two specs](../howto/compare.md) shows how to diff two files in
+this form.
 
 A new mathspec release can change the normal form, for example how it lays out
 a list. So compare two normal forms that the same mathspec wrote. Do not store
