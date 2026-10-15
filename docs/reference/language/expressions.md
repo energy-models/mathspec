@@ -70,6 +70,14 @@ objective:
 because an expression reads no [dimension](#name-resolution). Write `x * x` for
 a square.
 
+A divisor that `edge=0` can make 0 is refused at load, because the file itself
+puts that 0 in. `p / shift(c, along=t, offset=1, edge=0)` divides by 0 at the
+first `t`, whatever the data holds. The same holds where the shift is a factor,
+a numerator, a base, the operand of a sum, another shift or a lookup, a named
+expression or a region of a case, and in a sum only where every term can be 0:
+`shift(c, along=t, offset=1, edge=0) + 1` loads. Write `edge='wrap'`, or an
+`edge=` value other than 0.
+
 ## Name resolution
 
 One flat namespace covers dimensions, relations, parameters, variables, named

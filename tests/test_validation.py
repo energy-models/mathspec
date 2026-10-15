@@ -2675,3 +2675,61 @@ _ROW = {'dims': ['snapshot'], 'expression': 'sum(dispatch, over=generator) >= lo
 def test_a_row_a_set_a_curve_and_an_assumption_sit_outside_the_flat_namespace(patch):
     """What the language reference states under name resolution: none of these four is read by a bare name."""
     spec_of(EXAMPLES / 'sos.yaml', **patch)
+
+
+#: The shift a divisor below is 0 at the edge of, wherever it stands in the divisor.
+EDGE_ZERO = 'shift(c, along=g, offset=1, edge=0)'
+
+
+@pytest.mark.parametrize(
+    ('divisor', 'patch'),
+    [
+        pytest.param(EDGE_ZERO, {}, id='the-shift'),
+        pytest.param('shift(c, along=g, offset=-1, edge=0)', {}, id='a-shift-ahead'),
+        pytest.param(f'2 * {EDGE_ZERO}', {}, id='a-factor'),
+        pytest.param(f'-{EDGE_ZERO}', {}, id='negated'),
+        pytest.param(f'{EDGE_ZERO} / 2', {}, id='a-numerator'),
+        pytest.param(f'{EDGE_ZERO} ** 2', {}, id='a-base'),
+        pytest.param(f'sum({EDGE_ZERO}, over=g)', {}, id='summed'),
+        pytest.param(f'shift({EDGE_ZERO}, along=g, offset=1, edge=1)', {}, id='shifted-again'),
+        pytest.param(f'{EDGE_ZERO} + {EDGE_ZERO}', {}, id='every-addend'),
+        pytest.param('e', {'expressions.e': EDGE_ZERO}, id='a-named-expression'),
+        pytest.param(
+            'e',
+            {
+                'expressions.e': {
+                    'dims': ['g'],
+                    'cases': {'on': {'when': 'flag', 'expression': EDGE_ZERO}},
+                    'otherwise': '1',
+                }
+            },
+            id='a-case',
+        ),
+        pytest.param(
+            'at(shift(d, along=h, offset=1, edge=0), by=lk[h])', {'parameters.d': {'dims': ['h']}}, id='a-lookup'
+        ),
+    ],
+)
+def test_a_divisor_a_shift_fills_with_zero_is_refused(divisor, patch):
+    """`shift(c, edge=0)` loaded as a divisor, so the row at the edge divided by the 0 that `edge=0` stands for."""
+    message = _refusal(**patch, **{'constraints.cap': {'dims': ['g'], 'expression': f'p / ({divisor}) <= 1'}})
+    vacates = (
+        'the divisor is 0 where shift(along=g, edge=0) vacates',
+        'the divisor is 0 where shift(along=h, edge=0) vacates',
+    )
+    assert any(v in message for v in vacates), message
+    assert 'which no number divides by' in message
+    assert "Write edge='wrap', or an edge= value other than 0" in message, 'the refusal names the rewrite'
+
+
+@pytest.mark.parametrize(
+    'divisor',
+    [
+        pytest.param('shift(c, along=g, offset=1, edge=1)', id='another-edge'),
+        pytest.param("shift(c, along=g, offset=1, edge='wrap')", id='a-wrap'),
+        pytest.param('shift(c, along=g, offset=1, edge=0) + 1', id='an-addend-the-edge-does-not-zero'),
+    ],
+)
+def test_a_divisor_a_shift_fills_with_another_value_loads(divisor):
+    spec = to_spec(varied(SMALL_MODEL, **{'constraints.cap': {'dims': ['g'], 'expression': f'p / ({divisor}) <= 1'}}))
+    assert 'cap' in spec.program.constraints
