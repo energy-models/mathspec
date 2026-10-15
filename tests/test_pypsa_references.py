@@ -254,19 +254,32 @@ def test_a_delayed_port_assumes_one_generators_weighting_over_the_horizon(compon
         ('Store', 'e_nom'),
     ],
 )
-def test_a_modular_build_counts_modules_only_where_the_unit_stands(component: str, attr: str):
-    """PyPSA builds `{c}-n_mod` and `{c}-{attr}_modularity` over `c.active_assets` alone (`variables.py:379`, `constraints.py:1849`).
+def test_a_build_stands_only_for_an_extendable_unit_that_is_active(component: str, attr: str):
+    """PyPSA builds `{c}-{attr}`, `{c}-n_mod` and their rows over `c.extendables` and `c.active_assets` (`variables.py:353`, `:379`, `constraints.py:851`, `:1849`).
 
-    The file built both for a Generator, Link or Process that is not active,
-    and neither for a Line, Transformer, StorageUnit or Store. Rung 63.
+    `c.active_assets` is the `active` flag alone, without build year and
+    lifetime. The file built the build column and its bound rows for a
+    Generator, Link or Process that is not active (#883, rung 63), and it
+    counted no modules for a unit that is active but stands in no snapshot.
     """
-    stands = (
-        f'{component}_{attr}_extendable AND {component}_{attr}_mod > 0 AND count({component}_active, over=snapshot) > 0'
-    )
-    column = BASE.variables[f'{component}_n_mod'].where
-    row = BASE.constraints[f'{component}_{attr}_modularity'].where
-    assert column == row == stands, (
-        'the module count and its row stand for an extendable modular unit that stands in at least one snapshot'
+    entries = {
+        'variables': [f'{component}_{attr}_ext', f'{component}_n_mod'],
+        'constraints': [
+            f'{component}_ext_{attr}_lower',
+            f'{component}_ext_{attr}_upper',
+            f'{component}_{attr}_set',
+            f'{component}_{attr}_modularity',
+        ],
+    }
+    unit = {f'{attr}_extendable': True, f'{attr}_mod': 20.0, f'{attr}_max': 50.0, f'{attr}_set': 10.0}
+    stands = {
+        (name, active): _admits(getattr(BASE.program, section)[name].where, component, {**unit, 'active_asset': active})
+        for section, names in entries.items()
+        for name in names
+        for active in (True, False)
+    }
+    assert stands == {(name, active): active for name, active in stands}, (
+        'the build, its module count and their rows stand for an extendable unit exactly where it is active'
     )
 
 
