@@ -46,8 +46,8 @@ def _verdict(dimension: str = 'h', **patch: Any):
     return to_spec({**BASE, **patch}).program.separability[dimension]
 
 
-def _rows(expression: str, *, dims: list[str] | None = None, **block: Any) -> dict[str, Any]:
-    return {'constraints': {'k': {'dims': dims or ['h', 'u'], 'expression': expression, **block}}}
+def _rows(expression: str, *, dims: list[str] | None = None, **fields: Any) -> dict[str, Any]:
+    return {'constraints': {'k': {'dims': dims or ['h', 'u'], 'expression': expression, **fields}}}
 
 
 @pytest.mark.parametrize(
@@ -79,7 +79,7 @@ def test_a_separable_model_reports_the_lookahead_a_window_needs(patch, ahead):
 def test_a_model_the_axis_ties_together_names_what_ties_it(patch, fragment):
     verdict = _verdict(**patch)
     assert not verdict.windowable, 'this shape does not survive being cut into windows'
-    assert fragment in verdict.coupled["constraint 'k'"], 'the report names the construct, not just the declaration'
+    assert fragment in verdict.coupled["constraint 'k'"], 'the report names the construct, not just the entry'
     assert not verdict.undecided and not verdict.restarts, 'a coupling is not something data or a driver resolves'
 
 
@@ -195,7 +195,7 @@ def test_a_mask_counting_a_position_is_reported_and_not_refused():
     stays windowable and says where a window would restart the count."""
     verdict = _verdict(**_rows('p >= 0', where='position(h) == 0'))
     assert verdict.windowable, 'a seed is a modelling intent, not a coupling'
-    assert verdict.restarts == {"constraint 'k'": 'counts a position along h'}, 'the report names the declaration'
+    assert verdict.restarts == {"constraint 'k'": 'counts a position along h'}, 'the report names the entry'
 
 
 def test_a_sum_over_the_axis_couples_a_constraint_and_leaves_the_objective_alone():
@@ -302,7 +302,7 @@ def test_the_border_of_a_block_form_is_what_no_one_block_holds():
     bordered block-diagonal form."""
     verdict = _verdict(**BORDER)
     assert verdict.linking_rows == ('budget', 'peak'), (
-        'a row the axis ties together and a row it does not index, in declaration order, and no third'
+        'a row the axis ties together and a row it does not index, in file order, and no third'
     )
     assert verdict.linking_columns == ('built',), 'the one column every block reads, p being a column per block'
     along_u = _verdict('u', **BORDER)
@@ -348,11 +348,11 @@ def test_a_row_reaches_the_border_only_when_no_one_block_holds_it(patch, rows):
         ),
     ],
 )
-def test_a_coupling_carried_by_a_declaration_that_builds_no_row_stays_off_the_border(patch, label):
+def test_a_coupling_carried_by_an_entry_that_builds_no_row_stays_off_the_border(patch, label):
     """The objective is one row that no cut of the axis divides, and a set names
     columns that already exist. Neither builds a constraint row for a block to
     hold, so neither reaches the border. The coupling is reported all the same,
     because a window still cannot honour it."""
     verdict = _verdict(**patch)
-    assert label in verdict.coupled, 'the coupling is reported against the declaration that carries it'
+    assert label in verdict.coupled, 'the coupling is reported against the entry that carries it'
     assert verdict.linking_rows == (), 'and the one constraint here is pointwise, so the border holds no row'

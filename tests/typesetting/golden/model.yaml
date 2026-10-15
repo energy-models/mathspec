@@ -28,7 +28,7 @@ relations:
   season_of: { key: snapshot, values: season }
   gen_zone: { key: [generator, snapshot], values: zone } # a map keyed by two dimensions: a call sums one away and joins on the other
   rep_of: { key: snapshot, values: { rep: snapshot } } # a map into its own dimension: the representative snapshot
-  connection: { key: [generator, bus] } # a bare relation, with no value columns: many-to-many, read only by sum with both ends named
+  connection: { key: [generator, bus], missing: absent } # a bare relation, with no value columns: many-to-many, read only by sum with both ends named
   gen_bt: { key: generator, values: [bus, technology] } # one table with two value columns, read to both at once
 
 parameters:
@@ -47,7 +47,7 @@ parameters:
   bp_x: { dims: [generator, bp], missing: neutral } # the x-axis of every curve below, and what a derived mask is read from
   bp_y: { dims: [generator, bp], missing: neutral }
   bp_heat: { dims: [generator, bp] }
-  bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a block has a mask to print
+  bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a piecewise entry has a mask to print
 
 variables:
   p: # both bounds, and a where with all three connectives
@@ -72,7 +72,7 @@ variables:
   spare: # integer with neither bound: the domain is the whole line
     dims: [generator]
     domain: integer
-  reserve: # an empty dims: a scalar declaration, whose line carries no quantifier
+  reserve: # an empty dims: a scalar entry, whose line carries no quantifier
     dims: []
     bounds: { lower: 0 }
   headroom: # scalar too, but masked, so the condition stands with no set beside it; neutral, so the legend names the reading

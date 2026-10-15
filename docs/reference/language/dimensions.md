@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Dimensions
 
-A **dimension** is a set of labels that declarations are indexed by, such as
+A **dimension** is a set of labels that entries are indexed by, such as
 `snapshot` or `generator`. `sum` reduces over a dimension. A map from one
 dimension onto another is a [relation](relations.md).
 
@@ -51,7 +51,7 @@ Constraint 'ramp': shift(along=snapshot) reads the order of 'snapshot', which is
 ```
 
 A `dtype` does not make a dimension ordered: an `int` dimension may number
-things that have no order. An `sos` block with `type: 1` reads no order, and
+things that have no order. An `sos` entry with `type: 1` reads no order, and
 `edge='wrap'` makes one `shift` cyclic without changing the dimension.
 
 To decide whether a column of data is a dimension, a relation or a parameter,

@@ -37,10 +37,10 @@ SPECS = {
 MODELS = list(SPECS.values())
 BASE = SPECS['pypsa.md']
 ROWS_DECLARED = {
-    n for m in MODELS for name, block in m.constraints.items() for n in _names_for(name, block.description)
+    n for m in MODELS for name, entry in m.constraints.items() for n in _names_for(name, entry.description)
 }
 COLUMNS_DECLARED = {
-    n for m in MODELS for name, block in m.variables.items() for n in _names_for(name, block.description)
+    n for m in MODELS for name, entry in m.variables.items() for n in _names_for(name, entry.description)
 }
 #: The five GlobalConstraint formulas open with their *type* — PyPSA names
 #: those rows after each row's own label, so they are matched through the
@@ -140,7 +140,7 @@ def _stated(name: str, row: str) -> bool:
 
 @pytest.mark.parametrize('page', sorted(PATCHED))
 def test_a_patch_keeps_the_pypsa_name_of_what_it_changes(page: str):
-    """A patch rewrites declarations of the base; a rewritten name keeps its PyPSA name and its dtype, or it has drifted."""
+    """A patch rewrites entries of the base; a rewritten name keeps its PyPSA name and its dtype, or it has drifted."""
     own = SPECS[page]
     drifted = []
     for section in ('parameters', 'relations', 'variables', 'constraints'):
@@ -181,8 +181,8 @@ def test_a_fixed_modular_committable_unit_gets_only_its_per_module_commitment_ro
     families = ('com_p_', 'com_mod_p_', 'maint_status_', 'maint_modstatus_')
     admitted = {
         name.removeprefix(f'{component}_')
-        for name, block in BASE.program.constraints.items()
-        if name.removeprefix(f'{component}_').startswith(families) and _admits(block.where, component, unit)
+        for name, entry in BASE.program.constraints.items()
+        if name.removeprefix(f'{component}_').startswith(families) and _admits(entry.where, component, unit)
     }
     assert admitted == {
         'com_mod_p_lower',
@@ -204,20 +204,20 @@ def test_a_fixed_modular_committable_unit_gets_only_its_per_module_commitment_ro
         ),
     ],
 )
-def test_the_cvar_blocks_stand_exactly_where_a_risk_preference_is_set(section: str, name: str):
+def test_the_cvar_entries_stand_exactly_where_a_risk_preference_is_set(section: str, name: str):
     """PyPSA builds the CVaR columns and rows, and refuses a quadratic cost, under any risk preference (`optimize.py:461`, `:470-477`).
 
     The file built the columns always, and the rows and the refusal only where
     `omega > 0`, so a risk preference with `omega = 0` got neither. Rung 70.
     """
     mask = getattr(BASE.program, section)[name].where
-    assert mask is not None, 'the block stands only where a risk preference is set'
+    assert mask is not None, 'the entry stands only where a risk preference is set'
     grid = _Grid({}, {id(atom): _subject_of(atom) for atom in mask.atoms}, {})
     stands = {
         omega: _evaluate(mask.root, {Subject('param', 'CVaR_omega'): omega}, grid) for omega in (Special.NULL, 0.0, 0.3)
     }
     assert stands == {Special.NULL: False, 0.0: True, 0.3: True}, (
-        'the block stands under a risk preference of any weight, zero included, and not without one'
+        'the entry stands under a risk preference of any weight, zero included, and not without one'
     )
 
 
@@ -280,12 +280,12 @@ def test_the_spine_weightings_are_generic():
 
 
 @pytest.mark.parametrize('label', sorted(GC_RECORDED), ids=str)
-def test_a_global_constraint_row_has_a_block_of_its_recorded_type_and_sense(label: str):
+def test_a_global_constraint_row_has_an_entry_of_its_recorded_type_and_sense(label: str):
     gc = GC_RECORDED[label]
     matching = [
         name
         for m in MODELS
-        for name, block in m.constraints.items()
-        if _stands_for(name, block.description) == gc['type'] and f"'{gc['sense']}'" in (block.where or '')
+        for name, entry in m.constraints.items()
+        if _stands_for(name, entry.description) == gc['type'] and f"'{gc['sense']}'" in (entry.where or '')
     ]
-    assert matching, f'no declared block takes a {gc["type"]} row of sense {gc["sense"]}'
+    assert matching, f'no declared entry takes a {gc["type"]} row of sense {gc["sense"]}'
