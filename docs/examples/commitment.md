@@ -8,10 +8,10 @@ SPDX-License-Identifier: CC-BY-4.0
 This spec adds an on/off decision per unit and a start-up ramp to [least-cost
 dispatch](dispatch.md). Read `previous_status` first, then `ramp_up`.
 `previous_status` is the state that a unit carries into a snapshot, and the file
-states its three regimes once, in a
-[`cases:`](../reference/language/named.md#cases) block. `ramp_up` reads
+states its three regimes once, under
+[`cases:`](../reference/language/named.md#cases). `ramp_up` reads
 `previous_status` as it reads a parameter, so one inequality covers a running
-unit and a starting unit. The typesetter prints the block once, under
+unit and a starting unit. The typesetter prints the cases once, under
 **Definitions** below.
 
 <!-- gallery:begin -->
@@ -131,11 +131,12 @@ Unit commitment with a start-up ramp, the formulation `cases:` exists for. The s
 |---|---|
 | $`\mathit{previous\_status}`$ | `previous_status` over $`\mathcal{T} \times \mathcal{G}`$ — the commitment state a unit carries into a snapshot |
 
-Upright is what the data supplies — a parameter such as $`\mathrm{committable}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{dispatch}`$. An index is italic too, being what a quantifier chooses, and a set is script.
+#### Notation
 
-$`t \boxminus_{v} k`$ denotes translation with $`v`$ standing where index $`t-k`$ leaves the dimension (`shift(edge=v)`), so the row at that boundary is built and carries $`v`$ rather than being dropped.
-
-$`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own order — the order `shift` steps along, not the order labels sort in — counted from $`0`$. The index itself stays the coordinate, so $`t`$ compares against labels and $`\mathrm{pos}(t)`$ against positions.
+| Symbol | Meaning |
+|---|---|
+| $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
+| $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 
 #### Variable domains
 

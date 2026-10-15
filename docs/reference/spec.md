@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Spec API
 
-Look up every name that `mathspec.spec` exports: `Spec`, the blocks that its
+Look up every name that `mathspec.spec` exports: `Spec`, the entries that its
 sections hold, and the operator names that an expression may call.
 [`to_spec`](api.md#mathspec.to_spec) returns a `Spec`, and
 [reading a spec and its program](reading.md) says how a spec and its program

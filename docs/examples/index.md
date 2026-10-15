@@ -17,7 +17,7 @@ repository.
 - [One construct per spec](operators.md) shows each operator in the smallest
   file that uses it, beside the equation it prints.
 - [A component library](library/index.md) is several files that compose into
-  one spec. Each file reads the shared declarations of one surface file and
+  one spec. Each file reads the shared entries of one surface file and
   prints on its own. The composed page shows what `merge` returns.
 
 The PyPSA pages start at [PyPSA in one file](pypsa.md). They state the model

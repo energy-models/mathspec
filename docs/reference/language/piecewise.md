@@ -7,13 +7,13 @@ SPDX-License-Identifier: CC-BY-4.0
 
 `piecewise:` states a curve through breakpoints. `sos:` states a family of
 variables of which only one, or only two neighbours, may be non-zero. Both are
-**formulations**: blocks that expand into ordinary variables and constraints
+**formulations**: entries that expand into ordinary variables and constraints
 before the model is built. [`spec.expand()`](#writing-a-formulation-out) writes
 that expansion out.
 
 ## `piecewise`
 
-A `piecewise` block ties two or more expressions to one piecewise-linear curve,
+A `piecewise` entry ties two or more expressions to one piecewise-linear curve,
 which is given as breakpoints: the corner values each expression takes
 together.
 
@@ -28,7 +28,7 @@ piecewise:
     method: adjacency # how the weights are restricted — below
     activity: null # optional: a binary variable that the weights sum to
 
-  # a two-link block may bound one side instead of pinning it
+  # a two-link entry may bound one side instead of pinning it
   fuel_cap:
     over: bp
     links:
@@ -40,7 +40,7 @@ piecewise:
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | _expression_   | Any affine expression. The simplest is a bare variable name                                                                                  |
 | _values_       | A parameter that carries the `over` dimension, plus any dimensions the link expressions carry. A dimension the links do not carry is refused |
-| _sign_         | `<=` or `>=`. At most one per block, and only in a block with exactly two links. It bounds the link instead of pinning it                    |
+| _sign_         | `<=` or `>=`. At most one per entry, and only in an entry with exactly two links. It bounds the link instead of pinning it                   |
 
 | Key        |                                                                                          |                     |
 | ---------- | ---------------------------------------------------------------------------------------- | ------------------- |
@@ -50,10 +50,10 @@ piecewise:
 | `activity` | a binary variable that gates the curve ([below](#activity))                              | default `null`      |
 | `points`   | how far each curve runs, where the curves are not all the same length ([below](#points)) | default `null`      |
 
-A block states one weight per breakpoint in `[0, 1]`, a row making the weights
+An entry states one weight per breakpoint in `[0, 1]`, a row making the weights
 sum to 1, and a row per link tying its expression to the weighted breakpoints.
 The breakpoint order is the order of `over`, which is an
-[ordered](dimensions.md#order) dimension. What a block assumes of
+[ordered](dimensions.md#order) dimension. What an entry assumes of
 its numbers is on [what a curve assumes](assumptions.md#what-a-curve-assumes).
 
 ### `activity`
@@ -61,7 +61,7 @@ its numbers is on [what a curve assumes](assumptions.md#what-a-curve-assumes).
 `activity:` names a binary variable, and the weights then sum to that variable
 instead of to 1, so `0` pins the curve off.
 
-The gate is an ordinary variable declaration:
+The gate is an ordinary variable entry:
 
 ```yaml
 variables:
@@ -77,9 +77,9 @@ instead, put `missing: neutral` on the gate.
 ### `points`
 
 A values parameter with a missing row does not build a shorter curve, because
-the [assumption](assumptions.md#what-a-curve-assumes) of the block refuses the
+the [assumption](assumptions.md#what-a-curve-assumes) of the entry refuses the
 data. To give a curve fewer breakpoints than the dimension holds, set `points:`
-to one of the values parameters of the block, and the curve runs as far as that
+to one of the values parameters of the entry, and the curve runs as far as that
 parameter has rows:
 
 ```yaml
@@ -100,7 +100,7 @@ be one consecutive run, anywhere along the dimension.
 
 ### Missing breakpoints
 
-A parameter that a block reads takes [`missing:`](declarations.md#a-missing-row)
+A parameter that an entry reads takes [`missing:`](parameters-variables-constraints.md#a-missing-row)
 like any other parameter, and reads it the same inside and outside the curve.
 A values parameter of a curve with `points:` may **not** be `refused`, because
 the curve stops where the mask stops, so the table has no rows past it by
@@ -112,9 +112,9 @@ file:
 parameter 'bp_y' is refused where a row is missing, and piecewise 'cost_curve' reads it under points: 'bp_x', which stops the curve where its rows stop. Declare missing: neutral, absent, or a value of its dtype.
 ```
 
-Declare `missing: neutral` or `absent` on each values parameter of the block.
+Declare `missing: neutral` or `absent` on each values parameter of the entry.
 The two build the same curve, because the curve reads a table only inside the
-mask, and there the `<block>_complete` assumption still refuses a missing row.
+mask, and there the `<entry>_complete` assumption still refuses a missing row.
 They differ where an expression outside the curve reads the table: `neutral`
 reads `0` there, and `absent` removes the term. Use `absent` where no number
 stands for a breakpoint the curve does not have, and `neutral` where `0` does.
@@ -127,8 +127,8 @@ read the default, `refused`.
 
 | `method`                | What it adds                                                                  |                                                                |
 | ----------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `adjacency` _(default)_ | an [`sos:`](#sos) block over the weights, written out as binaries             | the curve, built                                               |
-| `sos2`                  | an [`sos:`](#sos) block over the weights, left as a set                       | the curve, stated for a solver that branches on the set itself |
+| `adjacency` _(default)_ | an [`sos:`](#sos) entry over the weights, written out as binaries             | the curve, built                                               |
+| `sos2`                  | an [`sos:`](#sos) entry over the weights, left as a set                       | the curve, stated for a solver that branches on the set itself |
 | `convex`                | nothing                                                                       | the hull, which is a pure linear program                       |
 | `lp`                    | no weights at all: one row per segment line, plus two rows holding the domain | the curve as its own lines                                     |
 
@@ -153,7 +153,7 @@ hand](../../howto/curve-by-hand.md)).
 
 ## `sos`
 
-An `sos` block declares a **special-ordered set**: one dimension of one
+An `sos` entry declares a **special-ordered set**: one dimension of one
 variable, and how many members of that set may be non-zero at once.
 
 ```yaml
@@ -165,7 +165,7 @@ sos:
 ```
 
 A set is over **one** variable, and a variable holds **one** set, so a second
-block naming the same variable is a load error.
+entry naming the same variable is a load error.
 
 A member the variable's `where` masks out is not in the set. The order is the
 order of the `along` dimension, which is
@@ -193,12 +193,12 @@ name the expansion writes that the file already declares is refused at load too.
 
 ## Writing a formulation out
 
-[`Spec.expand()`](../spec.md#mathspec.spec.Spec.expand) replaces the block
+[`Spec.expand()`](../spec.md#mathspec.spec.Spec.expand) replaces the entry
 with the variables and constraints it states.
 [See what a curve or a set expands to](../../howto/see-an-expansion.md) shows a
 spec before and after.
 
-- Every name written out starts with the name of the block, so the weights of
+- Every name written out starts with the name of the entry, so the weights of
   the curve `curve` are `curve_lam`.
 - No formulation emits a parameter, so the same data attaches to a spec and its
   expansion, and reads the same in both.

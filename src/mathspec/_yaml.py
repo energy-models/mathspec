@@ -11,8 +11,8 @@ language whose scalars are user data; both are fixed here:
   names in this language — a country code as a dimension, a mode as a relation.
   YAML 1.1 resolves them to ``True``/``False``; only ``true``/``false`` are
   booleans here, which is the YAML 1.2 core schema.
-- **Duplicate keys.** 1.1 lets the last one win silently, discarding a
-  declaration the file plainly contains.
+- **Duplicate keys.** 1.1 lets the last one win silently, discarding an
+  entry the file plainly contains.
 
 The output is plain ``dict``/``str``: no loader wrapper reaches the schema
 or the AST.
@@ -190,7 +190,7 @@ def _one_line(value: object) -> bool:
 
     A list may, when it holds only one-line scalars and such lists. A mapping
     may, when it holds only numbers, booleans, names and such lists, as
-    ``bounds`` does. A declaration with a description or an expression in it
+    ``bounds`` does. An entry with a description or an expression in it
     keeps one key on each line, so its text is never quoted to fit a flow
     mapping. Whether the line fits is for the emitter to decide.
     """

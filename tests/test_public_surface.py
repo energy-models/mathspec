@@ -33,7 +33,7 @@ SURFACE = frozenset(
         # the verdicts a consumer asks for rather than re-deriving
         'advice',
         # typesetting, and the two inputs it takes
-        'typeset', 'typeset_declaration', 'to_latex', 'to_typst', 'to_markdown', 'FormatName', 'SymbolTable',
+        'typeset', 'typeset_line', 'to_latex', 'to_typst', 'to_markdown', 'FormatName', 'SymbolTable',
         # the two file-level verbs: peers composed, and patches laid over a base
         'merge', 'override',
     }
@@ -127,7 +127,7 @@ def test_the_top_level_is_what_a_consumer_calls():
 
 
 def test_the_spec_module_exports_every_class_it_defines():
-    """`Spec` hands out its blocks, so each one is public: a block class added without a decision fails here."""
+    """`Spec` hands out its parts, so each one is public: a `*Spec` class added without a decision fails here."""
     declared = set(spec.__all__)
     classes = {n for n, obj in vars(spec).items() if inspect.isclass(obj) and obj.__module__ == spec.__name__}
     public = {n for n in classes if not n.startswith('_')}

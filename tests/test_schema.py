@@ -28,8 +28,8 @@ def test_the_checked_in_json_schema_has_not_drifted():
 @pytest.mark.parametrize(
     ('definition', 'shorthand', 'spelling'),
     [
-        pytest.param('PiecewiseLink', 'array', '`[expression, values, sign?]`', id='link-shorthand'),
-        pytest.param('ExpressionBlock', 'string', 'bare-string', id='bare-string-expression'),
+        pytest.param('PiecewiseLinkSpec', 'array', '`[expression, values, sign?]`', id='link-shorthand'),
+        pytest.param('ExpressionSpec', 'string', 'bare-string', id='bare-string-expression'),
     ],
 )
 def test_the_json_schema_admits_the_shorthand_the_loader_admits(definition, shorthand, spelling):
@@ -54,39 +54,39 @@ def test_no_definition_refers_only_to_itself():
 
 
 @pytest.mark.parametrize(
-    ('block', 'field', 'alias'),
+    ('entry', 'field', 'alias'),
     [
-        pytest.param('ObjectiveBlock', 'sense', spec.ObjectiveSense, id='sense'),
-        pytest.param('VariableBlock', 'domain', spec.VariableDomain, id='domain'),
-        pytest.param('VariableBlock', 'missing', spec.VariableMissing, id='variable-missing'),
-        pytest.param('RelationBlock', 'missing', spec.RelationMissing, id='relation-missing'),
-        pytest.param('ParameterBlock', 'missing', spec.MissingReading, id='parameter-missing'),
-        pytest.param('ParameterBlock', 'dtype', spec.ParameterDtype, id='parameter-dtype'),
-        pytest.param('DimensionBlock', 'dtype', spec.DimensionDtype, id='dimension-dtype'),
-        pytest.param('PiecewiseBlock', 'method', spec.PiecewiseMethod, id='method'),
-        pytest.param('SosBlock', 'type', spec.SosType, id='sos-type'),
+        pytest.param('ObjectiveSpec', 'sense', spec.ObjectiveSense, id='sense'),
+        pytest.param('VariableSpec', 'domain', spec.VariableDomain, id='domain'),
+        pytest.param('VariableSpec', 'missing', spec.VariableMissing, id='variable-missing'),
+        pytest.param('RelationSpec', 'missing', spec.RelationMissing, id='relation-missing'),
+        pytest.param('ParameterSpec', 'missing', spec.MissingReading, id='parameter-missing'),
+        pytest.param('ParameterSpec', 'dtype', spec.ParameterDtype, id='parameter-dtype'),
+        pytest.param('DimensionSpec', 'dtype', spec.DimensionDtype, id='dimension-dtype'),
+        pytest.param('PiecewiseSpec', 'method', spec.PiecewiseMethod, id='method'),
+        pytest.param('SosSpec', 'type', spec.SosType, id='sos-type'),
     ],
 )
-def test_a_closed_vocabulary_is_published_as_an_enum(block, field, alias):
+def test_a_closed_vocabulary_is_published_as_an_enum(entry, field, alias):
     """Read off the `Literal` rather than restated, so widening one is a one-line change."""
-    published = json.loads(schema.PATH.read_text())['$defs'][block]['properties'][field]
+    published = json.loads(schema.PATH.read_text())['$defs'][entry]['properties'][field]
     enum = published.get('enum') or next(
         (branch['enum'] for branch in published.get('anyOf', []) if 'enum' in branch), None
     )
-    assert enum == list(get_args(alias)), f'{block}.{field} stopped publishing its closed vocabulary'
+    assert enum == list(get_args(alias)), f'{entry}.{field} stopped publishing its closed vocabulary'
 
 
 @pytest.mark.parametrize(
-    ('block', 'default'),
+    ('entry', 'default'),
     [
-        pytest.param('ParameterBlock', 'refused', id='parameter'),
-        pytest.param('RelationBlock', 'refused', id='relation'),
-        pytest.param('VariableBlock', 'absent', id='variable'),
+        pytest.param('ParameterSpec', 'refused', id='parameter'),
+        pytest.param('RelationSpec', 'refused', id='relation'),
+        pytest.param('VariableSpec', 'absent', id='variable'),
     ],
 )
-def test_the_schema_publishes_the_reading_a_file_gets_by_leaving_missing_out(block, default):
+def test_the_schema_publishes_the_reading_a_file_gets_by_leaving_missing_out(entry, default):
     """The parameter and the relation hold `None` until read, and the schema published that `null`, not `refused`."""
-    published = json.loads(schema.PATH.read_text())['$defs'][block]['properties']['missing']
+    published = json.loads(schema.PATH.read_text())['$defs'][entry]['properties']['missing']
     assert published['default'] == default
 
 

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generators, the maintenance
 
-This file states the maintenance rows of PyPSA's `Generator`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Generator_active`, `Generator_committable`, `Generator_p_nom_ext`, `Generator_p_nom_extendable`, `Generator_p_nom_max`, `Generator_p_nom_min` and 3 more names that other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
+This file states the maintenance rows of PyPSA's `Generator`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Generator_active`, `Generator_committable`, `Generator_p_nom_ext`, `Generator_p_nom_extendable`, `Generator_p_nom_max`, `Generator_p_nom_min` and 3 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -43,6 +43,7 @@ relations:
       rows for a generator that is
       not maintainable
     key: { scenario: scenario, generator: generator, start: snapshot, covered: snapshot }
+    missing: absent
 
 parameters:
   Generator_maintainable:
@@ -265,9 +266,9 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$ — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$ — dispatch periods |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$ — generating units, each on one bus |
+| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — dispatch periods |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — generating units, each on one bus |
 
 #### Parameters
 

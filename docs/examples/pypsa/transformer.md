@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Transformers
 
-This file states PyPSA's `Transformer`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to each of these sums: `total_cost`, `Bus_injection` and `Cycle_angle_sum`. It reads `scenario_weight` and `transmission_losses`, which other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
+This file states PyPSA's `Transformer`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to each of these sums: `total_cost`, `Bus_injection` and `Cycle_angle_sum`. It reads `scenario_weight` and `transmission_losses`, which other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -433,8 +433,6 @@ constraints:
 | $`\check{\sigma}`$ | `Transformer_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — the flow a transformer's post-contingency rows read, as a line's |
 | $`\mathit{Transformer\_injection}`$ | `Transformer_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 | $`\mathit{Transformer\_angle\_sum}`$ | `Transformer_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ |
-
-Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\_phase\_shift\_varying}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{Transformer\_phase\_shift}`$. An index is italic too, being what a quantifier chooses, and a set is script.
 
 #### Masks
 

@@ -27,7 +27,7 @@ from mathspec.errors import SchemaError
 
 if TYPE_CHECKING:
     from mathspec.resolution import Namespace
-    from mathspec.spec import MacroBlock
+    from mathspec.spec import MacroSpec
 
 
 def parse_and_expand(text: str, ns: Namespace, context: str) -> ParsedNode:
@@ -60,13 +60,13 @@ def expand(node: ParsedNode, ns: Namespace, context: str) -> ParsedNode:
     return _expand(node, ns, context, ())
 
 
-def macro_signature(name: str, macro: MacroBlock) -> str:
+def macro_signature(name: str, macro: MacroSpec) -> str:
     """Human-readable call signature, for error messages."""
     parts = [*macro.args, *(f'{k}=...' for k in macro.kwargs)]
     return f'{name}({", ".join(parts)})'
 
 
-def parse_template(name: str, macro: MacroBlock, context: str) -> ArithmeticNode:
+def parse_template(name: str, macro: MacroSpec, context: str) -> ArithmeticNode:
     """Parse a macro template, rejecting comparisons."""
     body = parse_expression(macro.template)
     if isinstance(body, ComparisonNode):
@@ -87,7 +87,7 @@ def _expand(node: ArithmeticNode, ns: Namespace, context: str, stack: tuple[str,
     """
     if isinstance(node, NameNode) and stack and (refusal := ns.cycle(node.name, context, stack)) is not None:
         raise SchemaError(refusal)
-    if isinstance(node, FunctionCallNode) and node.name in ns.schema.macros:
+    if isinstance(node, FunctionCallNode) and node.name in ns.spec.macros:
         if node.name in stack:
             msg = (
                 f"{context}: macro '{node.name}' calls itself through {' -> '.join([*stack, node.name])}. "
@@ -100,7 +100,7 @@ def _expand(node: ArithmeticNode, ns: Namespace, context: str, stack: tuple[str,
 
 def _expand_macro(call: FunctionCallNode, ns: Namespace, context: str, stack: tuple[str, ...]) -> ArithmeticNode:
     """Call-by-value: arguments are expanded before substitution, and the substituted body is expanded again."""
-    macro = ns.schema.macros[call.name]
+    macro = ns.spec.macros[call.name]
     signature = macro_signature(call.name, macro)
     if len(call.args) != len(macro.args):
         msg = (
