@@ -504,6 +504,13 @@ MODELS = [
     pytest.param(
         {
             'parameters.lead': {'dims': ['g'], 'dtype': 'int', 'missing': 'absent'},
+            'constraints.c': {'dims': ['t', 'g'], 'expression': 'y <= shift(x, along=t, offset=lead, edge=0) + p'},
+        },
+        id='a-missing-named-offset-on-a-masked-variable',
+    ),
+    pytest.param(
+        {
+            'parameters.lead': {'dims': ['g'], 'dtype': 'int', 'missing': 'absent'},
             'parameters.q': {'dims': ['t', 'g']},
             'constraints.c': {'dims': ['t', 'g'], 'expression': "y <= shift(q, along=t, offset=lead, edge='wrap') + p"},
         },
