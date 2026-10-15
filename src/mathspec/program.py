@@ -358,6 +358,9 @@ class Translate:
     wrap: bool
     fill: float | None = None
     partition: Partition | None = None
+    #: The result at *t* is ``operand`` at *t + offset* instead. Only
+    #: [`Program.reads`][] writes it, to step a named offset back.
+    reverse: bool = False
 
 
 @dataclass(frozen=True)
@@ -386,6 +389,9 @@ class WindowSum:
     width: int | str
     wrap: bool
     partition: Partition | None = None
+    #: The window runs from *t* through *t + width - 1* instead. Only
+    #: [`Program.reads`][] writes it, to look a named width ahead.
+    ahead: bool = False
 
 
 @dataclass(frozen=True)
@@ -1120,6 +1126,30 @@ class Program:
             sos_types=frozenset(s.sos_type for s in self.sos.values()),
             kinds=frozenset(type(node) for node in walk(*self.roots)),
         )
+
+    @cached_property
+    def reads(self) -> Mapping[str, Mask]:
+        """Each ``refused`` parameter, to the mask over its own dims that holds where the model reads it.
+
+        A tool that attaches the data evaluates each mask as it evaluates a
+        ``where``, and refuses a missing row where the mask holds: no row needs
+        building first. A mask holds at a coordinate when a row the model builds,
+        a bound of a variable that exists, the objective or a reported
+        expression puts the value of the parameter there into the model. It
+        reads only data, so it is decided before the solve. A parameter the
+        model never reads maps to a mask that is false everywhere.
+
+        It answers for the rows this program holds, as [`footprint`][] does: a
+        curve still under [`piecewise`][] is not counted, so ask the program of
+        ``spec.expand('piecewise')`` for its rows.
+
+        The masks are built from the nodes a ``where`` already holds, plus two
+        flags no file writes: [`Translate.reverse`][] and
+        [`WindowSum.ahead`][], which step a named offset or width the other way.
+        """
+        from mathspec.reads import reads
+
+        return Sealed(reads(self))
 
     @cached_property
     def separability(self) -> Mapping[str, Separability]:
