@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(cli)!: `python -m mathspec diff` compares two specs in the canonical form, and `canonical` no longer rewrites or checks a file ([#874](https://github.com/energy-models/mathspec/pull/874))
 - feat(spec)!: a spec written back out puts short lists and mappings of names on one line ([#871](https://github.com/energy-models/mathspec/pull/871))
 - feat(typesetting): the legend keys its notation in a table rather than in paragraphs ([#870](https://github.com/energy-models/mathspec/pull/870))
 - refactor(api)!: a spec class ends in `Spec`, a program class takes its construct's name, and the docs call one named item an entry ([#855](https://github.com/energy-models/mathspec/pull/855))

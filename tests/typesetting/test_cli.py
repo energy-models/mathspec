@@ -2,9 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The shell front — `python -m mathspec <verb> spec.yaml`.
+"""The shell front — `python -m mathspec <command> spec.yaml`.
 
-`main` takes its argv and `parser` hands back the verbs, so none of this needs a
+`main` takes its argv and `parser` hands back the commands, so none of this needs a
 subprocess or a scrape of help text.
 """
 
@@ -27,11 +27,11 @@ from tests.typesetting import golden
 MODEL = str(golden.MODEL)
 
 
-def _verbs() -> dict[str, argparse.ArgumentParser]:
+def _commands() -> dict[str, argparse.ArgumentParser]:
     """The subcommands the front actually registered, each with its parser.
 
     Read off the parser rather than the ``--help`` text: a format named in a
-    help *sentence* would satisfy a substring check without a verb existing.
+    help *sentence* would satisfy a substring check without a command existing.
     """
     for action in front.parser()._actions:
         if isinstance(action, argparse._SubParsersAction):
@@ -39,16 +39,17 @@ def _verbs() -> dict[str, argparse.ArgumentParser]:
     raise AssertionError('the front registered no subcommands at all')
 
 
-def test_the_verbs_are_the_two_readers_and_the_formats_and_nothing_else():
+def test_the_commands_are_the_three_readers_and_the_formats_and_nothing_else():
     """The one claim the module makes about itself, in both directions.
 
-    The typeset verbs are built by looping over `FORMATS`, so a new format
-    arrives with its verb already written and there is no second list to
-    forget. A verb hand-added here, or a format quietly dropped, breaks this.
+    The typeset commands are built by looping over `FORMATS`, so a new format
+    arrives with its command already written and there is no second list to
+    forget. A command hand-added here, or a format quietly dropped, breaks this.
     `check` reads a model and reports, `canonical` reads one and writes it back
-    in the form two files that mean the same thing share; neither renders.
+    in the form two files that mean the same thing share, and `diff` writes two
+    in that form and prints where they differ; none of them renders.
     """
-    assert set(_verbs()) == set(FORMATS) | {'check', 'canonical'}
+    assert set(_commands()) == set(FORMATS) | {'check', 'canonical', 'diff'}
 
 
 UNUSED_DIMENSION = """
@@ -78,7 +79,7 @@ def test_check_accepts_the_model_that_carries_every_construct(capsys):
 
 def test_check_reads_a_curve_as_written(capsys):
     """`check` expanded every curve on the user's behalf, then refused a curve without `--expand`; either way
-    it read a file differently from the typeset verbs, which print it as written.
+    it read a file differently from the typeset commands, which print it as written.
 
     Advice reads an entry as the rows it states, so `check` takes the file as
     written and has no `--expand`: the rows are a different document to
@@ -174,12 +175,12 @@ def test_a_format_nothing_can_render_is_refused_rather_than_guessed():
 def test_no_verb_binds_data():
     """The rule the module docstring states, checked rather than asserted.
 
-    No verb takes `--source` or `--coords`: a source mapping in flags is a
+    No command takes `--source` or `--coords`: a source mapping in flags is a
     dict with worse errors, and a typed axis cannot be spelled in flags at
-    all. If a verb ever needs data, it takes one path to a run manifest, and
+    all. If a command ever needs data, it takes one path to a run manifest, and
     that argument gets made before this test changes.
     """
     banned = {'--source', '--coords', '--data'}
-    for name, verb in _verbs().items():
-        flags = {option for action in verb._actions for option in action.option_strings}
+    for name, command in _commands().items():
+        flags = {option for action in command._actions for option in action.option_strings}
         assert not (flags & banned), f'{name} attaches data: {sorted(flags & banned)}'
