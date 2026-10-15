@@ -121,7 +121,7 @@ written  # "assumption 'cost_is_never_negative' does not hold for the data attac
 ```
 
 `program.parameters[name].missing` says what a missing row of that parameter
-means: `'refused'`, `'absent'`, `'neutral'`, or the value that the row reads as.
+means: `'refused'`, `'absent'`, or the value that the row reads as.
 It is `None` for a given parameter, because the file that declares the
 parameter says. The program of `spec.expand(...)` reports the same readings.
 `program.relations[name].missing` is `'refused'` or `'absent'`.

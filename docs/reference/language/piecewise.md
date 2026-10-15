@@ -72,7 +72,7 @@ variables:
 ```
 
 Where the gate does not exist, the curve is ungated. To have no curve there
-instead, put `missing: neutral` on the gate.
+instead, put `missing: 0` on the gate.
 
 ### `points`
 
@@ -111,12 +111,11 @@ outside the curve reads the table:
 | -------------------------------- | ------------------------------------ |
 | `refused`, by default            | is refused                           |
 | `absent`                         | removes the term                     |
-| `neutral`                        | reads `0`                            |
-| a value                          | reads that value                     |
+| a value, such as `0`             | reads that value                     |
 
 Keep the default where no expression outside the curve reads the table past its
 last breakpoint. Use `absent` where no number stands for a breakpoint the curve
-does not have, and `neutral` where `0` does.
+does not have, and a value where one does.
 
 ### `method`
 

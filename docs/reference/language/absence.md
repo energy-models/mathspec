@@ -44,17 +44,30 @@ key says what a missing row is:
 | --------------------- | --------------------------------------------------------------------------------------------- |
 | `refused`, by default | is refused where the model reads it ([where a parameter is read](#where-a-parameter-is-read)) |
 | `absent`              | is absence, by the rules on this page                                                         |
-| `neutral`             | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a `where`   |
-| a value               | reads as that value                                                                           |
+| a value               | reads as that value, wherever the model reads the parameter                                   |
 
-Three positions have no neutral value, so a missing `neutral` row there is
-refused where the model reads it: a divisor, a `bounds:` entry, and the whole
-constant side of a comparison. Under `absent`, a missing divisor or constant
-side is absence and removes the row, and a missing bound leaves that side of
-the variable open. A curve needs a row at each breakpoint its `points:` admits,
-and [missing breakpoints](piecewise.md#missing-breakpoints) says what a missing
-row of a table that a curve reads means. For a bound only where the data has
-one, mask the variable, or declare the parameter `missing: absent` or
+A value is the same number at every position, so the file says what a missing
+row is: `missing: 0` for a cost that is zero, `missing: 1` for an efficiency
+that is one, and `missing: false` for a flag that is off. The table below says
+what a missing row does at each position:
+
+| Position                                  | `refused`  | `absent`                              | a value                                      |
+| ----------------------------------------- | ---------- | ------------------------------------- | -------------------------------------------- |
+| a coefficient, or a constant term         | is refused | removes the row                       | reads the value                              |
+| a factor of a summand in a `sum`          | is refused | removes the summand, not the row      | reads the value                              |
+| a divisor                                 | is refused | removes the row                       | reads the value. `0` is refused at load      |
+| the whole constant side of a comparison   | is refused | removes the row                       | reads the value                              |
+| a `bounds:` entry                         | is refused | leaves that side of the variable open | reads the value                              |
+| the amount of an `offset=` or a `window=` | is refused | makes the operator absent there       | reads the value                              |
+| a comparison in a `where`                 | is false   | is false                              | compares the value                           |
+| a bare name in a `where`                  | is false   | is false                              | is false. A bare `bool` name reads the value |
+
+A value of `0` as an amount reads `shift(x, along=t, offset=0)` as `x` itself,
+and sums nothing under `sum_back(x, along=t, window=0)`. A curve needs a row at
+each breakpoint its `points:` admits, and
+[missing breakpoints](piecewise.md#missing-breakpoints) says what a missing row
+of a table that a curve reads means. For a bound only where the data has one,
+mask the variable, or declare the parameter `missing: absent` or
 `missing: .inf`.
 
 ## How absence travels
@@ -90,7 +103,7 @@ constraints:
     expression: x - rel_max * y <= 0
 ```
 
-Where the variable `y` is masked, the row is gone. Where a `missing: neutral`
+Where the variable `y` is masked, the row is gone. Where a `missing: 0`
 parameter `rel_max` has no row, it reads as `0`, and the row stands as
 `x <= 0`. To drop the row there instead, declare `rel_max` `missing: absent`, or
 write `where: rel_max` on the constraint.
@@ -161,7 +174,7 @@ variables:
   spill:
     dims: [storage]
     where: has_inflow
-    missing: neutral # outside the mask spill is 0 and the row stands
+    missing: 0 # outside the mask spill is 0 and the row stands
   soc:
     dims: [storage]
     where: has_store # the default, missing: absent — no row
@@ -174,13 +187,14 @@ constraints:
 At a storage with a store and no inflow, `balance` reads `inflow - soc == 0`. At
 a storage with inflow and no store, there is no row.
 
-`missing: neutral` needs a `where:`, and it changes nothing inside a summing
-operator. The typeset legend prints `` `neutral` where the mask leaves it out ``
-beside the variable.
+A variable takes `missing: absent` or `missing: 0`, because a variable has no
+data to refuse and no other value. `missing: 0` needs a `where:`, and it
+changes nothing inside a summing operator. The typeset legend prints `0` where
+the mask leaves it out beside the variable.
 
 ## Rows with no variable terms
 
-A `neutral` parameter row can leave a row with nothing to decide, such as
+A missing row that reads as `0` can leave a row with nothing to decide, such as
 `0 == load` at a bus with no generator, and such a row is not built. `to_spec`
 refuses an expression that names no variable _in the file_.
 
@@ -192,5 +206,5 @@ divisor is absent, and where its divisor is exactly zero, whether a solve or the
 data gave that zero. A solved value is read as the engine reads it back, so
 an engine may read a value within its solver's tolerance of zero as zero. A
 divisor parameter with a missing row where the quotient is read is refused,
-unless the parameter is `missing: absent` or names a value. A deleted row has
+unless the parameter is `missing: absent` or names a value other than `0`. A deleted row has
 [no dual](named.md#reading-a-constraints-dual).

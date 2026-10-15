@@ -618,7 +618,7 @@ def test_a_patch_changes_what_a_key_the_map_leaves_out_means(base, relation, mis
 @pytest.mark.parametrize(
     ('base', 'written', 'missing'),
     [
-        pytest.param(DISPATCH_MODEL, 'neutral', 'neutral', id='a-reading'),
+        pytest.param(DISPATCH_MODEL, 'absent', 'absent', id='a-reading'),
         pytest.param(
             varied(DISPATCH_MODEL, **{'parameters.cost.missing': 'absent'}),
             None,

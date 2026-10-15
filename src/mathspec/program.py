@@ -152,9 +152,8 @@ VariableDomain = Literal['continuous', 'integer', 'binary']
 
 #: What a missing row means. ``refused`` refuses the data where the model reads
 #: the row, and a ``where`` reads none. ``absent`` removes the row of a term that
-#: reads it. ``neutral`` reads the value that contributes nothing: ``0`` as a
-#: coefficient, ``false`` in a ``where``.
-MissingReading = Literal['refused', 'absent', 'neutral']
+#: reads it.
+MissingReading = Literal['refused', 'absent']
 
 #: A parameter's ``missing:``: a reading, or the value a missing row reads as.
 Missing = MissingReading | bool | float
@@ -163,9 +162,9 @@ Missing = MissingReading | bool | float
 RelationMissing = Literal['refused', 'absent']
 
 #: What a masked variable means where its ``where`` masks it out. ``absent`` is
-#: the default: a term that carries it removes its row. ``neutral`` says the
-#: quantity *is* zero there, so the term contributes nothing and the row stands.
-VariableMissing = Literal['absent', 'neutral']
+#: the default: a term that carries it removes its row. ``0`` says the quantity
+#: *is* zero there, so the term contributes nothing and the row stands.
+VariableMissing = Literal['absent', 0]
 
 #: Which way an objective is optimised (the declaration rules).
 ObjectiveSense = Literal['minimize', 'maximize']

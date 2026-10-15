@@ -1022,8 +1022,8 @@ _CURVE = {
         pytest.param(
             {
                 'piecewise.curve.points': 'reaches',
-                'parameters.bp_x.missing': 'neutral',
-                'parameters.bp_y.missing': 'neutral',
+                'parameters.bp_x.missing': 0,
+                'parameters.bp_y.missing': 0,
             },
             r'\mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{reaches}_{b}}',
             id='points-narrows-the-breakpoints-to-the-ones-it-admits',

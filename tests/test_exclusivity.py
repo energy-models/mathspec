@@ -354,7 +354,7 @@ class TestAMissingRow:
         assert 'efficiency has no row' in refusal, 'the witness is the missing row'
         assert 'absent' not in refusal, 'the witness does not use the name of a reading for a missing row'
 
-    @pytest.mark.parametrize('reading', ['refused', 'absent', 'neutral'])
+    @pytest.mark.parametrize('reading', ['refused', 'absent'])
     def test_under_a_reading_a_missing_row_compares_false(self, reading: str):
         schema = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': reading}}))
         assert refusals(schema, self.CASES) == [], 'a missing row with no value is in neither case'

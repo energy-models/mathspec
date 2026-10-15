@@ -96,7 +96,7 @@ def assumptions_of(block: str, pw: PiecewiseDeclaration) -> dict[str, Assumption
     Every curve assumes its breakpoints are there, because a missing row does
     not shorten a curve. Under ``points:`` a table that is not ``refused``
     would read a breakpoint missing inside the mask as its ``missing:`` and,
-    under ``neutral``, sit the curve on the origin. A curve has an x-axis only where two
+    under ``missing: 0``, sit the curve on the origin. A curve has an x-axis only where two
     links tie it, so the increasing condition — and the shape it is checked
     with — exist only there; ``lp`` alone needs a segment to state a line for;
     a mask must be one run.
@@ -299,9 +299,9 @@ def leaves_ungated(gate: VariableBlock | VariableDeclaration | None) -> bool:
     """Whether a curve gated by *gate* runs ungated where the gate does not exist, which takes a second convexity row.
 
     A masked gate is absent off its mask, and there the curve sums to 1;
-    ``missing: neutral`` reads the gate as 0 there instead, which one row states.
+    ``missing: 0`` reads the gate as 0 there instead, which one row states.
     """
-    return gate is not None and gate.where is not None and gate.missing != 'neutral'
+    return gate is not None and gate.where is not None and gate.missing != 0
 
 
 def curve_frame(schema: Spec, name: str, pw: PiecewiseBlock, links: Iterable[Expression]) -> tuple[str, ...]:
@@ -440,7 +440,7 @@ class _Block:
         reduction, so the right-hand side would take the row with it and leave the
         weights without the convexity that makes them a curve at all (#1158).
 
-        ``missing: neutral`` is the other reading and stays one row — the gate is 0
+        ``missing: 0`` is the other reading and stays one row — the gate is 0
         where it does not exist, so the curve is pinned off there.
         """
         activity = self.pw.activity

@@ -1439,9 +1439,7 @@ class TestRulesDecidedWithoutData:
                 ("unknown key 'value' in a relation declaration", "Did you mean 'values'?"),
                 id='a-relation-naming-one-value-column',
             ),
-            pytest.param(
-                {'variables.p.missing': 'neutral'}, ('missing: neutral needs a `where:`',), id='neutral-without-a-mask'
-            ),
+            pytest.param({'variables.p.missing': 0}, ('missing: 0 needs a `where:`',), id='zero-without-a-mask'),
             pytest.param(
                 {'variables.p.bounds.upper': 'c * 2'},
                 ('not an expression', 'Precompute it as a parameter'),
@@ -2395,7 +2393,9 @@ def test_inf_and_dot_inf_load_as_one_number():
     ('dtype', 'written', 'fragment'),
     [
         pytest.param('float', None, 'missing: null on a parameter names no reading', id='null'),
-        pytest.param('float', 'zero', "missing is the string 'zero'. It takes refused, absent, neutral", id='a-word'),
+        pytest.param(
+            'float', 'zero', "missing is the string 'zero'. It takes refused, absent, or a value", id='a-word'
+        ),
         pytest.param('float', '1', "missing is the string '1'", id='a-quoted-number'),
         pytest.param('float', float('nan'), 'missing is nan', id='nan'),
         pytest.param(
@@ -2405,12 +2405,6 @@ def test_inf_and_dot_inf_load_as_one_number():
         pytest.param('int', float('inf'), 'missing: inf on an int parameter', id='an-infinity-on-an-int'),
         pytest.param('bool', 1, 'missing: 1 on a bool parameter, which takes true or false', id='a-number-on-a-flag'),
         pytest.param('str', 1, 'A label has no value to fill', id='a-number-on-a-label'),
-        pytest.param(
-            'str',
-            'neutral',
-            'missing: neutral on a str parameter, which takes refused or absent',
-            id='neutral-on-a-label',
-        ),
     ],
 )
 def test_a_parameter_missing_that_reads_nothing_is_refused(dtype, written, fragment):
@@ -2418,7 +2412,7 @@ def test_a_parameter_missing_that_reads_nothing_is_refused(dtype, written, fragm
     assert fragment in message
 
 
-#: A curve under `points: x_bp`, both values tables declared `missing: neutral`.
+#: A curve under `points: x_bp`, both values tables declared `missing: 0`.
 CURVE_UNDER_POINTS = Path(__file__).parent / 'expand' / 'curve-lp-points' / 'before.yaml'
 
 
@@ -2447,9 +2441,6 @@ def test_a_values_table_under_points_may_be_refused(parameter, declared):
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'int'}}, id='an-int-under-refused'),
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'str'}}, id='a-label-under-refused'),
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'bool'}}, id='a-flag-reads-its-value'),
-        pytest.param(
-            {'parameters.n': {'dims': ['g'], 'dtype': 'int', 'missing': 'neutral'}}, id='an-int-under-neutral'
-        ),
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'int', 'missing': 0}}, id='an-int-under-a-value'),
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'str', 'missing': 'absent'}}, id='a-label-under-absent'),
         pytest.param({'given.parameters.n': {'dims': ['g'], 'dtype': 'int'}}, id='a-given-int'),
@@ -2467,7 +2458,7 @@ def test_a_bare_parameter_whose_answer_needs_the_data_loads(patch):
 
 def test_a_given_parameter_has_no_missing():
     """The file that declares the parameter owns what a missing row means, as it owns a variable's bounds."""
-    message = _refusal(**{'given.parameters.d': {'dims': ['g'], 'missing': 'neutral'}})
+    message = _refusal(**{'given.parameters.d': {'dims': ['g'], 'missing': 'absent'}})
     assert "unknown key 'missing' in a given parameter declaration" in message
 
 
@@ -2491,9 +2482,9 @@ def test_a_relation_says_whether_every_key_combination_needs_a_row(declared, rea
     ('relation', 'fragment'),
     [
         pytest.param(
-            {'key': 'g', 'values': 'h', 'missing': 'neutral'},
-            'missing: neutral on a relation, which takes refused or absent',
-            id='neutral',
+            {'key': 'g', 'values': 'h', 'missing': 0},
+            'missing: 0 on a relation, which takes refused or absent',
+            id='a-number-as-a-value',
         ),
         pytest.param(
             {'key': 'g', 'values': 'h', 'missing': 'h1'}, 'missing: h1 on a relation', id='a-label-as-a-value'
@@ -2513,13 +2504,49 @@ def test_a_relation_missing_that_reads_nothing_is_refused(relation, fragment):
 @pytest.mark.parametrize(
     ('written', 'fragment'),
     [
-        pytest.param('refused', 'missing: refused on a variable, which takes absent or neutral', id='refused'),
-        pytest.param(0, 'missing: 0 on a variable, which takes absent or neutral', id='a-value'),
+        pytest.param('refused', 'missing: refused on a variable, which takes absent or 0', id='refused'),
+        pytest.param(1, 'missing: 1 on a variable, which takes absent or 0', id='a-value'),
+        pytest.param(False, 'missing: false on a variable, which takes absent or 0', id='a-flag'),
         pytest.param(None, 'missing: null on a variable names no reading', id='null'),
     ],
 )
 def test_a_variable_missing_that_reads_data_is_refused(written, fragment):
     assert fragment in _refusal(**{'variables.p': {'dims': ['g'], 'where': 'c', 'missing': written}})
+
+
+@pytest.mark.parametrize(
+    'section',
+    [
+        pytest.param({'constraints.cap': {'dims': ['g'], 'expression': 'p / c <= 1'}}, id='a-constraint'),
+        pytest.param({'expressions.share': 'p / c'}, id='a-named-expression'),
+    ],
+)
+def test_a_divisor_that_reads_a_missing_row_as_zero_is_refused(section):
+    """`missing: 0` on a divisor loaded, so every missing row divided by zero once the data arrived."""
+    message = _refusal(**{'parameters.c.missing': 0, **section})
+    assert "'c' is a divisor, and missing: 0 reads a missing row of it as 0" in message
+    assert 'Declare missing: refused, absent, or a value other than 0' in message, 'the refusal names the rewrite'
+
+
+@pytest.mark.parametrize(
+    'patch',
+    [
+        pytest.param(
+            {'parameters.c.missing': 1, 'constraints.cap': {'dims': ['g'], 'expression': 'p / c <= 1'}},
+            id='a-divisor-under-another-value',
+        ),
+        pytest.param(
+            {'parameters.c.missing': 0, 'constraints.cap': {'dims': ['g'], 'expression': 'p * c <= 1'}},
+            id='a-factor-under-zero',
+        ),
+        pytest.param(
+            {'parameters.c.missing': 0, 'constraints.cap': {'dims': ['g'], 'expression': 'p / (c + 1) <= 1'}},
+            id='zero-inside-a-divisor',
+        ),
+    ],
+)
+def test_a_parameter_read_as_zero_loads_where_it_divides_nothing(patch):
+    assert to_spec(varied(SMALL_MODEL, **patch)).program.constraints['cap'] is not None
 
 
 #: One dimension every construct below reads the order of, and a breakpoint

@@ -242,7 +242,7 @@ class RelationBlock(_StrictBlock):
     @field_validator('missing', mode='before')
     @classmethod
     def _refused_or_absent(cls, v: object) -> object:
-        """A label is data, so no value fills a gap in a map, and neutral reads as absent wherever a map is read."""
+        """A label is data, so no value fills a gap in a map."""
         if v is None:
             raise _missing_null(
                 'a relation', 'Write absent where a key combination may have no row, or leave the key out for refused.'
@@ -351,13 +351,10 @@ class ParameterBlock(_StrictBlock):
 
     @model_validator(mode='after')
     def _a_value_fits_the_dtype(self) -> ParameterBlock:
-        """A value fills rows of the column, so it has the column's dtype, and a label has no neutral value."""
+        """A value fills rows of the column, so it has the column's dtype, and a label has none."""
         v = self.missing
         if self.dtype == 'str' and v not in ('refused', 'absent'):
-            msg = (
-                f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill, '
-                f'and no neutral one.'
-            )
+            msg = f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill.'
             raise ValueError(msg)
         if isinstance(v, str):
             return self
@@ -426,20 +423,20 @@ class VariableBlock(_StrictBlock):
 
     @field_validator('missing', mode='before')
     @classmethod
-    def _absent_or_neutral(cls, v: object) -> object:
-        """A variable has no data, so the readings of data do not apply to it."""
+    def _absent_or_zero(cls, v: object) -> object:
+        """A variable has no data, so the readings of data do not apply to it; ``0.0`` is the ``0`` it states."""
         if v is None:
-            raise _missing_null('a variable', 'Write neutral, or leave the key out for absent.')
-        if v not in get_args(VariableMissing):
-            msg = (
-                f'missing: {_as_yaml(v)} on a variable, which takes absent or neutral. A variable has no data, '
-                f'so refused and a value apply only to a parameter.'
-            )
-            raise ValueError(msg)
-        return v
+            raise _missing_null('a variable', 'Write 0, or leave the key out for absent.')
+        if v == 'absent' or (isinstance(v, int | float) and not isinstance(v, bool) and v == 0):
+            return 'absent' if v == 'absent' else 0
+        msg = (
+            f'missing: {_as_yaml(v)} on a variable, which takes absent or 0. A variable has no data, '
+            f'so refused and any other value apply only to a parameter.'
+        )
+        raise ValueError(msg)
 
     @model_validator(mode='after')
-    def _neutral_needs_a_mask(self) -> VariableBlock:
+    def _zero_needs_a_mask(self) -> VariableBlock:
         """``missing:`` says what a masked-out coordinate means, so one must be missable."""
         if self.missing != 'absent' and self.where is None:
             msg = (

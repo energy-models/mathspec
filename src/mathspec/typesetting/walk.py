@@ -938,7 +938,7 @@ class Walk:
         the curve is built for, the factor is the gate where it exists and 1
         where it does not — the two rows the expansion writes there, because a
         variable that does not exist takes its row with it and would leave the
-        curve unstated rather than ungated. ``missing: neutral`` is the other
+        curve unstated rather than ungated. ``missing: 0`` is the other
         reading and pins the curve off, which is the factor on its own.
         """
         if (activity := block.activity) is None:
@@ -946,7 +946,7 @@ class Walk:
         gate = self.program.variables[activity]
         symbol = ctx.indexed(self.symbols.name[activity], list(gate.dims))
         mask = gate.where
-        if mask is None or gate.missing == 'neutral':
+        if mask is None or gate.missing == 0:
             return symbol
         where = self._predicate(mask.root, ctx, need=_WHERE_PRECEDENCE['and'])
         return self.format.cases(
