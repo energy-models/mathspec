@@ -16,7 +16,6 @@ The oracle covers what the models below use: no partition and no piecewise.
 
 from __future__ import annotations
 
-import copy
 import itertools
 import random
 from dataclasses import dataclass
@@ -25,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from mathspec import to_spec
+from mathspec.errors import LanguageError
 from mathspec.program import (
     Add,
     And,
@@ -57,6 +57,7 @@ from mathspec.program import (
     WindowSum,
     children,
 )
+from tests.fixtures import EXAMPLES, varied
 
 if TYPE_CHECKING:
     from mathspec.program import Expression, Predicate, Program
@@ -89,7 +90,8 @@ def _draw(program: Program, seed: int) -> Data:
     """Full tables for `refused` parameters, sparse ones for `absent`; mostly zeros, so a mask leaves most rows out.
 
     A `refused` table is full, so the oracle can read any coordinate and record
-    the read; the mask says which of them the model reads.
+    the read; the mask says which of them the model reads. A whole number is an
+    offset or a width, so it may be negative or zero.
     """
     rng = random.Random(seed)
     tables: dict[str, dict[tuple[Any, ...], float]] = {}
@@ -98,7 +100,7 @@ def _draw(program: Program, seed: int) -> Data:
         for key in itertools.product(*(LABELS[d] for d in declared.dims)):
             if declared.missing == 'refused' or rng.random() < 0.6:
                 table[key] = float(
-                    rng.randint(1, 3)
+                    rng.randint(-1, 3)
                     if declared.dtype == 'int'
                     else rng.randint(0, 1)
                     if declared.dtype == 'bool'
@@ -151,6 +153,8 @@ class Oracle:
                 [row] = self.rows(columns, at, inner_frame=True) or [None]
                 return None if row is None else self.value(e.operand, row)
             case Translate():
+                if self.amount(e.offset, at) is None:
+                    return None
                 source = self.shifted(e.along, at, e.offset, e.wrap)
                 if source is None:
                     return None if e.fill is None else (frozenset(), self.amount_read(e.offset, at))
@@ -158,6 +162,8 @@ class Oracle:
                 return None if found is None else (found[0], found[1] | self.amount_read(e.offset, at))
             case WindowSum():
                 width = self.amount(e.width, at)
+                if width is None:
+                    return None
                 sources = [self.shifted(e.along, at, k, e.wrap) for k in range(width)]
                 summed = self.total(self.value(e.operand, {**at, e.along: s}) for s in sources if s is not None)
                 return summed[0], summed[1] | self.amount_read(e.width, at)
@@ -173,10 +179,12 @@ class Oracle:
         present = [p for p in parts if p is not None]
         return frozenset().union(*(p[0] for p in present)), frozenset().union(*(p[1] for p in present))
 
-    def amount(self, amount: int | str, at: Coord) -> int:
+    def amount(self, amount: int | str, at: Coord) -> int | None:
+        """*amount* at *at*, or None where a named amount has no row."""
         if isinstance(amount, int):
             return amount
-        return int(self.data.tables[amount][_key(self.program.parameters[amount].dims, at)])
+        found = self.data.tables[amount].get(_key(self.program.parameters[amount].dims, at))
+        return None if found is None else int(found)
 
     def amount_read(self, amount: int | str, at: Coord) -> frozenset[Any]:
         if isinstance(amount, int):
@@ -186,7 +194,9 @@ class Oracle:
     def shifted(self, along: str, at: Coord, offset: int | str, wrap: bool) -> Any | None:
         """The label *offset* positions before *at* along *along*, or None past the edge."""
         labels = LABELS[along]
-        i = labels.index(at[along]) - self.amount(offset, at)
+        step = self.amount(offset, at)
+        assert step is not None, 'the caller rules out a missing offset'
+        i = labels.index(at[along]) - step
         if wrap:
             return labels[i % len(labels)]
         return labels[i] if 0 <= i < len(labels) else None
@@ -251,7 +261,10 @@ class Oracle:
         raise AssertionError(f'the oracle does not evaluate {type(p).__name__}')
 
     def window(self, p: WindowPredicate, at: Coord) -> list[Any]:
+        """The positions the window looks at: none where an amount has no row, or the width is 0 or less."""
         offset, width = self.amount(p.offset, at), self.amount(p.width, at)
+        if offset is None or width is None:
+            return []
         steps = range(offset, offset + width)
         labels = [self.shifted(p.along, at, -k if p.ahead else k, p.wrap) for k in steps]
         return [label for label in labels if label is not None]
@@ -292,11 +305,27 @@ class Oracle:
                 for bound in (variable.lower, variable.upper):
                     if bound is not None and (found := self.value(bound, at)) is not None:
                         self.record(found[1])
+        self.build_fragment_and_checks()
         for entry in program.expressions.values():
             if not entry.in_math:
                 for at in _coords(entry.dims):
                     if (found := self.value(entry.expression, at)) is not None:
                         self.record(found[1])
+
+    def build_fragment_and_checks(self) -> None:
+        """A term is read wherever it is present, and a flag in an assumption at every coordinate of its frame."""
+        program = self.program
+        for entry in program.expressions.values():
+            if entry.adds_to is not None:
+                for at in _coords(entry.dims):
+                    if (found := self.value(entry.expression, at)) is not None:
+                        self.record(found[1])
+        for assumption in program.assumptions.values():
+            masks = [m for m in (assumption.where, assumption.predicate) if m is not None]
+            frame = tuple(d for d in LABELS if any(d in m.dims for m in masks))
+            for at in _coords(frame):
+                for mask in masks:
+                    self.holds(mask.root, at, evaluated=True)
 
     def record(self, reads: frozenset[Any]) -> None:
         for name, key in reads:
@@ -464,19 +493,49 @@ MODELS = [
         {'constraints.c': {'dims': ['t', 'g'], 'where': 'p0 AND p0 > 0', 'expression': 'y <= 1'}},
         id='a-guard-reads-no-number',
     ),
+    pytest.param(
+        {
+            'parameters.lead': {'dims': ['g'], 'dtype': 'int', 'missing': 'absent'},
+            'parameters.q': {'dims': ['t', 'g']},
+            'constraints.c': {'dims': ['t', 'g'], 'expression': 'x <= shift(q, along=t, offset=lead, edge=0)'},
+        },
+        id='a-missing-named-offset',
+    ),
+    pytest.param(
+        {
+            'parameters.lead': {'dims': ['g'], 'dtype': 'int', 'missing': 'absent'},
+            'parameters.q': {'dims': ['t', 'g']},
+            'constraints.c': {'dims': ['t', 'g'], 'expression': "y <= shift(q, along=t, offset=lead, edge='wrap')"},
+        },
+        id='a-missing-named-offset-that-wraps',
+    ),
+    pytest.param(
+        {
+            'parameters.w': {'dims': ['g'], 'dtype': 'int', 'missing': 'absent'},
+            'parameters.q': {'dims': ['t', 'g']},
+            'constraints.c': {'dims': ['t', 'g'], 'expression': 'y <= sum_back(q, along=t, window=w)'},
+        },
+        id='a-missing-named-width',
+    ),
+    pytest.param(
+        {
+            'given.expressions.injection': {'dims': ['t']},
+            'expressions.term': {'expression': 'sum(p * x, over=g)', 'adds_to': 'injection'},
+        },
+        id='a-term-added-to-a-given-sum',
+    ),
+    pytest.param(
+        {
+            'parameters.on': {'dims': ['g'], 'dtype': 'bool'},
+            'assumptions.a': {'holds': 'on OR p0 > 0'},
+        },
+        id='a-flag-in-an-assumption',
+    ),
 ]
 
 
 def _model(patch: dict[str, Any]) -> dict[str, Any]:
-    spec = copy.deepcopy(BASE)
-    spec['parameters'].update({'p': {'dims': ['g']}, 'p0': {'dims': ['g']}})
-    for path, value in patch.items():
-        section, _, name = path.partition('.')
-        if name:
-            spec.setdefault(section, {})[name] = value
-        else:
-            spec[section] = value
-    return spec
+    return varied(BASE, **{'parameters.p': {'dims': ['g']}, 'parameters.p0': {'dims': ['g']}, **patch})
 
 
 @pytest.mark.parametrize('seed', range(12))
@@ -519,3 +578,12 @@ def test_a_shift_back_is_read_ahead():
     assert isinstance(root, CountComparison) and root.over == 'g'
     window = root.predicate.root
     assert isinstance(window, WindowPredicate) and window.ahead and window.offset == 1 and window.wrap
+
+
+def test_a_program_that_still_holds_a_curve_says_its_reads_are_not_known():
+    """`reads` answered a curve's tables with a mask false everywhere, so a tool accepted any gap in them."""
+    spec = to_spec(EXAMPLES / 'piecewise.yaml')
+    with pytest.raises(LanguageError) as caught:
+        _ = spec.program.reads
+    assert "spec.expand('piecewise')" in str(caught.value), 'the refusal names the rewrite'
+    assert spec.expand('piecewise').program.reads, 'the expanded program answers'

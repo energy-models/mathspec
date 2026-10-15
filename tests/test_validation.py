@@ -2559,12 +2559,30 @@ def test_a_variable_missing_inside_what_the_variable_takes_loads(declared):
     [
         pytest.param({'constraints.cap': {'dims': ['g'], 'expression': 'p / c <= 1'}}, id='a-constraint'),
         pytest.param({'expressions.share': 'p / c'}, id='a-named-expression'),
+        pytest.param({'constraints.cap': {'dims': ['g'], 'expression': 'p / (-c) <= 1'}}, id='negated'),
+        pytest.param({'constraints.cap': {'dims': ['g'], 'expression': 'p / (2 * c) <= 1'}}, id='a-factor'),
+        pytest.param({'constraints.cap': {'dims': ['g'], 'expression': 'p / (c / 2) <= 1'}}, id='a-numerator'),
+        pytest.param({'constraints.cap': {'dims': ['g'], 'expression': 'p / (c ** 2) <= 1'}}, id='a-base'),
+        pytest.param({'constraints.cap': {'dims': ['g'], 'expression': 'p / (c + c) <= 1'}}, id='every-addend'),
+        pytest.param({'constraints.cap': {'dims': ['g'], 'expression': 'p / sum(c, over=g) <= 1'}}, id='summed'),
+        pytest.param(
+            {'constraints.cap': {'dims': ['g'], 'expression': "p / shift(c, along=g, offset=1, edge='wrap') <= 1"}},
+            id='shifted',
+        ),
+        pytest.param(
+            {'expressions.e': 'c', 'constraints.cap': {'dims': ['g'], 'expression': 'p / e <= 1'}},
+            id='through-a-named-expression',
+        ),
     ],
 )
 def test_a_divisor_that_reads_a_missing_row_as_zero_is_refused(section):
-    """`missing: 0` on a divisor loaded, so every missing row divided by zero once the data arrived."""
+    """`missing: 0` on a divisor loaded, so every missing row divided by zero once the data arrived.
+
+    The refusal looked only at a bare parameter, so `p / (-c)`, `p / (2 * c)` and a named expression standing for
+    `c` loaded and divided by zero all the same.
+    """
     message = _refusal(**{'parameters.c.missing': 0, **section})
-    assert "'c' is a divisor, and missing: 0 reads a missing row of it as 0" in message
+    assert "reads 'c', which is declared missing: 0, so a missing row of 'c' makes the divisor 0" in message
     assert 'Declare missing: refused, absent, or a value other than 0' in message, 'the refusal names the rewrite'
 
 
