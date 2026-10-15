@@ -66,5 +66,6 @@ For a pre-commit hook or a non-Python CI job:
 uvx check-jsonschema --schemafile https://raw.githubusercontent.com/energy-models/mathspec/main/schema/mathspec.schema.json spec.yaml
 ```
 
-The schema validates structure only. The math inside `expression:` and
-`where:` is checked by [`to_spec`](../reference/language/errors.md#what-to_spec-checks).
+The schema checks only the structure, and
+[`to_spec`](../reference/language/errors.md#what-to_spec-checks) checks the
+math inside `expression:` and `where:`.

@@ -94,31 +94,25 @@ def _degree(node: Expression) -> int:
 def _above_the_ceiling_message(where: str, degree: int) -> str:
     """About the product's own degree, since ``p * p * p`` is two admissible products nested."""
     return (
-        f'{where}this product is degree {degree}. The language takes degree 2 and nothing above it.\n'
-        f'Multiply by a parameter instead, or give the inner product a name — a variable '
-        f'constrained to equal it is degree 1 wherever it is used.'
+        f'{where}this product is degree {degree}, and the limit is degree 2.\n'
+        f'Multiply by a parameter instead, or declare a variable constrained to equal the inner product.'
     )
 
 
 def _a_variable_under_a_power_message(where: str) -> str:
     return (
-        f'{where}`**` is not in the language over variables: it takes a base and an exponent that '
-        f'carry none.\n'
-        f'Write the product out — `x * x` for a square — or precompute the factor as a parameter. '
-        f'A variable base above degree 2 has no rewrite at all, and one whose exponent is data has '
-        f'no degree until the data arrives — see docs/about/limits.md.'
+        f'{where}`**` has a variable in its base or exponent.\n'
+        f'Write the product out, such as `x * x` for a square, or precompute the factor as a parameter. '
+        f'See docs/about/limits.md.'
     )
 
 
 def _degree_two_here_message(where: str) -> str:
     return (
-        f'{where}both factors of a product contain variables, which is degree 2. '
-        f'The **objective and constraints** take that; a bound and a piecewise: '
-        f'link do not — each of those is read affinely by something '
-        f'downstream.\n'
-        f'Multiply the variable by a parameter instead, or state the product where '
-        f'it can stand: as a constraint of its own, with a variable holding the '
-        f'result.'
+        f'{where}both factors of a product contain variables, which is degree 2, and only the objective '
+        f'and constraints allow degree 2.\n'
+        f'Multiply the variable by a parameter instead, or write the product in a constraint of its own, '
+        f'with a variable holding the result.'
     )
 
 
@@ -127,11 +121,9 @@ def _check_single_term_factor(node: Multiply, where: str) -> None:
     if not (_multi_term(node.left) and _multi_term(node.right)):
         return
     raise LanguageError(
-        f'{where}both factors of this product are sums of more than one term, so it is an outer '
-        f'product — every term of one against every term of the other, and nothing in the file '
-        f'says how many that is.\n'
-        f'Multiply *before* reducing (``sum(x * y, over=d)`` rather than '
-        f'``sum(x, over=d) * sum(y, over=d)``).'
+        f'{where}both factors of this product are sums of more than one term, which makes an outer product.\n'
+        f'Multiply before you reduce: write ``sum(x * y, over=d)``, not '
+        f'``sum(x, over=d) * sum(y, over=d)``.'
     )
 
 
@@ -170,8 +162,8 @@ def check_expression(node: Expression, context: str, *, ceiling: int = 1) -> Non
     for found in walk(node):
         if isinstance(found, Dual):
             raise LanguageError(
-                f'{context}: a dual exists only after a solve; the math cannot read one — '
-                f'keep the entry that carries it out of constraints, the objective, bounds and where.'
+                f'{context}: a dual exists only after a solve, so it cannot stand here. Keep the entry '
+                f'that reads it out of constraints, the objective, bounds and where.'
             )
         if isinstance(found, Multiply | Divide | Power):
             check_binary(found, context, ceiling=ceiling)

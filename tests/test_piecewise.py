@@ -229,7 +229,7 @@ def test_any_affine_expression_is_a_legal_link(link):
         pytest.param(
             NONCONVEX_YAML,
             {'piecewise.cost_curve.links': [['p', 'bp_x', '<='], ['op_cost', 'bp_y', '>=']]},
-            'at most one link',
+            'only one link may carry',
             id='at-most-one-link',
         ),
         pytest.param(
@@ -241,13 +241,13 @@ def test_any_affine_expression_is_a_legal_link(link):
         pytest.param(
             NONCONVEX_YAML,
             {'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '>='], ['p', 'bp_x']]},
-            "a non-'==' sign is only supported with exactly two links",
+            "a '<=' or '>=' sign needs exactly two links",
             id='a-bound-link-among-three',
         ),
         pytest.param(
             NONCONVEX_YAML,
             {'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '>=', 'extra']]},
-            r'each link must be \[expression, values\] or \[expression, values, sign\]',
+            r'each link is \[expression, values\] or \[expression, values, sign\]',
             id='a-link-of-four-elements',
         ),
         pytest.param(
@@ -262,13 +262,13 @@ def test_any_affine_expression_is_a_legal_link(link):
         pytest.param(
             GATED,
             {'piecewise.cost_curve.method': 'convex'},
-            'activity is not supported',
+            'activity: does not work with method: convex',
             id='convex-cannot-be-gated',
         ),
         pytest.param(
             GATED,
             {'variables.u': {'dims': ['snapshot'], 'bounds': {'lower': 0, 'upper': 1}}},
-            'must be binary',
+            "activity variable 'u' is continuous. Declare it domain: binary.",
             id='activity-must-be-binary',
         ),
         pytest.param(
@@ -280,25 +280,25 @@ def test_any_affine_expression_is_a_legal_link(link):
         pytest.param(
             NONCONVEX_YAML,
             {'parameters.reach': {'dims': ['bp']}, 'piecewise.cost_curve.points': 'reach'},
-            "points parameter 'reach' is float, and a mask is a bool parameter",
+            "points parameter 'reach' is float. Declare it dtype: bool.",
             id='points-that-are-not-a-mask',
         ),
         pytest.param(
             LP,
             {'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y']]},
-            'needs exactly one link bounded by the curve',
+            "needs exactly one link with a '<=' or '>=' sign",
             id='lp-with-both-links-pinned',
         ),
         pytest.param(
             LP,
             {'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y'], ['p', 'bp_x']]},
-            'needs exactly one link bounded by the curve',
+            "needs exactly one link with a '<=' or '>=' sign",
             id='lp-with-three-links-none-bounded',
         ),
         pytest.param(
             LP,
             {'piecewise.cost_curve.activity': 'running'},
-            'activity is not supported with method: lp',
+            'activity: does not work with method: lp',
             id='lp-with-an-activity-and-nothing-to-gate',
         ),
         pytest.param(
@@ -310,13 +310,13 @@ def test_any_affine_expression_is_a_legal_link(link):
         pytest.param(
             LP,
             {'piecewise.cost_curve.links': [['load', 'bp_x'], ['op_cost', 'bp_y', '>=']]},
-            "link 0: method: lp bounds the curve's domain by rows comparing this link's expression",
+            "link 0: method: lp bounds the domain with rows on 'load', which carries no variable",
             id='lp-with-an-x-link-carrying-no-variable',
         ),
         pytest.param(
             NONCONVEX_YAML,
             {'parameters.bp_x.dims': []},
-            "link 0 values parameter 'bp_x' must carry dim 'bp'",
+            r"link 0 values parameter 'bp_x' has dims \[\], without 'bp'",
             id='a-breakpoint-parameter-without-the-breakpoint-dim',
         ),
         pytest.param(
@@ -328,19 +328,19 @@ def test_any_affine_expression_is_a_legal_link(link):
         pytest.param(
             NONCONVEX_YAML,
             {'parameters.reach': {'dims': [], 'dtype': 'bool'}, 'piecewise.cost_curve.points': 'reach'},
-            "points parameter 'reach' must carry dim 'bp'",
+            r"points parameter 'reach' has dims \[\], without 'bp'",
             id='points-without-the-breakpoint-dim',
         ),
         pytest.param(
             NONCONVEX_YAML,
             {'piecewise.cost_curve.links': [['p + bp_x', 'bp_x'], ['op_cost', 'bp_y']]},
-            "link 0 expression already carries the breakpoint dim 'bp'",
+            "link 0 expression already carries the breakpoint dimension 'bp'",
             id='a-link-carrying-the-breakpoint-dim',
         ),
         pytest.param(
             NONCONVEX_YAML,
             {'variables.u': {'dims': ['snapshot', 'bp'], 'domain': 'binary'}, 'piecewise.cost_curve.activity': 'u'},
-            "activity already carries the breakpoint dim 'bp'",
+            "activity already carries the breakpoint dimension 'bp'",
             id='a-gate-carrying-the-breakpoint-dim',
         ),
         pytest.param(
@@ -373,7 +373,7 @@ def test_a_malformed_block_is_refused(model, patch, match):
 @pytest.mark.parametrize(
     ('link_expression', 'message'),
     [
-        pytest.param('p ** 2', 'over variables', id='a-power-of-a-variable'),
+        pytest.param('p ** 2', 'has a variable in its base or exponent', id='a-power-of-a-variable'),
         pytest.param('p * p', 'both factors of a product contain variables', id='a-product-of-variables'),
     ],
 )
@@ -422,7 +422,8 @@ def test_a_link_reading_a_refused_entry_names_it_and_its_refusal_is_listed():
     message = str(exc.value)
     assert "Named expression 'bad': 'nope' not found" in message
     assert (
-        "piecewise 'cost_curve' link 0: named expression 'bad' does not load. Its refusal is listed with it." in message
+        "piecewise 'cost_curve' link 0: named expression 'bad' does not load. Fix the error listed for 'bad' first."
+        in message
     )
 
 
@@ -662,4 +663,4 @@ def test_every_check_has_a_sentence(suffix):
     assert message.startswith(f"assumption '{name}' does not hold for the data attached to "), (
         'the refusal names the columns a consumer has to look at before it says why'
     )
-    assert "— piecewise 'cost_curve':" in message, 'and trails the sentence the method implies'
+    assert ": piecewise 'cost_curve':" in message, 'and trails the sentence the method implies'

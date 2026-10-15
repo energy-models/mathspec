@@ -5,8 +5,8 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The composed spec
 
-What [the surface](surface.md), [generators](generator.md) and
-[loads](load.md) make together:
+This page shows the spec that [the surface](surface.md),
+[generators](generator.md) and [loads](load.md) make together:
 
 ```python
 import mathspec as ms
@@ -14,18 +14,18 @@ import mathspec as ms
 spec = ms.merge(['surface.yaml', 'generator.yaml', 'load.yaml'])
 ```
 
-The file below is `spec`, the spec `merge` returns, written as YAML with
-every default spelled out. No
-fragment holds it, and nothing in the repository commits it. `Port_p` is one
-declaration here. Each component fragment read it under `given:`, and merging
-folded those readings into the surface's own declaration.
+The file below is `spec`, the spec that `merge` returns, written as YAML with
+every default spelled out. No fragment holds this file, and the repository does
+not commit it. Each component fragment read `Port_p` under `given:`, and `merge`
+folded those readings into the declaration of the surface, so `Port_p` is one
+declaration here.
 
-The objective is the surface's, and it reads `total_cost`. The generator is
-the one fragment that costs something, so `Generator_cost` is the one term of
-that sum. A second priced fragment would add its own term to `total_cost`.
+The objective comes from the surface, and it reads `total_cost`. The generator
+is the only fragment with a cost, so `Generator_cost` is the only term of that
+sum. A second fragment with a cost would add its own term to `total_cost`.
 
-The math under the file has a tab per formulation. **As composed** is the spec
-above. **With commitment** lays `variants/commitment.yaml` over it with
+The math under the file has a tab per formulation: **As composed** is the spec
+above, and **With commitment** lays `variants/commitment.yaml` over it with
 [`override`](../../howto/compose.md#a-base-and-its-patches), which makes the
 generator a committed unit:
 
@@ -33,9 +33,9 @@ generator a committed unit:
 committed = ms.override(spec, ['variants/commitment.yaml'])
 ```
 
-A patch is refused on its own, since it edits declarations it does not
-declare. So the spec it lands on is the only place its math exists, and the
-tab prints the patch beside that math.
+`to_spec` refuses a patch on its own, because the patch edits declarations that
+it does not declare. So the patch has math only on the spec it lands on, and
+the tab prints the patch beside that math.
 
 <!-- gallery:begin -->
 ```yaml
@@ -75,6 +75,13 @@ variables:
     domain: continuous
     missing: absent
     description: '`Generator-p` — what a generator produces in a snapshot'
+expressions:
+  Generator_cost: sum(Generator_p * Generator_marginal_cost)
+  total_cost:
+    dims: []
+    expression: Generator_cost
+    description: what running the system costs
+objective: {sense: minimize, expression: total_cost}
 constraints:
   Bus_nodal_balance:
     dims: [snapshot, bus]
@@ -90,13 +97,6 @@ constraints:
     expression: at(Port_p, by=Load_port[port]) == -Load_p_set
     description: 'what a load takes is what its port withdraws. No PyPSA row stands for this: PyPSA writes
       the load into the balance instead'
-objective: {sense: minimize, expression: total_cost}
-expressions:
-  Generator_cost: sum(Generator_p * Generator_marginal_cost)
-  total_cost:
-    dims: []
-    expression: Generator_cost
-    description: what running the system costs
 ```
 
 === "As composed"
@@ -133,6 +133,34 @@ expressions:
     | $`\mathit{Generator\_cost}`$ | `Generator_cost` (scalar) |
     | $`\mathit{total\_cost}`$ | `total_cost` (scalar) — what running the system costs |
 
+    #### Variable domains
+
+    **`Port_p`**
+
+    ```math
+    f_{t,j} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+    ```
+
+    **`Generator_p`**
+
+    ```math
+    0 \le p_{t,g} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    ```
+
+    #### Definitions
+
+    **`Generator_cost`**
+
+    ```math
+    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+    ```
+
+    **`total_cost`**
+
+    ```math
+    \mathit{total\_cost} = \mathit{Generator\_cost}
+    ```
+
     #### Objective
 
     ```math
@@ -157,34 +185,6 @@ expressions:
 
     ```math
     f_{t,\mathrm{Load\_port}(d)} = -\mathrm{load}_{t,d} \qquad \forall\, t \in \mathcal{T},\ d \in \mathcal{D}
-    ```
-
-    #### Definitions
-
-    **`Generator_cost`**
-
-    ```math
-    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
-    ```
-
-    **`total_cost`**
-
-    ```math
-    \mathit{total\_cost} = \mathit{Generator\_cost}
-    ```
-
-    #### Variable domains
-
-    **`Port_p`**
-
-    ```math
-    f_{t,j} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
-    ```
-
-    **`Generator_p`**
-
-    ```math
-    0 \le p_{t,g} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
     ```
 
 === "With commitment"
@@ -243,6 +243,40 @@ expressions:
     | $`\mathit{Generator\_cost}`$ | `Generator_cost` (scalar) |
     | $`\mathit{total\_cost}`$ | `total_cost` (scalar) — what running the system costs |
 
+    #### Variable domains
+
+    **`Port_p`**
+
+    ```math
+    f_{t,j} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+    ```
+
+    **`Generator_p`**
+
+    ```math
+    p_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    ```
+
+    **`Generator_status`**
+
+    ```math
+    u_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    ```
+
+    #### Definitions
+
+    **`Generator_cost`**
+
+    ```math
+    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+    ```
+
+    **`total_cost`**
+
+    ```math
+    \mathit{total\_cost} = \mathit{Generator\_cost}
+    ```
+
     #### Objective
 
     ```math
@@ -279,39 +313,5 @@ expressions:
 
     ```math
     p_{t,g} \ge \underline{\mathrm{p}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-    ```
-
-    #### Definitions
-
-    **`Generator_cost`**
-
-    ```math
-    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
-    ```
-
-    **`total_cost`**
-
-    ```math
-    \mathit{total\_cost} = \mathit{Generator\_cost}
-    ```
-
-    #### Variable domains
-
-    **`Port_p`**
-
-    ```math
-    f_{t,j} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
-    ```
-
-    **`Generator_p`**
-
-    ```math
-    p_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-    ```
-
-    **`Generator_status`**
-
-    ```math
-    u_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
     ```
 <!-- gallery:end -->

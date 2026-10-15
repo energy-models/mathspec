@@ -5,46 +5,45 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Glossary
 
-This page defines the words these docs use in a fixed sense and that no single
-reference page owns. A construct, such as a parameter or a macro, is defined on
-its [language page](language/index.md).
+We use several words in these docs with one fixed sense.
+Unlike constructs like `parameter` or `macro` (defined in their respective [language pages](language/index.md)), no single reference page defines these words.
 
-## The file and what reads it
+## The file and its readers
 
 **Spec**
-: Short for specification. The optimisation problem a file states: its dimensions, the data it expects,
-its decisions and its rules. A spec holds no data. In Python it is a `Spec`,
-the file as written and checked, which `to_spec` returns
+: Short for specification. A spec is the optimisation problem that a file
+states: its dimensions, the data it expects, its decisions and its rules, but
+no data. In Python it is a `Spec`, the file as written and checked, which
+`to_spec` returns
 ([reading a spec and its program](reading.md#spec-and-program)).
 
 **Model**
 : A spec with data attached, which an engine builds and a solver takes.
-mathspec never holds one. The docs say "model" only in this sense.
+mathspec alone cannot hold a model.
 
 **Program**
-: What the file means, `spec.program`: every name typed, every macro expanded,
+: What the file means once it has been parsed by mathspec: every name typed, every macro expanded,
 every operator a node.
+In Python it is a `Program`, accessed at `spec.program`.
+
+**Consumer**
+: A tool that reads a spec: an **engine** that attaches data and builds the model, a **renderer** such as the typesetter, or a **checker**.
 
 **Load**
-: What `to_spec` does. "Refused at load" means `to_spec` raises, before any
+: What the `to_spec` method does. "Refused at load" means `to_spec` raises, before any
 data exists.
 
 **Attach**
-: What a consumer does when it puts data on a program. A rule about numbers can
-be checked only then, and the language checks none itself. The docs never say
-"bind" for it, so that **bound** means one thing: a lower or upper limit on a
-variable ([variables](language/declarations.md#variables)).
+: What a consumer does when it combines data with a program.
+A consumer can only check a rule involving data after it has attached; mathspec checks no such rule itself.
+The docs will never say "bind" when they refer to this, so that **bound** means one thing: a lower or upper
+limit on a variable ([variables](language/declarations.md#variables)).
 
 **Provide**
-: What the host model, the model a file is layered onto, does for a name under
-`given:`. It holds a column or a row family of that name, on the same frame. A
-consumer checks that the host provides each given name
+: What a host model does for a name under `given:`, when layering several files.
+The host model will hold a column or a row family of that name, on the same frame.
+A consumer is responsible for checking that the host provides each given name
 ([what a program does not build](reading.md#what-a-program-does-not-build)).
-
-**Consumer**
-: A tool that reads a spec: an **engine** that attaches data and builds the rows a
-solver takes, a **renderer** such as the typesetter, or a **checker**
-([what counts as language](../about/what-counts-as-language.md)).
 
 **Declaration**
 : One named entry under one of the top-level keys: one dimension, one
@@ -62,13 +61,13 @@ variable has one column at each coordinate it is built at, and a constraint
 has one row.
 
 **Frame**
-: A declaration's own dimensions. An expression, a mask and a bound parameter
-must fit inside the frame they sit in
+: The dimensions over which a declaration ranges.
+The data of an expression, a mask and a bound parameter must fit inside their defined frame
 ([how dimensions combine](language/expressions.md#how-dimensions-combine)).
 
 **Group**
-: The labels that one value of a relation column collects. `within=` keeps a
-`shift`, a `sum_back` or a `position()` inside each group.
+: The labels of a relation `value` column, used for grouping the relation's keys.
+`within=<column>` can be used to apply `shift`, `sum_back` or `position()` separately per group.
 
 ## Masks and absence
 
@@ -92,19 +91,18 @@ default), absence (`absent`), `0` in arithmetic and false in a `where`
 
 **Primitive**
 : A construct built into the language, which every engine implements and the
-typesetter prints: the operators and the `where` comparisons.
+typesetter prints.
+This covers the operators and the `where` comparisons.
 
 **Formulation**
-: A block that states ordinary variables and constraints rather than being
-one: `piecewise:` and `sos:` ([piecewise curves and SOS](language/piecewise.md)).
+: A block that expands into ordinary variables and constraints: `piecewise:`
+and `sos:` ([piecewise curves and SOS](language/piecewise.md)).
 
-A request for a new construct is a macro, a primitive or a formulation, or it
-is refused ([how a new construct enters](../about/limits.md#how-a-new-construct-enters)).
+New constructs (primitives, formulations, macros) are not allowed ([how a new construct enters](../about/limits.md#adding-a-new-construct)).
 
 ## Words with two senses
 
-These words mean two things in these docs. The sentence around each one says
-which.
+The meaning of some words changes depending on the context in which they appear in the docs.
 
 | Word     | One sense                                               | The other sense                                               |
 | -------- | ------------------------------------------------------- | ------------------------------------------------------------- |

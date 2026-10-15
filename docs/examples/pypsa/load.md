@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Loads
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Load`. It adds a term to `Bus_injection`.
+This file states PyPSA's `Load`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to the sum `Bus_injection`.
 
 <!-- gallery:begin -->
 ```yaml
@@ -64,6 +64,12 @@ expressions:
     adds_to: Bus_injection
 ```
 
+#### Given
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Load_injection` to |
+
 #### Sets
 
 | Symbol | Meaning |
@@ -80,12 +86,6 @@ expressions:
 | $`\mathrm{load}`$ | `Load_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{D}`$ — demand |
 | $`\mathrm{sgn}^{\mathrm{load}}`$ | `Load_sign` over $`\mathcal{D}`$ — the sign a load's demand enters its bus's balance with — PyPSA's `sign`, `-1` unless given, `1` for a load that feeds its bus. PyPSA refuses one that differs by scenario (`constants.py:43`) |
 | $`\mathrm{on}^{\mathrm{load}}`$ | `Load_active` over $`\mathcal{D}`$ — whether a load stands in the model — PyPSA's `active`. A load has no build year and no lifetime, so the flag holds in every snapshot. PyPSA refuses one that differs by scenario (`constants.py:51`) |
-
-#### Given
-
-| Symbol | Meaning |
-|---|---|
-| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Load_injection` to |
 
 #### Definitions
 

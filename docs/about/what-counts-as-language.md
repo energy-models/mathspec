@@ -7,10 +7,9 @@ SPDX-License-Identifier: CC-BY-4.0
 
 Several tools read the same spec file. An engine attaches data, builds the
 model and hands it to a solver. A renderer prints the spec as equations. A
-checker reads the spec in CI with no data. This page says which decisions the
-language makes for all of them, and which each tool makes for itself.
-
-The test is one question:
+checker reads the spec in CI with no data. The language makes some decisions
+for all of them, and each tool makes the rest for itself. One question tells
+the two apart:
 
 > If two tools answered this differently, would the file have two meanings?
 
@@ -21,13 +20,13 @@ instead of working it out.
 
 Suppose instead that the engine writes the model in one solver's file format and
 the renderer sets the page width to 80 characters. They disagree, and nothing is
-wrong. Each tool decides those things for itself.
+wrong, because each tool decides those things for itself.
 
-Four rules follow from the test:
+Four rules follow from that question:
 
-- A name means one thing. `p` cannot be a variable in the engine and a parameter
-  in the renderer.
-- The set of operators is fixed. A tool cannot add a `roll` that the others
+- A name means one thing, so `p` cannot be a variable in the engine and a
+  parameter in the renderer.
+- The set of operators is fixed, so a tool cannot add a `roll` that the others
   do not know.
 - Each operator has one rule for the dimensions of its result. `sum(p, over=generator, by=gen_bus[bus])`
   groups by `bus` for every program.
@@ -41,14 +40,14 @@ writes it out the same way for every tool.
 
 ## What each tool decides for itself
 
-A tool can refuse a spec for a reason of its own. One engine can only take
-a literal offset in `shift`. Another has no concept of a special-ordered set. A
-file format has no way to write a quadratic constraint. None of these is a
-disagreement about what the file means, so none of them is the language's to
-settle. If the language refused everything one tool cannot build, every
+A tool can refuse a spec for a reason of its own. For example, one engine can
+only take a literal offset in `shift`. Another has no concept of a special-ordered set
+(SOS). A file format has no way to write a quadratic constraint. None of these
+is a disagreement about what the file means, so the language does not settle
+any of them. If the language refused everything one tool cannot build, every
 other tool would inherit that limit.
 
-So the boundary runs both ways:
+So the rule holds in both directions:
 
 - A tool must not invent a rule about what the file _means_. If it needs
   one, the rule goes into the language, once.

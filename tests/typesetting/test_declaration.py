@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from mathspec import typeset_declaration
+from mathspec import to_spec, typeset_declaration
 from mathspec.errors import LanguageError, SchemaError
 from tests.fixtures import DISPATCH_MODEL as DISPATCH
-from tests.fixtures import varied
+from tests.fixtures import EXAMPLES, varied
 from tests.typesetting.fixtures import EVERY_FORMAT
 from tests.typesetting.test_cases import CASED
 
@@ -144,6 +144,16 @@ def test_a_substituted_term_that_opens_with_a_minus_prints_as_a_subtraction():
     )
 
 
+def test_a_special_ordered_set_prints_the_line_the_document_prints_for_it():
+    """The document printed a set as its own row under Subject to, and asking for it by name was refused (#848)."""
+    spec = to_spec(EXAMPLES / 'sos.yaml').expand('piecewise')
+    line = typeset_declaration(spec, 'cost_curve', 'latex')
+    assert line == (
+        r'\left( \mathit{cost\_curve\_lam}_{t,g,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 '
+        r'\qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}'
+    )
+
+
 #: A column and a row family this file reads, each named by something that prints.
 GIVEN = varied(
     PLAIN,
@@ -162,7 +172,7 @@ GIVEN = varied(
         pytest.param(
             PLAIN,
             'spent',
-            r"'spent' is not a named expression, mask, constraint, assumption, curve or variable.*spend",
+            r"'spent' is not a named expression, mask, constraint, special ordered set, curve, assumption or variable.*spend",
             id='a-near-miss',
         ),
         pytest.param(PLAIN, 'objective', r"'objective' is not a named expression", id='the-objective-has-no-name'),

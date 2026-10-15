@@ -29,9 +29,8 @@ assumptions:
     holds: x_bp AND y_bp
     description: >-
       piecewise 'curve': every breakpoint the curve runs through needs a row in
-      'x_bp', 'y_bp' — a missing row does not shorten the
-      curve. Attach the rows, or declare
-      points: to say how far the curve runs.
+      'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows, or declare points: to say how far the curve
+      runs.
   curve_increasing:
     where: position(bp) > 0
     holds: shift(x_bp, along=bp, offset=1, edge=0) < x_bp

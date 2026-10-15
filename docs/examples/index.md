@@ -5,21 +5,25 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Examples
 
-Each page here shows one whole spec as the file and as the math it prints.
-Every spec is a file under `examples/` in the repository.
+Open a page here to see one whole spec as the YAML file and as the math that
+the typesetter prints from it. Every spec is a file under `examples/` in the
+repository.
 
-- [Least-cost dispatch](dispatch.md) is the smallest whole spec. It has a
-  balance, a bound and a cost to minimise.
-- [Unit commitment](commitment.md) adds a start-up ramp. One quantity is defined
-  by region, so a single inequality covers both regimes.
-- [One construct per spec](operators.md) declares each operator in the smallest
-  file that can, and prints the equation beside it.
+- [Least-cost dispatch](dispatch.md) is the smallest whole spec, with a balance,
+  a bound and a cost to minimise.
+- [Unit commitment](commitment.md) adds an on/off decision and a start-up ramp.
+  One quantity has three cases, so a single inequality covers a running unit
+  and a starting unit.
+- [One construct per spec](operators.md) shows each operator in the smallest
+  file that uses it, beside the equation it prints.
 - [A component library](library/index.md) is several files that compose into
-  one spec. Each file reads the coupling surface and prints on its own, and the
-  composed page shows what `merge` returns.
+  one spec. Each file reads the shared declarations of one surface file and
+  prints on its own. The composed page shows what `merge` returns.
 
-The PyPSA parity pages, from [PyPSA in one file](pypsa.md) on, are a proof of
-concept. They sit in the Development section, and
-[PyPSA in 24 files](pypsa/index.md) is the same spec composed from fragments.
+The PyPSA pages start at [PyPSA in one file](pypsa.md). They state the model
+that PyPSA builds, as a proof of concept, and they sit in the Development
+section. [PyPSA in 24 files](pypsa/index.md) composes the same spec from
+fragments.
 
-[Typeset the math](../reference/typeset.md) prints your own.
+To print the math of your own spec, see
+[Typeset the math](../reference/typeset.md).

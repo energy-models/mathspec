@@ -7,8 +7,8 @@ SPDX-License-Identifier: CC-BY-4.0
 
 Diff two spec files so that the diff shows only what the specs state
 differently. A plain text diff also shows the order of declarations, spacing
-and the order of the terms in a sum. The canonical form removes those
-differences. [Comparing two specs](../reference/reading.md#comparing-two-specs)
+and the order of the terms in a sum. The **canonical form** is one fixed way
+to write a spec, and it removes those differences. [Comparing two specs](../reference/reading.md#comparing-two-specs)
 lists what the form sorts and what it keeps.
 
 1. **Write one spec in the canonical form.**
@@ -17,9 +17,9 @@ lists what the form sorts and what it keeps.
    python -m mathspec canonical spec.yaml
    ```
 
-   The form goes to stdout. `-o canonical.yaml` writes it to a file instead. A
-   file the language refuses prints its message on stderr and exits with
-   status 1.
+   The command writes the form to stdout, or to a file with
+   `-o canonical.yaml`. A file the language refuses prints its message on
+   stderr and exits with status 1.
 
 2. **Diff two files once.** Give each file to the command, and diff the two
    outputs:
@@ -36,9 +36,10 @@ lists what the form sorts and what it keeps.
    git config diff.mathspec.textconv "python -m mathspec canonical"
    ```
 
-   The files in the repository stay as you wrote them. Only the diff changes.
-   A commit that writes `sum(dispatch * cost)` as `sum(cost * dispatch)` shows
-   no difference. A commit that changes a coefficient shows one line:
+   The files in the repository stay as you wrote them, and only the diff
+   changes. A commit that writes `sum(dispatch * cost)` as
+   `sum(cost * dispatch)` then shows no difference, and a commit that changes a
+   coefficient shows one line:
 
    ```diff
     objective:
@@ -47,18 +48,19 @@ lists what the form sorts and what it keeps.
    +  expression: sum((2 * cost) * dispatch)
    ```
 
-   Match only spec files in `.gitattributes`. Git runs the command on every
-   file the pattern matches, and a YAML file that is not a spec fails to load.
+   Match only spec files in `.gitattributes`, because git runs the command on
+   every file the pattern matches, and a YAML file that is not a spec fails to
+   load.
 
-4. **Keep specs in the canonical form in CI.** Then the files themselves
-   diff the way the form does, with no git setup. `--write` rewrites a file in
-   the form. The form holds no YAML comments, so `--write` drops them:
+4. **Keep specs in the canonical form in CI.** Then a plain diff of the files
+   shows what the form shows, with no git setup. `--write` rewrites a file in
+   the form, and drops its YAML comments because the form holds none:
 
    ```bash
    python -m mathspec canonical --write spec.yaml
    ```
 
-   `--check` writes nothing. It exits with status 1 if the file is not in the
+   `--check` writes nothing, but exits with status 1 if the file is not in the
    form, and names the rewrite:
 
    ```text

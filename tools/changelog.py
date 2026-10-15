@@ -125,7 +125,7 @@ def _new_release(version: str, day: str, section: Section, tags: set[str]) -> st
             f'"## {section.heading}" has the date {day}, which is not a day. Write YYYY-MM-DD.'
         ) from None
     if not section.body.strip():
-        raise ChangelogError(f'"## {section.heading}" has nothing under it, and its text is the release notes.')
+        raise ChangelogError(f'"## {section.heading}" has nothing under it. Write the release notes under it.')
     newest = max((key for key in map(order, tags) if key is not None), default=None)
     key = order(tag)
     if newest is not None and key is not None and key <= newest:

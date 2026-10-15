@@ -75,7 +75,7 @@ class Emitted:
         return (('variable', (self.seg,)), ('constraint', (self.pick, self.link, self.below)))
 
 
-#: What the binary says, per order — the description its legend entry carries.
+#: What the binary means, per order. Its legend entry carries this description.
 _SEGMENTS = {
     1: 'a binary per member, 1 where that member may be nonzero',
     2: 'a binary per segment, 1 where the two members it spans may be nonzero',

@@ -31,9 +31,9 @@ keep the document current as the file changes.
      capacity: "\\bar p"
    ```
 
-   A key naming nothing in the spec is an error.
+   A key that names nothing in the spec is an error.
 
-3. **Emit a document that compiles.** `--standalone` wraps the fragment in a
+3. **Write a document that compiles.** `--standalone` wraps the fragment in a
    preamble, so the output builds on its own:
 
    ```bash
@@ -41,9 +41,9 @@ keep the document current as the file changes.
    python -m mathspec typst spec.yaml --standalone -o spec.typ
    ```
 
-   Then `tectonic spec.tex` or `typst compile spec.typ`. A symbol table is
+   Then run `tectonic spec.tex` or `typst compile spec.typ`. A symbol table is
    written for one notation, so the Typst render takes a table with
-   `notation: typst` or none. Without `--standalone` the output is a fragment
+   `notation: typst`, or no table. Without `--standalone` the output is a fragment
    to `\input` or `#include` into a paper.
 
 4. **Print the rows a curve or a set states** with `--expand`:
@@ -52,8 +52,8 @@ keep the document current as the file changes.
    python -m mathspec markdown spec.yaml --expand
    ```
 
-   The same table serves both renders: a name the expansion emits, such as
-   `cost_curve_lam`, may be spelled in it.
+   The same symbol table works with and without `--expand`, and it may also
+   give a symbol to a name that the expansion adds, such as `cost_curve_lam`.
 
 5. **Keep it current** with a rule in the paper's build:
 

@@ -5,9 +5,9 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Dimensions
 
-A **dimension** is an axis of the spec, such as `snapshot` or `generator`.
-Declarations are indexed by it, and `sum` reduces over it. A map from one axis
-onto another is a [relation](relations.md).
+A **dimension** is a set of labels that declarations are indexed by, such as
+`snapshot` or `generator`. `sum` reduces over a dimension. A map from one
+dimension onto another is a [relation](relations.md).
 
 ## `dimensions`
 
@@ -30,11 +30,11 @@ them. Everything indexed by the dimension is matched to its members by label.
 
 ## Order
 
-**Only an ordered dimension has an order a construct may read.** A snapshot
-comes after the one before it. A generator does not come after another
-generator, and a file that steps from one to the next would read the row order
-of a data table. Five constructs read the order, and each needs its dimension
-declared `ordered: true`:
+A construct may read the order of a dimension **only** when the dimension is
+declared `ordered: true`. A snapshot comes after the one before it. A generator
+does not come after another generator, so a file that steps from one generator
+to the next would read the row order of a data table. Five constructs read the
+order, and each needs its dimension declared `ordered: true`:
 
 | Construct                                                                          | Reads                            |
 | ---------------------------------------------------------------------------------- | -------------------------------- |
@@ -47,12 +47,12 @@ declared `ordered: true`:
 The loader refuses any of them along a dimension that is not ordered:
 
 ```text
-Constraint 'ramp': shift(along=snapshot) reads the order of 'snapshot', which is not declared ordered, so the order it read would be the row order of the data. Declare the order part of the model with 'snapshot: {ordered: true}' under dimensions:.
+Constraint 'ramp': shift(along=snapshot) reads the order of 'snapshot', which is not declared ordered, so the order would come from the row order of the data. Declare 'snapshot: {ordered: true}' under dimensions:.
 ```
 
 A `dtype` does not make a dimension ordered: an `int` dimension may number
 things that have no order. An `sos` block with `type: 1` reads no order, and
 `edge='wrap'` makes one `shift` cyclic without changing the dimension.
 
-Whether to declare a column of data as a dimension, a relation or a parameter
-is decided in [declare a column of data](../../howto/declare-a-column.md).
+To decide whether a column of data is a dimension, a relation or a parameter,
+read [declare a column of data](../../howto/declare-a-column.md).

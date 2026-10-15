@@ -5,12 +5,14 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Unit commitment
 
-This spec adds a commitment decision and a start-up ramp to least-cost
-dispatch. Read `previous_status` first, then `ramp_up`: the state a unit
-carries into a snapshot has three regimes, stated once as a
-[`cases:`](../reference/language/named.md#cases) block, and `ramp_up` reads it
-the way it reads a parameter. The block prints once below, under
-**Definitions**.
+This spec adds an on/off decision per unit and a start-up ramp to [least-cost
+dispatch](dispatch.md). Read `previous_status` first, then `ramp_up`.
+`previous_status` is the state that a unit carries into a snapshot, and the file
+states its three regimes once, in a
+[`cases:`](../reference/language/named.md#cases) block. `ramp_up` reads
+`previous_status` as it reads a parameter, so one inequality covers a running
+unit and a starting unit. The typesetter prints the block once, under
+**Definitions** below.
 
 <!-- gallery:begin -->
 ```yaml
@@ -135,6 +137,28 @@ $`t \boxminus_{v} k`$ denotes translation with $`v`$ standing where index $`t-k`
 
 $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own order — the order `shift` steps along, not the order labels sort in — counted from $`0`$. The index itself stays the coordinate, so $`t`$ compares against labels and $`\mathrm{pos}(t)`$ against positions.
 
+#### Variable domains
+
+**`dispatch`**
+
+```math
+0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+**`status`**
+
+```math
+\mathit{status}_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+#### Definitions
+
+**`previous_status`**
+
+```math
+\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \\ \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \\ \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
 #### Objective
 
 ```math
@@ -165,28 +189,6 @@ $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own ord
 
 ```math
 \mathit{dispatch}_{t,g} - \mathit{dispatch}_{t \boxminus_{0} 1,g} \le \mathrm{ramp\_limit}_{g} \cdot \mathit{previous\_status}_{t,g} + \mathrm{start\_up\_limit}_{g} \cdot \left( 1 - \mathit{previous\_status}_{t,g} \right) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
-#### Definitions
-
-**`previous_status`**
-
-```math
-\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \\ \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \\ \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
-#### Variable domains
-
-**`dispatch`**
-
-```math
-0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
-**`status`**
-
-```math
-\mathit{status}_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 #### Assumptions

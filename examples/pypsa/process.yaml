@@ -93,9 +93,10 @@ parameters:
   Process_output_delay:
     description: >-
       snapshots a port's transfer lags its process's internal power — PyPSA's
-      `delay0`, `delay1`, … read long, over the `snapshot_weightings.generators`
-      value and rounded up, as data prep; zero for a port that transfers at
-      once. The same in every scenario, as a link's
+      `delay0`, `delay1`, … read long, divided by the
+      `snapshot_weightings.generators` value and rounded up in data prep; zero
+      for a port that transfers at once. A port has the same delay in every
+      scenario, as a link's port has
     dims: [process_output]
     dtype: int
   Process_output_cyclic_delay:
@@ -103,7 +104,7 @@ parameters:
       whether a delayed port's transfer wraps from the end of its investment
       period — PyPSA's `cyclic_delay0`, `cyclic_delay1`, …; where it does not,
       the energy still in transit at each period's first snapshots is lost.
-      The same in every scenario, as the delay
+      The flag is the same in every scenario, as the delay is
     dims: [process_output]
     dtype: bool
   Process_marginal_cost:

@@ -4,8 +4,9 @@
 
 description: >-
   A sum that keeps a key column — `sum(array, over=dim, by=relation[c])` joins
-  on the column over `dim` and groups by column `c`, and the key column it does
-  not name is joined on and kept, so each zone's total is taken per period.
+  on the column over `dim` and groups by column `c`. The sum also joins on the
+  key column that the call does not name, and keeps it, so each zone gets one
+  total per period.
 
 dimensions:
   generator: { dtype: str }

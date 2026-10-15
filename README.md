@@ -18,11 +18,11 @@ SPDX-License-Identifier: CC-BY-4.0
 **Write the specification (spec) of an optimisation model as a YAML file. Check it and print it
 as math, with no data and no solver.**
 
-A mathspec file states a specification, or spec. A spec declares four things: the axes it runs
-over, such as `snapshot` and `generator`; the data it expects, such as `load`
-and `cost`; the decisions the solver makes, such as `dispatch`; and the rules
-those decisions obey, such as `sum(dispatch, over=generator) == load`. The file
-[below](#example) is a complete spec.
+A spec declares four things: the dimensions it runs over, such as `snapshot`
+and `generator`; the data it expects, such as `load` and `cost`; the decisions
+the solver makes, such as `dispatch`; and the rules those decisions obey, such
+as `sum(dispatch, over=generator) == load`. The file [below](#example) is a
+complete spec.
 
 <!--- --8<-- [start:benefits] -->
 
@@ -89,6 +89,14 @@ Markdown is one of three formats, and GitHub renders it here.
 
 Least-cost dispatch of a generator fleet against an hourly load.
 
+#### Variable domains
+
+**`dispatch`**
+
+```math
+0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{capacity}_{g} > 0
+```
+
 #### Objective
 
 ```math
@@ -101,14 +109,6 @@ Least-cost dispatch of a generator fleet against an hourly load.
 
 ```math
 \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
-```
-
-#### Variable domains
-
-**`dispatch`**
-
-```math
-0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{capacity}_{g} > 0
 ```
 
 <details>
@@ -137,6 +137,12 @@ Least-cost dispatch of a generator fleet against an hourly load.
 |---|---|
 | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{S} \times \mathcal{G}`$ — output of a generator in a snapshot |
 
+#### Variable domains
+
+**`dispatch`**
+
+$`0 \le \mathit{dispatch}_{s,g} \le \bar p_{g} \qquad \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0`$
+
 #### Objective
 
 $`\min \sum_{s \in \mathcal{S},\ g \in \mathcal{G}} \mathit{dispatch}_{s,g} \cdot c_{g}`$
@@ -146,12 +152,6 @@ $`\min \sum_{s \in \mathcal{S},\ g \in \mathcal{G}} \mathit{dispatch}_{s,g} \cdo
 **`power_balance`**
 
 $`\sum_{g \in \mathcal{G}} \mathit{dispatch}_{s,g} = \ell_{s} \qquad \forall\, s \in \mathcal{S}`$
-
-#### Variable domains
-
-**`dispatch`**
-
-$`0 \le \mathit{dispatch}_{s,g} \le \bar p_{g} \qquad \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0`$
 
 </details>
 
@@ -178,7 +178,7 @@ conventional spelling, as in the folded block.
 
 <!--- --8<-- [start:engines] -->
 
-mathspec builds nothing and solves nothing itself.
+mathspec builds nothing and solves nothing itself. Instead,
 [specsolve](https://github.com/fluxopt/specsolve) and
 [linopy](https://github.com/PyPSA/linopy) build a model from a spec and its
 data, and solve it. Support in both is work in progress. Any other tool can
@@ -215,11 +215,10 @@ See [installation](https://mathspec.readthedocs.io/en/latest/howto/installation/
 ## Prior art
 
 Every file under `src/` was written in [specsolve](https://github.com/fluxopt/specsolve)
-and extracted here. The keys themselves,
-which are YAML math, a block per component, `dims:` and a `where:` string,
-come from [Calliope](https://github.com/calliope-project/calliope).
-[linopy](https://github.com/PyPSA/linopy) supplies the vocabulary that
-`sum(over=)` and the dimension rules are named against.
+and extracted here. The keys come from
+[Calliope](https://github.com/calliope-project/calliope): math in YAML, one
+block per component, `dims:` and a `where:` string. `sum(over=)` and the
+dimension rules take their names from [linopy](https://github.com/PyPSA/linopy).
 
 ## Status
 
@@ -230,9 +229,9 @@ Alpha, pre-1.0.
 **Breaking changes land without a deprecation cycle.** Pin an exact version if
 you depend on this, and read the
 [changelog](https://github.com/energy-models/mathspec/blob/main/CHANGELOG.md)
-before upgrading. Every construct round-trips through the schema, the parsers
-and all three typeset formats, and the LaTeX is compiled. The accepted YAML is
-not yet frozen.
+before upgrading. The test suite passes every construct through the schema,
+the parsers and all three typeset formats, and compiles the LaTeX. The YAML that
+mathspec accepts can still change.
 
 <!--- --8<-- [end:status] -->
 

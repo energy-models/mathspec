@@ -6,9 +6,9 @@ SPDX-License-Identifier: CC-BY-4.0
 # See what a curve or a set expands to
 
 A [`piecewise:`](../reference/language/piecewise.md) block and a `sos:` block
-each stand for plain variables and constraints. Write them out to review a
-formulation, to teach one, or to hand the spec to an engine that has no
-concept of a set.
+(a special ordered set) each stand for plain variables and constraints. Write
+them out to review a formulation, to teach one, or to hand the spec to an
+engine that cannot read a `sos:` block.
 
 ## 1. Write the formulation out
 
@@ -31,7 +31,8 @@ prints the result as a file.
     ```
 
 The command line prints the expansion as math rather than as YAML. Pass
-`'piecewise'` or `'sos'` to write out one kind and keep the other.
+`'piecewise'` or `'sos'` to `expand()` to write out one kind and keep the
+other.
 
 ## 2. Read a set
 
@@ -72,6 +73,8 @@ names each row the expansion adds.
         0 \le p_{g} \le 10 \qquad \forall\, g \in \mathcal{G}
         ```
 
+        _Subject to_
+
         **`pick`**
 
         ```math
@@ -106,20 +109,6 @@ names each row the expansion adds.
 
     === "Math"
 
-        _Subject to_
-
-        **`pick_pick`**
-
-        ```math
-        \sum_{g \in \mathcal{G}} \mathit{pick\_seg}_{g} \le 1
-        ```
-
-        **`pick_nonzero`**
-
-        ```math
-        p_{g} \le 10 \cdot \mathit{pick\_seg}_{g} \qquad \forall\, g \in \mathcal{G}
-        ```
-
         _Variable domains_
 
         **`p`**
@@ -132,6 +121,20 @@ names each row the expansion adds.
 
         ```math
         \mathit{pick\_seg}_{g} \in \{0, 1\} \qquad \forall\, g \in \mathcal{G}
+        ```
+
+        _Subject to_
+
+        **`pick_pick`**
+
+        ```math
+        \sum_{g \in \mathcal{G}} \mathit{pick\_seg}_{g} \le 1
+        ```
+
+        **`pick_nonzero`**
+
+        ```math
+        p_{g} \le 10 \cdot \mathit{pick\_seg}_{g} \qquad \forall\, g \in \mathcal{G}
         ```
 
 <!-- expansion:set:end -->
@@ -173,14 +176,6 @@ the set out too.
 
     === "Math"
 
-        _Subject to_
-
-        **`curve`**
-
-        ```math
-        \left( x,\ y \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}^{\mathrm{bp}}_{b},\ \mathrm{y}^{\mathrm{bp}}_{b})
-        ```
-
         _Variable domains_
 
         **`x`**
@@ -193,6 +188,14 @@ the set out too.
 
         ```math
         y \ge 0
+        ```
+
+        _Subject to_
+
+        **`curve`**
+
+        ```math
+        \left( x,\ y \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}^{\mathrm{bp}}_{b},\ \mathrm{y}^{\mathrm{bp}}_{b})
         ```
 
         _Assumptions_
@@ -245,32 +248,11 @@ the set out too.
             holds: x_bp AND y_bp
             description: >-
               piecewise 'curve': every breakpoint the curve runs through needs a row in
-              'x_bp', 'y_bp' — a missing row does not shorten the
-              curve. Attach the rows, or declare
-              points: to say how far the curve runs.
+              'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows, or declare points: to say how far the curve
+              runs.
         ```
 
     === "Math"
-
-        _Subject to_
-
-        **`curve_convexity`**
-
-        ```math
-        \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} = 1
-        ```
-
-        **`curve_link0`**
-
-        ```math
-        x = \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} \cdot \mathrm{x}^{\mathrm{bp}}_{b}
-        ```
-
-        **`curve_link1`**
-
-        ```math
-        y = \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} \cdot \mathrm{y}^{\mathrm{bp}}_{b}
-        ```
 
         _Variable domains_
 
@@ -290,6 +272,26 @@ the set out too.
 
         ```math
         0 \le \mathit{curve\_lam}_{b} \le 1 \qquad \forall\, b \in \mathcal{B}
+        ```
+
+        _Subject to_
+
+        **`curve_convexity`**
+
+        ```math
+        \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} = 1
+        ```
+
+        **`curve_link0`**
+
+        ```math
+        x = \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} \cdot \mathrm{x}^{\mathrm{bp}}_{b}
+        ```
+
+        **`curve_link1`**
+
+        ```math
+        y = \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} \cdot \mathrm{y}^{\mathrm{bp}}_{b}
         ```
 
         **`curve`**
@@ -352,12 +354,37 @@ the set out too.
             holds: x_bp AND y_bp
             description: >-
               piecewise 'curve': every breakpoint the curve runs through needs a row in
-              'x_bp', 'y_bp' — a missing row does not shorten the
-              curve. Attach the rows, or declare
-              points: to say how far the curve runs.
+              'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows, or declare points: to say how far the curve
+              runs.
         ```
 
     === "Math"
+
+        _Variable domains_
+
+        **`x`**
+
+        ```math
+        x \ge 0
+        ```
+
+        **`y`**
+
+        ```math
+        y \ge 0
+        ```
+
+        **`curve_lam`**
+
+        ```math
+        0 \le \mathit{curve\_lam}_{b} \le 1 \qquad \forall\, b \in \mathcal{B}
+        ```
+
+        **`curve_seg`**
+
+        ```math
+        \mathit{curve\_seg}_{b} \in \{0, 1\} \qquad \forall\, b \in \mathcal{B}
+        ```
 
         _Subject to_
 
@@ -389,32 +416,6 @@ the set out too.
 
         ```math
         \mathit{curve\_lam}_{b} \le \mathit{curve\_seg}_{b} + \mathit{curve\_seg}_{b \boxminus_{0} 1} \qquad \forall\, b \in \mathcal{B}
-        ```
-
-        _Variable domains_
-
-        **`x`**
-
-        ```math
-        x \ge 0
-        ```
-
-        **`y`**
-
-        ```math
-        y \ge 0
-        ```
-
-        **`curve_lam`**
-
-        ```math
-        0 \le \mathit{curve\_lam}_{b} \le 1 \qquad \forall\, b \in \mathcal{B}
-        ```
-
-        **`curve_seg`**
-
-        ```math
-        \mathit{curve\_seg}_{b} \in \{0, 1\} \qquad \forall\, b \in \mathcal{B}
         ```
 
         _Assumptions_

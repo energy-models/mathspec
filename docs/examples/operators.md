@@ -5,10 +5,10 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # One construct per spec
 
-For each built-in [operator](../reference/language/operators.md), the smallest
-spec that declares it, beside the equation it prints. The reference page shows
-the same equations as one table. This page shows the **file** that produced each
-one.
+Each built-in [operator](../reference/language/operators.md) has a section here,
+which shows the smallest spec that uses the operator and the equation that the
+typesetter prints from it. The reference page shows the same equations in one
+table, without the files.
 
 <!-- gallery:begin -->
 ### `sum(array)`
@@ -106,8 +106,8 @@ $`\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g,c} \le \mathrm{limit}_{c} 
 ```yaml
 description: >-
   The membership reduction — `sum(array, over=dim, by=relation[c])` groups the
-  result by the relation's column `c`, which is what makes topology data rather
-  than structure.
+  result by the relation's column `c`, so the topology is data rather than
+  structure.
 
 dimensions:
   snapshot: { dtype: int }
@@ -142,8 +142,9 @@ $`\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{t,g} \le \mathrm{li
 ```yaml
 description: >-
   A sum that keeps a key column — `sum(array, over=dim, by=relation[c])` joins
-  on the column over `dim` and groups by column `c`, and the key column it does
-  not name is joined on and kept, so each zone's total is taken per period.
+  on the column over `dim` and groups by column `c`. The sum also joins on the
+  key column that the call does not name, and keeps it, so each zone gets one
+  total per period.
 
 dimensions:
   generator: { dtype: str }
@@ -178,8 +179,7 @@ $`\sum_{g \in \mathcal{G} \,:\, \mathrm{zone\_of}(g,\ e) = z} p_{g,e} \ge \mathr
 ```yaml
 description: >-
   Several columns at each end — `sum(array, over=[dim, …], by=relation[c, …])`
-  joins on both key columns at once and groups by both value columns in one
-  join.
+  joins on both key columns and groups by both value columns, all in one join.
 
 dimensions:
   generator: { dtype: str }
@@ -214,8 +214,8 @@ $`\sum_{g \in \mathcal{G},\ e \in \mathcal{E} \,:\, \mathrm{slot\_of.bus}(g,\ e)
 
 ```yaml
 description: >-
-  The same join with no group-by — `at(array, by=relation[c])` reads one
-  coarse value once per fine label pointing at it.
+  The join without a grouping — `at(array, by=relation[c])` reads one coarse
+  value once for each fine label that points at it.
 
 dimensions:
   snapshot: { dtype: int }
@@ -248,9 +248,8 @@ $`p_{t} \le \mathrm{cap}_{\mathrm{period\_of}(t)} \qquad \forall\, t \in \mathca
 
 ```yaml
 description: >-
-  A read of one of two columns — `at(array, by=relation[c])` reads column `c`
-  where a table has two columns over one dimension, here the sending end of a
-  line.
+  One of two columns — where a table has two columns over one dimension,
+  `at(array, by=relation[c])` reads column `c`, here the sending end of a line.
 
 dimensions:
   line: { dtype: str }

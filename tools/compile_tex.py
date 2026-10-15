@@ -33,13 +33,13 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if shutil.which('tectonic') is None:
-        print('tectonic is not on PATH — run this through `pixi run compile-tex`', file=sys.stderr)
+        print('tectonic is not on PATH. Run this through `pixi run compile-tex`.', file=sys.stderr)
         return 2
 
     out = Path(argv[0])
     documents = sorted(out.glob('*.tex'))
     if not documents:
-        print(f'no .tex files in {out}; run `pixi run render-tex {out}` first', file=sys.stderr)
+        print(f'no .tex files in {out}. Run `pixi run render-tex {out}` first.', file=sys.stderr)
         return 1
 
     failed = []

@@ -35,16 +35,16 @@ as math, with no data and no solver.**
 ## A spec is one file
 
 A file states one specification, or spec. A spec declares four things: the
-axes it runs over, the data it expects, the decisions the solver makes, and
-the rules those decisions obey. It holds no data: an engine attaches the data
-and builds a model. The file below is a complete spec.
+dimensions it runs over, the data it expects, the decisions the solver makes,
+and the rules those decisions obey. The file holds no data, because an engine
+attaches the data when it builds a model. The file below is a complete spec.
 
 --8<-- "README.md:model"
 
 ## The math it prints
 
-Printed from the file above, with no data and no solver. **How** shows the
-call.
+The typesetter prints this from the file above, with no data and no solver, and
+the **How** tab shows the call.
 
 <!-- home-math:begin -->
 
@@ -73,6 +73,14 @@ call.
     |---|---|
     | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{S} \times \mathcal{G}`$ — output of a generator in a snapshot |
 
+    #### Variable domains
+
+    **`dispatch`**
+
+    ```math
+    0 \le \mathit{dispatch}_{s,g} \le \bar p_{g} \qquad \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0
+    ```
+
     #### Objective
 
     ```math
@@ -85,14 +93,6 @@ call.
 
     ```math
     \sum_{g \in \mathcal{G}} \mathit{dispatch}_{s,g} = \ell_{s} \qquad \forall\, s \in \mathcal{S}
-    ```
-
-    #### Variable domains
-
-    **`dispatch`**
-
-    ```math
-    0 \le \mathit{dispatch}_{s,g} \le \bar p_{g} \qquad \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0
     ```
 
 === "LaTeX"
@@ -118,6 +118,11 @@ call.
     \item[{$\mathit{dispatch}$}] \texttt{dispatch} over $\mathcal{S} \times \mathcal{G}$ --- output of a generator in a snapshot
     \end{description}
 
+    \paragraph{Variable domains}
+    \begin{align*}
+    \text{dispatch} && 0 \le \mathit{dispatch}_{s,g} & \le \bar p_{g} && \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0
+    \end{align*}
+
     \paragraph{Objective}
     \begin{align*}
      && \min & \sum_{s \in \mathcal{S},\ g \in \mathcal{G}} \mathit{dispatch}_{s,g} \cdot c_{g}
@@ -126,11 +131,6 @@ call.
     \paragraph{Subject to}
     \begin{align*}
     \text{power\_balance} && \sum_{g \in \mathcal{G}} \mathit{dispatch}_{s,g} & = \ell_{s} && \forall\, s \in \mathcal{S}
-    \end{align*}
-
-    \paragraph{Variable domains}
-    \begin{align*}
-    \text{dispatch} && 0 \le \mathit{dispatch}_{s,g} & \le \bar p_{g} && \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0
     \end{align*}
     ```
 

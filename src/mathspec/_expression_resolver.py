@@ -75,10 +75,11 @@ if TYPE_CHECKING:
 #: the vacated positions contribute where it does not.
 _Edge = tuple[bool, float | None]
 
-#: How deep a resolved tree may be with every named expression it reads
-#: written in — the tree every pass after resolution recurses over. Three
-#: times what one text may nest, since a text reads other texts: a chain of
-#: 200 entries survived every pass on a default stack and 250 did not (#643).
+#: How deep a resolved tree may be, with every named expression it reads
+#: written in. Every pass after resolution recurses over this tree. The limit
+#: is three times what one text may nest, because a text reads other texts: a
+#: chain of 200 entries survived every pass on a default stack and 250 did not
+#: (#643).
 MAX_RESOLVED_DEPTH = 3 * MAX_DEPTH
 
 
@@ -113,10 +114,9 @@ class ExpressionResolver:
         if resolved is None or (found := depth(resolved, children)) <= MAX_RESOLVED_DEPTH:
             return resolved
         self.errors.append(
-            f'{self.context}: the expression nests {found} deep with every named expression it reads written in, '
-            f'past the {MAX_RESOLVED_DEPTH} levels the language admits. Reduce over a dimension with sum() rather '
-            f'than writing the terms out, or precompute the deepest part as a parameter — a named expression '
-            f'stands inline where it is read, so naming a part does not make the tree shallower.'
+            f'{self.context}: the expression nests {found} levels deep, with its named expressions written in, '
+            f'and the limit is {MAX_RESOLVED_DEPTH}. Write the terms as one sum() over a dimension, or '
+            f'precompute the deepest part as a parameter.'
         )
         return None
 
@@ -141,23 +141,20 @@ class ExpressionResolver:
             return self._call(node)
         if isinstance(node, KeywordNode):
             self.errors.append(
-                f'{self.context}: {node.value!r} is a quoted keyword, which is only legal as a '
-                f"operator kwarg value such as shift(..., edge='wrap'). In an expression, quote "
-                f'nothing — names resolve and numbers are written bare.'
+                f'{self.context}: {node.value!r} is a quoted keyword, which is allowed only as an operator '
+                f"argument, such as edge='wrap'. Write names and numbers without quotes."
             )
             return None
         if isinstance(node, NameListNode):
             self.errors.append(
-                f'{self.context}: {node} is a list of names, which is only legal as an operator '
-                f'kwarg value such as sum(x, over=[snapshot, generator]). In an expression, write the '
-                f'terms out and add them.'
+                f'{self.context}: {node} is a list of names, which is allowed only as an operator argument, '
+                f'such as over=[snapshot, generator]. Write the terms out and add them.'
             )
             return None
         if isinstance(node, ColumnsNode):
             self.errors.append(
-                f'{self.context}: {node} names columns of a relation, which is only legal as an operator '
-                f'kwarg value such as at(x, by={node}). A relation is structure rather than data, so it is '
-                f'not a value in an expression.'
+                f'{self.context}: {node} names columns of a relation, which is allowed only as an operator '
+                f'argument, such as at(x, by={node}). A relation is not a value.'
             )
             return None
         assert_never(node)
@@ -212,18 +209,14 @@ class ExpressionResolver:
             case 'dimension':
                 self.errors.append(
                     f"{self.context}: '{node.name}' is a dimension, and a dimension is "
-                    f'not a value in an expression. Dimensions appear in '
-                    f"'dims:', in operator arguments (sum(x, over={node.name})), "
-                    f'and in where-comparisons — to use its coordinates as data, '
-                    f'declare a parameter over it.'
+                    f'not a value. To use its coordinates as data, declare a parameter over it.'
                 )
                 return None
             case 'relation':
                 self.errors.append(
-                    f"{self.context}: '{node.name}' is a relation, and a relation is structure "
-                    f'rather than data, so it is not a value in an expression. Its columns '
-                    f'appear in an operator (sum(x, over=<column>, by={node.name}[<column>])) and in a '
-                    f'where — to carry numbers along this dimension, declare a parameter over it.'
+                    f"{self.context}: '{node.name}' is a relation, and a relation is not a value. Use its "
+                    f'columns as sum(x, over=<column>, by={node.name}[<column>]) or in a where, or declare a '
+                    f'parameter to carry numbers.'
                 )
                 return None
             case _:
@@ -338,9 +331,8 @@ class ExpressionResolver:
             return Translate(operand, along, offset, wrap=wrap, fill=fill, partition=partition)
         if fill is not None:
             self.errors.append(
-                f"{self.context}: sum_back(edge=...) takes 'wrap' or nothing. A window sums the terms "
-                f'it reaches, so a position before the first contributes nothing rather than a '
-                f'fill value; add the constant to the expression if you want one.'
+                f"{self.context}: sum_back(edge=...) takes 'wrap' or nothing. To add a constant, "
+                f'write it in the expression.'
             )
             return None
         width = amounts['window']
@@ -356,9 +348,8 @@ class ExpressionResolver:
             return None
         if not inner:
             self.errors.append(
-                f'{self.context}: sum() with no over= or by= sums every dim the operand '
-                f'carries, and this one carries none — the expression is already a '
-                f'scalar. Drop the sum.'
+                f'{self.context}: sum() has no over= or by=, and its operand has no dimensions to sum over. '
+                f'Remove the sum.'
             )
             return None
         return Sum(operand, tuple(Axis(d) for d in sorted(inner)))
@@ -376,10 +367,8 @@ class ExpressionResolver:
         has_var = carries_variable(operand)
         if has_var and fill is not None and fill != 0:
             self.errors.append(
-                f'{self.context}: shift(edge={fill:g}) over an expression containing a variable — only '
-                f'fill=0 is representable there, since a vacated slot contributes no term. A nonzero '
-                f'fill would be a constant standing where a term was; add that constant to the '
-                f'expression instead.'
+                f'{self.context}: shift(edge={fill:g}) reads a variable, and over a variable only edge=0 is '
+                f'allowed. Write edge=0, and add the constant to the expression.'
             )
             return False
         if fill is None and _vacates(offset) and not has_var:
@@ -417,8 +406,7 @@ class ExpressionResolver:
         if (dtype := self.ns.dtypes[bare.name]) != 'int':
             self.errors.append(
                 f"{self.context}: {operator}({key}={bare.name}) counts positions, but '{bare.name}' is declared "
-                f'dtype: {dtype}. A count of positions is integral — declare it dtype: int, which accepts only an '
-                f'integer column, so a fractional {words.noun} has nowhere to arrive from.'
+                f'dtype: {dtype}. Declare it dtype: int.'
             )
             return None
         if isinstance(value, UnaryOperatorNode) and value.op == '-':
@@ -440,15 +428,14 @@ class ExpressionResolver:
         if isinstance(value, NameNode):
             if value.name == EDGE_WRAP:
                 self.errors.append(
-                    f'{self.context}: {operator}(edge={EDGE_WRAP}) is a bare name where a keyword belongs. '
-                    f"Write edge='{EDGE_WRAP}', quoted."
+                    f"{self.context}: {operator}(edge={EDGE_WRAP}) has no quotes. Write edge='{EDGE_WRAP}'."
                 )
                 return None
             self.errors.append(f'{self.context}: {edge_error(operator, value.name)}')
             return None
         if (literal := literal_number(value)) is None:
             self.errors.append(
-                f"{self.context}: {operator}(edge=) is an expression, and an edge is the keyword '{EDGE_WRAP}' "
+                f"{self.context}: {operator}(edge=) holds an expression, and edge= takes the keyword '{EDGE_WRAP}' "
                 f'or a number. Write the number itself.'
             )
             return None
@@ -459,7 +446,9 @@ class ExpressionResolver:
         if self._formal(value):
             return None
         if not isinstance(value, NameNode):
-            self.errors.append(f'{self.context}: {operator}({key}=...) must name a dimension.')
+            self.errors.append(
+                f'{self.context}: {operator}({key}=...) is not a name. Write the name of a declared dimension.'
+            )
             return None
         if value.name not in self.ns.dimensions:
             self.errors.append(
@@ -481,8 +470,8 @@ class ExpressionResolver:
             return None
         if not isinstance(value, NameNode):
             self.errors.append(
-                f'{self.context}: dual() takes the name of a declared constraint, written bare — '
-                f'dual(<constraint>). Name the constraint whose row dual you want.'
+                f'{self.context}: dual() takes the name of a declared constraint. Write dual(<constraint>), '
+                f'without quotes.'
             )
             return None
         if value.name not in self.ns.constraints:
@@ -500,14 +489,16 @@ class ExpressionResolver:
             return None
         if isinstance(value, ColumnsNode):
             self.errors.append(
-                f'{self.context}: {operator}(over={value}) writes the relation before its columns, and over= takes '
-                f'the names bare: over={shown(value.columns)}. Beside by={value.relation}[...], a name in over= is '
-                f"a column of '{value.relation}', or else a dimension."
+                f'{self.context}: {operator}(over={value}) names a relation, and over= takes bare names. Write '
+                f'over={shown(value.columns)}. Beside by={value.relation}[...], a name in over= is a column of '
+                f"'{value.relation}', or a dimension."
             )
             return None
         names = names_in(value)
         if not names:
-            self.errors.append(f'{self.context}: {operator}(over=...) must name a dimension, or a list of them.')
+            self.errors.append(
+                f'{self.context}: {operator}(over=...) is not a name. Write a declared dimension, or a list of them.'
+            )
             return None
         if any(n in self.formals for n in names):
             return None
@@ -543,13 +534,13 @@ class ExpressionResolver:
         if unknown := [c for c in value.columns if c not in shape.roles and c not in self.formals]:
             self.errors.append(
                 f'{self.context}: {operator}({key}={value}) names {unknown}, which is no column of '
-                f"'{value.relation}', whose columns are {list(shape.roles)}."
+                f"'{value.relation}'. Name one of its columns, {list(shape.roles)}."
             )
             return None
         if any(c in self.formals for c in value.columns):
             return None
         if len(set(value.columns)) < len(value.columns):
-            self.errors.append(f'{self.context}: {operator}({key}={value}) names a column twice.')
+            self.errors.append(f'{self.context}: {operator}({key}={value}) names a column twice. Name each once.')
             return None
         return value
 
@@ -559,7 +550,7 @@ class ExpressionResolver:
         if isinstance(value, NameNode) and value.name in ns.relations:
             return (
                 f'{context}: {operator}({key}={value.name}) names the relation and none of its columns. Write '
-                f"{key}={value.name}[<column>] — the columns of '{value.name}' are "
+                f"{key}={value.name}[<column>], with a column of '{value.name}': "
                 f'{list(ns.relations[value.name].roles)}.'
             )
         if isinstance(value, NameNode) and value.name in ns.dimensions:
@@ -576,7 +567,7 @@ class ExpressionResolver:
                 f'columns of a relation, written relation[column]. {hint}'
             )
         return (
-            f'{context}: {operator}({key}=...) takes columns of one relation, written relation[column] or '
+            f'{context}: {operator}({key}=...) takes columns of one relation. Write relation[column] or '
             f'relation[column, ...].'
         )
 
@@ -604,7 +595,8 @@ class ExpressionResolver:
         if not from_roles:
             self.errors.append(
                 f"{self.context}: {call}: over={shown(over)} names no column of '{name}', so the sum reads nothing "
-                f"through '{name}'. Name in over= the column the operand is joined on — {_columns_over(shape, plain)}."
+                f"through '{name}'. Name in over= the column that the operand is joined on: "
+                f'{_columns_over(shape, plain)}.'
             )
             return None
         join = self._checked_join(name, call, from_roles, into_roles)
@@ -613,9 +605,8 @@ class ExpressionResolver:
         if join.one_row_per_group:
             self.errors.append(
                 f'{self.context}: {call}: the columns this sum groups by, {list(join.grouped)}, hold the whole key '
-                f'{list(shape.key)}, so every group is one row and nothing is added up — that is a join with no '
-                f"group-by, which is at()'s. Write {_lookup_rewrite(name, from_roles, plain)}, or group by a "
-                f'value column.'
+                f'{list(shape.key)}, so every group is one row and the sum adds nothing. Write '
+                f'{_lookup_rewrite(name, from_roles, plain)}, or group by a value column.'
             )
             return None
         return join, plain
@@ -632,15 +623,14 @@ class ExpressionResolver:
         shape = self.ns.relations[name]
         if not shape.values:
             self.errors.append(
-                f"{self.context}: {call}: '{name}' is a bare relation — every column is in its key — so a key "
-                f'tuple may have several rows and there is no one value for at to read. Sum through it instead.'
+                f"{self.context}: {call}: '{name}' has every column in its key, so it has no value column for at() "
+                f'to read. Sum through it instead.'
             )
             return None
         if keyed := [r for r in columns.columns if r in shape.key]:
             self.errors.append(
                 f"{self.context}: {call} names {keyed}, a key column of '{name}'. A lookup reads value columns "
-                f'at the key, and the key arrives in the result — the value columns of {name!r} are '
-                f'{list(shape.values)}. Sum through a key column instead.'
+                f'at the key. Name one of the value columns, {list(shape.values)}, or sum through the key column.'
             )
             return None
         matched = inner - {shape.dim(r) for r in columns.columns}
@@ -654,17 +644,14 @@ class ExpressionResolver:
         context = self.context
         shape = self.ns.relations[name]
         if both := sorted(set(from_roles) & set(into_roles)):
-            self.errors.append(
-                f'{context}: {call}: over= and by= both name {both}, and a sum reads between two sets of columns.'
-            )
+            self.errors.append(f'{context}: {call}: over= and by= both name {both}. Name different columns in each.')
             return None
         for roles in (from_roles, into_roles):
             dims = [shape.dim(r) for r in roles]
             if shared := sorted({d for d in dims if dims.count(d) > 1}):
                 self.errors.append(
                     f'{context}: {call}: {list(roles)} are columns over one dimension, {shared}, and the operand '
-                    f'carries each dimension once, so nothing says which column its coordinate is read at. Read '
-                    f'one of them per call.'
+                    f'carries each dimension once. Read one of them per call.'
                 )
                 return None
         kept = tuple(r for r in shape.key if r not in from_roles and r not in into_roles)
@@ -684,22 +671,20 @@ class ExpressionResolver:
         call = f'{operator}(within={columns})'
         if not shape.values:
             self.errors.append(
-                f"{context}: {call}: '{name}' is a bare relation — every column is in its key — so it makes no "
-                f'groups and no coordinate is in exactly one. Move the columns the group is made of under '
-                f'values:, leaving key: the column {operator} steps along.'
+                f"{context}: {call}: '{name}' has every column in its key, so it makes no groups. Move the group "
+                f'columns under values:, and keep under key: the column {operator} steps along.'
             )
             return None
         over_keys = [r for r in shape.key if shape.dim(r) == along_dim]
         if not over_keys:
             self.errors.append(
-                f"{context}: {call}: '{name}' has no key column over '{along_dim}' — its key is "
-                f'{list(shape.key)} — and a partition steps along a key column over the dimension it groups.'
+                f"{context}: {call}: '{name}' has no key column over '{along_dim}'. Its key is {list(shape.key)}."
             )
             return None
         if keyed := [r for r in within_roles if r in shape.key]:
             self.errors.append(
-                f"{context}: {call}: within= names {keyed}, a key column of '{name}', and a partition groups by "
-                f'value columns — its value columns are {list(shape.values)}.'
+                f"{context}: {call}: within= names {keyed}, a key column of '{name}'. Name one of its value "
+                f'columns, {list(shape.values)}.'
             )
             return None
         (along,) = over_keys
@@ -713,13 +698,13 @@ class ExpressionResolver:
             return None
         if name in ns.dimensions:
             return (
-                f"{context}: {operator}({key}={name}[...]): '{name}' is a dimension, and a column selection "
-                f'starts with the relation the columns belong to.'
+                f"{context}: {operator}({key}={name}[...]): '{name}' is a dimension, not a relation. Write the "
+                f'relation first and its columns after it: {key}=<relation>[<column>].'
             )
         return (
             f'{context}: {operator}({key}={name}[...]) does not name a relation{_or_a_formal(self.formals)}. '
             f'{did_you_mean(name, ns.relations, label="Relations")}\n'
-            f"Declare it under 'relations:' — {name}: {{key: <the columns a row is identified by>, "
+            f"Declare it under 'relations:' as {name}: {{key: <the columns a row is identified by>, "
             f'values: <the columns they determine>}}.'
         )
 
@@ -728,28 +713,20 @@ def not_a_number(name: str, dtype: str, context: str) -> str:
     """Why a ``str`` or ``bool`` parameter is refused where a value belongs; the rewrite is the dtype's own."""
     if dtype == 'str':
         instead = (
-            f'A label selects rather than scales: compare it in a where '
+            f'Compare it in a where '
             f'("{name} == \'some_label\'"), and carry the numbers it picks out in a '
             f'parameter of its own.'
         )
     else:
-        instead = (
-            f'A flag masks rather than scales: name it in a where ("{name}", "NOT {name}"), '
-            f'which is what a mask is — or declare it dtype: int where the 0/1 is meant to '
-            f'arrive as data and be multiplied by.'
-        )
-    return (
-        f"{context}: '{name}' is declared dtype: {dtype}, and an expression is arithmetic — "
-        f'only dtype: float and dtype: int accept a column it can be done to. {instead}'
-    )
+        instead = f'Name it in a where ("{name}", "NOT {name}"), or declare it dtype: int to multiply by 0 and 1.'
+    return f"{context}: '{name}' is declared dtype: {dtype}, and an expression reads only float and int. {instead}"
 
 
 def _undeclared_dim(context: str, operator: str, call: str, name: str, ns: Namespace, formals: frozenset[str]) -> str:
     return (
         f'{context}: {operator}({call}) does not name a declared dimension{_or_a_formal(formals)}. '
         f'{did_you_mean(name, ns.dimensions, label="Dimensions")}\n'
-        f"Declare '{name}' under 'dimensions:', or fix the typo — an unknown "
-        f'dimension makes {operator}() a silent no-op rather than an error.'
+        f"Declare '{name}' under 'dimensions:', or correct the spelling."
     )
 
 
@@ -774,7 +751,7 @@ def _columns_over(shape: RelationDeclaration, dims: tuple[str, ...]) -> str:
 
 def _or_a_formal(formals: frozenset[str]) -> str:
     """The words a refusal inside a template adds, since a formal would have stood there too."""
-    return ' or a formal of this macro' if formals else ''
+    return ' or a formal argument of this macro' if formals else ''
 
 
 def _without_sign(value: ArithmeticNode) -> ArithmeticNode:
@@ -810,8 +787,8 @@ def _named_offset_edge_message(name: str) -> str:
     (#850); the two edges that write their own answer are allowed.
     """
     return (
-        f'shift(offset={name}) leaves the vacated positions absent, which a '
-        f'per-entity offset cannot say yet.\n'
+        f'shift(offset={name}) needs an edge=, because a named offset cannot leave its vacated positions '
+        f'absent yet.\n'
         f"Add edge='wrap' for a cyclic translation, or edge=<number> for what the "
         f'vacated positions contribute.'
     )
@@ -820,11 +797,10 @@ def _named_offset_edge_message(name: str) -> str:
 def _shift_over_data_message(context: str) -> str:
     """The three ways out of a translation over data with no ``edge=``, the third being two things at once."""
     return (
-        f'{context}: shift() over a variable-free expression leaves vacated positions with no '
-        f'value, and inventing one is what silently pinned a bound to zero. Say which you mean:\n'
+        f'{context}: shift() over an expression with no variable leaves the vacated positions with no '
+        f'value. Write which you mean:\n'
         f"  shift(x, along=d, offset=n, edge='wrap')   the dimension really is cyclic\n"
         f'  shift(x, along=d, offset=n, edge=0)        the vacated positions contribute zero\n'
         f'  ...and a where: excluding them        the vacated rows should not exist at all\n'
-        f'A where: alone does not lift this — it is decided on the expression, before any mask '
-        f'is read — and edge=0 alone leaves a row whose bound is that zero.'
+        f'A where: alone does not remove this refusal, and edge=0 alone keeps a row whose bound is that zero.'
     )

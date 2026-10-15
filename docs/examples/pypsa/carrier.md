@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Carriers
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the growth limits per carrier, which read `Carrier_additions`. It reads `Carrier_additions` under [`given`](../../reference/language/declarations.md#given).
+This file states the growth limits of each carrier. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. The limits read the sum `Carrier_additions`, which another fragment declares, and the file lists it under [`given`](../../reference/language/declarations.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -63,6 +63,12 @@ constraints:
       <= Carrier_max_growth
 ```
 
+#### Given
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression another file defines |
+
 #### Sets
 
 | Symbol | Meaning |
@@ -77,12 +83,6 @@ constraints:
 | $`\overline{\Delta}`$ | `Carrier_max_growth` over $`\mathcal{I}`$, `neutral` where the data has no row — most capacity of a carrier that may be added in a period; no value means no limit. The least over the scenarios, as PyPSA takes it (`global_constraints.py:227-231`), data prep. PyPSA reads it only under `multi_investment_periods` (`global_constraints.py:220-221`), so data prep feeds no value otherwise |
 | $`\mathrm{r}`$ | `Carrier_max_relative_growth` over $`\mathcal{I}`$ — share of the previous period's additions that may be added on top — the least over the scenarios, as PyPSA takes it, data prep |
 
-#### Given
-
-| Symbol | Meaning |
-|---|---|
-| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression another file defines |
-
 #### Definitions
 
 | Symbol | Meaning |
@@ -91,19 +91,19 @@ constraints:
 
 $`t \boxminus_{v} k`$ denotes translation with $`v`$ standing where index $`t-k`$ leaves the dimension (`shift(edge=v)`), so the row at that boundary is built and carries $`v`$ rather than being dropped.
 
-#### Subject to
-
-**`Carrier_growth_limit`**
-
-```math
-\mathit{Carrier\_additions}_{y,i} - \mathit{Carrier\_additions}_{y \boxminus_{0} 1,i} \cdot \mathrm{r}^{+}_{i} \le \overline{\Delta}_{i} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y} \,:\, \overline{\Delta}_{i} \text{ is defined}
-```
-
 #### Definitions
 
 **`Carrier_relative_growth`**
 
 ```math
 \mathrm{r}^{+}_{i} = \begin{cases} \mathrm{r}_{i} & \text{if } \mathrm{r}_{i} > 0 \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, i \in \mathcal{I}
+```
+
+#### Subject to
+
+**`Carrier_growth_limit`**
+
+```math
+\mathit{Carrier\_additions}_{y,i} - \mathit{Carrier\_additions}_{y \boxminus_{0} 1,i} \cdot \mathrm{r}^{+}_{i} \le \overline{\Delta}_{i} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y} \,:\, \overline{\Delta}_{i} \text{ is defined}
 ```
 <!-- gallery:end -->

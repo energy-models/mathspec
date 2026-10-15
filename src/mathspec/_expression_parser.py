@@ -23,23 +23,23 @@ from mathspec.errors import SchemaError
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
-#: The relation a comparison may carry — the three an expression may be
-#: written with, which is what a constraint's sense is read off.
+#: The three comparison operators an expression may use. A constraint reads
+#: its sense from this operator.
 ComparisonOperator = Literal['<=', '>=', '==']
 
 #: The sign a unary operator applies to its operand.
 UnaryOperator = Literal['+', '-']
 
-#: The arithmetic a binary operator may spell. Closed by the grammar, and the
-#: vocabulary a renderer dispatching on [`BinaryOperatorNode.op`][]
-#: switches over — it keeps no list of its own.
+#: The arithmetic a binary operator may spell. The grammar closes the set, and
+#: a renderer that dispatches on [`BinaryOperatorNode.op`][] switches over it
+#: and keeps no list of its own.
 BinaryOperator = Literal['+', '-', '*', '/', '**']
 
 #: What an expression writes to refer to a declaration, and so what a
 #: declaration may be named.
 NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
-#: A float — a fractional part or an exponent. A sign is the unary operator's.
+#: A float has a fractional part or an exponent. The unary operator carries the sign.
 REAL = r'\d+\.\d*([eE][+-]?\d+)?|\d+[eE][+-]?\d+'
 
 # ---------------------------------------------------------------------------
@@ -313,7 +313,7 @@ def keywords[V](name: str, pairs: Iterable[tuple[str, V]]) -> dict[str, V]:
     kwargs: dict[str, V] = {}
     for key, value in pairs:
         if key in kwargs:
-            msg = f'{name}({key}=) is given twice. A keyword names one value; drop one of them.'
+            msg = f'{name}({key}=) is given twice. Delete one of them.'
             raise SchemaError(msg)
         kwargs[key] = value
     return kwargs
@@ -392,7 +392,7 @@ def parse_text[T](
         result = grammar.parse_string(text, parse_all=True)
     except pp.ParseException as e:
         hint = rewrite(text, e.loc)
-        msg = f'Failed to parse {what}: {text!r}\n{f"{hint}\n" if hint is not None else ""}{e}'
+        msg = f'Cannot parse the {what} {text!r}.\n{f"{hint}\n" if hint is not None else ""}{e}'
         raise SchemaError(msg) from e
     except RecursionError:
         raise SchemaError(_too_deep(what, text, None, deep_rewrite)) from None
@@ -410,22 +410,13 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     """
     rest = text[loc:].lstrip()
     if rest.startswith(get_args(ComparisonOperator)):
-        return (
-            f"'{rest[:2]}' follows a complete comparison, and an expression carries "
-            f'one comparison, at the top. Split the chain into two constraints.'
-        )
+        return f"'{rest[:2]}' follows a complete comparison. Split the chain into two constraints."
     if rest.startswith('!='):
-        return (
-            "'!=' is not a constraint sense — the senses are <=, >= and ==. "
-            'Holding rows apart is a where matter: write the test in where:, where != is legal.'
-        )
+        return "'!=' is not a constraint sense. Write <=, >= or ==, or move the != test to where:."
     if rest.startswith(('<', '>')):
-        return f"'{rest[0]}' is not a constraint sense — the senses are <=, >= and ==. Write the bound inclusive."
+        return f"'{rest[0]}' is not a constraint sense. Write '{rest[0]}=' instead."
     if rest.startswith('='):
-        return (
-            "'=' on its own is how a kwarg is written inside a call, like sum(x, over=d). "
-            'Equality between two sides is written ==.'
-        )
+        return "A single '=' passes a keyword argument, as in sum(x, over=d). Write == for equality."
     if rest.startswith('^'):
         return "power is written '**', not '^'."
     return None

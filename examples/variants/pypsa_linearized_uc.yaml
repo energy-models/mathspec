@@ -8,8 +8,8 @@ description: >-
   generator, link and process are shares in [0, 1] rather than integers, and
   four rows PyPSA adds only under the keyword tighten the relaxation of a unit
   with a fixed build whose start and stop cost the same in every snapshot and
-  every scenario (`constraints.py:599-699`). A modular committable unit is refused, as PyPSA
-  refuses it. Every other row is the integer run's.
+  every scenario (`constraints.py:599-699`). A modular committable unit is
+  refused, as PyPSA refuses it. Every other row is the integer run's.
 
 variables:
   Generator_status:

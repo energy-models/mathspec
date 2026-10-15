@@ -186,6 +186,8 @@ closed and re-filed, not annotated.
 
 ## Prose
 
-Plain declarative sentences, Simplified Technical English (ASD-STE100), in
-pages, issues, PRs, commits and conversation. Documentation pages follow
+Plain declarative sentences that aim for Simplified Technical English
+(ASD-STE100), in pages, issues, PRs, commits and conversation. All of them follow
+[the prose-writing skill](.claude/skills/prose-writing/SKILL.md).
+Documentation pages also follow
 [the docs-writing skill](.claude/skills/docs-writing/SKILL.md).

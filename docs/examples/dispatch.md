@@ -5,13 +5,14 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Least-cost dispatch
 
-The smallest file that is a whole spec: generators with a capacity, an hourly
-load to meet, and a cost to minimise. It is the spec on the
-[home page](../index.md).
+This file is the smallest whole spec, and the one on the [home
+page](../index.md). It has generators with a capacity, an hourly load to meet,
+and a cost to minimise.
 
 The `where:` on `dispatch` deletes the rows where a generator has no capacity
 ([absence](../reference/language/absence.md)). `sum(dispatch, over=generator)`
-names the dimension it reduces, so the constraint's `dims` is what remains.
+names the dimension it sums over, so the `dims` of the constraint are the
+dimensions that remain.
 
 <!-- gallery:begin -->
 ```yaml
@@ -68,6 +69,14 @@ Least-cost dispatch of a generator fleet against an hourly load.
 
 Upright is what the data supplies — a parameter such as $`\mathrm{capacity}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{dispatch}`$. An index is italic too, being what a quantifier chooses, and a set is script.
 
+#### Variable domains
+
+**`dispatch`**
+
+```math
+0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{capacity}_{g} > 0
+```
+
 #### Objective
 
 ```math
@@ -80,14 +89,6 @@ Upright is what the data supplies — a parameter such as $`\mathrm{capacity}`$,
 
 ```math
 \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
-```
-
-#### Variable domains
-
-**`dispatch`**
-
-```math
-0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{capacity}_{g} > 0
 ```
 <!-- gallery:end -->
 

@@ -4,8 +4,8 @@
 
 description: >-
   The membership reduction — `sum(array, over=dim, by=relation[c])` groups the
-  result by the relation's column `c`, which is what makes topology data rather
-  than structure.
+  result by the relation's column `c`, so the topology is data rather than
+  structure.
 
 dimensions:
   snapshot: { dtype: int }

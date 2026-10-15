@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The network
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: the buses and the balance at each of them. It reads `Bus_injection` under `given:`, and every component adds its injection to it.
+This file states the buses and the balance at each bus. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads the sum `Bus_injection` under `given:`, and every component adds its injection to that sum.
 
 <!-- gallery:begin -->
 ```yaml
@@ -45,6 +45,12 @@ constraints:
     expression: Bus_injection == 0
 ```
 
+#### Given
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression another file defines — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
+
 #### Sets
 
 | Symbol | Meaning |
@@ -52,12 +58,6 @@ constraints:
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 | $`\mathcal{N}`$ | index $`n`$ — `bus` — network nodes |
-
-#### Given
-
-| Symbol | Meaning |
-|---|---|
-| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression another file defines — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
 
 #### Subject to
 

@@ -132,8 +132,8 @@ parameters:
       whether a transformer's phase shift is a decision — PyPSA's
       `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a
       fixed shift carried by `phase_shift`. The shift parameters carry no
-      scenario, while PyPSA reads them per scenario (`variables.py:433-443`,
-      `constraints.py:1652`, `:1735`): a parity gap (#783)
+      scenario, but PyPSA reads them per scenario (`variables.py:433-443`,
+      `constraints.py:1652`, `:1735`), so the spec and PyPSA differ here (#783)
     dims: [transformer]
     dtype: bool
   Transformer_phase_shift_min:

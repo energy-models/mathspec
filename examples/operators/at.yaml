@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  The same join with no group-by — `at(array, by=relation[c])` reads one
-  coarse value once per fine label pointing at it.
+  The join without a grouping — `at(array, by=relation[c])` reads one coarse
+  value once for each fine label that points at it.
 
 dimensions:
   snapshot: { dtype: int }
