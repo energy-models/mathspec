@@ -44,10 +44,12 @@ from mathspec.errors import DimensionError, SchemaError, did_you_mean, unordered
 from mathspec.program import (
     Add,
     Axis,
+    Cases,
     Constant,
     Divide,
     Dual,
     Expression,
+    ExpressionReference,
     Join,
     JoinColumns,
     Multiply,
@@ -81,6 +83,37 @@ _Edge = tuple[bool, float | None]
 #: chain of 200 entries survived every pass on a default stack and 250 did not
 #: (#643).
 MAX_RESOLVED_DEPTH = 3 * MAX_DEPTH
+
+
+def _zero_in(e: Expression) -> tuple[str, str] | None:
+    """Where the file itself makes *e* 0, with the rewrite that removes it, or ``None`` where it never does.
+
+    ``edge=0`` on a shift puts a 0 where the shift vacates, whatever the
+    data says, so a divisor that holds one is refused at load. A factor, the
+    numerator of a quotient, the base of a power, and the operand of a
+    negation, a sum, a window, a shift, a lookup or a named expression make *e*
+    0 where they are 0; a sum of terms only where every term is, so
+    ``shift(p, edge=0) + 1`` never is; a case where any region is.
+    """
+    match e:
+        case Translate(fill=fill) if fill == 0:
+            return f'where shift(along={e.along}, edge=0) vacates', "Write edge='wrap', or an edge= value other than 0."
+        case Negate(operand=operand) | Sum(operand=operand) | WindowSum(operand=operand) | Translate(operand=operand):
+            return _zero_in(operand)
+        case Join(operand=operand) | ExpressionReference(body=operand):
+            return _zero_in(operand)
+        case Multiply(left=left, right=right):
+            return _zero_in(left) or _zero_in(right)
+        case Divide(numerator=numerator):
+            return _zero_in(numerator)
+        case Power(base=base):
+            return _zero_in(base)
+        case Add(left=left, right=right):
+            zero = _zero_in(left)
+            return zero if zero is not None and _zero_in(right) is not None else None
+        case Cases(regions=regions):
+            return next((zero for r in regions if (zero := _zero_in(r.value)) is not None), None)
+    return None
 
 
 @dataclass(frozen=True)
@@ -172,6 +205,11 @@ class ExpressionResolver:
             case '*':
                 return Multiply(left, right)
             case '/':
+                if (zero := _zero_in(right)) is not None:
+                    self.errors.append(
+                        f'{self.context}: the divisor is 0 {zero[0]}, which no number divides by. {zero[1]}'
+                    )
+                    return None
                 return Divide(left, right)
             case '**':
                 return Power(left, right)
