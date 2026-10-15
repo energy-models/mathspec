@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast, overload
 
-import yaml
-
 from mathspec._expression_parser import (
     BinaryOperatorNode,
     ComparisonNode,
@@ -18,6 +16,7 @@ from mathspec._expression_parser import (
     operand,
     parse_expression,
 )
+from mathspec._yaml import dump_yaml
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -252,17 +251,6 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
     return built
 
 
-class _Dumper(yaml.SafeDumper):
-    """A dumper writing a multi-line expression as a block scalar, rather than escaping the newlines into one line."""
-
-
-def _scalar(dumper: yaml.SafeDumper, text: str) -> yaml.ScalarNode:
-    return dumper.represent_scalar('tag:yaml.org,2002:str', text, style='|' if '\n' in text else None)
-
-
-_Dumper.add_representer(str, _scalar)
-
-
 def canonical_yaml(spec: Spec) -> str:
     """The file a reviewer diffs — [`canonical_dict`][mathspec.canonical.canonical_dict] as YAML, each expression term on its own line."""
-    return yaml.dump(canonical_dict(spec), Dumper=_Dumper, sort_keys=False, allow_unicode=True)
+    return dump_yaml(canonical_dict(spec))

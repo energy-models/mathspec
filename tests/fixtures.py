@@ -27,6 +27,11 @@ EXAMPLES = Path(__file__).resolve().parent.parent / 'examples'
 #: from the same directory, so a probe added for the page is swept here too.
 OPERATOR_PROBES = sorted((EXAMPLES / 'operators').glob('*.yaml'))
 
+#: Every spec in the repository, the operator probes included. The symbol
+#: tables under `examples/symbols/` and the patches under a `variants/` folder
+#: are not specs and do not load as one.
+SPECS = [path for path in sorted(EXAMPLES.rglob('*.yaml')) if not {'symbols', 'variants'} & set(path.parts)]
+
 #: The shape of ``examples/dispatch.yaml`` as a dict a test can vary with
 #: :func:`varied`: no ``where:``, the constraint named ``balance``, and short
 #: names, so a test that prints it asserts on the math rather than on the

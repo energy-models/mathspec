@@ -33,15 +33,11 @@ from mathspec._expression_parser import (
     parse_expression,
 )
 from mathspec.canonical import _factors, _signed_terms, canonical_text, laid_out, normalised
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, raw_of, varied
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, raw_of, varied
 
 if TYPE_CHECKING:
     from mathspec._expression_parser import ArithmeticNode, ParsedNode
 
-#: Every spec in the repository, the operator probes included. The symbol
-#: tables under `examples/symbols/` and the patches under a `variants/` folder
-#: are not specs and do not load as one.
-SPECS = [path for path in sorted(EXAMPLES.rglob('*.yaml')) if not {'symbols', 'variants'} & set(path.parts)]
 FIXTURE = Path(__file__).resolve().parent / 'fixtures' / 'every_program_node.yaml'
 
 

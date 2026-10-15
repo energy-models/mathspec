@@ -55,6 +55,6 @@ def test_the_page_shows_the_entries_the_expansion_emits(tmp_path, monkeypatch):
         exec(compile(code, str(PAGE), 'exec'), namespace)
         claims.extend(_claims(code))
 
-    assert len(claims) == 23, 'every `expression  # value` line on the page is checked; one without one is not'
+    assert len(claims) == 24, 'every `expression  # value` line on the page is checked; one without one is not'
     for expression, claimed in claims:
         assert eval(expression, namespace) == claimed, f'reading.md says `{expression}` is {claimed}'

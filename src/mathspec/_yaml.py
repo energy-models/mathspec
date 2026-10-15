@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""How this project reads a YAML file.
+"""How this project reads and writes a YAML file.
 
 `yaml.safe_load` implements YAML 1.1, and two of its rules are wrong for a
 language whose scalars are user data; both are fixed here:
@@ -16,13 +16,15 @@ language whose scalars are user data; both are fixed here:
 
 The output is plain ``dict``/``str``: no loader wrapper reaches the schema
 or the AST.
+
+Every spec this package writes is laid out by ``dump_yaml``.
 """
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 import yaml
 
@@ -134,3 +136,128 @@ def parse_yaml(text: str, origin: str = '<string>') -> dict[str, object]:
         msg = f'{origin}: the file holds a {type(data).__name__}, not a mapping of sections. Write sections such as dimensions: at the top level.'
         raise SchemaError(msg)
     return data
+
+
+#: The space between two sentences: one space after a full stop, a question mark or an exclamation mark, and
+#: before a capital letter or a backtick, so the space in ``e.g. the`` is not one.
+_SENTENCE_BREAK = re.compile(r'(?<=[.!?]) (?=[A-Z`])')
+
+
+#: The longest line, indent and key included, that a list or a mapping is written on.
+_LINE_LIMIT = 100
+
+
+class _Dumper(yaml.SafeDumper):
+    """A dumper writing short lists and mappings on one line, and prose one sentence to a line."""
+
+    @override
+    def expect_node(
+        self, root: bool = False, sequence: bool = False, mapping: bool = False, simple_key: bool = False
+    ) -> None:
+        """Write a list or a mapping in block style when its one line would pass the limit.
+
+        Only the emitter knows the column the collection starts at, after its
+        key or its ``-``. The representer leaves the collection's width in its
+        flow style, and the one-line form adds a space and that width to the
+        column.
+        """
+        event = self.event
+        if isinstance(event, yaml.CollectionStartEvent) and event.flow_style:
+            event.flow_style = self.column + 1 + event.flow_style <= _LINE_LIMIT
+        super().expect_node(root, sequence, mapping, simple_key)
+
+    @override
+    def write_folded(self, text: str) -> None:
+        """Write *text* as a folded scalar with one sentence on each line.
+
+        YAML folds a line break between two lines of text into one space, so
+        the file reads back as the single-line string it came from.
+        """
+        self.write_indicator('>' + self.determine_block_hints(text), True)
+        for sentence in _SENTENCE_BREAK.split(text):
+            self.write_line_break()
+            self.write_indent()
+            self.stream.write(sentence)
+            self.column += len(sentence)
+
+
+#: A value a one-line mapping may hold: a number, a boolean, or a name such as ``p_max``, ``binary`` or ``-inf``.
+_WORD = re.compile(r'[\w.+-]+')
+
+
+def _one_line(value: object) -> bool:
+    """Whether *value* is a list or a mapping that may be written on one line.
+
+    A list may, when it holds only one-line scalars and such lists. A mapping
+    may, when it holds only numbers, booleans, names and such lists, as
+    ``bounds`` does. An entry with a description or an expression in it
+    keeps one key on each line, so its text is never quoted to fit a flow
+    mapping. Whether the line fits is for the emitter to decide.
+    """
+    if isinstance(value, list):
+        return all(_one_line(item) if isinstance(item, list) else _one_line_scalar(item) for item in value)
+    return isinstance(value, dict) and all(
+        _one_line(item) if isinstance(item, list) else _WORD.fullmatch(str(item)) is not None for item in value.values()
+    )
+
+
+def _width(value: object) -> int:
+    """How wide *value* is on one line, brackets and separators included, each scalar as ``str`` prints it.
+
+    An empty list or mapping is its two brackets wide.
+    """
+    if isinstance(value, list):
+        return sum(_width(item) + 2 for item in value) or 2
+    if isinstance(value, dict):
+        return sum(len(str(key)) + _width(item) + 4 for key, item in value.items()) or 2
+    return len(str(value))
+
+
+def _one_line_scalar(value: object) -> bool:
+    """Whether *value* is a scalar with no line break, which a flow collection can hold."""
+    return not isinstance(value, (dict, list)) and not (isinstance(value, str) and '\n' in value)
+
+
+def _string(dumper: yaml.SafeDumper, text: str) -> yaml.ScalarNode:
+    if '\n' in text:
+        return dumper.represent_scalar('tag:yaml.org,2002:str', text, style='|')
+    prose = text == text.strip() and _SENTENCE_BREAK.search(text) is not None
+    return dumper.represent_scalar('tag:yaml.org,2002:str', text, style='>' if prose else None)
+
+
+def _flow_style(value: list[object] | dict[object, object]) -> int | bool:
+    """The width of *value* on one line, where it may go on one line, and ``False`` where not.
+
+    PyYAML reads a flow style only as true or false, and a width is never 0,
+    so the width rides to [`_Dumper.expect_node`][mathspec._yaml._Dumper.expect_node]
+    on the event.
+    """
+    return _width(value) if _one_line(value) else False
+
+
+def _sequence(dumper: yaml.SafeDumper, items: list[object]) -> yaml.SequenceNode:
+    width = _flow_style(items)
+    return dumper.represent_sequence('tag:yaml.org,2002:seq', items, flow_style=width)  # pyrefly: ignore[bad-argument-type] -- the width rides to expect_node, and PyYAML reads it only as true or false
+
+
+def _mapping(dumper: yaml.SafeDumper, entries: dict[object, object]) -> yaml.MappingNode:
+    width = _flow_style(entries)
+    return dumper.represent_mapping('tag:yaml.org,2002:map', entries, flow_style=width)  # pyrefly: ignore[bad-argument-type] -- the width rides to expect_node, and PyYAML reads it only as true or false
+
+
+_Dumper.add_representer(str, _string)
+_Dumper.add_representer(list, _sequence)
+_Dumper.add_representer(dict, _mapping)
+
+
+def dump_yaml(data: dict[str, object]) -> str:
+    """*data* as YAML text, in the one layout every spec this package writes shares.
+
+    A list, and a mapping of numbers and names, is written on one line when
+    the whole line holds 100 characters or fewer, as ``dims: [day, hour]`` and
+    ``bounds: {lower: 0}``. Text of two or more sentences is a folded scalar
+    with one sentence on each line, and a multi-line string is a literal block
+    scalar. No sentence is wrapped, so an edit to one sentence changes one line
+    of a diff.
+    """
+    return yaml.dump(data, Dumper=_Dumper, sort_keys=False, allow_unicode=True, width=float('inf'))
