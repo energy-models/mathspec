@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+# How `examples/variants/pypsa_linearized_uc.yaml` prints, laid over
+# `examples/symbols/pypsa.yaml`: the names the patch declares and the base does
+# not. The base table may name only what the base declares.
+names:
+  Generator_tightened: '\mathrm{on}^{\mathrm{com,tight}}'
+  Link_tightened: '\mathrm{on}^{f,\mathrm{com,tight}}'
+  Process_tightened: '\mathrm{on}^{z,\mathrm{com,tight}}'

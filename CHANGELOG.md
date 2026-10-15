@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(pypsa): the linearized unit commitment names the units it tightens as a mask ([#887](https://github.com/energy-models/mathspec/pull/887))
 - docs(pypsa): an extendable unit has a capacity to choose exactly where its active flag is set, as in PyPSA ([#886](https://github.com/energy-models/mathspec/pull/886))
 - refactor(api)!: a module outside spec, program and errors has a name that starts with an underscore ([#878](https://github.com/energy-models/mathspec/pull/878))
 - feat(cli)!: `python -m mathspec diff` compares two specs in the canonical form, and `canonical` no longer rewrites or checks a file ([#874](https://github.com/energy-models/mathspec/pull/874))
