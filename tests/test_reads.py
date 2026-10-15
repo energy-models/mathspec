@@ -432,8 +432,8 @@ MODELS = [
             'parameters.on': {'dims': ['t', 'g'], 'dtype': 'bool'},
             'expressions.e': {
                 'dims': ['t', 'g'],
-                'cases': {'on': {'when': 'on', 'expression': 'p * y'}},
-                'otherwise': 'y',
+                'cases': {'on': {'when': 'on', 'expression': 'p * x'}},
+                'otherwise': 'x',
             },
             'constraints.c': {'dims': ['t', 'g'], 'where': 'p0 > 0', 'expression': 'e <= 1'},
         },
