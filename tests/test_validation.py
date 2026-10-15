@@ -2573,6 +2573,25 @@ def test_a_variable_missing_inside_what_the_variable_takes_loads(declared):
             {'expressions.e': 'c', 'constraints.cap': {'dims': ['g'], 'expression': 'p / e <= 1'}},
             id='through-a-named-expression',
         ),
+        pytest.param(
+            {
+                'expressions.e': {
+                    'dims': ['g'],
+                    'cases': {'on': {'when': 'flag', 'expression': 'c'}},
+                    'otherwise': '1',
+                },
+                'constraints.cap': {'dims': ['g'], 'expression': 'p / e <= 1'},
+            },
+            id='in-a-case',
+        ),
+        pytest.param(
+            {
+                'parameters.d': {'dims': ['h'], 'missing': 0},
+                'expressions.e': 'c + at(d, by=lk[h])',
+                'constraints.cap': {'dims': ['g'], 'expression': 'p / e <= 1'},
+            },
+            id='looked-up-in-every-addend',
+        ),
     ],
 )
 def test_a_divisor_that_reads_a_missing_row_as_zero_is_refused(section):
