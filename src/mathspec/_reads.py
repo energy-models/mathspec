@@ -45,24 +45,24 @@ from mathspec.program import (
     Divide,
     Dual,
     ExpressionComparison,
+    ExpressionReference,
     Join,
     JoinColumns,
     JoinedPredicate,
     Mask,
+    MaskReference,
     Multiply,
-    NamedExpression,
-    NamedMask,
     Negate,
     Not,
     Or,
-    Parameter,
     ParameterDefined,
+    ParameterReference,
     Power,
     Region,
     Sum,
     Translate,
-    Variable,
     VariableDefined,
+    VariableReference,
     WindowPredicate,
     WindowSum,
     children,
@@ -71,7 +71,7 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from mathspec.program import ConstraintDeclaration, Expression, Partition, Predicate, Program
+    from mathspec.program import Constraint, Expression, Partition, Predicate, Program
 
 _TRUE = BooleanLiteral(True)
 _FALSE = BooleanLiteral(False)
@@ -148,7 +148,7 @@ class _Reads:
             if not entry.in_math:
                 self.visit(entry.expression, self.present(entry.expression), _TRUE)
 
-    def built(self, name: str, constraint: ConstraintDeclaration) -> Predicate:
+    def built(self, name: str, constraint: Constraint) -> Predicate:
         """Where *constraint* has a row: its mask holds, absence removed neither side, and a variable term is left."""
         if name not in self._built:
             lhs, rhs = constraint.lhs, constraint.rhs
@@ -168,18 +168,18 @@ class _Reads:
         return self._frames[e]
 
     def _frame(self, e: Expression) -> frozenset[str]:
-        """The dims *e* is read over, as ``mathspec.dimensions.dims_of`` finds them when the file loads."""
+        """The dims *e* is read over, as ``mathspec._dimensions.dims_of`` finds them when the file loads."""
         program, given = self.program, self.program.given
         match e:
             case Constant():
                 return frozenset()
-            case Parameter(name=name):
+            case ParameterReference(name=name):
                 return frozenset({**program.parameters, **given.parameters}[name].dims)
-            case Variable(name=name):
+            case VariableReference(name=name):
                 return frozenset({**program.variables, **given.variables, **given.expressions}[name].dims)
             case Dual(constraint=name):
                 return frozenset({**program.constraints, **given.constraints}[name].dims)
-            case NamedExpression(name=name):
+            case ExpressionReference(name=name):
                 return frozenset(program.expressions[name].dims)
             case Cases(regions=regions):
                 return frozenset().union(*(self.frame(r.value) | r.when.dims for r in regions))
@@ -241,12 +241,12 @@ class _Reads:
         match e:
             case Constant() | Sum() | WindowSum():
                 return _TRUE
-            case Parameter(name=name):
+            case ParameterReference(name=name):
                 declared = program.parameters.get(name)
                 if declared is not None and declared.missing != 'absent':
                     return _TRUE
                 return ParameterDefined(name, self.ordered(self.frame(e)))
-            case Variable(name=name):
+            case VariableReference(name=name):
                 variable = program.variables.get(name)
                 if variable is not None and (variable.where is None or variable.missing != 'absent'):
                     return _TRUE
@@ -262,7 +262,7 @@ class _Reads:
                 return self.forward_shift(e, self.present(e.operand), vacated=True)
             case Cases(regions=regions):
                 return _or(*(_and(r.when.root, self.present(r.value)) for r in regions))
-            case NamedExpression(body=body):
+            case ExpressionReference(body=body):
                 return self.present(body)
         assert_never(e)
 
@@ -274,9 +274,9 @@ class _Reads:
     def _liveness(self, e: Expression) -> Predicate:
         """Where *e* carries a variable term, over its own frame; presence is the caller's to add."""
         match e:
-            case Constant() | Parameter() | Dual() | Power():
+            case Constant() | ParameterReference() | Dual() | Power():
                 return _FALSE
-            case Variable(name=name):
+            case VariableReference(name=name):
                 variable = self.program.variables.get(name)
                 if variable is not None and variable.where is None:
                     return _TRUE
@@ -300,7 +300,7 @@ class _Reads:
                 return self.forward_shift(e, self.live(e.operand), vacated=False)
             case Cases(regions=regions):
                 return _or(*(_and(r.when.root, self.live(r.value)) for r in regions))
-            case NamedExpression(body=body):
+            case ExpressionReference(body=body):
                 return self.live(body)
         assert_never(e)
 
@@ -363,11 +363,11 @@ class _Reads:
         if read == _FALSE and evaluated == _FALSE:
             return
         match e:
-            case Parameter(name=name):
+            case ParameterReference(name=name):
                 declared = self.program.parameters.get(name)
                 if declared is not None and declared.missing == 'refused':
                     self.record(name, read, declared.dims)
-            case Constant() | Variable() | Dual():
+            case Constant() | VariableReference() | Dual():
                 return
             case Negate() | Add() | Multiply() | Divide() | Power():
                 for child in children(e):
@@ -393,7 +393,7 @@ class _Reads:
                 for region in regions:
                     self.visit_mask(region.when.root, evaluated)
                     self.visit(region.value, _and(read, region.when.root), _and(evaluated, region.when.root))
-            case NamedExpression(body=body):
+            case ExpressionReference(body=body):
                 self.visit(body, read, evaluated)
             case _:
                 assert_never(e)
@@ -418,7 +418,7 @@ class _Reads:
                 self.visit_mask(right, evaluated)
             case Not(operand=operand):
                 self.visit_mask(operand, evaluated)
-            case NamedMask(body=body):
+            case MaskReference(body=body):
                 self.visit_mask(body, evaluated)
             case CountComparison(predicate=predicate, over=over):
                 self.visit_mask(predicate.root, self.project(evaluated, Mask(evaluated).dims - {over}))
@@ -438,7 +438,7 @@ class _Reads:
     def amount(self, amount: int | str, read: Predicate) -> None:
         """A named offset or width is read wherever the operator it sizes is."""
         if isinstance(amount, str):
-            self.visit(Parameter(amount), read, _FALSE)
+            self.visit(ParameterReference(amount), read, _FALSE)
 
     def back_join(self, columns: JoinColumns, read: Predicate, e: Expression) -> Predicate:
         """Where the operand of a join on *columns* is read, given *read* at the join *e*: the join with its columns swapped."""

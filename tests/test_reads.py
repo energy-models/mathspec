@@ -7,7 +7,7 @@
 The check is differential. An oracle here builds the rows of a small model on
 random data the way the absence rules say, and records every parameter
 coordinate that a built row, a bound of an existing variable, the objective or
-a reported expression reads. It shares no code with `mathspec.reads`, which
+a reported expression reads. It shares no code with `mathspec._reads`, which
 states the same set as a mask without data. Each mask is then evaluated on the
 same data and must hold at exactly the coordinates the oracle recorded.
 
@@ -36,23 +36,23 @@ from mathspec.program import (
     Divide,
     Dual,
     ExpressionComparison,
+    ExpressionReference,
     Join,
     JoinColumns,
     JoinedPredicate,
+    MaskReference,
     Multiply,
-    NamedExpression,
-    NamedMask,
     Negate,
     Not,
     Or,
-    Parameter,
     ParameterComparison,
     ParameterDefined,
+    ParameterReference,
     Power,
     Sum,
     Translate,
-    Variable,
     VariableDefined,
+    VariableReference,
     WindowPredicate,
     WindowSum,
     children,
@@ -122,13 +122,13 @@ class Oracle:
         match e:
             case Constant() | Dual():
                 return frozenset(), frozenset()
-            case Parameter(name=name):
+            case ParameterReference(name=name):
                 declared = self.program.parameters[name]
                 key = _key(declared.dims, at)
                 if key not in self.data.tables[name] and declared.missing == 'absent':
                     return None
                 return frozenset(), frozenset({(name, key)})
-            case Variable(name=name):
+            case VariableReference(name=name):
                 declared = self.program.variables[name]
                 if declared.where is None or self.holds(declared.where.root, at):
                     return frozenset({(name, _key(declared.dims, at))}), frozenset()
@@ -164,7 +164,7 @@ class Oracle:
             case Cases(regions=regions):
                 whens = [self.holds(region.when.root, at, evaluated=True) for region in regions]
                 return next((self.value(r.value, at) for r, w in zip(regions, whens, strict=True) if w), None)
-            case NamedExpression(body=body):
+            case ExpressionReference(body=body):
                 return self.value(body, at)
         raise AssertionError(f'the oracle does not build {type(e).__name__}')
 
@@ -216,7 +216,7 @@ class Oracle:
                 return any(sides)
             case Not(operand=operand):
                 return not self.holds(operand, at, evaluated=evaluated)
-            case NamedMask(body=body):
+            case MaskReference(body=body):
                 return self.holds(body, at, evaluated=evaluated)
             case ParameterComparison(name=name, op=op, value=literal):
                 found = self.data.tables[name].get(_key(self.program.parameters[name].dims, at))

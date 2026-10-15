@@ -12,14 +12,14 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mathspec import to_latex, to_spec, typeset
-from mathspec.typesetting.symbols import chosen_expressions
+from mathspec._typesetting.symbols import chosen_expressions
 from tests.fixtures import DISPATCH_MODEL as DISPATCH
 from tests.fixtures import varied
 from tests.typesetting.fixtures import EVERY_FORMAT
 
 if TYPE_CHECKING:
-    from mathspec.typesetting import FormatName
-    from mathspec.typesetting.format import Format
+    from mathspec._typesetting import FormatName
+    from mathspec._typesetting.format import Format
 
 #: One region and the fallback. `opening` is a column and `otherwise` a scalar,
 #: so the cases alone would not give a quantity its shape — the `dims` does.
@@ -130,7 +130,7 @@ def test_a_variable_reached_through_another_cased_expression_still_prints_chosen
     """The given/chosen cut follows the whole chain, not one link of it.
 
     `opening_cost` names `headroom` and nothing else that moves; `headroom`
-    holds a variable. A walk stopping at the inner block would print the outer
+    holds a variable. A walk stopping at the inner entry would print the outer
     one upright — a quantity the solver decides, set as one the model was handed.
     """
     assert chosen_expressions(to_spec(_NESTED).program) == {'headroom', 'opening_cost'}, (
@@ -148,7 +148,7 @@ def test_the_table_may_rename_a_named_expression_cased_or_plain():
     assert 's_{t} & =' in tex, 'the definition prints under the spelling the table gave'
 
 
-def test_the_definitions_print_in_declaration_order():
+def test_the_definitions_print_in_file_order():
     """The file's order, not a set's — six of them, so a shuffle cannot pass by luck.
 
     The names were once collected into a `frozenset`, whose iteration order
@@ -160,4 +160,4 @@ def test_the_definitions_print_in_declaration_order():
     tex = to_latex(varied(CASED, **{f'expressions.{n}': BY_REGION for n in declared}), legend=False)
     section = tex[tex.index('Definitions') : tex.index('Objective')]
     labels = re.findall(r'^\\text\{(\w+)\} &&', section, flags=re.MULTILINE)
-    assert labels == ['headroom', *declared], "declaration order, the file's own"
+    assert labels == ['headroom', *declared], "file order, the file's own"

@@ -15,16 +15,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from mathspec._piecewise import Emitted, leaves_ungated
+from mathspec._sos import Emitted as EmittedSet
+from mathspec._typesetting.format import NOTATIONS
 from mathspec._yaml import read_yaml
 from mathspec.errors import SchemaError, did_you_mean
-from mathspec.piecewise import Emitted, leaves_ungated
-from mathspec.program import Dual, Variable, walk
-from mathspec.sos import Emitted as EmittedSet
-from mathspec.typesetting.format import NOTATIONS
+from mathspec.program import Dual, VariableReference, walk
 
 if TYPE_CHECKING:
+    from mathspec._typesetting.format import Format, Notation
     from mathspec.program import Program
-    from mathspec.typesetting.format import Format, Notation
 
 __all__ = ['SymbolTable', 'Symbols', 'symbols_for']
 
@@ -87,7 +87,7 @@ def chosen_expressions(program: Program) -> frozenset[str]:
     return frozenset(
         name
         for name, entry in program.expressions.items()
-        if any(isinstance(node, Variable | Dual) for node in walk(entry.expression))
+        if any(isinstance(node, VariableReference | Dual) for node in walk(entry.expression))
     )
 
 
@@ -102,8 +102,6 @@ class Symbols:
     ``p`` is not a collision.
 
     Attributes:
-        overridden: Names the table spelled; the convention note quotes only
-            derived symbols.
         name: Each parameter's, variable's, expression's and mask's symbol.
             A mask is upright, being read off the data as a parameter is.
         constraint: Each constraint's symbol, the subscript ``dual(c)`` prints
@@ -115,7 +113,6 @@ class Symbols:
         set: Each dimension's set symbol.
     """
 
-    overridden: frozenset[str]
     name: Mapping[str, str]
     constraint: Mapping[str, str]
     index: Mapping[str, str]
@@ -173,7 +170,7 @@ def symbols_for(program: Program, fmt: Format, table: SymbolTable) -> Symbols:
         upper = _first_free(_set_candidates(dim, letter), taken_set)
         taken_set.add(upper)
         sets[dim] = table.sets[dim] if dim in table.sets else fmt.script(upper)
-    return Symbols(frozenset(table.names) & declared, name, constraint, index, sets)
+    return Symbols(name, constraint, index, sets)
 
 
 def _index_candidates(dim: str) -> list[str]:
@@ -270,8 +267,8 @@ class SymbolTable:
     def checked_against(self, program: Program) -> SymbolTable:
         """Reject entries naming nothing in *program* or in what its formulations state, with the near miss.
 
-        A name a ``piecewise:`` or ``sos:`` block emits counts as declared, so
-        one table spells both readings of a spec: the blocks as the file states
+        A name a ``piecewise:`` or ``sos:`` entry emits counts as declared, so
+        one table spells both readings of a spec: the entries as the file states
         them, and the rows [`expand`][mathspec.spec.Spec.expand] writes out.
         """
         dims = set(program.dimensions)
@@ -310,7 +307,7 @@ def _emitted(program: Program) -> set[str]:
         )
         for name, curve in program.piecewise.items()
     )
-    sets = (EmittedSet.of(name, block.sos_type).by_kind for name, block in program.sos.items())
+    sets = (EmittedSet.of(name, entry.sos_type).by_kind for name, entry in program.sos.items())
     return {
         *(name for names in curves for name in names),
         *(name for by_kind in sets for _, names in by_kind for name in names),

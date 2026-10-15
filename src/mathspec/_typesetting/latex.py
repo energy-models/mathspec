@@ -8,12 +8,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from mathspec.typesetting.format import OPERATOR_SPELLINGS, aligned_rows, escaped, paragraphs
+from mathspec._typesetting.format import OPERATOR_SPELLINGS, aligned_rows, escaped, paragraphs
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from mathspec.typesetting.format import Entry, Line, Notation, OperatorName
+    from mathspec._typesetting.format import LegendItem, Line, Notation, OperatorName
 
 _ESCAPES = {
     '\\': r'\textbackslash{}',
@@ -42,7 +42,7 @@ def _escape(text: str) -> str:
 
 
 class LatexFormat:
-    """See [`mathspec.typesetting.format.Format`][]."""
+    """See [`mathspec._typesetting.format.Format`][]."""
 
     notation: ClassVar[Notation] = 'latex'
     #: TeX's own em-dash ligature.
@@ -124,8 +124,8 @@ class LatexFormat:
         body = ' \\\\\n'.join(aligned_rows(lines, self, gap=' && '))
         return f'\\begin{{{environment}}}\n{body}\n\\end{{{environment}}}'
 
-    def glossary(self, entries: list[Entry]) -> str:
-        rows = '\n'.join(rf'\item[{{{self.math(e.symbol)}}}] {e.meaning}' for e in entries)
+    def glossary(self, items: list[LegendItem]) -> str:
+        rows = '\n'.join(rf'\item[{{{self.math(e.symbol)}}}] {e.meaning}' for e in items)
         return f'\\begin{{description}}\n{rows}\n\\end{{description}}'
 
     def section(self, title: str, body: str) -> str:

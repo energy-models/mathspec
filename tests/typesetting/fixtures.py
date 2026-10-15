@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec.typesetting import FORMATS
+from mathspec._typesetting import FORMATS
 
 LATEX = FORMATS['latex']
 #: Each format by the name a renderer takes and the object that spells it.

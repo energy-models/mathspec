@@ -6,7 +6,7 @@
 
 Every operator call is read here — its shape against [`BUILTINS`][],
 its dimension and relation arguments against the namespace — and the node it
-stands for is built. [`mathspec.resolution`][] holds the namespace and the
+stands for is built. [`mathspec._resolution`][] holds the namespace and the
 doors that call this.
 """
 
@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, assert_never, cast
 
+from mathspec._dimensions import dims_of
 from mathspec._expression_parser import (
     MAX_DEPTH,
     ArithmeticNode,
@@ -31,9 +32,7 @@ from mathspec._expression_parser import (
     names_in,
     shown,
 )
-from mathspec.dimensions import dims_of
-from mathspec.errors import DimensionError, SchemaError, did_you_mean, unordered
-from mathspec.operators import (
+from mathspec._operators import (
     AMOUNTS,
     BUILTINS,
     EDGE_WRAP,
@@ -41,6 +40,7 @@ from mathspec.operators import (
     edge_error,
     unknown_operator_message,
 )
+from mathspec.errors import DimensionError, SchemaError, did_you_mean, unordered
 from mathspec.program import (
     Add,
     Axis,
@@ -52,13 +52,13 @@ from mathspec.program import (
     JoinColumns,
     Multiply,
     Negate,
-    Parameter,
+    ParameterReference,
     Partition,
     Power,
-    RelationDeclaration,
+    Relation,
     Sum,
     Translate,
-    Variable,
+    VariableReference,
     WindowSum,
     carries_variable,
     children,
@@ -68,7 +68,7 @@ from mathspec.spec import NUMERIC_DTYPES
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from mathspec.resolution import Namespace
+    from mathspec._resolution import Namespace
 
 
 #: An ``edge=`` as a translation carries it: whether it wraps, and the number
@@ -88,7 +88,7 @@ class ExpressionResolver:
     """One resolution walk over an expression, and the three things every step of it reads.
 
     A node that cannot be built comes back as ``None`` with its refusal
-    appended to ``errors``; every sibling is still read, so a declaration
+    appended to ``errors``; every sibling is still read, so an entry
     with two faults reports both. ``formals`` are a macro template's formals:
     a formal has no kind until a call site binds it, so a node one stands
     under is ``None`` with nothing appended.
@@ -182,9 +182,9 @@ class ExpressionResolver:
 
     def _zero_divisor(self, divisor: Expression) -> bool:
         """Whether *divisor* is a parameter whose ``missing: 0`` gives a quotient a zero to divide by, recorded as an error."""
-        if not isinstance(divisor, Parameter):
+        if not isinstance(divisor, ParameterReference):
             return False
-        declared = self.ns.schema.parameters.get(divisor.name)
+        declared = self.ns.spec.parameters.get(divisor.name)
         if declared is None or isinstance(declared.missing, bool) or declared.missing != 0:
             return False
         self.errors.append(
@@ -198,7 +198,7 @@ class ExpressionResolver:
 
         A named expression arrives as the one node [`Namespace.named`][]
         built for it; the cast is the one place a
-        [`NamedExpression`][mathspec.program.NamedExpression] enters a tree typed as a program's,
+        [`ExpressionReference`][mathspec.program.ExpressionReference] enters a tree typed as a program's,
         which lowering makes true.
         """
         if node.name in self.formals:
@@ -214,13 +214,13 @@ class ExpressionResolver:
                 return None
         match self.ns.kind(node.name):
             case 'variable':
-                return Variable(node.name)
+                return VariableReference(node.name)
             case 'parameter':
                 dtype = self.ns.dtypes.get(node.name)
                 if dtype is not None and dtype not in NUMERIC_DTYPES:
                     self.errors.append(not_a_number(node.name, dtype, self.context))
                     return None
-                return Parameter(node.name)
+                return ParameterReference(node.name)
             case 'dimension':
                 self.errors.append(
                     f"{self.context}: '{node.name}' is a dimension, and a dimension is "
@@ -317,7 +317,7 @@ class ExpressionResolver:
     def _at(self, operand: Expression, columns: ColumnsNode) -> Expression | None:
         """``at(x, by=relation[column])``: *operand* read at the value of *columns* each row of the relation holds."""
         try:
-            inner = dims_of(operand, self.ns.schema, self.context)
+            inner = dims_of(operand, self.ns.spec, self.context)
         except DimensionError as e:
             self.errors.append(str(e))
             return None
@@ -357,7 +357,7 @@ class ExpressionResolver:
     def _bare_sum(self, operand: Expression) -> Expression | None:
         """``sum(x)`` with no ``over=`` or ``by=`` reduces every dim the operand carries, which it has to carry some of."""
         try:
-            inner = dims_of(operand, self.ns.schema, self.context)
+            inner = dims_of(operand, self.ns.spec, self.context)
         except DimensionError as e:
             self.errors.append(str(e))
             return None
@@ -397,7 +397,7 @@ class ExpressionResolver:
     def _amount(self, value: ArithmeticNode, operator: str, key: str) -> int | str | None:
         """``offset=`` or ``window=``: a whole number in the operator's range, or the name of a parameter.
 
-        Closed so that [`mathspec.dimensions._check_named_amount`][] sees
+        Closed so that [`mathspec._dimensions._check_named_amount`][] sees
         every parameter an amount carries, and so that a program's
         ``offset`` and ``width`` are the ``int | str`` they say.
         """
@@ -478,7 +478,7 @@ class ExpressionResolver:
         Constraints sit outside the flat namespace, so this store is consulted
         only here — a bare name in arithmetic never reaches it. A dual standing
         where the math is built is refused separately
-        ([`mathspec.degree`][]); this pass only types the name.
+        ([`mathspec._degree`][]); this pass only types the name.
         """
         (value,) = node.args
         if self._formal(value):
@@ -590,7 +590,7 @@ class ExpressionResolver:
         """How ``sum(x, over=..., by=relation[...])`` joins the relation, and the dims it sums away with no column.
 
         A name in *over* is a column of the relation where it has one, and a
-        dimension otherwise, summed away after the group-by. The declaration
+        dimension otherwise, summed away after the group-by. The entry
         refuses a column named after a dimension it is not over, so the two
         readings never disagree. Every column a call touches is written in it,
         so a relation may gain a column without changing what the call means.
@@ -756,7 +756,7 @@ def _lookup_rewrite(name: str, columns: tuple[str, ...], plain: tuple[str, ...])
     return f'sum({lookup}, over={shown(plain)})' if plain else lookup
 
 
-def _columns_over(shape: RelationDeclaration, dims: tuple[str, ...]) -> str:
+def _columns_over(shape: Relation, dims: tuple[str, ...]) -> str:
     """The columns of *shape* over each of *dims*, for the writer who named a dimension where a column was meant."""
     over = {d: [r for r in shape.roles if shape.dim(r) == d] for d in dims}
     if named := [f'the columns over {d!r} are {roles}' for d, roles in over.items() if roles]:

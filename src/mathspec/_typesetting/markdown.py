@@ -18,11 +18,11 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, ClassVar, override
 
-from mathspec.typesetting.format import escaped, paragraphs
-from mathspec.typesetting.latex import LatexFormat
+from mathspec._typesetting.format import escaped, paragraphs
+from mathspec._typesetting.latex import LatexFormat
 
 if TYPE_CHECKING:
-    from mathspec.typesetting.format import Entry, Line
+    from mathspec._typesetting.format import LegendItem, Line
 
 
 #: What Markdown reads as markup inside a paragraph, each escaped by a leading
@@ -45,7 +45,7 @@ def _cell(text: str) -> str:
 
 
 class MarkdownFormat(LatexFormat):
-    """See [`mathspec.typesetting.format.Format`][]. Math is LaTeX's; prose is not."""
+    """See [`mathspec._typesetting.format.Format`][]. Math is LaTeX's; prose is not."""
 
     #: The character, not TeX's ligature: no Markdown renderer this output
     #: is aimed at substitutes one, so `---` reaches the reader as three
@@ -86,8 +86,8 @@ class MarkdownFormat(LatexFormat):
         return '\n\n'.join(blocks)
 
     @override
-    def glossary(self, entries: list[Entry]) -> str:
-        rows = '\n'.join(f'| {_cell(self.math(e.symbol))} | {_cell(e.meaning)} |' for e in entries)
+    def glossary(self, items: list[LegendItem]) -> str:
+        rows = '\n'.join(f'| {_cell(self.math(e.symbol))} | {_cell(e.meaning)} |' for e in items)
         return f'| Symbol | Meaning |\n|---|---|\n{rows}'
 
     @override

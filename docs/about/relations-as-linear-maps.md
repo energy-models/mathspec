@@ -87,7 +87,7 @@ summed. They are the indices of the operand and of the indicator together,
 less the summed one, which is `(dims(x) − joined) ∪ grouped`. That is the rule
 in the [expressions
 reference](../reference/language/expressions.md#how-dimensions-combine), and
-`join_dims` in `src/mathspec/dimensions.py` computes it. The loader refuses a
+`join_dims` in `src/mathspec/_dimensions.py` computes it. The loader refuses a
 sum that breaks one of three conditions, and the formula needs each of them:
 
 - The operand carries every column joined on, or there is nothing to match.
@@ -218,5 +218,5 @@ The other two uses of a relation do not multiply by $`\mathbf{1}_R`$ and sum.
   neighbour $`t'`$ of $`t`$ with $`f(t') = f(t)`$. The fibres of $`f`$
   partition the axis, and the dimensions do not change.
 - A test reads the indicator itself. The name of a relation in a `where`
-  evaluates $`\mathbf{1}_R`$ at the coordinate of the declaration, and keeps
+  evaluates $`\mathbf{1}_R`$ at the coordinate of the entry, and keeps
   the coordinate where $`\mathbf{1}_R`$ is $`1`$.

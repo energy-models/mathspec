@@ -22,6 +22,7 @@ import yaml
 
 import mathspec as ms
 from mathspec.__main__ import main
+from mathspec._canonical import _factors, _signed_terms, canonical_text, laid_out, normalised
 from mathspec._expression_parser import (
     BinaryOperatorNode,
     ComparisonNode,
@@ -32,16 +33,11 @@ from mathspec._expression_parser import (
     operand,
     parse_expression,
 )
-from mathspec.canonical import _factors, _signed_terms, canonical_text, laid_out, normalised
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, raw_of, varied
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, raw_of, varied
 
 if TYPE_CHECKING:
     from mathspec._expression_parser import ArithmeticNode, ParsedNode
 
-#: Every spec in the repository, the operator probes included. The symbol
-#: tables under `examples/symbols/` and the patches under a `variants/` folder
-#: are not specs and do not load as one.
-SPECS = [path for path in sorted(EXAMPLES.rglob('*.yaml')) if not {'symbols', 'variants'} & set(path.parts)]
 FIXTURE = Path(__file__).resolve().parent / 'fixtures' / 'every_program_node.yaml'
 
 
@@ -51,7 +47,7 @@ def _dumped(**patch: object) -> str:
 
 def test_two_files_that_mean_the_same_thing_write_the_same_text():
     """The claim the form makes, over the three ambiguities a file carries: the
-    order two declarations are written in, the order of the terms of a sum, and
+    order two entries are written in, the order of the terms of a sum, and
     the order of the factors of a product."""
     one = ms.to_spec(
         {
@@ -128,7 +124,7 @@ def test_a_sum_is_broken_one_term_to_a_line():
     )
 
 
-def test_the_declarations_of_a_section_are_sorted_by_name():
+def test_the_entries_of_a_section_are_sorted_by_name():
     dumped = ms.to_spec(
         varied(DISPATCH_MODEL, **{'constraints.a_cap.dims': [], 'constraints.a_cap.expression': 'sum(p) >= 0'})
     ).to_yaml(canonical=True)
@@ -160,8 +156,8 @@ SECTIONS = [
 def _written_backwards(raw: object, depth: int = 3) -> object:
     """*raw* with every mapping down to *depth* levels written in reverse order.
 
-    Three levels reach the sections, the declarations of each section and the
-    keys of each declaration. They stop above a `cases:` block, whose regions
+    Three levels reach the sections, the entries of each section and the
+    keys of each entry. They stop above `cases:`, whose regions
     are a mapping that the form keeps in the file's order.
     """
     if depth == 0 or not isinstance(raw, dict):
@@ -171,8 +167,8 @@ def _written_backwards(raw: object, depth: int = 3) -> object:
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
 def test_a_file_written_backwards_writes_the_same_text(path):
-    """The section order, the declaration order in each section and the key
-    order in each declaration are spelling. A file that writes all three in
+    """The section order, the file order in each section and the key
+    order in each entry are spelling. A file that writes all three in
     reverse is the same spec, so it writes the same text."""
     raw = raw_of(path)
     backwards = ms.to_spec(_written_backwards(raw)).to_yaml(canonical=True)
@@ -190,9 +186,9 @@ def test_the_sections_come_in_one_order(path):
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
 def test_every_section_is_sorted_by_name(path):
     data = yaml.safe_load(ms.to_spec(path).to_yaml(canonical=True))
-    for section, declarations in data.items():
-        if isinstance(declarations, dict) and section != 'objective':
-            assert list(declarations) == sorted(declarations), f'{path.name}: `{section}` reads in name order'
+    for section, entries in data.items():
+        if isinstance(entries, dict) and section != 'objective':
+            assert list(entries) == sorted(entries), f'{path.name}: `{section}` reads in name order'
 
 
 def _commitment_with_its_cases_reversed() -> dict[str, object]:
@@ -212,17 +208,17 @@ def _piecewise_with_its_links_reversed() -> dict[str, object]:
         pytest.param(
             DISPATCH_MODEL,
             varied(DISPATCH_MODEL, **{'variables.p.dims': ['generator', 'snapshot']}),
-            id='a-declarations-dims',
+            id='the-dims-of-an-entry',
         ),
         pytest.param(
             raw_of(EXAMPLES / 'commitment.yaml'),
             _commitment_with_its_cases_reversed(),
-            id='the-regions-of-a-cases-block',
+            id='the-regions-under-cases',
         ),
         pytest.param(
             raw_of(EXAMPLES / 'piecewise.yaml'),
             _piecewise_with_its_links_reversed(),
-            id='the-links-of-a-piecewise-block',
+            id='the-links-of-a-piecewise-entry',
         ),
         pytest.param(
             varied(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0 and cost > 0'}),
@@ -247,7 +243,7 @@ def test_the_dump_that_keeps_the_file_as_written_is_unchanged():
 
 
 def test_the_shell_writes_the_form_a_reviewer_diffs(tmp_path, capsys):
-    """The verb is the whole point of the form: a reviewer works in a shell and
+    """The command is the whole point of the form: a reviewer works in a shell and
     a version control diff, not in Python."""
     model = tmp_path / 'spec.yaml'
     model.write_text(ms.to_spec(DISPATCH_MODEL).to_yaml())
@@ -262,60 +258,43 @@ def test_the_shell_refuses_a_spec_the_language_refuses(tmp_path, capsys):
     assert capsys.readouterr().err, 'and its message on stderr'
 
 
-def test_the_check_passes_a_file_in_the_form_and_writes_nothing(tmp_path, capsys):
-    model = tmp_path / 'spec.yaml'
-    model.write_text(ms.to_spec(DISPATCH_MODEL).to_yaml(canonical=True))
-    assert main(['canonical', '--check', str(model)]) == 0, 'a file in the form passes'
-    assert capsys.readouterr() == ('', ''), 'a check that passes prints nothing on either stream'
-
-
-def test_the_check_fails_a_file_out_of_the_form_and_names_the_rewrite(tmp_path, capsys):
-    """What a CI job runs: the spec loads, so the language accepts it, and the
-    job still fails, because the file is not the text the form writes."""
-    model = tmp_path / 'spec.yaml'
-    written = ms.to_spec(DISPATCH_MODEL).to_yaml()
-    model.write_text(written)
-    assert main(['canonical', '--check', str(model)]) == 1, 'a file out of the form is exit status 1'
-    assert capsys.readouterr().err == (
-        f'{model} is not in the canonical form. Run `python -m mathspec canonical --write {model}` to rewrite it.\n'
+def test_diff_is_silent_for_two_files_that_state_one_spec(tmp_path, capsys):
+    """The same spec with its declarations in reverse order and its sum written the other way round."""
+    before, after = tmp_path / 'before.yaml', tmp_path / 'after.yaml'
+    before.write_text(ms.to_spec(DISPATCH_MODEL).to_yaml())
+    after.write_text(
+        ms.to_spec(_written_backwards(varied(DISPATCH_MODEL, **{'objective.expression': 'sum(cost * p)'}))).to_yaml()
     )
-    assert model.read_text() == written, 'the check leaves the file as it found it'
+    assert main(['diff', str(before), str(after)]) == 0, 'two files that state one spec exit 0, as diff does'
+    assert capsys.readouterr() == ('', ''), 'and print nothing on either stream'
 
 
-def test_the_rewrite_leaves_a_file_the_check_passes(tmp_path, capsys):
-    model = tmp_path / 'spec.yaml'
-    model.write_text(ms.to_spec(DISPATCH_MODEL).to_yaml())
-    assert main(['canonical', '--write', str(model)]) == 0, 'the rewrite of a spec the language accepts exits 0'
-    assert model.read_text() == ms.to_spec(DISPATCH_MODEL).to_yaml(canonical=True), 'the file now holds the form'
-    assert capsys.readouterr().out == '', 'the form goes into the file, not to stdout'
-    assert main(['canonical', '--check', str(model)]) == 0, 'and the check passes the file it wrote'
+def test_diff_prints_the_changed_line_and_exits_1(tmp_path, capsys):
+    before, after = tmp_path / 'before.yaml', tmp_path / 'after.yaml'
+    before.write_text(ms.to_spec(DISPATCH_MODEL).to_yaml())
+    after.write_text(ms.to_spec(varied(DISPATCH_MODEL, **{'objective.expression': 'sum(2 * p * cost)'})).to_yaml())
+    assert main(['diff', str(before), str(after)]) == 1, 'two specs that differ exit 1, as diff does'
+    out = capsys.readouterr().out
+    assert out.startswith(f'--- {before}\n+++ {after}\n'), 'a unified diff, headed by the two paths'
+    changed = [line for line in out.splitlines() if line.startswith(('-', '+')) and not line.startswith(('---', '+++'))]
+    assert changed == ['-  expression: sum(cost * p)', '+  expression: sum((2 * cost) * p)'], (
+        'the one line that changed, in the canonical form, and nothing else'
+    )
 
 
-@pytest.mark.parametrize('flag', ['--check', '--write'])
-def test_a_refused_file_is_neither_checked_nor_rewritten(tmp_path, capsys, flag):
-    model = tmp_path / 'broken.yaml'
-    written = 'constraints: {k: {dims: [], expression: "p >= "}}\n'
-    model.write_text(written)
-    assert main(['canonical', flag, str(model)]) == 1, 'a refused file is exit status 1'
-    assert capsys.readouterr().err, 'and its message on stderr'
-    assert model.read_text() == written, 'the file is left as the author wrote it'
-
-
-@pytest.mark.parametrize(
-    'flags',
-    [
-        pytest.param(['--check', '--write'], id='check-and-write'),
-        pytest.param(['--check', '-o', 'out.yaml'], id='check-and-out'),
-        pytest.param(['--write', '-o', 'out.yaml'], id='write-and-out'),
-    ],
-)
-def test_the_form_goes_to_one_place(tmp_path, flags):
-    """Each flag names where the form goes, so two of them name two places."""
-    model = tmp_path / 'spec.yaml'
-    model.write_text(ms.to_spec(DISPATCH_MODEL).to_yaml())
-    with pytest.raises(SystemExit) as refused:
-        main(['canonical', *flags, str(model)])
-    assert refused.value.code == 2, 'argparse refuses the pair before the file is read'
+@pytest.mark.parametrize('broken', ['before', 'after'])
+def test_diff_exits_2_when_either_file_is_refused(tmp_path, capsys, broken):
+    paths = {'before': tmp_path / 'before.yaml', 'after': tmp_path / 'after.yaml'}
+    for name, path in paths.items():
+        path.write_text(
+            'constraints: {k: {dims: [], expression: "p >= "}}\n'
+            if name == broken
+            else ms.to_spec(DISPATCH_MODEL).to_yaml()
+        )
+    assert main(['diff', str(paths['before']), str(paths['after'])]) == 2, 'a refused file exits 2, as diff does'
+    captured = capsys.readouterr()
+    assert captured.err, 'with the message on stderr'
+    assert captured.out == '', 'and no diff on stdout'
 
 
 # ---------------------------------------------------------------------------
@@ -452,9 +431,9 @@ def test_every_spelling_of_one_sum_writes_one_text():
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
 def test_the_form_declares_the_same_spec(path):
-    """The form is not only stable, it is the same spec: every declaration is
+    """The form is not only stable, it is the same spec: every entry is
     there, under its own name, on its own frame. What the form is allowed to
-    change is the text of an expression and the order two declarations sit in.
+    change is the text of an expression and the order two entries sit in.
 
     A frame is compared as the set it is. Sorting `variables:` changes the
     order a `piecewise:` expansion meets them in, so a constraint the expansion
@@ -479,11 +458,11 @@ def test_the_form_declares_the_same_spec(path):
         assert sorted(getattr(original, group)) == sorted(getattr(rewritten, group)), (
             f'{group}: the form declares a different set of names'
         )
-    assert [(name, frozenset(block.dims), block.sense) for name, block in sorted(rewritten.constraints.items())] == [
-        (name, frozenset(block.dims), block.sense) for name, block in sorted(original.constraints.items())
+    assert [(name, frozenset(entry.dims), entry.sense) for name, entry in sorted(rewritten.constraints.items())] == [
+        (name, frozenset(entry.dims), entry.sense) for name, entry in sorted(original.constraints.items())
     ], 'every constraint keeps its frame and its sense'
-    assert [(name, frozenset(block.dims), block.domain) for name, block in sorted(rewritten.variables.items())] == [
-        (name, frozenset(block.dims), block.domain) for name, block in sorted(original.variables.items())
+    assert [(name, frozenset(entry.dims), entry.domain) for name, entry in sorted(rewritten.variables.items())] == [
+        (name, frozenset(entry.dims), entry.domain) for name, entry in sorted(original.variables.items())
     ], 'and every variable its frame and its domain'
     assert (rewritten.objective is None) == (original.objective is None), 'an objective is kept, or its absence is'
     if original.objective is not None and rewritten.objective is not None:

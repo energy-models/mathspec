@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast, overload
 
-import yaml
-
 from mathspec._expression_parser import (
     BinaryOperatorNode,
     ComparisonNode,
@@ -18,6 +16,7 @@ from mathspec._expression_parser import (
     operand,
     parse_expression,
 )
+from mathspec._yaml import dump_yaml
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -29,7 +28,7 @@ if TYPE_CHECKING:
 #: rebuilds it.
 Sign = Literal['+', '-']
 
-#: Where a declaration's expression text sits under a section, once the spec is
+#: Where an entry's expression text sits under a section, once the spec is
 #: plain data. A link is different: it serialises back to the ``[expression,
 #: values]`` list the file wrote, so its expression is a position rather than a
 #: key.
@@ -41,7 +40,7 @@ def _signed(sign: Sign, node: ArithmeticNode) -> tuple[Sign, ArithmeticNode]:
 
     ``+ -x`` is ``- x`` and ``- -x`` is ``+ x``, so a term sorts and prints
     under one spelling however the file wrote it. Folding is also what makes
-    the walk the inverse of [`_sum`][mathspec.canonical._sum], which writes a leading minus term as
+    the walk the inverse of [`_sum`][mathspec._canonical._sum], which writes a leading minus term as
     the negation it is — without it a second pass would read that minus as part
     of the term and sort by it.
     """
@@ -168,7 +167,7 @@ def laid_out(node: ParsedNode) -> str:
     as the same tree. An expression of one term stays on one line.
 
     Each term is bracketed the way any operand is, and the first through
-    [`_sum`][mathspec.canonical._sum], because a line is read back as part of the whole: ``- b - c``
+    [`_sum`][mathspec._canonical._sum], because a line is read back as part of the whole: ``- b - c``
     under a leading ``a`` is ``a - b - c``, where the term written was
     ``(b - c)``. An expression of one term is one line, operator and all.
     """
@@ -188,51 +187,51 @@ def canonical_text(text: str) -> str:
     return laid_out(normalised(parse_expression(text)))
 
 
-def _canonical_block(block: object) -> object:
-    """One declaration, with every expression under it normalised and everything else untouched."""
-    if isinstance(block, dict):
+def _canonical_entry(entry: object) -> object:
+    """One entry, with every expression under it normalised and everything else untouched."""
+    if isinstance(entry, dict):
         return {
             key: canonical_text(value)
             if key in _EXPRESSION_KEYS and isinstance(value, str)
-            else _canonical_block(value)
-            for key, value in block.items()
+            else _canonical_entry(value)
+            for key, value in entry.items()
         }
-    if isinstance(block, list):
-        return [_canonical_block(item) for item in block]
-    return block
+    if isinstance(entry, list):
+        return [_canonical_entry(item) for item in entry]
+    return entry
 
 
 def _canonical_links(links: list[list[object]]) -> list[list[object]]:
-    """A piecewise block's links, whose expression is the first position of the list the file wrote."""
+    """A piecewise entry's links, whose expression is the first position of the list the file wrote."""
     return [[canonical_text(cast('str', link[0])), *link[1:]] for link in links]
 
 
-def _sorted_blocks(section: dict[str, object], *, bare_is_expression: bool = False) -> dict[str, object]:
-    """One section's declarations sorted by name, each with its expressions in the normal form.
+def _sorted_entries(section: dict[str, object], *, bare_is_expression: bool = False) -> dict[str, object]:
+    """One section's entries sorted by name, each with its expressions in the normal form.
 
     A named expression written on one line serialises back as a bare string,
     which is the expression itself, so *bare_is_expression* normalises it too.
     """
     return {
-        name: canonical_text(block) if bare_is_expression and isinstance(block, str) else _canonical_block(block)
-        for name, block in sorted(section.items())
+        name: canonical_text(entry) if bare_is_expression and isinstance(entry, str) else _canonical_entry(entry)
+        for name, entry in sorted(section.items())
     }
 
 
 def canonical_dict(spec: Spec) -> dict[str, object]:
     """The spec as plain data, in the form two files that state the same spec share.
 
-    Declarations are sorted by name, the ones under each kind of ``given:``
+    Entries are sorted by name, the ones under each kind of ``given:``
     too, and every expression is printed from its parsed tree, so what is left of a difference is a difference in the spec.
-    A ``where`` string, the order of a ``cases:`` block's regions, the order of
-    a declaration's ``dims`` and the order of a piecewise block's links are all
+    A ``where`` string, the order of the regions under ``cases:``, the order of
+    an entry's ``dims`` and the order of a piecewise entry's links are all
     left as written.
 
     Args:
         spec: The loaded spec.
 
     Returns:
-        Plain data, ready for [`canonical_yaml`][mathspec.canonical.canonical_yaml].
+        Plain data, ready for [`canonical_yaml`][mathspec._canonical.canonical_yaml].
         Loading it gives the same spec back, and not a `Spec` equal to *spec*:
         an expression reprinted in the normal form is a different string.
     """
@@ -240,29 +239,18 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
     built: dict[str, object] = {}
     for section, value in data.items():
         if section == 'given' and isinstance(value, dict):
-            built[section] = {kind: _sorted_blocks(entries) for kind, entries in sorted(value.items())}
+            built[section] = {kind: _sorted_entries(entries) for kind, entries in sorted(value.items())}
         elif isinstance(value, dict) and section != 'objective':
-            built[section] = _sorted_blocks(value, bare_is_expression=section == 'expressions')
+            built[section] = _sorted_entries(value, bare_is_expression=section == 'expressions')
         else:
-            built[section] = _canonical_block(value)
+            built[section] = _canonical_entry(value)
     piecewise = built.get('piecewise')
     if isinstance(piecewise, dict):
-        for block in piecewise.values():
-            block['links'] = _canonical_links(block['links'])
+        for entry in piecewise.values():
+            entry['links'] = _canonical_links(entry['links'])
     return built
 
 
-class _Dumper(yaml.SafeDumper):
-    """A dumper writing a multi-line expression as a block scalar, rather than escaping the newlines into one line."""
-
-
-def _scalar(dumper: yaml.SafeDumper, text: str) -> yaml.ScalarNode:
-    return dumper.represent_scalar('tag:yaml.org,2002:str', text, style='|' if '\n' in text else None)
-
-
-_Dumper.add_representer(str, _scalar)
-
-
 def canonical_yaml(spec: Spec) -> str:
-    """The file a reviewer diffs — [`canonical_dict`][mathspec.canonical.canonical_dict] as YAML, each expression term on its own line."""
-    return yaml.dump(canonical_dict(spec), Dumper=_Dumper, sort_keys=False, allow_unicode=True)
+    """The file a reviewer diffs — [`canonical_dict`][mathspec._canonical.canonical_dict] as YAML, each expression term on its own line."""
+    return dump_yaml(canonical_dict(spec))

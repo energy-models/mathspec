@@ -7,7 +7,7 @@
 A bare name, a comparison, a count and a predicate read through a relation
 or along a dimension are each typed here against the namespace, and a
 comparison of expressions hands its sides to the expression walk.
-[`mathspec.resolution`][] holds the namespace and the doors that call this.
+[`mathspec._resolution`][] holds the namespace and the doors that call this.
 """
 
 from __future__ import annotations
@@ -17,7 +17,9 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple, assert_never, cast
 
-import mathspec.degree as degree
+import mathspec._degree as degree
+from mathspec._dimensions import dims_of, join_dims
+from mathspec._expansion import expand
 from mathspec._expression_parser import (
     ArithmeticNode,
     FunctionCallNode,
@@ -34,9 +36,7 @@ from mathspec._where_parser import (
     UnresolvedPredicateCallNode,
     UnresolvedWhereNode,
 )
-from mathspec.dimensions import dims_of, join_dims
 from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
-from mathspec.expansion import expand
 from mathspec.program import (
     Add,
     And,
@@ -50,8 +50,8 @@ from mathspec.program import (
     ExpressionComparison,
     JoinedPredicate,
     Mask,
+    MaskReference,
     Multiply,
-    NamedMask,
     Negate,
     Not,
     Or,
@@ -74,8 +74,8 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from mathspec._resolution import Namespace
     from mathspec.program import DeclaredDtype
-    from mathspec.resolution import Namespace
 
 #: Why a mask may not read a given expression. The namespace stores a given
 #: expression with the variables, because it is read as a column, so this
@@ -109,7 +109,7 @@ class WhereResolver:
 
     def where(self, node: Predicate | UnresolvedWhereNode) -> Predicate | UnresolvedWhereNode:
         """One predicate node typed, or returned unresolved with its refusal appended."""
-        if isinstance(node, BooleanLiteral | TypedPredicate | NamedMask):
+        if isinstance(node, BooleanLiteral | TypedPredicate | MaskReference):
             return node
         if isinstance(node, NameNode):
             return self._where_name(node)
@@ -378,7 +378,7 @@ class WhereResolver:
         assert len(sides) == 2, 'a side of a where builds or refuses, since a where holds no formal'
         dims: set[str] = set()
         for side in sides:
-            if given := sorted(variables_of(side) & set(ns.schema.given.expressions)):
+            if given := sorted(variables_of(side) & set(ns.spec.given.expressions)):
                 self.errors.append(
                     f'{context}: a where compares expressions, and one side reads the given expression '
                     f'{given[0]!r}. {GIVEN_IN_A_MASK}'
@@ -396,7 +396,7 @@ class WhereResolver:
             else:
                 try:
                     degree.check_expression(side, context)
-                    dims |= dims_of(side, ns.schema, context)
+                    dims |= dims_of(side, ns.spec, context)
                 except LanguageError as e:
                     self.errors.append(str(e))
         if len(self.errors) > found:
@@ -408,7 +408,7 @@ class WhereResolver:
                 f'side stands for, or remove the comparison.'
             )
             return node
-        return ExpressionComparison(left, node.op, right, tuple(d for d in ns.schema.dimensions if d in dims))
+        return ExpressionComparison(left, node.op, right, tuple(d for d in ns.spec.dimensions if d in dims))
 
     def _position(
         self, call: FunctionCallNode, node: UnresolvedComparisonNode
@@ -467,7 +467,7 @@ class WhereResolver:
                         return node
                     dims = tuple(ns.relations[left_name].dim(k) for k in ns.relations[left_name].key)
                     return RelationPairComparison(left_name, left, right_name, right, plain.op, dims)
-                given = right_name in ns.schema.given.expressions
+                given = right_name in ns.spec.given.expressions
                 self.errors.append(_declared_rhs_error(context, plain, value, rhs_kind, given=given))
                 return node
 
@@ -506,7 +506,7 @@ class WhereResolver:
                 assert column is not None
                 shape = ns.relations[left_name]
                 return RelationComparison(left_name, column, plain.op, value, tuple(shape.dim(k) for k in shape.key))
-            case 'variable' if left_name in ns.schema.given.expressions:
+            case 'variable' if left_name in ns.spec.given.expressions:
                 self.errors.append(f"{context}: where references the given expression '{left_name}'. {GIVEN_IN_A_MASK}")
             case 'variable':
                 self.errors.append(

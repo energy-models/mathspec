@@ -11,17 +11,17 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from mathspec._typesetting import SymbolTable, to_latex, to_markdown, to_typst, typeset
+from mathspec._typesetting.format import number
+from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
-from mathspec.typesetting import SymbolTable, to_latex, to_markdown, to_typst, typeset
-from mathspec.typesetting.format import number
-from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, varied
 from tests.typesetting.fixtures import EVERY_FORMAT, TYPST_SYMBOLS
 
 if TYPE_CHECKING:
+    from mathspec._typesetting import FormatName
+    from mathspec._typesetting.format import Format
     from mathspec.spec import Spec
-    from mathspec.typesetting import FormatName
-    from mathspec.typesetting.format import Format
 
 
 WITH_MARGINAL_COST = varied(
@@ -73,7 +73,7 @@ DESCRIBED = varied(
 
 @EVERY_FORMAT
 def test_a_description_reaches_the_legend_without_hiding_the_name(name: FormatName, fmt: Format):
-    """The declaration's own `description:` is what the legend reads — no
+    """The entry's own `description:` is what the legend reads — no
     sidecar involved, so a model carries its prose wherever it goes."""
     out = typeset(DESCRIBED, name)
     for text in (
@@ -169,8 +169,8 @@ CURVED = varied(
 )
 
 
-def test_one_table_spells_the_blocks_a_file_states_and_the_rows_they_state():
-    """The weights are named after the block, which no equation can carry, and the
+def test_one_table_spells_the_entries_a_file_states_and_the_rows_they_state():
+    """The weights are named after the entry, which no equation can carry, and the
     table that renames them has to render the file they came from too."""
     spec = to_spec(CURVED)
     table = {'notation': 'latex', 'names': {'curve_lam': r'\lambda'}}

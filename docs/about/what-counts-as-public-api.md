@@ -5,8 +5,8 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # What counts as public API
 
-A function may join the public API of the package, as `to_spec` and
-`to_latex` did, when both of these are true:
+A function belongs in the public API, as `to_spec` and `to_latex` do, when
+both of these are true:
 
 1. The same file gives the same answer. `to_spec('spec.yaml')` returns the same
    `Spec` today, tomorrow, and on a machine with no data and no solver. A
@@ -29,16 +29,19 @@ The top level of the package holds the functions you call. Every other
 public name is in one of three modules, and how you get the name decides the
 module:
 
-| You get it                  | It lives in        | Such as                                  |
-| --------------------------- | ------------------ | ---------------------------------------- |
-| by calling a function       | `mathspec`         | `to_spec`, `merge`, `typeset`, `advice`  |
-| from what a `Spec` holds    | `mathspec.spec`    | `Spec`, `VariableBlock`, `BUILTIN_NAMES` |
-| from what a `Program` holds | `mathspec.program` | `Program`, `Sum`, `Mask`, `Advice`       |
-| by catching it              | `mathspec.errors`  | `LanguageError`, `SchemaError`           |
+| You get it                  | It lives in        | Such as                                 |
+| --------------------------- | ------------------ | --------------------------------------- |
+| by calling a function       | `mathspec`         | `to_spec`, `merge`, `typeset`, `advice` |
+| from what a `Spec` holds    | `mathspec.spec`    | `Spec`, `VariableSpec`, `BUILTIN_NAMES` |
+| from what a `Program` holds | `mathspec.program` | `Program`, `Sum`, `Mask`, `Advice`      |
+| by catching it              | `mathspec.errors`  | `LanguageError`, `SchemaError`          |
 
 `SymbolTable` and `FormatName` are also at the top level, because you make
 them to give them to the typesetter. `tests/test_public_surface.py` checks
 that each module obeys its rule.
+
+Every other module starts with an underscore and is private. Import from the
+four modules above: `from mathspec import to_latex`.
 
 ## What every function keeps
 
@@ -51,7 +54,7 @@ that each module obeys its rule.
   `advice()` is separate: it reports on a file the language accepts, and
   changes nothing.
 - A function writes nothing out unless the caller asks. A `piecewise:` or
-  `sos:` block stays a block until the caller calls
+  `sos:` entry stays an entry until the caller calls
   [`spec.expand()`](../reference/spec.md#mathspec.spec.Spec.expand).
 
 Each engine decides what a solver or file format can take, how the numbers

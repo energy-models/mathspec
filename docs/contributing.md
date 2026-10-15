@@ -102,11 +102,15 @@ changes.
 The same construct passes through three layers, and each layer names it in full
 with a suffix that says which layer it is:
 
-| Layer                        | Suffix               | Example                                |
-| ---------------------------- | -------------------- | -------------------------------------- |
-| YAML block (`mathspec.spec`) | `Block`              | `VariableBlock`, `PiecewiseBlock`      |
-| Syntax (`mathspec.*_parser`) | `Node`               | `NameNode`, `UnresolvedComparisonNode` |
-| Program (`mathspec.program`) | none / `Declaration` | `Variable`, `VariableDeclaration`      |
+| Layer                        | Suffix | Example                                |
+| ---------------------------- | ------ | -------------------------------------- |
+| YAML (`mathspec.spec`)       | `Spec` | `VariableSpec`, `PiecewiseSpec`        |
+| Syntax (`mathspec.*_parser`) | `Node` | `NameNode`, `UnresolvedComparisonNode` |
+| Program (`mathspec.program`) | none   | `Variable`, `Piecewise`                |
+
+In the program, the node that stands where an expression uses a name ends in
+`Reference`: `VariableReference` reads a `Variable`, and `ExpressionReference`
+reads a `NamedExpression`.
 
 A node names the operation, not the function a file writes. One function can
 resolve to two nodes, so the spelling in the file cannot decide the name.
@@ -124,11 +128,11 @@ No name is abbreviated.
 ## Adding an operator
 
 Start with the grammar, which usually needs no change because `f(x, k=v)`
-already parses. Then declare the signature in `operators.BUILTINS`. The
+already parses. Then declare the signature in `_operators.BUILTINS`. The
 signature holds the number of arguments and says which arguments name
 dimensions, and resolution reads it from there. Then write the node in
 `program.py` and how resolution builds it, the dimension rule in
-`dimensions.py`, the degree rule in `degree.py`, and the entry in the
+`_dimensions.py`, the degree rule in `_degree.py`, and the entry in the
 [language reference](reference/language/operators.md).
 
 ## Submitting changes

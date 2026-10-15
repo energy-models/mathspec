@@ -7,7 +7,7 @@
 The page states the consumer contract in three answers — what a `Spec`'s
 `constraints:` holds, and what the `Program` lowered from it holds. A page that
 shows the difference and is never executed is a page that stops being true the
-first time a curve expands into a fourth declaration, which is exactly the
+first time a curve expands into a fourth entry, which is exactly the
 drift the contract exists to prevent.
 """
 
@@ -44,7 +44,7 @@ def _claims(code: str) -> list[tuple[str, object]]:
     ]
 
 
-def test_the_page_shows_the_declarations_the_expansion_emits(tmp_path, monkeypatch):
+def test_the_page_shows_the_entries_the_expansion_emits(tmp_path, monkeypatch):
     (tmp_path / 'curve.yaml').write_text(_block('yaml'))
     monkeypatch.chdir(tmp_path)
 
@@ -55,6 +55,6 @@ def test_the_page_shows_the_declarations_the_expansion_emits(tmp_path, monkeypat
         exec(compile(code, str(PAGE), 'exec'), namespace)
         claims.extend(_claims(code))
 
-    assert len(claims) == 25, 'every `expression  # value` line on the page is checked; one without one is not'
+    assert len(claims) == 26, 'every `expression  # value` line on the page is checked; one without one is not'
     for expression, claimed in claims:
         assert eval(expression, namespace) == claimed, f'reading.md says `{expression}` is {claimed}'

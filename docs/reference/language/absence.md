@@ -36,8 +36,8 @@ hold.
 | a missing row of a `missing: absent` parameter                | the parameter, at that coordinate                                                  |
 
 Nothing else creates absence. A missing row is the only gap a parameter can
-have, because a null or NaN value is [refused](declarations.md#parameters) when
-the data is attached. The parameter's [`missing:`](declarations.md#a-missing-row)
+have, because a null or NaN value is [refused](parameters-variables-constraints.md#parameters) when
+the data is attached. The parameter's [`missing:`](parameters-variables-constraints.md#a-missing-row)
 key says what a missing row is:
 
 | `missing:`            | A missing row                                                                                 |
@@ -152,7 +152,7 @@ The model reads a parameter where its value goes into the model it builds:
 | the amount of an `offset=` or a `window=`                        | each coordinate where a row that the model builds evaluates the operator |
 | a term of the objective                                          | each term that exists                                                    |
 | a term of a [reported expression](named.md#reported-expressions) | each coordinate where the expression is reported                         |
-| a values parameter of a [`piecewise:`](piecewise.md) block       | each breakpoint that the curve runs through                              |
+| a values parameter of a [`piecewise:`](piecewise.md) entry       | each breakpoint that the curve runs through                              |
 | a bare `bool` name in a `where`                                  | each coordinate where the model evaluates that `where`                   |
 
 A row that an absent term removes is not built, so the model reads no

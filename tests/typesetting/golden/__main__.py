@@ -10,7 +10,7 @@ pixi run python -m tests.typesetting.golden
 from __future__ import annotations
 
 from mathspec import to_spec
-from mathspec.typesetting import FORMATS, typeset
+from mathspec._typesetting import FORMATS, typeset
 from tests.typesetting.golden import MODEL, path_for
 
 

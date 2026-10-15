@@ -14,9 +14,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from mathspec._typesetting import to_markdown
+from mathspec._validation import to_spec
 from mathspec.spec import PIECEWISE_METHODS
-from mathspec.typesetting import to_markdown
-from mathspec.validation import to_spec
 from tests.fixtures import EXAMPLES
 from tools import expansion_math, gallery, home_math, notation, spec_math
 
@@ -155,7 +155,7 @@ def test_the_published_grammar_spells_a_name_the_way_the_code_reads_one():
 
     The EBNF on that page is the language's published definition, and
     `expression_parser.NAME` is the one the loader and the schema both apply —
-    `spec.py` validates every declaration name against it. A page that refuses
+    `spec.py` validates every entry name against it. A page that refuses
     what the language accepts is the drift this asks about; it went unnoticed
     because nothing compared the two.
     """
@@ -294,7 +294,7 @@ def test_every_page_under_docs_has_a_nav_entry():
     )
 
 
-#: The API pages, by the module each renders. `mathspec.typesetting` has no
+#: The API pages, by the module each renders. `mathspec._typesetting` has no
 #: page of its own: `mathspec` re-exports what a consumer calls from it.
 API_PAGES = {
     'mathspec': Path('docs') / 'reference' / 'api.md',

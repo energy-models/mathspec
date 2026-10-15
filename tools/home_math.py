@@ -17,7 +17,7 @@ that produced the other two.
 from __future__ import annotations
 
 from mathspec import to_spec
-from mathspec.typesetting import to_latex, to_markdown
+from mathspec._typesetting import to_latex, to_markdown
 from tools._page import ROOT, inlined, sidecar_for, splice, tab, without_header
 from tools._page import main as page_main
 
