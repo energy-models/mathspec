@@ -1604,27 +1604,6 @@ class TestRulesDecidedWithoutData:
                 id='where-a-bare-dimension',
             ),
             pytest.param(
-                {'parameters.n': {'dims': ['g'], 'dtype': 'int'}, 'variables.p.where': 'n'},
-                (
-                    "'n' is declared dtype: int and missing: refused",
-                    'Declare `missing: neutral` or `absent`, or compare the value',
-                ),
-                id='where-a-bare-int-parameter-under-refused',
-            ),
-            pytest.param(
-                {'variables.p.where': 'tag'},
-                (
-                    "'tag' is declared dtype: str and missing: refused",
-                    'Declare `missing: absent`, or compare the label',
-                ),
-                id='where-a-bare-str-parameter-under-refused',
-            ),
-            pytest.param(
-                {'parameters.n': {'dims': ['g'], 'dtype': 'int'}, 'masks.held': 'NOT n'},
-                ("'n' is declared dtype: int and missing: refused",),
-                id='a-mask-reading-a-bare-int-parameter-under-refused',
-            ),
-            pytest.param(
                 {
                     'macros.scaled': {'args': ['x'], 'kwargs': ['n'], 'template': 'x * n'},
                     'constraints': {'cap': {'dims': ['g'], 'expression': "scaled(p, n='wrap') <= c"}},
@@ -2451,21 +2430,22 @@ CURVE_UNDER_POINTS = Path(__file__).parent / 'expand' / 'curve-lp-points' / 'bef
         pytest.param({'dims': ['bp'], 'missing': 'refused'}, id='refused-written'),
     ],
 )
-def test_a_values_table_under_points_is_not_refused(parameter, declared):
-    """`points: x_bp` with `x_bp` declared `refused` loaded, and named a mask every breakpoint is in.
+def test_a_values_table_under_points_may_be_refused(parameter, declared):
+    """`points: x_bp` with `x_bp` declared `refused` was refused at load.
 
-    `refused` says the table has a row at every breakpoint, so the curve never ran short of the dimension, and the
-    refusal of a curve parameter read outside the curve suggested that reading.
+    `refused` read as a row at every breakpoint, so the curve could never run short. It now needs a row only where the
+    model reads one, and the curve reads no row past the mask.
     """
-    message = _refusal(read_yaml(CURVE_UNDER_POINTS), **{f'parameters.{parameter}': declared})
-    assert f"parameter '{parameter}' is refused where a row is missing, and piecewise 'curve'" in message
-    assert 'Declare missing: neutral, absent, or a value of its dtype' in message, 'the refusal names the rewrite'
+    spec = to_spec(varied(read_yaml(CURVE_UNDER_POINTS), **{f'parameters.{parameter}': declared}))
+    assert spec.program.parameters[parameter].missing == 'refused'
 
 
 @pytest.mark.parametrize(
     'patch',
     [
         pytest.param({'parameters.n': {'dims': ['g']}}, id='a-float-may-hold-inf'),
+        pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'int'}}, id='an-int-under-refused'),
+        pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'str'}}, id='a-label-under-refused'),
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'bool'}}, id='a-flag-reads-its-value'),
         pytest.param(
             {'parameters.n': {'dims': ['g'], 'dtype': 'int', 'missing': 'neutral'}}, id='an-int-under-neutral'
@@ -2476,7 +2456,11 @@ def test_a_values_table_under_points_is_not_refused(parameter, declared):
     ],
 )
 def test_a_bare_parameter_whose_answer_needs_the_data_loads(patch):
-    """The declaring file owns a given parameter's `missing:`, so this file cannot decide its rows."""
+    """A bare `int` or `str` name under `refused` was refused at load, as true at every coordinate.
+
+    A `where` does not read the parameter, so `refused` asks for no row there, and the bare name selects the rows the
+    data gives. The declaring file owns a given parameter's `missing:`, so this file cannot decide its rows either.
+    """
     spec = to_spec(varied(SMALL_MODEL, **patch, **{'variables.p.where': 'n'}))
     assert spec.program.variables['p'].where is not None, 'the bare name stays a mask'
 

@@ -40,22 +40,22 @@ have, because a null or NaN value is [refused](declarations.md#parameters) when
 the data is attached. The parameter's [`missing:`](declarations.md#a-missing-row)
 key says what a missing row is:
 
-| `missing:`            | A missing row                                                                               |
-| --------------------- | ------------------------------------------------------------------------------------------- |
-| `refused`, by default | is refused when the data is attached                                                        |
-| `absent`              | is absence, by the rules on this page                                                       |
-| `neutral`             | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a `where` |
-| a value               | reads as that value                                                                         |
+| `missing:`            | A missing row                                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| `refused`, by default | is refused where the model reads it ([where a parameter is read](#where-a-parameter-is-read)) |
+| `absent`              | is absence, by the rules on this page                                                         |
+| `neutral`             | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a `where`   |
+| a value               | reads as that value                                                                           |
 
 Three positions have no neutral value, so a missing `neutral` row there is
-refused when the data is attached: a divisor, a `bounds:` entry, and the whole
+refused where the model reads it: a divisor, a `bounds:` entry, and the whole
 constant side of a comparison. Under `absent`, a missing divisor or constant
 side is absence and removes the row, and a missing bound leaves that side of
 the variable open. A curve needs a row at each breakpoint its `points:` admits,
 and [missing breakpoints](piecewise.md#missing-breakpoints) says what a missing
 row of a table that a curve reads means. For a bound only where the data has
-one, declare the parameter `missing: absent` or `missing: .inf`, or mask the
-variable.
+one, mask the variable, or declare the parameter `missing: absent` or
+`missing: .inf`.
 
 ## How absence travels
 
@@ -102,6 +102,53 @@ write `where: rel_max` on the constraint.
 | `sum_back(x, along=d, window=w)` | the positions the window covers | is one summand fewer; the row stands |
 | `shift(x, along=d, offset=n)`    | one position, `n` back          | _is_ the output, so it spreads       |
 | `at(x, by=relation[c])`          | one position, through the map   | _is_ the output, so it spreads       |
+
+## Where a parameter is read
+
+A `refused` parameter needs a row at each coordinate where the model reads its
+value, and at no other coordinate. A tool builds the masks first, because the
+masks decide which variables and rows exist. Then the tool refuses a missing
+row at a coordinate the model reads, and names the parameter and the
+coordinate.
+
+```yaml
+dimensions:
+  g: { dtype: str }
+parameters:
+  capacity: { dims: [g] }
+  p_max: { dims: [g] } # refused, by default
+variables:
+  dispatch:
+    dims: [g]
+    where: "capacity > 0"
+    bounds: { lower: 0, upper: p_max }
+```
+
+With `capacity = {wind: 10, gas: 5, old: 0}`, the model has no `dispatch[old]`.
+So the model never reads `p_max[old]`, and a `p_max` table with rows for `wind`
+and `gas` only is accepted. A `p_max` table with no row for `gas` is refused,
+because the model reads the upper bound of `dispatch[gas]`.
+
+The model reads a parameter where its value goes into the model it builds:
+
+| The parameter stands as                                          | The model reads it at                                                    |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| a coefficient, a divisor or a constant in a constraint           | each row that the model builds                                           |
+| a factor of a summand in `sum` or `sum_back`                     | each summand that exists, so not where the summand has an absent factor  |
+| a `bounds:` entry                                                | each coordinate where the variable exists                                |
+| the amount of an `offset=` or a `window=`                        | each coordinate where a row that the model builds evaluates the operator |
+| a term of the objective                                          | each term that exists                                                    |
+| a term of a [reported expression](named.md#reported-expressions) | each coordinate where the expression is reported                         |
+| a values parameter of a [`piecewise:`](piecewise.md) block       | each breakpoint that the curve runs through                              |
+
+A row that an absent term removes is not built, so the model reads no
+parameter in that row.
+
+A `where` does not read a parameter. A bare name asks whether the table has a
+row. A comparison at a missing row is false, unless the `missing:` of the
+parameter names a value. So `where: "capacity > 0"` above is false at a
+generator with no `capacity` row, and that generator has no `dispatch`. A
+[mask](named.md#masks) reads the same way.
 
 ## What a missing coordinate means
 
