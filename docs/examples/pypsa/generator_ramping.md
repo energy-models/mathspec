@@ -11,10 +11,8 @@ This file states the ramping rows of PyPSA's `Generator`. It is one of the [24 f
 ```yaml
 given:
   parameters:
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
     Generator_committable: { dims: [generator], dtype: bool }
     Generator_status_initial: { dims: [scenario, generator], dtype: int }
-    Generator_p_nom_mod: { dims: [generator] }
     Generator_big_m: { dims: [scenario, generator] }
     Generator_active: { dims: [snapshot, generator], dtype: bool }
   variables:
@@ -155,6 +153,22 @@ masks:
     where: >-
       position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
       (Generator_status_initial == 0 OR Generator_p_init))
+  Generator_ramps_up:
+    description: >-
+      a snapshot whose rise in output a ramp limit bounds — the generator
+      has a ramp-up or start-up limit, and the snapshot reads a previous
+      output
+    where: >-
+      (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
+      AND Generator_ramps_from_previous
+  Generator_ramps_down:
+    description: >-
+      a snapshot whose fall in output a ramp limit bounds — the generator
+      has a ramp-down or shut-down limit, and the snapshot reads a
+      previous output
+    where: >-
+      (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
+      AND Generator_ramps_from_previous
 
 constraints:
   Generator_p_ramp_limit_up_run_big_m:
@@ -163,10 +177,7 @@ constraints:
       raises output no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns on
     dims: [scenario, snapshot, generator]
-    where: >-
-      Generator_com_ext
-      AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND Generator_ramps_from_previous
+    where: Generator_com_ext AND Generator_ramps_up
     expression: >-
       Generator_p - Generator_previous_p <=
       Generator_ramp_up_rate * Generator_p_nom_ext
@@ -177,10 +188,7 @@ constraints:
       committed extendable unit ramps no further than its start-up ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, generator]
-    where: >-
-      Generator_com_ext
-      AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND Generator_ramps_from_previous
+    where: Generator_com_ext AND Generator_ramps_up
     expression: >-
       Generator_p - Generator_previous_p <=
       Generator_start_up_rate * Generator_p_nom_ext
@@ -191,10 +199,7 @@ constraints:
       lowers output no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns off
     dims: [scenario, snapshot, generator]
-    where: >-
-      Generator_com_ext
-      AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND Generator_ramps_from_previous
+    where: Generator_com_ext AND Generator_ramps_down
     expression: >-
       Generator_previous_p - Generator_p <=
       Generator_ramp_down_rate * Generator_p_nom_ext
@@ -205,10 +210,7 @@ constraints:
       a committed extendable unit ramps no further than its shut-down ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, generator]
-    where: >-
-      Generator_com_ext
-      AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND Generator_ramps_from_previous
+    where: Generator_com_ext AND Generator_ramps_down
     expression: >-
       Generator_previous_p - Generator_p <=
       Generator_shut_down_rate * Generator_p_nom_ext
@@ -222,11 +224,7 @@ constraints:
       `p_init` gives the output it brought in, and no unit carries one at
       the start of a later investment period — nor does any unit a big M releases instead
     dims: [scenario, snapshot, generator]
-    where: >-
-      (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-      AND Generator_ramps_from_previous
-      AND Generator_active
+    where: Generator_ramps_up AND Generator_active AND NOT Generator_com_ext
     expression: Generator_p - Generator_previous_p <= Generator_ramp_up_allowance
   Generator_p_ramp_limit_down:
     description: >-
@@ -237,11 +235,7 @@ constraints:
       `p_init` gives the output it brought in, and no unit carries one at
       the start of a later investment period — nor does any unit a big M releases instead
     dims: [scenario, snapshot, generator]
-    where: >-
-      (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-      AND Generator_ramps_from_previous
-      AND Generator_active
+    where: Generator_ramps_down AND Generator_active AND NOT Generator_com_ext
     expression: Generator_previous_p - Generator_p <= Generator_ramp_down_allowance
 
 assumptions:
@@ -265,10 +259,8 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{ext}`$ | `Generator_p_nom_extendable` over $`\mathcal{G}`$, data another file declares |
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$, data another file declares |
 | $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$, data another file declares |
-| $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$, data another file declares |
 | $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, data another file declares |
 | $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{T} \times \mathcal{G}`$, data another file declares |
 | $`p`$ | `Generator_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
@@ -305,6 +297,8 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{prev}`$ | `Generator_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the generator comes in off or carries an initial output |
+| $`\mathrm{prev}^{\mathrm{up}}`$ | `Generator_ramps_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — a snapshot whose rise in output a ramp limit bounds — the generator has a ramp-up or start-up limit, and the snapshot reads a previous output |
+| $`\mathrm{prev}^{\mathrm{dn}}`$ | `Generator_ramps_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — a snapshot whose fall in output a ramp limit bounds — the generator has a ramp-down or shut-down limit, and the snapshot reads a previous output |
 
 #### Definitions
 
@@ -331,6 +325,18 @@ assumptions:
 
 ```math
 \mathrm{prev}_{\xi,t,g} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+**`Generator_ramps_up`**
+
+```math
+\mathrm{prev}^{\mathrm{up}}_{\xi,t,g} \iff \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \mathrm{prev}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+**`Generator_ramps_down`**
+
+```math
+\mathrm{prev}^{\mathrm{dn}}_{\xi,t,g} \iff \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \mathrm{prev}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 #### Definitions
@@ -382,37 +388,37 @@ assumptions:
 **`Generator_p_ramp_limit_up_run_big_m`**
 
 ```math
-p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \mathrm{prev}_{\xi,t,g}
+p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \mathrm{prev}^{\mathrm{up}}_{\xi,t,g}
 ```
 
 **`Generator_p_ramp_limit_up_start_big_m`**
 
 ```math
-p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{up}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \mathrm{prev}_{\xi,t,g}
+p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{up}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \mathrm{prev}^{\mathrm{up}}_{\xi,t,g}
 ```
 
 **`Generator_p_ramp_limit_down_run_big_m`**
 
 ```math
-\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \mathrm{prev}_{\xi,t,g}
+\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \mathrm{prev}^{\mathrm{dn}}_{\xi,t,g}
 ```
 
 **`Generator_p_ramp_limit_down_shut_big_m`**
 
 ```math
-\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{dn}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \mathrm{prev}_{\xi,t,g}
+\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{dn}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \mathrm{prev}^{\mathrm{dn}}_{\xi,t,g}
 ```
 
 **`Generator_p_ramp_limit_up`**
 
 ```math
-p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \Delta^{+}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \mathrm{prev}_{\xi,t,g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \Delta^{+}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{prev}^{\mathrm{up}}_{\xi,t,g} \wedge \mathrm{on}_{t,g} \wedge \neg \mathrm{on}^{\mathrm{com,ext}}_{t,g}
 ```
 
 **`Generator_p_ramp_limit_down`**
 
 ```math
-\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \Delta^{-}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \mathrm{prev}_{\xi,t,g} \wedge \mathrm{on}_{t,g}
+\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \Delta^{-}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{prev}^{\mathrm{dn}}_{\xi,t,g} \wedge \mathrm{on}_{t,g} \wedge \neg \mathrm{on}^{\mathrm{com,ext}}_{t,g}
 ```
 
 #### Assumptions

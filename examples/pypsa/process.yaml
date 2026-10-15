@@ -191,7 +191,7 @@ variables:
   Process_n_mod:
     description: "`Process-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND Process_active_asset
+    where: Process_ext_asset AND Process_p_nom_mod > 0
     domain: integer
     bounds:
       lower: 0
@@ -201,7 +201,7 @@ variables:
       process that is active; the parameter of the same PyPSA name carries
       the fixed regime
     dims: [process]
-    where: Process_p_nom_extendable AND Process_active_asset
+    where: Process_ext_asset
 
 expressions:
   Process_p_nom_effective:
@@ -259,47 +259,62 @@ masks:
       a committable process that stands in the snapshot's period — every
       unit-commitment row's set
     where: Process_committable AND Process_active
+  Process_fix:
+    description: >-
+      a process with a fixed build, not committable, that stands in the
+      snapshot's period — PyPSA's `fix` rows
+    where: NOT Process_p_nom_extendable AND NOT Process_committable AND Process_active
+  Process_ext:
+    description: >-
+      a process with an extendable build, not committable, that stands in
+      the snapshot's period — PyPSA's `ext` rows
+    where: Process_p_nom_extendable AND NOT Process_committable AND Process_active
+  Process_ext_asset:
+    description: >-
+      a process with an extendable build among PyPSA's active assets — the
+      units whose build is a variable
+    where: Process_p_nom_extendable AND Process_active_asset
 
 constraints:
   Process_fix_p_lower:
     description: "`Process-fix-p-lower` — a fixed process runs at least its minimum, negative for the other way"
     dims: [scenario, snapshot, process]
-    where: not Process_p_nom_extendable AND not Process_committable AND Process_active
+    where: Process_fix
     expression: Process_p >= Process_p_min_pu * Process_p_nom * (1 - Process_maintenance_pu * Process_maintenance)
   Process_fix_p_upper:
     description: "`Process-fix-p-upper` — a fixed process runs at most its nominal power"
     dims: [scenario, snapshot, process]
-    where: not Process_p_nom_extendable AND not Process_committable AND Process_active
+    where: Process_fix
     expression: Process_p <= Process_p_max_pu * Process_p_nom * (1 - Process_maintenance_pu * Process_maintenance)
   Process_ext_p_lower:
     description: "`Process-ext-p-lower` — an extendable process runs at least its minimum of the chosen build, negative for the other way"
     dims: [scenario, snapshot, process]
-    where: Process_p_nom_extendable AND not Process_committable AND Process_active
+    where: Process_ext
     expression: Process_p >= Process_p_min_pu * (Process_p_nom_ext - Process_maintenance_pu * Process_maintenance_capacity)
   Process_ext_p_upper:
     description: "`Process-ext-p-upper` — an extendable process runs at most the chosen build"
     dims: [scenario, snapshot, process]
-    where: Process_p_nom_extendable AND not Process_committable AND Process_active
+    where: Process_ext
     expression: Process_p <= Process_p_max_pu * (Process_p_nom_ext - Process_maintenance_pu * Process_maintenance_capacity)
   Process_ext_p_nom_lower:
     description: "`Process-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, process]
-    where: Process_p_nom_extendable AND Process_active_asset
+    where: Process_ext_asset
     expression: Process_p_nom_ext >= Process_p_nom_min
   Process_ext_p_nom_upper:
     description: "`Process-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
     dims: [scenario, process]
-    where: Process_p_nom_extendable AND Process_active_asset AND Process_p_nom_max
+    where: Process_ext_asset AND Process_p_nom_max
     expression: Process_p_nom_ext <= Process_p_nom_max
   Process_p_nom_set:
     description: "`Process-p_nom_set` — the chosen build pinned, wherever a value is given"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_active_asset AND Process_p_nom_set
+    where: Process_ext_asset AND Process_p_nom_set
     expression: Process_p_nom_ext == Process_p_nom_set
   Process_p_nom_modularity:
     description: "`Process-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND Process_active_asset
+    where: Process_ext_asset AND Process_p_nom_mod > 0
     expression: Process_p_nom_ext == Process_p_nom_mod * Process_n_mod
   Process_p_set:
     description: "`Process-p_set` — internal power pinned to the given schedule, wherever one is given"

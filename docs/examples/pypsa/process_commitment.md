@@ -169,17 +169,37 @@ masks:
       AND Process_p_nom_extendable
       AND NOT (Process_p_nom_mod > 0)
       AND Process_active
+  Process_com_fix:
+    description: >-
+      a committable process with a fixed, non-modular build that stands in
+      the snapshot's period — PyPSA's `com` rows
+    where: >-
+      Process_committed
+      AND NOT Process_p_nom_extendable
+      AND NOT (Process_p_nom_mod > 0)
+  Process_com_mod:
+    description: >-
+      a committable process with a modular build that stands in the
+      snapshot's period — PyPSA's `com-mod` rows, whose status counts
+      modules
+    where: Process_committed AND Process_p_nom_mod > 0
+  Process_com_ext_mod:
+    description: >-
+      a committable process with an extendable, modular build that stands
+      in the snapshot's period — its status is bounded by the chosen
+      number of modules
+    where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
 
 constraints:
   Process_com_p_lower:
     description: "`Process-com-p-lower` — a committed process runs at least its minimum; off, at least nothing"
     dims: [scenario, snapshot, process]
-    where: Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
+    where: Process_com_fix
     expression: Process_p >= Process_p_min_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_p_upper:
     description: "`Process-com-p-upper` — a committed process runs at most what is available; off, at most nothing"
     dims: [scenario, snapshot, process]
-    where: Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
+    where: Process_com_fix
     expression: Process_p <= Process_p_max_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_transition_start_up:
     description: "`Process-com-transition-start-up` — turning on is a start, counted against the state the process carried into the snapshot"
@@ -254,14 +274,14 @@ constraints:
       `Process-com-mod-p-lower` — a committed modular process runs at least
       its minimum of one module, whether the build is fixed or a decision
     dims: [scenario, snapshot, process]
-    where: Process_committed AND Process_p_nom_mod > 0
+    where: Process_com_mod
     expression: Process_p >= Process_p_min_pu * Process_p_nom_mod * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_mod_p_upper:
     description: >-
       `Process-com-mod-p-upper` — a committed modular process runs at most
       one module's share, whether the build is fixed or a decision
     dims: [scenario, snapshot, process]
-    where: Process_committed AND Process_p_nom_mod > 0
+    where: Process_com_mod
     expression: Process_p <= Process_p_max_pu * Process_p_nom_mod * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_status_p_fixed_upper:
     description: >-
@@ -269,7 +289,7 @@ constraints:
       place, an explicit row as PyPSA writes it: one where the build is not
       modular, and the fixed build's whole count of modules where it is
     dims: [scenario, snapshot, process]
-    where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
+    where: Process_committed AND NOT Process_com_ext_mod
     expression: Process_status <= Process_modules_installed
   Process_start_up_p_fixed_upper:
     description: >-
@@ -277,7 +297,7 @@ constraints:
       place, an explicit row as PyPSA writes it: one where the build is not
       modular, and the fixed build's whole count of modules where it is
     dims: [scenario, snapshot, process]
-    where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
+    where: Process_committed AND NOT Process_com_ext_mod
     expression: Process_start_up <= Process_modules_installed
   Process_shut_down_p_fixed_upper:
     description: >-
@@ -285,22 +305,22 @@ constraints:
       place, an explicit row as PyPSA writes it: one where the build is not
       modular, and the fixed build's whole count of modules where it is
     dims: [scenario, snapshot, process]
-    where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
+    where: Process_committed AND NOT Process_com_ext_mod
     expression: Process_shut_down <= Process_modules_installed
   Process_status_p_nom_variable_upper:
     description: "`Process-status-p_nom-variable-upper` — a modular process is on only where a module is built"
     dims: [scenario, snapshot, process]
-    where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
+    where: Process_com_ext_mod
     expression: Process_status <= Process_n_mod
   Process_start_up_p_nom_variable_upper:
     description: "`Process-start_up-p_nom-variable-upper` — a modular process starts only where a module is built"
     dims: [scenario, snapshot, process]
-    where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
+    where: Process_com_ext_mod
     expression: Process_start_up <= Process_n_mod
   Process_shut_down_p_nom_variable_upper:
     description: "`Process-shut_down-p_nom-variable-upper` — a modular process stops only where a module is built"
     dims: [scenario, snapshot, process]
-    where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
+    where: Process_com_ext_mod
     expression: Process_shut_down <= Process_n_mod
 ```
 
@@ -356,6 +376,9 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{z,\mathrm{com,ext}}`$ | `Process_com_ext` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
+| $`\mathrm{on}^{z,\mathrm{com,fix}}`$ | `Process_com_fix` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process with a fixed, non-modular build that stands in the snapshot's period — PyPSA's `com` rows |
+| $`\mathrm{on}^{z,\mathrm{com,mod}}`$ | `Process_com_mod` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process with a modular build that stands in the snapshot's period — PyPSA's `com-mod` rows, whose status counts modules |
+| $`\mathrm{on}^{z,\mathrm{com,ext,mod}}`$ | `Process_com_ext_mod` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process with an extendable, modular build that stands in the snapshot's period — its status is bounded by the chosen number of modules |
 
 #### Variables
 
@@ -385,6 +408,24 @@ constraints:
 
 ```math
 \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \iff \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+**`Process_com_fix`**
+
+```math
+\mathrm{on}^{z,\mathrm{com,fix}}_{t,j} \iff \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+**`Process_com_mod`**
+
+```math
+\mathrm{on}^{z,\mathrm{com,mod}}_{t,j} \iff \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+**`Process_com_ext_mod`**
+
+```math
+\mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j} \iff \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
 ```
 
 #### Variable domains
@@ -432,13 +473,13 @@ u^{z}_{\xi,t,j} \ge 0, u^{z}_{\xi,t,j} \in \mathbb{Z} \qquad \forall\, \xi \in \
 **`Process_com_p_lower`**
 
 ```math
-z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,fix}}_{t,j}
 ```
 
 **`Process_com_p_upper`**
 
 ```math
-z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,fix}}_{t,j}
 ```
 
 **`Process_com_transition_start_up`**
@@ -504,48 +545,48 @@ z_{\xi,t,j} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \math
 **`Process_com_mod_p_lower`**
 
 ```math
-z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{mod}}_{j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{mod}}_{j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,mod}}_{t,j}
 ```
 
 **`Process_com_mod_p_upper`**
 
 ```math
-z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{mod}}_{j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{mod}}_{j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,mod}}_{t,j}
 ```
 
 **`Process_status_p_fixed_upper`**
 
 ```math
-u^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+u^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j}
 ```
 
 **`Process_start_up_p_fixed_upper`**
 
 ```math
-\mathit{up}^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+\mathit{up}^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j}
 ```
 
 **`Process_shut_down_p_fixed_upper`**
 
 ```math
-\mathit{dn}^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+\mathit{dn}^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j}
 ```
 
 **`Process_status_p_nom_variable_upper`**
 
 ```math
-u^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+u^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j}
 ```
 
 **`Process_start_up_p_nom_variable_upper`**
 
 ```math
-\mathit{up}^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\mathit{up}^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j}
 ```
 
 **`Process_shut_down_p_nom_variable_upper`**
 
 ```math
-\mathit{dn}^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\mathit{dn}^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j}
 ```
 <!-- gallery:end -->

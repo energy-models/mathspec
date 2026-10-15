@@ -183,7 +183,7 @@ variables:
   Generator_n_mod:
     description: "`Generator-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active_asset
+    where: Generator_ext_asset AND Generator_p_nom_mod > 0
     domain: integer
     bounds:
       lower: 0
@@ -193,7 +193,7 @@ variables:
       generator that is active; the parameter of the same PyPSA name carries
       the fixed regime
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_active_asset
+    where: Generator_ext_asset
 
 expressions:
   Generator_p_nom_effective:
@@ -243,42 +243,63 @@ masks:
       a committable generator that stands in the snapshot's period — every
       unit-commitment row's set
     where: Generator_committable AND Generator_active
+  Generator_fix:
+    description: >-
+      a generator with a fixed build, not committable, that stands in the
+      snapshot's period — PyPSA's `fix` rows
+    where: >-
+      NOT Generator_p_nom_extendable
+      AND NOT Generator_committable
+      AND Generator_active
+  Generator_ext:
+    description: >-
+      a generator with an extendable build, not committable, that stands
+      in the snapshot's period — PyPSA's `ext` rows
+    where: >-
+      Generator_p_nom_extendable
+      AND NOT Generator_committable
+      AND Generator_active
+  Generator_ext_asset:
+    description: >-
+      a generator with an extendable build among PyPSA's active assets —
+      the units whose build is a variable
+    where: Generator_p_nom_extendable AND Generator_active_asset
 
 constraints:
   Generator_fix_p_lower:
     description: "`Generator-fix-p-lower` — a fixed generator outputs at least its minimum"
     dims: [scenario, snapshot, generator]
-    where: not Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+    where: Generator_fix
     expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * (1 - Generator_maintenance_pu * Generator_maintenance)
   Generator_fix_p_upper:
     description: "`Generator-fix-p-upper` — a fixed generator outputs at most what is available"
     dims: [scenario, snapshot, generator]
-    where: not Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+    where: Generator_fix
     expression: Generator_p <= Generator_p_max_pu * Generator_p_nom * (1 - Generator_maintenance_pu * Generator_maintenance)
   Generator_ext_p_lower:
     description: "`Generator-ext-p-lower` — an extendable generator outputs at least its minimum of the chosen build"
     dims: [scenario, snapshot, generator]
-    where: Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+    where: Generator_ext
     expression: Generator_p >= Generator_p_min_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
   Generator_ext_p_upper:
     description: "`Generator-ext-p-upper` — an extendable generator outputs at most what is available of the chosen build"
     dims: [scenario, snapshot, generator]
-    where: Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+    where: Generator_ext
     expression: Generator_p <= Generator_p_max_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
   Generator_ext_p_nom_lower:
     description: "`Generator-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, generator]
-    where: Generator_p_nom_extendable AND Generator_active_asset
+    where: Generator_ext_asset
     expression: Generator_p_nom_ext >= Generator_p_nom_min
   Generator_ext_p_nom_upper:
     description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
     dims: [scenario, generator]
-    where: Generator_p_nom_extendable AND Generator_active_asset AND Generator_p_nom_max
+    where: Generator_ext_asset AND Generator_p_nom_max
     expression: Generator_p_nom_ext <= Generator_p_nom_max
   Generator_p_nom_set:
     description: "`Generator-p_nom_set` — the chosen build pinned, wherever a value is given"
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_active_asset AND Generator_p_nom_set
+    where: Generator_ext_asset AND Generator_p_nom_set
     expression: Generator_p_nom_ext == Generator_p_nom_set
   Generator_e_sum_min:
     description: "`Generator-e_sum_min` — energy over the horizon is at least its floor; a floor of minus infinity is no row"
@@ -293,7 +314,7 @@ constraints:
   Generator_p_nom_modularity:
     description: "`Generator-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active_asset
+    where: Generator_ext_asset AND Generator_p_nom_mod > 0
     expression: Generator_p_nom_ext == Generator_p_nom_mod * Generator_n_mod
   Generator_p_set:
     description: "`Generator-p_set` — output pinned to the given schedule, wherever one is given"
@@ -380,6 +401,9 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{T} \times \mathcal{G}`$ — a committable generator that stands in the snapshot's period — every unit-commitment row's set |
+| $`\mathrm{on}^{\mathrm{fix}}`$ | `Generator_fix` over $`\mathcal{T} \times \mathcal{G}`$ — a generator with a fixed build, not committable, that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{\mathrm{ext}}`$ | `Generator_ext` over $`\mathcal{T} \times \mathcal{G}`$ — a generator with an extendable build, not committable, that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{\mathrm{ext}}`$ | `Generator_ext_asset` over $`\mathcal{G}`$ — a generator with an extendable build among PyPSA's active assets — the units whose build is a variable |
 
 #### Variables
 
@@ -411,6 +435,24 @@ assumptions:
 \mathrm{on}^{\mathrm{com}}_{t,g} \iff \mathrm{com}_{g} \wedge \mathrm{on}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
+**`Generator_fix`**
+
+```math
+\mathrm{on}^{\mathrm{fix}}_{t,g} \iff \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+**`Generator_ext`**
+
+```math
+\mathrm{on}^{\mathrm{ext}}_{t,g} \iff \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+**`Generator_ext_asset`**
+
+```math
+\mathrm{act}^{\mathrm{ext}}_{g} \iff \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \qquad \forall\, g \in \mathcal{G}
+```
+
 #### Variable domains
 
 **`Generator_p`**
@@ -422,13 +464,13 @@ p_{\xi,t,g} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g 
 **`Generator_n_mod`**
 
 ```math
-N_{g} \ge 0, N_{g} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g}
+N_{g} \ge 0, N_{g} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{act}^{\mathrm{ext}}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 **`Generator_p_nom_ext`**
 
 ```math
-P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{act}_{g}
+P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{act}^{\mathrm{ext}}_{g}
 ```
 
 #### Definitions
@@ -492,43 +534,43 @@ P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \
 **`Generator_fix_p_lower`**
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{fix}}_{t,g}
 ```
 
 **`Generator_fix_p_upper`**
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{fix}}_{t,g}
 ```
 
 **`Generator_ext_p_lower`**
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{ext}}_{t,g}
 ```
 
 **`Generator_ext_p_upper`**
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{ext}}_{t,g}
 ```
 
 **`Generator_ext_p_nom_lower`**
 
 ```math
-P_{g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{act}_{g}
+P_{g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{act}^{\mathrm{ext}}_{g}
 ```
 
 **`Generator_ext_p_nom_upper`**
 
 ```math
-P_{g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \text{ is defined}
+P_{g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{act}^{\mathrm{ext}}_{g} \wedge \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \text{ is defined}
 ```
 
 **`Generator_p_nom_set`**
 
 ```math
-P_{g} = \mathrm{p}^{\mathrm{nom,set}}_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \mathrm{p}^{\mathrm{nom,set}}_{g} \text{ is defined}
+P_{g} = \mathrm{p}^{\mathrm{nom,set}}_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{act}^{\mathrm{ext}}_{g} \wedge \mathrm{p}^{\mathrm{nom,set}}_{g} \text{ is defined}
 ```
 
 **`Generator_e_sum_min`**
@@ -546,7 +588,7 @@ P_{g} = \mathrm{p}^{\mathrm{nom,set}}_{g} \qquad \forall\, g \in \mathcal{G} \,:
 **`Generator_p_nom_modularity`**
 
 ```math
-P_{g} = \mathrm{p}^{\mathrm{mod}}_{g} \cdot N_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g}
+P_{g} = \mathrm{p}^{\mathrm{mod}}_{g} \cdot N_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{act}^{\mathrm{ext}}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 **`Generator_p_set`**

@@ -11,10 +11,8 @@ This file states the ramping rows of PyPSA's `Process`. It is one of the [24 fra
 ```yaml
 given:
   parameters:
-    Process_p_nom_extendable: { dims: [process], dtype: bool }
     Process_committable: { dims: [process], dtype: bool }
     Process_status_initial: { dims: [scenario, process], dtype: int }
-    Process_p_nom_mod: { dims: [process] }
     Process_big_m: { dims: [scenario, process] }
     Process_active: { dims: [snapshot, process], dtype: bool }
   variables:
@@ -155,6 +153,22 @@ masks:
     where: >-
       position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
       (Process_status_initial == 0 OR Process_p_init))
+  Process_ramps_up:
+    description: >-
+      a snapshot whose rise in output a ramp limit bounds — the process
+      has a ramp-up or start-up limit, and the snapshot reads a previous
+      output
+    where: >-
+      (Process_ramp_limit_up OR Process_ramp_limit_start_up)
+      AND Process_ramps_from_previous
+  Process_ramps_down:
+    description: >-
+      a snapshot whose fall in output a ramp limit bounds — the process
+      has a ramp-down or shut-down limit, and the snapshot reads a
+      previous output
+    where: >-
+      (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
+      AND Process_ramps_from_previous
 
 constraints:
   Process_p_ramp_limit_up_run_big_m:
@@ -163,7 +177,7 @@ constraints:
       raises internal power no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns on
     dims: [scenario, snapshot, process]
-    where: Process_com_ext AND (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND Process_ramps_from_previous
+    where: Process_com_ext AND Process_ramps_up
     expression: >-
       Process_p - Process_previous_p <=
       Process_ramp_up_rate * Process_p_nom_ext
@@ -174,7 +188,7 @@ constraints:
       committed extendable process ramps no further than its start-up ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, process]
-    where: Process_com_ext AND (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND Process_ramps_from_previous
+    where: Process_com_ext AND Process_ramps_up
     expression: >-
       Process_p - Process_previous_p <=
       Process_start_up_rate * Process_p_nom_ext
@@ -185,10 +199,7 @@ constraints:
       lowers internal power no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns off
     dims: [scenario, snapshot, process]
-    where: >-
-      Process_com_ext
-      AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND Process_ramps_from_previous
+    where: Process_com_ext AND Process_ramps_down
     expression: >-
       Process_previous_p - Process_p <=
       Process_ramp_down_rate * Process_p_nom_ext
@@ -199,10 +210,7 @@ constraints:
       a committed extendable process ramps no further than its shut-down ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, process]
-    where: >-
-      Process_com_ext
-      AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND Process_ramps_from_previous
+    where: Process_com_ext AND Process_ramps_down
     expression: >-
       Process_previous_p - Process_p <=
       Process_shut_down_rate * Process_p_nom_ext
@@ -216,11 +224,7 @@ constraints:
       `p_init` gives the internal power it brought in, and no process carries one at
       the start of a later investment period — nor does any process a big M releases instead
     dims: [scenario, snapshot, process]
-    where: >-
-      (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-      AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-      AND Process_ramps_from_previous
-      AND Process_active
+    where: Process_ramps_up AND Process_active AND NOT Process_com_ext
     expression: Process_p - Process_previous_p <= Process_ramp_up_allowance
   Process_p_ramp_limit_down:
     description: >-
@@ -231,11 +235,7 @@ constraints:
       `p_init` gives the internal power it brought in, and no process carries one at
       the start of a later investment period — nor does any process a big M releases instead
     dims: [scenario, snapshot, process]
-    where: >-
-      (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-      AND Process_ramps_from_previous
-      AND Process_active
+    where: Process_ramps_down AND Process_active AND NOT Process_com_ext
     expression: Process_previous_p - Process_p <= Process_ramp_down_allowance
 
 assumptions:
@@ -259,10 +259,8 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{ext}^{z}`$ | `Process_p_nom_extendable` over $`\mathcal{J}`$, data another file declares |
 | $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$, data another file declares |
 | $`\mathrm{u}^{z,0}`$ | `Process_status_initial` over $`\Xi \times \mathcal{J}`$, data another file declares |
-| $`\mathrm{z}^{\mathrm{mod}}`$ | `Process_p_nom_mod` over $`\mathcal{J}`$, data another file declares |
 | $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$, data another file declares |
 | $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{T} \times \mathcal{J}`$, data another file declares |
 | $`z`$ | `Process_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
@@ -299,6 +297,8 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{prev}^{z}`$ | `Process_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the process comes in off or carries an initial output |
+| $`\mathrm{prev}^{z,\mathrm{up}}`$ | `Process_ramps_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — a snapshot whose rise in output a ramp limit bounds — the process has a ramp-up or start-up limit, and the snapshot reads a previous output |
+| $`\mathrm{prev}^{z,\mathrm{dn}}`$ | `Process_ramps_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — a snapshot whose fall in output a ramp limit bounds — the process has a ramp-down or shut-down limit, and the snapshot reads a previous output |
 
 #### Definitions
 
@@ -325,6 +325,18 @@ assumptions:
 
 ```math
 \mathrm{prev}^{z}_{\xi,t,j} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{\xi,j} = 0 \vee \mathrm{z}^{0}_{\xi,j} \text{ is defined} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+**`Process_ramps_up`**
+
+```math
+\mathrm{prev}^{z,\mathrm{up}}_{\xi,t,j} \iff \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+**`Process_ramps_down`**
+
+```math
+\mathrm{prev}^{z,\mathrm{dn}}_{\xi,t,j} \iff \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
 ```
 
 #### Definitions
@@ -376,37 +388,37 @@ assumptions:
 **`Process_p_ramp_limit_up_run_big_m`**
 
 ```math
-z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \overleftarrow{u}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j}
+z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \overleftarrow{u}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \mathrm{prev}^{z,\mathrm{up}}_{\xi,t,j}
 ```
 
 **`Process_p_ramp_limit_up_start_big_m`**
 
 ```math
-z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{up}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j}
+z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{up}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \mathrm{prev}^{z,\mathrm{up}}_{\xi,t,j}
 ```
 
 **`Process_p_ramp_limit_down_run_big_m`**
 
 ```math
-\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j}
+\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \mathrm{prev}^{z,\mathrm{dn}}_{\xi,t,j}
 ```
 
 **`Process_p_ramp_limit_down_shut_big_m`**
 
 ```math
-\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{dn}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j}
+\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{dn}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \mathrm{prev}^{z,\mathrm{dn}}_{\xi,t,j}
 ```
 
 **`Process_p_ramp_limit_up`**
 
 ```math
-z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \Delta^{z,+}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \mathrm{prev}^{z}_{\xi,t,j} \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \Delta^{z,+}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{prev}^{z,\mathrm{up}}_{\xi,t,j} \wedge \mathrm{on}^{z}_{t,j} \wedge \neg \mathrm{on}^{z,\mathrm{com,ext}}_{t,j}
 ```
 
 **`Process_p_ramp_limit_down`**
 
 ```math
-\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \Delta^{z,-}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \mathrm{prev}^{z}_{\xi,t,j} \wedge \mathrm{on}^{z}_{t,j}
+\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \Delta^{z,-}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{prev}^{z,\mathrm{dn}}_{\xi,t,j} \wedge \mathrm{on}^{z}_{t,j} \wedge \neg \mathrm{on}^{z,\mathrm{com,ext}}_{t,j}
 ```
 
 #### Assumptions

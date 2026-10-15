@@ -176,7 +176,7 @@ variables:
   Generator_n_mod:
     description: "`Generator-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active_asset
+    where: Generator_ext_asset AND Generator_p_nom_mod > 0
     domain: integer
     bounds:
       lower: 0
@@ -186,7 +186,7 @@ variables:
       generator that is active; the parameter of the same PyPSA name carries
       the fixed regime
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_active_asset
+    where: Generator_ext_asset
 
 expressions:
   Generator_p_nom_effective:
@@ -236,42 +236,63 @@ masks:
       a committable generator that stands in the snapshot's period — every
       unit-commitment row's set
     where: Generator_committable AND Generator_active
+  Generator_fix:
+    description: >-
+      a generator with a fixed build, not committable, that stands in the
+      snapshot's period — PyPSA's `fix` rows
+    where: >-
+      NOT Generator_p_nom_extendable
+      AND NOT Generator_committable
+      AND Generator_active
+  Generator_ext:
+    description: >-
+      a generator with an extendable build, not committable, that stands
+      in the snapshot's period — PyPSA's `ext` rows
+    where: >-
+      Generator_p_nom_extendable
+      AND NOT Generator_committable
+      AND Generator_active
+  Generator_ext_asset:
+    description: >-
+      a generator with an extendable build among PyPSA's active assets —
+      the units whose build is a variable
+    where: Generator_p_nom_extendable AND Generator_active_asset
 
 constraints:
   Generator_fix_p_lower:
     description: "`Generator-fix-p-lower` — a fixed generator outputs at least its minimum"
     dims: [scenario, snapshot, generator]
-    where: not Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+    where: Generator_fix
     expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * (1 - Generator_maintenance_pu * Generator_maintenance)
   Generator_fix_p_upper:
     description: "`Generator-fix-p-upper` — a fixed generator outputs at most what is available"
     dims: [scenario, snapshot, generator]
-    where: not Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+    where: Generator_fix
     expression: Generator_p <= Generator_p_max_pu * Generator_p_nom * (1 - Generator_maintenance_pu * Generator_maintenance)
   Generator_ext_p_lower:
     description: "`Generator-ext-p-lower` — an extendable generator outputs at least its minimum of the chosen build"
     dims: [scenario, snapshot, generator]
-    where: Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+    where: Generator_ext
     expression: Generator_p >= Generator_p_min_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
   Generator_ext_p_upper:
     description: "`Generator-ext-p-upper` — an extendable generator outputs at most what is available of the chosen build"
     dims: [scenario, snapshot, generator]
-    where: Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+    where: Generator_ext
     expression: Generator_p <= Generator_p_max_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
   Generator_ext_p_nom_lower:
     description: "`Generator-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, generator]
-    where: Generator_p_nom_extendable AND Generator_active_asset
+    where: Generator_ext_asset
     expression: Generator_p_nom_ext >= Generator_p_nom_min
   Generator_ext_p_nom_upper:
     description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
     dims: [scenario, generator]
-    where: Generator_p_nom_extendable AND Generator_active_asset AND Generator_p_nom_max
+    where: Generator_ext_asset AND Generator_p_nom_max
     expression: Generator_p_nom_ext <= Generator_p_nom_max
   Generator_p_nom_set:
     description: "`Generator-p_nom_set` — the chosen build pinned, wherever a value is given"
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_active_asset AND Generator_p_nom_set
+    where: Generator_ext_asset AND Generator_p_nom_set
     expression: Generator_p_nom_ext == Generator_p_nom_set
   Generator_e_sum_min:
     description: "`Generator-e_sum_min` — energy over the horizon is at least its floor; a floor of minus infinity is no row"
@@ -286,7 +307,7 @@ constraints:
   Generator_p_nom_modularity:
     description: "`Generator-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [generator]
-    where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active_asset
+    where: Generator_ext_asset AND Generator_p_nom_mod > 0
     expression: Generator_p_nom_ext == Generator_p_nom_mod * Generator_n_mod
   Generator_p_set:
     description: "`Generator-p_set` — output pinned to the given schedule, wherever one is given"

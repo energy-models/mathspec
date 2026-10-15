@@ -198,7 +198,7 @@ variables:
   Process_n_mod:
     description: "`Process-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND Process_active_asset
+    where: Process_ext_asset AND Process_p_nom_mod > 0
     domain: integer
     bounds:
       lower: 0
@@ -208,7 +208,7 @@ variables:
       process that is active; the parameter of the same PyPSA name carries
       the fixed regime
     dims: [process]
-    where: Process_p_nom_extendable AND Process_active_asset
+    where: Process_ext_asset
 
 expressions:
   Process_p_nom_effective:
@@ -266,47 +266,62 @@ masks:
       a committable process that stands in the snapshot's period — every
       unit-commitment row's set
     where: Process_committable AND Process_active
+  Process_fix:
+    description: >-
+      a process with a fixed build, not committable, that stands in the
+      snapshot's period — PyPSA's `fix` rows
+    where: NOT Process_p_nom_extendable AND NOT Process_committable AND Process_active
+  Process_ext:
+    description: >-
+      a process with an extendable build, not committable, that stands in
+      the snapshot's period — PyPSA's `ext` rows
+    where: Process_p_nom_extendable AND NOT Process_committable AND Process_active
+  Process_ext_asset:
+    description: >-
+      a process with an extendable build among PyPSA's active assets — the
+      units whose build is a variable
+    where: Process_p_nom_extendable AND Process_active_asset
 
 constraints:
   Process_fix_p_lower:
     description: "`Process-fix-p-lower` — a fixed process runs at least its minimum, negative for the other way"
     dims: [scenario, snapshot, process]
-    where: not Process_p_nom_extendable AND not Process_committable AND Process_active
+    where: Process_fix
     expression: Process_p >= Process_p_min_pu * Process_p_nom * (1 - Process_maintenance_pu * Process_maintenance)
   Process_fix_p_upper:
     description: "`Process-fix-p-upper` — a fixed process runs at most its nominal power"
     dims: [scenario, snapshot, process]
-    where: not Process_p_nom_extendable AND not Process_committable AND Process_active
+    where: Process_fix
     expression: Process_p <= Process_p_max_pu * Process_p_nom * (1 - Process_maintenance_pu * Process_maintenance)
   Process_ext_p_lower:
     description: "`Process-ext-p-lower` — an extendable process runs at least its minimum of the chosen build, negative for the other way"
     dims: [scenario, snapshot, process]
-    where: Process_p_nom_extendable AND not Process_committable AND Process_active
+    where: Process_ext
     expression: Process_p >= Process_p_min_pu * (Process_p_nom_ext - Process_maintenance_pu * Process_maintenance_capacity)
   Process_ext_p_upper:
     description: "`Process-ext-p-upper` — an extendable process runs at most the chosen build"
     dims: [scenario, snapshot, process]
-    where: Process_p_nom_extendable AND not Process_committable AND Process_active
+    where: Process_ext
     expression: Process_p <= Process_p_max_pu * (Process_p_nom_ext - Process_maintenance_pu * Process_maintenance_capacity)
   Process_ext_p_nom_lower:
     description: "`Process-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, process]
-    where: Process_p_nom_extendable AND Process_active_asset
+    where: Process_ext_asset
     expression: Process_p_nom_ext >= Process_p_nom_min
   Process_ext_p_nom_upper:
     description: "`Process-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
     dims: [scenario, process]
-    where: Process_p_nom_extendable AND Process_active_asset AND Process_p_nom_max
+    where: Process_ext_asset AND Process_p_nom_max
     expression: Process_p_nom_ext <= Process_p_nom_max
   Process_p_nom_set:
     description: "`Process-p_nom_set` — the chosen build pinned, wherever a value is given"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_active_asset AND Process_p_nom_set
+    where: Process_ext_asset AND Process_p_nom_set
     expression: Process_p_nom_ext == Process_p_nom_set
   Process_p_nom_modularity:
     description: "`Process-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [process]
-    where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND Process_active_asset
+    where: Process_ext_asset AND Process_p_nom_mod > 0
     expression: Process_p_nom_ext == Process_p_nom_mod * Process_n_mod
   Process_p_set:
     description: "`Process-p_set` — internal power pinned to the given schedule, wherever one is given"
@@ -394,6 +409,9 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process that stands in the snapshot's period — every unit-commitment row's set |
+| $`\mathrm{on}^{z,\mathrm{fix}}`$ | `Process_fix` over $`\mathcal{T} \times \mathcal{J}`$ — a process with a fixed build, not committable, that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{z,\mathrm{ext}}`$ | `Process_ext` over $`\mathcal{T} \times \mathcal{J}`$ — a process with an extendable build, not committable, that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{z,\mathrm{ext}}`$ | `Process_ext_asset` over $`\mathcal{J}`$ — a process with an extendable build among PyPSA's active assets — the units whose build is a variable |
 
 #### Variables
 
@@ -432,6 +450,24 @@ assumptions:
 \mathrm{on}^{z,\mathrm{com}}_{t,j} \iff \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
 ```
 
+**`Process_fix`**
+
+```math
+\mathrm{on}^{z,\mathrm{fix}}_{t,j} \iff \neg \mathrm{ext}^{z}_{j} \wedge \neg \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+**`Process_ext`**
+
+```math
+\mathrm{on}^{z,\mathrm{ext}}_{t,j} \iff \mathrm{ext}^{z}_{j} \wedge \neg \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+**`Process_ext_asset`**
+
+```math
+\mathrm{act}^{z,\mathrm{ext}}_{j} \iff \mathrm{ext}^{z}_{j} \wedge \mathrm{act}^{z}_{j} \qquad \forall\, j \in \mathcal{J}
+```
+
 #### Variable domains
 
 **`Process_p`**
@@ -443,13 +479,13 @@ z_{\xi,t,j} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j 
 **`Process_n_mod`**
 
 ```math
-N^{z}_{j} \ge 0, N^{z}_{j} \in \mathbb{Z} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \wedge \mathrm{act}^{z}_{j}
+N^{z}_{j} \ge 0, N^{z}_{j} \in \mathbb{Z} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{act}^{z,\mathrm{ext}}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 **`Process_p_nom_ext`**
 
 ```math
-Z_{j} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{act}^{z}_{j}
+Z_{j} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{act}^{z,\mathrm{ext}}_{j}
 ```
 
 #### Definitions
@@ -507,49 +543,49 @@ Z_{j} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{
 **`Process_fix_p_lower`**
 
 ```math
-z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( 1 - \gamma^{z}_{\xi,j} \cdot \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \neg \mathrm{ext}^{z}_{j} \wedge \neg \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( 1 - \gamma^{z}_{\xi,j} \cdot \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{fix}}_{t,j}
 ```
 
 **`Process_fix_p_upper`**
 
 ```math
-z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( 1 - \gamma^{z}_{\xi,j} \cdot \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \neg \mathrm{ext}^{z}_{j} \wedge \neg \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( 1 - \gamma^{z}_{\xi,j} \cdot \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{fix}}_{t,j}
 ```
 
 **`Process_ext_p_lower`**
 
 ```math
-z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \left( Z_{j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,\mathrm{nom}}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \neg \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \left( Z_{j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,\mathrm{nom}}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{ext}}_{t,j}
 ```
 
 **`Process_ext_p_upper`**
 
 ```math
-z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \left( Z_{j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,\mathrm{nom}}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \neg \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \left( Z_{j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,\mathrm{nom}}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{ext}}_{t,j}
 ```
 
 **`Process_ext_p_nom_lower`**
 
 ```math
-Z_{j} \ge \underline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{act}^{z}_{j}
+Z_{j} \ge \underline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{act}^{z,\mathrm{ext}}_{j}
 ```
 
 **`Process_ext_p_nom_upper`**
 
 ```math
-Z_{j} \le \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{act}^{z}_{j} \wedge \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \text{ is defined}
+Z_{j} \le \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{act}^{z,\mathrm{ext}}_{j} \wedge \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \text{ is defined}
 ```
 
 **`Process_p_nom_set`**
 
 ```math
-Z_{j} = \mathrm{z}^{\mathrm{nom,set}}_{j} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{act}^{z}_{j} \wedge \mathrm{z}^{\mathrm{nom,set}}_{j} \text{ is defined}
+Z_{j} = \mathrm{z}^{\mathrm{nom,set}}_{j} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{act}^{z,\mathrm{ext}}_{j} \wedge \mathrm{z}^{\mathrm{nom,set}}_{j} \text{ is defined}
 ```
 
 **`Process_p_nom_modularity`**
 
 ```math
-Z_{j} = \mathrm{z}^{\mathrm{mod}}_{j} \cdot N^{z}_{j} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \wedge \mathrm{act}^{z}_{j}
+Z_{j} = \mathrm{z}^{\mathrm{mod}}_{j} \cdot N^{z}_{j} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{act}^{z,\mathrm{ext}}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 **`Process_p_set`**

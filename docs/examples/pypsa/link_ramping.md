@@ -11,10 +11,8 @@ This file states the ramping rows of PyPSA's `Link`. It is one of the [24 fragme
 ```yaml
 given:
   parameters:
-    Link_p_nom_extendable: { dims: [link], dtype: bool }
     Link_committable: { dims: [link], dtype: bool }
     Link_status_initial: { dims: [scenario, link], dtype: int }
-    Link_p_nom_mod: { dims: [link] }
     Link_big_m: { dims: [scenario, link] }
     Link_active: { dims: [snapshot, link], dtype: bool }
   variables:
@@ -155,6 +153,21 @@ masks:
     where: >-
       position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
       (Link_status_initial == 0 OR Link_p_init))
+  Link_ramps_up:
+    description: >-
+      a snapshot whose rise in output a ramp limit bounds — the link has a
+      ramp-up or start-up limit, and the snapshot reads a previous output
+    where: >-
+      (Link_ramp_limit_up OR Link_ramp_limit_start_up)
+      AND Link_ramps_from_previous
+  Link_ramps_down:
+    description: >-
+      a snapshot whose fall in output a ramp limit bounds — the link has a
+      ramp-down or shut-down limit, and the snapshot reads a previous
+      output
+    where: >-
+      (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
+      AND Link_ramps_from_previous
 
 constraints:
   Link_p_ramp_limit_up_run_big_m:
@@ -163,7 +176,7 @@ constraints:
       raises flow no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns on
     dims: [scenario, snapshot, link]
-    where: Link_com_ext AND (Link_ramp_limit_up OR Link_ramp_limit_start_up) AND Link_ramps_from_previous
+    where: Link_com_ext AND Link_ramps_up
     expression: >-
       Link_p - Link_previous_p <=
       Link_ramp_up_rate * Link_p_nom_ext
@@ -174,7 +187,7 @@ constraints:
       committed extendable link ramps no further than its start-up ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, link]
-    where: Link_com_ext AND (Link_ramp_limit_up OR Link_ramp_limit_start_up) AND Link_ramps_from_previous
+    where: Link_com_ext AND Link_ramps_up
     expression: >-
       Link_p - Link_previous_p <=
       Link_start_up_rate * Link_p_nom_ext
@@ -185,7 +198,7 @@ constraints:
       lowers flow no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns off
     dims: [scenario, snapshot, link]
-    where: Link_com_ext AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down) AND Link_ramps_from_previous
+    where: Link_com_ext AND Link_ramps_down
     expression: >-
       Link_previous_p - Link_p <=
       Link_ramp_down_rate * Link_p_nom_ext
@@ -196,7 +209,7 @@ constraints:
       a committed extendable link ramps no further than its shut-down ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, link]
-    where: Link_com_ext AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down) AND Link_ramps_from_previous
+    where: Link_com_ext AND Link_ramps_down
     expression: >-
       Link_previous_p - Link_p <=
       Link_shut_down_rate * Link_p_nom_ext
@@ -210,11 +223,7 @@ constraints:
       `p_init` gives the flow it brought in, and no link carries one at
       the start of a later investment period — nor does any link a big M releases instead
     dims: [scenario, snapshot, link]
-    where: >-
-      (Link_ramp_limit_up OR Link_ramp_limit_start_up)
-      AND NOT (Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0))
-      AND Link_ramps_from_previous
-      AND Link_active
+    where: Link_ramps_up AND Link_active AND NOT Link_com_ext
     expression: Link_p - Link_previous_p <= Link_ramp_up_allowance
   Link_p_ramp_limit_down:
     description: >-
@@ -225,11 +234,7 @@ constraints:
       `p_init` gives the flow it brought in, and no link carries one at
       the start of a later investment period — nor does any link a big M releases instead
     dims: [scenario, snapshot, link]
-    where: >-
-      (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
-      AND NOT (Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0))
-      AND Link_ramps_from_previous
-      AND Link_active
+    where: Link_ramps_down AND Link_active AND NOT Link_com_ext
     expression: Link_previous_p - Link_p <= Link_ramp_down_allowance
 
 assumptions:
@@ -253,10 +258,8 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$, data another file declares |
 | $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$, data another file declares |
 | $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\Xi \times \mathcal{L}`$, data another file declares |
-| $`\mathrm{f}^{\mathrm{mod}}`$ | `Link_p_nom_mod` over $`\mathcal{L}`$, data another file declares |
 | $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\Xi \times \mathcal{L}`$, data another file declares |
 | $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{T} \times \mathcal{L}`$, data another file declares |
 | $`f`$ | `Link_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
@@ -293,6 +296,8 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{prev}^{f}`$ | `Link_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the link comes in off or carries an initial output |
+| $`\mathrm{prev}^{f,\mathrm{up}}`$ | `Link_ramps_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — a snapshot whose rise in output a ramp limit bounds — the link has a ramp-up or start-up limit, and the snapshot reads a previous output |
+| $`\mathrm{prev}^{f,\mathrm{dn}}`$ | `Link_ramps_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — a snapshot whose fall in output a ramp limit bounds — the link has a ramp-down or shut-down limit, and the snapshot reads a previous output |
 
 #### Definitions
 
@@ -319,6 +324,18 @@ assumptions:
 
 ```math
 \mathrm{prev}^{f}_{\xi,t,l} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{f,0}_{\xi,l} = 0 \vee \mathrm{f}^{0}_{\xi,l} \text{ is defined} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+**`Link_ramps_up`**
+
+```math
+\mathrm{prev}^{f,\mathrm{up}}_{\xi,t,l} \iff \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+**`Link_ramps_down`**
+
+```math
+\mathrm{prev}^{f,\mathrm{dn}}_{\xi,t,l} \iff \left( \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
 ```
 
 #### Definitions
@@ -370,37 +387,37 @@ assumptions:
 **`Link_p_ramp_limit_up_run_big_m`**
 
 ```math
-f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \widetilde{\mathrm{ru}}^{f}_{\xi,t,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \overleftarrow{u}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{\xi,t,l}
+f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \widetilde{\mathrm{ru}}^{f}_{\xi,t,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \overleftarrow{u}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \mathrm{prev}^{f,\mathrm{up}}_{\xi,t,l}
 ```
 
 **`Link_p_ramp_limit_up_start_big_m`**
 
 ```math
-f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{\xi,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \mathit{up}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{\xi,t,l}
+f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{\xi,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \mathit{up}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \mathrm{prev}^{f,\mathrm{up}}_{\xi,t,l}
 ```
 
 **`Link_p_ramp_limit_down_run_big_m`**
 
 ```math
-\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \widetilde{\mathrm{rd}}^{f}_{\xi,t,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \left( \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{\xi,t,l}
+\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \widetilde{\mathrm{rd}}^{f}_{\xi,t,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \mathrm{prev}^{f,\mathrm{dn}}_{\xi,t,l}
 ```
 
 **`Link_p_ramp_limit_down_shut_big_m`**
 
 ```math
-\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \mathit{dn}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \left( \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{\xi,t,l}
+\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \mathit{dn}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \mathrm{prev}^{f,\mathrm{dn}}_{\xi,t,l}
 ```
 
 **`Link_p_ramp_limit_up`**
 
 ```math
-f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \Delta^{f,+}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \right) \wedge \mathrm{prev}^{f}_{\xi,t,l} \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \Delta^{f,+}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{prev}^{f,\mathrm{up}}_{\xi,t,l} \wedge \mathrm{on}^{f}_{t,l} \wedge \neg \mathrm{on}^{f,\mathrm{com,ext}}_{t,l}
 ```
 
 **`Link_p_ramp_limit_down`**
 
 ```math
-\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \Delta^{f,-}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \left( \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \right) \wedge \mathrm{prev}^{f}_{\xi,t,l} \wedge \mathrm{on}^{f}_{t,l}
+\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \Delta^{f,-}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{prev}^{f,\mathrm{dn}}_{\xi,t,l} \wedge \mathrm{on}^{f}_{t,l} \wedge \neg \mathrm{on}^{f,\mathrm{com,ext}}_{t,l}
 ```
 
 #### Assumptions

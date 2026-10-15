@@ -221,11 +221,11 @@ variables:
       a transformer that is active; the parameter of the same PyPSA name
       carries the fixed regime
     dims: [transformer]
-    where: Transformer_s_nom_extendable AND Transformer_active_asset
+    where: Transformer_ext_asset
   Transformer_n_mod:
     description: "`Transformer-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
     dims: [transformer]
-    where: Transformer_s_nom_extendable AND Transformer_s_nom_mod > 0 AND Transformer_active_asset
+    where: Transformer_ext_asset AND Transformer_s_nom_mod > 0
     domain: integer
     bounds:
       lower: 0
@@ -255,6 +255,21 @@ expressions:
     adds_to: Cycle_angle_sum
 
 masks:
+  Transformer_fix:
+    description: >-
+      a transformer with a fixed build that stands in the snapshot's
+      period — PyPSA's `fix` rows
+    where: NOT Transformer_s_nom_extendable AND Transformer_active
+  Transformer_ext:
+    description: >-
+      a transformer with an extendable build that stands in the snapshot's
+      period — PyPSA's `ext` rows
+    where: Transformer_s_nom_extendable AND Transformer_active
+  Transformer_ext_asset:
+    description: >-
+      a transformer with an extendable build among PyPSA's active assets —
+      the units whose build is a variable
+    where: Transformer_s_nom_extendable AND Transformer_active_asset
   Transformer_lossy:
     description: >-
       a transformer that stands in the snapshot's period, where the run models
@@ -265,27 +280,27 @@ constraints:
   Transformer_fix_s_lower:
     description: "`Transformer-fix-s-lower` — a fixed transformer carries at least the negative of its rating, the loss counted against it"
     dims: [scenario, snapshot, transformer]
-    where: not Transformer_s_nom_extendable AND Transformer_active
+    where: Transformer_fix
     expression: Transformer_s - Transformer_loss >= -Transformer_s_max_pu * Transformer_s_nom
   Transformer_fix_s_upper:
     description: "`Transformer-fix-s-upper` — a fixed transformer carries at most its rating, the loss included"
     dims: [scenario, snapshot, transformer]
-    where: not Transformer_s_nom_extendable AND Transformer_active
+    where: Transformer_fix
     expression: Transformer_s + Transformer_loss <= Transformer_s_max_pu * Transformer_s_nom
   Transformer_ext_s_lower:
     description: "`Transformer-ext-s-lower` — an extendable transformer carries at least the negative of its rating of the chosen build, the loss counted against it"
     dims: [scenario, snapshot, transformer]
-    where: Transformer_s_nom_extendable AND Transformer_active
+    where: Transformer_ext
     expression: Transformer_s - Transformer_loss >= -Transformer_s_max_pu * Transformer_s_nom_ext
   Transformer_ext_s_upper:
     description: "`Transformer-ext-s-upper` — an extendable transformer carries at most its rating of the chosen build, the loss included"
     dims: [scenario, snapshot, transformer]
-    where: Transformer_s_nom_extendable AND Transformer_active
+    where: Transformer_ext
     expression: Transformer_s + Transformer_loss <= Transformer_s_max_pu * Transformer_s_nom_ext
   Transformer_ext_s_nom_lower:
     description: "`Transformer-ext-s_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, transformer]
-    where: Transformer_s_nom_extendable AND Transformer_active_asset
+    where: Transformer_ext_asset
     expression: Transformer_s_nom_ext >= Transformer_s_nom_min
   Transformer_ext_s_nom_upper:
     description: "`Transformer-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
@@ -300,7 +315,7 @@ constraints:
   Transformer_s_nom_modularity:
     description: "`Transformer-s_nom_modularity` — the chosen build is a whole number of modules"
     dims: [transformer]
-    where: Transformer_s_nom_extendable AND Transformer_s_nom_mod > 0 AND Transformer_active_asset
+    where: Transformer_ext_asset AND Transformer_s_nom_mod > 0
     expression: Transformer_s_nom_ext == Transformer_s_nom_mod * Transformer_n_mod
   Transformer_s_set:
     description: "`Transformer-s_set` — flow pinned to the given schedule, wherever one is given"
