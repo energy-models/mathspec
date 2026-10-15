@@ -10,13 +10,44 @@ request renames that heading to the version and the day, such as
 `## 0.1.0 (2026-10-01)`, and edits the section into the release notes. Merging
 it releases that version ([RELEASING.md](https://github.com/energy-models/mathspec/blob/main/RELEASING.md)).
 
-## Upcoming version
+## 0.4.0 (2026-10-15)
+
+This release renames the Python API and changes how a spec is written back
+out. A spec file that 0.3.0 loads still loads, with the same meaning. The
+language version stays `0`.
+
+- Only `mathspec`, `mathspec.spec`, `mathspec.program` and `mathspec.errors`
+  are public. Every other module now starts with an underscore, so import
+  from the top level: `from mathspec import to_latex` ([#878](https://github.com/energy-models/mathspec/pull/878)).
+- A class in `mathspec.spec` ends in `Spec`: `VariableBlock` is
+  `VariableSpec`. `typeset_declaration` is `typeset_line` ([#855](https://github.com/energy-models/mathspec/pull/855)).
+- In `mathspec.program`, `Variable`, `Parameter`, `NamedExpression` and
+  `NamedMask` now name the entries. The nodes that use them are
+  `VariableReference`, `ParameterReference`, `ExpressionReference` and
+  `MaskReference`. The other `*Declaration` classes lose the suffix:
+  `ConstraintDeclaration` is `Constraint` ([#855](https://github.com/energy-models/mathspec/pull/855)).
+- `python -m mathspec diff a.yaml b.yaml` compares two specs.
+  `canonical --check` and `--write` are gone ([#874](https://github.com/energy-models/mathspec/pull/874)).
+- `to_yaml()` writes a short list or mapping on one line ([#871](https://github.com/energy-models/mathspec/pull/871)).
+
+The pull requests in this release:
+
+### Python API
 
 - refactor(api)!: a module outside spec, program and errors has a name that starts with an underscore ([#878](https://github.com/energy-models/mathspec/pull/878))
-- feat(cli)!: `python -m mathspec diff` compares two specs in the canonical form, and `canonical` no longer rewrites or checks a file ([#874](https://github.com/energy-models/mathspec/pull/874))
-- feat(spec)!: a spec written back out puts short lists and mappings of names on one line ([#871](https://github.com/energy-models/mathspec/pull/871))
-- feat(typesetting): the legend keys its notation in a table rather than in paragraphs ([#870](https://github.com/energy-models/mathspec/pull/870))
 - refactor(api)!: a spec class ends in `Spec`, a program class takes its construct's name, and the docs call one named item an entry ([#855](https://github.com/energy-models/mathspec/pull/855))
+
+### Writing and comparing specs
+
+- feat(spec)!: a spec written back out puts short lists and mappings of names on one line ([#871](https://github.com/energy-models/mathspec/pull/871))
+- feat(cli)!: `python -m mathspec diff` compares two specs in the canonical form, and `canonical` no longer rewrites or checks a file ([#874](https://github.com/energy-models/mathspec/pull/874))
+
+### Typesetting
+
+- feat(typesetting): the legend keys its notation in a table rather than in paragraphs ([#870](https://github.com/energy-models/mathspec/pull/870))
+
+### Language
+
 - fix(language): a patch that changes a dimension is told that a field it leaves out reads as its default ([#857](https://github.com/energy-models/mathspec/pull/857))
 
 ## 0.3.0 (2026-10-15)
