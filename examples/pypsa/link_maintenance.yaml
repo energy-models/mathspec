@@ -36,6 +36,7 @@ relations:
       rows for a link that is
       not maintainable
     key: { scenario: scenario, link: link, start: snapshot, covered: snapshot }
+    missing: absent
 
 parameters:
   Link_maintainable:

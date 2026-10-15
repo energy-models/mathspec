@@ -43,6 +43,7 @@ relations:
       rows for a process that is
       not maintainable
     key: { scenario: scenario, process: process, start: snapshot, covered: snapshot }
+    missing: absent
 
 parameters:
   Process_maintainable:
@@ -265,9 +266,9 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$ — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$ — dispatch periods |
-| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$ — generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate |
+| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — dispatch periods |
+| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate |
 
 #### Parameters
 

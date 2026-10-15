@@ -36,6 +36,7 @@ relations:
       rows for a generator that is
       not maintainable
     key: { scenario: scenario, generator: generator, start: snapshot, covered: snapshot }
+    missing: absent
 
 parameters:
   Generator_maintainable:
