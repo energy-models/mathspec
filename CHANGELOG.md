@@ -10,6 +10,10 @@ request renames that heading to the version and the day, such as
 `## 0.1.0 (2026-10-01)`, and edits the section into the release notes. Merging
 it releases that version ([RELEASING.md](https://github.com/energy-models/mathspec/blob/main/RELEASING.md)).
 
+## Upcoming version
+
+- feat(language)!: a refused parameter needs a row only where the model reads it ([#880](https://github.com/energy-models/mathspec/pull/880))
+
 ## 0.3.0 (2026-10-15)
 
 The syntax and implementation for relations was changed to a join and sum logic with a new syntax `zone_of[zone]`. A file can now say what a missing row means with `missing:` and refuses missing data by default for both parameters and relations. A new `masks:` spec is introduced for reusable predicates. Dimensions get an `ordered: true` key if their order is meaningful for the model, and order-sensitive operations are refused on unordered dimensions. This release breaks files and imports that 0.2.1 loads as well as the program api. The
