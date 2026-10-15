@@ -2488,22 +2488,19 @@ def test_a_given_parameter_has_no_missing():
 
 
 @pytest.mark.parametrize(
-    ('written', 'read'),
+    ('declared', 'read'),
     [
-        pytest.param({}, 'refused', id='left-out-is-refused'),
-        pytest.param({'missing': 'refused'}, 'refused', id='refused'),
-        pytest.param({'missing': 'absent'}, 'absent', id='absent'),
+        pytest.param({'key': 'g', 'values': 'h'}, 'refused', id='left-out-is-refused'),
+        pytest.param({'key': 'g', 'values': 'h', 'missing': 'refused'}, 'refused', id='refused'),
+        pytest.param({'key': 'g', 'values': 'h', 'missing': 'absent'}, 'absent', id='absent'),
+        pytest.param({'key': ['g', 'h']}, 'refused', id='bare-left-out-is-refused'),
+        pytest.param({'key': ['g', 'h'], 'missing': 'absent'}, 'absent', id='bare-absent'),
     ],
 )
-def test_a_relation_says_what_a_label_it_leaves_out_means(written, read):
-    spec = to_spec(varied(SMALL_MODEL, **{'relations.lk': {'key': 'g', 'values': 'h', **written}}))
-    assert spec.program.relations['lk'].missing == read
-
-
-def test_a_bare_relation_has_no_missing_rows():
-    """Its rows are its membership: a pair it leaves out is not a gap, so `refused` would refuse every sparse set."""
-    spec = to_spec(varied(SMALL_MODEL, **{'relations.pair': {'key': ['g', 'h']}}))
-    assert spec.program.relations['pair'].missing is None
+def test_a_relation_says_whether_every_key_combination_needs_a_row(declared, read):
+    """A bare relation's key is every column, and it takes `missing:` and its default as a map does."""
+    spec = to_spec(varied(SMALL_MODEL, **{'relations.pair': declared}))
+    assert spec.program.relations['pair'].missing == read
 
 
 @pytest.mark.parametrize(
@@ -2522,11 +2519,6 @@ def test_a_bare_relation_has_no_missing_rows():
         ),
         pytest.param(
             {'key': 'g', 'values': 'h', 'missing': None}, 'missing: null on a relation names no reading', id='null'
-        ),
-        pytest.param(
-            {'key': ['g', 'h'], 'missing': 'refused'},
-            'missing: refused on a relation with no `values:`',
-            id='a-bare-relation',
         ),
     ],
 )

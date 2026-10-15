@@ -158,7 +158,7 @@ MissingReading = Literal['refused', 'absent', 'neutral']
 #: A parameter's ``missing:``: a reading, or the value a missing row reads as.
 Missing = MissingReading | bool | float
 
-#: A relation's ``missing:``. A label the map leaves out is refused, or belongs to no group.
+#: A relation's ``missing:``. A key combination with no row is refused, or is not in the relation.
 RelationMissing = Literal['refused', 'absent']
 
 #: What a masked variable means where its ``where`` masks it out. ``absent`` is
@@ -494,9 +494,9 @@ class RelationDeclaration:
 
     columns: tuple[tuple[str, str], ...]
     key: tuple[str, ...]
-    #: What a key the map leaves out means, or ``None`` for a bare relation,
-    #: whose rows are its membership and so have no gap.
-    missing: RelationMissing | None = 'refused'
+    #: Whether every combination of the key's roles needs a row: ``refused``
+    #: or ``absent``.
+    missing: RelationMissing = 'refused'
     description: str | None = None
 
     @property

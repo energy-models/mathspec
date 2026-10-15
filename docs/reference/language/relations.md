@@ -20,7 +20,7 @@ dimensions:
 relations:
   gen_bus: { key: generator, values: bus } # each generator on one bus
   period_of: { key: snapshot, values: period }
-  connection: { key: [generator, bus] } # no values: a generator may connect to several buses
+  connection: { key: [generator, bus], missing: absent } # no values: a generator may connect to several buses
 ```
 
 The **key** is the combination of dimensions that is unique per row:
@@ -32,7 +32,7 @@ and the table is a **bare relation**.
 | ------------- | --------------------------------------------------------------------- | ----------------- |
 | `key`         | required. The columns that identify a row                             |                   |
 | `values`      | the columns the key determines. When omitted, the key is every column | default none      |
-| `missing`     | `refused` or `absent`: what a key that the map leaves out means       | default `refused` |
+| `missing`     | `refused` or `absent`: whether every key combination needs a row      | default `refused` |
 | `description` | free text                                                             | default `null`    |
 
 A column is named after its dimension, or after no dimension. Where two columns
@@ -43,15 +43,15 @@ the dimension must then agree.
 
 ### Cardinalities
 
-| intention                                    | written                                               | cardinality                                 |
-| -------------------------------------------- | ----------------------------------------------------- | ------------------------------------------- |
-| each generator has one bus                   | `{key: generator, values: bus}`                       | many-to-one                                 |
-| a generator may connect to several buses     | `{key: [generator, bus]}`, no `values:`               | many-to-many                                |
-| a generator has one zone in each period      | `{key: [generator, period], values: zone}`            | many-to-one, keyed by a pair                |
-| a snapshot has a month, a week and a weekday | `{key: snapshot, values: [month, week, weekday]}`     | many-to-one, several values                 |
-| a line has two ends, both buses              | `{key: line, values: {bus0: bus, bus1: bus}}`         | many-to-one, two columns over one dimension |
-| a snapshot has a representative snapshot     | `{key: snapshot, values: {rep: snapshot}}`            | many-to-one, onto itself                    |
-| a snapshot has neighbours                    | `{key: {from: snapshot, to: snapshot}}`, no `values:` | many-to-many, onto itself                   |
+| intention                                    | written                                                  | cardinality                                 |
+| -------------------------------------------- | -------------------------------------------------------- | ------------------------------------------- |
+| each generator has one bus                   | `{key: generator, values: bus}`                          | many-to-one                                 |
+| a generator may connect to several buses     | `{key: [generator, bus], missing: absent}`               | many-to-many                                |
+| a generator has one zone in each period      | `{key: [generator, period], values: zone}`               | many-to-one, keyed by a pair                |
+| a snapshot has a month, a week and a weekday | `{key: snapshot, values: [month, week, weekday]}`        | many-to-one, several values                 |
+| a line has two ends, both buses              | `{key: line, values: {bus0: bus, bus1: bus}}`            | many-to-one, two columns over one dimension |
+| a snapshot has a representative snapshot     | `{key: snapshot, values: {rep: snapshot}}`               | many-to-one, onto itself                    |
+| a snapshot has neighbours                    | `{key: {from: snapshot, to: snapshot}, missing: absent}` | many-to-many, onto itself                   |
 
 A key that determines a value holds one column per dimension, so
 `{key: {bus0: bus, bus1: bus}, values: line}` is refused, but a bare relation
@@ -66,18 +66,18 @@ column per declared column, named after it.
   is attached.
 - Every value is a label of its dimension, and a value that matches none is
   refused.
-- A relation with `values:` has a row for every key coordinate. A generator
-  that the table leaves out is refused when the data is attached, and the
-  message names it.
-- Under `missing: absent`, a partial map is the rows it has, so a generator in
-  no row sits on no bus, which is [absence](absence.md): its terms land in no
-  group.
+- A relation has a row for every combination of its key's dimensions, unless
+  it declares `missing: absent` ([a missing row](#a-missing-row)).
 - A null in any column is refused.
 - Row order has no meaning, because the order comes from the
   [dimension](dimensions.md).
 
-A generator that is on no bus looks the same in the data as a port that nobody
-wired, so `missing:` says which one you mean:
+### A missing row
+
+`missing:` says whether every combination of the key's dimensions needs a row.
+For `gen_bus`, the key is `generator`, so every generator needs a row. A
+generator that is on no bus looks the same in the data as a line end that
+nobody wired, so the file says which one you mean:
 
 ```yaml
 dimensions:
@@ -87,13 +87,25 @@ dimensions:
 relations:
   gen_bus: { key: generator, values: bus } # refused: every generator is on a bus
   line_to: { key: line, values: bus, missing: absent } # an open end is meant
+  connection: { key: [generator, bus], missing: absent } # most pairs are not connected
 ```
 
-A label is data, so no value fills a gap in a map, and `neutral` is refused. A
-bare relation takes no `missing:`, because its rows are its membership, so a
-pair it leaves out is not missing. The typeset legend prints
-`` `line_to` is `absent` where the data has no row `` beside each set that the
-map joins, and prints nothing for `refused`.
+| `missing:`            | A key combination with no row                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------ |
+| `refused`, by default | is refused when the data is attached, and the message names it                                         |
+| `absent`              | is not in the relation, so a line with no `line_to` row ends at no bus, which is [absence](absence.md) |
+
+`missing:` checks only the key. The values cannot be missing, because a null is
+refused and every value must be a label of its dimension. A label is data, so
+no value fills a gap in a map, and `neutral` is refused.
+
+A bare relation follows the same rule, and its key is every column. Under the
+default `refused`, `connection` needs a row for every pair of a generator and a
+bus. Most bare relations are sparse, so they declare `missing: absent`, and a
+pair with no row is then not in the relation.
+
+The typeset legend prints `` `line_to` is `absent` where the data has no row ``
+beside each set that the map joins, and prints nothing for `refused`.
 
 ## How a relation is used
 
@@ -135,7 +147,7 @@ Each column of the relation is either **joined on** or not, and either
 | a value column the call does not name | no        | no         | not read      |
 
 With `zone_of: { key: [generator, period], values: zone }`, the bare
-`connection: { key: [generator, bus] }` and `p` over `[generator, period]`:
+`connection: { key: [generator, bus], missing: absent }` and `p` over `[generator, period]`:
 
 | call                                         | joins on            | groups by         | result              |
 | -------------------------------------------- | ------------------- | ----------------- | ------------------- |
