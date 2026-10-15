@@ -83,10 +83,11 @@ A bare numeric name in a `where` asks whether the data has a row, whatever the
 at a missing row reads a value that the `missing:` names, so
 `where: efficiency <= 1` is true at a missing row of `efficiency` above, which
 reads `1` there. Under `refused` and `absent`, a comparison at a
-missing row is false, because a `where` does not read the parameter
+missing row is false, because a comparison does not read the parameter
 ([where a parameter is read](absence.md#where-a-parameter-is-read)). A bare
-`bool` name reads its value, so `where: active`
-reads `true` at a missing row.
+`bool` name reads its value, so `where: active` reads `true` at a missing row.
+Under `refused`, a bare `bool` name is read wherever the model evaluates the
+`where`, so a missing row there is refused.
 
 A value has the parameter's dtype:
 
