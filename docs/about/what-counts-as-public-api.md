@@ -5,8 +5,8 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # What counts as public API
 
-A function may join the public API of the package, as `to_spec` and
-`to_latex` did, when both of these are true:
+A function belongs in the public API, as `to_spec` and `to_latex` do, when
+both of these are true:
 
 1. The same file gives the same answer. `to_spec('spec.yaml')` returns the same
    `Spec` today, tomorrow, and on a machine with no data and no solver. A
@@ -40,11 +40,8 @@ module:
 them to give them to the typesetter. `tests/test_public_surface.py` checks
 that each module obeys its rule.
 
-Every other module starts with an underscore, such as `mathspec._canonical` or
-`mathspec._typesetting`. Python lets you import from one, but no name in it is
-public API, so a release can rename, move or delete it. Import the name from
-the four modules above instead: `from mathspec import to_latex`, not
-`from mathspec._typesetting import to_latex`.
+Every other module starts with an underscore and is private. Import from the
+four modules above: `from mathspec import to_latex`.
 
 ## What every function keeps
 
