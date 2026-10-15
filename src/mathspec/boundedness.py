@@ -23,22 +23,22 @@ from mathspec.program import (
     Divide,
     Dual,
     Expression,
+    ExpressionReference,
     Join,
     Multiply,
-    NamedExpression,
     Negate,
-    Parameter,
+    ParameterReference,
     Power,
     Sum,
     Translate,
-    Variable,
+    VariableReference,
     WindowSum,
     children,
     variables_of,
 )
 
 if TYPE_CHECKING:
-    from mathspec.program import Program, VariableDeclaration
+    from mathspec.program import Program, Variable
 
 #: The sign a term carries into the objective, or ``None`` where the file does
 #: not decide it: a parameter coefficient (which may be zero), a variable
@@ -65,7 +65,7 @@ def unbounded_notes(program: Program) -> list[Advice]:
     if program.objective is None:
         return []
 
-    constrained = {block.variable for block in program.sos.values()}
+    constrained = {entry.variable for entry in program.sos.values()}
     for curve in program.piecewise.values():
         constrained |= variables_of(*(link.expression for link in curve.links))
     for constraint in program.constraints.values():
@@ -94,7 +94,7 @@ def unbounded_notes(program: Program) -> list[Advice]:
     return notes
 
 
-def _is_open(vdef: VariableDeclaration, side: BoundSide) -> bool:
+def _is_open(vdef: Variable, side: BoundSide) -> bool:
     """Whether *vdef* states no bound on *side*.
 
     A bound naming a parameter is finite or not by data, so it does not count.
@@ -120,7 +120,7 @@ def _coefficient_sign(node: Expression) -> Sign:
     """
     if isinstance(node, Negate):
         return _flip(_coefficient_sign(node.operand))
-    if isinstance(node, NamedExpression):
+    if isinstance(node, ExpressionReference):
         return _coefficient_sign(node.body)
     if isinstance(node, Constant) and node.value != 0:
         return '+' if node.value > 0 else '-'
@@ -137,10 +137,10 @@ def _record_signs(node: Expression, sign: Sign, signs: dict[str, Sign]) -> None:
     variable-free leaf and contributes nothing — the Dual arm only keeps the
     walk exhaustive, since the loader refuses one in any objective.
     """
-    if isinstance(node, Variable):
+    if isinstance(node, VariableReference):
         signs[node.name] = sign if signs.setdefault(node.name, sign) == sign else None
         return
-    if isinstance(node, Constant | Parameter | Dual):
+    if isinstance(node, Constant | ParameterReference | Dual):
         return
     if isinstance(node, Negate):
         _record_signs(node.operand, _flip(sign), signs)
@@ -161,7 +161,7 @@ def _record_signs(node: Expression, sign: Sign, signs: dict[str, Sign]) -> None:
         _record_signs(node.base, None, signs)
         _record_signs(node.exponent, None, signs)
         return
-    if isinstance(node, Sum | Join | Translate | WindowSum | Cases | NamedExpression):
+    if isinstance(node, Sum | Join | Translate | WindowSum | Cases | ExpressionReference):
         for child in children(node):
             _record_signs(child, sign, signs)
         return

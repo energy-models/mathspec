@@ -6,7 +6,7 @@
 
 A where string is a boolean algebra over comparisons, and a comparison's
 sides are the expression grammar's own arithmetic. What a side *is* — a
-parameter, a dimension, a relation column, a ``position()`` — only the schema
+parameter, a dimension, a relation column, a ``position()`` — only the spec
 knows, so the grammar hands both sides over bare and
 [`mathspec.resolution`][] reads them. The resolved vocabulary lives in
 [`mathspec.program`][].
@@ -256,7 +256,7 @@ def _named_rewrite(text: str, loc: int) -> str | None:
 #: of a long chain of predicates as data, so this rewrite comes first.
 _DEEP_REWRITE = (
     'Declare a parameter or relation carrying part of the test and name that here, or split the '
-    'declaration into two, each masked by one half.'
+    'entry into two, each masked by one half.'
 )
 
 
@@ -280,7 +280,7 @@ def parse_where(text: str) -> Predicate | UnresolvedWhereNode:
     """Parse a where string into an AST, its leaves still unresolved.
 
     The connectives and literals are the resolved vocabulary's own; the leaves
-    naming declarations are a bare [`NameNode`][] or an ``Unresolved*``
+    naming entries are a bare [`NameNode`][] or an ``Unresolved*``
     node, which only [`resolve_where`][mathspec.resolution.resolve_where] takes.
 
     Raises:

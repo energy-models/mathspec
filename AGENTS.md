@@ -104,7 +104,7 @@ To learn what the project _is_, read [docs/](docs/index.md), and
   a tolerance, an absence.
 
   ```python
-  assert names == ['bus', 'snapshot', 'tech'], 'dimensions come back sorted, not in declaration order'
+  assert names == ['bus', 'snapshot', 'tech'], 'dimensions come back sorted, not in file order'
   ```
 
 - **Parametrize cases, with `id` as the label.** Not five `pytest.raises` in

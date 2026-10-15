@@ -1449,6 +1449,7 @@ relations:
       rows for a generator that is
       not maintainable
     key: { scenario: scenario, generator: generator, start: snapshot, covered: snapshot }
+    missing: absent
   Link_maintenance_cover:
     description: >-
       the snapshots a maintenance event covers, by the snapshot it starts in —
@@ -1457,6 +1458,7 @@ relations:
       rows for a link that is
       not maintainable
     key: { scenario: scenario, link: link, start: snapshot, covered: snapshot }
+    missing: absent
   Process_maintenance_cover:
     description: >-
       the snapshots a maintenance event covers, by the snapshot it starts in —
@@ -1465,6 +1467,7 @@ relations:
       rows for a process that is
       not maintainable
     key: { scenario: scenario, process: process, start: snapshot, covered: snapshot }
+    missing: absent
 
 variables:
   Generator_p:
@@ -3728,7 +3731,7 @@ constraints:
     description: >-
       `Line-loss_tangents-{k}-1`, `Line-loss_secants-pos` — the loss sits above
       every cut to its curve for flow one way; PyPSA names one row per tangent
-      `k`, or one row stacked over its `secant` axis, and this block states them
+      `k`, or one row stacked over its `secant` axis, and this entry states them
       all over the segment dimension
     dims: [scenario, snapshot, line, segment]
     where: Line_lossy
@@ -3844,7 +3847,7 @@ constraints:
       of its rating: its flow takes on its share of the outaged branch's
       flow. PyPSA names one row per outaged component `c` and
       sub-network `n`, and under `multi_investment_periods` it appends
-      `-period-{p}` for each period `p`. This block states them all over the
+      `-period-{p}` for each period `p`. This entry states them all over the
       outage dimension
     dims: [scenario, snapshot, line, outage]
     where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
@@ -3856,7 +3859,7 @@ constraints:
       flow takes on its share of the outaged branch's flow. PyPSA names
       one row per outaged component `c` and
       sub-network `n`, and under `multi_investment_periods` it appends
-      `-period-{p}` for each period `p`. This block states them all over the
+      `-period-{p}` for each period `p`. This entry states them all over the
       outage dimension
     dims: [scenario, snapshot, line, outage]
     where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
@@ -3869,7 +3872,7 @@ constraints:
       share of the outaged branch's flow. PyPSA names one row per
       outaged component `c` and
       sub-network `n`, and under `multi_investment_periods` it appends
-      `-period-{p}` for each period `p`. This block states them all over the
+      `-period-{p}` for each period `p`. This entry states them all over the
       outage dimension
     dims: [scenario, snapshot, line, outage]
     where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
@@ -3881,7 +3884,7 @@ constraints:
       of the chosen build: its flow takes on its share of the outaged
       branch's flow. PyPSA names one row per outaged component `c` and
       sub-network `n`, and under `multi_investment_periods` it appends
-      `-period-{p}` for each period `p`. This block states them all over the
+      `-period-{p}` for each period `p`. This entry states them all over the
       outage dimension
     dims: [scenario, snapshot, line, outage]
     where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period])
@@ -3893,7 +3896,7 @@ constraints:
       negative of its rating: its flow takes on its share of the outaged
       branch's flow. PyPSA names one row per outaged component `c` and
       sub-network `n`, and under `multi_investment_periods` it appends
-      `-period-{p}` for each period `p`. This block states them all over the
+      `-period-{p}` for each period `p`. This entry states them all over the
       outage dimension
     dims: [scenario, snapshot, transformer, outage]
     where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
@@ -3905,7 +3908,7 @@ constraints:
       rating: its flow takes on its share of the outaged branch's flow.
       PyPSA names one row per outaged component `c` and
       sub-network `n`, and under `multi_investment_periods` it appends
-      `-period-{p}` for each period `p`. This block states them all over the
+      `-period-{p}` for each period `p`. This entry states them all over the
       outage dimension
     dims: [scenario, snapshot, transformer, outage]
     where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
@@ -3918,7 +3921,7 @@ constraints:
       its share of the outaged branch's flow. PyPSA names one row per
       outaged component `c` and
       sub-network `n`, and under `multi_investment_periods` it appends
-      `-period-{p}` for each period `p`. This block states them all over the
+      `-period-{p}` for each period `p`. This entry states them all over the
       outage dimension
     dims: [scenario, snapshot, transformer, outage]
     where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])
@@ -3931,7 +3934,7 @@ constraints:
       outaged branch's flow. PyPSA names one row per outaged component
       `c` and
       sub-network `n`, and under `multi_investment_periods` it appends
-      `-period-{p}` for each period `p`. This block states them all over the
+      `-period-{p}` for each period `p`. This entry states them all over the
       outage dimension
     dims: [scenario, snapshot, transformer, outage]
     where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period])

@@ -44,8 +44,8 @@ expressions:
     description: the nominal capacity, the same in every snapshot
 ```
 
-[`adds_to:`](declarations.md#terms) adds this expression as a term to the sum
-it names. The sum is a [given expression](declarations.md#given-expressions)
+[`adds_to:`](parameters-variables-constraints.md#terms) adds this expression as a term to the sum
+it names. The sum is a [given expression](parameters-variables-constraints.md#given-expressions)
 of the same file, and [`merge`](../../howto/compose.md#a-library-of-components)
 adds the entry to it by its own name.
 
@@ -113,10 +113,10 @@ A named expression carries **exactly one** of `expression:` and `cases:`.
   `position(snapshot) == 0` and `position(snapshot) == -1` pick the same row on
   a dimension with one member, so count from one end only.
 
-- In a block of two or more cases, a `when:` may not compare expressions, such
+- Where `cases:` holds two or more cases, a `when:` may not compare expressions, such
   as `c > 2 * k`, because the loader cannot prove such a case apart from the
   others before the data arrives. Precompute the test as a boolean parameter. A
-  block with one case may compare expressions, because its `otherwise:` claims
+  `cases:` with one case may compare expressions, because its `otherwise:` claims
   only what the case leaves.
 
 - Each `when:` and each value sits inside the frame, and a narrower case
@@ -262,7 +262,7 @@ An entry with no `description:` may be the bare `where` string.
 - The `where:` of a variable may not ask, through a mask, whether that variable
   exists. The loader refuses this the same as the bare name of the variable.
 
-Another file reads a mask under [`given: masks`](declarations.md#given-masks).
+Another file reads a mask under [`given: masks`](parameters-variables-constraints.md#given-masks).
 
 ## `macros`
 

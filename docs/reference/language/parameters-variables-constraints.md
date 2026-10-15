@@ -6,8 +6,8 @@ SPDX-License-Identifier: CC-BY-4.0
 # Parameters, variables, constraints and the objective
 
 You declare the data, the decisions, the rules and the goal of a spec in four
-blocks. A fifth block, `given:`, names what the file reads from another file.
-Each block takes an optional `description:`, free text that the
+sections. A fifth section, `given:`, names what the file reads from another file.
+Each entry takes an optional `description:`, free text that the
 [typeset](../typeset.md#descriptions) legend prints.
 
 ## `parameters`
@@ -99,7 +99,7 @@ A value has the parameter's dtype:
 
 A NaN, a quoted number and `missing: null` are refused. A `given:` parameter
 has no `missing:`, because the file that declares the parameter owns it. A
-parameter that a [`piecewise:`](piecewise.md#missing-breakpoints) block reads
+parameter that a [`piecewise:`](piecewise.md#missing-breakpoints) entry reads
 takes `missing:` too, and a values parameter of a curve with `points:` declares
 a `missing:` other than `refused`.
 
@@ -149,7 +149,7 @@ and a pinned variable is still a variable.
 `given:` holds what this file reads and does not build: data under
 `parameters:`, columns under `variables:`, named expressions under
 `expressions:`, masks under `masks:`, and row families under `constraints:`. It
-takes those five keys and no other, and a file with a `given:` block loads and
+takes those five keys and no other, and a file with a `given:` section loads and
 prints on its own.
 
 ### `given: parameters`
@@ -225,13 +225,13 @@ under both `variables:` and `given: variables:` is refused. The typeset legend
 lists a given variable under _Given_, and prints no domain line for it.
 
 [`merge`](../../howto/compose.md#a-library-of-components) folds a given
-declaration into the declaration of another fragment that introduces the name,
+entry into the entry of another fragment that introduces the name,
 so a composed library carries none of them. The merged spec keeps the
-declaration of the file that introduces the name, and the `given:` entry has to
+entry of the file that introduces the name, and the `given:` entry has to
 state the same, or less.
 
 Where nothing in this language introduces the column, the program carries the
-declaration until a host model provides it
+entry until a host model provides it
 ([what a program does not build](../reading.md#what-a-program-does-not-build)).
 
 ### `given: constraints`
@@ -440,7 +440,7 @@ message.
 
 ## `constraints`
 
-Each block under `constraints:` declares one constraint, named by its key.
+Each entry under `constraints:` declares one constraint, named by its key.
 
 ```yaml
 dimensions:
@@ -472,12 +472,12 @@ numbers and parameters alone is refused at load.
 `dims: []` gives one scalar row. A scalar variable may not carry a `where`, so
 put the condition on the constraints that use it.
 
-Write a rule that differs by regime as two blocks, each under its own `where:`
+Write a rule that differs by regime as two entries, each under its own `where:`
 ([state a rule that differs by regime](../../howto/regimes.md)).
 
 ## `objective`
 
-The objective is a single block with no name.
+The objective is a single entry with no name.
 
 ```yaml
 dimensions:
@@ -501,7 +501,7 @@ The expression must be **scalar**. The loader adds no sum for you:
 `sum(x * a) + sum(y * b)` and `sum(x * a + y * b)` are both allowed, and they
 state different objectives.
 
-There is one objective block, so to pursue several goals, weight them into one
+There is one objective entry, so to pursue several goals, weight them into one
 expression.
 
 A spec composed from several files also has one objective, which one file sets,

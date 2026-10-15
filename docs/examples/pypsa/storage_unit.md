@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Storage units
 
-This file states PyPSA's `StorageUnit`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to each of these sums: `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions` and `Bus_injection`. It reads `CVaR_omega`, `GlobalConstraint_counts_snapshot`, `GlobalConstraint_snapshot_closes`, `period_weight_objective`, `period_weight_years`, `scenario_weight` and 2 more names that other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
+This file states PyPSA's `StorageUnit`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to each of these sums: `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions` and `Bus_injection`. It reads `CVaR_omega`, `GlobalConstraint_counts_snapshot`, `GlobalConstraint_snapshot_closes`, `period_weight_objective`, `period_weight_years`, `scenario_weight` and 2 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml

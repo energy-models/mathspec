@@ -43,7 +43,7 @@ relations:
   season_of: { key: snapshot, values: season }
   gen_zone: { key: [generator, snapshot], values: zone } # a map keyed by two dimensions: a call sums one away and joins on the other
   rep_of: { key: snapshot, values: { rep: snapshot } } # a map into its own dimension: the representative snapshot
-  connection: { key: [generator, bus] } # a bare relation, with no value columns: many-to-many, read only by sum with both ends named
+  connection: { key: [generator, bus], missing: absent } # a bare relation, with no value columns: many-to-many, read only by sum with both ends named
   gen_bt: { key: generator, values: [bus, technology] } # one table with two value columns, read to both at once
 
 parameters:
@@ -62,7 +62,7 @@ parameters:
   bp_x: { dims: [generator, bp], missing: neutral } # the x-axis of every curve below, and what a derived mask is read from
   bp_y: { dims: [generator, bp], missing: neutral }
   bp_heat: { dims: [generator, bp] }
-  bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a block has a mask to print
+  bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a piecewise entry has a mask to print
 ```
 
 #### Sets
@@ -70,8 +70,8 @@ parameters:
 | Symbol | Meaning |
 |---|---|
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T}`$ |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$ |
-| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `area_of` is `absent` where the data has no row |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `connection` is `absent` where the data has no row |
+| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
 | $`\mathcal{Z}`$ | index $`z`$ — `zone` with $`\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$ |
@@ -251,7 +251,7 @@ variables:
 
 #### Scalar variable
 
-an empty dims: a scalar declaration, whose line carries no quantifier
+an empty dims: a scalar entry, whose line carries no quantifier
 
 ```yaml
 variables:
@@ -1031,7 +1031,7 @@ constraints:
 
 ### Piecewise curves
 
-A curve prints as the curve it states, over the frame the block builds one per coordinate of, and its expansion prints the rows that curve stands for. One row per `method:`, each from the spec named under it, so the symbols in this section are that spec's.
+A curve prints as the curve it states, over the frame the entry builds one per coordinate of, and its expansion prints the rows that curve stands for. One row per `method:`, each from the spec named under it, so the symbols in this section are that spec's.
 
 #### Adjacency method
 

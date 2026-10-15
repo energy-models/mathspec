@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 This fragment states PyPSA's `Generator`, and owns its dimension, its relation
 into `port`, its parameters, its variable and its cost. It reads `Port_p` and
 `total_cost` from [the surface](surface.md) under
-[`given`](../../reference/language/declarations.md#given), and adds its cost to
+[`given`](../../reference/language/parameters-variables-constraints.md#given), and adds its cost to
 `total_cost` as the term `Generator_cost`. `Generator_port` stands where PyPSA
 writes `Generator_bus`. The surface sets the objective, so this file on its own
 sets none.
@@ -24,7 +24,7 @@ availability profile and ramp limits, and this file states none of the three.
 
 The math below is what this file prints on its own, with `Port_p` under
 *Given* in the legend. When the file merges with the surface, `Port_p` is one
-declaration again.
+entry again.
 
 <!-- gallery:begin -->
 ```yaml

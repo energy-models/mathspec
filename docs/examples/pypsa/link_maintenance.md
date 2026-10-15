@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Links, the maintenance
 
-This file states the maintenance rows of PyPSA's `Link`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Link_active`, `Link_committable`, `Link_p_nom_ext`, `Link_p_nom_extendable`, `Link_p_nom_max`, `Link_p_nom_min` and 3 more names that other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
+This file states the maintenance rows of PyPSA's `Link`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Link_active`, `Link_committable`, `Link_p_nom_ext`, `Link_p_nom_extendable`, `Link_p_nom_max`, `Link_p_nom_min` and 3 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -43,6 +43,7 @@ relations:
       rows for a link that is
       not maintainable
     key: { scenario: scenario, link: link, start: snapshot, covered: snapshot }
+    missing: absent
 
 parameters:
   Link_maintainable:
@@ -262,9 +263,9 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$ — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$ — dispatch periods |
-| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$ — controllable connections, each from one bus to the buses it delivers to |
+| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — dispatch periods |
+| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — controllable connections, each from one bus to the buses it delivers to |
 
 #### Parameters
 

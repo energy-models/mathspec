@@ -33,7 +33,7 @@ Four rules follow from that question:
 - Degree is decided when the file loads. Whether `x * y` is allowed does not
   depend on which engine builds the model.
 
-A `piecewise:` block and a `sos:` block each state ordinary variables and
+A `piecewise:` entry and an `sos:` entry each state ordinary variables and
 constraints, so the language decides what they state, and
 [`spec.expand()`](../reference/language/piecewise.md#writing-a-formulation-out)
 writes it out the same way for every tool.
@@ -53,5 +53,5 @@ So the rule holds in both directions:
   one, the rule goes into the language, once.
 - The language must not state a rule about what one tool can _build_.
 
-[The limits](limits.md) say which operators and blocks may be added to the
+[The limits](limits.md) say which operators and sections may be added to the
 language at all.

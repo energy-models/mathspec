@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Links, the ramping
 
-This file states the ramping rows of PyPSA's `Link`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Link_active`, `Link_big_m`, `Link_committable`, `Link_p`, `Link_p_nom_committed`, `Link_p_nom_effective` and 8 more names that other fragments declare, and lists them under [`given`](../../reference/language/declarations.md#given).
+This file states the ramping rows of PyPSA's `Link`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Link_active`, `Link_big_m`, `Link_committable`, `Link_p`, `Link_p_nom_committed`, `Link_p_nom_effective` and 8 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
