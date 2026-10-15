@@ -12,11 +12,11 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## 0.3.0 (2026-10-15)
 
-The syntax and implementation for relations was changed to a join and sum logic with a new syntax `zone_of[zone]`. A file can now say what a missing row means with `missing:` and refuses missing data by default. A new `masks:` spec is used for reusable predicates.  This release breaks files and imports that 0.2.1 loads. The
+The syntax and implementation for relations was changed to a join and sum logic with a new syntax `zone_of[zone]`. A file can now say what a missing row means with `missing:` and refuses missing data by default. A new `masks:` spec is used for reusable predicates. This release breaks files and imports that 0.2.1 loads. The
 language version stays `0`. Dimensions get an `ordered: true` key if their order is meaningful for the model.
 
-- A missing row of a parameter, or of a relation with `values:`, is refused by default. Opt in to allowing sparse data and define their meaning with the new `missing:` key. 0.2.1 read a missing parameter row as neutral, and `missing: neutral` keeps that reading. A variable's `absence: undefined` and `absence: zero` are now `missing: absent` and `missing: neutral`
-  ([#810](https://github.com/energy-models/mathspec/pull/810)).
+- A missing row of a parameter, or of a relation, is refused by default. A relation needs a row for every combination of its key's dimensions, so a sparse bare relation declares `missing: absent`. Opt in to allowing sparse data and define their meaning with the new `missing:` key. 0.2.1 read a missing parameter row as neutral, and `missing: neutral` keeps that reading. A variable's `absence: undefined` and `absence: zero` are now `missing: absent` and `missing: neutral`
+  ([#810](https://github.com/energy-models/mathspec/pull/810), [#879](https://github.com/energy-models/mathspec/pull/879)).
 - A dimension that `shift`, `sum_back`, `position()`, a curve or a type-2 set
   steps along needs `ordered: true` ([#793](https://github.com/energy-models/mathspec/pull/793)).
 - `at(price, by=zone_of[zone])` replaces
@@ -35,6 +35,7 @@ The pull requests in this release:
 - feat(language)!: a call names the columns of a relation as relation[column], and a sum through a relation is a sum over the axes its join opens ([#664](https://github.com/energy-models/mathspec/pull/664))
 - feat(language): a where predicate is named once under `masks:`, and another file reads it under `given: masks:` ([#821](https://github.com/energy-models/mathspec/pull/821))
 - feat(language)!: `missing:` says what a missing row means, a table short of a row is refused unless the file says otherwise, and a variable's `absence:` is now `missing:` ([#810](https://github.com/energy-models/mathspec/pull/810))
+- feat(language)!: a bare relation takes `missing:` too, and needs a row for every key combination unless it declares `missing: absent` ([#879](https://github.com/energy-models/mathspec/pull/879))
 - feat(language)!: a construct that reads the order of a dimension needs the dimension declared ordered ([#793](https://github.com/energy-models/mathspec/pull/793))
 - feat!: a spec written back out and its typeset document follow one section order, with the given block first ([#818](https://github.com/energy-models/mathspec/pull/818), [#848](https://github.com/energy-models/mathspec/pull/848))
 
