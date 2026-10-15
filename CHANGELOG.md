@@ -12,52 +12,26 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## 0.3.0 (2026-10-15)
 
-A file can now say what a missing row of a table means, name a `where`
-predicate once under `masks:`, and read a column of a relation by name, as
-`zone_of[zone]`. A spec written back out and its typeset document now show the
-sections in one order.
+A file can now say what a missing row means with `missing:`, name a `where`
+predicate once under `masks:`, and read a column of a relation as
+`zone_of[zone]`. This release breaks files and imports that 0.2.1 loads. The
+language version stays `0`.
 
-This release breaks files and imports that 0.2.1 loads. The language version
-stays `0`, so the `version:` key of a file does not change.
-
-A file written for 0.2.1 needs these changes:
-
-- A parameter row that is missing from the table is now
-  [refused](https://mathspec.readthedocs.io/en/latest/reference/language/absence/)
-  when the data is attached, where 0.2.1 read it as `0`. Write
-  `missing: neutral` on a sparse table to keep the 0.2.1 reading, or
-  `missing: absent` to drop the row. A relation with `values:` refuses a
-  missing row too, unless it declares `missing: absent`
+- A missing row of a parameter, or of a relation with `values:`, is refused
+  when the data is attached. 0.2.1 read a missing parameter row as `0`, and
+  `missing: neutral` keeps that reading. A variable's `absence: undefined` and
+  `absence: zero` are now `missing: absent` and `missing: neutral`
   ([#810](https://github.com/energy-models/mathspec/pull/810)).
-- A variable's `absence: undefined` is now `missing: absent`, and
-  `absence: zero` is now `missing: neutral` ([#810](https://github.com/energy-models/mathspec/pull/810)).
-- A dimension that `shift`, `sum_back`, `position()`, a piecewise curve's
-  `over:` or a type-2 set's `along:` steps along needs `ordered: true`. The
-  loader refuses the file and names the declaration to add
-  ([#793](https://github.com/energy-models/mathspec/pull/793)).
-- A call names the columns of a relation as `relation[column]`. Write
-  `at(price, by=zone_of[zone])` where 0.2.1 took
-  `at(price, by=zone_of, over=zone, into=generator)`. A call to `at()` with
-  `over=` or `into=` no longer loads ([#664](https://github.com/energy-models/mathspec/pull/664)).
-- `to_yaml()`, the canonical form, and the specs that `merge` and `override`
-  return write the sections in this order: `given`, `dimensions`,
-  `relations`, `parameters`, `masks`, `variables`, `expressions`,
-  `objective`, `constraints`, `sos`, `piecewise`, `assumptions`, `macros`.
-  `canonical --check` fails on a file in the 0.2.1 order, and rewriting the
-  file fixes it ([#818](https://github.com/energy-models/mathspec/pull/818), [#848](https://github.com/energy-models/mathspec/pull/848)).
-
-Python code written for 0.2.1 needs these changes:
-
-- `Spec` and `BUILTIN_NAMES` import from `mathspec.spec`, and `Advice` and
-  `AdviceKind` from `mathspec.program`. The errors and `did_you_mean` import
-  from `mathspec.errors`. `FORMATS` is gone, and `FormatName` names the
-  formats ([#837](https://github.com/energy-models/mathspec/pull/837)).
-- In `mathspec.program`, `Named` is now `NamedExpression`, and
-  `VariableAbsence` is now `VariableMissing`
-  ([#822](https://github.com/energy-models/mathspec/pull/822), [#810](https://github.com/energy-models/mathspec/pull/810)). A call through a relation lowers to
-  `Join`, `JoinColumns` and `JoinedPredicate`, and a `Sum` names its axes as
-  `Axis` values. `GroupSum`, `Pullback`, `PulledBackPredicate` and
-  `Direction` are gone ([#664](https://github.com/energy-models/mathspec/pull/664)).
+- A dimension that `shift`, `sum_back`, `position()`, a curve or a type-2 set
+  steps along needs `ordered: true` ([#793](https://github.com/energy-models/mathspec/pull/793)).
+- `at(price, by=zone_of[zone])` replaces
+  `at(price, by=zone_of, over=zone, into=generator)` ([#664](https://github.com/energy-models/mathspec/pull/664)).
+- A spec written back out puts its sections in a new order, so
+  `canonical --check` fails on a 0.2.1 file until you rewrite it
+  ([#848](https://github.com/energy-models/mathspec/pull/848)).
+- `Spec` imports from `mathspec.spec`, `Advice` from `mathspec.program`, and
+  the errors from `mathspec.errors`. In `mathspec.program`, `Named` is now
+  `NamedExpression` ([#837](https://github.com/energy-models/mathspec/pull/837), [#822](https://github.com/energy-models/mathspec/pull/822)).
 
 The pull requests in this release:
 
