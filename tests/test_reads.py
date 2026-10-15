@@ -317,9 +317,7 @@ MODELS = [
     pytest.param(
         {'constraints.c': {'dims': ['t', 'g'], 'where': 'p > 0', 'expression': 'y <= 1'}}, id='only-in-a-where'
     ),
-    pytest.param(
-        {'constraints.c': {'dims': ['t', 'g'], 'where': 'p0 > 0', 'expression': 'y <= p'}}, id='a-masked-row'
-    ),
+    pytest.param({'constraints.c': {'dims': ['t', 'g'], 'where': 'p0 > 0', 'expression': 'y <= p'}}, id='a-masked-row'),
     pytest.param(
         {
             'parameters.q': {'dims': ['t']},
