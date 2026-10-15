@@ -105,7 +105,6 @@ __all__ = [
     'SosType',
     'Sum',
     'Translate',
-    'TranslatedPredicate',
     'TypedPredicate',
     'Variable',
     'VariableDeclaration',
@@ -113,6 +112,7 @@ __all__ = [
     'VariableDomain',
     'VariableMissing',
     'VariableReading',
+    'WindowPredicate',
     'WindowSum',
     'assumption_message',
     'carries_variable',
@@ -358,9 +358,6 @@ class Translate:
     wrap: bool
     fill: float | None = None
     partition: Partition | None = None
-    #: The result at *t* is ``operand`` at *t + offset* instead. Only
-    #: [`Program.reads`][] writes it, to step a named offset back.
-    reverse: bool = False
 
 
 @dataclass(frozen=True)
@@ -389,9 +386,6 @@ class WindowSum:
     width: int | str
     wrap: bool
     partition: Partition | None = None
-    #: The window runs from *t* through *t + width - 1* instead. Only
-    #: [`Program.reads`][] writes it, to look a named width ahead.
-    ahead: bool = False
 
 
 @dataclass(frozen=True)
@@ -1143,9 +1137,9 @@ class Program:
         curve still under [`piecewise`][] is not counted, so ask the program of
         ``spec.expand('piecewise')`` for its rows.
 
-        The masks are built from the nodes a ``where`` already holds, plus two
-        flags no file writes: [`Translate.reverse`][] and
-        [`WindowSum.ahead`][], which step a named offset or width the other way.
+        The masks are built from the nodes a ``where`` already holds. Only a
+        [`WindowPredicate`][] wider than one position, or one that looks ahead
+        by a named offset, is a form no file writes.
         """
         from mathspec.reads import reads
 
@@ -1415,20 +1409,35 @@ class CountComparison:
 
 
 @dataclass(frozen=True)
-class TranslatedPredicate:
-    """*operand* read at a neighbouring coordinate — ``shift(points, along=bp, offset=1)``.
+class WindowPredicate:
+    """True at a coordinate where *operand* holds at some position of a window along one dimension.
 
-    False where the translation vacates, and there is no ``edge=`` to state.
-    The arithmetic translation needs one because no number is neutral and
-    inventing one changes the answer; false is what a missing row already
-    means in a mask, so the predicate form has the value the language already
-    gives it.
+    Looking back, the window at *t* runs from *t - offset - width + 1* through
+    *t - offset*; looking ``ahead``, from *t + offset* through
+    *t + offset + width - 1*. A file writes the window of one position:
+    ``shift(points, along=bp, offset=1)`` looks back by 1, and ``offset=-1``
+    ahead by 1. [`Program.reads`][] writes the others.
+
+    A position past the edge of the dimension holds nothing, so the window is
+    false where it reaches only past the edge: false is what a missing row
+    already means in a mask, and no ``edge=`` value has to be invented.
+    ``wrap`` closes the dimension into a cycle instead. ``partition`` makes
+    the window step inside each group of a relation, as a [`Translate`][]
+    does ([`Partition`][]).
+
+    ``offset`` and ``width`` are whole numbers, ``offset`` at least 0 and
+    ``width`` at least 1, or the name of an integer parameter that does not
+    depend on ``along``.
     """
 
     operand: Mask
     along: str
-    offset: int
+    offset: int | str
     dims: tuple[str, ...]
+    width: int | str = 1
+    ahead: bool = False
+    wrap: bool = False
+    partition: Partition | None = None
 
 
 @dataclass(frozen=True)
@@ -1492,7 +1501,7 @@ TypedPredicate = (
     | RelationPairComparison
     | RelationDefined
     | CountComparison
-    | TranslatedPredicate
+    | WindowPredicate
     | JoinedPredicate
 )
 
@@ -1561,7 +1570,7 @@ def _atom_dims(atom: TypedPredicate) -> frozenset[str]:
             | ParameterDefined()
             | VariableDefined()
             | CountComparison()
-            | TranslatedPredicate()
+            | WindowPredicate()
             | RelationComparison()
             | RelationPairComparison()
             | RelationDefined()
@@ -1596,7 +1605,7 @@ def _atom_names(atom: TypedPredicate) -> frozenset[str]:
             return _names_under(atom.left, atom.right)
         case CountComparison():
             return atom.predicate.names_read
-        case TranslatedPredicate():
+        case WindowPredicate():
             return atom.operand.names_read
         case JoinedPredicate():
             return atom.operand.names_read | {atom.columns.name}

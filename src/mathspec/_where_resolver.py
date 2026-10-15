@@ -63,9 +63,9 @@ from mathspec.program import (
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
-    TranslatedPredicate,
     TypedPredicate,
     VariableDefined,
+    WindowPredicate,
     carries_variable,
     variables_of,
     walk,
@@ -233,7 +233,8 @@ class WhereResolver:
         if self.ns.unordered(along.name):
             self.errors.append(unordered(context, f'shift(<predicate>, along={along.name})', along.name))
             return node
-        return TranslatedPredicate(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
+        step = int(offset.value)
+        return WindowPredicate(mask, along.name, abs(step), tuple(sorted(mask.dims)), ahead=step < 0)
 
     def _joined(self, node: UnresolvedPredicateCallNode, mask: Mask) -> Predicate | UnresolvedWhereNode:
         """``at(<predicate>, by=relation[column])`` — the predicate read through a relation, as ``at`` reads an array.

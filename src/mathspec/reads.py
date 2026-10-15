@@ -52,6 +52,7 @@ from mathspec.program import (
     Translate,
     Variable,
     VariableDefined,
+    WindowPredicate,
     WindowSum,
     children,
 )
@@ -59,7 +60,7 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from mathspec.program import ConstraintDeclaration, Expression, Predicate, Program
+    from mathspec.program import ConstraintDeclaration, Expression, Partition, Predicate, Program
 
 _TRUE = BooleanLiteral(True)
 _FALSE = BooleanLiteral(False)
@@ -77,11 +78,13 @@ def reads(program: Program) -> dict[str, Mask]:
 
 
 def _and(*predicates: Predicate) -> Predicate:
-    return Mask(reduce(And, predicates, _TRUE)).root
+    """All of *predicates*, each once, and the literals folded away."""
+    return Mask(reduce(And, dict.fromkeys(predicates), _TRUE)).root
 
 
 def _or(*predicates: Predicate) -> Predicate:
-    return Mask(reduce(Or, predicates, _FALSE)).root
+    """Any of *predicates*, each once, and the literals folded away."""
+    return Mask(reduce(Or, dict.fromkeys(predicates), _FALSE)).root
 
 
 def _positive(expression: Expression, dims: tuple[str, ...]) -> Predicate:
@@ -179,9 +182,7 @@ class _Reads:
     def everywhere(self, dim: str) -> Predicate:
         """True at every coordinate of *dim*, and read over it — an indicator's way to carry a dim its predicate does not read."""
         dtype = self.program.dimensions[dim].dtype
-        label: float | str | datetime.date = (
-            '' if dtype == 'str' else datetime.date.min if dtype == 'datetime' else 0.0
-        )
+        label: float | str | datetime.date = '' if dtype == 'str' else datetime.date.min if dtype == 'datetime' else 0.0
         at = DimensionComparison(dim, '==', label)
         return Or(at, Not(at))
 
@@ -234,9 +235,9 @@ class _Reads:
             case Negate() | Add() | Multiply() | Divide() | Power():
                 return _and(*(self.present(child) for child in children(e)))
             case Join(operand=operand, columns=columns):
-                return self.forward_join(columns, self.present(operand), operand, e)
+                return self.through(columns, self.present(operand), self.frame(operand))
             case Translate():
-                return self.forward_shift(e, self.present(e.operand), vacated=1.0)
+                return self.forward_shift(e, self.present(e.operand), vacated=True)
             case Cases(regions=regions):
                 return _or(*(_and(r.when.root, self.present(r.value)) for r in regions))
             case NamedExpression(body=body):
@@ -264,48 +265,65 @@ class _Reads:
                 return _or(self.live(left), self.live(right))
             case Divide(numerator=numerator):
                 return self.live(numerator)
-            case Sum(operand=Join(operand=inner, columns=columns), over=over) if columns.axes:
-                summand = _and(self.live(inner), self.present(inner))
-                if isinstance(summand, BooleanLiteral) and not summand.value:
-                    return _FALSE
-                total = Sum(Join(self.indicator(summand, self.frame(inner)), columns), over)
-                return _positive(total, self.ordered(self.frame(e)))
+            case Sum(operand=Join(operand=inner, columns=columns)) if columns.axes:
+                return self.through(columns, _and(self.live(inner), self.present(inner)), self.frame(inner))
             case Sum(operand=operand):
                 return self.project(_and(self.live(operand), self.present(operand)), self.frame(e))
             case WindowSum(operand=operand):
                 summand = _and(self.live(operand), self.present(operand))
-                if isinstance(summand, BooleanLiteral) and not summand.value:
-                    return _FALSE
-                window = WindowSum(
-                    self.indicator(summand, self.frame(operand)), e.along, e.width, e.wrap, e.partition
-                )
-                return _positive(window, self.ordered(self.frame(e)))
+                return self.window(summand, e.along, 0, e.width, ahead=False, wrap=e.wrap, partition=e.partition)
             case Join(operand=operand, columns=columns):
-                return self.forward_join(columns, self.live(operand), operand, e)
+                return self.through(columns, self.live(operand), self.frame(operand))
             case Translate():
-                return self.forward_shift(e, self.live(e.operand), vacated=0.0)
+                return self.forward_shift(e, self.live(e.operand), vacated=False)
             case Cases(regions=regions):
                 return _or(*(_and(r.when.root, self.live(r.value)) for r in regions))
             case NamedExpression(body=body):
                 return self.live(body)
         assert_never(e)
 
-    def forward_join(self, columns: JoinColumns, predicate: Predicate, operand: Expression, e: Expression) -> Predicate:
-        """*predicate* carried through a lookup, false where the map has no row."""
+    def through(self, columns: JoinColumns, predicate: Predicate, frame: frozenset[str]) -> Predicate:
+        """*predicate* over *frame* carried through a join on *columns*: true where some row it joins to holds it.
+
+        A join that opens axes is summed over them, as ``sum(by=)`` is. The
+        dims come from *frame* and from what *predicate* reads, since a read
+        mask can carry dims of the row beyond the frame of the node it reaches.
+        """
         if isinstance(predicate, BooleanLiteral) and not predicate.value:
             return _FALSE
-        looked_up = Join(self.indicator(predicate, self.frame(operand)), columns)
-        return _positive(looked_up, self.ordered(self.frame(e)))
+        dims = frame | Mask(predicate).dims
+        joined: Expression = Join(self.indicator(predicate, dims), columns)
+        if columns.axes:
+            joined = Sum(joined, columns.axes)
+        return _positive(joined, self.ordered(self.joined(columns, dims)))
 
-    def forward_shift(self, e: Translate, predicate: Predicate, *, vacated: float) -> Predicate:
+    def forward_shift(self, e: Translate, predicate: Predicate, *, vacated: bool) -> Predicate:
         """*predicate* carried through *e*; where *e* vacates, *vacated* stands if *e* has a fill, else false."""
-        if isinstance(predicate, BooleanLiteral) and (not predicate.value or (e.wrap and e.partition is None)):
+        back, by = (False, -e.offset) if isinstance(e.offset, int) and e.offset < 0 else (True, e.offset)
+        shifted = self.window(predicate, e.along, by, 1, ahead=not back, wrap=e.wrap, partition=e.partition)
+        if not vacated or e.wrap or e.fill is None:
+            return shifted
+        if predicate == _TRUE:
+            return _TRUE
+        reached = self.window(_TRUE, e.along, by, 1, ahead=not back, wrap=e.wrap, partition=e.partition)
+        return _or(shifted, Not(reached))
+
+    def window(
+        self,
+        predicate: Predicate,
+        along: str,
+        offset: int | str,
+        width: int | str,
+        *,
+        ahead: bool,
+        wrap: bool,
+        partition: Partition | None,
+    ) -> Predicate:
+        """Where *predicate* holds at some position of the window, read over *along* whether or not it reads it."""
+        if isinstance(predicate, BooleanLiteral) and (not predicate.value or (wrap and partition is None)):
             return predicate
-        fill = None if e.wrap or e.fill is None else vacated
-        shifted = Translate(
-            self.indicator(predicate, self.frame(e.operand)), e.along, e.offset, e.wrap, fill, e.partition
-        )
-        return _positive(shifted, self.ordered(self.frame(e)))
+        operand = Mask(_and(predicate, self.everywhere(along)) if along not in Mask(predicate).dims else predicate)
+        return WindowPredicate(operand, along, offset, self.ordered(operand.dims), width, ahead, wrap, partition)
 
     # -- read, top-down ---------------------------------------------------------
 
@@ -324,11 +342,11 @@ class _Reads:
                 for child in children(e):
                     self.visit(child, read)
             case Sum(operand=Join(operand=inner, columns=columns)) if columns.axes:
-                self.visit(inner, _and(self.back_join(columns, read, e, inner), self.present(inner)))
+                self.visit(inner, _and(self.back_join(columns, read, e), self.present(inner)))
             case Sum(operand=operand):
                 self.visit(operand, _and(read, self.present(operand)))
             case Join(operand=operand, columns=columns):
-                self.visit(operand, self.back_join(columns, read, e, operand))
+                self.visit(operand, self.back_join(columns, read, e))
             case Translate():
                 self.amount(e.offset, read)
                 self.visit(e.operand, self.back_shift(e, read))
@@ -348,26 +366,16 @@ class _Reads:
         if isinstance(amount, str):
             self.visit(Parameter(amount), read)
 
-    def back_join(self, columns: JoinColumns, read: Predicate, e: Expression, operand: Expression) -> Predicate:
-        """Where *operand* is read, given *read* over the frame of the join of it: the join with its columns swapped."""
+    def back_join(self, columns: JoinColumns, read: Predicate, e: Expression) -> Predicate:
+        """Where the operand of a join on *columns* is read, given *read* at the join *e*: the join with its columns swapped."""
         swapped = JoinColumns(columns.name, columns.relation, joined=columns.grouped, grouped=columns.joined)
-        pulled: Expression = Join(self.indicator(read, self.frame(e)), swapped)
-        if swapped.axes:
-            pulled = Sum(pulled, swapped.axes)
-        return _positive(pulled, self.ordered(self.frame(operand)))
+        return self.through(swapped, read, self.frame(e))
 
     def back_shift(self, e: Translate, read: Predicate) -> Predicate:
-        """Where the operand of *e* is read: *read* stepped back by the offset, and nothing past the edge."""
-        if isinstance(read, BooleanLiteral) and e.wrap and e.partition is None:
-            return read
-        offset, reverse = (-e.offset, False) if isinstance(e.offset, int) else (e.offset, True)
-        fill = None if e.wrap else 0.0
-        frame = self.frame(e)
-        stepped = Translate(self.indicator(read, frame), e.along, offset, e.wrap, fill, e.partition, reverse)
-        return _positive(stepped, self.ordered(frame))
+        """Where the operand of *e* is read: *read* looked at from the other side of the offset."""
+        ahead, by = (False, -e.offset) if isinstance(e.offset, int) and e.offset < 0 else (True, e.offset)
+        return self.window(read, e.along, by, 1, ahead=ahead, wrap=e.wrap, partition=e.partition)
 
     def window_ahead(self, e: WindowSum, read: Predicate) -> Predicate:
-        """Where the operand of *e* is read: some position of the window ahead of it is."""
-        frame = self.frame(e)
-        ahead = WindowSum(self.indicator(read, frame), e.along, e.width, e.wrap, e.partition, ahead=True)
-        return _positive(ahead, self.ordered(frame))
+        """Where the operand of *e* is read: at some position of the window ahead of it, *read* holds."""
+        return self.window(read, e.along, 0, e.width, ahead=True, wrap=e.wrap, partition=e.partition)

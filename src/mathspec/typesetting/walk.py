@@ -51,9 +51,9 @@ from mathspec.program import (
     RelationPairComparison,
     Sum,
     Translate,
-    TranslatedPredicate,
     Variable,
     VariableDefined,
+    WindowPredicate,
     WindowSum,
 )
 from mathspec.typesetting.format import Line, OperatorName, number
@@ -107,6 +107,20 @@ _TRANSLATIONS: dict[TranslationPolicy, tuple[OperatorName, OperatorName]] = {
     'wrap': ('cyclic_minus', 'cyclic_plus'),
     'edge': ('edge_minus', 'edge_plus'),
 }
+
+
+def _one_step(node: WindowPredicate) -> int | str:
+    """The step a file's predicate ``shift`` takes: its offset back, or a negative one ahead.
+
+    A file writes a window of one literal position with no wrap and no group;
+    only [`Program.reads`][mathspec.program.Program.reads] writes the others,
+    and nothing prints those.
+    """
+    assert node.width == 1 and not node.wrap and node.partition is None, 'only a read mask writes a wider window'
+    if not node.ahead:
+        return node.offset
+    assert isinstance(node.offset, int), 'only a read mask looks ahead by a named offset'
+    return -node.offset
 
 
 @dataclass(frozen=True)
@@ -551,9 +565,8 @@ class Walk:
             left, right = self.sides(node, ctx)
             return f'{left} {right}', comparison
 
-        if isinstance(node, TranslatedPredicate):
-            moved = ctx.translated(node.along, _Step(node.offset, 'plain'))
-            return self._where(node.operand.root, moved)
+        if isinstance(node, WindowPredicate):
+            return self._where(node.operand.root, ctx.translated(node.along, _Step(_one_step(node), 'plain')))
 
         if isinstance(node, JoinedPredicate):
             return self._where(node.operand.root, self._looked_up(node.columns, ctx))
