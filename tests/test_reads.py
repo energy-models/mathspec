@@ -497,7 +497,7 @@ MODELS = [
         {
             'parameters.lead': {'dims': ['g'], 'dtype': 'int', 'missing': 'absent'},
             'parameters.q': {'dims': ['t', 'g']},
-            'constraints.c': {'dims': ['t', 'g'], 'expression': 'x <= shift(q, along=t, offset=lead, edge=0)'},
+            'constraints.c': {'dims': ['t', 'g'], 'expression': 'y <= shift(q, along=t, offset=lead, edge=0) + p'},
         },
         id='a-missing-named-offset',
     ),
@@ -505,7 +505,7 @@ MODELS = [
         {
             'parameters.lead': {'dims': ['g'], 'dtype': 'int', 'missing': 'absent'},
             'parameters.q': {'dims': ['t', 'g']},
-            'constraints.c': {'dims': ['t', 'g'], 'expression': "y <= shift(q, along=t, offset=lead, edge='wrap')"},
+            'constraints.c': {'dims': ['t', 'g'], 'expression': "y <= shift(q, along=t, offset=lead, edge='wrap') + p"},
         },
         id='a-missing-named-offset-that-wraps',
     ),
@@ -513,7 +513,7 @@ MODELS = [
         {
             'parameters.w': {'dims': ['g'], 'dtype': 'int', 'missing': 'absent'},
             'parameters.q': {'dims': ['t', 'g']},
-            'constraints.c': {'dims': ['t', 'g'], 'expression': 'y <= sum_back(q, along=t, window=w)'},
+            'constraints.c': {'dims': ['t', 'g'], 'expression': 'y <= sum_back(q, along=t, window=w) + p'},
         },
         id='a-missing-named-width',
     ),

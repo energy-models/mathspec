@@ -1034,6 +1034,40 @@ class Separability:
         return replace(self, ahead=ahead, undecided=tuple(r for r in self.undecided if r not in folded))
 
 
+#: What holds a tree that goes into the model ([`model_trees`][]).
+TreeKind = Literal['constraint', 'objective', 'bound', 'curve', 'term']
+
+
+def model_trees(
+    constraints: Mapping[str, Constraint],
+    objective: Objective | None,
+    variables: Mapping[str, Variable],
+    piecewise: Mapping[str, Piecewise],
+    terms: Mapping[str, ExpressionReference],
+) -> Iterator[tuple[TreeKind, str, Expression]]:
+    """Every tree whose value goes into the model, with what holds it and the name of that holder.
+
+    The one list of them: lowering marks each named expression under one of
+    them ``in_math``, and [`Program.reads`][] starts its walk from each, so a
+    kind added here reaches both. A reported expression is read after the
+    solve and an assumption is a check on the data, so neither is here.
+    """
+    for name, constraint in constraints.items():
+        yield 'constraint', name, constraint.lhs
+        yield 'constraint', name, constraint.rhs
+    if objective is not None:
+        yield 'objective', '', objective.expression
+    for name, variable in variables.items():
+        for bound in (variable.lower, variable.upper):
+            if bound is not None:
+                yield 'bound', name, bound
+    for name, curve in piecewise.items():
+        for link in curve.links:
+            yield 'curve', name, link.expression
+    for name, term in terms.items():
+        yield 'term', name, term
+
+
 @dataclass(frozen=True, kw_only=True)
 class Program:
     """A complete declarative description of a mathematical program, with no data in it.

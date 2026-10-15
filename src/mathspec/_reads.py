@@ -34,6 +34,7 @@ import datetime
 from functools import reduce
 from typing import TYPE_CHECKING, assert_never
 
+from mathspec.errors import LanguageError
 from mathspec.program import (
     Add,
     And,
@@ -66,10 +67,11 @@ from mathspec.program import (
     WindowPredicate,
     WindowSum,
     children,
+    model_trees,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
 
     from mathspec.program import Constraint, Expression, Partition, Predicate, Program
 
@@ -89,13 +91,22 @@ def reads(program: Program) -> dict[str, Mask]:
 
 
 def _and(*predicates: Predicate) -> Predicate:
-    """All of *predicates*, each once, and the literals folded away."""
-    return Mask(reduce(And, dict.fromkeys(predicates), _TRUE)).root
+    """All of *predicates*, each part once however deep the ``AND`` that holds it, and the literals folded away."""
+    return Mask(reduce(And, dict.fromkeys(_parts(predicates, And)), _TRUE)).root
 
 
 def _or(*predicates: Predicate) -> Predicate:
-    """Any of *predicates*, each once, and the literals folded away."""
-    return Mask(reduce(Or, dict.fromkeys(predicates), _FALSE)).root
+    """Any of *predicates*, each part once however deep the ``OR`` that holds it, and the literals folded away."""
+    return Mask(reduce(Or, dict.fromkeys(_parts(predicates, Or)), _FALSE)).root
+
+
+def _parts(predicates: Iterable[Predicate], kind: type[And | Or]) -> Iterator[Predicate]:
+    """The operands of every *kind* connective in *predicates*, flattened, so a repeated part is seen as one."""
+    for predicate in predicates:
+        if isinstance(predicate, kind):
+            yield from _parts((predicate.left, predicate.right), kind)
+        else:
+            yield predicate
 
 
 def _swapped(columns: JoinColumns) -> JoinColumns:
@@ -124,29 +135,58 @@ class _Reads:
         self._live: dict[Expression, Predicate] = {}
         self._built: dict[str, Predicate] = {}
         self._cases: dict[Expression, bool] = {}
+        self._dims: dict[int, tuple[Predicate, frozenset[str]]] = {}
 
     def run(self) -> None:
+        """Walk from each tree that goes into the model, each reported expression, each ``where`` and each assumption.
+
+        A term that adds to a given expression is read wherever it is present,
+        because this file cannot see where its host reads the sum. An assumption
+        is checked at every coordinate of its frame, so a flag in it is read
+        there with nothing to narrow it.
+        """
         program = self.program
-        for name, constraint in program.constraints.items():
-            built = self.built(name, constraint)
-            where = _TRUE if constraint.where is None else constraint.where.root
-            self.visit_mask(where, _TRUE)
-            self.visit(constraint.lhs, built, where)
-            self.visit(constraint.rhs, built, where)
-        if program.objective is not None:
-            expression = program.objective.expression
-            self.visit(expression, self.present(expression), _TRUE)
-        for name, variable in program.variables.items():
-            exists = _TRUE
-            if variable.where is not None:
-                self.visit_mask(variable.where.root, _TRUE)
-                exists = VariableDefined(name, variable.dims)
-            for bound in (variable.lower, variable.upper):
-                if bound is not None:
-                    self.visit(bound, exists, exists)
+        if program.piecewise:
+            named = ', '.join(f"'{name}'" for name in program.piecewise)
+            msg = (
+                f'piecewise {named} is still a curve, so its rows do not exist yet and no mask can say where they '
+                f"read its tables. Ask the program of spec.expand('piecewise')."
+            )
+            raise LanguageError(msg)
+        terms = {
+            name: ExpressionReference(name, entry.expression)
+            for name, entry in program.expressions.items()
+            if entry.adds_to is not None
+        }
+        trees = model_trees(program.constraints, program.objective, program.variables, program.piecewise, terms)
+        for kind, name, tree in trees:
+            match kind:
+                case 'constraint':
+                    constraint = program.constraints[name]
+                    where = _TRUE if constraint.where is None else constraint.where.root
+                    self.visit(tree, self.built(name, constraint), where)
+                case 'objective' | 'term':
+                    self.visit(tree, self.present(tree), _TRUE)
+                case 'bound':
+                    exists = self.exists(name)
+                    self.visit(tree, exists, exists)
+                case 'curve':
+                    raise AssertionError('a program that holds a curve is refused above')
+                case _:
+                    assert_never(kind)
+        wheres = [c.where for c in program.constraints.values()] + [v.where for v in program.variables.values()]
+        checks = [mask for a in program.assumptions.values() for mask in (a.where, a.predicate)]
+        for mask in wheres + checks:
+            if mask is not None:
+                self.visit_mask(mask.root, _TRUE)
         for entry in program.expressions.values():
             if not entry.in_math:
                 self.visit(entry.expression, self.present(entry.expression), _TRUE)
+
+    def exists(self, name: str) -> Predicate:
+        """Where variable *name* exists."""
+        variable = self.program.variables[name]
+        return _TRUE if variable.where is None else VariableDefined(name, variable.dims)
 
     def built(self, name: str, constraint: Constraint) -> Predicate:
         """Where *constraint* has a row: its mask holds, absence removed neither side, and a variable term is left."""
@@ -158,6 +198,13 @@ class _Reads:
         return self._built[name]
 
     # -- frames ---------------------------------------------------------------
+
+    def dims_of(self, predicate: Predicate) -> frozenset[str]:
+        """The dims *predicate* reads, held by identity: a mask is a deep tree, and hashing it again on each ask is quadratic."""
+        key = id(predicate)
+        if key not in self._dims:
+            self._dims[key] = (predicate, Mask(predicate).dims)
+        return self._dims[key][1]
 
     def ordered(self, dims: Iterable[str]) -> tuple[str, ...]:
         return tuple(sorted(set(dims), key=self._order.__getitem__))
@@ -210,7 +257,7 @@ class _Reads:
 
     def indicator(self, predicate: Predicate, dims: frozenset[str]) -> Expression:
         """``1`` where *predicate* holds and ``0`` elsewhere, over every dim of *dims*."""
-        cover = _and(*(self.everywhere(d) for d in self.ordered(dims - Mask(predicate).dims)))
+        cover = _and(*(self.everywhere(d) for d in self.ordered(dims - self.dims_of(predicate))))
         if isinstance(predicate, BooleanLiteral):
             value = Constant(1.0 if predicate.value else 0.0)
             return value if isinstance(cover, BooleanLiteral) else Cases((Region(Mask(cover), value),))
@@ -223,8 +270,8 @@ class _Reads:
 
     def project(self, predicate: Predicate, dims: Iterable[str]) -> Predicate:
         """Where *predicate* holds at some coordinate of the dims it reads beyond *dims*."""
-        for dim in self.ordered(Mask(predicate).dims - set(dims)):
-            rest = self.ordered(Mask(predicate).dims - {dim})
+        for dim in self.ordered(self.dims_of(predicate) - set(dims)):
+            rest = self.ordered(self.dims_of(predicate) - {dim})
             predicate = CountComparison(Mask(predicate), dim, '>', 0.0, rest)
         return predicate
 
@@ -239,8 +286,10 @@ class _Reads:
         """Where absence has not removed *e*, over its own frame."""
         program = self.program
         match e:
-            case Constant() | Sum() | WindowSum():
+            case Constant() | Sum():
                 return _TRUE
+            case WindowSum(width=width):
+                return self.amount_present(width)
             case ParameterReference(name=name):
                 declared = program.parameters.get(name)
                 if declared is not None and declared.missing != 'absent':
@@ -313,7 +362,7 @@ class _Reads:
         """
         if isinstance(predicate, BooleanLiteral) and not predicate.value:
             return _FALSE
-        dims = frame | Mask(predicate).dims
+        dims = frame | self.dims_of(predicate)
         joined: Expression = Join(self.indicator(predicate, dims), columns)
         if columns.axes:
             joined = Sum(joined, columns.axes)
@@ -326,9 +375,13 @@ class _Reads:
         if not vacated or e.wrap or e.fill is None:
             return shifted
         if predicate == _TRUE:
-            return _TRUE
+            return self.amount_present(e.offset)
         reached = self.window(_TRUE, e.along, by, 1, ahead=not back, wrap=e.wrap, partition=e.partition)
-        return _or(shifted, Not(reached))
+        return _and(_or(shifted, Not(reached)), self.amount_present(e.offset))
+
+    def amount_present(self, amount: int | str) -> Predicate:
+        """Where an offset or a width has a value: a missing amount makes its operator absent there."""
+        return _TRUE if isinstance(amount, int) else self.present(ParameterReference(amount))
 
     def window(
         self,
@@ -341,10 +394,16 @@ class _Reads:
         wrap: bool,
         partition: Partition | None,
     ) -> Predicate:
-        """Where *predicate* holds at some position of the window, read over *along* whether or not it reads it."""
-        if isinstance(predicate, BooleanLiteral) and (not predicate.value or (wrap and partition is None)):
+        """Where *predicate* holds at some position of the window, read over *along* whether or not it reads it.
+
+        A window that always holds is folded to true only where both amounts
+        are numbers: a named amount can have no row, and then the window holds
+        nothing.
+        """
+        literal = isinstance(offset, int) and isinstance(width, int) and width >= 1
+        if isinstance(predicate, BooleanLiteral) and (not predicate.value or (wrap and partition is None and literal)):
             return predicate
-        operand = Mask(_and(predicate, self.everywhere(along)) if along not in Mask(predicate).dims else predicate)
+        operand = Mask(_and(predicate, self.everywhere(along)) if along not in self.dims_of(predicate) else predicate)
         return WindowPredicate(operand, along, offset, self.ordered(operand.dims), width, ahead, wrap, partition)
 
     # -- read, top-down ---------------------------------------------------------
@@ -421,7 +480,7 @@ class _Reads:
             case MaskReference(body=body):
                 self.visit_mask(body, evaluated)
             case CountComparison(predicate=predicate, over=over):
-                self.visit_mask(predicate.root, self.project(evaluated, Mask(evaluated).dims - {over}))
+                self.visit_mask(predicate.root, self.project(evaluated, self.dims_of(evaluated) - {over}))
             case WindowPredicate():
                 looked_at = self.window(
                     evaluated, p.along, p.offset, p.width, ahead=not p.ahead, wrap=p.wrap, partition=p.partition

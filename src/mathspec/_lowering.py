@@ -52,6 +52,7 @@ from mathspec.program import (
     Sos,
     Variable,
     VariableDefined,
+    model_trees,
     variables_of,
     walk,
 )
@@ -189,13 +190,6 @@ def lower(spec: Spec) -> Program:
     if errors:
         raise SchemaError('\n'.join(errors))
 
-    roots = [side for c in constraints.values() for side in (c.lhs, c.rhs)]
-    if objective is not None:
-        roots.append(objective.expression)
-    roots.extend(link for links in curves.values() for link in links)
-    roots.extend(terms)
-    in_math = frozenset(node.name for node in walk(*roots) if isinstance(node, ExpressionReference))
-
     piecewise = {}
     for pname, links in curves.items():
         pdef = spec.piecewise[pname]
@@ -212,6 +206,11 @@ def lower(spec: Spec) -> Program:
             assumption = _assumption(aname, assumed, ns, errors)
             assert assumption is not None and not errors, 'what a method assumes is stated in the language'
             assumptions[aname] = assumption
+
+    trees = model_trees(constraints, objective, variables, piecewise, {term.name: term for term in terms})
+    in_math = frozenset(
+        node.name for node in walk(*(tree for _, _, tree in trees)) if isinstance(node, ExpressionReference)
+    )
 
     program = Program(
         parameters={
