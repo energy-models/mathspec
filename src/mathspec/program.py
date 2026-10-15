@@ -1461,9 +1461,14 @@ class WindowPredicate:
     the window step inside each group of a relation, as a [`Translate`][]
     does ([`Partition`][]).
 
-    ``offset`` and ``width`` are whole numbers, ``offset`` at least 0 and
-    ``width`` at least 1, or the name of an integer parameter that does not
-    depend on ``along``.
+    ``offset`` and ``width`` are whole numbers, or the name of an integer
+    parameter that does not depend on ``along``. A number is in normal form: a
+    literal ``offset`` is 0 or more, and ``ahead`` carries the direction. A
+    named ``offset`` carries its sign in the data, as on a [`Translate`][]:
+    where its value is negative, the window lies on the other side of *t*. A
+    width of 0 or less is an empty window, which holds nothing. Where a named
+    amount has no row, the window holds nothing there, as a missing row reads
+    in any mask; an amount declared with a value reads that value instead.
     """
 
     operand: Mask

@@ -144,16 +144,18 @@ because the model reads the upper bound of `dispatch[gas]`.
 
 The model reads a parameter where its value goes into the model it builds:
 
-| The parameter stands as                                          | The model reads it at                                                    |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| a coefficient, a divisor or a constant in a constraint           | each row that the model builds                                           |
-| a factor of a summand in `sum` or `sum_back`                     | each summand that exists, so not where the summand has an absent factor  |
-| a `bounds:` entry                                                | each coordinate where the variable exists                                |
-| the amount of an `offset=` or a `window=`                        | each coordinate where a row that the model builds evaluates the operator |
-| a term of the objective                                          | each term that exists                                                    |
-| a term of a [reported expression](named.md#reported-expressions) | each coordinate where the expression is reported                         |
-| a values parameter of a [`piecewise:`](piecewise.md) entry       | each breakpoint that the curve runs through                              |
-| a bare `bool` name in a `where`                                  | each coordinate where the model evaluates that `where`                   |
+| The parameter stands as                                                                | The model reads it at                                                                               |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| a coefficient, a divisor or a constant in a constraint                                 | each row that the model builds                                                                      |
+| a factor of a summand in `sum` or `sum_back`                                           | each summand that exists, so not where the summand has an absent factor                             |
+| a `bounds:` entry                                                                      | each coordinate where the variable exists                                                           |
+| the amount of an `offset=` or a `window=`                                              | each coordinate where a row that the model builds evaluates the operator                            |
+| a term of the objective                                                                | each term that exists                                                                               |
+| a term of a [reported expression](named.md#reported-expressions)                       | each coordinate where the expression is reported                                                    |
+| a values parameter of a [`piecewise:`](piecewise.md) entry                             | each breakpoint that the curve runs through                                                         |
+| a bare `bool` name in a `where`                                                        | each coordinate where the model evaluates that `where`                                              |
+| a term with [`adds_to:`](parameters-variables-constraints.md#terms) a given expression | each coordinate where the term is present, because the file cannot see where its host reads the sum |
+| a bare `bool` name in an `assumptions:` entry                                          | every coordinate of the frame of the assumption                                                     |
 
 A row that an absent term removes is not built, so the model reads no
 parameter in that row. A tool does not have to build the model to apply this
