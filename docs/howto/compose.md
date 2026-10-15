@@ -366,7 +366,7 @@ Given variable 'Generator_p' collides with the variable of the same name. Rename
 | `null` under a section's name        | it is refused                                                                 |
 | a dimension or a relation            | it is added, or restated as the base declares it                              |
 | `ordered:` on a restated dimension   | `true` makes the dimension ordered; `false` over an ordered one is refused    |
-| `missing:` on a relation             | it changes what a key the map leaves out means, as on a parameter             |
+| `missing:` on a relation             | it changes whether every key combination needs a row, as on a parameter       |
 | an entry under one kind of `given:`  | it is edited, added or removed like any declaration, and the other kinds stay |
 | `version`, `description`             | the patch's value replaces the base's                                         |
 | a field an earlier patch writes      | the later patch's value replaces it                                           |

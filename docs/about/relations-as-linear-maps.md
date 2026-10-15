@@ -53,7 +53,8 @@ By default the function is total: when the data is attached, a key tuple with
 no row is [refused](../reference/language/relations.md#the-data-contract).
 Under `missing: absent`, as in the spec above, the function is partial: it has
 no value at a key tuple with no row. A bare relation is a subset, with no
-function behind it. In the spec above, `gen_zone` is the graph of
+function behind it. The same default holds for it, so a bare relation that is
+not every key tuple declares `missing: absent`. In the spec above, `gen_zone` is the graph of
 $`f: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$. The
 [data contract](../reference/language/relations.md#the-data-contract) makes
 sure of this, because the loader checks for one row per key tuple when the
