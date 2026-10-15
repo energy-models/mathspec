@@ -302,13 +302,29 @@ def declared_block(path: Path) -> str:
     return '\n\n'.join(parts)
 
 
+def patched_symbols(base: Path, patch: Path) -> dict[str, Any] | Path | None:
+    """The base's symbol table, with the names of the patch's own table added.
+
+    A table may name only what its spec declares, so a name the patch adds
+    cannot go in the base's table.
+    """
+    table, own = sidecar_for(base), sidecar_for(patch)
+    if own is None:
+        return table
+    merged = yaml.safe_load(table.read_text()) if table else {}
+    merged['names'] = {**merged.get('names', {}), **yaml.safe_load(own.read_text())['names']}
+    return merged
+
+
 def patched_block(base: Path, patch: Path) -> str:
     """The patch's description, then every entry it writes as YAML beside the line it prints once laid over *base*."""
     text = without_header(patch)
     model = override(base, [patch])
     written = yaml.safe_load(text)
+    symbols = patched_symbols(base, patch)
     headings = {
         'variables': {name: _stands_for(name, variable.description) for name, variable in model.variables.items()},
+        'masks': {name: name for name in model.masks},
         'constraints': {
             name: _stands_for(name, constraint.description) for name, constraint in model.constraints.items()
         },
@@ -317,7 +333,7 @@ def patched_block(base: Path, patch: Path) -> str:
     parts = [model.description]
     for section, heading_of in headings.items():
         for name in written.get(section, {}):
-            line = typeset_line(model, name, 'markdown', symbols=sidecar_for(base), inline_expressions=False)
+            line = typeset_line(model, name, 'markdown', symbols=symbols, inline_expressions=False)
             parts.append(
                 f'### `{heading_of[name]}`\n\n'
                 f'`{name}`\n\n'

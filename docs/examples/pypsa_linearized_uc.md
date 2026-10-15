@@ -22,7 +22,8 @@ The patch changes only what the keyword changes:
   `:183-192`).
 - Four rows tighten the relaxation of a unit with a fixed build whose start
   and stop cost the same in every snapshot and every scenario
-  (`constraints.py:599-699`).
+  (`constraints.py:599-699`). The mask `Generator_tightened`, and its twins
+  for a link and a process, name these units.
 - A modular committable unit is refused, as PyPSA refuses it
   (`optimize.py:783-784`).
 
@@ -603,6 +604,69 @@ Process_shut_down:
 0 \le \mathit{dn}^{z}_{\xi,t,j} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j}
 ```
 
+### `Generator_tightened`
+
+`Generator_tightened`
+
+```yaml
+Generator_tightened:
+  description: >-
+    a committable generator with a fixed build, whose start-up and shut-down
+    cost are equal in every snapshot and every scenario, that stands in the
+    snapshot's period — the rows PyPSA adds under the keyword to tighten the
+    relaxation (`constraints.py:599-699`)
+  where: >-
+    Generator_committed
+    AND NOT Generator_p_nom_extendable
+    AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0
+```
+
+```math
+\mathrm{on}^{\mathrm{com,tight}}_{t,g} \iff \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \lvert \{ \xi \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{\xi,t',g} \neq \mathrm{c}^{\mathrm{dn}}_{\xi,t',g} \} \rvert > 0 \} \rvert = 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+### `Link_tightened`
+
+`Link_tightened`
+
+```yaml
+Link_tightened:
+  description: >-
+    a committable link with a fixed build, whose start-up and shut-down
+    cost are equal in every snapshot and every scenario, that stands in the
+    snapshot's period — the rows PyPSA adds under the keyword to tighten the
+    relaxation (`constraints.py:599-699`)
+  where: >-
+    Link_committed
+    AND NOT Link_p_nom_extendable
+    AND count(count(Link_start_up_cost != Link_shut_down_cost, over=snapshot) > 0, over=scenario) == 0
+```
+
+```math
+\mathrm{on}^{f,\mathrm{com,tight}}_{t,l} \iff \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \lvert \{ \xi \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{f,\mathrm{up}}_{\xi,t',l} \neq \mathrm{c}^{f,\mathrm{dn}}_{\xi,t',l} \} \rvert > 0 \} \rvert = 0 \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Process_tightened`
+
+`Process_tightened`
+
+```yaml
+Process_tightened:
+  description: >-
+    a committable process with a fixed build, whose start-up and shut-down
+    cost are equal in every snapshot and every scenario, that stands in the
+    snapshot's period — the rows PyPSA adds under the keyword to tighten the
+    relaxation (`constraints.py:599-699`)
+  where: >-
+    Process_committed
+    AND NOT Process_p_nom_extendable
+    AND count(count(Process_start_up_cost != Process_shut_down_cost, over=snapshot) > 0, over=scenario) == 0
+```
+
+```math
+\mathrm{on}^{z,\mathrm{com,tight}}_{t,j} \iff \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \lvert \{ \xi \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{z,\mathrm{up}}_{\xi,t',j} \neq \mathrm{c}^{z,\mathrm{dn}}_{\xi,t',j} \} \rvert > 0 \} \rvert = 0 \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
 ### `Generator-com-p-before`
 
 `Generator_com_p_before`
@@ -615,7 +679,7 @@ Generator_com_p_before:
     shut-down ramp (`constraints.py:635-649`). The translated terms vacate
     the first snapshot, as PyPSA's `sns[1:]` does
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
+  where: Generator_tightened
   expression: >-
     shift(Generator_p, along=snapshot, offset=1)
     - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
@@ -624,7 +688,7 @@ Generator_com_p_before:
 ```
 
 ```math
-p_{\xi,t - 1,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot u_{\xi,t - 1,g} - \left( \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \right) \cdot \left( u_{\xi,t,g} - \mathit{up}_{\xi,t,g} \right) \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{\xi',t',g} \neq \mathrm{c}^{\mathrm{dn}}_{\xi',t',g} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{on}_{t,g}
+p_{\xi,t - 1,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot u_{\xi,t - 1,g} - \left( \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \right) \cdot \left( u_{\xi,t,g} - \mathit{up}_{\xi,t,g} \right) \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,tight}}_{t,g}
 ```
 
 ### `Generator-com-p-current`
@@ -637,14 +701,14 @@ Generator_com_p_current:
     `Generator-com-p-current` — output fits the share on, and the share starting
     up only up to the start-up ramp (`constraints.py:652-665`)
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND position(snapshot) > 0 AND Generator_active
+  where: Generator_tightened AND position(snapshot) > 0
   expression: >-
     Generator_p - Generator_p_max_pu * Generator_p_nom * Generator_status
     + (Generator_p_max_pu * Generator_p_nom - Generator_start_up_rate * Generator_p_nom) * Generator_start_up <= 0
 ```
 
 ```math
-p_{\xi,t,g} - \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot u_{\xi,t,g} + \left( \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} - \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \right) \cdot \mathit{up}_{\xi,t,g} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{\xi',t',g} \neq \mathrm{c}^{\mathrm{dn}}_{\xi',t',g} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{pos}(t) > 0 \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} - \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot u_{\xi,t,g} + \left( \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} - \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \right) \cdot \mathit{up}_{\xi,t,g} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,tight}}_{t,g} \wedge \mathrm{pos}(t) > 0
 ```
 
 ### `Generator-com-partly-start-up`
@@ -658,7 +722,7 @@ Generator_com_partly_start_up:
     is bounded by the ramp of the share on and the start-up ramp of the
     share coming on (`constraints.py:667-682`)
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
+  where: Generator_tightened
   expression: >-
     Generator_p - shift(Generator_p, along=snapshot, offset=1)
     - (Generator_p_min_pu * Generator_p_nom + Generator_ramp_up_rate * Generator_p_nom) * Generator_status
@@ -668,7 +732,7 @@ Generator_com_partly_start_up:
 ```
 
 ```math
-p_{\xi,t,g} - p_{\xi,t - 1,g} - \left( \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} + \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \right) \cdot u_{\xi,t,g} + \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot u_{\xi,t - 1,g} + \left( \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} + \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} - \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \right) \cdot \mathit{up}_{\xi,t,g} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{\xi',t',g} \neq \mathrm{c}^{\mathrm{dn}}_{\xi',t',g} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} - p_{\xi,t - 1,g} - \left( \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} + \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \right) \cdot u_{\xi,t,g} + \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot u_{\xi,t - 1,g} + \left( \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} + \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} - \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \right) \cdot \mathit{up}_{\xi,t,g} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,tight}}_{t,g}
 ```
 
 ### `Generator-com-partly-shut-down`
@@ -681,7 +745,7 @@ Generator_com_partly_shut_down:
     `Generator-com-partly-shut-down` — lowering output while a share is shutting
     down is bounded likewise, by the shut-down ramp (`constraints.py:684-699`)
   dims: [scenario, snapshot, generator]
-  where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
+  where: Generator_tightened
   expression: >-
     shift(Generator_p, along=snapshot, offset=1) - Generator_p
     - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
@@ -691,7 +755,7 @@ Generator_com_partly_shut_down:
 ```
 
 ```math
-p_{\xi,t - 1,g} - p_{\xi,t,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot u_{\xi,t - 1,g} + \left( \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} - \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \right) \cdot u_{\xi,t,g} - \left( \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} + \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \right) \cdot \mathit{up}_{\xi,t,g} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{\mathrm{up}}_{\xi',t',g} \neq \mathrm{c}^{\mathrm{dn}}_{\xi',t',g} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{on}_{t,g}
+p_{\xi,t - 1,g} - p_{\xi,t,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot u_{\xi,t - 1,g} + \left( \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} - \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \right) \cdot u_{\xi,t,g} - \left( \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} + \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \right) \cdot \mathit{up}_{\xi,t,g} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,tight}}_{t,g}
 ```
 
 ### `Link-com-p-before`
@@ -706,7 +770,7 @@ Link_com_p_before:
     shut-down ramp (`constraints.py:635-649`). The translated terms vacate
     the first snapshot, as PyPSA's `sns[1:]` does
   dims: [scenario, snapshot, link]
-  where: Link_committable AND NOT Link_p_nom_extendable AND count(count(Link_start_up_cost != Link_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Link_active
+  where: Link_tightened
   expression: >-
     shift(Link_p, along=snapshot, offset=1)
     - Link_shut_down_rate * Link_p_nom * shift(Link_status, along=snapshot, offset=1)
@@ -715,7 +779,7 @@ Link_com_p_before:
 ```
 
 ```math
-f_{\xi,t - 1,l} - \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot u^{f}_{\xi,t - 1,l} - \left( \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} - \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \right) \cdot \left( u^{f}_{\xi,t,l} - \mathit{up}^{f}_{\xi,t,l} \right) \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{f,\mathrm{up}}_{\xi',t',l} \neq \mathrm{c}^{f,\mathrm{dn}}_{\xi',t',l} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t - 1,l} - \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot u^{f}_{\xi,t - 1,l} - \left( \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} - \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \right) \cdot \left( u^{f}_{\xi,t,l} - \mathit{up}^{f}_{\xi,t,l} \right) \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,tight}}_{t,l}
 ```
 
 ### `Link-com-p-current`
@@ -728,14 +792,14 @@ Link_com_p_current:
     `Link-com-p-current` — output fits the share on, and the share starting
     up only up to the start-up ramp (`constraints.py:652-665`)
   dims: [scenario, snapshot, link]
-  where: Link_committable AND NOT Link_p_nom_extendable AND count(count(Link_start_up_cost != Link_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND position(snapshot) > 0 AND Link_active
+  where: Link_tightened AND position(snapshot) > 0
   expression: >-
     Link_p - Link_p_max_pu * Link_p_nom * Link_status
     + (Link_p_max_pu * Link_p_nom - Link_start_up_rate * Link_p_nom) * Link_start_up <= 0
 ```
 
 ```math
-f_{\xi,t,l} - \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot u^{f}_{\xi,t,l} + \left( \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} - \widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \right) \cdot \mathit{up}^{f}_{\xi,t,l} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{f,\mathrm{up}}_{\xi',t',l} \neq \mathrm{c}^{f,\mathrm{dn}}_{\xi',t',l} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{pos}(t) > 0 \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t,l} - \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot u^{f}_{\xi,t,l} + \left( \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} - \widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \right) \cdot \mathit{up}^{f}_{\xi,t,l} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,tight}}_{t,l} \wedge \mathrm{pos}(t) > 0
 ```
 
 ### `Link-com-partly-start-up`
@@ -749,7 +813,7 @@ Link_com_partly_start_up:
     is bounded by the ramp of the share on and the start-up ramp of the
     share coming on (`constraints.py:667-682`)
   dims: [scenario, snapshot, link]
-  where: Link_committable AND NOT Link_p_nom_extendable AND count(count(Link_start_up_cost != Link_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Link_active
+  where: Link_tightened
   expression: >-
     Link_p - shift(Link_p, along=snapshot, offset=1)
     - (Link_p_min_pu * Link_p_nom + Link_ramp_up_rate * Link_p_nom) * Link_status
@@ -759,7 +823,7 @@ Link_com_partly_start_up:
 ```
 
 ```math
-f_{\xi,t,l} - f_{\xi,t - 1,l} - \left( \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} + \widetilde{\mathrm{ru}}^{f}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \right) \cdot u^{f}_{\xi,t,l} + \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot u^{f}_{\xi,t - 1,l} + \left( \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} + \widetilde{\mathrm{ru}}^{f}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} - \widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \right) \cdot \mathit{up}^{f}_{\xi,t,l} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{f,\mathrm{up}}_{\xi',t',l} \neq \mathrm{c}^{f,\mathrm{dn}}_{\xi',t',l} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t,l} - f_{\xi,t - 1,l} - \left( \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} + \widetilde{\mathrm{ru}}^{f}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \right) \cdot u^{f}_{\xi,t,l} + \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot u^{f}_{\xi,t - 1,l} + \left( \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} + \widetilde{\mathrm{ru}}^{f}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} - \widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \right) \cdot \mathit{up}^{f}_{\xi,t,l} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,tight}}_{t,l}
 ```
 
 ### `Link-com-partly-shut-down`
@@ -772,7 +836,7 @@ Link_com_partly_shut_down:
     `Link-com-partly-shut-down` — lowering output while a share is shutting
     down is bounded likewise, by the shut-down ramp (`constraints.py:684-699`)
   dims: [scenario, snapshot, link]
-  where: Link_committable AND NOT Link_p_nom_extendable AND count(count(Link_start_up_cost != Link_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Link_active
+  where: Link_tightened
   expression: >-
     shift(Link_p, along=snapshot, offset=1) - Link_p
     - Link_shut_down_rate * Link_p_nom * shift(Link_status, along=snapshot, offset=1)
@@ -782,7 +846,7 @@ Link_com_partly_shut_down:
 ```
 
 ```math
-f_{\xi,t - 1,l} - f_{\xi,t,l} - \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot u^{f}_{\xi,t - 1,l} + \left( \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} - \widetilde{\mathrm{rd}}^{f}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \right) \cdot u^{f}_{\xi,t,l} - \left( \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} + \widetilde{\mathrm{rd}}^{f}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} - \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \right) \cdot \mathit{up}^{f}_{\xi,t,l} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{f,\mathrm{up}}_{\xi',t',l} \neq \mathrm{c}^{f,\mathrm{dn}}_{\xi',t',l} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t - 1,l} - f_{\xi,t,l} - \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot u^{f}_{\xi,t - 1,l} + \left( \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} - \widetilde{\mathrm{rd}}^{f}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \right) \cdot u^{f}_{\xi,t,l} - \left( \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} + \widetilde{\mathrm{rd}}^{f}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} - \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \right) \cdot \mathit{up}^{f}_{\xi,t,l} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,tight}}_{t,l}
 ```
 
 ### `Process-com-p-before`
@@ -797,7 +861,7 @@ Process_com_p_before:
     shut-down ramp (`constraints.py:635-649`). The translated terms vacate
     the first snapshot, as PyPSA's `sns[1:]` does
   dims: [scenario, snapshot, process]
-  where: Process_committable AND NOT Process_p_nom_extendable AND count(count(Process_start_up_cost != Process_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Process_active
+  where: Process_tightened
   expression: >-
     shift(Process_p, along=snapshot, offset=1)
     - Process_shut_down_rate * Process_p_nom * shift(Process_status, along=snapshot, offset=1)
@@ -806,7 +870,7 @@ Process_com_p_before:
 ```
 
 ```math
-z_{\xi,t - 1,j} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot u^{z}_{\xi,t - 1,j} - \left( \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \right) \cdot \left( u^{z}_{\xi,t,j} - \mathit{up}^{z}_{\xi,t,j} \right) \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{z,\mathrm{up}}_{\xi',t',j} \neq \mathrm{c}^{z,\mathrm{dn}}_{\xi',t',j} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t - 1,j} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot u^{z}_{\xi,t - 1,j} - \left( \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \right) \cdot \left( u^{z}_{\xi,t,j} - \mathit{up}^{z}_{\xi,t,j} \right) \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,tight}}_{t,j}
 ```
 
 ### `Process-com-p-current`
@@ -819,14 +883,14 @@ Process_com_p_current:
     `Process-com-p-current` — output fits the share on, and the share starting
     up only up to the start-up ramp (`constraints.py:652-665`)
   dims: [scenario, snapshot, process]
-  where: Process_committable AND NOT Process_p_nom_extendable AND count(count(Process_start_up_cost != Process_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND position(snapshot) > 0 AND Process_active
+  where: Process_tightened AND position(snapshot) > 0
   expression: >-
     Process_p - Process_p_max_pu * Process_p_nom * Process_status
     + (Process_p_max_pu * Process_p_nom - Process_start_up_rate * Process_p_nom) * Process_start_up <= 0
 ```
 
 ```math
-z_{\xi,t,j} - \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot u^{z}_{\xi,t,j} + \left( \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} - \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \right) \cdot \mathit{up}^{z}_{\xi,t,j} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{z,\mathrm{up}}_{\xi',t',j} \neq \mathrm{c}^{z,\mathrm{dn}}_{\xi',t',j} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{pos}(t) > 0 \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} - \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot u^{z}_{\xi,t,j} + \left( \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} - \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \right) \cdot \mathit{up}^{z}_{\xi,t,j} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,tight}}_{t,j} \wedge \mathrm{pos}(t) > 0
 ```
 
 ### `Process-com-partly-start-up`
@@ -840,7 +904,7 @@ Process_com_partly_start_up:
     is bounded by the ramp of the share on and the start-up ramp of the
     share coming on (`constraints.py:667-682`)
   dims: [scenario, snapshot, process]
-  where: Process_committable AND NOT Process_p_nom_extendable AND count(count(Process_start_up_cost != Process_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Process_active
+  where: Process_tightened
   expression: >-
     Process_p - shift(Process_p, along=snapshot, offset=1)
     - (Process_p_min_pu * Process_p_nom + Process_ramp_up_rate * Process_p_nom) * Process_status
@@ -850,7 +914,7 @@ Process_com_partly_start_up:
 ```
 
 ```math
-z_{\xi,t,j} - z_{\xi,t - 1,j} - \left( \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} + \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \right) \cdot u^{z}_{\xi,t,j} + \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot u^{z}_{\xi,t - 1,j} + \left( \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} + \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} - \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \right) \cdot \mathit{up}^{z}_{\xi,t,j} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{z,\mathrm{up}}_{\xi',t',j} \neq \mathrm{c}^{z,\mathrm{dn}}_{\xi',t',j} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} - z_{\xi,t - 1,j} - \left( \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} + \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \right) \cdot u^{z}_{\xi,t,j} + \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot u^{z}_{\xi,t - 1,j} + \left( \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} + \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} - \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \right) \cdot \mathit{up}^{z}_{\xi,t,j} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,tight}}_{t,j}
 ```
 
 ### `Process-com-partly-shut-down`
@@ -863,7 +927,7 @@ Process_com_partly_shut_down:
     `Process-com-partly-shut-down` — lowering output while a share is shutting
     down is bounded likewise, by the shut-down ramp (`constraints.py:684-699`)
   dims: [scenario, snapshot, process]
-  where: Process_committable AND NOT Process_p_nom_extendable AND count(count(Process_start_up_cost != Process_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Process_active
+  where: Process_tightened
   expression: >-
     shift(Process_p, along=snapshot, offset=1) - Process_p
     - Process_shut_down_rate * Process_p_nom * shift(Process_status, along=snapshot, offset=1)
@@ -873,7 +937,7 @@ Process_com_partly_shut_down:
 ```
 
 ```math
-z_{\xi,t - 1,j} - z_{\xi,t,j} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot u^{z}_{\xi,t - 1,j} + \left( \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} - \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \right) \cdot u^{z}_{\xi,t,j} - \left( \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} + \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \right) \cdot \mathit{up}^{z}_{\xi,t,j} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{z,\mathrm{up}}_{\xi',t',j} \neq \mathrm{c}^{z,\mathrm{dn}}_{\xi',t',j} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t - 1,j} - z_{\xi,t,j} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot u^{z}_{\xi,t - 1,j} + \left( \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} - \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \right) \cdot u^{z}_{\xi,t,j} - \left( \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} + \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \right) \cdot \mathit{up}^{z}_{\xi,t,j} \le 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,tight}}_{t,j}
 ```
 
 ### `Generator_committable_is_not_modular`
@@ -883,7 +947,7 @@ z_{\xi,t - 1,j} - z_{\xi,t,j} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} 
 ```yaml
 Generator_committable_is_not_modular:
   holds: "NOT (Generator_p_nom_mod > 0)"
-  where: "Generator_committable AND count(Generator_active, over=snapshot) > 0"
+  where: "count(Generator_committed, over=snapshot) > 0"
   description: >-
     a modular committable unit counts its status in modules, which the
     relaxation cannot share out — PyPSA refuses it under the keyword
@@ -891,7 +955,7 @@ Generator_committable_is_not_modular:
 ```
 
 ```math
-\neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}_{t,g} \} \rvert > 0
+\neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \} \rvert > 0
 ```
 
 ### `Link_committable_is_not_modular`
@@ -901,7 +965,7 @@ Generator_committable_is_not_modular:
 ```yaml
 Link_committable_is_not_modular:
   holds: "NOT (Link_p_nom_mod > 0)"
-  where: "Link_committable AND count(Link_active, over=snapshot) > 0"
+  where: "count(Link_committed, over=snapshot) > 0"
   description: >-
     a modular committable unit counts its status in modules, which the
     relaxation cannot share out — PyPSA refuses it under the keyword
@@ -909,7 +973,7 @@ Link_committable_is_not_modular:
 ```
 
 ```math
-\neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{com}^{f}_{l} \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{f}_{t,l} \} \rvert > 0
+\neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \qquad \forall\, l \in \mathcal{L} \,:\, \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \} \rvert > 0
 ```
 
 ### `Process_committable_is_not_modular`
@@ -919,7 +983,7 @@ Link_committable_is_not_modular:
 ```yaml
 Process_committable_is_not_modular:
   holds: "NOT (Process_p_nom_mod > 0)"
-  where: "Process_committable AND count(Process_active, over=snapshot) > 0"
+  where: "count(Process_committed, over=snapshot) > 0"
   description: >-
     a modular committable unit counts its status in modules, which the
     relaxation cannot share out — PyPSA refuses it under the keyword
@@ -927,7 +991,7 @@ Process_committable_is_not_modular:
 ```
 
 ```math
-\neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{com}^{z}_{j} \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{z}_{t,j} \} \rvert > 0
+\neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \qquad \forall\, j \in \mathcal{J} \,:\, \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \} \rvert > 0
 ```
 <!-- gallery:end -->
 
