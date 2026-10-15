@@ -5770,17 +5770,54 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{on}^{\mathrm{mnt,ext}}`$ | `Generator_maint_ext` over $`\mathcal{T} \times \mathcal{G}`$ — a maintainable generator with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
 | $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{T} \times \mathcal{G}`$ — a committable generator that stands in the snapshot's period — every unit-commitment row's set |
 | $`\mathrm{prev}`$ | `Generator_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the generator comes in off or carries an initial output |
+| $`\mathrm{on}^{\mathrm{fix}}`$ | `Generator_fix` over $`\mathcal{T} \times \mathcal{G}`$ — a generator with a fixed build, not committable, that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{\mathrm{ext}}`$ | `Generator_ext` over $`\mathcal{T} \times \mathcal{G}`$ — a generator with an extendable build, not committable, that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{\mathrm{ext}}`$ | `Generator_ext_asset` over $`\mathcal{G}`$ — a generator with an extendable build among PyPSA's active assets — the units whose build is a variable |
+| $`\mathrm{on}^{\mathrm{com,fix}}`$ | `Generator_com_fix` over $`\mathcal{T} \times \mathcal{G}`$ — a committable generator with a fixed, non-modular build that stands in the snapshot's period — PyPSA's `com` rows |
+| $`\mathrm{on}^{\mathrm{com,mod}}`$ | `Generator_com_mod` over $`\mathcal{T} \times \mathcal{G}`$ — a committable generator with a modular build that stands in the snapshot's period — PyPSA's `com-mod` rows, whose status counts modules |
+| $`\mathrm{on}^{\mathrm{com,ext,mod}}`$ | `Generator_com_ext_mod` over $`\mathcal{T} \times \mathcal{G}`$ — a committable generator with an extendable, modular build that stands in the snapshot's period — its status is bounded by the chosen number of modules |
+| $`\mathrm{on}^{\mathrm{mnt}}`$ | `Generator_maintained` over $`\mathcal{T} \times \mathcal{G}`$ — a maintainable generator that stands in the snapshot's period — every maintenance row's set |
+| $`\mathrm{prev}^{\mathrm{up}}`$ | `Generator_ramps_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — a snapshot whose rise in output a ramp limit bounds — the generator has a ramp-up or start-up limit, and the snapshot reads a previous output |
+| $`\mathrm{prev}^{\mathrm{dn}}`$ | `Generator_ramps_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — a snapshot whose fall in output a ramp limit bounds — the generator has a ramp-down or shut-down limit, and the snapshot reads a previous output |
 | $`\mathrm{on}^{f,\mathrm{com,ext}}`$ | `Link_com_ext` over $`\mathcal{T} \times \mathcal{L}`$ — a committable link with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
 | $`\mathrm{on}^{f,\mathrm{mnt,ext}}`$ | `Link_maint_ext` over $`\mathcal{T} \times \mathcal{L}`$ — a maintainable link with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
 | $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{T} \times \mathcal{L}`$ — a committable link that stands in the snapshot's period — every unit-commitment row's set |
 | $`\mathrm{prev}^{f}`$ | `Link_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the link comes in off or carries an initial output |
+| $`\mathrm{on}^{f,\mathrm{fix}}`$ | `Link_fix` over $`\mathcal{T} \times \mathcal{L}`$ — a link with a fixed build, not committable, that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{f,\mathrm{ext}}`$ | `Link_ext` over $`\mathcal{T} \times \mathcal{L}`$ — a link with an extendable build, not committable, that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{f,\mathrm{ext}}`$ | `Link_ext_asset` over $`\mathcal{L}`$ — a link with an extendable build among PyPSA's active assets — the units whose build is a variable |
+| $`\mathrm{on}^{f,\mathrm{com,fix}}`$ | `Link_com_fix` over $`\mathcal{T} \times \mathcal{L}`$ — a committable link with a fixed, non-modular build that stands in the snapshot's period — PyPSA's `com` rows |
+| $`\mathrm{on}^{f,\mathrm{com,mod}}`$ | `Link_com_mod` over $`\mathcal{T} \times \mathcal{L}`$ — a committable link with a modular build that stands in the snapshot's period — PyPSA's `com-mod` rows, whose status counts modules |
+| $`\mathrm{on}^{f,\mathrm{com,ext,mod}}`$ | `Link_com_ext_mod` over $`\mathcal{T} \times \mathcal{L}`$ — a committable link with an extendable, modular build that stands in the snapshot's period — its status is bounded by the chosen number of modules |
+| $`\mathrm{on}^{f,\mathrm{mnt}}`$ | `Link_maintained` over $`\mathcal{T} \times \mathcal{L}`$ — a maintainable link that stands in the snapshot's period — every maintenance row's set |
+| $`\mathrm{prev}^{f,\mathrm{up}}`$ | `Link_ramps_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — a snapshot whose rise in output a ramp limit bounds — the link has a ramp-up or start-up limit, and the snapshot reads a previous output |
+| $`\mathrm{prev}^{f,\mathrm{dn}}`$ | `Link_ramps_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — a snapshot whose fall in output a ramp limit bounds — the link has a ramp-down or shut-down limit, and the snapshot reads a previous output |
 | $`\mathrm{on}^{z,\mathrm{com,ext}}`$ | `Process_com_ext` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
 | $`\mathrm{on}^{z,\mathrm{mnt,ext}}`$ | `Process_maint_ext` over $`\mathcal{T} \times \mathcal{J}`$ — a maintainable process with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
 | $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process that stands in the snapshot's period — every unit-commitment row's set |
 | $`\mathrm{prev}^{z}`$ | `Process_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the process comes in off or carries an initial output |
+| $`\mathrm{on}^{z,\mathrm{fix}}`$ | `Process_fix` over $`\mathcal{T} \times \mathcal{J}`$ — a process with a fixed build, not committable, that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{z,\mathrm{ext}}`$ | `Process_ext` over $`\mathcal{T} \times \mathcal{J}`$ — a process with an extendable build, not committable, that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{z,\mathrm{ext}}`$ | `Process_ext_asset` over $`\mathcal{J}`$ — a process with an extendable build among PyPSA's active assets — the units whose build is a variable |
+| $`\mathrm{on}^{z,\mathrm{com,fix}}`$ | `Process_com_fix` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process with a fixed, non-modular build that stands in the snapshot's period — PyPSA's `com` rows |
+| $`\mathrm{on}^{z,\mathrm{com,mod}}`$ | `Process_com_mod` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process with a modular build that stands in the snapshot's period — PyPSA's `com-mod` rows, whose status counts modules |
+| $`\mathrm{on}^{z,\mathrm{com,ext,mod}}`$ | `Process_com_ext_mod` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process with an extendable, modular build that stands in the snapshot's period — its status is bounded by the chosen number of modules |
+| $`\mathrm{on}^{z,\mathrm{mnt}}`$ | `Process_maintained` over $`\mathcal{T} \times \mathcal{J}`$ — a maintainable process that stands in the snapshot's period — every maintenance row's set |
+| $`\mathrm{prev}^{z,\mathrm{up}}`$ | `Process_ramps_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — a snapshot whose rise in output a ramp limit bounds — the process has a ramp-up or start-up limit, and the snapshot reads a previous output |
+| $`\mathrm{prev}^{z,\mathrm{dn}}`$ | `Process_ramps_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — a snapshot whose fall in output a ramp limit bounds — the process has a ramp-down or shut-down limit, and the snapshot reads a previous output |
 | $`\mathrm{on}^{h,\mathrm{fix}}`$ | `StorageUnit_fix` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with a fixed build that stands in the snapshot's period — PyPSA's `fix` rows |
 | $`\mathrm{on}^{h,\mathrm{ext}}`$ | `StorageUnit_ext` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with an extendable build that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{h,\mathrm{ext}}`$ | `StorageUnit_ext_asset` over $`\mathcal{S}`$ — a storage unit with an extendable build among PyPSA's active assets — the units whose build is a variable |
+| $`\mathrm{on}^{e,\mathrm{fix}}`$ | `Store_fix` over $`\mathcal{T} \times \mathcal{V}`$ — a store with a fixed build that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{e,\mathrm{ext}}`$ | `Store_ext` over $`\mathcal{T} \times \mathcal{V}`$ — a store with an extendable build that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{e,\mathrm{ext}}`$ | `Store_ext_asset` over $`\mathcal{V}`$ — a store with an extendable build among PyPSA's active assets — the units whose build is a variable |
+| $`\mathrm{on}^{s,\mathrm{fix}}`$ | `Line_fix` over $`\mathcal{T} \times \mathcal{K}`$ — a line with a fixed build that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{s,\mathrm{ext}}`$ | `Line_ext` over $`\mathcal{T} \times \mathcal{K}`$ — a line with an extendable build that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{s,\mathrm{ext}}`$ | `Line_ext_asset` over $`\mathcal{K}`$ — a line with an extendable build among PyPSA's active assets — the units whose build is a variable |
 | $`\mathrm{on}^{s,\mathrm{lossy}}`$ | `Line_lossy` over $`\mathcal{T} \times \mathcal{K}`$ — a line that stands in the snapshot's period, where the run models transmission losses |
+| $`\mathrm{on}^{\sigma,\mathrm{fix}}`$ | `Transformer_fix` over $`\mathcal{T} \times \mathcal{M}`$ — a transformer with a fixed build that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{\sigma,\mathrm{ext}}`$ | `Transformer_ext` over $`\mathcal{T} \times \mathcal{M}`$ — a transformer with an extendable build that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{\sigma,\mathrm{ext}}`$ | `Transformer_ext_asset` over $`\mathcal{M}`$ — a transformer with an extendable build among PyPSA's active assets — the units whose build is a variable |
 | $`\mathrm{on}^{\sigma,\mathrm{lossy}}`$ | `Transformer_lossy` over $`\mathcal{T} \times \mathcal{M}`$ — a transformer that stands in the snapshot's period, where the run models transmission losses |
 
 #### Variables
@@ -6030,6 +6067,152 @@ Generator_ramps_from_previous:
 \mathrm{prev}_{\xi,t,g} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{\xi,g} = 0 \vee \mathrm{p}^{0}_{\xi,g} \text{ is defined} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
+### `Generator_fix`
+
+```yaml
+Generator_fix:
+  description: >-
+    a generator with a fixed build, not committable, that stands in the
+    snapshot's period — PyPSA's `fix` rows
+  where: >-
+    NOT Generator_p_nom_extendable
+    AND NOT Generator_committable
+    AND Generator_active
+```
+
+```math
+\mathrm{on}^{\mathrm{fix}}_{t,g} \iff \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+### `Generator_ext`
+
+```yaml
+Generator_ext:
+  description: >-
+    a generator with an extendable build, not committable, that stands
+    in the snapshot's period — PyPSA's `ext` rows
+  where: >-
+    Generator_p_nom_extendable
+    AND NOT Generator_committable
+    AND Generator_active
+```
+
+```math
+\mathrm{on}^{\mathrm{ext}}_{t,g} \iff \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+### `Generator_ext_asset`
+
+```yaml
+Generator_ext_asset:
+  description: >-
+    a generator with an extendable build among PyPSA's active assets —
+    the units whose build is a variable
+  where: Generator_p_nom_extendable AND Generator_active_asset
+```
+
+```math
+\mathrm{act}^{\mathrm{ext}}_{g} \iff \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \qquad \forall\, g \in \mathcal{G}
+```
+
+### `Generator_com_fix`
+
+```yaml
+Generator_com_fix:
+  description: >-
+    a committable generator with a fixed, non-modular build that stands
+    in the snapshot's period — PyPSA's `com` rows
+  where: >-
+    Generator_committed
+    AND NOT Generator_p_nom_extendable
+    AND NOT (Generator_p_nom_mod > 0)
+```
+
+```math
+\mathrm{on}^{\mathrm{com,fix}}_{t,g} \iff \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+### `Generator_com_mod`
+
+```yaml
+Generator_com_mod:
+  description: >-
+    a committable generator with a modular build that stands in the
+    snapshot's period — PyPSA's `com-mod` rows, whose status counts
+    modules
+  where: Generator_committed AND Generator_p_nom_mod > 0
+```
+
+```math
+\mathrm{on}^{\mathrm{com,mod}}_{t,g} \iff \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+### `Generator_com_ext_mod`
+
+```yaml
+Generator_com_ext_mod:
+  description: >-
+    a committable generator with an extendable, modular build that
+    stands in the snapshot's period — its status is bounded by the
+    chosen number of modules
+  where: >-
+    Generator_committed
+    AND Generator_p_nom_extendable
+    AND Generator_p_nom_mod > 0
+```
+
+```math
+\mathrm{on}^{\mathrm{com,ext,mod}}_{t,g} \iff \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+### `Generator_maintained`
+
+```yaml
+Generator_maintained:
+  description: >-
+    a maintainable generator that stands in the snapshot's period —
+    every maintenance row's set
+  where: Generator_maintainable AND Generator_active
+```
+
+```math
+\mathrm{on}^{\mathrm{mnt}}_{t,g} \iff \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+### `Generator_ramps_up`
+
+```yaml
+Generator_ramps_up:
+  description: >-
+    a snapshot whose rise in output a ramp limit bounds — the generator
+    has a ramp-up or start-up limit, and the snapshot reads a previous
+    output
+  where: >-
+    (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
+    AND Generator_ramps_from_previous
+```
+
+```math
+\mathrm{prev}^{\mathrm{up}}_{\xi,t,g} \iff \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \mathrm{prev}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+### `Generator_ramps_down`
+
+```yaml
+Generator_ramps_down:
+  description: >-
+    a snapshot whose fall in output a ramp limit bounds — the generator
+    has a ramp-down or shut-down limit, and the snapshot reads a
+    previous output
+  where: >-
+    (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
+    AND Generator_ramps_from_previous
+```
+
+```math
+\mathrm{prev}^{\mathrm{dn}}_{\xi,t,g} \iff \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \mathrm{prev}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
 ### `Link_com_ext`
 
 ```yaml
@@ -6097,6 +6280,139 @@ Link_ramps_from_previous:
 
 ```math
 \mathrm{prev}^{f}_{\xi,t,l} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{f,0}_{\xi,l} = 0 \vee \mathrm{f}^{0}_{\xi,l} \text{ is defined} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Link_fix`
+
+```yaml
+Link_fix:
+  description: >-
+    a link with a fixed build, not committable, that stands in the
+    snapshot's period — PyPSA's `fix` rows
+  where: NOT Link_p_nom_extendable AND NOT Link_committable AND Link_active
+```
+
+```math
+\mathrm{on}^{f,\mathrm{fix}}_{t,l} \iff \neg \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Link_ext`
+
+```yaml
+Link_ext:
+  description: >-
+    a link with an extendable build, not committable, that stands in the
+    snapshot's period — PyPSA's `ext` rows
+  where: Link_p_nom_extendable AND NOT Link_committable AND Link_active
+```
+
+```math
+\mathrm{on}^{f,\mathrm{ext}}_{t,l} \iff \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Link_ext_asset`
+
+```yaml
+Link_ext_asset:
+  description: >-
+    a link with an extendable build among PyPSA's active assets — the
+    units whose build is a variable
+  where: Link_p_nom_extendable AND Link_active_asset
+```
+
+```math
+\mathrm{act}^{f,\mathrm{ext}}_{l} \iff \mathrm{ext}^{f}_{l} \wedge \mathrm{act}^{f}_{l} \qquad \forall\, l \in \mathcal{L}
+```
+
+### `Link_com_fix`
+
+```yaml
+Link_com_fix:
+  description: >-
+    a committable link with a fixed, non-modular build that stands in
+    the snapshot's period — PyPSA's `com` rows
+  where: Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
+```
+
+```math
+\mathrm{on}^{f,\mathrm{com,fix}}_{t,l} \iff \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Link_com_mod`
+
+```yaml
+Link_com_mod:
+  description: >-
+    a committable link with a modular build that stands in the
+    snapshot's period — PyPSA's `com-mod` rows, whose status counts
+    modules
+  where: Link_committed AND Link_p_nom_mod > 0
+```
+
+```math
+\mathrm{on}^{f,\mathrm{com,mod}}_{t,l} \iff \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Link_com_ext_mod`
+
+```yaml
+Link_com_ext_mod:
+  description: >-
+    a committable link with an extendable, modular build that stands in
+    the snapshot's period — its status is bounded by the chosen number
+    of modules
+  where: Link_committed AND Link_p_nom_extendable AND Link_p_nom_mod > 0
+```
+
+```math
+\mathrm{on}^{f,\mathrm{com,ext,mod}}_{t,l} \iff \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Link_maintained`
+
+```yaml
+Link_maintained:
+  description: >-
+    a maintainable link that stands in the snapshot's period — every
+    maintenance row's set
+  where: Link_maintainable AND Link_active
+```
+
+```math
+\mathrm{on}^{f,\mathrm{mnt}}_{t,l} \iff \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Link_ramps_up`
+
+```yaml
+Link_ramps_up:
+  description: >-
+    a snapshot whose rise in output a ramp limit bounds — the link has a
+    ramp-up or start-up limit, and the snapshot reads a previous output
+  where: >-
+    (Link_ramp_limit_up OR Link_ramp_limit_start_up)
+    AND Link_ramps_from_previous
+```
+
+```math
+\mathrm{prev}^{f,\mathrm{up}}_{\xi,t,l} \iff \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+### `Link_ramps_down`
+
+```yaml
+Link_ramps_down:
+  description: >-
+    a snapshot whose fall in output a ramp limit bounds — the link has a
+    ramp-down or shut-down limit, and the snapshot reads a previous
+    output
+  where: >-
+    (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
+    AND Link_ramps_from_previous
+```
+
+```math
+\mathrm{prev}^{f,\mathrm{dn}}_{\xi,t,l} \iff \left( \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
 ```
 
 ### `Process_com_ext`
@@ -6168,6 +6484,143 @@ Process_ramps_from_previous:
 \mathrm{prev}^{z}_{\xi,t,j} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{\xi,j} = 0 \vee \mathrm{z}^{0}_{\xi,j} \text{ is defined} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
 ```
 
+### `Process_fix`
+
+```yaml
+Process_fix:
+  description: >-
+    a process with a fixed build, not committable, that stands in the
+    snapshot's period — PyPSA's `fix` rows
+  where: NOT Process_p_nom_extendable AND NOT Process_committable AND Process_active
+```
+
+```math
+\mathrm{on}^{z,\mathrm{fix}}_{t,j} \iff \neg \mathrm{ext}^{z}_{j} \wedge \neg \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+### `Process_ext`
+
+```yaml
+Process_ext:
+  description: >-
+    a process with an extendable build, not committable, that stands in
+    the snapshot's period — PyPSA's `ext` rows
+  where: Process_p_nom_extendable AND NOT Process_committable AND Process_active
+```
+
+```math
+\mathrm{on}^{z,\mathrm{ext}}_{t,j} \iff \mathrm{ext}^{z}_{j} \wedge \neg \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+### `Process_ext_asset`
+
+```yaml
+Process_ext_asset:
+  description: >-
+    a process with an extendable build among PyPSA's active assets — the
+    units whose build is a variable
+  where: Process_p_nom_extendable AND Process_active_asset
+```
+
+```math
+\mathrm{act}^{z,\mathrm{ext}}_{j} \iff \mathrm{ext}^{z}_{j} \wedge \mathrm{act}^{z}_{j} \qquad \forall\, j \in \mathcal{J}
+```
+
+### `Process_com_fix`
+
+```yaml
+Process_com_fix:
+  description: >-
+    a committable process with a fixed, non-modular build that stands in
+    the snapshot's period — PyPSA's `com` rows
+  where: >-
+    Process_committed
+    AND NOT Process_p_nom_extendable
+    AND NOT (Process_p_nom_mod > 0)
+```
+
+```math
+\mathrm{on}^{z,\mathrm{com,fix}}_{t,j} \iff \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+### `Process_com_mod`
+
+```yaml
+Process_com_mod:
+  description: >-
+    a committable process with a modular build that stands in the
+    snapshot's period — PyPSA's `com-mod` rows, whose status counts
+    modules
+  where: Process_committed AND Process_p_nom_mod > 0
+```
+
+```math
+\mathrm{on}^{z,\mathrm{com,mod}}_{t,j} \iff \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+### `Process_com_ext_mod`
+
+```yaml
+Process_com_ext_mod:
+  description: >-
+    a committable process with an extendable, modular build that stands
+    in the snapshot's period — its status is bounded by the chosen
+    number of modules
+  where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
+```
+
+```math
+\mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j} \iff \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+### `Process_maintained`
+
+```yaml
+Process_maintained:
+  description: >-
+    a maintainable process that stands in the snapshot's period — every
+    maintenance row's set
+  where: Process_maintainable AND Process_active
+```
+
+```math
+\mathrm{on}^{z,\mathrm{mnt}}_{t,j} \iff \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+### `Process_ramps_up`
+
+```yaml
+Process_ramps_up:
+  description: >-
+    a snapshot whose rise in output a ramp limit bounds — the process
+    has a ramp-up or start-up limit, and the snapshot reads a previous
+    output
+  where: >-
+    (Process_ramp_limit_up OR Process_ramp_limit_start_up)
+    AND Process_ramps_from_previous
+```
+
+```math
+\mathrm{prev}^{z,\mathrm{up}}_{\xi,t,j} \iff \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+### `Process_ramps_down`
+
+```yaml
+Process_ramps_down:
+  description: >-
+    a snapshot whose fall in output a ramp limit bounds — the process
+    has a ramp-down or shut-down limit, and the snapshot reads a
+    previous output
+  where: >-
+    (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
+    AND Process_ramps_from_previous
+```
+
+```math
+\mathrm{prev}^{z,\mathrm{dn}}_{\xi,t,j} \iff \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
 ### `StorageUnit_fix`
 
 ```yaml
@@ -6196,6 +6649,104 @@ StorageUnit_ext:
 \mathrm{on}^{h,\mathrm{ext}}_{t,s} \iff \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
+### `StorageUnit_ext_asset`
+
+```yaml
+StorageUnit_ext_asset:
+  description: >-
+    a storage unit with an extendable build among PyPSA's active assets
+    — the units whose build is a variable
+  where: StorageUnit_p_nom_extendable AND StorageUnit_active_asset
+```
+
+```math
+\mathrm{act}^{h,\mathrm{ext}}_{s} \iff \mathrm{ext}^{h}_{s} \wedge \mathrm{act}^{h}_{s} \qquad \forall\, s \in \mathcal{S}
+```
+
+### `Store_fix`
+
+```yaml
+Store_fix:
+  description: >-
+    a store with a fixed build that stands in the snapshot's period —
+    PyPSA's `fix` rows
+  where: NOT Store_e_nom_extendable AND Store_active
+```
+
+```math
+\mathrm{on}^{e,\mathrm{fix}}_{t,v} \iff \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \qquad \forall\, t \in \mathcal{T},\ v \in \mathcal{V}
+```
+
+### `Store_ext`
+
+```yaml
+Store_ext:
+  description: >-
+    a store with an extendable build that stands in the snapshot's
+    period — PyPSA's `ext` rows
+  where: Store_e_nom_extendable AND Store_active
+```
+
+```math
+\mathrm{on}^{e,\mathrm{ext}}_{t,v} \iff \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \qquad \forall\, t \in \mathcal{T},\ v \in \mathcal{V}
+```
+
+### `Store_ext_asset`
+
+```yaml
+Store_ext_asset:
+  description: >-
+    a store with an extendable build among PyPSA's active assets — the
+    units whose build is a variable
+  where: Store_e_nom_extendable AND Store_active_asset
+```
+
+```math
+\mathrm{act}^{e,\mathrm{ext}}_{v} \iff \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v} \qquad \forall\, v \in \mathcal{V}
+```
+
+### `Line_fix`
+
+```yaml
+Line_fix:
+  description: >-
+    a line with a fixed build that stands in the snapshot's period —
+    PyPSA's `fix` rows
+  where: NOT Line_s_nom_extendable AND Line_active
+```
+
+```math
+\mathrm{on}^{s,\mathrm{fix}}_{t,k} \iff \neg \mathrm{ext}^{s}_{k} \wedge \mathrm{on}^{s}_{t,k} \qquad \forall\, t \in \mathcal{T},\ k \in \mathcal{K}
+```
+
+### `Line_ext`
+
+```yaml
+Line_ext:
+  description: >-
+    a line with an extendable build that stands in the snapshot's period
+    — PyPSA's `ext` rows
+  where: Line_s_nom_extendable AND Line_active
+```
+
+```math
+\mathrm{on}^{s,\mathrm{ext}}_{t,k} \iff \mathrm{ext}^{s}_{k} \wedge \mathrm{on}^{s}_{t,k} \qquad \forall\, t \in \mathcal{T},\ k \in \mathcal{K}
+```
+
+### `Line_ext_asset`
+
+```yaml
+Line_ext_asset:
+  description: >-
+    a line with an extendable build among PyPSA's active assets — the
+    units whose build is a variable
+  where: Line_s_nom_extendable AND Line_active_asset
+```
+
+```math
+\mathrm{act}^{s,\mathrm{ext}}_{k} \iff \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k} \qquad \forall\, k \in \mathcal{K}
+```
+
 ### `Line_lossy`
 
 ```yaml
@@ -6208,6 +6759,48 @@ Line_lossy:
 
 ```math
 \mathrm{on}^{s,\mathrm{lossy}}_{t,k} \iff \mathrm{lossy} \wedge \mathrm{on}^{s}_{t,k} \qquad \forall\, t \in \mathcal{T},\ k \in \mathcal{K}
+```
+
+### `Transformer_fix`
+
+```yaml
+Transformer_fix:
+  description: >-
+    a transformer with a fixed build that stands in the snapshot's
+    period — PyPSA's `fix` rows
+  where: NOT Transformer_s_nom_extendable AND Transformer_active
+```
+
+```math
+\mathrm{on}^{\sigma,\mathrm{fix}}_{t,m} \iff \neg \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{on}^{\sigma}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}
+```
+
+### `Transformer_ext`
+
+```yaml
+Transformer_ext:
+  description: >-
+    a transformer with an extendable build that stands in the snapshot's
+    period — PyPSA's `ext` rows
+  where: Transformer_s_nom_extendable AND Transformer_active
+```
+
+```math
+\mathrm{on}^{\sigma,\mathrm{ext}}_{t,m} \iff \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{on}^{\sigma}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}
+```
+
+### `Transformer_ext_asset`
+
+```yaml
+Transformer_ext_asset:
+  description: >-
+    a transformer with an extendable build among PyPSA's active assets —
+    the units whose build is a variable
+  where: Transformer_s_nom_extendable AND Transformer_active_asset
+```
+
+```math
+\mathrm{act}^{\sigma,\mathrm{ext}}_{m} \iff \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{act}^{\sigma}_{m} \qquad \forall\, m \in \mathcal{M}
 ```
 
 ### `Transformer_lossy`
@@ -6283,7 +6876,7 @@ q_{\xi,t,v} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v 
 **`Generator_n_mod`**
 
 ```math
-N_{g} \ge 0, N_{g} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g}
+N_{g} \ge 0, N_{g} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{act}^{\mathrm{ext}}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 **`Generator_status`**
@@ -6307,13 +6900,13 @@ u_{\xi,t,g} \ge 0, u_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \
 **`Generator_maintenance`**
 
 ```math
-0 \le \mu_{\xi,t,g} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g}
+0 \le \mu_{\xi,t,g} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{mnt}}_{t,g}
 ```
 
 **`Generator_maintenance_start`**
 
 ```math
-\mu^{\mathrm{up}}_{\xi,t,g} \in \{0, 1\} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g}
+\mu^{\mathrm{up}}_{\xi,t,g} \in \{0, 1\} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{mnt}}_{t,g}
 ```
 
 **`Generator_maintenance_capacity`**
@@ -6331,7 +6924,7 @@ u_{\xi,t,g} \ge 0, u_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \
 **`Link_n_mod`**
 
 ```math
-N^{f}_{l} \ge 0, N^{f}_{l} \in \mathbb{Z} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \wedge \mathrm{act}^{f}_{l}
+N^{f}_{l} \ge 0, N^{f}_{l} \in \mathbb{Z} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{act}^{f,\mathrm{ext}}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 
 **`Link_status`**
@@ -6355,13 +6948,13 @@ u^{f}_{\xi,t,l} \ge 0, u^{f}_{\xi,t,l} \in \mathbb{Z} \qquad \forall\, \xi \in \
 **`Link_maintenance`**
 
 ```math
-0 \le \mu^{f}_{\xi,t,l} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+0 \le \mu^{f}_{\xi,t,l} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{mnt}}_{t,l}
 ```
 
 **`Link_maintenance_start`**
 
 ```math
-\mu^{f,\mathrm{up}}_{\xi,t,l} \in \{0, 1\} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+\mu^{f,\mathrm{up}}_{\xi,t,l} \in \{0, 1\} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{mnt}}_{t,l}
 ```
 
 **`Link_maintenance_capacity`**
@@ -6379,7 +6972,7 @@ u^{f}_{\xi,t,l} \ge 0, u^{f}_{\xi,t,l} \in \mathbb{Z} \qquad \forall\, \xi \in \
 **`Process_n_mod`**
 
 ```math
-N^{z}_{j} \ge 0, N^{z}_{j} \in \mathbb{Z} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \wedge \mathrm{act}^{z}_{j}
+N^{z}_{j} \ge 0, N^{z}_{j} \in \mathbb{Z} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{act}^{z,\mathrm{ext}}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 **`Process_status`**
@@ -6403,13 +6996,13 @@ u^{z}_{\xi,t,j} \ge 0, u^{z}_{\xi,t,j} \in \mathbb{Z} \qquad \forall\, \xi \in \
 **`Process_maintenance`**
 
 ```math
-0 \le \mu^{z}_{\xi,t,j} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+0 \le \mu^{z}_{\xi,t,j} \le 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{mnt}}_{t,j}
 ```
 
 **`Process_maintenance_start`**
 
 ```math
-\mu^{z,\mathrm{up}}_{\xi,t,j} \in \{0, 1\} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z,\mathrm{up}}_{\xi,t,j} \in \{0, 1\} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{mnt}}_{t,j}
 ```
 
 **`Process_maintenance_capacity`**
@@ -6457,67 +7050,67 @@ s_{\xi,t,k} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k 
 **`Line_s_nom_ext`**
 
 ```math
-S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k}
+S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{act}^{s,\mathrm{ext}}_{k}
 ```
 
 **`Line_n_mod`**
 
 ```math
-N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0 \wedge \mathrm{act}^{s}_{k}
+N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{act}^{s,\mathrm{ext}}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0
 ```
 
 **`Generator_p_nom_ext`**
 
 ```math
-P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{act}_{g}
+P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{act}^{\mathrm{ext}}_{g}
 ```
 
 **`Link_p_nom_ext`**
 
 ```math
-F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \mathrm{act}^{f}_{l}
+F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{act}^{f,\mathrm{ext}}_{l}
 ```
 
 **`Process_p_nom_ext`**
 
 ```math
-Z_{j} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{act}^{z}_{j}
+Z_{j} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{act}^{z,\mathrm{ext}}_{j}
 ```
 
 **`Transformer_s_nom_ext`**
 
 ```math
-\Sigma_{m} \in \mathbb{R} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{act}^{\sigma}_{m}
+\Sigma_{m} \in \mathbb{R} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{act}^{\sigma,\mathrm{ext}}_{m}
 ```
 
 **`Transformer_n_mod`**
 
 ```math
-N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0 \wedge \mathrm{act}^{\sigma}_{m}
+N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{act}^{\sigma,\mathrm{ext}}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0
 ```
 
 **`StorageUnit_p_nom_ext`**
 
 ```math
-H_{s} \in \mathbb{R} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{act}^{h}_{s}
+H_{s} \in \mathbb{R} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{act}^{h,\mathrm{ext}}_{s}
 ```
 
 **`StorageUnit_n_mod`**
 
 ```math
-N^{h}_{s} \ge 0, N^{h}_{s} \in \mathbb{Z} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{h}^{\mathrm{mod}}_{s} > 0 \wedge \mathrm{act}^{h}_{s}
+N^{h}_{s} \ge 0, N^{h}_{s} \in \mathbb{Z} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{act}^{h,\mathrm{ext}}_{s} \wedge \mathrm{h}^{\mathrm{mod}}_{s} > 0
 ```
 
 **`Store_e_nom_ext`**
 
 ```math
-E_{v} \in \mathbb{R} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v}
+E_{v} \in \mathbb{R} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{act}^{e,\mathrm{ext}}_{v}
 ```
 
 **`Store_n_mod`**
 
 ```math
-N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0 \wedge \mathrm{act}^{e}_{v}
+N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{act}^{e,\mathrm{ext}}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0
 ```
 
 **`CVaR_a`**
@@ -8263,12 +8856,12 @@ objective:
 Generator_fix_p_lower:
   description: "`Generator-fix-p-lower` — a fixed generator outputs at least its minimum"
   dims: [scenario, snapshot, generator]
-  where: not Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+  where: Generator_fix
   expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * (1 - Generator_maintenance_pu * Generator_maintenance)
 ```
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{fix}}_{t,g}
 ```
 
 ### `Generator-fix-p-upper`
@@ -8279,12 +8872,12 @@ p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}
 Generator_fix_p_upper:
   description: "`Generator-fix-p-upper` — a fixed generator outputs at most what is available"
   dims: [scenario, snapshot, generator]
-  where: not Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+  where: Generator_fix
   expression: Generator_p <= Generator_p_max_pu * Generator_p_nom * (1 - Generator_maintenance_pu * Generator_maintenance)
 ```
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{fix}}_{t,g}
 ```
 
 ### `Link-fix-p-lower`
@@ -8295,12 +8888,12 @@ p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_
 Link_fix_p_lower:
   description: "`Link-fix-p-lower` — a fixed link carries at least its minimum, negative for the other way"
   dims: [scenario, snapshot, link]
-  where: not Link_p_nom_extendable AND not Link_committable AND Link_active
+  where: Link_fix
   expression: Link_p >= Link_p_min_pu * Link_p_nom * (1 - Link_maintenance_pu * Link_maintenance)
 ```
 
 ```math
-f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( 1 - \gamma^{f}_{\xi,l} \cdot \mu^{f}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \neg \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( 1 - \gamma^{f}_{\xi,l} \cdot \mu^{f}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{fix}}_{t,l}
 ```
 
 ### `Link-fix-p-upper`
@@ -8311,12 +8904,12 @@ f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}
 Link_fix_p_upper:
   description: "`Link-fix-p-upper` — a fixed link carries at most its nominal power"
   dims: [scenario, snapshot, link]
-  where: not Link_p_nom_extendable AND not Link_committable AND Link_active
+  where: Link_fix
   expression: Link_p <= Link_p_max_pu * Link_p_nom * (1 - Link_maintenance_pu * Link_maintenance)
 ```
 
 ```math
-f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( 1 - \gamma^{f}_{\xi,l} \cdot \mu^{f}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \neg \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( 1 - \gamma^{f}_{\xi,l} \cdot \mu^{f}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{fix}}_{t,l}
 ```
 
 ### `Generator-ext-p-lower`
@@ -8327,12 +8920,12 @@ f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_
 Generator_ext_p_lower:
   description: "`Generator-ext-p-lower` — an extendable generator outputs at least its minimum of the chosen build"
   dims: [scenario, snapshot, generator]
-  where: Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+  where: Generator_ext
   expression: Generator_p >= Generator_p_min_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
 ```
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{ext}}_{t,g}
 ```
 
 ### `Generator-ext-p-upper`
@@ -8343,12 +8936,12 @@ p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\x
 Generator_ext_p_upper:
   description: "`Generator-ext-p-upper` — an extendable generator outputs at most what is available of the chosen build"
   dims: [scenario, snapshot, generator]
-  where: Generator_p_nom_extendable AND not Generator_committable AND Generator_active
+  where: Generator_ext
   expression: Generator_p <= Generator_p_max_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
 ```
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{ext}}_{t,g}
 ```
 
 ### `Generator-ext-p_nom-lower`
@@ -8359,12 +8952,12 @@ p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi
 Generator_ext_p_nom_lower:
   description: "`Generator-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
   dims: [scenario, generator]
-  where: Generator_p_nom_extendable AND Generator_active_asset
+  where: Generator_ext_asset
   expression: Generator_p_nom_ext >= Generator_p_nom_min
 ```
 
 ```math
-P_{g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{act}_{g}
+P_{g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{act}^{\mathrm{ext}}_{g}
 ```
 
 ### `Generator-ext-p_nom-upper`
@@ -8375,12 +8968,12 @@ P_{g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in
 Generator_ext_p_nom_upper:
   description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
   dims: [scenario, generator]
-  where: Generator_p_nom_extendable AND Generator_active_asset AND Generator_p_nom_max
+  where: Generator_ext_asset AND Generator_p_nom_max
   expression: Generator_p_nom_ext <= Generator_p_nom_max
 ```
 
 ```math
-P_{g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \text{ is defined}
+P_{g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{act}^{\mathrm{ext}}_{g} \wedge \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \text{ is defined}
 ```
 
 ### `Generator-p_nom_set`
@@ -8391,12 +8984,12 @@ P_{g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in 
 Generator_p_nom_set:
   description: "`Generator-p_nom_set` — the chosen build pinned, wherever a value is given"
   dims: [generator]
-  where: Generator_p_nom_extendable AND Generator_active_asset AND Generator_p_nom_set
+  where: Generator_ext_asset AND Generator_p_nom_set
   expression: Generator_p_nom_ext == Generator_p_nom_set
 ```
 
 ```math
-P_{g} = \mathrm{p}^{\mathrm{nom,set}}_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \mathrm{p}^{\mathrm{nom,set}}_{g} \text{ is defined}
+P_{g} = \mathrm{p}^{\mathrm{nom,set}}_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{act}^{\mathrm{ext}}_{g} \wedge \mathrm{p}^{\mathrm{nom,set}}_{g} \text{ is defined}
 ```
 
 ### `Generator-e_sum_min`
@@ -8439,12 +9032,12 @@ Generator_e_sum_max:
 Link_ext_p_lower:
   description: "`Link-ext-p-lower` — an extendable link carries at least its minimum of the chosen build, negative for the other way"
   dims: [scenario, snapshot, link]
-  where: Link_p_nom_extendable AND not Link_committable AND Link_active
+  where: Link_ext
   expression: Link_p >= Link_p_min_pu * (Link_p_nom_ext - Link_maintenance_pu * Link_maintenance_capacity)
 ```
 
 ```math
-f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \left( F_{l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,\mathrm{nom}}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \left( F_{l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,\mathrm{nom}}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{ext}}_{t,l}
 ```
 
 ### `Link-ext-p-upper`
@@ -8455,12 +9048,12 @@ f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \left( F_{l} - \gamma^{f}
 Link_ext_p_upper:
   description: "`Link-ext-p-upper` — an extendable link carries at most the chosen build"
   dims: [scenario, snapshot, link]
-  where: Link_p_nom_extendable AND not Link_committable AND Link_active
+  where: Link_ext
   expression: Link_p <= Link_p_max_pu * (Link_p_nom_ext - Link_maintenance_pu * Link_maintenance_capacity)
 ```
 
 ```math
-f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \left( F_{l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,\mathrm{nom}}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \left( F_{l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,\mathrm{nom}}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{ext}}_{t,l}
 ```
 
 ### `Link-ext-p_nom-lower`
@@ -8471,12 +9064,12 @@ f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \left( F_{l} - \gamma^{f}_
 Link_ext_p_nom_lower:
   description: "`Link-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
   dims: [scenario, link]
-  where: Link_p_nom_extendable AND Link_active_asset
+  where: Link_ext_asset
   expression: Link_p_nom_ext >= Link_p_nom_min
 ```
 
 ```math
-F_{l} \ge \underline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \mathrm{act}^{f}_{l}
+F_{l} \ge \underline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{act}^{f,\mathrm{ext}}_{l}
 ```
 
 ### `Link-ext-p_nom-upper`
@@ -8487,12 +9080,12 @@ F_{l} \ge \underline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \qquad \forall\, \xi \in
 Link_ext_p_nom_upper:
   description: "`Link-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
   dims: [scenario, link]
-  where: Link_p_nom_extendable AND Link_active_asset AND Link_p_nom_max
+  where: Link_ext_asset AND Link_p_nom_max
   expression: Link_p_nom_ext <= Link_p_nom_max
 ```
 
 ```math
-F_{l} \le \overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \mathrm{act}^{f}_{l} \wedge \overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \text{ is defined}
+F_{l} \le \overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{act}^{f,\mathrm{ext}}_{l} \wedge \overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \text{ is defined}
 ```
 
 ### `Link-p_nom_set`
@@ -8503,12 +9096,12 @@ F_{l} \le \overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \qquad \forall\, \xi \in 
 Link_p_nom_set:
   description: "`Link-p_nom_set` — the chosen build pinned, wherever a value is given"
   dims: [link]
-  where: Link_p_nom_extendable AND Link_active_asset AND Link_p_nom_set
+  where: Link_ext_asset AND Link_p_nom_set
   expression: Link_p_nom_ext == Link_p_nom_set
 ```
 
 ```math
-F_{l} = \mathrm{f}^{\mathrm{nom,set}}_{l} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \mathrm{act}^{f}_{l} \wedge \mathrm{f}^{\mathrm{nom,set}}_{l} \text{ is defined}
+F_{l} = \mathrm{f}^{\mathrm{nom,set}}_{l} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{act}^{f,\mathrm{ext}}_{l} \wedge \mathrm{f}^{\mathrm{nom,set}}_{l} \text{ is defined}
 ```
 
 ### `Process-fix-p-lower`
@@ -8519,12 +9112,12 @@ F_{l} = \mathrm{f}^{\mathrm{nom,set}}_{l} \qquad \forall\, l \in \mathcal{L} \,:
 Process_fix_p_lower:
   description: "`Process-fix-p-lower` — a fixed process runs at least its minimum, negative for the other way"
   dims: [scenario, snapshot, process]
-  where: not Process_p_nom_extendable AND not Process_committable AND Process_active
+  where: Process_fix
   expression: Process_p >= Process_p_min_pu * Process_p_nom * (1 - Process_maintenance_pu * Process_maintenance)
 ```
 
 ```math
-z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( 1 - \gamma^{z}_{\xi,j} \cdot \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \neg \mathrm{ext}^{z}_{j} \wedge \neg \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( 1 - \gamma^{z}_{\xi,j} \cdot \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{fix}}_{t,j}
 ```
 
 ### `Process-fix-p-upper`
@@ -8535,12 +9128,12 @@ z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}
 Process_fix_p_upper:
   description: "`Process-fix-p-upper` — a fixed process runs at most its nominal power"
   dims: [scenario, snapshot, process]
-  where: not Process_p_nom_extendable AND not Process_committable AND Process_active
+  where: Process_fix
   expression: Process_p <= Process_p_max_pu * Process_p_nom * (1 - Process_maintenance_pu * Process_maintenance)
 ```
 
 ```math
-z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( 1 - \gamma^{z}_{\xi,j} \cdot \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \neg \mathrm{ext}^{z}_{j} \wedge \neg \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( 1 - \gamma^{z}_{\xi,j} \cdot \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{fix}}_{t,j}
 ```
 
 ### `Process-ext-p-lower`
@@ -8551,12 +9144,12 @@ z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_
 Process_ext_p_lower:
   description: "`Process-ext-p-lower` — an extendable process runs at least its minimum of the chosen build, negative for the other way"
   dims: [scenario, snapshot, process]
-  where: Process_p_nom_extendable AND not Process_committable AND Process_active
+  where: Process_ext
   expression: Process_p >= Process_p_min_pu * (Process_p_nom_ext - Process_maintenance_pu * Process_maintenance_capacity)
 ```
 
 ```math
-z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \left( Z_{j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,\mathrm{nom}}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \neg \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \left( Z_{j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,\mathrm{nom}}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{ext}}_{t,j}
 ```
 
 ### `Process-ext-p-upper`
@@ -8567,12 +9160,12 @@ z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \left( Z_{j} - \gamma^{z}
 Process_ext_p_upper:
   description: "`Process-ext-p-upper` — an extendable process runs at most the chosen build"
   dims: [scenario, snapshot, process]
-  where: Process_p_nom_extendable AND not Process_committable AND Process_active
+  where: Process_ext
   expression: Process_p <= Process_p_max_pu * (Process_p_nom_ext - Process_maintenance_pu * Process_maintenance_capacity)
 ```
 
 ```math
-z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \left( Z_{j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,\mathrm{nom}}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \neg \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \left( Z_{j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,\mathrm{nom}}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{ext}}_{t,j}
 ```
 
 ### `Process-ext-p_nom-lower`
@@ -8583,12 +9176,12 @@ z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \left( Z_{j} - \gamma^{z}_
 Process_ext_p_nom_lower:
   description: "`Process-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
   dims: [scenario, process]
-  where: Process_p_nom_extendable AND Process_active_asset
+  where: Process_ext_asset
   expression: Process_p_nom_ext >= Process_p_nom_min
 ```
 
 ```math
-Z_{j} \ge \underline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{act}^{z}_{j}
+Z_{j} \ge \underline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{act}^{z,\mathrm{ext}}_{j}
 ```
 
 ### `Process-ext-p_nom-upper`
@@ -8599,12 +9192,12 @@ Z_{j} \ge \underline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \qquad \forall\, \xi \in
 Process_ext_p_nom_upper:
   description: "`Process-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
   dims: [scenario, process]
-  where: Process_p_nom_extendable AND Process_active_asset AND Process_p_nom_max
+  where: Process_ext_asset AND Process_p_nom_max
   expression: Process_p_nom_ext <= Process_p_nom_max
 ```
 
 ```math
-Z_{j} \le \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{act}^{z}_{j} \wedge \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \text{ is defined}
+Z_{j} \le \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{act}^{z,\mathrm{ext}}_{j} \wedge \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \text{ is defined}
 ```
 
 ### `Process-p_nom_set`
@@ -8615,12 +9208,12 @@ Z_{j} \le \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \qquad \forall\, \xi \in 
 Process_p_nom_set:
   description: "`Process-p_nom_set` — the chosen build pinned, wherever a value is given"
   dims: [process]
-  where: Process_p_nom_extendable AND Process_active_asset AND Process_p_nom_set
+  where: Process_ext_asset AND Process_p_nom_set
   expression: Process_p_nom_ext == Process_p_nom_set
 ```
 
 ```math
-Z_{j} = \mathrm{z}^{\mathrm{nom,set}}_{j} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{act}^{z}_{j} \wedge \mathrm{z}^{\mathrm{nom,set}}_{j} \text{ is defined}
+Z_{j} = \mathrm{z}^{\mathrm{nom,set}}_{j} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{act}^{z,\mathrm{ext}}_{j} \wedge \mathrm{z}^{\mathrm{nom,set}}_{j} \text{ is defined}
 ```
 
 ### `StorageUnit-fix-p_dispatch-lower`
@@ -8729,12 +9322,12 @@ StorageUnit_fix_state_of_charge_upper:
 Generator_com_p_lower:
   description: "`Generator-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing"
   dims: [scenario, snapshot, generator]
-  where: Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
+  where: Generator_com_fix
   expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
 ```
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,fix}}_{t,g}
 ```
 
 ### `Generator-com-p-upper`
@@ -8745,12 +9338,12 @@ p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}
 Generator_com_p_upper:
   description: "`Generator-com-p-upper` — a committed unit outputs at most what is available; off, at most nothing"
   dims: [scenario, snapshot, generator]
-  where: Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
+  where: Generator_com_fix
   expression: Generator_p <= Generator_p_max_pu * Generator_p_nom * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
 ```
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,fix}}_{t,g}
 ```
 
 ### `Generator-com-transition-start-up`
@@ -8868,10 +9461,7 @@ Generator_p_ramp_limit_up_run_big_m:
     raises output no faster than its limit of the chosen build; the big M
     releases the row in the snapshot it turns on
   dims: [scenario, snapshot, generator]
-  where: >-
-    Generator_com_ext
-    AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-    AND Generator_ramps_from_previous
+  where: Generator_com_ext AND Generator_ramps_up
   expression: >-
     Generator_p - Generator_previous_p <=
     Generator_ramp_up_rate * Generator_p_nom_ext
@@ -8879,7 +9469,7 @@ Generator_p_ramp_limit_up_run_big_m:
 ```
 
 ```math
-p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \mathrm{prev}_{\xi,t,g}
+p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \mathrm{prev}^{\mathrm{up}}_{\xi,t,g}
 ```
 
 ### `Generator-p-ramp_limit_up-start-bigM`
@@ -8893,10 +9483,7 @@ Generator_p_ramp_limit_up_start_big_m:
     committed extendable unit ramps no further than its start-up ramp of
     the chosen build; the big M releases the row everywhere else
   dims: [scenario, snapshot, generator]
-  where: >-
-    Generator_com_ext
-    AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-    AND Generator_ramps_from_previous
+  where: Generator_com_ext AND Generator_ramps_up
   expression: >-
     Generator_p - Generator_previous_p <=
     Generator_start_up_rate * Generator_p_nom_ext
@@ -8904,7 +9491,7 @@ Generator_p_ramp_limit_up_start_big_m:
 ```
 
 ```math
-p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{up}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \mathrm{prev}_{\xi,t,g}
+p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{up}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \mathrm{prev}^{\mathrm{up}}_{\xi,t,g}
 ```
 
 ### `Generator-p-ramp_limit_down-run-bigM`
@@ -8918,10 +9505,7 @@ Generator_p_ramp_limit_down_run_big_m:
     lowers output no faster than its limit of the chosen build; the big M
     releases the row in the snapshot it turns off
   dims: [scenario, snapshot, generator]
-  where: >-
-    Generator_com_ext
-    AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-    AND Generator_ramps_from_previous
+  where: Generator_com_ext AND Generator_ramps_down
   expression: >-
     Generator_previous_p - Generator_p <=
     Generator_ramp_down_rate * Generator_p_nom_ext
@@ -8929,7 +9513,7 @@ Generator_p_ramp_limit_down_run_big_m:
 ```
 
 ```math
-\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \mathrm{prev}_{\xi,t,g}
+\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \mathrm{prev}^{\mathrm{dn}}_{\xi,t,g}
 ```
 
 ### `Generator-p-ramp_limit_down-shut-bigM`
@@ -8943,10 +9527,7 @@ Generator_p_ramp_limit_down_shut_big_m:
     a committed extendable unit ramps no further than its shut-down ramp of
     the chosen build; the big M releases the row everywhere else
   dims: [scenario, snapshot, generator]
-  where: >-
-    Generator_com_ext
-    AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-    AND Generator_ramps_from_previous
+  where: Generator_com_ext AND Generator_ramps_down
   expression: >-
     Generator_previous_p - Generator_p <=
     Generator_shut_down_rate * Generator_p_nom_ext
@@ -8954,7 +9535,7 @@ Generator_p_ramp_limit_down_shut_big_m:
 ```
 
 ```math
-\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{dn}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \mathrm{prev}_{\xi,t,g}
+\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot P_{g} + \mathrm{M}_{\xi,g} - \mathrm{M}_{\xi,g} \cdot \mathit{dn}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g} \wedge \mathrm{prev}^{\mathrm{dn}}_{\xi,t,g}
 ```
 
 ### `Generator-p_nom_modularity`
@@ -8965,12 +9546,12 @@ Generator_p_ramp_limit_down_shut_big_m:
 Generator_p_nom_modularity:
   description: "`Generator-p_nom_modularity` — the chosen build is a whole number of modules"
   dims: [generator]
-  where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active_asset
+  where: Generator_ext_asset AND Generator_p_nom_mod > 0
   expression: Generator_p_nom_ext == Generator_p_nom_mod * Generator_n_mod
 ```
 
 ```math
-P_{g} = \mathrm{p}^{\mathrm{mod}}_{g} \cdot N_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{act}_{g}
+P_{g} = \mathrm{p}^{\mathrm{mod}}_{g} \cdot N_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{act}^{\mathrm{ext}}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 ### `Generator-com-ext-p-upper-cap`
@@ -9057,12 +9638,12 @@ Generator_com_mod_p_lower:
     `Generator-com-mod-p-lower` — a committed modular unit outputs at least
     its minimum of one module, whether the build is fixed or a decision
   dims: [scenario, snapshot, generator]
-  where: Generator_committed AND Generator_p_nom_mod > 0
+  where: Generator_com_mod
   expression: Generator_p >= Generator_p_min_pu * Generator_p_nom_mod * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
 ```
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,mod}}_{t,g}
 ```
 
 ### `Generator-com-mod-p-upper`
@@ -9075,12 +9656,12 @@ Generator_com_mod_p_upper:
     `Generator-com-mod-p-upper` — a committed modular unit outputs at most
     one module's share, whether the build is fixed or a decision
   dims: [scenario, snapshot, generator]
-  where: Generator_committed AND Generator_p_nom_mod > 0
+  where: Generator_com_mod
   expression: Generator_p <= Generator_p_max_pu * Generator_p_nom_mod * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
 ```
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,mod}}_{t,g}
 ```
 
 ### `Generator-status-p-fixed-upper`
@@ -9094,12 +9675,12 @@ Generator_status_p_fixed_upper:
     place, an explicit row as PyPSA writes it: one where the build is not
     modular, and the fixed build's whole count of modules where it is
   dims: [scenario, snapshot, generator]
-  where: Generator_committed AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0)
+  where: Generator_committed AND NOT Generator_com_ext_mod
   expression: Generator_status <= Generator_modules_installed
 ```
 
 ```math
-u_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+u_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{on}^{\mathrm{com,ext,mod}}_{t,g}
 ```
 
 ### `Generator-start_up-p-fixed-upper`
@@ -9113,12 +9694,12 @@ Generator_start_up_p_fixed_upper:
     place, an explicit row as PyPSA writes it: one where the build is not
     modular, and the fixed build's whole count of modules where it is
   dims: [scenario, snapshot, generator]
-  where: Generator_committed AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0)
+  where: Generator_committed AND NOT Generator_com_ext_mod
   expression: Generator_start_up <= Generator_modules_installed
 ```
 
 ```math
-\mathit{up}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+\mathit{up}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{on}^{\mathrm{com,ext,mod}}_{t,g}
 ```
 
 ### `Generator-shut_down-p-fixed-upper`
@@ -9132,12 +9713,12 @@ Generator_shut_down_p_fixed_upper:
     place, an explicit row as PyPSA writes it: one where the build is not
     modular, and the fixed build's whole count of modules where it is
   dims: [scenario, snapshot, generator]
-  where: Generator_committed AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0)
+  where: Generator_committed AND NOT Generator_com_ext_mod
   expression: Generator_shut_down <= Generator_modules_installed
 ```
 
 ```math
-\mathit{dn}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+\mathit{dn}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{on}^{\mathrm{com,ext,mod}}_{t,g}
 ```
 
 ### `Generator-status-p_nom-variable-upper`
@@ -9148,12 +9729,12 @@ Generator_shut_down_p_fixed_upper:
 Generator_status_p_nom_variable_upper:
   description: "`Generator-status-p_nom-variable-upper` — a modular unit is on only where a module is built"
   dims: [scenario, snapshot, generator]
-  where: Generator_committed AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0
+  where: Generator_com_ext_mod
   expression: Generator_status <= Generator_n_mod
 ```
 
 ```math
-u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext,mod}}_{t,g}
 ```
 
 ### `Generator-start_up-p_nom-variable-upper`
@@ -9164,12 +9745,12 @@ u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \
 Generator_start_up_p_nom_variable_upper:
   description: "`Generator-start_up-p_nom-variable-upper` — a modular unit starts only where a module is built"
   dims: [scenario, snapshot, generator]
-  where: Generator_committed AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0
+  where: Generator_com_ext_mod
   expression: Generator_start_up <= Generator_n_mod
 ```
 
 ```math
-\mathit{up}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+\mathit{up}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext,mod}}_{t,g}
 ```
 
 ### `Generator-shut_down-p_nom-variable-upper`
@@ -9180,12 +9761,12 @@ Generator_start_up_p_nom_variable_upper:
 Generator_shut_down_p_nom_variable_upper:
   description: "`Generator-shut_down-p_nom-variable-upper` — a modular unit stops only where a module is built"
   dims: [scenario, snapshot, generator]
-  where: Generator_committed AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0
+  where: Generator_com_ext_mod
   expression: Generator_shut_down <= Generator_n_mod
 ```
 
 ```math
-\mathit{dn}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+\mathit{dn}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext,mod}}_{t,g}
 ```
 
 ### `Generator-maint-event-count`
@@ -9215,12 +9796,12 @@ Generator_maint_window:
     started covers the snapshot; two events do not overlap, since the
     maintenance status is at most one
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_active
+  where: Generator_maintained
   expression: Generator_maintenance == sum(Generator_maintenance_start, over=start, by=Generator_maintenance_cover[covered])
 ```
 
 ```math
-\mu_{\xi,t,g} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ g,\ t',\ t \right) \in \mathrm{Generator\_maintenance\_cover}} \mu^{\mathrm{up}}_{\xi,t',g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g}
+\mu_{\xi,t,g} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ g,\ t',\ t \right) \in \mathrm{Generator\_maintenance\_cover}} \mu^{\mathrm{up}}_{\xi,t',g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{mnt}}_{t,g}
 ```
 
 ### `Generator-maint-start-horizon`
@@ -9231,12 +9812,12 @@ Generator_maint_window:
 Generator_maint_start_horizon:
   description: "`Generator-maint-start-horizon` — no event starts where it could not run its whole duration"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_active AND Generator_maintenance_start_blocked
+  where: Generator_maintained AND Generator_maintenance_start_blocked
   expression: Generator_maintenance_start == 0
 ```
 
 ```math
-\mu^{\mathrm{up}}_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{t,g} \wedge \mathrm{blk}_{\xi,t,g}
+\mu^{\mathrm{up}}_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{mnt}}_{t,g} \wedge \mathrm{blk}_{\xi,t,g}
 ```
 
 ### `Generator-maintcap_upper`
@@ -9313,12 +9894,12 @@ Generator_maintcap_lower_nommin:
 Generator_maint_status_le_status:
   description: "`Generator-maint-status-le-status` — the status in maintenance is at most the status"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
+  where: Generator_maintainable AND Generator_com_fix
   expression: Generator_maintenance_status <= Generator_status
 ```
 
 ```math
-\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com,fix}}_{t,g}
 ```
 
 ### `Generator-maint-status-le-maint`
@@ -9329,12 +9910,12 @@ Generator_maint_status_le_status:
 Generator_maint_status_le_maint:
   description: "`Generator-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
+  where: Generator_maintainable AND Generator_com_fix
   expression: Generator_maintenance_status <= Generator_maintenance
 ```
 
 ```math
-\mu^{u}_{\xi,t,g} \le \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+\mu^{u}_{\xi,t,g} \le \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com,fix}}_{t,g}
 ```
 
 ### `Generator-maint-status-lb`
@@ -9345,12 +9926,12 @@ Generator_maint_status_le_maint:
 Generator_maint_status_lb:
   description: "`Generator-maint-status-lb` — on and in maintenance, the status in maintenance is one"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
+  where: Generator_maintainable AND Generator_com_fix
   expression: Generator_maintenance_status >= Generator_status + Generator_maintenance - 1
 ```
 
 ```math
-\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} + \mu_{\xi,t,g} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} + \mu_{\xi,t,g} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com,fix}}_{t,g}
 ```
 
 ### `Generator-maint-modstatus-le-status`
@@ -9361,12 +9942,12 @@ Generator_maint_status_lb:
 Generator_maint_modstatus_le_status:
   description: "`Generator-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
+  where: Generator_maintainable AND Generator_com_mod
   expression: Generator_maintenance_status <= Generator_status
 ```
 
 ```math
-\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+\mu^{u}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com,mod}}_{t,g}
 ```
 
 ### `Generator-maint-modstatus-le-maint`
@@ -9379,12 +9960,12 @@ Generator_maint_modstatus_le_maint:
     `Generator-maint-modstatus-le-maint` — out of maintenance, no module is on in
     maintenance; in it, at most the modules the build cap holds
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
+  where: Generator_maintainable AND Generator_com_mod
   expression: Generator_maintenance_status <= Generator_p_nom_max / Generator_p_nom_mod * Generator_maintenance
 ```
 
 ```math
-\mu^{u}_{\xi,t,g} \le \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+\mu^{u}_{\xi,t,g} \le \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \mu_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com,mod}}_{t,g}
 ```
 
 ### `Generator-maint-modstatus-lb`
@@ -9395,12 +9976,12 @@ Generator_maint_modstatus_le_maint:
 Generator_maint_modstatus_lb:
   description: "`Generator-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
   dims: [scenario, snapshot, generator]
-  where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
+  where: Generator_maintainable AND Generator_com_mod
   expression: Generator_maintenance_status >= Generator_status - Generator_p_nom_max / Generator_p_nom_mod * (1 - Generator_maintenance)
 ```
 
 ```math
-\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} - \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{t,g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+\mu^{u}_{\xi,t,g} \ge u_{\xi,t,g} - \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \left( 1 - \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com,mod}}_{t,g}
 ```
 
 ### `Link-com-p-lower`
@@ -9411,12 +9992,12 @@ Generator_maint_modstatus_lb:
 Link_com_p_lower:
   description: "`Link-com-p-lower` — a committed link flows at least its minimum; off, at least nothing"
   dims: [scenario, snapshot, link]
-  where: Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
+  where: Link_com_fix
   expression: Link_p >= Link_p_min_pu * Link_p_nom * (Link_status - Link_maintenance_pu * Link_maintenance_status)
 ```
 
 ```math
-f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( u^{f}_{\xi,t,l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,u}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( u^{f}_{\xi,t,l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,u}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,fix}}_{t,l}
 ```
 
 ### `Link-com-p-upper`
@@ -9427,12 +10008,12 @@ f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}
 Link_com_p_upper:
   description: "`Link-com-p-upper` — a committed link flows at most what is available; off, at most nothing"
   dims: [scenario, snapshot, link]
-  where: Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
+  where: Link_com_fix
   expression: Link_p <= Link_p_max_pu * Link_p_nom * (Link_status - Link_maintenance_pu * Link_maintenance_status)
 ```
 
 ```math
-f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( u^{f}_{\xi,t,l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,u}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( u^{f}_{\xi,t,l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,u}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,fix}}_{t,l}
 ```
 
 ### `Link-com-transition-start-up`
@@ -9550,7 +10131,7 @@ Link_p_ramp_limit_up_run_big_m:
     raises flow no faster than its limit of the chosen build; the big M
     releases the row in the snapshot it turns on
   dims: [scenario, snapshot, link]
-  where: Link_com_ext AND (Link_ramp_limit_up OR Link_ramp_limit_start_up) AND Link_ramps_from_previous
+  where: Link_com_ext AND Link_ramps_up
   expression: >-
     Link_p - Link_previous_p <=
     Link_ramp_up_rate * Link_p_nom_ext
@@ -9558,7 +10139,7 @@ Link_p_ramp_limit_up_run_big_m:
 ```
 
 ```math
-f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \widetilde{\mathrm{ru}}^{f}_{\xi,t,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \overleftarrow{u}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{\xi,t,l}
+f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \widetilde{\mathrm{ru}}^{f}_{\xi,t,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \overleftarrow{u}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \mathrm{prev}^{f,\mathrm{up}}_{\xi,t,l}
 ```
 
 ### `Link-p-ramp_limit_up-start-bigM`
@@ -9572,7 +10153,7 @@ Link_p_ramp_limit_up_start_big_m:
     committed extendable link ramps no further than its start-up ramp of
     the chosen build; the big M releases the row everywhere else
   dims: [scenario, snapshot, link]
-  where: Link_com_ext AND (Link_ramp_limit_up OR Link_ramp_limit_start_up) AND Link_ramps_from_previous
+  where: Link_com_ext AND Link_ramps_up
   expression: >-
     Link_p - Link_previous_p <=
     Link_start_up_rate * Link_p_nom_ext
@@ -9580,7 +10161,7 @@ Link_p_ramp_limit_up_start_big_m:
 ```
 
 ```math
-f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{\xi,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \mathit{up}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{\xi,t,l}
+f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{\xi,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \mathit{up}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \mathrm{prev}^{f,\mathrm{up}}_{\xi,t,l}
 ```
 
 ### `Link-p-ramp_limit_down-run-bigM`
@@ -9594,7 +10175,7 @@ Link_p_ramp_limit_down_run_big_m:
     lowers flow no faster than its limit of the chosen build; the big M
     releases the row in the snapshot it turns off
   dims: [scenario, snapshot, link]
-  where: Link_com_ext AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down) AND Link_ramps_from_previous
+  where: Link_com_ext AND Link_ramps_down
   expression: >-
     Link_previous_p - Link_p <=
     Link_ramp_down_rate * Link_p_nom_ext
@@ -9602,7 +10183,7 @@ Link_p_ramp_limit_down_run_big_m:
 ```
 
 ```math
-\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \widetilde{\mathrm{rd}}^{f}_{\xi,t,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \left( \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{\xi,t,l}
+\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \widetilde{\mathrm{rd}}^{f}_{\xi,t,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \mathrm{prev}^{f,\mathrm{dn}}_{\xi,t,l}
 ```
 
 ### `Link-p-ramp_limit_down-shut-bigM`
@@ -9616,7 +10197,7 @@ Link_p_ramp_limit_down_shut_big_m:
     a committed extendable link ramps no further than its shut-down ramp of
     the chosen build; the big M releases the row everywhere else
   dims: [scenario, snapshot, link]
-  where: Link_com_ext AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down) AND Link_ramps_from_previous
+  where: Link_com_ext AND Link_ramps_down
   expression: >-
     Link_previous_p - Link_p <=
     Link_shut_down_rate * Link_p_nom_ext
@@ -9624,7 +10205,7 @@ Link_p_ramp_limit_down_shut_big_m:
 ```
 
 ```math
-\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \mathit{dn}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \left( \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{\xi,t,l}
+\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \mathit{dn}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \wedge \mathrm{prev}^{f,\mathrm{dn}}_{\xi,t,l}
 ```
 
 ### `Link-p_nom_modularity`
@@ -9635,12 +10216,12 @@ Link_p_ramp_limit_down_shut_big_m:
 Link_p_nom_modularity:
   description: "`Link-p_nom_modularity` — the chosen build is a whole number of modules"
   dims: [link]
-  where: Link_p_nom_extendable AND Link_p_nom_mod > 0 AND Link_active_asset
+  where: Link_ext_asset AND Link_p_nom_mod > 0
   expression: Link_p_nom_ext == Link_p_nom_mod * Link_n_mod
 ```
 
 ```math
-F_{l} = \mathrm{f}^{\mathrm{mod}}_{l} \cdot N^{f}_{l} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \wedge \mathrm{act}^{f}_{l}
+F_{l} = \mathrm{f}^{\mathrm{mod}}_{l} \cdot N^{f}_{l} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{act}^{f,\mathrm{ext}}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 
 ### `Link-com-ext-p-upper-cap`
@@ -9727,12 +10308,12 @@ Link_com_mod_p_lower:
     `Link-com-mod-p-lower` — a committed modular link flows at least
     its minimum of one module, whether the build is fixed or a decision
   dims: [scenario, snapshot, link]
-  where: Link_committed AND Link_p_nom_mod > 0
+  where: Link_com_mod
   expression: Link_p >= Link_p_min_pu * Link_p_nom_mod * (Link_status - Link_maintenance_pu * Link_maintenance_status)
 ```
 
 ```math
-f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{mod}}_{l} \cdot \left( u^{f}_{\xi,t,l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,u}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{mod}}_{l} \cdot \left( u^{f}_{\xi,t,l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,u}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,mod}}_{t,l}
 ```
 
 ### `Link-com-mod-p-upper`
@@ -9745,12 +10326,12 @@ Link_com_mod_p_upper:
     `Link-com-mod-p-upper` — a committed modular link flows at most
     one module's share, whether the build is fixed or a decision
   dims: [scenario, snapshot, link]
-  where: Link_committed AND Link_p_nom_mod > 0
+  where: Link_com_mod
   expression: Link_p <= Link_p_max_pu * Link_p_nom_mod * (Link_status - Link_maintenance_pu * Link_maintenance_status)
 ```
 
 ```math
-f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{mod}}_{l} \cdot \left( u^{f}_{\xi,t,l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,u}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{mod}}_{l} \cdot \left( u^{f}_{\xi,t,l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,u}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,mod}}_{t,l}
 ```
 
 ### `Link-status-p-fixed-upper`
@@ -9764,12 +10345,12 @@ Link_status_p_fixed_upper:
     place, an explicit row as PyPSA writes it: one where the build is not
     modular, and the fixed build's whole count of modules where it is
   dims: [scenario, snapshot, link]
-  where: Link_committed AND NOT (Link_p_nom_extendable AND Link_p_nom_mod > 0)
+  where: Link_committed AND NOT Link_com_ext_mod
   expression: Link_status <= Link_modules_installed
 ```
 
 ```math
-u^{f}_{\xi,t,l} \le \mathrm{N}^{f,\mathrm{fix}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+u^{f}_{\xi,t,l} \le \mathrm{N}^{f,\mathrm{fix}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \mathrm{on}^{f,\mathrm{com,ext,mod}}_{t,l}
 ```
 
 ### `Link-start_up-p-fixed-upper`
@@ -9783,12 +10364,12 @@ Link_start_up_p_fixed_upper:
     place, an explicit row as PyPSA writes it: one where the build is not
     modular, and the fixed build's whole count of modules where it is
   dims: [scenario, snapshot, link]
-  where: Link_committed AND NOT (Link_p_nom_extendable AND Link_p_nom_mod > 0)
+  where: Link_committed AND NOT Link_com_ext_mod
   expression: Link_start_up <= Link_modules_installed
 ```
 
 ```math
-\mathit{up}^{f}_{\xi,t,l} \le \mathrm{N}^{f,\mathrm{fix}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+\mathit{up}^{f}_{\xi,t,l} \le \mathrm{N}^{f,\mathrm{fix}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \mathrm{on}^{f,\mathrm{com,ext,mod}}_{t,l}
 ```
 
 ### `Link-shut_down-p-fixed-upper`
@@ -9802,12 +10383,12 @@ Link_shut_down_p_fixed_upper:
     place, an explicit row as PyPSA writes it: one where the build is not
     modular, and the fixed build's whole count of modules where it is
   dims: [scenario, snapshot, link]
-  where: Link_committed AND NOT (Link_p_nom_extendable AND Link_p_nom_mod > 0)
+  where: Link_committed AND NOT Link_com_ext_mod
   expression: Link_shut_down <= Link_modules_installed
 ```
 
 ```math
-\mathit{dn}^{f}_{\xi,t,l} \le \mathrm{N}^{f,\mathrm{fix}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+\mathit{dn}^{f}_{\xi,t,l} \le \mathrm{N}^{f,\mathrm{fix}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \mathrm{on}^{f,\mathrm{com,ext,mod}}_{t,l}
 ```
 
 ### `Link-status-p_nom-variable-upper`
@@ -9818,12 +10399,12 @@ Link_shut_down_p_fixed_upper:
 Link_status_p_nom_variable_upper:
   description: "`Link-status-p_nom-variable-upper` — a modular link is on only where a module is built"
   dims: [scenario, snapshot, link]
-  where: Link_committed AND Link_p_nom_extendable AND Link_p_nom_mod > 0
+  where: Link_com_ext_mod
   expression: Link_status <= Link_n_mod
 ```
 
 ```math
-u^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+u^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext,mod}}_{t,l}
 ```
 
 ### `Link-start_up-p_nom-variable-upper`
@@ -9834,12 +10415,12 @@ u^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\
 Link_start_up_p_nom_variable_upper:
   description: "`Link-start_up-p_nom-variable-upper` — a modular link starts only where a module is built"
   dims: [scenario, snapshot, link]
-  where: Link_committed AND Link_p_nom_extendable AND Link_p_nom_mod > 0
+  where: Link_com_ext_mod
   expression: Link_start_up <= Link_n_mod
 ```
 
 ```math
-\mathit{up}^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+\mathit{up}^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext,mod}}_{t,l}
 ```
 
 ### `Link-shut_down-p_nom-variable-upper`
@@ -9850,12 +10431,12 @@ Link_start_up_p_nom_variable_upper:
 Link_shut_down_p_nom_variable_upper:
   description: "`Link-shut_down-p_nom-variable-upper` — a modular link stops only where a module is built"
   dims: [scenario, snapshot, link]
-  where: Link_committed AND Link_p_nom_extendable AND Link_p_nom_mod > 0
+  where: Link_com_ext_mod
   expression: Link_shut_down <= Link_n_mod
 ```
 
 ```math
-\mathit{dn}^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+\mathit{dn}^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext,mod}}_{t,l}
 ```
 
 ### `Link-maint-event-count`
@@ -9885,12 +10466,12 @@ Link_maint_window:
     started covers the snapshot; two events do not overlap, since the
     maintenance status is at most one
   dims: [scenario, snapshot, link]
-  where: Link_maintainable AND Link_active
+  where: Link_maintained
   expression: Link_maintenance == sum(Link_maintenance_start, over=start, by=Link_maintenance_cover[covered])
 ```
 
 ```math
-\mu^{f}_{\xi,t,l} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ l,\ t',\ t \right) \in \mathrm{Link\_maintenance\_cover}} \mu^{f,\mathrm{up}}_{\xi,t',l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+\mu^{f}_{\xi,t,l} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ l,\ t',\ t \right) \in \mathrm{Link\_maintenance\_cover}} \mu^{f,\mathrm{up}}_{\xi,t',l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{mnt}}_{t,l}
 ```
 
 ### `Link-maint-start-horizon`
@@ -9901,12 +10482,12 @@ Link_maint_window:
 Link_maint_start_horizon:
   description: "`Link-maint-start-horizon` — no event starts where it could not run its whole duration"
   dims: [scenario, snapshot, link]
-  where: Link_maintainable AND Link_active AND Link_maintenance_start_blocked
+  where: Link_maintained AND Link_maintenance_start_blocked
   expression: Link_maintenance_start == 0
 ```
 
 ```math
-\mu^{f,\mathrm{up}}_{\xi,t,l} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l} \wedge \mathrm{blk}^{f}_{\xi,t,l}
+\mu^{f,\mathrm{up}}_{\xi,t,l} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{mnt}}_{t,l} \wedge \mathrm{blk}^{f}_{\xi,t,l}
 ```
 
 ### `Link-maintcap_upper`
@@ -9983,12 +10564,12 @@ Link_maintcap_lower_nommin:
 Link_maint_status_le_status:
   description: "`Link-maint-status-le-status` — the status in maintenance is at most the status"
   dims: [scenario, snapshot, link]
-  where: Link_maintainable AND Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
+  where: Link_maintainable AND Link_com_fix
   expression: Link_maintenance_status <= Link_status
 ```
 
 ```math
-\mu^{f,u}_{\xi,t,l} \le u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+\mu^{f,u}_{\xi,t,l} \le u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com,fix}}_{t,l}
 ```
 
 ### `Link-maint-status-le-maint`
@@ -9999,12 +10580,12 @@ Link_maint_status_le_status:
 Link_maint_status_le_maint:
   description: "`Link-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
   dims: [scenario, snapshot, link]
-  where: Link_maintainable AND Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
+  where: Link_maintainable AND Link_com_fix
   expression: Link_maintenance_status <= Link_maintenance
 ```
 
 ```math
-\mu^{f,u}_{\xi,t,l} \le \mu^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+\mu^{f,u}_{\xi,t,l} \le \mu^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com,fix}}_{t,l}
 ```
 
 ### `Link-maint-status-lb`
@@ -10015,12 +10596,12 @@ Link_maint_status_le_maint:
 Link_maint_status_lb:
   description: "`Link-maint-status-lb` — on and in maintenance, the status in maintenance is one"
   dims: [scenario, snapshot, link]
-  where: Link_maintainable AND Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
+  where: Link_maintainable AND Link_com_fix
   expression: Link_maintenance_status >= Link_status + Link_maintenance - 1
 ```
 
 ```math
-\mu^{f,u}_{\xi,t,l} \ge u^{f}_{\xi,t,l} + \mu^{f}_{\xi,t,l} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+\mu^{f,u}_{\xi,t,l} \ge u^{f}_{\xi,t,l} + \mu^{f}_{\xi,t,l} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com,fix}}_{t,l}
 ```
 
 ### `Link-maint-modstatus-le-status`
@@ -10031,12 +10612,12 @@ Link_maint_status_lb:
 Link_maint_modstatus_le_status:
   description: "`Link-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
   dims: [scenario, snapshot, link]
-  where: Link_maintainable AND Link_committed AND Link_p_nom_mod > 0
+  where: Link_maintainable AND Link_com_mod
   expression: Link_maintenance_status <= Link_status
 ```
 
 ```math
-\mu^{f,u}_{\xi,t,l} \le u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+\mu^{f,u}_{\xi,t,l} \le u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com,mod}}_{t,l}
 ```
 
 ### `Link-maint-modstatus-le-maint`
@@ -10049,12 +10630,12 @@ Link_maint_modstatus_le_maint:
     `Link-maint-modstatus-le-maint` — out of maintenance, no module is on in
     maintenance; in it, at most the modules the build cap holds
   dims: [scenario, snapshot, link]
-  where: Link_maintainable AND Link_committed AND Link_p_nom_mod > 0
+  where: Link_maintainable AND Link_com_mod
   expression: Link_maintenance_status <= Link_p_nom_max / Link_p_nom_mod * Link_maintenance
 ```
 
 ```math
-\mu^{f,u}_{\xi,t,l} \le \frac{\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l}}{\mathrm{f}^{\mathrm{mod}}_{l}} \cdot \mu^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+\mu^{f,u}_{\xi,t,l} \le \frac{\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l}}{\mathrm{f}^{\mathrm{mod}}_{l}} \cdot \mu^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com,mod}}_{t,l}
 ```
 
 ### `Link-maint-modstatus-lb`
@@ -10065,12 +10646,12 @@ Link_maint_modstatus_le_maint:
 Link_maint_modstatus_lb:
   description: "`Link-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
   dims: [scenario, snapshot, link]
-  where: Link_maintainable AND Link_committed AND Link_p_nom_mod > 0
+  where: Link_maintainable AND Link_com_mod
   expression: Link_maintenance_status >= Link_status - Link_p_nom_max / Link_p_nom_mod * (1 - Link_maintenance)
 ```
 
 ```math
-\mu^{f,u}_{\xi,t,l} \ge u^{f}_{\xi,t,l} - \frac{\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l}}{\mathrm{f}^{\mathrm{mod}}_{l}} \cdot \left( 1 - \mu^{f}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{t,l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+\mu^{f,u}_{\xi,t,l} \ge u^{f}_{\xi,t,l} - \frac{\overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l}}{\mathrm{f}^{\mathrm{mod}}_{l}} \cdot \left( 1 - \mu^{f}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com,mod}}_{t,l}
 ```
 
 ### `Process-com-p-lower`
@@ -10081,12 +10662,12 @@ Link_maint_modstatus_lb:
 Process_com_p_lower:
   description: "`Process-com-p-lower` — a committed process runs at least its minimum; off, at least nothing"
   dims: [scenario, snapshot, process]
-  where: Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
+  where: Process_com_fix
   expression: Process_p >= Process_p_min_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
 ```
 
 ```math
-z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,fix}}_{t,j}
 ```
 
 ### `Process-com-p-upper`
@@ -10097,12 +10678,12 @@ z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}
 Process_com_p_upper:
   description: "`Process-com-p-upper` — a committed process runs at most what is available; off, at most nothing"
   dims: [scenario, snapshot, process]
-  where: Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
+  where: Process_com_fix
   expression: Process_p <= Process_p_max_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
 ```
 
 ```math
-z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,fix}}_{t,j}
 ```
 
 ### `Process-com-transition-start-up`
@@ -10220,7 +10801,7 @@ Process_p_ramp_limit_up_run_big_m:
     raises internal power no faster than its limit of the chosen build; the big M
     releases the row in the snapshot it turns on
   dims: [scenario, snapshot, process]
-  where: Process_com_ext AND (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND Process_ramps_from_previous
+  where: Process_com_ext AND Process_ramps_up
   expression: >-
     Process_p - Process_previous_p <=
     Process_ramp_up_rate * Process_p_nom_ext
@@ -10228,7 +10809,7 @@ Process_p_ramp_limit_up_run_big_m:
 ```
 
 ```math
-z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \overleftarrow{u}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j}
+z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \overleftarrow{u}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \mathrm{prev}^{z,\mathrm{up}}_{\xi,t,j}
 ```
 
 ### `Process-p-ramp_limit_up-start-bigM`
@@ -10242,7 +10823,7 @@ Process_p_ramp_limit_up_start_big_m:
     committed extendable process ramps no further than its start-up ramp of
     the chosen build; the big M releases the row everywhere else
   dims: [scenario, snapshot, process]
-  where: Process_com_ext AND (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND Process_ramps_from_previous
+  where: Process_com_ext AND Process_ramps_up
   expression: >-
     Process_p - Process_previous_p <=
     Process_start_up_rate * Process_p_nom_ext
@@ -10250,7 +10831,7 @@ Process_p_ramp_limit_up_start_big_m:
 ```
 
 ```math
-z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{up}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j}
+z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{up}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \mathrm{prev}^{z,\mathrm{up}}_{\xi,t,j}
 ```
 
 ### `Process-p-ramp_limit_down-run-bigM`
@@ -10264,10 +10845,7 @@ Process_p_ramp_limit_down_run_big_m:
     lowers internal power no faster than its limit of the chosen build; the big M
     releases the row in the snapshot it turns off
   dims: [scenario, snapshot, process]
-  where: >-
-    Process_com_ext
-    AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-    AND Process_ramps_from_previous
+  where: Process_com_ext AND Process_ramps_down
   expression: >-
     Process_previous_p - Process_p <=
     Process_ramp_down_rate * Process_p_nom_ext
@@ -10275,7 +10853,7 @@ Process_p_ramp_limit_down_run_big_m:
 ```
 
 ```math
-\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j}
+\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \mathrm{prev}^{z,\mathrm{dn}}_{\xi,t,j}
 ```
 
 ### `Process-p-ramp_limit_down-shut-bigM`
@@ -10289,10 +10867,7 @@ Process_p_ramp_limit_down_shut_big_m:
     a committed extendable process ramps no further than its shut-down ramp of
     the chosen build; the big M releases the row everywhere else
   dims: [scenario, snapshot, process]
-  where: >-
-    Process_com_ext
-    AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-    AND Process_ramps_from_previous
+  where: Process_com_ext AND Process_ramps_down
   expression: >-
     Process_previous_p - Process_p <=
     Process_shut_down_rate * Process_p_nom_ext
@@ -10300,7 +10875,7 @@ Process_p_ramp_limit_down_shut_big_m:
 ```
 
 ```math
-\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{dn}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{\xi,t,j}
+\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{dn}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \wedge \mathrm{prev}^{z,\mathrm{dn}}_{\xi,t,j}
 ```
 
 ### `Process-p_nom_modularity`
@@ -10311,12 +10886,12 @@ Process_p_ramp_limit_down_shut_big_m:
 Process_p_nom_modularity:
   description: "`Process-p_nom_modularity` — the chosen build is a whole number of modules"
   dims: [process]
-  where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND Process_active_asset
+  where: Process_ext_asset AND Process_p_nom_mod > 0
   expression: Process_p_nom_ext == Process_p_nom_mod * Process_n_mod
 ```
 
 ```math
-Z_{j} = \mathrm{z}^{\mathrm{mod}}_{j} \cdot N^{z}_{j} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \wedge \mathrm{act}^{z}_{j}
+Z_{j} = \mathrm{z}^{\mathrm{mod}}_{j} \cdot N^{z}_{j} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{act}^{z,\mathrm{ext}}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 ### `Process-com-ext-p-upper-cap`
@@ -10403,12 +10978,12 @@ Process_com_mod_p_lower:
     `Process-com-mod-p-lower` — a committed modular process runs at least
     its minimum of one module, whether the build is fixed or a decision
   dims: [scenario, snapshot, process]
-  where: Process_committed AND Process_p_nom_mod > 0
+  where: Process_com_mod
   expression: Process_p >= Process_p_min_pu * Process_p_nom_mod * (Process_status - Process_maintenance_pu * Process_maintenance_status)
 ```
 
 ```math
-z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{mod}}_{j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{mod}}_{j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,mod}}_{t,j}
 ```
 
 ### `Process-com-mod-p-upper`
@@ -10421,12 +10996,12 @@ Process_com_mod_p_upper:
     `Process-com-mod-p-upper` — a committed modular process runs at most
     one module's share, whether the build is fixed or a decision
   dims: [scenario, snapshot, process]
-  where: Process_committed AND Process_p_nom_mod > 0
+  where: Process_com_mod
   expression: Process_p <= Process_p_max_pu * Process_p_nom_mod * (Process_status - Process_maintenance_pu * Process_maintenance_status)
 ```
 
 ```math
-z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{mod}}_{j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{mod}}_{j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,mod}}_{t,j}
 ```
 
 ### `Process-status-p-fixed-upper`
@@ -10440,12 +11015,12 @@ Process_status_p_fixed_upper:
     place, an explicit row as PyPSA writes it: one where the build is not
     modular, and the fixed build's whole count of modules where it is
   dims: [scenario, snapshot, process]
-  where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
+  where: Process_committed AND NOT Process_com_ext_mod
   expression: Process_status <= Process_modules_installed
 ```
 
 ```math
-u^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+u^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j}
 ```
 
 ### `Process-start_up-p-fixed-upper`
@@ -10459,12 +11034,12 @@ Process_start_up_p_fixed_upper:
     place, an explicit row as PyPSA writes it: one where the build is not
     modular, and the fixed build's whole count of modules where it is
   dims: [scenario, snapshot, process]
-  where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
+  where: Process_committed AND NOT Process_com_ext_mod
   expression: Process_start_up <= Process_modules_installed
 ```
 
 ```math
-\mathit{up}^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+\mathit{up}^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j}
 ```
 
 ### `Process-shut_down-p-fixed-upper`
@@ -10478,12 +11053,12 @@ Process_shut_down_p_fixed_upper:
     place, an explicit row as PyPSA writes it: one where the build is not
     modular, and the fixed build's whole count of modules where it is
   dims: [scenario, snapshot, process]
-  where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
+  where: Process_committed AND NOT Process_com_ext_mod
   expression: Process_shut_down <= Process_modules_installed
 ```
 
 ```math
-\mathit{dn}^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+\mathit{dn}^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j}
 ```
 
 ### `Process-status-p_nom-variable-upper`
@@ -10494,12 +11069,12 @@ Process_shut_down_p_fixed_upper:
 Process_status_p_nom_variable_upper:
   description: "`Process-status-p_nom-variable-upper` — a modular process is on only where a module is built"
   dims: [scenario, snapshot, process]
-  where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
+  where: Process_com_ext_mod
   expression: Process_status <= Process_n_mod
 ```
 
 ```math
-u^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+u^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j}
 ```
 
 ### `Process-start_up-p_nom-variable-upper`
@@ -10510,12 +11085,12 @@ u^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\
 Process_start_up_p_nom_variable_upper:
   description: "`Process-start_up-p_nom-variable-upper` — a modular process starts only where a module is built"
   dims: [scenario, snapshot, process]
-  where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
+  where: Process_com_ext_mod
   expression: Process_start_up <= Process_n_mod
 ```
 
 ```math
-\mathit{up}^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\mathit{up}^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j}
 ```
 
 ### `Process-shut_down-p_nom-variable-upper`
@@ -10526,12 +11101,12 @@ Process_start_up_p_nom_variable_upper:
 Process_shut_down_p_nom_variable_upper:
   description: "`Process-shut_down-p_nom-variable-upper` — a modular process stops only where a module is built"
   dims: [scenario, snapshot, process]
-  where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
+  where: Process_com_ext_mod
   expression: Process_shut_down <= Process_n_mod
 ```
 
 ```math
-\mathit{dn}^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\mathit{dn}^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext,mod}}_{t,j}
 ```
 
 ### `Process-maint-event-count`
@@ -10561,12 +11136,12 @@ Process_maint_window:
     started covers the snapshot; two events do not overlap, since the
     maintenance status is at most one
   dims: [scenario, snapshot, process]
-  where: Process_maintainable AND Process_active
+  where: Process_maintained
   expression: Process_maintenance == sum(Process_maintenance_start, over=start, by=Process_maintenance_cover[covered])
 ```
 
 ```math
-\mu^{z}_{\xi,t,j} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ j,\ t',\ t \right) \in \mathrm{Process\_maintenance\_cover}} \mu^{z,\mathrm{up}}_{\xi,t',j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j}
+\mu^{z}_{\xi,t,j} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ j,\ t',\ t \right) \in \mathrm{Process\_maintenance\_cover}} \mu^{z,\mathrm{up}}_{\xi,t',j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{mnt}}_{t,j}
 ```
 
 ### `Process-maint-start-horizon`
@@ -10577,12 +11152,12 @@ Process_maint_window:
 Process_maint_start_horizon:
   description: "`Process-maint-start-horizon` — no event starts where it could not run its whole duration"
   dims: [scenario, snapshot, process]
-  where: Process_maintainable AND Process_active AND Process_maintenance_start_blocked
+  where: Process_maintained AND Process_maintenance_start_blocked
   expression: Process_maintenance_start == 0
 ```
 
 ```math
-\mu^{z,\mathrm{up}}_{\xi,t,j} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{t,j} \wedge \mathrm{blk}^{z}_{\xi,t,j}
+\mu^{z,\mathrm{up}}_{\xi,t,j} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{mnt}}_{t,j} \wedge \mathrm{blk}^{z}_{\xi,t,j}
 ```
 
 ### `Process-maintcap_upper`
@@ -10659,12 +11234,12 @@ Process_maintcap_lower_nommin:
 Process_maint_status_le_status:
   description: "`Process-maint-status-le-status` — the status in maintenance is at most the status"
   dims: [scenario, snapshot, process]
-  where: Process_maintainable AND Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
+  where: Process_maintainable AND Process_com_fix
   expression: Process_maintenance_status <= Process_status
 ```
 
 ```math
-\mu^{z,u}_{\xi,t,j} \le u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+\mu^{z,u}_{\xi,t,j} \le u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com,fix}}_{t,j}
 ```
 
 ### `Process-maint-status-le-maint`
@@ -10675,12 +11250,12 @@ Process_maint_status_le_status:
 Process_maint_status_le_maint:
   description: "`Process-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
   dims: [scenario, snapshot, process]
-  where: Process_maintainable AND Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
+  where: Process_maintainable AND Process_com_fix
   expression: Process_maintenance_status <= Process_maintenance
 ```
 
 ```math
-\mu^{z,u}_{\xi,t,j} \le \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+\mu^{z,u}_{\xi,t,j} \le \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com,fix}}_{t,j}
 ```
 
 ### `Process-maint-status-lb`
@@ -10691,12 +11266,12 @@ Process_maint_status_le_maint:
 Process_maint_status_lb:
   description: "`Process-maint-status-lb` — on and in maintenance, the status in maintenance is one"
   dims: [scenario, snapshot, process]
-  where: Process_maintainable AND Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
+  where: Process_maintainable AND Process_com_fix
   expression: Process_maintenance_status >= Process_status + Process_maintenance - 1
 ```
 
 ```math
-\mu^{z,u}_{\xi,t,j} \ge u^{z}_{\xi,t,j} + \mu^{z}_{\xi,t,j} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+\mu^{z,u}_{\xi,t,j} \ge u^{z}_{\xi,t,j} + \mu^{z}_{\xi,t,j} - 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com,fix}}_{t,j}
 ```
 
 ### `Process-maint-modstatus-le-status`
@@ -10707,12 +11282,12 @@ Process_maint_status_lb:
 Process_maint_modstatus_le_status:
   description: "`Process-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
   dims: [scenario, snapshot, process]
-  where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
+  where: Process_maintainable AND Process_com_mod
   expression: Process_maintenance_status <= Process_status
 ```
 
 ```math
-\mu^{z,u}_{\xi,t,j} \le u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\mu^{z,u}_{\xi,t,j} \le u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com,mod}}_{t,j}
 ```
 
 ### `Process-maint-modstatus-le-maint`
@@ -10725,12 +11300,12 @@ Process_maint_modstatus_le_maint:
     `Process-maint-modstatus-le-maint` — out of maintenance, no module is on in
     maintenance; in it, at most the modules the build cap holds
   dims: [scenario, snapshot, process]
-  where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
+  where: Process_maintainable AND Process_com_mod
   expression: Process_maintenance_status <= Process_p_nom_max / Process_p_nom_mod * Process_maintenance
 ```
 
 ```math
-\mu^{z,u}_{\xi,t,j} \le \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\mu^{z,u}_{\xi,t,j} \le \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \mu^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com,mod}}_{t,j}
 ```
 
 ### `Process-maint-modstatus-lb`
@@ -10741,12 +11316,12 @@ Process_maint_modstatus_le_maint:
 Process_maint_modstatus_lb:
   description: "`Process-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
   dims: [scenario, snapshot, process]
-  where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
+  where: Process_maintainable AND Process_com_mod
   expression: Process_maintenance_status >= Process_status - Process_p_nom_max / Process_p_nom_mod * (1 - Process_maintenance)
 ```
 
 ```math
-\mu^{z,u}_{\xi,t,j} \ge u^{z}_{\xi,t,j} - \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \left( 1 - \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{t,j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\mu^{z,u}_{\xi,t,j} \ge u^{z}_{\xi,t,j} - \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \left( 1 - \mu^{z}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com,mod}}_{t,j}
 ```
 
 ### `Line-fix-s-lower`
@@ -10757,12 +11332,12 @@ Process_maint_modstatus_lb:
 Line_fix_s_lower:
   description: "`Line-fix-s-lower` — a fixed line carries at least the negative of its rating, the loss counted against it"
   dims: [scenario, snapshot, line]
-  where: not Line_s_nom_extendable AND Line_active
+  where: Line_fix
   expression: Line_s - Line_loss >= -Line_s_max_pu * Line_s_nom
 ```
 
 ```math
-s_{\xi,t,k} - \ell_{\xi,t,k} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \mathrm{on}^{s}_{t,k}
+s_{\xi,t,k} - \ell_{\xi,t,k} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{fix}}_{t,k}
 ```
 
 ### `Line-fix-s-upper`
@@ -10773,12 +11348,12 @@ s_{\xi,t,k} - \ell_{\xi,t,k} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{
 Line_fix_s_upper:
   description: "`Line-fix-s-upper` — a fixed line carries at most its rating, the loss included"
   dims: [scenario, snapshot, line]
-  where: not Line_s_nom_extendable AND Line_active
+  where: Line_fix
   expression: Line_s + Line_loss <= Line_s_max_pu * Line_s_nom
 ```
 
 ```math
-s_{\xi,t,k} + \ell_{\xi,t,k} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \mathrm{on}^{s}_{t,k}
+s_{\xi,t,k} + \ell_{\xi,t,k} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{fix}}_{t,k}
 ```
 
 ### `Line-ext-s-lower`
@@ -10789,12 +11364,12 @@ s_{\xi,t,k} + \ell_{\xi,t,k} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s
 Line_ext_s_lower:
   description: "`Line-ext-s-lower` — an extendable line carries at least the negative of its rating of the chosen build, the loss counted against it"
   dims: [scenario, snapshot, line]
-  where: Line_s_nom_extendable AND Line_active
+  where: Line_ext
   expression: Line_s - Line_loss >= -Line_s_max_pu * Line_s_nom_ext
 ```
 
 ```math
-s_{\xi,t,k} - \ell_{\xi,t,k} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{on}^{s}_{t,k}
+s_{\xi,t,k} - \ell_{\xi,t,k} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{ext}}_{t,k}
 ```
 
 ### `Line-ext-s-upper`
@@ -10805,12 +11380,12 @@ s_{\xi,t,k} - \ell_{\xi,t,k} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \q
 Line_ext_s_upper:
   description: "`Line-ext-s-upper` — an extendable line carries at most its rating of the chosen build, the loss included"
   dims: [scenario, snapshot, line]
-  where: Line_s_nom_extendable AND Line_active
+  where: Line_ext
   expression: Line_s + Line_loss <= Line_s_max_pu * Line_s_nom_ext
 ```
 
 ```math
-s_{\xi,t,k} + \ell_{\xi,t,k} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{on}^{s}_{t,k}
+s_{\xi,t,k} + \ell_{\xi,t,k} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{ext}}_{t,k}
 ```
 
 ### `Line-ext-s_nom-lower`
@@ -10821,12 +11396,12 @@ s_{\xi,t,k} + \ell_{\xi,t,k} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qq
 Line_ext_s_nom_lower:
   description: "`Line-ext-s_nom-lower` — the chosen build is at least its floor in every scenario"
   dims: [scenario, line]
-  where: Line_s_nom_extendable AND Line_active_asset
+  where: Line_ext_asset
   expression: Line_s_nom_ext >= Line_s_nom_min
 ```
 
 ```math
-S_{k} \ge \underline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k}
+S_{k} \ge \underline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{act}^{s,\mathrm{ext}}_{k}
 ```
 
 ### `Line-ext-s_nom-upper`
@@ -10869,12 +11444,12 @@ S_{k} = \mathrm{s}^{\mathrm{nom,set}}_{k} \qquad \forall\, k \in \mathcal{K} \,:
 Line_s_nom_modularity:
   description: "`Line-s_nom_modularity` — the chosen build is a whole number of modules"
   dims: [line]
-  where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND Line_active_asset
+  where: Line_ext_asset AND Line_s_nom_mod > 0
   expression: Line_s_nom_ext == Line_s_nom_mod * Line_n_mod
 ```
 
 ```math
-S_{k} = \mathrm{s}^{\mathrm{mod}}_{k} \cdot N^{s}_{k} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0 \wedge \mathrm{act}^{s}_{k}
+S_{k} = \mathrm{s}^{\mathrm{mod}}_{k} \cdot N^{s}_{k} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{act}^{s,\mathrm{ext}}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0
 ```
 
 ### `Line-s_set`
@@ -10992,12 +11567,12 @@ Line_loss_tangents_reverse:
 Transformer_fix_s_lower:
   description: "`Transformer-fix-s-lower` — a fixed transformer carries at least the negative of its rating, the loss counted against it"
   dims: [scenario, snapshot, transformer]
-  where: not Transformer_s_nom_extendable AND Transformer_active
+  where: Transformer_fix
   expression: Transformer_s - Transformer_loss >= -Transformer_s_max_pu * Transformer_s_nom
 ```
 
 ```math
-\sigma_{\xi,t,m} - \ell^{\sigma}_{\xi,t,m} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\sigma_{\xi,t,m} - \ell^{\sigma}_{\xi,t,m} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{fix}}_{t,m}
 ```
 
 ### `Transformer-fix-s-upper`
@@ -11008,12 +11583,12 @@ Transformer_fix_s_lower:
 Transformer_fix_s_upper:
   description: "`Transformer-fix-s-upper` — a fixed transformer carries at most its rating, the loss included"
   dims: [scenario, snapshot, transformer]
-  where: not Transformer_s_nom_extendable AND Transformer_active
+  where: Transformer_fix
   expression: Transformer_s + Transformer_loss <= Transformer_s_max_pu * Transformer_s_nom
 ```
 
 ```math
-\sigma_{\xi,t,m} + \ell^{\sigma}_{\xi,t,m} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\sigma_{\xi,t,m} + \ell^{\sigma}_{\xi,t,m} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{fix}}_{t,m}
 ```
 
 ### `Transformer-ext-s-lower`
@@ -11024,12 +11599,12 @@ Transformer_fix_s_upper:
 Transformer_ext_s_lower:
   description: "`Transformer-ext-s-lower` — an extendable transformer carries at least the negative of its rating of the chosen build, the loss counted against it"
   dims: [scenario, snapshot, transformer]
-  where: Transformer_s_nom_extendable AND Transformer_active
+  where: Transformer_ext
   expression: Transformer_s - Transformer_loss >= -Transformer_s_max_pu * Transformer_s_nom_ext
 ```
 
 ```math
-\sigma_{\xi,t,m} - \ell^{\sigma}_{\xi,t,m} \ge -\overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\sigma_{\xi,t,m} - \ell^{\sigma}_{\xi,t,m} \ge -\overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{ext}}_{t,m}
 ```
 
 ### `Transformer-ext-s-upper`
@@ -11040,12 +11615,12 @@ Transformer_ext_s_lower:
 Transformer_ext_s_upper:
   description: "`Transformer-ext-s-upper` — an extendable transformer carries at most its rating of the chosen build, the loss included"
   dims: [scenario, snapshot, transformer]
-  where: Transformer_s_nom_extendable AND Transformer_active
+  where: Transformer_ext
   expression: Transformer_s + Transformer_loss <= Transformer_s_max_pu * Transformer_s_nom_ext
 ```
 
 ```math
-\sigma_{\xi,t,m} + \ell^{\sigma}_{\xi,t,m} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\sigma_{\xi,t,m} + \ell^{\sigma}_{\xi,t,m} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{ext}}_{t,m}
 ```
 
 ### `Transformer-ext-s_nom-lower`
@@ -11056,12 +11631,12 @@ Transformer_ext_s_upper:
 Transformer_ext_s_nom_lower:
   description: "`Transformer-ext-s_nom-lower` — the chosen build is at least its floor in every scenario"
   dims: [scenario, transformer]
-  where: Transformer_s_nom_extendable AND Transformer_active_asset
+  where: Transformer_ext_asset
   expression: Transformer_s_nom_ext >= Transformer_s_nom_min
 ```
 
 ```math
-\Sigma_{m} \ge \underline{\sigma}^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{act}^{\sigma}_{m}
+\Sigma_{m} \ge \underline{\sigma}^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ m \in \mathcal{M} \,:\, \mathrm{act}^{\sigma,\mathrm{ext}}_{m}
 ```
 
 ### `Transformer-ext-s_nom-upper`
@@ -11104,12 +11679,12 @@ Transformer_s_nom_set:
 Transformer_s_nom_modularity:
   description: "`Transformer-s_nom_modularity` — the chosen build is a whole number of modules"
   dims: [transformer]
-  where: Transformer_s_nom_extendable AND Transformer_s_nom_mod > 0 AND Transformer_active_asset
+  where: Transformer_ext_asset AND Transformer_s_nom_mod > 0
   expression: Transformer_s_nom_ext == Transformer_s_nom_mod * Transformer_n_mod
 ```
 
 ```math
-\Sigma_{m} = \sigma^{\mathrm{mod}}_{m} \cdot N^{\sigma}_{m} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0 \wedge \mathrm{act}^{\sigma}_{m}
+\Sigma_{m} = \sigma^{\mathrm{mod}}_{m} \cdot N^{\sigma}_{m} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{act}^{\sigma,\mathrm{ext}}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0
 ```
 
 ### `Transformer-s_set`
@@ -11482,16 +12057,12 @@ Generator_p_ramp_limit_up:
     `p_init` gives the output it brought in, and no unit carries one at
     the start of a later investment period — nor does any unit a big M releases instead
   dims: [scenario, snapshot, generator]
-  where: >-
-    (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-    AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-    AND Generator_ramps_from_previous
-    AND Generator_active
+  where: Generator_ramps_up AND Generator_active AND NOT Generator_com_ext
   expression: Generator_p - Generator_previous_p <= Generator_ramp_up_allowance
 ```
 
 ```math
-p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \Delta^{+}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \mathrm{prev}_{\xi,t,g} \wedge \mathrm{on}_{t,g}
+p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \Delta^{+}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{prev}^{\mathrm{up}}_{\xi,t,g} \wedge \mathrm{on}_{t,g} \wedge \neg \mathrm{on}^{\mathrm{com,ext}}_{t,g}
 ```
 
 ### `Generator-p-ramp_limit_down`
@@ -11508,16 +12079,12 @@ Generator_p_ramp_limit_down:
     `p_init` gives the output it brought in, and no unit carries one at
     the start of a later investment period — nor does any unit a big M releases instead
   dims: [scenario, snapshot, generator]
-  where: >-
-    (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-    AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-    AND Generator_ramps_from_previous
-    AND Generator_active
+  where: Generator_ramps_down AND Generator_active AND NOT Generator_com_ext
   expression: Generator_previous_p - Generator_p <= Generator_ramp_down_allowance
 ```
 
 ```math
-\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \Delta^{-}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \mathrm{prev}_{\xi,t,g} \wedge \mathrm{on}_{t,g}
+\overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \Delta^{-}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{prev}^{\mathrm{dn}}_{\xi,t,g} \wedge \mathrm{on}_{t,g} \wedge \neg \mathrm{on}^{\mathrm{com,ext}}_{t,g}
 ```
 
 ### `Link-p-ramp_limit_up`
@@ -11534,16 +12101,12 @@ Link_p_ramp_limit_up:
     `p_init` gives the flow it brought in, and no link carries one at
     the start of a later investment period — nor does any link a big M releases instead
   dims: [scenario, snapshot, link]
-  where: >-
-    (Link_ramp_limit_up OR Link_ramp_limit_start_up)
-    AND NOT (Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0))
-    AND Link_ramps_from_previous
-    AND Link_active
+  where: Link_ramps_up AND Link_active AND NOT Link_com_ext
   expression: Link_p - Link_previous_p <= Link_ramp_up_allowance
 ```
 
 ```math
-f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \Delta^{f,+}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \right) \wedge \mathrm{prev}^{f}_{\xi,t,l} \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \Delta^{f,+}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{prev}^{f,\mathrm{up}}_{\xi,t,l} \wedge \mathrm{on}^{f}_{t,l} \wedge \neg \mathrm{on}^{f,\mathrm{com,ext}}_{t,l}
 ```
 
 ### `Link-p-ramp_limit_down`
@@ -11560,16 +12123,12 @@ Link_p_ramp_limit_down:
     `p_init` gives the flow it brought in, and no link carries one at
     the start of a later investment period — nor does any link a big M releases instead
   dims: [scenario, snapshot, link]
-  where: >-
-    (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
-    AND NOT (Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0))
-    AND Link_ramps_from_previous
-    AND Link_active
+  where: Link_ramps_down AND Link_active AND NOT Link_com_ext
   expression: Link_previous_p - Link_p <= Link_ramp_down_allowance
 ```
 
 ```math
-\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \Delta^{f,-}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \left( \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \right) \wedge \mathrm{prev}^{f}_{\xi,t,l} \wedge \mathrm{on}^{f}_{t,l}
+\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \Delta^{f,-}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{prev}^{f,\mathrm{dn}}_{\xi,t,l} \wedge \mathrm{on}^{f}_{t,l} \wedge \neg \mathrm{on}^{f,\mathrm{com,ext}}_{t,l}
 ```
 
 ### `Process-p-ramp_limit_up`
@@ -11586,16 +12145,12 @@ Process_p_ramp_limit_up:
     `p_init` gives the internal power it brought in, and no process carries one at
     the start of a later investment period — nor does any process a big M releases instead
   dims: [scenario, snapshot, process]
-  where: >-
-    (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-    AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-    AND Process_ramps_from_previous
-    AND Process_active
+  where: Process_ramps_up AND Process_active AND NOT Process_com_ext
   expression: Process_p - Process_previous_p <= Process_ramp_up_allowance
 ```
 
 ```math
-z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \Delta^{z,+}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \mathrm{prev}^{z}_{\xi,t,j} \wedge \mathrm{on}^{z}_{t,j}
+z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \Delta^{z,+}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{prev}^{z,\mathrm{up}}_{\xi,t,j} \wedge \mathrm{on}^{z}_{t,j} \wedge \neg \mathrm{on}^{z,\mathrm{com,ext}}_{t,j}
 ```
 
 ### `Process-p-ramp_limit_down`
@@ -11612,16 +12167,12 @@ Process_p_ramp_limit_down:
     `p_init` gives the internal power it brought in, and no process carries one at
     the start of a later investment period — nor does any process a big M releases instead
   dims: [scenario, snapshot, process]
-  where: >-
-    (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-    AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-    AND Process_ramps_from_previous
-    AND Process_active
+  where: Process_ramps_down AND Process_active AND NOT Process_com_ext
   expression: Process_previous_p - Process_p <= Process_ramp_down_allowance
 ```
 
 ```math
-\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \Delta^{z,-}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \mathrm{prev}^{z}_{\xi,t,j} \wedge \mathrm{on}^{z}_{t,j}
+\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \Delta^{z,-}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{prev}^{z,\mathrm{dn}}_{\xi,t,j} \wedge \mathrm{on}^{z}_{t,j} \wedge \neg \mathrm{on}^{z,\mathrm{com,ext}}_{t,j}
 ```
 
 ### `StorageUnit-ext-p_dispatch-lower`
@@ -11730,12 +12281,12 @@ StorageUnit_ext_state_of_charge_upper:
 StorageUnit_ext_p_nom_lower:
   description: "`StorageUnit-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
   dims: [scenario, storage_unit]
-  where: StorageUnit_p_nom_extendable AND StorageUnit_active_asset
+  where: StorageUnit_ext_asset
   expression: StorageUnit_p_nom_ext >= StorageUnit_p_nom_min
 ```
 
 ```math
-H_{s} \ge \underline{\mathrm{h}}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{act}^{h}_{s}
+H_{s} \ge \underline{\mathrm{h}}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{act}^{h,\mathrm{ext}}_{s}
 ```
 
 ### `StorageUnit-ext-p_nom-upper`
@@ -11778,12 +12329,12 @@ H_{s} = \mathrm{h}^{\mathrm{nom,set}}_{s} \qquad \forall\, s \in \mathcal{S} \,:
 StorageUnit_p_nom_modularity:
   description: "`StorageUnit-p_nom_modularity` — the chosen build is a whole number of modules"
   dims: [storage_unit]
-  where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_mod > 0 AND StorageUnit_active_asset
+  where: StorageUnit_ext_asset AND StorageUnit_p_nom_mod > 0
   expression: StorageUnit_p_nom_ext == StorageUnit_p_nom_mod * StorageUnit_n_mod
 ```
 
 ```math
-H_{s} = \mathrm{h}^{\mathrm{mod}}_{s} \cdot N^{h}_{s} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{h}^{\mathrm{mod}}_{s} > 0 \wedge \mathrm{act}^{h}_{s}
+H_{s} = \mathrm{h}^{\mathrm{mod}}_{s} \cdot N^{h}_{s} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{act}^{h,\mathrm{ext}}_{s} \wedge \mathrm{h}^{\mathrm{mod}}_{s} > 0
 ```
 
 ### `StorageUnit-energy_balance`
@@ -11818,12 +12369,12 @@ StorageUnit_energy_balance:
 Store_fix_e_lower:
   description: "`Store-fix-e-lower` — a fixed store holds at least its floor"
   dims: [scenario, snapshot, store]
-  where: not Store_e_nom_extendable AND Store_active
+  where: Store_fix
   expression: Store_e >= Store_e_min_pu * Store_e_nom
 ```
 
 ```math
-e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
+e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e,\mathrm{fix}}_{t,v}
 ```
 
 ### `Store-fix-e-upper`
@@ -11834,12 +12385,12 @@ e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}
 Store_fix_e_upper:
   description: "`Store-fix-e-upper` — a fixed store holds at most its nominal capacity"
   dims: [scenario, snapshot, store]
-  where: not Store_e_nom_extendable AND Store_active
+  where: Store_fix
   expression: Store_e <= Store_e_max_pu * Store_e_nom
 ```
 
 ```math
-e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
+e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e,\mathrm{fix}}_{t,v}
 ```
 
 ### `Store-ext-e-lower`
@@ -11850,12 +12401,12 @@ e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_
 Store_ext_e_lower:
   description: "`Store-ext-e-lower` — an extendable store holds at least its floor of the chosen build"
   dims: [scenario, snapshot, store]
-  where: Store_e_nom_extendable AND Store_active
+  where: Store_ext
   expression: Store_e >= Store_e_min_pu * Store_e_nom_ext
 ```
 
 ```math
-e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
+e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e,\mathrm{ext}}_{t,v}
 ```
 
 ### `Store-ext-e-upper`
@@ -11866,12 +12417,12 @@ e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \x
 Store_ext_e_upper:
   description: "`Store-ext-e-upper` — an extendable store holds at most the chosen build"
   dims: [scenario, snapshot, store]
-  where: Store_e_nom_extendable AND Store_active
+  where: Store_ext
   expression: Store_e <= Store_e_max_pu * Store_e_nom_ext
 ```
 
 ```math
-e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
+e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e,\mathrm{ext}}_{t,v}
 ```
 
 ### `Store-ext-e_nom-lower`
@@ -11882,12 +12433,12 @@ e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi
 Store_ext_e_nom_lower:
   description: "`Store-ext-e_nom-lower` — the chosen build is at least its floor in every scenario"
   dims: [scenario, store]
-  where: Store_e_nom_extendable AND Store_active_asset
+  where: Store_ext_asset
   expression: Store_e_nom_ext >= Store_e_nom_min
 ```
 
 ```math
-E_{v} \ge \underline{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v}
+E_{v} \ge \underline{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{act}^{e,\mathrm{ext}}_{v}
 ```
 
 ### `Store-ext-e_nom-upper`
@@ -11930,12 +12481,12 @@ E_{v} = \mathrm{e}^{\mathrm{nom,set}}_{v} \qquad \forall\, v \in \mathcal{V} \,:
 Store_e_nom_modularity:
   description: "`Store-e_nom_modularity` — the chosen build is a whole number of modules"
   dims: [store]
-  where: Store_e_nom_extendable AND Store_e_nom_mod > 0 AND Store_active_asset
+  where: Store_ext_asset AND Store_e_nom_mod > 0
   expression: Store_e_nom_ext == Store_e_nom_mod * Store_n_mod
 ```
 
 ```math
-E_{v} = \mathrm{e}^{\mathrm{mod}}_{v} \cdot N^{e}_{v} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0 \wedge \mathrm{act}^{e}_{v}
+E_{v} = \mathrm{e}^{\mathrm{mod}}_{v} \cdot N^{e}_{v} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{act}^{e,\mathrm{ext}}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0
 ```
 
 ### `Store-energy_balance`

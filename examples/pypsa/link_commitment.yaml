@@ -162,17 +162,34 @@ masks:
       AND Link_p_nom_extendable
       AND NOT (Link_p_nom_mod > 0)
       AND Link_active
+  Link_com_fix:
+    description: >-
+      a committable link with a fixed, non-modular build that stands in
+      the snapshot's period — PyPSA's `com` rows
+    where: Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
+  Link_com_mod:
+    description: >-
+      a committable link with a modular build that stands in the
+      snapshot's period — PyPSA's `com-mod` rows, whose status counts
+      modules
+    where: Link_committed AND Link_p_nom_mod > 0
+  Link_com_ext_mod:
+    description: >-
+      a committable link with an extendable, modular build that stands in
+      the snapshot's period — its status is bounded by the chosen number
+      of modules
+    where: Link_committed AND Link_p_nom_extendable AND Link_p_nom_mod > 0
 
 constraints:
   Link_com_p_lower:
     description: "`Link-com-p-lower` — a committed link flows at least its minimum; off, at least nothing"
     dims: [scenario, snapshot, link]
-    where: Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
+    where: Link_com_fix
     expression: Link_p >= Link_p_min_pu * Link_p_nom * (Link_status - Link_maintenance_pu * Link_maintenance_status)
   Link_com_p_upper:
     description: "`Link-com-p-upper` — a committed link flows at most what is available; off, at most nothing"
     dims: [scenario, snapshot, link]
-    where: Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
+    where: Link_com_fix
     expression: Link_p <= Link_p_max_pu * Link_p_nom * (Link_status - Link_maintenance_pu * Link_maintenance_status)
   Link_com_transition_start_up:
     description: "`Link-com-transition-start-up` — turning on is a start, counted against the state the link carried into the snapshot"
@@ -247,14 +264,14 @@ constraints:
       `Link-com-mod-p-lower` — a committed modular link flows at least
       its minimum of one module, whether the build is fixed or a decision
     dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_p_nom_mod > 0
+    where: Link_com_mod
     expression: Link_p >= Link_p_min_pu * Link_p_nom_mod * (Link_status - Link_maintenance_pu * Link_maintenance_status)
   Link_com_mod_p_upper:
     description: >-
       `Link-com-mod-p-upper` — a committed modular link flows at most
       one module's share, whether the build is fixed or a decision
     dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_p_nom_mod > 0
+    where: Link_com_mod
     expression: Link_p <= Link_p_max_pu * Link_p_nom_mod * (Link_status - Link_maintenance_pu * Link_maintenance_status)
   Link_status_p_fixed_upper:
     description: >-
@@ -262,7 +279,7 @@ constraints:
       place, an explicit row as PyPSA writes it: one where the build is not
       modular, and the fixed build's whole count of modules where it is
     dims: [scenario, snapshot, link]
-    where: Link_committed AND NOT (Link_p_nom_extendable AND Link_p_nom_mod > 0)
+    where: Link_committed AND NOT Link_com_ext_mod
     expression: Link_status <= Link_modules_installed
   Link_start_up_p_fixed_upper:
     description: >-
@@ -270,7 +287,7 @@ constraints:
       place, an explicit row as PyPSA writes it: one where the build is not
       modular, and the fixed build's whole count of modules where it is
     dims: [scenario, snapshot, link]
-    where: Link_committed AND NOT (Link_p_nom_extendable AND Link_p_nom_mod > 0)
+    where: Link_committed AND NOT Link_com_ext_mod
     expression: Link_start_up <= Link_modules_installed
   Link_shut_down_p_fixed_upper:
     description: >-
@@ -278,20 +295,20 @@ constraints:
       place, an explicit row as PyPSA writes it: one where the build is not
       modular, and the fixed build's whole count of modules where it is
     dims: [scenario, snapshot, link]
-    where: Link_committed AND NOT (Link_p_nom_extendable AND Link_p_nom_mod > 0)
+    where: Link_committed AND NOT Link_com_ext_mod
     expression: Link_shut_down <= Link_modules_installed
   Link_status_p_nom_variable_upper:
     description: "`Link-status-p_nom-variable-upper` — a modular link is on only where a module is built"
     dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_p_nom_extendable AND Link_p_nom_mod > 0
+    where: Link_com_ext_mod
     expression: Link_status <= Link_n_mod
   Link_start_up_p_nom_variable_upper:
     description: "`Link-start_up-p_nom-variable-upper` — a modular link starts only where a module is built"
     dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_p_nom_extendable AND Link_p_nom_mod > 0
+    where: Link_com_ext_mod
     expression: Link_start_up <= Link_n_mod
   Link_shut_down_p_nom_variable_upper:
     description: "`Link-shut_down-p_nom-variable-upper` — a modular link stops only where a module is built"
     dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_p_nom_extendable AND Link_p_nom_mod > 0
+    where: Link_com_ext_mod
     expression: Link_shut_down <= Link_n_mod

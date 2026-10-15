@@ -4,10 +4,8 @@
 
 given:
   parameters:
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
     Generator_committable: { dims: [generator], dtype: bool }
     Generator_status_initial: { dims: [scenario, generator], dtype: int }
-    Generator_p_nom_mod: { dims: [generator] }
     Generator_big_m: { dims: [scenario, generator] }
     Generator_active: { dims: [snapshot, generator], dtype: bool }
   variables:
@@ -148,6 +146,22 @@ masks:
     where: >-
       position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
       (Generator_status_initial == 0 OR Generator_p_init))
+  Generator_ramps_up:
+    description: >-
+      a snapshot whose rise in output a ramp limit bounds — the generator
+      has a ramp-up or start-up limit, and the snapshot reads a previous
+      output
+    where: >-
+      (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
+      AND Generator_ramps_from_previous
+  Generator_ramps_down:
+    description: >-
+      a snapshot whose fall in output a ramp limit bounds — the generator
+      has a ramp-down or shut-down limit, and the snapshot reads a
+      previous output
+    where: >-
+      (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
+      AND Generator_ramps_from_previous
 
 constraints:
   Generator_p_ramp_limit_up_run_big_m:
@@ -156,10 +170,7 @@ constraints:
       raises output no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns on
     dims: [scenario, snapshot, generator]
-    where: >-
-      Generator_com_ext
-      AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND Generator_ramps_from_previous
+    where: Generator_com_ext AND Generator_ramps_up
     expression: >-
       Generator_p - Generator_previous_p <=
       Generator_ramp_up_rate * Generator_p_nom_ext
@@ -170,10 +181,7 @@ constraints:
       committed extendable unit ramps no further than its start-up ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, generator]
-    where: >-
-      Generator_com_ext
-      AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND Generator_ramps_from_previous
+    where: Generator_com_ext AND Generator_ramps_up
     expression: >-
       Generator_p - Generator_previous_p <=
       Generator_start_up_rate * Generator_p_nom_ext
@@ -184,10 +192,7 @@ constraints:
       lowers output no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns off
     dims: [scenario, snapshot, generator]
-    where: >-
-      Generator_com_ext
-      AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND Generator_ramps_from_previous
+    where: Generator_com_ext AND Generator_ramps_down
     expression: >-
       Generator_previous_p - Generator_p <=
       Generator_ramp_down_rate * Generator_p_nom_ext
@@ -198,10 +203,7 @@ constraints:
       a committed extendable unit ramps no further than its shut-down ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, generator]
-    where: >-
-      Generator_com_ext
-      AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND Generator_ramps_from_previous
+    where: Generator_com_ext AND Generator_ramps_down
     expression: >-
       Generator_previous_p - Generator_p <=
       Generator_shut_down_rate * Generator_p_nom_ext
@@ -215,11 +217,7 @@ constraints:
       `p_init` gives the output it brought in, and no unit carries one at
       the start of a later investment period — nor does any unit a big M releases instead
     dims: [scenario, snapshot, generator]
-    where: >-
-      (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-      AND Generator_ramps_from_previous
-      AND Generator_active
+    where: Generator_ramps_up AND Generator_active AND NOT Generator_com_ext
     expression: Generator_p - Generator_previous_p <= Generator_ramp_up_allowance
   Generator_p_ramp_limit_down:
     description: >-
@@ -230,11 +228,7 @@ constraints:
       `p_init` gives the output it brought in, and no unit carries one at
       the start of a later investment period — nor does any unit a big M releases instead
     dims: [scenario, snapshot, generator]
-    where: >-
-      (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-      AND Generator_ramps_from_previous
-      AND Generator_active
+    where: Generator_ramps_down AND Generator_active AND NOT Generator_com_ext
     expression: Generator_previous_p - Generator_p <= Generator_ramp_down_allowance
 
 assumptions:

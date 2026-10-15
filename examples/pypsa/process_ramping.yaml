@@ -4,10 +4,8 @@
 
 given:
   parameters:
-    Process_p_nom_extendable: { dims: [process], dtype: bool }
     Process_committable: { dims: [process], dtype: bool }
     Process_status_initial: { dims: [scenario, process], dtype: int }
-    Process_p_nom_mod: { dims: [process] }
     Process_big_m: { dims: [scenario, process] }
     Process_active: { dims: [snapshot, process], dtype: bool }
   variables:
@@ -148,6 +146,22 @@ masks:
     where: >-
       position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
       (Process_status_initial == 0 OR Process_p_init))
+  Process_ramps_up:
+    description: >-
+      a snapshot whose rise in output a ramp limit bounds — the process
+      has a ramp-up or start-up limit, and the snapshot reads a previous
+      output
+    where: >-
+      (Process_ramp_limit_up OR Process_ramp_limit_start_up)
+      AND Process_ramps_from_previous
+  Process_ramps_down:
+    description: >-
+      a snapshot whose fall in output a ramp limit bounds — the process
+      has a ramp-down or shut-down limit, and the snapshot reads a
+      previous output
+    where: >-
+      (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
+      AND Process_ramps_from_previous
 
 constraints:
   Process_p_ramp_limit_up_run_big_m:
@@ -156,7 +170,7 @@ constraints:
       raises internal power no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns on
     dims: [scenario, snapshot, process]
-    where: Process_com_ext AND (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND Process_ramps_from_previous
+    where: Process_com_ext AND Process_ramps_up
     expression: >-
       Process_p - Process_previous_p <=
       Process_ramp_up_rate * Process_p_nom_ext
@@ -167,7 +181,7 @@ constraints:
       committed extendable process ramps no further than its start-up ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, process]
-    where: Process_com_ext AND (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND Process_ramps_from_previous
+    where: Process_com_ext AND Process_ramps_up
     expression: >-
       Process_p - Process_previous_p <=
       Process_start_up_rate * Process_p_nom_ext
@@ -178,10 +192,7 @@ constraints:
       lowers internal power no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns off
     dims: [scenario, snapshot, process]
-    where: >-
-      Process_com_ext
-      AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND Process_ramps_from_previous
+    where: Process_com_ext AND Process_ramps_down
     expression: >-
       Process_previous_p - Process_p <=
       Process_ramp_down_rate * Process_p_nom_ext
@@ -192,10 +203,7 @@ constraints:
       a committed extendable process ramps no further than its shut-down ramp of
       the chosen build; the big M releases the row everywhere else
     dims: [scenario, snapshot, process]
-    where: >-
-      Process_com_ext
-      AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND Process_ramps_from_previous
+    where: Process_com_ext AND Process_ramps_down
     expression: >-
       Process_previous_p - Process_p <=
       Process_shut_down_rate * Process_p_nom_ext
@@ -209,11 +217,7 @@ constraints:
       `p_init` gives the internal power it brought in, and no process carries one at
       the start of a later investment period — nor does any process a big M releases instead
     dims: [scenario, snapshot, process]
-    where: >-
-      (Process_ramp_limit_up OR Process_ramp_limit_start_up)
-      AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-      AND Process_ramps_from_previous
-      AND Process_active
+    where: Process_ramps_up AND Process_active AND NOT Process_com_ext
     expression: Process_p - Process_previous_p <= Process_ramp_up_allowance
   Process_p_ramp_limit_down:
     description: >-
@@ -224,11 +228,7 @@ constraints:
       `p_init` gives the internal power it brought in, and no process carries one at
       the start of a later investment period — nor does any process a big M releases instead
     dims: [scenario, snapshot, process]
-    where: >-
-      (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
-      AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-      AND Process_ramps_from_previous
-      AND Process_active
+    where: Process_ramps_down AND Process_active AND NOT Process_com_ext
     expression: Process_previous_p - Process_p <= Process_ramp_down_allowance
 
 assumptions:

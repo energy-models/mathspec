@@ -214,11 +214,11 @@ variables:
       line that is active; the parameter of the same PyPSA name carries the
       fixed regime
     dims: [line]
-    where: Line_s_nom_extendable AND Line_active_asset
+    where: Line_ext_asset
   Line_n_mod:
     description: "`Line-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
     dims: [line]
-    where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND Line_active_asset
+    where: Line_ext_asset AND Line_s_nom_mod > 0
     domain: integer
     bounds:
       lower: 0
@@ -261,6 +261,21 @@ expressions:
     adds_to: Cycle_angle_sum
 
 masks:
+  Line_fix:
+    description: >-
+      a line with a fixed build that stands in the snapshot's period —
+      PyPSA's `fix` rows
+    where: NOT Line_s_nom_extendable AND Line_active
+  Line_ext:
+    description: >-
+      a line with an extendable build that stands in the snapshot's period
+      — PyPSA's `ext` rows
+    where: Line_s_nom_extendable AND Line_active
+  Line_ext_asset:
+    description: >-
+      a line with an extendable build among PyPSA's active assets — the
+      units whose build is a variable
+    where: Line_s_nom_extendable AND Line_active_asset
   Line_lossy:
     description: >-
       a line that stands in the snapshot's period, where the run models
@@ -271,27 +286,27 @@ constraints:
   Line_fix_s_lower:
     description: "`Line-fix-s-lower` — a fixed line carries at least the negative of its rating, the loss counted against it"
     dims: [scenario, snapshot, line]
-    where: not Line_s_nom_extendable AND Line_active
+    where: Line_fix
     expression: Line_s - Line_loss >= -Line_s_max_pu * Line_s_nom
   Line_fix_s_upper:
     description: "`Line-fix-s-upper` — a fixed line carries at most its rating, the loss included"
     dims: [scenario, snapshot, line]
-    where: not Line_s_nom_extendable AND Line_active
+    where: Line_fix
     expression: Line_s + Line_loss <= Line_s_max_pu * Line_s_nom
   Line_ext_s_lower:
     description: "`Line-ext-s-lower` — an extendable line carries at least the negative of its rating of the chosen build, the loss counted against it"
     dims: [scenario, snapshot, line]
-    where: Line_s_nom_extendable AND Line_active
+    where: Line_ext
     expression: Line_s - Line_loss >= -Line_s_max_pu * Line_s_nom_ext
   Line_ext_s_upper:
     description: "`Line-ext-s-upper` — an extendable line carries at most its rating of the chosen build, the loss included"
     dims: [scenario, snapshot, line]
-    where: Line_s_nom_extendable AND Line_active
+    where: Line_ext
     expression: Line_s + Line_loss <= Line_s_max_pu * Line_s_nom_ext
   Line_ext_s_nom_lower:
     description: "`Line-ext-s_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, line]
-    where: Line_s_nom_extendable AND Line_active_asset
+    where: Line_ext_asset
     expression: Line_s_nom_ext >= Line_s_nom_min
   Line_ext_s_nom_upper:
     description: "`Line-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
@@ -306,7 +321,7 @@ constraints:
   Line_s_nom_modularity:
     description: "`Line-s_nom_modularity` — the chosen build is a whole number of modules"
     dims: [line]
-    where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND Line_active_asset
+    where: Line_ext_asset AND Line_s_nom_mod > 0
     expression: Line_s_nom_ext == Line_s_nom_mod * Line_n_mod
   Line_s_set:
     description: "`Line-s_set` — flow pinned to the given schedule, wherever one is given"
@@ -410,6 +425,9 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{on}^{s,\mathrm{fix}}`$ | `Line_fix` over $`\mathcal{T} \times \mathcal{K}`$ — a line with a fixed build that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{s,\mathrm{ext}}`$ | `Line_ext` over $`\mathcal{T} \times \mathcal{K}`$ — a line with an extendable build that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{s,\mathrm{ext}}`$ | `Line_ext_asset` over $`\mathcal{K}`$ — a line with an extendable build among PyPSA's active assets — the units whose build is a variable |
 | $`\mathrm{on}^{s,\mathrm{lossy}}`$ | `Line_lossy` over $`\mathcal{T} \times \mathcal{K}`$ — a line that stands in the snapshot's period, where the run models transmission losses |
 
 #### Variables
@@ -436,6 +454,24 @@ constraints:
 
 #### Masks
 
+**`Line_fix`**
+
+```math
+\mathrm{on}^{s,\mathrm{fix}}_{t,k} \iff \neg \mathrm{ext}^{s}_{k} \wedge \mathrm{on}^{s}_{t,k} \qquad \forall\, t \in \mathcal{T},\ k \in \mathcal{K}
+```
+
+**`Line_ext`**
+
+```math
+\mathrm{on}^{s,\mathrm{ext}}_{t,k} \iff \mathrm{ext}^{s}_{k} \wedge \mathrm{on}^{s}_{t,k} \qquad \forall\, t \in \mathcal{T},\ k \in \mathcal{K}
+```
+
+**`Line_ext_asset`**
+
+```math
+\mathrm{act}^{s,\mathrm{ext}}_{k} \iff \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k} \qquad \forall\, k \in \mathcal{K}
+```
+
 **`Line_lossy`**
 
 ```math
@@ -459,13 +495,13 @@ s_{\xi,t,k} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k 
 **`Line_s_nom_ext`**
 
 ```math
-S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k}
+S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{act}^{s,\mathrm{ext}}_{k}
 ```
 
 **`Line_n_mod`**
 
 ```math
-N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0 \wedge \mathrm{act}^{s}_{k}
+N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{act}^{s,\mathrm{ext}}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0
 ```
 
 #### Definitions
@@ -523,31 +559,31 @@ N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:
 **`Line_fix_s_lower`**
 
 ```math
-s_{\xi,t,k} - \ell_{\xi,t,k} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \mathrm{on}^{s}_{t,k}
+s_{\xi,t,k} - \ell_{\xi,t,k} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{fix}}_{t,k}
 ```
 
 **`Line_fix_s_upper`**
 
 ```math
-s_{\xi,t,k} + \ell_{\xi,t,k} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \mathrm{on}^{s}_{t,k}
+s_{\xi,t,k} + \ell_{\xi,t,k} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{fix}}_{t,k}
 ```
 
 **`Line_ext_s_lower`**
 
 ```math
-s_{\xi,t,k} - \ell_{\xi,t,k} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{on}^{s}_{t,k}
+s_{\xi,t,k} - \ell_{\xi,t,k} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{ext}}_{t,k}
 ```
 
 **`Line_ext_s_upper`**
 
 ```math
-s_{\xi,t,k} + \ell_{\xi,t,k} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{on}^{s}_{t,k}
+s_{\xi,t,k} + \ell_{\xi,t,k} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{ext}}_{t,k}
 ```
 
 **`Line_ext_s_nom_lower`**
 
 ```math
-S_{k} \ge \underline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k}
+S_{k} \ge \underline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{act}^{s,\mathrm{ext}}_{k}
 ```
 
 **`Line_ext_s_nom_upper`**
@@ -565,7 +601,7 @@ S_{k} = \mathrm{s}^{\mathrm{nom,set}}_{k} \qquad \forall\, k \in \mathcal{K} \,:
 **`Line_s_nom_modularity`**
 
 ```math
-S_{k} = \mathrm{s}^{\mathrm{mod}}_{k} \cdot N^{s}_{k} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0 \wedge \mathrm{act}^{s}_{k}
+S_{k} = \mathrm{s}^{\mathrm{mod}}_{k} \cdot N^{s}_{k} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{act}^{s,\mathrm{ext}}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0
 ```
 
 **`Line_s_set`**

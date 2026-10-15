@@ -221,7 +221,7 @@ variables:
   Link_n_mod:
     description: "`Link-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
     dims: [link]
-    where: Link_p_nom_extendable AND Link_p_nom_mod > 0 AND Link_active_asset
+    where: Link_ext_asset AND Link_p_nom_mod > 0
     domain: integer
     bounds:
       lower: 0
@@ -230,7 +230,7 @@ variables:
       `Link-p_nom` — nominal power where it is a decision, for a link that is
       active; the parameter of the same PyPSA name carries the fixed regime
     dims: [link]
-    where: Link_p_nom_extendable AND Link_active_asset
+    where: Link_ext_asset
 
 expressions:
   Link_p_nom_effective:
@@ -295,47 +295,62 @@ masks:
       a committable link that stands in the snapshot's period — every
       unit-commitment row's set
     where: Link_committable AND Link_active
+  Link_fix:
+    description: >-
+      a link with a fixed build, not committable, that stands in the
+      snapshot's period — PyPSA's `fix` rows
+    where: NOT Link_p_nom_extendable AND NOT Link_committable AND Link_active
+  Link_ext:
+    description: >-
+      a link with an extendable build, not committable, that stands in the
+      snapshot's period — PyPSA's `ext` rows
+    where: Link_p_nom_extendable AND NOT Link_committable AND Link_active
+  Link_ext_asset:
+    description: >-
+      a link with an extendable build among PyPSA's active assets — the
+      units whose build is a variable
+    where: Link_p_nom_extendable AND Link_active_asset
 
 constraints:
   Link_fix_p_lower:
     description: "`Link-fix-p-lower` — a fixed link carries at least its minimum, negative for the other way"
     dims: [scenario, snapshot, link]
-    where: not Link_p_nom_extendable AND not Link_committable AND Link_active
+    where: Link_fix
     expression: Link_p >= Link_p_min_pu * Link_p_nom * (1 - Link_maintenance_pu * Link_maintenance)
   Link_fix_p_upper:
     description: "`Link-fix-p-upper` — a fixed link carries at most its nominal power"
     dims: [scenario, snapshot, link]
-    where: not Link_p_nom_extendable AND not Link_committable AND Link_active
+    where: Link_fix
     expression: Link_p <= Link_p_max_pu * Link_p_nom * (1 - Link_maintenance_pu * Link_maintenance)
   Link_ext_p_lower:
     description: "`Link-ext-p-lower` — an extendable link carries at least its minimum of the chosen build, negative for the other way"
     dims: [scenario, snapshot, link]
-    where: Link_p_nom_extendable AND not Link_committable AND Link_active
+    where: Link_ext
     expression: Link_p >= Link_p_min_pu * (Link_p_nom_ext - Link_maintenance_pu * Link_maintenance_capacity)
   Link_ext_p_upper:
     description: "`Link-ext-p-upper` — an extendable link carries at most the chosen build"
     dims: [scenario, snapshot, link]
-    where: Link_p_nom_extendable AND not Link_committable AND Link_active
+    where: Link_ext
     expression: Link_p <= Link_p_max_pu * (Link_p_nom_ext - Link_maintenance_pu * Link_maintenance_capacity)
   Link_ext_p_nom_lower:
     description: "`Link-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, link]
-    where: Link_p_nom_extendable AND Link_active_asset
+    where: Link_ext_asset
     expression: Link_p_nom_ext >= Link_p_nom_min
   Link_ext_p_nom_upper:
     description: "`Link-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
     dims: [scenario, link]
-    where: Link_p_nom_extendable AND Link_active_asset AND Link_p_nom_max
+    where: Link_ext_asset AND Link_p_nom_max
     expression: Link_p_nom_ext <= Link_p_nom_max
   Link_p_nom_set:
     description: "`Link-p_nom_set` — the chosen build pinned, wherever a value is given"
     dims: [link]
-    where: Link_p_nom_extendable AND Link_active_asset AND Link_p_nom_set
+    where: Link_ext_asset AND Link_p_nom_set
     expression: Link_p_nom_ext == Link_p_nom_set
   Link_p_nom_modularity:
     description: "`Link-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [link]
-    where: Link_p_nom_extendable AND Link_p_nom_mod > 0 AND Link_active_asset
+    where: Link_ext_asset AND Link_p_nom_mod > 0
     expression: Link_p_nom_ext == Link_p_nom_mod * Link_n_mod
   Link_p_set:
     description: "`Link-p_set` — flow pinned to the given schedule, wherever one is given"
@@ -432,6 +447,9 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{T} \times \mathcal{L}`$ — a committable link that stands in the snapshot's period — every unit-commitment row's set |
+| $`\mathrm{on}^{f,\mathrm{fix}}`$ | `Link_fix` over $`\mathcal{T} \times \mathcal{L}`$ — a link with a fixed build, not committable, that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{f,\mathrm{ext}}`$ | `Link_ext` over $`\mathcal{T} \times \mathcal{L}`$ — a link with an extendable build, not committable, that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{f,\mathrm{ext}}`$ | `Link_ext_asset` over $`\mathcal{L}`$ — a link with an extendable build among PyPSA's active assets — the units whose build is a variable |
 
 #### Variables
 
@@ -472,6 +490,24 @@ assumptions:
 \mathrm{on}^{f,\mathrm{com}}_{t,l} \iff \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
 ```
 
+**`Link_fix`**
+
+```math
+\mathrm{on}^{f,\mathrm{fix}}_{t,l} \iff \neg \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+**`Link_ext`**
+
+```math
+\mathrm{on}^{f,\mathrm{ext}}_{t,l} \iff \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+```
+
+**`Link_ext_asset`**
+
+```math
+\mathrm{act}^{f,\mathrm{ext}}_{l} \iff \mathrm{ext}^{f}_{l} \wedge \mathrm{act}^{f}_{l} \qquad \forall\, l \in \mathcal{L}
+```
+
 #### Variable domains
 
 **`Link_p`**
@@ -483,13 +519,13 @@ f_{\xi,t,l} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l 
 **`Link_n_mod`**
 
 ```math
-N^{f}_{l} \ge 0, N^{f}_{l} \in \mathbb{Z} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \wedge \mathrm{act}^{f}_{l}
+N^{f}_{l} \ge 0, N^{f}_{l} \in \mathbb{Z} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{act}^{f,\mathrm{ext}}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 
 **`Link_p_nom_ext`**
 
 ```math
-F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \mathrm{act}^{f}_{l}
+F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{act}^{f,\mathrm{ext}}_{l}
 ```
 
 #### Definitions
@@ -559,49 +595,49 @@ F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{
 **`Link_fix_p_lower`**
 
 ```math
-f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( 1 - \gamma^{f}_{\xi,l} \cdot \mu^{f}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \neg \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( 1 - \gamma^{f}_{\xi,l} \cdot \mu^{f}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{fix}}_{t,l}
 ```
 
 **`Link_fix_p_upper`**
 
 ```math
-f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( 1 - \gamma^{f}_{\xi,l} \cdot \mu^{f}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \neg \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( 1 - \gamma^{f}_{\xi,l} \cdot \mu^{f}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{fix}}_{t,l}
 ```
 
 **`Link_ext_p_lower`**
 
 ```math
-f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \left( F_{l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,\mathrm{nom}}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \left( F_{l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,\mathrm{nom}}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{ext}}_{t,l}
 ```
 
 **`Link_ext_p_upper`**
 
 ```math
-f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \left( F_{l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,\mathrm{nom}}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
+f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \left( F_{l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,\mathrm{nom}}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{ext}}_{t,l}
 ```
 
 **`Link_ext_p_nom_lower`**
 
 ```math
-F_{l} \ge \underline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \mathrm{act}^{f}_{l}
+F_{l} \ge \underline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{act}^{f,\mathrm{ext}}_{l}
 ```
 
 **`Link_ext_p_nom_upper`**
 
 ```math
-F_{l} \le \overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \mathrm{act}^{f}_{l} \wedge \overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \text{ is defined}
+F_{l} \le \overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \mathrm{act}^{f,\mathrm{ext}}_{l} \wedge \overline{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \text{ is defined}
 ```
 
 **`Link_p_nom_set`**
 
 ```math
-F_{l} = \mathrm{f}^{\mathrm{nom,set}}_{l} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \mathrm{act}^{f}_{l} \wedge \mathrm{f}^{\mathrm{nom,set}}_{l} \text{ is defined}
+F_{l} = \mathrm{f}^{\mathrm{nom,set}}_{l} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{act}^{f,\mathrm{ext}}_{l} \wedge \mathrm{f}^{\mathrm{nom,set}}_{l} \text{ is defined}
 ```
 
 **`Link_p_nom_modularity`**
 
 ```math
-F_{l} = \mathrm{f}^{\mathrm{mod}}_{l} \cdot N^{f}_{l} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \wedge \mathrm{act}^{f}_{l}
+F_{l} = \mathrm{f}^{\mathrm{mod}}_{l} \cdot N^{f}_{l} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{act}^{f,\mathrm{ext}}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 
 **`Link_p_set`**

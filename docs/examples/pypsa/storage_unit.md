@@ -249,11 +249,11 @@ variables:
       storage unit that is active; the parameter of the same PyPSA name
       carries the fixed regime
     dims: [storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active_asset
+    where: StorageUnit_ext_asset
   StorageUnit_n_mod:
     description: "`StorageUnit-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
     dims: [storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_mod > 0 AND StorageUnit_active_asset
+    where: StorageUnit_ext_asset AND StorageUnit_p_nom_mod > 0
     domain: integer
     bounds:
       lower: 0
@@ -365,6 +365,11 @@ masks:
       a storage unit with an extendable build that stands in the snapshot's
       period — PyPSA's `ext` rows
     where: StorageUnit_p_nom_extendable AND StorageUnit_active
+  StorageUnit_ext_asset:
+    description: >-
+      a storage unit with an extendable build among PyPSA's active assets
+      — the units whose build is a variable
+    where: StorageUnit_p_nom_extendable AND StorageUnit_active_asset
 
 constraints:
   StorageUnit_fix_p_dispatch_lower:
@@ -434,7 +439,7 @@ constraints:
   StorageUnit_ext_p_nom_lower:
     description: "`StorageUnit-ext-p_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active_asset
+    where: StorageUnit_ext_asset
     expression: StorageUnit_p_nom_ext >= StorageUnit_p_nom_min
   StorageUnit_ext_p_nom_upper:
     description: "`StorageUnit-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
@@ -449,7 +454,7 @@ constraints:
   StorageUnit_p_nom_modularity:
     description: "`StorageUnit-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [storage_unit]
-    where: StorageUnit_p_nom_extendable AND StorageUnit_p_nom_mod > 0 AND StorageUnit_active_asset
+    where: StorageUnit_ext_asset AND StorageUnit_p_nom_mod > 0
     expression: StorageUnit_p_nom_ext == StorageUnit_p_nom_mod * StorageUnit_n_mod
   StorageUnit_energy_balance:
     description: >-
@@ -615,6 +620,7 @@ assumptions:
 |---|---|
 | $`\mathrm{on}^{h,\mathrm{fix}}`$ | `StorageUnit_fix` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with a fixed build that stands in the snapshot's period — PyPSA's `fix` rows |
 | $`\mathrm{on}^{h,\mathrm{ext}}`$ | `StorageUnit_ext` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with an extendable build that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{h,\mathrm{ext}}`$ | `StorageUnit_ext_asset` over $`\mathcal{S}`$ — a storage unit with an extendable build among PyPSA's active assets — the units whose build is a variable |
 
 #### Variables
 
@@ -666,6 +672,12 @@ assumptions:
 \mathrm{on}^{h,\mathrm{ext}}_{t,s} \iff \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
+**`StorageUnit_ext_asset`**
+
+```math
+\mathrm{act}^{h,\mathrm{ext}}_{s} \iff \mathrm{ext}^{h}_{s} \wedge \mathrm{act}^{h}_{s} \qquad \forall\, s \in \mathcal{S}
+```
+
 #### Variable domains
 
 **`StorageUnit_p_dispatch`**
@@ -695,13 +707,13 @@ h^{-}_{\xi,t,s} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},
 **`StorageUnit_p_nom_ext`**
 
 ```math
-H_{s} \in \mathbb{R} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{act}^{h}_{s}
+H_{s} \in \mathbb{R} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{act}^{h,\mathrm{ext}}_{s}
 ```
 
 **`StorageUnit_n_mod`**
 
 ```math
-N^{h}_{s} \ge 0, N^{h}_{s} \in \mathbb{Z} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{h}^{\mathrm{mod}}_{s} > 0 \wedge \mathrm{act}^{h}_{s}
+N^{h}_{s} \ge 0, N^{h}_{s} \in \mathbb{Z} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{act}^{h,\mathrm{ext}}_{s} \wedge \mathrm{h}^{\mathrm{mod}}_{s} > 0
 ```
 
 #### Definitions
@@ -843,7 +855,7 @@ h^{-}_{\xi,t,s} \le -\underline{\mathrm{h}}_{\xi,t,s} \cdot H_{s} \qquad \forall
 **`StorageUnit_ext_p_nom_lower`**
 
 ```math
-H_{s} \ge \underline{\mathrm{h}}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{act}^{h}_{s}
+H_{s} \ge \underline{\mathrm{h}}^{\mathrm{nom}}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{act}^{h,\mathrm{ext}}_{s}
 ```
 
 **`StorageUnit_ext_p_nom_upper`**
@@ -861,7 +873,7 @@ H_{s} = \mathrm{h}^{\mathrm{nom,set}}_{s} \qquad \forall\, s \in \mathcal{S} \,:
 **`StorageUnit_p_nom_modularity`**
 
 ```math
-H_{s} = \mathrm{h}^{\mathrm{mod}}_{s} \cdot N^{h}_{s} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{ext}^{h}_{s} \wedge \mathrm{h}^{\mathrm{mod}}_{s} > 0 \wedge \mathrm{act}^{h}_{s}
+H_{s} = \mathrm{h}^{\mathrm{mod}}_{s} \cdot N^{h}_{s} \qquad \forall\, s \in \mathcal{S} \,:\, \mathrm{act}^{h,\mathrm{ext}}_{s} \wedge \mathrm{h}^{\mathrm{mod}}_{s} > 0
 ```
 
 **`StorageUnit_energy_balance`**

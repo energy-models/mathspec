@@ -70,20 +70,20 @@ The fragments are of three kinds:
 | [generator](generator.md) | 24 | 3 | 11 | 17 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
 | [generator_commitment](generator_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
 | [generator_maintenance](generator_maintenance.md) | 5 | 4 | 13 | 9 |  |
-| [generator_ramping](generator_ramping.md) | 5 | 0 | 6 | 14 |  |
+| [generator_ramping](generator_ramping.md) | 5 | 0 | 6 | 12 |  |
 | [global_constraints](global_constraints.md) | 3 | 0 | 15 | 6 |  |
 | [line](line.md) | 22 | 4 | 14 | 9 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
 | [link](link.md) | 24 | 3 | 9 | 16 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
 | [link_commitment](link_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
 | [link_maintenance](link_maintenance.md) | 5 | 4 | 13 | 9 |  |
-| [link_ramping](link_ramping.md) | 5 | 0 | 6 | 14 |  |
+| [link_ramping](link_ramping.md) | 5 | 0 | 6 | 12 |  |
 | [load](load.md) | 3 | 0 | 0 | 1 | `Bus_injection` |
 | [network](network.md) | 0 | 0 | 1 | 1 |  |
 | [power_flow](power_flow.md) | 0 | 0 | 1 | 1 |  |
 | [process](process.md) | 22 | 3 | 9 | 14 | `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
 | [process_commitment](process_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
 | [process_maintenance](process_maintenance.md) | 5 | 4 | 13 | 9 |  |
-| [process_ramping](process_ramping.md) | 5 | 0 | 6 | 14 |  |
+| [process_ramping](process_ramping.md) | 5 | 0 | 6 | 12 |  |
 | [security](security.md) | 2 | 0 | 8 | 10 |  |
 | [settings](settings.md) | 9 | 0 | 0 | 8 |  |
 | [storage_unit](storage_unit.md) | 36 | 6 | 21 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |

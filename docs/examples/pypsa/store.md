@@ -211,11 +211,11 @@ variables:
       that is active; the parameter of the same PyPSA name carries the fixed
       regime
     dims: [store]
-    where: Store_e_nom_extendable AND Store_active_asset
+    where: Store_ext_asset
   Store_n_mod:
     description: "`Store-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
     dims: [store]
-    where: Store_e_nom_extendable AND Store_e_nom_mod > 0 AND Store_active_asset
+    where: Store_ext_asset AND Store_e_nom_mod > 0
     domain: integer
     bounds:
       lower: 0
@@ -308,31 +308,48 @@ expressions:
     expression: sum(Store_sign * Store_p, over=store, by=Store_bus[bus])
     adds_to: Bus_injection
 
+masks:
+  Store_fix:
+    description: >-
+      a store with a fixed build that stands in the snapshot's period —
+      PyPSA's `fix` rows
+    where: NOT Store_e_nom_extendable AND Store_active
+  Store_ext:
+    description: >-
+      a store with an extendable build that stands in the snapshot's
+      period — PyPSA's `ext` rows
+    where: Store_e_nom_extendable AND Store_active
+  Store_ext_asset:
+    description: >-
+      a store with an extendable build among PyPSA's active assets — the
+      units whose build is a variable
+    where: Store_e_nom_extendable AND Store_active_asset
+
 constraints:
   Store_fix_e_lower:
     description: "`Store-fix-e-lower` — a fixed store holds at least its floor"
     dims: [scenario, snapshot, store]
-    where: not Store_e_nom_extendable AND Store_active
+    where: Store_fix
     expression: Store_e >= Store_e_min_pu * Store_e_nom
   Store_fix_e_upper:
     description: "`Store-fix-e-upper` — a fixed store holds at most its nominal capacity"
     dims: [scenario, snapshot, store]
-    where: not Store_e_nom_extendable AND Store_active
+    where: Store_fix
     expression: Store_e <= Store_e_max_pu * Store_e_nom
   Store_ext_e_lower:
     description: "`Store-ext-e-lower` — an extendable store holds at least its floor of the chosen build"
     dims: [scenario, snapshot, store]
-    where: Store_e_nom_extendable AND Store_active
+    where: Store_ext
     expression: Store_e >= Store_e_min_pu * Store_e_nom_ext
   Store_ext_e_upper:
     description: "`Store-ext-e-upper` — an extendable store holds at most the chosen build"
     dims: [scenario, snapshot, store]
-    where: Store_e_nom_extendable AND Store_active
+    where: Store_ext
     expression: Store_e <= Store_e_max_pu * Store_e_nom_ext
   Store_ext_e_nom_lower:
     description: "`Store-ext-e_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, store]
-    where: Store_e_nom_extendable AND Store_active_asset
+    where: Store_ext_asset
     expression: Store_e_nom_ext >= Store_e_nom_min
   Store_ext_e_nom_upper:
     description: "`Store-ext-e_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
@@ -347,7 +364,7 @@ constraints:
   Store_e_nom_modularity:
     description: "`Store-e_nom_modularity` — the chosen build is a whole number of modules"
     dims: [store]
-    where: Store_e_nom_extendable AND Store_e_nom_mod > 0 AND Store_active_asset
+    where: Store_ext_asset AND Store_e_nom_mod > 0
     expression: Store_e_nom_ext == Store_e_nom_mod * Store_n_mod
   Store_energy_balance:
     description: "`Store-energy_balance` — the energy carried in, less what is delivered to the bus"
@@ -485,6 +502,14 @@ assumptions:
 | $`\mathrm{b}^{e}`$ | `Store_operational_limit_weight` over $`\Xi \times \mathcal{G} \times \mathcal{V}`$, `neutral` where the data has no row — one where the store is in the row's set — data prep; one outside it has no row |
 | $`\mathrm{m}^{e}`$ | `Store_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{V}`$, `neutral` where the data has no row — one where the store is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
+#### Masks
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{e,\mathrm{fix}}`$ | `Store_fix` over $`\mathcal{T} \times \mathcal{V}`$ — a store with a fixed build that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{e,\mathrm{ext}}`$ | `Store_ext` over $`\mathcal{T} \times \mathcal{V}`$ — a store with an extendable build that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{e,\mathrm{ext}}`$ | `Store_ext_asset` over $`\mathcal{V}`$ — a store with an extendable build among PyPSA's active assets — the units whose build is a variable |
+
 #### Variables
 
 | Symbol | Meaning |
@@ -519,6 +544,26 @@ assumptions:
 | $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ | `position(within=relation[...])` — the position of $`t`$ inside its group |
 | $`\lvert \mathcal{T} \rvert`$ | the size of $`\mathcal{T}`$; $`\lvert \mathcal{T} \rvert - 1`$ is the last position |
 
+#### Masks
+
+**`Store_fix`**
+
+```math
+\mathrm{on}^{e,\mathrm{fix}}_{t,v} \iff \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \qquad \forall\, t \in \mathcal{T},\ v \in \mathcal{V}
+```
+
+**`Store_ext`**
+
+```math
+\mathrm{on}^{e,\mathrm{ext}}_{t,v} \iff \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \qquad \forall\, t \in \mathcal{T},\ v \in \mathcal{V}
+```
+
+**`Store_ext_asset`**
+
+```math
+\mathrm{act}^{e,\mathrm{ext}}_{v} \iff \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v} \qquad \forall\, v \in \mathcal{V}
+```
+
 #### Variable domains
 
 **`Store_e`**
@@ -536,13 +581,13 @@ q_{\xi,t,v} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v 
 **`Store_e_nom_ext`**
 
 ```math
-E_{v} \in \mathbb{R} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v}
+E_{v} \in \mathbb{R} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{act}^{e,\mathrm{ext}}_{v}
 ```
 
 **`Store_n_mod`**
 
 ```math
-N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0 \wedge \mathrm{act}^{e}_{v}
+N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{act}^{e,\mathrm{ext}}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0
 ```
 
 #### Definitions
@@ -612,31 +657,31 @@ N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:
 **`Store_fix_e_lower`**
 
 ```math
-e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
+e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e,\mathrm{fix}}_{t,v}
 ```
 
 **`Store_fix_e_upper`**
 
 ```math
-e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
+e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e,\mathrm{fix}}_{t,v}
 ```
 
 **`Store_ext_e_lower`**
 
 ```math
-e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
+e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e,\mathrm{ext}}_{t,v}
 ```
 
 **`Store_ext_e_upper`**
 
 ```math
-e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
+e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e,\mathrm{ext}}_{t,v}
 ```
 
 **`Store_ext_e_nom_lower`**
 
 ```math
-E_{v} \ge \underline{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v}
+E_{v} \ge \underline{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{act}^{e,\mathrm{ext}}_{v}
 ```
 
 **`Store_ext_e_nom_upper`**
@@ -654,7 +699,7 @@ E_{v} = \mathrm{e}^{\mathrm{nom,set}}_{v} \qquad \forall\, v \in \mathcal{V} \,:
 **`Store_e_nom_modularity`**
 
 ```math
-E_{v} = \mathrm{e}^{\mathrm{mod}}_{v} \cdot N^{e}_{v} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0 \wedge \mathrm{act}^{e}_{v}
+E_{v} = \mathrm{e}^{\mathrm{mod}}_{v} \cdot N^{e}_{v} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{act}^{e,\mathrm{ext}}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0
 ```
 
 **`Store_energy_balance`**

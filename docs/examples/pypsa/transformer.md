@@ -228,11 +228,11 @@ variables:
       a transformer that is active; the parameter of the same PyPSA name
       carries the fixed regime
     dims: [transformer]
-    where: Transformer_s_nom_extendable AND Transformer_active_asset
+    where: Transformer_ext_asset
   Transformer_n_mod:
     description: "`Transformer-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
     dims: [transformer]
-    where: Transformer_s_nom_extendable AND Transformer_s_nom_mod > 0 AND Transformer_active_asset
+    where: Transformer_ext_asset AND Transformer_s_nom_mod > 0
     domain: integer
     bounds:
       lower: 0
@@ -262,6 +262,21 @@ expressions:
     adds_to: Cycle_angle_sum
 
 masks:
+  Transformer_fix:
+    description: >-
+      a transformer with a fixed build that stands in the snapshot's
+      period — PyPSA's `fix` rows
+    where: NOT Transformer_s_nom_extendable AND Transformer_active
+  Transformer_ext:
+    description: >-
+      a transformer with an extendable build that stands in the snapshot's
+      period — PyPSA's `ext` rows
+    where: Transformer_s_nom_extendable AND Transformer_active
+  Transformer_ext_asset:
+    description: >-
+      a transformer with an extendable build among PyPSA's active assets —
+      the units whose build is a variable
+    where: Transformer_s_nom_extendable AND Transformer_active_asset
   Transformer_lossy:
     description: >-
       a transformer that stands in the snapshot's period, where the run models
@@ -272,27 +287,27 @@ constraints:
   Transformer_fix_s_lower:
     description: "`Transformer-fix-s-lower` — a fixed transformer carries at least the negative of its rating, the loss counted against it"
     dims: [scenario, snapshot, transformer]
-    where: not Transformer_s_nom_extendable AND Transformer_active
+    where: Transformer_fix
     expression: Transformer_s - Transformer_loss >= -Transformer_s_max_pu * Transformer_s_nom
   Transformer_fix_s_upper:
     description: "`Transformer-fix-s-upper` — a fixed transformer carries at most its rating, the loss included"
     dims: [scenario, snapshot, transformer]
-    where: not Transformer_s_nom_extendable AND Transformer_active
+    where: Transformer_fix
     expression: Transformer_s + Transformer_loss <= Transformer_s_max_pu * Transformer_s_nom
   Transformer_ext_s_lower:
     description: "`Transformer-ext-s-lower` — an extendable transformer carries at least the negative of its rating of the chosen build, the loss counted against it"
     dims: [scenario, snapshot, transformer]
-    where: Transformer_s_nom_extendable AND Transformer_active
+    where: Transformer_ext
     expression: Transformer_s - Transformer_loss >= -Transformer_s_max_pu * Transformer_s_nom_ext
   Transformer_ext_s_upper:
     description: "`Transformer-ext-s-upper` — an extendable transformer carries at most its rating of the chosen build, the loss included"
     dims: [scenario, snapshot, transformer]
-    where: Transformer_s_nom_extendable AND Transformer_active
+    where: Transformer_ext
     expression: Transformer_s + Transformer_loss <= Transformer_s_max_pu * Transformer_s_nom_ext
   Transformer_ext_s_nom_lower:
     description: "`Transformer-ext-s_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, transformer]
-    where: Transformer_s_nom_extendable AND Transformer_active_asset
+    where: Transformer_ext_asset
     expression: Transformer_s_nom_ext >= Transformer_s_nom_min
   Transformer_ext_s_nom_upper:
     description: "`Transformer-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
@@ -307,7 +322,7 @@ constraints:
   Transformer_s_nom_modularity:
     description: "`Transformer-s_nom_modularity` — the chosen build is a whole number of modules"
     dims: [transformer]
-    where: Transformer_s_nom_extendable AND Transformer_s_nom_mod > 0 AND Transformer_active_asset
+    where: Transformer_ext_asset AND Transformer_s_nom_mod > 0
     expression: Transformer_s_nom_ext == Transformer_s_nom_mod * Transformer_n_mod
   Transformer_s_set:
     description: "`Transformer-s_set` — flow pinned to the given schedule, wherever one is given"
@@ -423,6 +438,9 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{on}^{\sigma,\mathrm{fix}}`$ | `Transformer_fix` over $`\mathcal{T} \times \mathcal{M}`$ — a transformer with a fixed build that stands in the snapshot's period — PyPSA's `fix` rows |
+| $`\mathrm{on}^{\sigma,\mathrm{ext}}`$ | `Transformer_ext` over $`\mathcal{T} \times \mathcal{M}`$ — a transformer with an extendable build that stands in the snapshot's period — PyPSA's `ext` rows |
+| $`\mathrm{act}^{\sigma,\mathrm{ext}}`$ | `Transformer_ext_asset` over $`\mathcal{M}`$ — a transformer with an extendable build among PyPSA's active assets — the units whose build is a variable |
 | $`\mathrm{on}^{\sigma,\mathrm{lossy}}`$ | `Transformer_lossy` over $`\mathcal{T} \times \mathcal{M}`$ — a transformer that stands in the snapshot's period, where the run models transmission losses |
 
 #### Variables
@@ -445,6 +463,24 @@ constraints:
 | $`\mathit{Transformer\_angle\_sum}`$ | `Transformer_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ |
 
 #### Masks
+
+**`Transformer_fix`**
+
+```math
+\mathrm{on}^{\sigma,\mathrm{fix}}_{t,m} \iff \neg \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{on}^{\sigma}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}
+```
+
+**`Transformer_ext`**
+
+```math
+\mathrm{on}^{\sigma,\mathrm{ext}}_{t,m} \iff \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{on}^{\sigma}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}
+```
+
+**`Transformer_ext_asset`**
+
+```math
+\mathrm{act}^{\sigma,\mathrm{ext}}_{m} \iff \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{act}^{\sigma}_{m} \qquad \forall\, m \in \mathcal{M}
+```
 
 **`Transformer_lossy`**
 
@@ -475,13 +511,13 @@ constraints:
 **`Transformer_s_nom_ext`**
 
 ```math
-\Sigma_{m} \in \mathbb{R} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{act}^{\sigma}_{m}
+\Sigma_{m} \in \mathbb{R} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{act}^{\sigma,\mathrm{ext}}_{m}
 ```
 
 **`Transformer_n_mod`**
 
 ```math
-N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0 \wedge \mathrm{act}^{\sigma}_{m}
+N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{act}^{\sigma,\mathrm{ext}}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0
 ```
 
 #### Definitions
@@ -515,31 +551,31 @@ N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \math
 **`Transformer_fix_s_lower`**
 
 ```math
-\sigma_{\xi,t,m} - \ell^{\sigma}_{\xi,t,m} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\sigma_{\xi,t,m} - \ell^{\sigma}_{\xi,t,m} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{fix}}_{t,m}
 ```
 
 **`Transformer_fix_s_upper`**
 
 ```math
-\sigma_{\xi,t,m} + \ell^{\sigma}_{\xi,t,m} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\sigma_{\xi,t,m} + \ell^{\sigma}_{\xi,t,m} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{fix}}_{t,m}
 ```
 
 **`Transformer_ext_s_lower`**
 
 ```math
-\sigma_{\xi,t,m} - \ell^{\sigma}_{\xi,t,m} \ge -\overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\sigma_{\xi,t,m} - \ell^{\sigma}_{\xi,t,m} \ge -\overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{ext}}_{t,m}
 ```
 
 **`Transformer_ext_s_upper`**
 
 ```math
-\sigma_{\xi,t,m} + \ell^{\sigma}_{\xi,t,m} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\sigma_{\xi,t,m} + \ell^{\sigma}_{\xi,t,m} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{ext}}_{t,m}
 ```
 
 **`Transformer_ext_s_nom_lower`**
 
 ```math
-\Sigma_{m} \ge \underline{\sigma}^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{act}^{\sigma}_{m}
+\Sigma_{m} \ge \underline{\sigma}^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ m \in \mathcal{M} \,:\, \mathrm{act}^{\sigma,\mathrm{ext}}_{m}
 ```
 
 **`Transformer_ext_s_nom_upper`**
@@ -557,7 +593,7 @@ N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \math
 **`Transformer_s_nom_modularity`**
 
 ```math
-\Sigma_{m} = \sigma^{\mathrm{mod}}_{m} \cdot N^{\sigma}_{m} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0 \wedge \mathrm{act}^{\sigma}_{m}
+\Sigma_{m} = \sigma^{\mathrm{mod}}_{m} \cdot N^{\sigma}_{m} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{act}^{\sigma,\mathrm{ext}}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0
 ```
 
 **`Transformer_s_set`**
