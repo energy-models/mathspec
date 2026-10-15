@@ -13,7 +13,7 @@ and prints it.
 | ------------- | ----------------------------------------------------------------------------------------------- |
 | `__init__.py` | `typeset` / `to_latex` / `to_markdown` / `to_typst`, `typeset_line`, and the `FORMATS` registry |
 | `walk.py`     | the program's trees to `Line`s. Every decision about the **math**, written once                 |
-| `legend.py`   | the notes under the equations, read off what the program uses                                   |
+| `legend.py`   | the symbol and notation tables above the equations, read off what the program uses              |
 | `format.py`   | the boundary: what a format must spell, and the operator vocabulary                             |
 | `symbols.py`  | which symbol a name gets, and the `SymbolTable` sidecar that overrides it                       |
 | `latex.py`    | amsmath, the format that lands in a journal                                                     |

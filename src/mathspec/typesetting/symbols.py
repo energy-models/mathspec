@@ -102,8 +102,6 @@ class Symbols:
     ``p`` is not a collision.
 
     Attributes:
-        overridden: Names the table spelled; the convention note quotes only
-            derived symbols.
         name: Each parameter's, variable's, expression's and mask's symbol.
             A mask is upright, being read off the data as a parameter is.
         constraint: Each constraint's symbol, the subscript ``dual(c)`` prints
@@ -115,7 +113,6 @@ class Symbols:
         set: Each dimension's set symbol.
     """
 
-    overridden: frozenset[str]
     name: Mapping[str, str]
     constraint: Mapping[str, str]
     index: Mapping[str, str]
@@ -173,7 +170,7 @@ def symbols_for(program: Program, fmt: Format, table: SymbolTable) -> Symbols:
         upper = _first_free(_set_candidates(dim, letter), taken_set)
         taken_set.add(upper)
         sets[dim] = table.sets[dim] if dim in table.sets else fmt.script(upper)
-    return Symbols(frozenset(table.names) & declared, name, constraint, index, sets)
+    return Symbols(name, constraint, index, sets)
 
 
 def _index_candidates(dim: str) -> list[str]:

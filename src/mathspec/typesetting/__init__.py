@@ -125,9 +125,9 @@ def typeset(
             mapping. Names it does not carry are derived, and it must be
             written in *fmt*'s notation.
         standalone: Emit a compilable document rather than a fragment.
-        legend: Prepend the sets/parameters/variables table. The spec's own
-            ``description:`` opens the document either way — it is what the
-            file says it is, not a symbol table.
+        legend: Prepend the symbol tables, the notation the equations use
+            included. The spec's own ``description:`` opens the document
+            either way — it is what the file says it is, not a symbol table.
         numbered: Number the equations.
         inline_expressions: Substitute each plain named expression into the equations that
             use it, rather than printing its symbol there and its definition
@@ -159,9 +159,6 @@ def typeset(
             format_.section(title, format_.glossary(items))
             for title, items in explained.glossaries(noticed, walk.defined())
         ]
-        blocks += [format_.note(text) for text in explained.convention_notes()]
-        blocks += [format_.note(text) for text in explained.translation_notes(noticed)]
-        blocks += [format_.note(text) for text in explained.position_notes(noticed)]
     return format_.document([*blocks, *rendered], standalone=standalone)
 
 

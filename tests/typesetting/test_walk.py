@@ -175,7 +175,7 @@ def test_a_fill_and_a_group_take_the_operators_two_slots(name: FormatName, fmt: 
 
 
 @pytest.mark.parametrize('name', ['latex', 'typst', 'markdown'])
-def test_a_translation_by_nothing_takes_no_legend_note(name: FormatName):
+def test_a_translation_by_nothing_takes_no_legend_row(name: FormatName):
     """A shift by 0 prints no operator, but the legend read every partitioned
     translation as printed and explained a grouped operator the page never shows."""
     model = {
@@ -191,8 +191,8 @@ def test_a_translation_by_nothing_takes_no_legend_note(name: FormatName):
         'objective': {'sense': 'minimize', 'expression': 'sum(p)'},
     }
     text = typeset(model, name)
-    assert 'denotes a translation counted inside the group' not in text
-    assert 'denotes translation with' not in text, 'no fill note for a translation that vacates nothing'
+    assert 'inside the group of' not in text, 'no group row for a translation that moves nothing'
+    assert 'past the edge' not in text, 'no fill row for a translation that vacates nothing'
 
 
 @EVERY_FORMAT
@@ -361,18 +361,18 @@ def test_a_dimension_compared_against_a_number_says_what_its_coordinates_are(nam
 
 @EVERY_FORMAT
 @pytest.mark.parametrize(
-    ('note', 'printing', 'silent'),
+    ('row', 'printing', 'silent'),
     [
-        pytest.param('cyclic translation', _storage("offset=1, edge='wrap'"), DISPATCH_MODEL, id='wraparound'),
-        pytest.param('against positions', _selected('position(snapshot) == 0'), DISPATCH_MODEL, id='a-position'),
+        pytest.param('cyclic', _storage("offset=1, edge='wrap'"), DISPATCH_MODEL, id='wraparound'),
+        pytest.param('counted from', _selected('position(snapshot) == 0'), DISPATCH_MODEL, id='a-position'),
         pytest.param(
-            'counts within the group',
+            'inside its group',
             _selected('position(snapshot, within=season_of[season]) == 0'),
             _selected('position(snapshot) == 0'),
             id='a-grouped-position',
         ),
         pytest.param(
-            'counted from the end',
+            'is the last position',
             _selected('position(snapshot) == -1'),
             _selected('position(snapshot) == 0'),
             id='a-position-from-the-end',
@@ -380,23 +380,20 @@ def test_a_dimension_compared_against_a_number_says_what_its_coordinates_are(nam
         pytest.param(
             'coordinates)', _selected('snapshot >= 3'), _selected('position(snapshot) == 0'), id='numeric-coordinates'
         ),
-        pytest.param(
-            'Upright is what the data supplies', DISPATCH_MODEL, _storage('offset=1'), id='the-upright-convention'
-        ),
     ],
 )
-def test_a_legend_note_prints_only_where_its_symbol_does(
-    name: FormatName, fmt: Format, note: str, printing: dict, silent: dict
+def test_a_legend_row_prints_only_where_its_symbol_does(
+    name: FormatName, fmt: Format, row: str, printing: dict, silent: dict
 ):
-    """Each note is introduced where its symbol is used, and nowhere else.
+    """Each row is introduced where its symbol is used, and nowhere else.
 
-    The position note is the one the page cannot go without: a reader arrives
+    The position row is the one the page cannot go without: a reader arrives
     from papers whose index *is* the ordinal, so a page printing both
     ``pos(t) = 0`` and ``t >= 3`` has to say once which of the two is the
     coordinate.
     """
-    assert note in typeset(printing, name), 'the symbol prints, so the legend explains it'
-    assert note not in typeset(silent, name), 'a note explaining a contrast the page does not draw is a dead end'
+    assert row in typeset(printing, name), 'the symbol prints, so the legend explains it'
+    assert row not in typeset(silent, name), 'a row explaining a contrast the page does not draw is a dead end'
 
 
 @EVERY_FORMAT
@@ -569,23 +566,6 @@ def test_nothing_the_model_is_given_prints_italic():
     assert all(symbol.startswith(r'\mathrm{') for symbol in given.values()), (
         f'derived upright for every parameter, but got {sorted(s for s in given.values() if "mathrm" not in s)}'
     )
-
-
-@EVERY_FORMAT
-def test_the_convention_note_quotes_only_what_the_derivation_chose(name: FormatName, fmt: Format):
-    """A table is printed verbatim and is the author's to write, so a symbol it
-    supplies is not one the note governs.
-
-    `examples/symbols/dispatch.yaml` maps three parameters to italic symbols,
-    and the homepage renders through it — so the note quoting one of those said
-    "a parameter such as $\\bar p$" under a sentence claiming a parameter is
-    upright, contradicting itself on the page a reader arrives at first.
-    """
-    table = {'notation': fmt.notation, 'names': {'load': 'x', 'cost': 'c', 'p_max': 'm'}}
-    assert 'Upright is what the data supplies' not in typeset(DISPATCH_MODEL, name, symbols=table), (
-        'a symbol the table supplies is not one the note governs'
-    )
-    assert 'Upright is what the data supplies' in typeset(DISPATCH_MODEL, name), 'derived, so the note applies'
 
 
 @EVERY_FORMAT

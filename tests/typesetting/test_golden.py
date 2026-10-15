@@ -195,9 +195,7 @@ def test_the_golden_model_calls_every_operator_in_the_language():
 #: entry and nowhere else, so the arm that would print one in place is the
 #: type's closure rather than a case. The absent objective is the arm a
 #: *different* model takes — a file declares at most one — and
-#: `test_a_model_with_no_objective_prints_the_rest` covers it; that model
-#: declares no parameter, which is the legend's convention note with nothing
-#: to quote. A refusal of the name asked for renders nothing, and
+#: `test_a_model_with_no_objective_prints_the_rest` covers it. A refusal of the name asked for renders nothing, and
 #: `test_line.py` pins both.
 UNREACHABLE = {
     walk: {
@@ -211,7 +209,7 @@ UNREACHABLE = {
         'raise SchemaError(msg)',
         'msg = f"\'{name}\' is declared twice, as {found[0]} and as {found[1]}. Rename one."',
     },
-    legend: {'return []'},
+    legend: set(),
 }
 
 
