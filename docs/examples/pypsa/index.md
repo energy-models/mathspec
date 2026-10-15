@@ -67,28 +67,28 @@ The fragments are of three kinds:
 | --- | --- | --- | --- | --- | --- |
 | [carrier](carrier.md) | 2 | 0 | 1 | 1 |  |
 | [cost](cost.md) | 1 | 3 | 2 | 4 | `total_cost` |
-| [generator](generator.md) | 23 | 3 | 11 | 17 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [generator](generator.md) | 24 | 3 | 11 | 17 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
 | [generator_commitment](generator_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
 | [generator_maintenance](generator_maintenance.md) | 5 | 4 | 13 | 9 |  |
 | [generator_ramping](generator_ramping.md) | 5 | 0 | 6 | 14 |  |
 | [global_constraints](global_constraints.md) | 3 | 0 | 15 | 6 |  |
-| [line](line.md) | 21 | 4 | 14 | 9 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
-| [link](link.md) | 23 | 3 | 9 | 16 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [line](line.md) | 22 | 4 | 14 | 9 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
+| [link](link.md) | 24 | 3 | 9 | 16 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
 | [link_commitment](link_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
 | [link_maintenance](link_maintenance.md) | 5 | 4 | 13 | 9 |  |
 | [link_ramping](link_ramping.md) | 5 | 0 | 6 | 14 |  |
 | [load](load.md) | 3 | 0 | 0 | 1 | `Bus_injection` |
 | [network](network.md) | 0 | 0 | 1 | 1 |  |
 | [power_flow](power_flow.md) | 0 | 0 | 1 | 1 |  |
-| [process](process.md) | 21 | 3 | 9 | 14 | `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [process](process.md) | 22 | 3 | 9 | 14 | `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
 | [process_commitment](process_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
 | [process_maintenance](process_maintenance.md) | 5 | 4 | 13 | 9 |  |
 | [process_ramping](process_ramping.md) | 5 | 0 | 6 | 14 |  |
 | [security](security.md) | 2 | 0 | 8 | 10 |  |
 | [settings](settings.md) | 9 | 0 | 0 | 8 |  |
-| [storage_unit](storage_unit.md) | 35 | 6 | 21 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [store](store.md) | 28 | 4 | 11 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [transformer](transformer.md) | 23 | 5 | 16 | 5 | `total_cost`, `Bus_injection`, `Cycle_angle_sum` |
+| [storage_unit](storage_unit.md) | 36 | 6 | 21 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [store](store.md) | 29 | 4 | 11 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [transformer](transformer.md) | 24 | 5 | 16 | 5 | `total_cost`, `Bus_injection`, `Cycle_angle_sum` |
 <!-- gallery:end -->
 
 ## Leaving a file out

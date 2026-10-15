@@ -77,6 +77,14 @@ parameters:
     description: whether a line stands in a snapshot's period — PyPSA's `active`, data prep
     dims: [snapshot, line]
     dtype: bool
+  Line_active_asset:
+    description: >-
+      whether a line is one of PyPSA's `active_assets` — its `active` flag
+      alone, without build year and lifetime, so a unit that stands in no
+      snapshot of the horizon still counts. PyPSA refuses one that differs
+      by scenario (`constants.py:51`)
+    dims: [line]
+    dtype: bool
   Line_capital_weight:
     description: the sum of period weights a line stands in — PyPSA's `active * period_weighting`, summed, data prep
     dims: [line]
@@ -202,14 +210,15 @@ variables:
       lower: 0
   Line_s_nom_ext:
     description: >-
-      `Line-s_nom` — nominal apparent power where it is a decision; the
-      parameter of the same PyPSA name carries the fixed regime
+      `Line-s_nom` — nominal apparent power where it is a decision, for a
+      line that is active; the parameter of the same PyPSA name carries the
+      fixed regime
     dims: [line]
-    where: Line_s_nom_extendable
+    where: Line_s_nom_extendable AND Line_active_asset
   Line_n_mod:
-    description: "`Line-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
+    description: "`Line-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
     dims: [line]
-    where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND count(Line_active, over=snapshot) > 0
+    where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND Line_active_asset
     domain: integer
     bounds:
       lower: 0
@@ -282,22 +291,22 @@ constraints:
   Line_ext_s_nom_lower:
     description: "`Line-ext-s_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, line]
-    where: Line_s_nom_extendable
+    where: Line_s_nom_extendable AND Line_active_asset
     expression: Line_s_nom_ext >= Line_s_nom_min
   Line_ext_s_nom_upper:
     description: "`Line-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
     dims: [scenario, line]
-    where: Line_s_nom_extendable AND Line_s_nom_max
+    where: Line_s_nom_extendable AND Line_active_asset AND Line_s_nom_max
     expression: Line_s_nom_ext <= Line_s_nom_max
   Line_s_nom_set:
     description: "`Line-s_nom_set` — the chosen build pinned, wherever a value is given"
     dims: [line]
-    where: Line_s_nom_extendable AND Line_s_nom_set
+    where: Line_s_nom_extendable AND Line_active_asset AND Line_s_nom_set
     expression: Line_s_nom_ext == Line_s_nom_set
   Line_s_nom_modularity:
     description: "`Line-s_nom_modularity` — the chosen build is a whole number of modules"
     dims: [line]
-    where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND count(Line_active, over=snapshot) > 0
+    where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND Line_active_asset
     expression: Line_s_nom_ext == Line_s_nom_mod * Line_n_mod
   Line_s_set:
     description: "`Line-s_set` — flow pinned to the given schedule, wherever one is given"
@@ -375,6 +384,7 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{s}`$ | `Line_active` over $`\mathcal{T} \times \mathcal{K}`$ — whether a line stands in a snapshot's period — PyPSA's `active`, data prep |
+| $`\mathrm{act}^{s}`$ | `Line_active_asset` over $`\mathcal{K}`$ — whether a line is one of PyPSA's `active_assets` — its `active` flag alone, without build year and lifetime, so a unit that stands in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:51`) |
 | $`\mathrm{W}^{s}`$ | `Line_capital_weight` over $`\mathcal{K}`$ — the sum of period weights a line stands in — PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{new}^{s}`$ | `Line_first_active` over $`\mathcal{Y} \times \mathcal{K}`$ — one in the first period a line stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\mathrm{s}^{\mathrm{nom}}`$ | `Line_s_nom` over $`\Xi \times \mathcal{K}`$ — nominal apparent power |
@@ -408,8 +418,8 @@ constraints:
 |---|---|
 | $`s`$ | `Line_s` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — `Line-s` — PyPSA's `p0`, the flow measured at the `Line_bus0` end: a positive value withdraws there and injects at `Line_bus1`, lossless |
 | $`\ell`$ | `Line_loss` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$, `neutral` where the mask leaves it out — `Line-loss` — what a line dissipates carrying its flow, pushed down by the cost and held up by the cuts; absent, and zero in the balance, where the network is lossless |
-| $`S`$ | `Line_s_nom_ext` over $`\mathcal{K}`$ — `Line-s_nom` — nominal apparent power where it is a decision; the parameter of the same PyPSA name carries the fixed regime |
-| $`N^{s}`$ | `Line_n_mod` over $`\mathcal{K}`$ — `Line-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot |
+| $`S`$ | `Line_s_nom_ext` over $`\mathcal{K}`$ — `Line-s_nom` — nominal apparent power where it is a decision, for a line that is active; the parameter of the same PyPSA name carries the fixed regime |
+| $`N^{s}`$ | `Line_n_mod` over $`\mathcal{K}`$ — `Line-n_mod` — how many modules of an extendable modular build; none for a unit that is not active |
 
 #### Definitions
 
@@ -449,13 +459,13 @@ s_{\xi,t,k} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k 
 **`Line_s_nom_ext`**
 
 ```math
-S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k}
+S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k}
 ```
 
 **`Line_n_mod`**
 
 ```math
-N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{s}_{t,k} \} \rvert > 0
+N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0 \wedge \mathrm{act}^{s}_{k}
 ```
 
 #### Definitions
@@ -537,25 +547,25 @@ s_{\xi,t,k} + \ell_{\xi,t,k} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qq
 **`Line_ext_s_nom_lower`**
 
 ```math
-S_{k} \ge \underline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k}
+S_{k} \ge \underline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k}
 ```
 
 **`Line_ext_s_nom_upper`**
 
 ```math
-S_{k} \le \overline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \overline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \text{ is defined}
+S_{k} \le \overline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k} \wedge \overline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \text{ is defined}
 ```
 
 **`Line_s_nom_set`**
 
 ```math
-S_{k} = \mathrm{s}^{\mathrm{nom,set}}_{k} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{nom,set}}_{k} \text{ is defined}
+S_{k} = \mathrm{s}^{\mathrm{nom,set}}_{k} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k} \wedge \mathrm{s}^{\mathrm{nom,set}}_{k} \text{ is defined}
 ```
 
 **`Line_s_nom_modularity`**
 
 ```math
-S_{k} = \mathrm{s}^{\mathrm{mod}}_{k} \cdot N^{s}_{k} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{s}_{t,k} \} \rvert > 0
+S_{k} = \mathrm{s}^{\mathrm{mod}}_{k} \cdot N^{s}_{k} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0 \wedge \mathrm{act}^{s}_{k}
 ```
 
 **`Line_s_set`**
