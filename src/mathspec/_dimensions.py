@@ -43,9 +43,9 @@ from mathspec.program import (
     RelationPairComparison,
     Sum,
     Translate,
-    TranslatedPredicate,
     VariableDefined,
     VariableReference,
+    WindowPredicate,
     WindowSum,
     children,
 )
@@ -361,7 +361,7 @@ def _check_where_dims(
                 leaf = 'a where-comparison of expressions'
             case CountComparison():
                 leaf = f"a where-count over '{atom.over}'"
-            case TranslatedPredicate():
+            case WindowPredicate():
                 leaf = f"a where-predicate translated along '{atom.along}'"
             case JoinedPredicate():
                 leaf = f"a where-predicate read through '{atom.columns.name}'"

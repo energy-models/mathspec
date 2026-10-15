@@ -41,9 +41,9 @@ from mathspec.program import (
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
-    TranslatedPredicate,
     TypedPredicate,
     VariableDefined,
+    WindowPredicate,
 )
 
 if TYPE_CHECKING:
@@ -264,7 +264,7 @@ def _observe(
             'against a literal, or precompute the count as a parameter and test that'
         )
         raise Undecidable(msg)
-    if isinstance(node, TranslatedPredicate):
+    if isinstance(node, WindowPredicate):
         msg = (
             'it reads a predicate at a neighbouring coordinate, which only the data decides. '
             'Test this row, or precompute the neighbour as a boolean parameter and test that'
@@ -316,7 +316,7 @@ def _subject_of(node: TypedPredicate) -> Subject:
             return Subject('expression', 'a comparison of expressions')
         case CountComparison():
             return Subject('expression', 'a count of the coordinates a predicate admits')
-        case TranslatedPredicate():
+        case WindowPredicate():
             return Subject('expression', 'a predicate read at a neighbouring coordinate')
         case JoinedPredicate():
             return Subject('expression', 'a predicate read through a relation')
@@ -520,7 +520,7 @@ def _atom(node: TypedPredicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
         case ExpressionComparison():
             msg = 'a comparison of expressions is refused as undecidable before any cell is read'
             raise AssertionError(msg)
-        case CountComparison() | TranslatedPredicate() | JoinedPredicate():
+        case CountComparison() | WindowPredicate() | JoinedPredicate():
             msg = (
                 'a predicate read as a count, at a neighbour or through a relation is refused as undecidable '
                 'before any cell is read'

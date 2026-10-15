@@ -22,7 +22,7 @@ from mathspec.program import (
     ExpressionComparison,
     JoinedPredicate,
     Translate,
-    TranslatedPredicate,
+    WindowPredicate,
     WindowSum,
     walk_regions,
 )
@@ -103,7 +103,7 @@ def notice(program: Program) -> Noticed:
                 expressions(atom.left, atom.right)
             elif isinstance(atom, CountComparison):
                 masks(atom.predicate)
-            elif isinstance(atom, TranslatedPredicate | JoinedPredicate):
+            elif isinstance(atom, WindowPredicate | JoinedPredicate):
                 masks(atom.operand)
 
     expressions(*program.roots)

@@ -63,9 +63,9 @@ from mathspec.program import (
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
-    TranslatedPredicate,
     TypedPredicate,
     VariableDefined,
+    WindowPredicate,
     carries_variable,
     variables_of,
     walk,
@@ -151,19 +151,6 @@ class WhereResolver:
             return node
         match kind:
             case 'parameter':
-                declared = ns.spec.parameters.get(node.name)
-                if declared is not None and declared.missing == 'refused' and declared.dtype in ('int', 'str'):
-                    rewrite = (
-                        f'Declare `missing: absent`, or compare the label: where: "{node.name} == \'...\'".'
-                        if declared.dtype == 'str'
-                        else f'Declare `missing: neutral` or `absent`, or compare the value: where: "{node.name} > 0".'
-                    )
-                    self.errors.append(
-                        f"{context}: '{node.name}' is declared dtype: {declared.dtype} and missing: refused, so it "
-                        f'has a row at every coordinate and the bare name is true at every coordinate — the mask '
-                        f'has no effect. {rewrite}'
-                    )
-                    return node
                 return ParameterDefined(node.name, ns.leaf_dims[node.name])
             case 'dimension':
                 self.errors.append(
@@ -246,7 +233,8 @@ class WhereResolver:
         if self.ns.unordered(along.name):
             self.errors.append(unordered(context, f'shift(<predicate>, along={along.name})', along.name))
             return node
-        return TranslatedPredicate(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
+        step = int(offset.value)
+        return WindowPredicate(mask, along.name, abs(step), tuple(sorted(mask.dims)), ahead=step < 0)
 
     def _joined(self, node: UnresolvedPredicateCallNode, mask: Mask) -> Predicate | UnresolvedWhereNode:
         """``at(<predicate>, by=relation[column])`` — the predicate read through a relation, as ``at`` reads an array.

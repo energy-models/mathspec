@@ -97,7 +97,7 @@ relations:
 
 `missing:` checks only the key. The values cannot be missing, because a null is
 refused and every value must be a label of its dimension. A label is data, so
-no value fills a gap in a map, and `neutral` is refused.
+no value fills a gap in a map.
 
 A bare relation follows the same rule, and its key is every column. Under the
 default `refused`, `connection` needs a row for every pair of a generator and a

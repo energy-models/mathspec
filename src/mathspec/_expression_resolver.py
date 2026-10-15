@@ -172,11 +172,26 @@ class ExpressionResolver:
             case '*':
                 return Multiply(left, right)
             case '/':
+                if self._zero_divisor(right):
+                    return None
                 return Divide(left, right)
             case '**':
                 return Power(left, right)
             case _:
                 assert_never(node.op)
+
+    def _zero_divisor(self, divisor: Expression) -> bool:
+        """Whether *divisor* is a parameter whose ``missing: 0`` gives a quotient a zero to divide by, recorded as an error."""
+        if not isinstance(divisor, ParameterReference):
+            return False
+        declared = self.ns.spec.parameters.get(divisor.name)
+        if declared is None or isinstance(declared.missing, bool) or declared.missing != 0:
+            return False
+        self.errors.append(
+            f"{self.context}: '{divisor.name}' is a divisor, and missing: 0 reads a missing row of it as 0, which "
+            f'no number divides by. Declare missing: refused, absent, or a value other than 0.'
+        )
+        return True
 
     def _name(self, node: NameNode) -> Expression | None:
         """A bare name as the variable, parameter or named expression it declares; a dimension or relation is not a value.

@@ -26,7 +26,7 @@ from mathspec.program import Piecewise, PiecewiseMethod, Variable, carries_varia
 from mathspec.spec import AssumptionSpec, Curvature, PiecewiseSpec, Spec, VariableSpec
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable
 
     from mathspec._resolution import Namespace
     from mathspec.program import Expression
@@ -94,9 +94,9 @@ def assumptions_of(name: str, pw: Piecewise) -> dict[str, AssumptionSpec]:
     """What entry *name* assumes of its numbers, by the name the document prints and a refusal quotes.
 
     Every curve assumes its breakpoints are there, because a missing row does
-    not shorten a curve. Under ``points:`` its tables are not ``refused``, so
-    a breakpoint missing inside the mask would read as their ``missing:`` and,
-    under ``neutral``, sit the curve on the origin. A curve has an x-axis only where two
+    not shorten a curve. Under ``points:`` a table that is not ``refused``
+    would read a breakpoint missing inside the mask as its ``missing:`` and,
+    under ``missing: 0``, sit the curve on the origin. A curve has an x-axis only where two
     links tie it, so the increasing condition — and the shape it is checked
     with — exist only there; ``lp`` alone needs a segment to state a line for;
     a mask must be one run.
@@ -299,9 +299,9 @@ def leaves_ungated(gate: VariableSpec | Variable | None) -> bool:
     """Whether a curve gated by *gate* runs ungated where the gate does not exist, which takes a second convexity row.
 
     A masked gate is absent off its mask, and there the curve sums to 1;
-    ``missing: neutral`` reads the gate as 0 there instead, which one row states.
+    ``missing: 0`` reads the gate as 0 there instead, which one row states.
     """
-    return gate is not None and gate.where is not None and gate.missing != 'neutral'
+    return gate is not None and gate.where is not None and gate.missing != 0
 
 
 def curve_frame(spec: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expression]) -> tuple[str, ...]:
@@ -438,7 +438,7 @@ class _Expansion:
         reduction, so the right-hand side would take the row with it and leave the
         weights without the convexity that makes them a curve at all (#1158).
 
-        ``missing: neutral`` is the other reading and stays one row — the gate is 0
+        ``missing: 0`` is the other reading and stays one row — the gate is 0
         where it does not exist, so the curve is pinned off there.
         """
         activity = self.pw.activity
@@ -476,26 +476,6 @@ class _Expansion:
             self._constraint(
                 cname, [*self.frame, d], f'({x_link.expression}) {sense} {x_link.values}', _edge(d, self.mask, end)
             )
-
-
-def refused_under_points(spec: Spec) -> Iterator[str]:
-    """A refusal for each values parameter of a curve with ``points:`` that reads a missing row as ``refused``.
-
-    ``points:`` says the curve stops short of the dimension, so its tables
-    have no row past the mask by design. ``refused`` says every row is
-    there: the curve never runs short, and a mask that names the table marks
-    every breakpoint.
-    """
-    for entry_name, pw in spec.piecewise.items():
-        if pw.points is None:
-            continue
-        for name in dict.fromkeys(link.values for link in pw.links):
-            if spec.parameters[name].missing == 'refused':
-                yield (
-                    f"parameter '{name}' is refused where a row is missing, and piecewise '{entry_name}' reads it under "
-                    f"points: '{pw.points}', which stops the curve where its rows stop. Declare missing: neutral, "
-                    f'absent, or a value of its dtype.'
-                )
 
 
 def expand_piecewise(spec: Spec) -> Spec:
