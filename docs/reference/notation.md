@@ -62,7 +62,7 @@ parameters:
   bp_x: { dims: [generator, bp], missing: neutral } # the x-axis of every curve below, and what a derived mask is read from
   bp_y: { dims: [generator, bp], missing: neutral }
   bp_heat: { dims: [generator, bp] }
-  bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a block has a mask to print
+  bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a piecewise entry has a mask to print
 ```
 
 #### Sets
@@ -254,7 +254,7 @@ variables:
 
 #### Scalar variable
 
-an empty dims: a scalar declaration, whose line carries no quantifier
+an empty dims: a scalar entry, whose line carries no quantifier
 
 ```yaml
 variables:
@@ -1034,7 +1034,7 @@ constraints:
 
 ### Piecewise curves
 
-A curve prints as the curve it states, over the frame the block builds one per coordinate of, and its expansion prints the rows that curve stands for. One row per `method:`, each from the spec named under it, so the symbols in this section are that spec's.
+A curve prints as the curve it states, over the frame the entry builds one per coordinate of, and its expansion prints the rows that curve stands for. One row per `method:`, each from the spec named under it, so the symbols in this section are that spec's.
 
 #### Adjacency method
 

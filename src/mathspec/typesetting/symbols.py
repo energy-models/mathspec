@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, cast
 from mathspec._yaml import read_yaml
 from mathspec.errors import SchemaError, did_you_mean
 from mathspec.piecewise import Emitted, leaves_ungated
-from mathspec.program import Dual, Variable, walk
+from mathspec.program import Dual, VariableReference, walk
 from mathspec.sos import Emitted as EmittedSet
 from mathspec.typesetting.format import NOTATIONS
 
@@ -87,7 +87,7 @@ def chosen_expressions(program: Program) -> frozenset[str]:
     return frozenset(
         name
         for name, entry in program.expressions.items()
-        if any(isinstance(node, Variable | Dual) for node in walk(entry.expression))
+        if any(isinstance(node, VariableReference | Dual) for node in walk(entry.expression))
     )
 
 
@@ -270,8 +270,8 @@ class SymbolTable:
     def checked_against(self, program: Program) -> SymbolTable:
         """Reject entries naming nothing in *program* or in what its formulations state, with the near miss.
 
-        A name a ``piecewise:`` or ``sos:`` block emits counts as declared, so
-        one table spells both readings of a spec: the blocks as the file states
+        A name a ``piecewise:`` or ``sos:`` entry emits counts as declared, so
+        one table spells both readings of a spec: the entries as the file states
         them, and the rows [`expand`][mathspec.spec.Spec.expand] writes out.
         """
         dims = set(program.dimensions)
@@ -310,7 +310,7 @@ def _emitted(program: Program) -> set[str]:
         )
         for name, curve in program.piecewise.items()
     )
-    sets = (EmittedSet.of(name, block.sos_type).by_kind for name, block in program.sos.items())
+    sets = (EmittedSet.of(name, entry.sos_type).by_kind for name, entry in program.sos.items())
     return {
         *(name for names in curves for name in names),
         *(name for by_kind in sets for _, names in by_kind for name in names),

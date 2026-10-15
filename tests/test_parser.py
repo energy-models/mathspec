@@ -313,7 +313,7 @@ def test_conjuncts_does_not_split_or_or_not(text):
 )
 def test_a_quoted_right_hand_side_is_a_label(text, right):
     """Quoting says "label, not name" (#460): unquoted, `combined-cycle` or `CCGT 400MW` was
-    unsayable, and a bare word may name a declaration."""
+    unsayable, and a bare word may name an entry."""
     node = parse_where(text)
     assert isinstance(node, UnresolvedComparisonNode)
     assert node.right == right
@@ -390,7 +390,7 @@ def test_position_is_a_call_on_the_left_hand_side(text, op, right, kwargs):
 )
 def test_a_side_is_any_arithmetic_to_the_grammar(text):
     """The grammar hands both sides over bare; what the language admits on a side is decided in resolution,
-    where the schema is (`TestAWhereSideIsReadInResolution`)."""
+    where the spec is (`TestAWhereSideIsReadInResolution`)."""
     assert isinstance(parse_where(text), UnresolvedComparisonNode)
 
 

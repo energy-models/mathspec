@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 Every other file in the library is written against this surface. It declares one
 `Port_p` per port, one balance per bus, and the relation that says which bus a
 port sits on. It sets the objective on `total_cost`, which it reads under
-[`given`](../../reference/language/declarations.md#given), and each component
+[`given`](../../reference/language/parameters-variables-constraints.md#given), and each component
 that has a cost adds its cost to that sum. No name in the surface names a
 component class, so you do not change this file when you add a component class.
 

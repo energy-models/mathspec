@@ -11,7 +11,7 @@ and three modules hold the rest:
 
 | Module             | Holds                                                   | Documented on             |
 | ------------------ | ------------------------------------------------------- | ------------------------- |
-| `mathspec.spec`    | what the file says: `Spec` and its blocks               | [Spec API](spec.md)       |
+| `mathspec.spec`    | what the file says: `Spec` and its parts                | [Spec API](spec.md)       |
 | `mathspec.program` | what the file means: `Program`, its nodes, and `Advice` | [Program API](program.md) |
 | `mathspec.errors`  | what you catch: the error tree, and `did_you_mean`      | [Errors](#errors) below   |
 
@@ -67,7 +67,7 @@ and three modules hold the rest:
       show_root_toc_entry: true
       heading_level: 3
 
-::: mathspec.typeset_declaration
+::: mathspec.typeset_line
     options:
       show_root_heading: true
       show_root_toc_entry: true

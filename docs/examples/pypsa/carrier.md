@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Carriers
 
-This file states the growth limits of each carrier. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. The limits read the sum `Carrier_additions`, which another fragment declares, and the file lists it under [`given`](../../reference/language/declarations.md#given).
+This file states the growth limits of each carrier. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. The limits read the sum `Carrier_additions`, which another fragment declares, and the file lists it under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml

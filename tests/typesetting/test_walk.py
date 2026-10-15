@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from mathspec.errors import LanguageError
-from mathspec.typesetting import FORMATS, SymbolTable, to_latex, to_markdown, typeset, typeset_declaration
+from mathspec.typesetting import FORMATS, SymbolTable, to_latex, to_markdown, typeset, typeset_line
 from mathspec.typesetting.format import OPERATOR_NAMES
 from mathspec.typesetting.symbols import _derive_name_symbol, chosen_expressions, symbols_for
 from mathspec.validation import to_spec
@@ -59,7 +59,7 @@ def test_a_where_lands_on_the_quantifier_not_in_the_equation(name: FormatName, f
     text = typeset(model, name, legend=False)
     forall, such_that = fmt.operators['forall'], fmt.operators['such_that']
     masked = [line for line in text.splitlines() if such_that in line]
-    assert len(masked) == 1, 'one declaration carries a mask, so exactly one line says so'
+    assert len(masked) == 1, 'one entry carries a mask, so exactly one line says so'
     assert masked[0].index(forall) < masked[0].index(such_that), 'the mask follows the quantifier, not the equation'
 
 
@@ -556,16 +556,16 @@ def test_a_parameter_is_upright_and_a_variable_is_italic(name: FormatName, fmt: 
 def test_nothing_the_model_is_given_prints_italic():
     """The convention as a property of the whole document, not of a fragment: a
     rendering path added later reaches the page through its own call."""
-    schema = to_spec(golden.MODEL)
-    computed = set(schema.variables) | chosen_expressions(schema.program)
+    spec = to_spec(golden.MODEL)
+    computed = set(spec.variables) | chosen_expressions(spec.program)
     italic = {m.replace(r'\_', '_') for m in re.findall(r'\\mathit\{([^}]*)\}', to_latex(golden.MODEL))}
     assert italic <= computed, (
         f'{sorted(italic - computed)} print italic and are neither chosen by the solver nor read off its '
         f'solution — upright is what the model is given, italic what it computes'
     )
 
-    symbols = symbols_for(schema.program, LATEX, SymbolTable('latex'))
-    given = {name: symbols.name[name] for name in schema.parameters}
+    symbols = symbols_for(spec.program, LATEX, SymbolTable('latex'))
+    given = {name: symbols.name[name] for name in spec.parameters}
     assert all(symbol.startswith(r'\mathrm{') for symbol in given.values()), (
         f'derived upright for every parameter, but got {sorted(s for s in given.values() if "mathrm" not in s)}'
     )
@@ -920,7 +920,7 @@ def test_a_count_along_a_dim_the_frame_carries_takes_a_primed_dummy():
             }
         },
     )
-    line = typeset_declaration(model, 'balance', 'latex')
+    line = typeset_line(model, 'balance', 'latex')
     assert r"g' \in \mathcal{G}" in line, 'the counted dimension is quantified already, so the set takes a fresh index'
 
 
@@ -949,16 +949,16 @@ def test_a_curve_prints_what_its_method_assumes_of_the_breakpoints(name: FormatN
     text = typeset(EXAMPLES / 'piecewise.yaml', name, legend=False)
     section = text[text.index('Assumptions') :]
     assert 'cost_curve_increasing' in section.replace(r'\_', '_'), (
-        'a condition is named after the block whose method implies it'
+        'a condition is named after the entry whose method implies it'
     )
     assert fmt.operators['lt'] in section, 'the x-axis is strictly increasing between neighbours'
     assert fmt.operators['or'] in section, 'the either-way bend is two counts joined by or, one per direction'
 
 
-def test_an_assumption_is_a_declaration_a_line_may_be_asked_for():
-    """`typeset_declaration` prints one line for a name; an assumption is now one of the names it takes."""
+def test_an_assumption_is_an_entry_a_line_may_be_asked_for():
+    """`typeset_line` prints one line for a name; an assumption is now one of the names it takes."""
     model = varied(DISPATCH_MODEL, assumptions={'costs_are_positive': 'cost > 0'})
-    assert typeset_declaration(model, 'costs_are_positive', 'latex') == (
+    assert typeset_line(model, 'costs_are_positive', 'latex') == (
         r'\mathrm{cost}_{g} > 0 \qquad \forall\, g \in \mathcal{G}'
     )
 
@@ -971,10 +971,10 @@ def test_a_condition_a_method_states_is_a_line_that_may_be_asked_for_before_it_i
     there, and the page shows a line no caller can reach.
     """
     curve = to_spec(EXAMPLES / 'piecewise_lp.yaml')
-    line = typeset_declaration(curve, 'cost_curve_increasing', 'latex')
+    line = typeset_line(curve, 'cost_curve_increasing', 'latex')
 
     assert 'is defined' not in line, 'the increasing condition is a comparison, not a definedness test'
-    assert line == typeset_declaration(curve.expand('piecewise'), 'cost_curve_increasing', 'latex'), (
+    assert line == typeset_line(curve.expand('piecewise'), 'cost_curve_increasing', 'latex'), (
         'and it prints the same line whether or not the curve has been written out'
     )
 
@@ -1036,8 +1036,8 @@ _CURVE = {
     ],
 )
 def test_a_curve_prints_as_the_curve_it_states(patch: dict[str, Any], expected: str):
-    """The block, not the rows it stands for: `typeset(spec.expand())` prints those."""
-    assert expected in typeset_declaration(varied(_CURVE, **patch), 'curve', 'latex')
+    """The entry, not the rows it stands for: `typeset(spec.expand())` prints those."""
+    assert expected in typeset_line(varied(_CURVE, **patch), 'curve', 'latex')
 
 
 def test_a_gate_that_does_not_exist_everywhere_prints_the_two_arms_the_expansion_writes_two_rows_for():
@@ -1051,7 +1051,7 @@ def test_a_gate_that_does_not_exist_everywhere_prints_the_two_arms_the_expansion
     assert (
         r'\begin{cases} \mathit{warm}_{t} & \text{if } \mathrm{committable}_{t} \\ 1 '
         r'& \text{otherwise} \end{cases} \cdot \mathrm{pwl}'
-    ) in typeset_declaration(spec, 'curve', 'latex'), 'and the factor on the curve carries the same two arms'
+    ) in typeset_line(spec, 'curve', 'latex'), 'and the factor on the curve carries the same two arms'
 
 
 def test_a_curve_prints_over_the_frame_its_expansion_builds_one_per_coordinate_of():
@@ -1070,13 +1070,13 @@ def test_a_curve_prints_over_the_frame_its_expansion_builds_one_per_coordinate_o
     spec = to_spec(model)
     emitted = spec.expand('piecewise').constraints['curve_link0'].dims
 
-    printed = typeset_declaration(spec, 'curve', 'latex')
+    printed = typeset_line(spec, 'curve', 'latex')
     assert printed.endswith(r'\forall\, t \in \mathcal{T},\ g \in \mathcal{G}')
     assert emitted == ['snapshot', 'generator'], 'the quantifier above is that frame, in that order'
 
 
-def test_the_expansion_prints_the_rows_the_block_states():
-    """Which is the whole reason the block prints as one line: the two readings are one call apart."""
+def test_the_expansion_prints_the_rows_the_entry_states():
+    """Which is the whole reason the entry prints as one line: the two readings are one call apart."""
     spec = to_spec(_CURVE)
 
     assert 'curve_lam' not in to_markdown(spec), 'nothing a curve emits is named where the curve itself prints'
@@ -1084,7 +1084,7 @@ def test_the_expansion_prints_the_rows_the_block_states():
 
 
 @EVERY_FORMAT
-def test_a_set_is_labelled_by_the_block_that_declares_it(name: FormatName, fmt: Format):
+def test_a_set_is_labelled_by_the_entry_that_declares_it(name: FormatName, fmt: Format):
     """The line was labelled ``<variable> sos``, a name the file never wrote, while every other line carries its key."""
     picked = varied(
         DISPATCH_MODEL,

@@ -8,10 +8,10 @@ SPDX-License-Identifier: CC-BY-4.0
 This spec adds an on/off decision per unit and a start-up ramp to [least-cost
 dispatch](dispatch.md). Read `previous_status` first, then `ramp_up`.
 `previous_status` is the state that a unit carries into a snapshot, and the file
-states its three regimes once, in a
-[`cases:`](../reference/language/named.md#cases) block. `ramp_up` reads
+states its three regimes once, under
+[`cases:`](../reference/language/named.md#cases). `ramp_up` reads
 `previous_status` as it reads a parameter, so one inequality covers a running
-unit and a starting unit. The typesetter prints the block once, under
+unit and a starting unit. The typesetter prints the cases once, under
 **Definitions** below.
 
 <!-- gallery:begin -->

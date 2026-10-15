@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- refactor(api)!: a spec class ends in `Spec`, a program class takes its construct's name, and the docs call one named item an entry ([#855](https://github.com/energy-models/mathspec/pull/855))
 - fix(language): a patch that changes a dimension is told that a field it leaves out reads as its default ([#857](https://github.com/energy-models/mathspec/pull/857))
 
 ## 0.3.0 (2026-10-15)

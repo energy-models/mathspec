@@ -204,7 +204,7 @@ _allowed_, or _written_, or _the language can express it_.
 | a surface             | the keys the language accepts, or name them                           |
 
 Domain terms stay, because replacing one costs the reader more than it saves:
-affine, degree, dimension, coordinate, broadcast, declaration, invariant,
+affine, degree, dimension, coordinate, broadcast, entry, invariant,
 agnostic, and PyPSA's own names such as `p_nom`. A cardinality constraint keeps
 its name and gains a clause that says it counts how many things are non-zero.
 
@@ -220,8 +220,8 @@ anyway. Shorten a clause to fit the sentence, and never drop it:
 | a backend     | one of the two implementations that build a model from the same syntax tree                                                                      |
 | a primitive   | an operator built into the language, which no file can add to                                                                                    |
 | a macro       | a template that takes arguments and is substituted into an expression before anything reads it                                                   |
-| a formulation | a block that expands into ordinary declarations before the model is built                                                                        |
-| a frame       | the dimensions a declaration ranges over                                                                                                         |
+| a formulation | an entry that expands into ordinary entries before the model is built                                                                            |
+| a frame       | the dimensions an entry ranges over                                                                                                              |
 | bounded-halo  | reads a fixed number of neighbouring positions, and no more                                                                                      |
 | a rung        | one step of the PyPSA ladder, which is one `n.optimize()` keyword stated in full                                                                 |
 
@@ -239,7 +239,7 @@ and no docs at hand. Every rule above applies, and these are added:
   "`bounds.lower` is nan, which no value compares to. Write a number, or omit
   the bound." names the key, the fault and the rewrite. A message that only
   says what is wrong leaves the reader to guess the fix.
-- **Name the thing as the file spells it.** Quote the key, the declaration
+- **Name the thing as the file spells it.** Quote the key, the entry
   name and the value the reader wrote, so that they can search the file for
   it. Keep the quoting the module already uses.
 - **No "invalid", "illegal", "failed" or "error" on their own.** Say which
