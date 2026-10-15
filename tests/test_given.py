@@ -17,8 +17,8 @@ from __future__ import annotations
 import pytest
 
 from mathspec import advice, merge, to_markdown, to_spec, typeset
+from mathspec._typesetting import FORMATS
 from mathspec.errors import LanguageError
-from mathspec.typesetting import FORMATS
 from tests.fixtures import BALANCE, section
 
 #: One component file: it pins the flow at its own port, and the column it

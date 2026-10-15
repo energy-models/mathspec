@@ -11,17 +11,17 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from mathspec._typesetting import SymbolTable, to_latex, to_markdown, to_typst, typeset
+from mathspec._typesetting.format import number
+from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
-from mathspec.typesetting import SymbolTable, to_latex, to_markdown, to_typst, typeset
-from mathspec.typesetting.format import number
-from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, varied
 from tests.typesetting.fixtures import EVERY_FORMAT, TYPST_SYMBOLS
 
 if TYPE_CHECKING:
+    from mathspec._typesetting import FormatName
+    from mathspec._typesetting.format import Format
     from mathspec.spec import Spec
-    from mathspec.typesetting import FormatName
-    from mathspec.typesetting.format import Format
 
 
 WITH_MARGINAL_COST = varied(

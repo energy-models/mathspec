@@ -12,9 +12,9 @@ import pytest
 import yaml
 
 import mathspec._yaml as _yaml_module
+from mathspec._validation import to_spec
 from mathspec._yaml import read_yaml
 from mathspec.errors import SchemaError
-from mathspec.validation import to_spec
 from tests.fixtures import raw_of
 
 MODEL = """dimensions:

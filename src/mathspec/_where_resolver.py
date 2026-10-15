@@ -7,7 +7,7 @@
 A bare name, a comparison, a count and a predicate read through a relation
 or along a dimension are each typed here against the namespace, and a
 comparison of expressions hands its sides to the expression walk.
-[`mathspec.resolution`][] holds the namespace and the doors that call this.
+[`mathspec._resolution`][] holds the namespace and the doors that call this.
 """
 
 from __future__ import annotations
@@ -17,7 +17,9 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple, assert_never, cast
 
-import mathspec.degree as degree
+import mathspec._degree as degree
+from mathspec._dimensions import dims_of, join_dims
+from mathspec._expansion import expand
 from mathspec._expression_parser import (
     ArithmeticNode,
     FunctionCallNode,
@@ -34,9 +36,7 @@ from mathspec._where_parser import (
     UnresolvedPredicateCallNode,
     UnresolvedWhereNode,
 )
-from mathspec.dimensions import dims_of, join_dims
 from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
-from mathspec.expansion import expand
 from mathspec.program import (
     Add,
     And,
@@ -74,8 +74,8 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from mathspec._resolution import Namespace
     from mathspec.program import DeclaredDtype
-    from mathspec.resolution import Namespace
 
 #: Why a mask may not read a given expression. The namespace stores a given
 #: expression with the variables, because it is read as a column, so this

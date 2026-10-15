@@ -14,9 +14,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from mathspec._typesetting import to_markdown
+from mathspec._validation import to_spec
 from mathspec.spec import PIECEWISE_METHODS
-from mathspec.typesetting import to_markdown
-from mathspec.validation import to_spec
 from tests.fixtures import EXAMPLES
 from tools import expansion_math, gallery, home_math, notation, spec_math
 
@@ -294,7 +294,7 @@ def test_every_page_under_docs_has_a_nav_entry():
     )
 
 
-#: The API pages, by the module each renders. `mathspec.typesetting` has no
+#: The API pages, by the module each renders. `mathspec._typesetting` has no
 #: page of its own: `mathspec` re-exports what a consumer calls from it.
 API_PAGES = {
     'mathspec': Path('docs') / 'reference' / 'api.md',

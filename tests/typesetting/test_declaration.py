@@ -18,8 +18,8 @@ from tests.typesetting.fixtures import EVERY_FORMAT
 from tests.typesetting.test_cases import CASED
 
 if TYPE_CHECKING:
-    from mathspec.typesetting import FormatName
-    from mathspec.typesetting.format import Format
+    from mathspec._typesetting import FormatName
+    from mathspec._typesetting.format import Format
 
 #: A variable-carrying reduction, a scalar reduction, a data-only body, and a
 #: constraint reading the first — the shapes a line has to read.

@@ -9,12 +9,12 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, ClassVar
 
-from mathspec.typesetting.format import OPERATOR_SPELLINGS, aligned_rows, escaped, paragraphs
+from mathspec._typesetting.format import OPERATOR_SPELLINGS, aligned_rows, escaped, paragraphs
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from mathspec.typesetting.format import Entry, Line, Notation, OperatorName
+    from mathspec._typesetting.format import Entry, Line, Notation, OperatorName
 
 _PREAMBLE = """#set page(margin: 2.5cm)
 #set text(size: 11pt)
@@ -46,7 +46,7 @@ def _raw(text: str) -> str:
 
 
 class TypstFormat:
-    """See [`mathspec.typesetting.format.Format`][].
+    """See [`mathspec._typesetting.format.Format`][].
 
     The cyclic operators spell with ``.o``, Typst's circled modifier;
     ``minus.circle`` does not compile.

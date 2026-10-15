@@ -12,14 +12,14 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mathspec import to_latex, to_spec, typeset
-from mathspec.typesetting.symbols import chosen_expressions
+from mathspec._typesetting.symbols import chosen_expressions
 from tests.fixtures import DISPATCH_MODEL as DISPATCH
 from tests.fixtures import varied
 from tests.typesetting.fixtures import EVERY_FORMAT
 
 if TYPE_CHECKING:
-    from mathspec.typesetting import FormatName
-    from mathspec.typesetting.format import Format
+    from mathspec._typesetting import FormatName
+    from mathspec._typesetting.format import Format
 
 #: One region and the fallback. `opening` is a column and `otherwise` a scalar,
 #: so the cases alone would not give a quantity its shape — the `dims` does.

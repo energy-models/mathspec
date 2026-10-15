@@ -13,17 +13,17 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from mathspec._resolution import Namespace
+from mathspec._typesetting import FORMATS, to_markdown, typeset_declaration
+from mathspec._validation import to_spec
 from mathspec._yaml import parse_yaml, read_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
 from mathspec.program import DimensionPosition
-from mathspec.resolution import Namespace
-from mathspec.typesetting import FORMATS, to_markdown, typeset_declaration
-from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SMALL_MODEL, schema_of, varied, where_of
 
 if TYPE_CHECKING:
+    from mathspec._typesetting import FormatName
     from mathspec.spec import Spec
-    from mathspec.typesetting import FormatName
 
 
 def _schema(**patch) -> Spec:
@@ -2275,7 +2275,8 @@ def test_each_declaration_is_resolved_once_however_many_readers(monkeypatch):
     program lowering built now. A curve's links were resolved again for its
     rules at load and again when printed.
     """
-    from mathspec import lowering, resolution
+    from mathspec import _lowering as lowering
+    from mathspec import _resolution as resolution
 
     seen: list[tuple[str, str]] = []
 

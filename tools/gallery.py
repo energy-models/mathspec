@@ -22,8 +22,8 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 from mathspec import merge, override, to_spec, typeset_declaration
+from mathspec._typesetting import to_markdown
 from mathspec.program import Add, Constant, NamedExpression
-from mathspec.typesetting import to_markdown
 from tools._page import ROOT, sidecar_for, splice, split_math, tab, without_header
 from tools._page import main as page_main
 from tools.notation import equations

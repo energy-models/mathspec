@@ -40,7 +40,7 @@ def _signed(sign: Sign, node: ArithmeticNode) -> tuple[Sign, ArithmeticNode]:
 
     ``+ -x`` is ``- x`` and ``- -x`` is ``+ x``, so a term sorts and prints
     under one spelling however the file wrote it. Folding is also what makes
-    the walk the inverse of [`_sum`][mathspec.canonical._sum], which writes a leading minus term as
+    the walk the inverse of [`_sum`][mathspec._canonical._sum], which writes a leading minus term as
     the negation it is — without it a second pass would read that minus as part
     of the term and sort by it.
     """
@@ -167,7 +167,7 @@ def laid_out(node: ParsedNode) -> str:
     as the same tree. An expression of one term stays on one line.
 
     Each term is bracketed the way any operand is, and the first through
-    [`_sum`][mathspec.canonical._sum], because a line is read back as part of the whole: ``- b - c``
+    [`_sum`][mathspec._canonical._sum], because a line is read back as part of the whole: ``- b - c``
     under a leading ``a`` is ``a - b - c``, where the term written was
     ``(b - c)``. An expression of one term is one line, operator and all.
     """
@@ -231,7 +231,7 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
         spec: The loaded spec.
 
     Returns:
-        Plain data, ready for [`canonical_yaml`][mathspec.canonical.canonical_yaml].
+        Plain data, ready for [`canonical_yaml`][mathspec._canonical.canonical_yaml].
         Loading it gives the same spec back, and not a `Spec` equal to *spec*:
         an expression reprinted in the normal form is a different string.
     """
@@ -252,5 +252,5 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
 
 
 def canonical_yaml(spec: Spec) -> str:
-    """The file a reviewer diffs — [`canonical_dict`][mathspec.canonical.canonical_dict] as YAML, each expression term on its own line."""
+    """The file a reviewer diffs — [`canonical_dict`][mathspec._canonical.canonical_dict] as YAML, each expression term on its own line."""
     return dump_yaml(canonical_dict(spec))

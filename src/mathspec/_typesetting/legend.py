@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
+from mathspec._typesetting.format import Entry, number
 from mathspec.program import (
     CountComparison,
     DimensionComparison,
@@ -25,14 +26,13 @@ from mathspec.program import (
     WindowSum,
     walk_regions,
 )
-from mathspec.typesetting.format import Entry, number
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from mathspec._typesetting.format import Format, OperatorName
+    from mathspec._typesetting.symbols import Symbols
     from mathspec.program import Expression, Mask, Missing, Program, RelationDeclaration
-    from mathspec.typesetting.format import Format, OperatorName
-    from mathspec.typesetting.symbols import Symbols
 
 #: What a translation does with the row the shift vacates. Three policies get
 #: three spellings because they are three different equations at the boundary.

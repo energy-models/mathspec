@@ -24,7 +24,7 @@ import yaml
 
 import mathspec.spec as spec_module
 from mathspec import merge, override, to_markdown, to_spec
-from mathspec.canonical import canonical_yaml
+from mathspec._canonical import canonical_yaml
 from mathspec.errors import LanguageError
 from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, varied
 

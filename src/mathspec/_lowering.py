@@ -17,10 +17,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec.dimensions import check_schema, dims_of
+from mathspec._dimensions import check_schema, dims_of
+from mathspec._expansion import expand, parse_template
+from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
+from mathspec._resolution import (
+    Namespace,
+    mask_of,
+    resolve_constraint_text,
+    resolve_expression,
+    resolve_expression_text,
+    resolve_where_text,
+    self_existence,
+)
+from mathspec._validation import emitted_name_errors, reference_errors
 from mathspec.errors import SchemaError, did_you_mean, prefixed
-from mathspec.expansion import expand, parse_template
-from mathspec.piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec.program import (
     Assumption,
     BooleanLiteral,
@@ -45,16 +55,6 @@ from mathspec.program import (
     variables_of,
     walk,
 )
-from mathspec.resolution import (
-    Namespace,
-    mask_of,
-    resolve_constraint_text,
-    resolve_expression,
-    resolve_expression_text,
-    resolve_where_text,
-    self_existence,
-)
-from mathspec.validation import emitted_name_errors, reference_errors
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping

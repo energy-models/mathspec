@@ -16,9 +16,10 @@ from typing import get_args
 import pytest
 
 from mathspec import to_spec
+from mathspec._exclusivity import overlapping
+from mathspec._resolution import Namespace
 from mathspec._where_parser import parse_where
 from mathspec.errors import LanguageError
-from mathspec.exclusivity import overlapping
 from mathspec.program import (
     Add,
     And,
@@ -63,7 +64,6 @@ from mathspec.program import (
     walk_regions,
     where_children,
 )
-from mathspec.resolution import Namespace
 from mathspec.spec import Spec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, expanded, expression_of, schema_of, varied, where_of
 

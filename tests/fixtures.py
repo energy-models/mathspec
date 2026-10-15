@@ -10,13 +10,13 @@ import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from mathspec._expansion import parse_and_expand
 from mathspec._expression_parser import ComparisonNode
+from mathspec._resolution import Namespace, mask_of, resolve_expression, resolve_where_text
+from mathspec._validation import to_spec
 from mathspec._yaml import parse_yaml, read_yaml
 from mathspec.errors import SchemaError
-from mathspec.expansion import parse_and_expand
-from mathspec.resolution import Namespace, mask_of, resolve_expression, resolve_where_text
 from mathspec.spec import Spec
-from mathspec.validation import to_spec
 
 if TYPE_CHECKING:
     from mathspec.program import Expression, Mask

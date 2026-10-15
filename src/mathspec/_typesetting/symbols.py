@@ -15,16 +15,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from mathspec._piecewise import Emitted, leaves_ungated
+from mathspec._sos import Emitted as EmittedSet
+from mathspec._typesetting.format import NOTATIONS
 from mathspec._yaml import read_yaml
 from mathspec.errors import SchemaError, did_you_mean
-from mathspec.piecewise import Emitted, leaves_ungated
 from mathspec.program import Dual, Variable, walk
-from mathspec.sos import Emitted as EmittedSet
-from mathspec.typesetting.format import NOTATIONS
 
 if TYPE_CHECKING:
+    from mathspec._typesetting.format import Format, Notation
     from mathspec.program import Program
-    from mathspec.typesetting.format import Format, Notation
 
 __all__ = ['SymbolTable', 'Symbols', 'symbols_for']
 

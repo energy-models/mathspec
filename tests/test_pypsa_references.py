@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mathspec import override, to_spec
-from mathspec.exclusivity import Special, Subject, _evaluate, _Grid, _subject_of
+from mathspec._exclusivity import Special, Subject, _evaluate, _Grid, _subject_of
 from tools import gallery
 from tools.gallery import DECLARED, PATCHED, RECORDED, REFERENCES, _names_for, _stands_for
 

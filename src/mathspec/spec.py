@@ -32,8 +32,8 @@ from pydantic import (
 )
 
 from mathspec._expression_parser import NAME, ComparisonOperator
+from mathspec._operators import BUILTIN_NAMES
 from mathspec.errors import did_you_mean, schema_error
-from mathspec.operators import BUILTIN_NAMES
 from mathspec.program import (
     DimensionDtype,
     MissingReading,
@@ -520,7 +520,7 @@ class GivenExpressionBlock(_StrictBlock):
     of every place this file reads it.
 
     A named expression of this file may add to the name with ``adds_to:``.
-    [`merge`][mathspec.composition.merge] then writes every term the files
+    [`merge`][mathspec.merge] then writes every term the files
     add after the body a file defines, or as the whole body where no file
     defines it. The file itself reads the name as the whole sum, alone and
     composed.
@@ -666,7 +666,7 @@ class ExpressionBlock(_StrictBlock):
     ``adds_to:`` adds this entry as a term to the sum it names, a
     ``given: expressions:`` entry of this file: a write, where the given entry
     is the read.
-    [`merge`][mathspec.composition.merge] adds every term to that name by
+    [`merge`][mathspec.merge] adds every term to that name by
     name, after the body a file defines where one does. The term is read over at most the
     frame the given entry states, and does not read the name it adds to.
     """
@@ -1082,7 +1082,7 @@ class Spec(_StrictBlock):
         so a consumer building rows reads ``spec.expand(...).program`` and
         refuses a block it does not take.
         """
-        from mathspec.lowering import lower
+        from mathspec._lowering import lower
 
         return lower(self)
 
@@ -1159,7 +1159,7 @@ class Spec(_StrictBlock):
                 being a different string.
         """
         if canonical:
-            from mathspec.canonical import canonical_yaml
+            from mathspec._canonical import canonical_yaml
 
             return canonical_yaml(self)
         from mathspec._yaml import dump_yaml
@@ -1194,8 +1194,8 @@ class Spec(_StrictBlock):
             ValueError: *kinds* names something that is not a formulation.
         """
         wanted = _formulations(kinds)
-        from mathspec.piecewise import expand_piecewise
-        from mathspec.sos import expand_sets
+        from mathspec._piecewise import expand_piecewise
+        from mathspec._sos import expand_sets
 
         expanded = expand_piecewise(self) if 'piecewise' in wanted else self
         if 'sos' in wanted and expanded.sos:

@@ -15,18 +15,18 @@ from typing import TYPE_CHECKING, Any, get_args
 
 import pytest
 
-from mathspec.operators import BUILTIN_NAMES
+from mathspec._operators import BUILTIN_NAMES
+from mathspec._typesetting import FORMATS, legend, to_latex, typeset, walk
+from mathspec._typesetting.format import OPERATOR_NAMES
+from mathspec._validation import to_spec
 from mathspec.program import Dual, Expression, Join, NamedExpression, Predicate, Sum, Translate, WindowSum
-from mathspec.typesetting import FORMATS, legend, to_latex, typeset, walk
-from mathspec.typesetting.format import OPERATOR_NAMES
-from mathspec.validation import to_spec
 from tests.typesetting import golden
 from tests.typesetting.fixtures import LATEX
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from mathspec.typesetting.format import Format
+    from mathspec._typesetting.format import Format
 
 
 @pytest.mark.parametrize('name', list(FORMATS), ids=list(FORMATS))

@@ -13,12 +13,12 @@ import textwrap
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from mathspec.typesetting import to_markdown
+from mathspec._typesetting import to_markdown
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
-    from mathspec.composition import Source
+    from mathspec._composition import Source
 
 ROOT = Path(__file__).resolve().parent.parent
 

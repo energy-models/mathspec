@@ -12,7 +12,7 @@ through parameters carrying its breakpoints — which lowering runs before it
 reads any expression, since resolution assumes every one of them.
 [`emitted_name_errors`][] is read off the program instead: what a block's
 expansion writes is decided by the block as lowered. The rules that need a
-typed expression stay with the expressions in [`lower`][mathspec.lowering.lower]:
+typed expression stay with the expressions in [`lower`][mathspec._lowering.lower]:
 a macro formal against a dimension, a curve's links, and every dim rule.
 """
 
@@ -22,12 +22,12 @@ from collections import Counter
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
+from mathspec._operators import BUILTIN_NAMES
+from mathspec._piecewise import Emitted as EmittedCurve
+from mathspec._sos import Emitted as EmittedSet
+from mathspec._sos import coefficients
 from mathspec._yaml import read_spec
 from mathspec.errors import SchemaError, unordered
-from mathspec.operators import BUILTIN_NAMES
-from mathspec.piecewise import Emitted as EmittedCurve
-from mathspec.sos import Emitted as EmittedSet
-from mathspec.sos import coefficients
 from mathspec.spec import NUMERIC_DTYPES, Spec, side_columns
 
 if TYPE_CHECKING:

@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec.degree import calls_dual, check_binary, check_expression
+from mathspec._degree import calls_dual, check_binary, check_expression
+from mathspec._resolution import Namespace
 from mathspec.errors import LanguageError
 from mathspec.program import carries_variable
-from mathspec.resolution import Namespace
 from tests.fixtures import SMALL_MODEL, expression_of, schema_of
 
 SCHEMA = schema_of(SMALL_MODEL)

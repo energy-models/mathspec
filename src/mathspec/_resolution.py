@@ -18,7 +18,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast
 
-import mathspec.degree as degree
+import mathspec._degree as degree
+from mathspec._exclusivity import overlapping
+from mathspec._expansion import expand, parse_and_expand
 from mathspec._expression_parser import (
     ArithmeticNode,
     ComparisonNode,
@@ -33,8 +35,6 @@ from mathspec._where_parser import (
 )
 from mathspec._where_resolver import WhereResolver
 from mathspec.errors import LanguageError, SchemaError, case_context, prefixed
-from mathspec.exclusivity import overlapping
-from mathspec.expansion import expand, parse_and_expand
 from mathspec.program import (
     BooleanLiteral,
     Cases,
@@ -67,7 +67,7 @@ DeclarationKind = Literal['variable', 'parameter', 'dimension', 'relation']
 class Namespace:
     """The declared names of one schema, by kind — the whole of what a file may name, read once.
 
-    A name has one kind: validation.py refuses one declared under two sections.
+    A name has one kind: _validation.py refuses one declared under two sections.
     """
 
     __slots__ = (
@@ -406,7 +406,7 @@ def resolve_expression_text(
 
     *ceiling* is the degree the position honours, and ``None`` for an
     ``expressions:`` entry's body: what the math admits
-    ([`check_expression`][mathspec.degree.check_expression]) is a rule about the position
+    ([`check_expression`][mathspec._degree.check_expression]) is a rule about the position
     that *reads* it, so it fires on the expanded tree of every objective and
     piecewise link, and not where an entry is declared. A constraint is
     [`resolve_constraint_text`][]'s.

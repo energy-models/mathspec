@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import ast
 import inspect
+import pkgutil
 import types
 from pathlib import Path
 
@@ -51,6 +52,9 @@ SPEC_REEXPORTS = frozenset({'BUILTIN_NAMES'})
 #: A `model_`-prefixed name is pydantic's, not a contract this project keeps.
 SPEC_SURFACE = frozenset({'to_dict', 'to_yaml', 'expand', 'program'})
 
+#: The submodules of `mathspec` whose names carry no leading underscore.
+PUBLIC_MODULES = frozenset({'spec', 'program', 'errors'})
+
 #: The modules whose `__all__` a consumer imports from.
 MODULES = [
     pytest.param(mathspec, id='mathspec'),
@@ -73,6 +77,14 @@ def test_all_matches_the_pinned_surface():
     declared = set(mathspec.__all__)
     assert declared == SURFACE, (
         f'only in __all__: {sorted(declared - SURFACE)}; only in SURFACE: {sorted(SURFACE - declared)}'
+    )
+
+
+def test_only_the_public_modules_have_names_without_a_leading_underscore():
+    """A module named without an underscore reads as public, so a new one is the same decision as a name in `__all__`."""
+    named = {info.name for info in pkgutil.iter_modules(mathspec.__path__) if not info.name.startswith('_')}
+    assert named == PUBLIC_MODULES, (
+        f'only in the package: {sorted(named - PUBLIC_MODULES)}; only in PUBLIC_MODULES: {sorted(PUBLIC_MODULES - named)}'
     )
 
 

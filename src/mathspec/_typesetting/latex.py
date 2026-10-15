@@ -8,12 +8,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from mathspec.typesetting.format import OPERATOR_SPELLINGS, aligned_rows, escaped, paragraphs
+from mathspec._typesetting.format import OPERATOR_SPELLINGS, aligned_rows, escaped, paragraphs
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from mathspec.typesetting.format import Entry, Line, Notation, OperatorName
+    from mathspec._typesetting.format import Entry, Line, Notation, OperatorName
 
 _ESCAPES = {
     '\\': r'\textbackslash{}',
@@ -42,7 +42,7 @@ def _escape(text: str) -> str:
 
 
 class LatexFormat:
-    """See [`mathspec.typesetting.format.Format`][]."""
+    """See [`mathspec._typesetting.format.Format`][]."""
 
     notation: ClassVar[Notation] = 'latex'
     #: TeX's own em-dash ligature.

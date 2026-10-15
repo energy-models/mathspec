@@ -65,11 +65,11 @@ at a time::
       ramp: {dims: [snapshot, generator, investment_period]}
 
 A fragment is a [`Spec`][mathspec.spec.Spec] of its own, and a base is one
-too: each goes through [`to_spec`][mathspec.validation.to_spec] before anything is
+too: each goes through [`to_spec`][mathspec.to_spec] before anything is
 composed, so a composed spec never hides a file that does not load alone. A
 patch is not one. It names only what it changes and may carry ``null`` where a
 declaration would go, so it is laid over as written, and the result goes
-through [`to_spec`][mathspec.validation.to_spec] like any other file.
+through [`to_spec`][mathspec.to_spec] like any other file.
 
 What a patch may say, and what is refused:
 
@@ -103,11 +103,11 @@ from typing import TYPE_CHECKING, cast, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
+from mathspec._validation import to_spec
 from mathspec._yaml import read_spec
 from mathspec.errors import LanguageError, did_you_mean, schema_error
 from mathspec.program import variables_of
 from mathspec.spec import GivenBlock, Spec
-from mathspec.validation import to_spec
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -704,7 +704,7 @@ def override(base: Source, patches: Sequence[Source]) -> Spec:
 def _declarations(source: Source) -> dict[str, object]:
     """A patch as the mapping it declares, whatever shape it arrived in.
 
-    Deliberately not [`to_spec`][mathspec.validation.to_spec]: a patch carrying a
+    Deliberately not [`to_spec`][mathspec.to_spec]: a patch carrying a
     ``null`` or naming only the field it changes is not a spec.
     """
     if isinstance(source, Spec):

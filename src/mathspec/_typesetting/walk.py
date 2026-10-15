@@ -15,6 +15,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, assert_never
 
+from mathspec._typesetting.format import Line, OperatorName, number
+from mathspec._typesetting.legend import TranslationPolicy, policy_of
 from mathspec.errors import SchemaError, did_you_mean
 from mathspec.program import (
     Add,
@@ -56,17 +58,15 @@ from mathspec.program import (
     VariableDefined,
     WindowSum,
 )
-from mathspec.typesetting.format import Line, OperatorName, number
-from mathspec.typesetting.legend import TranslationPolicy, policy_of
 
 if TYPE_CHECKING:
     import datetime
     from collections.abc import Iterable, Mapping
 
     from mathspec._expression_parser import BinaryOperator
+    from mathspec._typesetting.format import Format
+    from mathspec._typesetting.symbols import Symbols
     from mathspec.program import PiecewiseDeclaration, Program
-    from mathspec.typesetting.format import Format
-    from mathspec.typesetting.symbols import Symbols
 
 #: Operator precedence, for deciding brackets. A reduction sits at the bottom
 #: with ``+``: an unbracketed sum reads as capturing whatever follows it, so as

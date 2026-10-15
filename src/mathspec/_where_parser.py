@@ -8,7 +8,7 @@ A where string is a boolean algebra over comparisons, and a comparison's
 sides are the expression grammar's own arithmetic. What a side *is* — a
 parameter, a dimension, a relation column, a ``position()`` — only the schema
 knows, so the grammar hands both sides over bare and
-[`mathspec.resolution`][] reads them. The resolved vocabulary lives in
+[`mathspec._resolution`][] reads them. The resolved vocabulary lives in
 [`mathspec.program`][].
 """
 
@@ -281,7 +281,7 @@ def parse_where(text: str) -> Predicate | UnresolvedWhereNode:
 
     The connectives and literals are the resolved vocabulary's own; the leaves
     naming declarations are a bare [`NameNode`][] or an ``Unresolved*``
-    node, which only [`resolve_where`][mathspec.resolution.resolve_where] takes.
+    node, which only [`resolve_where`][mathspec._resolution.resolve_where] takes.
 
     Raises:
         SchemaError: If *text* is not a where string of the language. A

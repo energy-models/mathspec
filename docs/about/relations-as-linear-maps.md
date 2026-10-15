@@ -86,7 +86,7 @@ summed. They are the indices of the operand and of the indicator together,
 less the summed one, which is `(dims(x) − joined) ∪ grouped`. That is the rule
 in the [expressions
 reference](../reference/language/expressions.md#how-dimensions-combine), and
-`join_dims` in `src/mathspec/dimensions.py` computes it. The loader refuses a
+`join_dims` in `src/mathspec/_dimensions.py` computes it. The loader refuses a
 sum that breaks one of three conditions, and the formula needs each of them:
 
 - The operand carries every column joined on, or there is nothing to match.

@@ -20,9 +20,9 @@ package-private, because a consumer reads a program instead.
 """
 
 from mathspec import errors, program, spec
-from mathspec.advising import advice
-from mathspec.composition import merge, override
-from mathspec.typesetting import (
+from mathspec._advising import advice
+from mathspec._composition import merge, override
+from mathspec._typesetting import (
     FormatName,
     SymbolTable,
     to_latex,
@@ -31,7 +31,7 @@ from mathspec.typesetting import (
     typeset,
     typeset_declaration,
 )
-from mathspec.validation import to_spec
+from mathspec._validation import to_spec
 
 __all__ = [
     'FormatName',
