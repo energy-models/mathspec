@@ -37,7 +37,7 @@ data exists.
 : What a consumer does when it combines data with a program.
 A consumer can only check a rule involving data after it has attached; mathspec checks no such rule itself.
 The docs will never say "bind" when they refer to this, so that **bound** means one thing: a lower or upper
-limit on a variable ([variables](language/declarations.md#variables)).
+limit on a variable ([variables](language/parameters-variables-constraints.md#variables)).
 
 **Provide**
 : What a host model does for a name under `given:`, when layering several files.
@@ -45,9 +45,15 @@ The host model will hold a column or a row family of that name, on the same fram
 A consumer is responsible for checking that the host provides each given name
 ([what a program does not build](reading.md#what-a-program-does-not-build)).
 
-**Declaration**
-: One named entry under one of the top-level keys: one dimension, one
-parameter, one constraint ([file shape](language/file.md)).
+**Section**
+: One of the thirteen top-level keys of a file, such as `parameters:` or
+`given:`, and the entries under it ([file shape](language/file.md)).
+
+**Entry**
+: One named item under one section: one dimension, one parameter, one
+constraint ([file shape](language/file.md)). In Python, an entry is a
+`*Spec` in `mathspec.spec`, such as `VariableSpec`, and a class with the
+bare name in `mathspec.program`, such as `Variable`.
 
 ## Coordinates
 
@@ -56,12 +62,12 @@ parameter, one constraint ([file shape](language/file.md)).
 the order that `shift`, `sum_back` and `position()` count along.
 
 **Coordinate**
-: One point of a declaration's dimensions: one generator in one snapshot. A
+: One point of an entry's dimensions: one generator in one snapshot. A
 variable has one column at each coordinate it is built at, and a constraint
 has one row.
 
 **Frame**
-: The dimensions over which a declaration ranges.
+: The dimensions over which an entry ranges.
 The data of an expression, a mask and a bound parameter must fit inside their defined frame
 ([how dimensions combine](language/expressions.md#how-dimensions-combine)).
 
@@ -74,7 +80,7 @@ The data of an expression, a mask and a bound parameter must fit inside their de
 **Mask** · **predicate**
 : A predicate is a true-or-false expression in the
 [where grammar](language/expressions.md#where-strings). A mask is a predicate
-on a declaration, and the coordinates it admits.
+on an entry, and the coordinates it admits.
 
 **Absence**
 : No value at a coordinate. A masked-out variable has no column there, and a
@@ -85,7 +91,7 @@ row that reads it is not built ([absence](language/absence.md)).
 `missing:` says what it is: refused when the data is attached (`refused`, the
 default), absence (`absent`), `0` in arithmetic and false in a `where`
 (`neutral`), or a value
-([a missing row](language/declarations.md#a-missing-row)).
+([a missing row](language/parameters-variables-constraints.md#a-missing-row)).
 
 ## Kinds of construct
 
@@ -95,8 +101,8 @@ typesetter prints.
 This covers the operators and the `where` comparisons.
 
 **Formulation**
-: A block that expands into ordinary variables and constraints: `piecewise:`
-and `sos:` ([piecewise curves and SOS](language/piecewise.md)).
+: An entry that states ordinary variables and constraints rather than being
+one: `piecewise:` and `sos:` ([piecewise curves and SOS](language/piecewise.md)).
 
 New constructs (primitives, formulations, macros) are not allowed ([how a new construct enters](../about/limits.md#adding-a-new-construct)).
 
@@ -104,12 +110,13 @@ New constructs (primitives, formulations, macros) are not allowed ([how a new co
 
 The meaning of some words changes depending on the context in which they appear in the docs.
 
-| Word     | One sense                                               | The other sense                                               |
-| -------- | ------------------------------------------------------- | ------------------------------------------------------------- |
-| row      | a constraint at one coordinate                          | one line of a parameter's or a relation's table               |
-| column   | a variable at one coordinate                            | one column of a data table or a relation                      |
-| set      | an `sos:` entry                                         | the set symbol of a dimension, $\mathcal{G}$, in the legend   |
-| regime   | one case of a [`cases:`](language/named.md#cases) block | one of two constraints, each under its own `where:`           |
-| domain   | a variable's `continuous`, `integer` or `binary`        | the rows that hold a curve's link inside its breakpoint range |
-| program  | `spec.program`, the typed spec                          | a linear or quadratic program, the problem a solver takes     |
-| the rows | the constraint rows of a spec                           | the expanded spec: the spec a formulation is written out as   |
+| Word     | One sense                                          | The other sense                                               |
+| -------- | -------------------------------------------------- | ------------------------------------------------------------- |
+| row      | a constraint at one coordinate                     | one line of a parameter's or a relation's table               |
+| column   | a variable at one coordinate                       | one column of a data table or a relation                      |
+| set      | an `sos:` entry                                    | the set symbol of a dimension, $\mathcal{G}$, in the legend   |
+| regime   | one case under [`cases:`](language/named.md#cases) | one of two constraints, each under its own `where:`           |
+| domain   | a variable's `continuous`, `integer` or `binary`   | the rows that hold a curve's link inside its breakpoint range |
+| program  | `spec.program`, the typed spec                     | a linear or quadratic program, the problem a solver takes     |
+| the rows | the constraint rows of a spec                      | the expanded spec: the spec a formulation is written out as   |
+| section  | a top-level key of the file, such as `parameters:` | a heading of a typeset document, such as **Definitions**      |

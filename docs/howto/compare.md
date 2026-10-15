@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 # Compare two specs
 
 Diff two spec files so that the diff shows only what the specs state
-differently. A plain text diff also shows the order of declarations, spacing
+differently. A plain text diff also shows the order of entries, spacing
 and the order of the terms in a sum. The **canonical form** is one fixed way
 to write a spec, and it removes those differences. [Comparing two specs](../reference/reading.md#comparing-two-specs)
 lists what the form sorts and what it keeps.

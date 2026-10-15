@@ -36,6 +36,7 @@ relations:
       rows for a process that is
       not maintainable
     key: { scenario: scenario, process: process, start: snapshot, covered: snapshot }
+    missing: absent
 
 parameters:
   Process_maintainable:

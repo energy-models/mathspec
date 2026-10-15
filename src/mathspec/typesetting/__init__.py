@@ -53,7 +53,7 @@ __all__ = [
     'to_markdown',
     'to_typst',
     'typeset',
-    'typeset_declaration',
+    'typeset_line',
 ]
 
 #: A format by the name the CLI takes. Every renderer here is asked for one.
@@ -125,9 +125,9 @@ def typeset(
             mapping. Names it does not carry are derived, and it must be
             written in *fmt*'s notation.
         standalone: Emit a compilable document rather than a fragment.
-        legend: Prepend the sets/parameters/variables table. The spec's own
-            ``description:`` opens the document either way — it is what the
-            file says it is, not a symbol table.
+        legend: Prepend the symbol tables, the notation the equations use
+            included. The spec's own ``description:`` opens the document
+            either way — it is what the file says it is, not a symbol table.
         numbered: Number the equations.
         inline_expressions: Substitute each plain named expression into the equations that
             use it, rather than printing its symbol there and its definition
@@ -156,16 +156,13 @@ def typeset(
     if legend:
         explained, noticed = Legend(program, walk.symbols, format_), notice(program)
         blocks += [
-            format_.section(title, format_.glossary(entries))
-            for title, entries in explained.glossaries(noticed, walk.defined())
+            format_.section(title, format_.glossary(items))
+            for title, items in explained.glossaries(noticed, walk.defined())
         ]
-        blocks += [format_.note(text) for text in explained.convention_notes()]
-        blocks += [format_.note(text) for text in explained.translation_notes(noticed)]
-        blocks += [format_.note(text) for text in explained.position_notes(noticed)]
     return format_.document([*blocks, *rendered], standalone=standalone)
 
 
-def typeset_declaration(
+def typeset_line(
     spec: str | Path | Mapping[str, object] | Spec | Program,
     name: str,
     fmt: FormatName,
@@ -173,7 +170,7 @@ def typeset_declaration(
     symbols: str | Path | Mapping[str, object] | SymbolTable | None = None,
     inline_expressions: bool = True,
 ) -> str:
-    """Render one declaration as the bare line the document prints for it.
+    """Render one entry as the bare line the document prints for it.
 
     The line the whole-spec render prints for it — a named expression's
     or a mask's definition, a constraint, an ``sos:`` set, a ``piecewise:``
@@ -182,12 +179,12 @@ def typeset_declaration(
     a math context the caller lays out: a docstring, a table cell. A line on
     its own has no Definitions section beside it, so the plain named
     expressions it uses are substituted unless *inline_expressions* says otherwise; a cased
-    one prints by symbol, and a second call with its name prints its block.
+    one prints by symbol, and a second call with its name prints its definition.
 
     Args:
         spec: Anything [`mathspec.to_spec`][] accepts, or a [`Program`][].
-        name: A named expression, mask, constraint, ``sos:`` block,
-            ``piecewise:`` block, assumption or variable the spec declares.
+        name: A named expression, mask, constraint, ``sos:`` entry,
+            ``piecewise:`` entry, assumption or variable the spec declares.
         fmt: What spells the math — a [`FormatName`][].
         symbols: How names print; see [`typeset`][].
         inline_expressions: Substitute the plain named expressions the line uses, so it

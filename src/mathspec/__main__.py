@@ -11,7 +11,7 @@ typeset format, read off [`mathspec.typesetting.FORMATS`][]. Every verb reads
 the file as written, and nothing here writes a formulation out unasked.
 The typeset verbs take ``--expand``, because a shell cannot compose
 [`expand`][mathspec.spec.Spec.expand] the way a caller does and the rows are a
-different document; ``check`` has no such flag, because advice reads a block
+different document; ``check`` has no such flag, because advice reads an entry
 as the rows it states.
 """
 
@@ -48,7 +48,7 @@ def parser() -> argparse.ArgumentParser:
         verb.add_argument('-o', '--out', help='write here instead of stdout')
         verb.add_argument('--symbols', help='sidecar YAML saying how names should print')
         verb.add_argument('--standalone', action='store_true', help='emit a compilable document')
-        verb.add_argument('--no-legend', action='store_true', help='omit the sets/parameters/variables table')
+        verb.add_argument('--no-legend', action='store_true', help='omit the tables of symbols and notation')
         verb.add_argument('--no-numbers', action='store_true', help='leave the equations unnumbered')
         verb.add_argument(
             '--inline-expressions', action='store_true', help='substitute each named expression where it is used'
@@ -56,7 +56,7 @@ def parser() -> argparse.ArgumentParser:
         verb.add_argument(
             '--expand',
             action='store_true',
-            help='print the variables and constraints the piecewise: and sos: blocks state, not the blocks',
+            help='print the variables and constraints the piecewise: and sos: entries state, not the entries',
         )
     return front
 

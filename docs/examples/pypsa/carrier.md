@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Carriers
 
-This file states the growth limits of each carrier. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. The limits read the sum `Carrier_additions`, which another fragment declares, and the file lists it under [`given`](../../reference/language/declarations.md#given).
+This file states the growth limits of each carrier. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. The limits read the sum `Carrier_additions`, which another fragment declares, and the file lists it under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -89,7 +89,11 @@ constraints:
 |---|---|
 | $`\mathrm{r}^{+}`$ | `Carrier_relative_growth` over $`\mathcal{I}`$ — the share of the previous period's additions a carrier's growth limit reads — PyPSA's `max_relative_growth` clipped at zero, so a negative share adds nothing and never tightens the limit |
 
-$`t \boxminus_{v} k`$ denotes translation with $`v`$ standing where index $`t-k`$ leaves the dimension (`shift(edge=v)`), so the row at that boundary is built and carries $`v`$ rather than being dropped.
+#### Notation
+
+| Symbol | Meaning |
+|---|---|
+| $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
 
 #### Definitions
 
