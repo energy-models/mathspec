@@ -318,6 +318,9 @@ MODELS = [
         {'constraints.c': {'dims': ['t', 'g'], 'where': 'p > 0', 'expression': 'y <= 1'}}, id='only-in-a-where'
     ),
     pytest.param(
+        {'constraints.c': {'dims': ['t', 'g'], 'where': 'p0 > 0', 'expression': 'y <= p'}}, id='a-masked-row'
+    ),
+    pytest.param(
         {
             'parameters.q': {'dims': ['t']},
             'constraints.c': {'dims': ['t', 'g'], 'expression': "x <= shift(q, along=t, offset=1, edge='wrap')"},
@@ -392,7 +395,7 @@ MODELS = [
     pytest.param(
         {
             'variables.s': {'dims': ['t', 'g'], 'where': 'p0 > 0', 'missing': 0},
-            'constraints.c': {'dims': ['t', 'g'], 'expression': 's <= p'},
+            'constraints.c': {'dims': ['t', 'g'], 'expression': 's + y <= p'},
         },
         id='a-variable-read-as-a-number',
     ),
