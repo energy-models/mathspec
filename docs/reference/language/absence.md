@@ -51,16 +51,15 @@ row is: `missing: 0` for a cost that is zero, `missing: 1` for an efficiency
 that is one, and `missing: false` for a flag that is off. The table below says
 what a missing row does at each position:
 
-| Position                                  | `refused`  | `absent`                              | a value                                      |
-| ----------------------------------------- | ---------- | ------------------------------------- | -------------------------------------------- |
-| a coefficient, or a constant term         | is refused | removes the row                       | reads the value                              |
-| a factor of a summand in a `sum`          | is refused | removes the summand, not the row      | reads the value                              |
-| a divisor                                 | is refused | removes the row                       | reads the value. `0` is refused at load      |
-| the whole constant side of a comparison   | is refused | removes the row                       | reads the value                              |
-| a `bounds:` entry                         | is refused | leaves that side of the variable open | reads the value                              |
-| the amount of an `offset=` or a `window=` | is refused | makes the operator absent there       | reads the value                              |
-| a comparison in a `where`                 | is false   | is false                              | compares the value                           |
-| a bare name in a `where`                  | is false   | is false                              | is false. A bare `bool` name reads the value |
+| Position                                                    | `refused`  | `absent`                              | a value                                      |
+| ----------------------------------------------------------- | ---------- | ------------------------------------- | -------------------------------------------- |
+| a coefficient, or a constant on either side of a comparison | is refused | removes the row                       | reads the value                              |
+| a factor of a summand in a `sum`                            | is refused | removes the summand, not the row      | reads the value                              |
+| a divisor                                                   | is refused | removes the row                       | reads the value. `0` is refused at load      |
+| a `bounds:` entry                                           | is refused | leaves that side of the variable open | reads the value                              |
+| the amount of an `offset=` or a `window=`                   | is refused | makes the operator absent there       | reads the value                              |
+| a comparison in a `where`                                   | is false   | is false                              | compares the value                           |
+| a bare name in a `where`                                    | is false   | is false                              | is false. A bare `bool` name reads the value |
 
 A value of `0` as an amount reads `shift(x, along=t, offset=0)` as `x` itself,
 and sums nothing under `sum_back(x, along=t, window=0)`. A curve needs a row at
@@ -166,8 +165,8 @@ generator with no `capacity` row, and that generator has no `dispatch`. A
 ## What a missing coordinate means
 
 By default a masked coordinate has **no value**, and a row that needs it is not
-built. Some quantities are **zero** outside their mask, and the `missing:` key
-of the variable says which reading applies:
+built. Some quantities have a known number outside their mask, such as **zero**,
+and the `missing:` key of the variable names it:
 
 ```yaml
 variables:
@@ -187,10 +186,13 @@ constraints:
 At a storage with a store and no inflow, `balance` reads `inflow - soc == 0`. At
 a storage with inflow and no store, there is no row.
 
-A variable takes `missing: absent` or `missing: 0`, because a variable has no
-data to refuse and no other value. `missing: 0` needs a `where:`, and it
-changes nothing inside a summing operator. The typeset legend prints `0` where
-the mask leaves it out beside the variable.
+A variable takes `missing: absent` or a finite number, because a variable has
+no data to refuse. A number needs a `where:`. It must lie in the `domain:` of
+the variable, so a `binary` variable takes `0` or `1`, and inside its literal
+`bounds:`. `to_spec` refuses the file otherwise. Inside a summing operator,
+`missing: 0` changes nothing, and another number adds itself once for each
+coordinate that the mask leaves out. The typeset legend prints the number
+where the mask leaves it out beside the variable.
 
 ## Rows with no variable terms
 

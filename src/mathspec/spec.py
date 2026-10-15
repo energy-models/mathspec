@@ -44,7 +44,7 @@ from mathspec.program import (
     RelationMissing,
     SosType,
     VariableDomain,
-    VariableMissing,
+    VariableReading,
 )
 
 if TYPE_CHECKING:
@@ -144,6 +144,11 @@ _MISSING_SCHEMA: dict[str, object] = {
         {'type': 'number'},
         {'enum': ['inf', '-inf']},
     ],
+}
+
+#: What a variable's ``missing:`` is written as: the one reading, or a finite number.
+_VARIABLE_MISSING_SCHEMA: dict[str, object] = {
+    'anyOf': [{'enum': list(get_args(VariableReading))}, {'type': 'number'}],
 }
 
 #: The spellings of a missing row, for a refusal to list.
@@ -418,25 +423,25 @@ class VariableBlock(_StrictBlock):
     where: str | None = None
     bounds: BoundsBlock = BoundsBlock()
     domain: VariableDomain = 'continuous'
-    missing: VariableMissing = 'absent'
+    missing: Annotated[VariableReading | int | float, WithJsonSchema(_VARIABLE_MISSING_SCHEMA)] = 'absent'
     description: str | None = None
 
     @field_validator('missing', mode='before')
     @classmethod
-    def _absent_or_zero(cls, v: object) -> object:
-        """A variable has no data, so the readings of data do not apply to it; ``0.0`` is the ``0`` it states."""
+    def _absent_or_a_number(cls, v: object) -> object:
+        """A variable has no data, so ``refused`` does not apply to it, and only a finite number can stand for it."""
         if v is None:
-            raise _missing_null('a variable', 'Write 0, or leave the key out for absent.')
-        if v == 'absent' or (isinstance(v, int | float) and not isinstance(v, bool) and v == 0):
-            return 'absent' if v == 'absent' else 0
+            raise _missing_null('a variable', 'Write a number, or leave the key out for absent.')
+        if v == 'absent' or (isinstance(v, int | float) and not isinstance(v, bool) and math.isfinite(v)):
+            return v
         msg = (
-            f'missing: {_as_yaml(v)} on a variable, which takes absent or 0. A variable has no data, '
-            f'so refused and any other value apply only to a parameter.'
+            f'missing: {_as_yaml(v)} on a variable, which takes absent or a finite number. A variable has no data, '
+            f'so refused and a flag apply only to a parameter.'
         )
         raise ValueError(msg)
 
     @model_validator(mode='after')
-    def _zero_needs_a_mask(self) -> VariableBlock:
+    def _a_number_needs_a_mask(self) -> VariableBlock:
         """``missing:`` says what a masked-out coordinate means, so one must be missable."""
         if self.missing != 'absent' and self.where is None:
             msg = (
@@ -445,6 +450,25 @@ class VariableBlock(_StrictBlock):
             )
             raise ValueError(msg)
         return self
+
+    @model_validator(mode='after')
+    def _a_number_fits_the_variable(self) -> VariableBlock:
+        """The number stands for the variable, so it lies in the variable's domain and inside its literal bounds."""
+        v = self.missing
+        if isinstance(v, str):
+            return self
+        lower, upper = self.bounds.lower, self.bounds.upper
+        if self.domain == 'binary' and v not in (0, 1):
+            msg = f'missing: {_as_yaml(v)} on a binary variable, which takes 0 or 1.'
+        elif self.domain == 'integer' and not float(v).is_integer():
+            msg = f'missing: {_as_yaml(v)} on an integer variable, which takes an integer.'
+        elif isinstance(lower, int | float) and v < lower:
+            msg = f'missing: {_as_yaml(v)} is below bounds.lower {_as_yaml(lower)}. Write a number inside the bounds.'
+        elif isinstance(upper, int | float) and v > upper:
+            msg = f'missing: {_as_yaml(v)} is above bounds.upper {_as_yaml(upper)}. Write a number inside the bounds.'
+        else:
+            return self
+        raise ValueError(msg)
 
 
 class GivenParameterBlock(_StrictBlock):

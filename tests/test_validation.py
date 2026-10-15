@@ -2504,14 +2504,53 @@ def test_a_relation_missing_that_reads_nothing_is_refused(relation, fragment):
 @pytest.mark.parametrize(
     ('written', 'fragment'),
     [
-        pytest.param('refused', 'missing: refused on a variable, which takes absent or 0', id='refused'),
-        pytest.param(1, 'missing: 1 on a variable, which takes absent or 0', id='a-value'),
-        pytest.param(False, 'missing: false on a variable, which takes absent or 0', id='a-flag'),
+        pytest.param('refused', 'missing: refused on a variable, which takes absent or a finite number', id='refused'),
+        pytest.param(False, 'missing: false on a variable, which takes absent or a finite number', id='a-flag'),
+        pytest.param(
+            float('inf'), 'missing: inf on a variable, which takes absent or a finite number', id='an-infinity'
+        ),
         pytest.param(None, 'missing: null on a variable names no reading', id='null'),
     ],
 )
 def test_a_variable_missing_that_reads_data_is_refused(written, fragment):
     assert fragment in _refusal(**{'variables.p': {'dims': ['g'], 'where': 'c', 'missing': written}})
+
+
+@pytest.mark.parametrize(
+    ('declared', 'fragment'),
+    [
+        pytest.param(
+            {'domain': 'binary', 'missing': 2}, 'missing: 2 on a binary variable, which takes 0 or 1', id='binary'
+        ),
+        pytest.param(
+            {'domain': 'integer', 'missing': 1.5},
+            'missing: 1.5 on an integer variable, which takes an integer',
+            id='integer',
+        ),
+        pytest.param({'bounds': {'lower': 0}, 'missing': -1}, 'missing: -1 is below bounds.lower 0', id='below-lower'),
+        pytest.param(
+            {'bounds': {'upper': 10}, 'missing': 11}, 'missing: 11 is above bounds.upper 10', id='above-upper'
+        ),
+    ],
+)
+def test_a_variable_missing_outside_what_the_variable_takes_is_refused(declared, fragment):
+    """The number stands for the variable where the mask leaves it out, so the file contradicted itself."""
+    assert fragment in _refusal(**{'variables.p': {'dims': ['g'], 'where': 'c', **declared}})
+
+
+@pytest.mark.parametrize(
+    'declared',
+    [
+        pytest.param({'missing': 3}, id='a-number-on-a-continuous-variable'),
+        pytest.param({'domain': 'binary', 'missing': 1}, id='one-on-a-binary-variable'),
+        pytest.param({'domain': 'integer', 'missing': 2.0}, id='a-whole-float-on-an-integer-variable'),
+        pytest.param({'bounds': {'lower': 0, 'upper': 10}, 'missing': 10}, id='on-a-literal-bound'),
+        pytest.param({'bounds': {'upper': 'c'}, 'missing': 1e6}, id='a-parameter-bound-is-data'),
+    ],
+)
+def test_a_variable_missing_inside_what_the_variable_takes_loads(declared):
+    spec = to_spec(varied(SMALL_MODEL, **{'variables.p': {'dims': ['g'], 'where': 'c', **declared}}))
+    assert spec.program.variables['p'].missing == declared['missing']
 
 
 @pytest.mark.parametrize(

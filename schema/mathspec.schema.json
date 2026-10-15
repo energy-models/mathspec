@@ -954,11 +954,17 @@
           "type": "string"
         },
         "missing": {
-          "default": "absent",
-          "enum": [
-            "absent",
-            0
+          "anyOf": [
+            {
+              "enum": [
+                "absent"
+              ]
+            },
+            {
+              "type": "number"
+            }
           ],
+          "default": "absent",
           "title": "Missing"
         },
         "where": {

@@ -58,7 +58,7 @@ def test_no_definition_refers_only_to_itself():
     [
         pytest.param('ObjectiveBlock', 'sense', spec.ObjectiveSense, id='sense'),
         pytest.param('VariableBlock', 'domain', spec.VariableDomain, id='domain'),
-        pytest.param('VariableBlock', 'missing', spec.VariableMissing, id='variable-missing'),
+        pytest.param('VariableBlock', 'missing', spec.VariableReading, id='variable-missing'),
         pytest.param('RelationBlock', 'missing', spec.RelationMissing, id='relation-missing'),
         pytest.param('ParameterBlock', 'missing', spec.MissingReading, id='parameter-missing'),
         pytest.param('ParameterBlock', 'dtype', spec.ParameterDtype, id='parameter-dtype'),

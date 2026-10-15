@@ -112,6 +112,7 @@ __all__ = [
     'VariableDefined',
     'VariableDomain',
     'VariableMissing',
+    'VariableReading',
     'WindowSum',
     'assumption_message',
     'carries_variable',
@@ -162,9 +163,12 @@ Missing = MissingReading | bool | float
 RelationMissing = Literal['refused', 'absent']
 
 #: What a masked variable means where its ``where`` masks it out. ``absent`` is
-#: the default: a term that carries it removes its row. ``0`` says the quantity
-#: *is* zero there, so the term contributes nothing and the row stands.
-VariableMissing = Literal['absent', 0]
+#: the default: a term that carries it removes its row.
+VariableReading = Literal['absent']
+
+#: A variable's ``missing:``: ``absent``, or the number the quantity *is* where
+#: its ``where`` masks it out, so the term reads that number and the row stands.
+VariableMissing = VariableReading | float
 
 #: Which way an objective is optimised (the declaration rules).
 ObjectiveSense = Literal['minimize', 'maximize']

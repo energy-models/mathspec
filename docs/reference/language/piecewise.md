@@ -71,8 +71,8 @@ variables:
     where: committable # only some units have a commitment decision
 ```
 
-Where the gate does not exist, the curve is ungated. To have no curve there
-instead, put `missing: 0` on the gate.
+Where the gate does not exist, the curve is ungated, as under `missing: 1`. To
+have no curve there instead, put `missing: 0` on the gate.
 
 ### `points`
 

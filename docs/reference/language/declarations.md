@@ -125,14 +125,14 @@ variables:
       upper: capacity
 ```
 
-| Field                           |                                                                                                             |                      |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------- |
-| `dims`                          | required. The dimensions it is indexed by                                                                   |                      |
-| `where`                         | which coordinates exist ([absence](absence.md))                                                             | default `null`       |
-| `bounds.lower` / `bounds.upper` | a finite number, or the name of a `float` or `int` parameter. `null` leaves that side open                  | default `null`       |
-| `domain`                        | `continuous`, `integer` or `binary`. `binary` carries fixed 0/1 bounds                                      | default `continuous` |
-| `missing`                       | `absent` or `0`: what a masked-out coordinate means ([absence](absence.md#what-a-missing-coordinate-means)) | default `absent`     |
-| `description`                   | free text                                                                                                   | default `null`       |
+| Field                           |                                                                                                                  |                      |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `dims`                          | required. The dimensions it is indexed by                                                                        |                      |
+| `where`                         | which coordinates exist ([absence](absence.md))                                                                  | default `null`       |
+| `bounds.lower` / `bounds.upper` | a finite number, or the name of a `float` or `int` parameter. `null` leaves that side open                       | default `null`       |
+| `domain`                        | `continuous`, `integer` or `binary`. `binary` carries fixed 0/1 bounds                                           | default `continuous` |
+| `missing`                       | `absent` or a number: what a masked-out coordinate means ([absence](absence.md#what-a-missing-coordinate-means)) | default `absent`     |
+| `description`                   | free text                                                                                                        | default `null`       |
 
 An open side is `null`, because a bound is never infinite: `.inf` and `-.inf`
 are refused, with `null` named as the rewrite.

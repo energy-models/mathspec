@@ -185,7 +185,7 @@ class ExpressionResolver:
         if not isinstance(divisor, Parameter):
             return False
         declared = self.ns.schema.parameters.get(divisor.name)
-        if declared is None or declared.missing != 0:
+        if declared is None or isinstance(declared.missing, bool) or declared.missing != 0:
             return False
         self.errors.append(
             f"{self.context}: '{divisor.name}' is a divisor, and missing: 0 reads a missing row of it as 0, which "
