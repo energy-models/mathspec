@@ -152,8 +152,8 @@ DeclaredDtype = ParameterDtype | DimensionDtype
 VariableDomain = Literal['continuous', 'integer', 'binary']
 
 #: What a missing row means. ``refused`` refuses the data where the model reads
-#: the row, and a ``where`` reads none. ``absent`` removes the row of a term that
-#: reads it.
+#: the row, and a ``where`` reads only a bare ``bool`` name. ``absent`` removes
+#: the row of a term that reads it.
 MissingReading = Literal['refused', 'absent']
 
 #: A parameter's ``missing:``: a reading, or the value a missing row reads as.

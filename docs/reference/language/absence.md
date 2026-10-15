@@ -51,15 +51,16 @@ row is: `missing: 0` for a cost that is zero, `missing: 1` for an efficiency
 that is one, and `missing: false` for a flag that is off. The table below says
 what a missing row does at each position:
 
-| Position                                                    | `refused`  | `absent`                              | a value                                      |
-| ----------------------------------------------------------- | ---------- | ------------------------------------- | -------------------------------------------- |
-| a coefficient, or a constant on either side of a comparison | is refused | removes the row                       | reads the value                              |
-| a factor of a summand in a `sum`                            | is refused | removes the summand, not the row      | reads the value                              |
-| a divisor                                                   | is refused | removes the row                       | reads the value. `0` is refused at load      |
-| a `bounds:` entry                                           | is refused | leaves that side of the variable open | reads the value                              |
-| the amount of an `offset=` or a `window=`                   | is refused | makes the operator absent there       | reads the value                              |
-| a comparison in a `where`                                   | is false   | is false                              | compares the value                           |
-| a bare name in a `where`                                    | is false   | is false                              | is false. A bare `bool` name reads the value |
+| Position                                                    | `refused`  | `absent`                              | a value                                 |
+| ----------------------------------------------------------- | ---------- | ------------------------------------- | --------------------------------------- |
+| a coefficient, or a constant on either side of a comparison | is refused | removes the row                       | reads the value                         |
+| a factor of a summand in a `sum`                            | is refused | removes the summand, not the row      | reads the value                         |
+| a divisor                                                   | is refused | removes the row                       | reads the value. `0` is refused at load |
+| a `bounds:` entry                                           | is refused | leaves that side of the variable open | reads the value                         |
+| the amount of an `offset=` or a `window=`                   | is refused | makes the operator absent there       | reads the value                         |
+| a comparison in a `where`                                   | is false   | is false                              | compares the value                      |
+| a bare `bool` name in a `where`                             | is refused | is false                              | reads the value                         |
+| a bare number or label in a `where`                         | is false   | is false                              | is false                                |
 
 A value of `0` as an amount reads `shift(x, along=t, offset=0)` as `x` itself,
 and sums nothing under `sum_back(x, along=t, window=0)`. A curve needs a row at
@@ -152,15 +153,25 @@ The model reads a parameter where its value goes into the model it builds:
 | a term of the objective                                          | each term that exists                                                    |
 | a term of a [reported expression](named.md#reported-expressions) | each coordinate where the expression is reported                         |
 | a values parameter of a [`piecewise:`](piecewise.md) block       | each breakpoint that the curve runs through                              |
+| a bare `bool` name in a `where`                                  | each coordinate where the model evaluates that `where`                   |
 
 A row that an absent term removes is not built, so the model reads no
 parameter in that row.
 
-A `where` does not read a parameter. A bare name asks whether the table has a
-row. A comparison at a missing row is false, unless the `missing:` of the
-parameter names a value. So `where: "capacity > 0"` above is false at a
-generator with no `capacity` row, and that generator has no `dispatch`. A
-[mask](named.md#masks) reads the same way.
+A `where` reads one kind of parameter: a bare `bool` name, such as
+`where: committable`, reads the value of the flag. The model evaluates the
+`where` of a variable or a constraint at every coordinate of its dims, and the
+`when` of a case wherever it evaluates the expression that holds the case. A
+flag under `count`, `shift` or `at` in a `where` is read at each position that
+the operator looks at, and a flag in a [mask](named.md#masks) wherever the
+mask is evaluated. Both sides of `AND` and `OR` are evaluated.
+
+Every other part of a `where` reads no parameter. A bare number or label asks
+whether the table has a row. A comparison at a missing row is false, unless the
+`missing:` of the parameter names a value. So `where: "capacity > 0"` above is
+false at a generator with no `capacity` row, and that generator has no
+`dispatch`. Because a comparison reads nothing, `where: "cost AND cost > 0"`
+selects the rows of a sparse `refused` table `cost` without refusing it.
 
 ## What a missing coordinate means
 
