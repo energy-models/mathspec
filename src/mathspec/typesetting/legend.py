@@ -142,7 +142,7 @@ class Legend:
         return self.format.operators[name]
 
     def glossaries(self, noticed: Noticed, defined: Iterable[str]) -> list[tuple[str, list[LegendItem]]]:
-        """The sets, parameters, variables, given entries, definitions and masks, each with its symbol, its dims and its description.
+        """The given entries, sets, parameters, masks, variables and definitions, each with its symbol, its dims and its description.
 
         *defined* names the expressions that print under their own symbol, so
         a legend row stands exactly where a symbol does.
@@ -226,12 +226,12 @@ class Legend:
             for m, entry in program.masks.items()
         ]
         groups = (
+            ('Given', given),
             ('Sets', sets),
             ('Parameters', parameters),
-            ('Variables', variables),
-            ('Given', given),
-            ('Definitions', definitions),
             ('Masks', masks),
+            ('Variables', variables),
+            ('Definitions', definitions),
         )
         return [(title, items) for title, items in groups if items]
 

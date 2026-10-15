@@ -19,7 +19,7 @@ from mathspec.program import DimensionPosition
 from mathspec.resolution import Namespace
 from mathspec.typesetting import FORMATS, to_markdown, typeset_line
 from mathspec.validation import to_spec
-from tests.fixtures import DISPATCH_MODEL, OPERATOR_PROBES, SMALL_MODEL, varied, where_of
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SMALL_MODEL, spec_of, varied, where_of
 
 if TYPE_CHECKING:
     from mathspec.spec import Spec
@@ -2488,22 +2488,19 @@ def test_a_given_parameter_has_no_missing():
 
 
 @pytest.mark.parametrize(
-    ('written', 'read'),
+    ('declared', 'read'),
     [
-        pytest.param({}, 'refused', id='left-out-is-refused'),
-        pytest.param({'missing': 'refused'}, 'refused', id='refused'),
-        pytest.param({'missing': 'absent'}, 'absent', id='absent'),
+        pytest.param({'key': 'g', 'values': 'h'}, 'refused', id='left-out-is-refused'),
+        pytest.param({'key': 'g', 'values': 'h', 'missing': 'refused'}, 'refused', id='refused'),
+        pytest.param({'key': 'g', 'values': 'h', 'missing': 'absent'}, 'absent', id='absent'),
+        pytest.param({'key': ['g', 'h']}, 'refused', id='bare-left-out-is-refused'),
+        pytest.param({'key': ['g', 'h'], 'missing': 'absent'}, 'absent', id='bare-absent'),
     ],
 )
-def test_a_relation_says_what_a_label_it_leaves_out_means(written, read):
-    spec = to_spec(varied(SMALL_MODEL, **{'relations.lk': {'key': 'g', 'values': 'h', **written}}))
-    assert spec.program.relations['lk'].missing == read
-
-
-def test_a_bare_relation_has_no_missing_rows():
-    """Its rows are its membership: a pair it leaves out is not a gap, so `refused` would refuse every sparse set."""
-    spec = to_spec(varied(SMALL_MODEL, **{'relations.pair': {'key': ['g', 'h']}}))
-    assert spec.program.relations['pair'].missing is None
+def test_a_relation_says_whether_every_key_combination_needs_a_row(declared, read):
+    """A bare relation's key is every column, and it takes `missing:` and its default as a map does."""
+    spec = to_spec(varied(SMALL_MODEL, **{'relations.pair': declared}))
+    assert spec.program.relations['pair'].missing == read
 
 
 @pytest.mark.parametrize(
@@ -2522,11 +2519,6 @@ def test_a_bare_relation_has_no_missing_rows():
         ),
         pytest.param(
             {'key': 'g', 'values': 'h', 'missing': None}, 'missing: null on a relation names no reading', id='null'
-        ),
-        pytest.param(
-            {'key': ['g', 'h'], 'missing': 'refused'},
-            'missing: refused on a relation with no `values:`',
-            id='a-bare-relation',
         ),
     ],
 )
@@ -2654,3 +2646,31 @@ def test_a_dump_that_leaves_ordered_out_still_writes_the_dimension(dump):
     """The serializer dropped `ordered` with `del`, so a dump that had already left it out raised a KeyError."""
     spec = to_spec({'dimensions': {'t': {'dtype': 'int'}}})
     assert spec.model_dump(**dump)['dimensions'] == {'t': {'dtype': 'int'}}
+
+
+#: A row of ``examples/sos.yaml``, the spec every case below patches.
+_ROW = {'dims': ['snapshot'], 'expression': 'sum(dispatch, over=generator) >= load'}
+
+
+@pytest.mark.parametrize(
+    'patch',
+    [
+        pytest.param({'constraints.dispatch': _ROW}, id='a-constraint-named-after-a-variable'),
+        pytest.param({'assumptions.load': {'holds': 'load >= 0'}}, id='an-assumption-named-after-a-parameter'),
+        pytest.param(
+            {'sos.dispatch': {'variable': 'dispatch', 'along': 'generator', 'type': 1}},
+            id='a-set-named-after-its-variable',
+        ),
+        pytest.param(
+            {'piecewise.load': {'over': 'bp', 'links': [['dispatch', 'bp_x'], ['op_cost', 'bp_y']]}},
+            id='a-curve-named-after-a-parameter',
+        ),
+        pytest.param(
+            {'constraints.cost_curve': _ROW, 'assumptions.cost_curve': {'holds': 'load >= 0'}},
+            id='a-constraint-an-assumption-and-a-curve-of-one-name',
+        ),
+    ],
+)
+def test_a_row_a_set_a_curve_and_an_assumption_sit_outside_the_flat_namespace(patch):
+    """What the language reference states under name resolution: none of these four is read by a bare name."""
+    spec_of(EXAMPLES / 'sos.yaml', **patch)

@@ -839,7 +839,8 @@
             "refused",
             "absent"
           ],
-          "title": "Missing"
+          "title": "Missing",
+          "type": "string"
         },
         "values": {
           "anyOf": [

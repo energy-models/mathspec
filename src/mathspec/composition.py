@@ -406,18 +406,25 @@ def _summed(
 
 
 def _undeclared(read: Mapping[str, dict[str, object]], merged: Mapping[str, object], key: str, adder: str) -> None:
-    """Refuse a term on a name a fragment declares as something a term cannot follow, naming what declares it."""
-    section = next((section for section in OWNED_SECTIONS if key in _mapping(merged.get(section))), None)
-    if section is None:
-        return
-    author = _author_of(read, section, key)
-    if section == 'expressions':
-        if not _as_mapping(_mapping(merged['expressions'])[key]).get('cases'):
+    """Refuse a term on a name a fragment declares as something a term cannot follow, naming what declares it.
+
+    A named expression of that name is what the term adds to, whatever else
+    shares the name: a constraint, an assumption, a set or a curve sits outside the
+    flat namespace.
+    """
+    defined = _mapping(merged.get('expressions'))
+    if key in defined:
+        if not _as_mapping(defined[key]).get('cases'):
             return
+        author = _author_of(read, 'expressions', key)
         raise LanguageError(
             f"fragment '{author}' defines {key!r} as `cases:`, and fragment '{adder}' adds a term to it. "
             f'Declare the cased body as an expression of its own, and define {key!r} as that name.'
         )
+    section = next((section for section in OWNED_SECTIONS if key in _mapping(merged.get(section))), None)
+    if section is None:
+        return
+    author = _author_of(read, section, key)
     raise LanguageError(
         f"fragment '{author}' declares {key!r} as a {_singular(section)}, and fragment '{adder}' adds a term to "
         f'it. Give the sum a name of its own, or read the '
@@ -870,10 +877,13 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
                 f'may step along it. Leave `ordered` out of the patch.'
             )
         if (joined := _joined(section, base, laid, lambda written: _without(written, 'missing'))) is None:
+            claim = 'ordered' if section == 'dimensions' else 'missing'
             raise LanguageError(
                 f"patch '{name}' declares the {singular} '{key}' as {entry!r}, where its base "
-                f'declares {out[key]!r}. Restate the entry word for word, leave it out, or give '
-                f'the patch {_a(singular)} of its own under a name of its own.'
+                f'declares {out[key]!r}. A patch adjusts the math, not the coordinate space the math is '
+                f'already written over: each field but `{claim}` has to read as the base reads it, and a '
+                f'field the patch leaves out reads as its default. Restate the {singular} as its base '
+                f'declares it, leave it out, or give the patch {_a(singular)} of its own under a name of its own.'
             )
         out[key] = joined
     return out

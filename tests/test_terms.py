@@ -20,7 +20,7 @@ from mathspec import advice, merge, override, to_markdown, to_spec, typeset, typ
 from mathspec.canonical import canonical_yaml
 from mathspec.errors import LanguageError
 from mathspec.typesetting import FORMATS
-from tests.fixtures import BALANCE, BUS_DIMS, BUS_FRAME, INJECTION
+from tests.fixtures import BALANCE, BUS_DIMS, BUS_FRAME, INJECTION, section
 
 #: A generator fleet: what it puts in is its term.
 FLEET = {
@@ -328,6 +328,18 @@ def test_a_term_on_a_cased_definition_is_refused():
         merge([cased, STORAGE])
 
 
+def test_a_term_adds_to_the_expression_a_constraint_shares_its_name_with():
+    """Whether the term landed hung on the order of the sections on `Spec` (#848).
+
+    A constraint sits outside the flat namespace, so `injection` names the
+    expression and the constraint both. With `constraints` declared before
+    `expressions`, merge found the constraint first and refused the term.
+    """
+    shared = {**SLACKED, 'constraints': {'injection': {'dims': BUS_FRAME, 'expression': 'injection == 0'}}}
+    composed = merge([shared, STORAGE])
+    assert composed.expressions['injection'].expression == 'slack + store_injection'
+
+
 def test_a_reader_that_states_less_than_the_definer_is_refused():
     narrow = {
         **DEMAND,
@@ -604,7 +616,7 @@ def test_a_patch_drops_what_a_term_adds_to_with_null():
 
 
 def test_the_legend_names_the_term_the_file_adds():
-    given = to_markdown(DEMAND).split('#### Given')[1]
+    given = section(to_markdown(DEMAND), 'Given')
     assert 'an expression this file adds `demand_injection` to' in given
 
 

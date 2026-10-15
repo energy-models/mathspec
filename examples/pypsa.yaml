@@ -1449,6 +1449,7 @@ relations:
       rows for a generator that is
       not maintainable
     key: { scenario: scenario, generator: generator, start: snapshot, covered: snapshot }
+    missing: absent
   Link_maintenance_cover:
     description: >-
       the snapshots a maintenance event covers, by the snapshot it starts in —
@@ -1457,6 +1458,7 @@ relations:
       rows for a link that is
       not maintainable
     key: { scenario: scenario, link: link, start: snapshot, covered: snapshot }
+    missing: absent
   Process_maintenance_cover:
     description: >-
       the snapshots a maintenance event covers, by the snapshot it starts in —
@@ -1465,6 +1467,7 @@ relations:
       rows for a process that is
       not maintainable
     key: { scenario: scenario, process: process, start: snapshot, covered: snapshot }
+    missing: absent
 
 variables:
   Generator_p:

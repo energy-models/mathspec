@@ -124,8 +124,7 @@ written  # "assumption 'cost_is_never_negative' does not hold for the data attac
 means: `'refused'`, `'absent'`, `'neutral'`, or the value that the row reads as.
 It is `None` for a given parameter, because the file that declares the
 parameter says. The program of `spec.expand(...)` reports the same readings.
-`program.relations[name].missing` is `'refused'` or `'absent'`, and `None` for
-a bare relation.
+`program.relations[name].missing` is `'refused'` or `'absent'`.
 
 Under `'refused'`, the engine does not build the model from a table with a
 missing row, and names the coordinate. Each engine decides whether it raises at
@@ -310,8 +309,8 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 
 - The sections come in one order, whatever order the file wrote them in:
   `version`, `description`, `given`, `dimensions`, `relations`, `parameters`,
-  `variables`, `constraints`, `objective`, `expressions`, `masks`, `macros`,
-  `piecewise`, `sos`, `assumptions`. The keys of an entry also come in one
+  `masks`, `variables`, `expressions`, `objective`, `constraints`, `sos`,
+  `piecewise`, `assumptions`, `macros`. The keys of an entry also come in one
   order.
 - Entries are sorted by name within each section.
 - Every expression is printed from its parsed tree, so the spacing and the

@@ -554,6 +554,7 @@ def test_a_patch_adds_a_dimension_and_may_restate_one_it_shares():
         pytest.param('generator', {'dtype': 'str', 'ordered': False}, False, id='false-written-out'),
         pytest.param('generator', {'dtype': 'str', 'ordered': True}, True, id='widened-to-ordered'),
         pytest.param('snapshot', {'dtype': 'int'}, True, id='ordered-left-out'),
+        pytest.param('generator', {}, False, id='defaults-left-out'),
     ],
 )
 def test_a_patch_restates_a_dimension_as_the_schema_reads_it(dimension, restated, ordered):
@@ -573,12 +574,12 @@ def test_a_patch_that_withdraws_ordered_is_refused():
     [
         pytest.param(
             {'dimensions': {'snapshot': {'dtype': 'str'}}},
-            'Restate the entry word for word',
+            'Restate the dimension as its base declares it',
             id='declared-as-something-else',
         ),
         pytest.param(
             {'dimensions': {'snapshot': {}}},
-            'Restate the entry word for word',
+            'a field the patch leaves out reads as its default',
             id='restated-in-part',
         ),
         pytest.param(
@@ -589,7 +590,11 @@ def test_a_patch_that_withdraws_ordered_is_refused():
     ],
 )
 def test_a_patch_that_rewrites_a_dimension_is_refused(patch, says):
-    """A dimension changed under the expressions already written over it is a different spec, silently."""
+    """A dimension changed under the expressions already written over it is a different spec, silently.
+
+    The refusal asked for the declaration word for word, where a restatement that leaves out a field
+    at its default is accepted.
+    """
     with pytest.raises(LanguageError) as raised:
         override(DISPATCH_MODEL, [patch])
     assert says in str(raised.value), 'the refusal names the rewrite rather than only what is wrong'

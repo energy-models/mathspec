@@ -27,13 +27,13 @@ hold.
 
 ## What creates absence
 
-| Construct                                         | What is absent                                                              |
-| ------------------------------------------------- | --------------------------------------------------------------------------- |
-| `where:` on a variable                            | the variable, at the masked coordinates                                     |
-| `where:` on a constraint                          | the row                                                                     |
-| `shift(x, along=d, offset=n)` without `edge=`     | the vacated edge coordinate ([shift](operators.md#shift))                   |
-| a label a `missing: absent` relation does not map | that label's group membership ([relations](relations.md#the-data-contract)) |
-| a missing row of a `missing: absent` parameter    | the parameter, at that coordinate                                           |
+| Construct                                                     | What is absent                                                                     |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `where:` on a variable                                        | the variable, at the masked coordinates                                            |
+| `where:` on a constraint                                      | the row                                                                            |
+| `shift(x, along=d, offset=n)` without `edge=`                 | the vacated edge coordinate ([shift](operators.md#shift))                          |
+| a key combination a `missing: absent` relation has no row for | that combination's place in the relation ([relations](relations.md#a-missing-row)) |
+| a missing row of a `missing: absent` parameter                | the parameter, at that coordinate                                                  |
 
 Nothing else creates absence. A missing row is the only gap a parameter can
 have, because a null or NaN value is [refused](parameters-variables-constraints.md#parameters) when

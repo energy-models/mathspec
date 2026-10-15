@@ -233,11 +233,10 @@ class RelationSpec(_StrictSpec):
 
     key: str | list[str] | dict[str, str]
     values: str | list[str] | dict[str, str] | None = None
-    #: What a key the map leaves out means: ``refused`` where the file writes
-    #: nothing, and ``None`` for a bare relation, whose rows are its membership.
-    missing: Annotated[RelationMissing | None, WithJsonSchema({'enum': list(get_args(RelationMissing))})] = Field(
-        default=None, json_schema_extra={'default': 'refused'}
-    )
+    #: Whether every combination of the key's dimensions needs a row:
+    #: ``refused`` refuses data that leaves one out, and ``absent`` reads it
+    #: as no row.
+    missing: RelationMissing = 'refused'
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -246,32 +245,15 @@ class RelationSpec(_StrictSpec):
         """A label is data, so no value fills a gap in a map, and neutral reads as absent wherever a map is read."""
         if v is None:
             raise _missing_null(
-                'a relation', 'Write absent for a key the map leaves out, or leave the key out for refused.'
+                'a relation', 'Write absent where a key combination may have no row, or leave the key out for refused.'
             )
         if v not in get_args(RelationMissing):
             msg = (
-                f'missing: {_as_yaml(v)} on a relation, which takes refused or absent. A label the map leaves out '
-                f'is refused, or belongs to no group.'
+                f'missing: {_as_yaml(v)} on a relation, which takes refused or absent. A key combination with no '
+                f'row is refused, or is not in the relation.'
             )
             raise ValueError(msg)
         return v
-
-    @model_validator(mode='after')
-    def _a_bare_relation_has_no_gap(self) -> RelationSpec:
-        """A bare relation's rows are its membership, so a key it leaves out is not missing.
-
-        A map left unwritten reads ``refused``, held as the value, so the spec
-        that writes the default and the one that leaves it out are one spec.
-        """
-        if self.missing is not None and self.values is None:
-            msg = (
-                f'missing: {self.missing} on a relation with no `values:`. Its rows are its membership, '
-                f'so a key it leaves out is not missing: drop the key.'
-            )
-            raise ValueError(msg)
-        if self.values is not None and self.missing is None:
-            self.missing = 'refused'
-        return self
 
     @model_serializer(mode='wrap')
     def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
@@ -1060,15 +1042,15 @@ class Spec(_StrictSpec):
     dimensions: dict[str, DimensionSpec] = {}
     relations: dict[str, RelationSpec] = {}
     parameters: dict[str, ParameterSpec] = {}
-    variables: dict[str, VariableSpec] = {}
-    constraints: dict[str, ConstraintSpec] = {}
-    objective: ObjectiveSpec | None = None
-    expressions: dict[str, ExpressionSpec] = {}
     masks: dict[str, MaskSpec] = {}
-    macros: dict[str, MacroSpec] = {}
-    piecewise: dict[str, PiecewiseSpec] = {}
+    variables: dict[str, VariableSpec] = {}
+    expressions: dict[str, ExpressionSpec] = {}
+    objective: ObjectiveSpec | None = None
+    constraints: dict[str, ConstraintSpec] = {}
     sos: dict[str, SosSpec] = {}
+    piecewise: dict[str, PiecewiseSpec] = {}
     assumptions: dict[str, AssumptionSpec] = {}
+    macros: dict[str, MacroSpec] = {}
 
     @cached_property
     def program(self) -> Program:
