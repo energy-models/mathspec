@@ -143,17 +143,23 @@ An engine evaluates the mask as it evaluates a `where`, when it attaches the
 data, and refuses a missing row where the mask holds. It does not build a row
 first. The mask of a parameter that the model never reads is false everywhere.
 
-Like the footprint, the masks answer for the rows that the program holds. The
-program reads the tables of the curve nowhere, because the curve is not a row
-until the expansion writes it out. The expanded program reads them at every
-breakpoint:
+A curve is not a row until the expansion writes it out, so `program.reads`
+raises a `LanguageError` on a program that still holds one, and names
+`spec.expand('piecewise')`. The expanded program reads the tables of the curve
+at every breakpoint:
 
 ```python
 from mathspec.program import BooleanLiteral
 
-program.reads['bp_x'].root == BooleanLiteral(False)  # True
 rows.reads['bp_x'].root == BooleanLiteral(True)  # True
 ```
+
+A term that adds to a given expression is read wherever it is present,
+because the file cannot see where its host reads the sum. A bare `bool` name
+in an assumption is read at every coordinate of the frame of the assumption.
+`model_trees` lists every tree whose value goes into the model: both sides of
+each constraint, the objective, each bound, each curve link, and each term. A
+reported expression and an assumption are not in that list.
 
 A mask is built from the predicate nodes below. A read through a relation
 compares an expression of `Cases`, `Join` and `Sum` nodes with `0`. Only

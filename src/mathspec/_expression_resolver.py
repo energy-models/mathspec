@@ -44,10 +44,12 @@ from mathspec.errors import DimensionError, SchemaError, did_you_mean, unordered
 from mathspec.program import (
     Add,
     Axis,
+    Cases,
     Constant,
     Divide,
     Dual,
     Expression,
+    ExpressionReference,
     Join,
     JoinColumns,
     Multiply,
@@ -69,6 +71,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from mathspec._resolution import Namespace
+    from mathspec.spec import ParameterSpec
 
 
 #: An ``edge=`` as a translation carries it: whether it wraps, and the number
@@ -81,6 +84,38 @@ _Edge = tuple[bool, float | None]
 #: chain of 200 entries survived every pass on a default stack and 250 did not
 #: (#643).
 MAX_RESOLVED_DEPTH = 3 * MAX_DEPTH
+
+
+def _zero_where_missing(e: Expression, parameters: Mapping[str, ParameterSpec]) -> str | None:
+    """The ``missing: 0`` parameter whose missing row makes *e* 0, or ``None`` where no missing row can.
+
+    The language puts that 0 in, so a divisor it can zero is refused at load.
+    A factor, the numerator of a quotient, the base of a power, and the
+    operand of a sum, a shift, a lookup or a named expression make *e* 0 where
+    they are 0; a sum of terms only where every term is, so ``p + 1`` never
+    is; a case where any region is.
+    """
+    match e:
+        case ParameterReference(name=name):
+            declared = parameters.get(name)
+            zero = declared is not None and not isinstance(declared.missing, bool) and declared.missing == 0
+            return name if zero else None
+        case Negate(operand=operand) | Sum(operand=operand) | WindowSum(operand=operand) | Translate(operand=operand):
+            return _zero_where_missing(operand, parameters)
+        case Join(operand=operand) | ExpressionReference(body=operand):
+            return _zero_where_missing(operand, parameters)
+        case Multiply(left=left, right=right):
+            return _zero_where_missing(left, parameters) or _zero_where_missing(right, parameters)
+        case Divide(numerator=numerator):
+            return _zero_where_missing(numerator, parameters)
+        case Power(base=base):
+            return _zero_where_missing(base, parameters)
+        case Add(left=left, right=right):
+            name = _zero_where_missing(left, parameters)
+            return name if name is not None and _zero_where_missing(right, parameters) is not None else None
+        case Cases(regions=regions):
+            return next((n for r in regions if (n := _zero_where_missing(r.value, parameters)) is not None), None)
+    return None
 
 
 @dataclass(frozen=True)
@@ -181,15 +216,14 @@ class ExpressionResolver:
                 assert_never(node.op)
 
     def _zero_divisor(self, divisor: Expression) -> bool:
-        """Whether *divisor* is a parameter whose ``missing: 0`` gives a quotient a zero to divide by, recorded as an error."""
-        if not isinstance(divisor, ParameterReference):
-            return False
-        declared = self.ns.spec.parameters.get(divisor.name)
-        if declared is None or isinstance(declared.missing, bool) or declared.missing != 0:
+        """Whether a missing row of a ``missing: 0`` parameter can make *divisor* 0, recorded as an error."""
+        name = _zero_where_missing(divisor, self.ns.spec.parameters)
+        if name is None:
             return False
         self.errors.append(
-            f"{self.context}: '{divisor.name}' is a divisor, and missing: 0 reads a missing row of it as 0, which "
-            f'no number divides by. Declare missing: refused, absent, or a value other than 0.'
+            f"{self.context}: the divisor reads '{name}', which is declared missing: 0, so a missing row of '{name}' "
+            f'makes the divisor 0, which no number divides by. Declare missing: refused, absent, or a value other '
+            f'than 0.'
         )
         return True
 
