@@ -13,6 +13,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(language)!: a refused parameter needs a row only where the model reads it ([#880](https://github.com/energy-models/mathspec/pull/880))
+- feat(language)!: a missing row reads as the value the file names, and `missing: neutral` is gone ([#881](https://github.com/energy-models/mathspec/pull/881))
 
 ## 0.3.0 (2026-10-15)
 
