@@ -25,7 +25,11 @@ language version stays `0`.
   `NamedMask` now name the entries. The nodes that use them are
   `VariableReference`, `ParameterReference`, `ExpressionReference` and
   `MaskReference`. The other `*Declaration` classes lose the suffix:
-  `ConstraintDeclaration` is `Constraint` ([#855](https://github.com/energy-models/mathspec/pull/855)).
+  `ConstraintDeclaration` is `Constraint`. Code that uses the old meaning
+  raises no error, so rename the four references before you drop the
+  suffixes ([#855](https://github.com/energy-models/mathspec/pull/855)).
+- The language reference page `declarations/` is now
+  `parameters-variables-constraints/` ([#855](https://github.com/energy-models/mathspec/pull/855)).
 - `python -m mathspec diff a.yaml b.yaml` compares two specs.
   `canonical --check` and `--write` are gone ([#874](https://github.com/energy-models/mathspec/pull/874)).
 - `to_yaml()` writes a short list or mapping on one line ([#871](https://github.com/energy-models/mathspec/pull/871)).
