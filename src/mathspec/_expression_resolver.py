@@ -6,7 +6,7 @@
 
 Every operator call is read here — its shape against [`BUILTINS`][],
 its dimension and relation arguments against the namespace — and the node it
-stands for is built. [`mathspec.resolution`][] holds the namespace and the
+stands for is built. [`mathspec._resolution`][] holds the namespace and the
 doors that call this.
 """
 
@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, assert_never, cast
 
+from mathspec._dimensions import dims_of
 from mathspec._expression_parser import (
     MAX_DEPTH,
     ArithmeticNode,
@@ -31,9 +32,7 @@ from mathspec._expression_parser import (
     names_in,
     shown,
 )
-from mathspec.dimensions import dims_of
-from mathspec.errors import DimensionError, SchemaError, did_you_mean, unordered
-from mathspec.operators import (
+from mathspec._operators import (
     AMOUNTS,
     BUILTINS,
     EDGE_WRAP,
@@ -41,6 +40,7 @@ from mathspec.operators import (
     edge_error,
     unknown_operator_message,
 )
+from mathspec.errors import DimensionError, SchemaError, did_you_mean, unordered
 from mathspec.program import (
     Add,
     Axis,
@@ -68,7 +68,7 @@ from mathspec.spec import NUMERIC_DTYPES
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from mathspec.resolution import Namespace
+    from mathspec._resolution import Namespace
 
 
 #: An ``edge=`` as a translation carries it: whether it wraps, and the number
@@ -382,7 +382,7 @@ class ExpressionResolver:
     def _amount(self, value: ArithmeticNode, operator: str, key: str) -> int | str | None:
         """``offset=`` or ``window=``: a whole number in the operator's range, or the name of a parameter.
 
-        Closed so that [`mathspec.dimensions._check_named_amount`][] sees
+        Closed so that [`mathspec._dimensions._check_named_amount`][] sees
         every parameter an amount carries, and so that a program's
         ``offset`` and ``width`` are the ``int | str`` they say.
         """
@@ -463,7 +463,7 @@ class ExpressionResolver:
         Constraints sit outside the flat namespace, so this store is consulted
         only here — a bare name in arithmetic never reaches it. A dual standing
         where the math is built is refused separately
-        ([`mathspec.degree`][]); this pass only types the name.
+        ([`mathspec._degree`][]); this pass only types the name.
         """
         (value,) = node.args
         if self._formal(value):

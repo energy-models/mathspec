@@ -22,6 +22,7 @@ import yaml
 
 import mathspec as ms
 from mathspec.__main__ import main
+from mathspec._canonical import _factors, _signed_terms, canonical_text, laid_out, normalised
 from mathspec._expression_parser import (
     BinaryOperatorNode,
     ComparisonNode,
@@ -32,7 +33,6 @@ from mathspec._expression_parser import (
     operand,
     parse_expression,
 )
-from mathspec.canonical import _factors, _signed_terms, canonical_text, laid_out, normalised
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, raw_of, varied
 
 if TYPE_CHECKING:

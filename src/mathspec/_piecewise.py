@@ -18,18 +18,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
-import mathspec.sos as sos
-from mathspec.dimensions import dims_of
+import mathspec._sos as sos
+from mathspec._dimensions import dims_of
+from mathspec._resolution import resolve_expression_text
 from mathspec.errors import DimensionError
 from mathspec.program import Piecewise, PiecewiseMethod, Variable, carries_variable
-from mathspec.resolution import resolve_expression_text
 from mathspec.spec import AssumptionSpec, Curvature, PiecewiseSpec, Spec, VariableSpec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
+    from mathspec._resolution import Namespace
     from mathspec.program import Expression
-    from mathspec.resolution import Namespace
 
 
 #: The suffix on the second gate row, where the gate variable does not exist.
@@ -504,7 +504,7 @@ def expand_piecewise(spec: Spec) -> Spec:
     A ``method: adjacency`` entry states its restriction as the set
     ``method: sos2`` states, and then that set is written out here too: the
     binaries are what the method *is*, so the spec that comes back carries no
-    set of its own ([`mathspec.sos.emit`][] is where they are spelled).
+    set of its own ([`mathspec._sos.emit`][] is where they are spelled).
     Each entry's frame and names are read off the program *spec* lowered to.
     """
     if not spec.piecewise:

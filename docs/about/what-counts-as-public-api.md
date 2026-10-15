@@ -5,8 +5,8 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # What counts as public API
 
-A function may join the public API of the package, as `to_spec` and
-`to_latex` did, when both of these are true:
+A function belongs in the public API, as `to_spec` and `to_latex` do, when
+both of these are true:
 
 1. The same file gives the same answer. `to_spec('spec.yaml')` returns the same
    `Spec` today, tomorrow, and on a machine with no data and no solver. A
@@ -39,6 +39,9 @@ module:
 `SymbolTable` and `FormatName` are also at the top level, because you make
 them to give them to the typesetter. `tests/test_public_surface.py` checks
 that each module obeys its rule.
+
+Every other module starts with an underscore and is private. Import from the
+four modules above: `from mathspec import to_latex`.
 
 ## What every function keeps
 

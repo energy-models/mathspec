@@ -18,7 +18,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from mathspec import piecewise, to_spec
+from mathspec import _piecewise as piecewise
+from mathspec import to_spec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, spec_of, varied
 from tests.test_sos import CURVE
 from tools.render_tex import models

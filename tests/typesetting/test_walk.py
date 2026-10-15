@@ -11,18 +11,18 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from mathspec._typesetting import FORMATS, SymbolTable, to_latex, to_markdown, typeset, typeset_line
+from mathspec._typesetting.format import OPERATOR_NAMES
+from mathspec._typesetting.symbols import _derive_name_symbol, chosen_expressions, symbols_for
+from mathspec._validation import to_spec
 from mathspec.errors import LanguageError
-from mathspec.typesetting import FORMATS, SymbolTable, to_latex, to_markdown, typeset, typeset_line
-from mathspec.typesetting.format import OPERATOR_NAMES
-from mathspec.typesetting.symbols import _derive_name_symbol, chosen_expressions, symbols_for
-from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, varied
 from tests.typesetting import golden
 from tests.typesetting.fixtures import EVERY_FORMAT, LATEX
 
 if TYPE_CHECKING:
-    from mathspec.typesetting import FormatName
-    from mathspec.typesetting.format import Format
+    from mathspec._typesetting import FormatName
+    from mathspec._typesetting.format import Format
 
 
 @EVERY_FORMAT

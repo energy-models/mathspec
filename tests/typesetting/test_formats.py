@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mathspec import to_spec, typeset_line
-from mathspec.typesetting import FORMATS, to_latex, to_markdown, to_typst, typeset
-from mathspec.typesetting.format import OPERATOR_NAMES
+from mathspec._typesetting import FORMATS, to_latex, to_markdown, to_typst, typeset
+from mathspec._typesetting.format import OPERATOR_NAMES
 from tests.fixtures import DISPATCH_MODEL, varied
 from tests.typesetting import golden
 from tests.typesetting.fixtures import EVERY_FORMAT, TYPST_SYMBOLS
@@ -21,8 +21,8 @@ from tests.typesetting.fixtures import EVERY_FORMAT, TYPST_SYMBOLS
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from mathspec.typesetting import FormatName
-    from mathspec.typesetting.format import Format
+    from mathspec._typesetting import FormatName
+    from mathspec._typesetting.format import Format
 
 
 #: Every math span of a Markdown document: a `math` fence, then the verbatim

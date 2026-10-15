@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec.boundedness import unbounded_notes
-from mathspec.operators import BUILTIN_NAMES
+from mathspec._boundedness import unbounded_notes
+from mathspec._operators import BUILTIN_NAMES
 from tests.fixtures import SMALL_MODEL, spec_of, varied
 
 BASE = varied(

@@ -16,8 +16,8 @@ from __future__ import annotations
 import pytest
 
 from mathspec import merge, override, to_markdown, to_spec
+from mathspec._typesetting import FORMATS, typeset
 from mathspec.errors import LanguageError
-from mathspec.typesetting import FORMATS, typeset
 from tests.fixtures import EXAMPLES
 from tools import gallery
 

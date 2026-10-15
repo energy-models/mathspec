@@ -17,11 +17,11 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 
+from mathspec._exclusivity import CELL_BUDGET, Special, Subject, _evaluate, _Grid, overlapping
+from mathspec._resolution import Namespace, resolve_where
+from mathspec._validation import to_spec
 from mathspec._where_parser import parse_where
-from mathspec.exclusivity import CELL_BUDGET, Special, Subject, _evaluate, _Grid, overlapping
 from mathspec.program import And, Mask, Not, Or
-from mathspec.resolution import Namespace, resolve_where
-from mathspec.validation import to_spec
 from tests.fixtures import varied
 
 if TYPE_CHECKING:

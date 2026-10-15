@@ -7,7 +7,7 @@
 ``check`` loads the file and prints the language's advice; ``canonical``
 writes the spec in the form two files that state the same spec share; ``diff``
 writes two specs in that form and prints where they differ; one further command per
-typeset format, read off [`mathspec.typesetting.FORMATS`][]. Every command reads
+typeset format, read off [`mathspec._typesetting.FORMATS`][]. Every command reads
 the file as written, and nothing here writes a formulation out unasked.
 The typeset commands take ``--expand``, because a shell cannot compose
 [`expand`][mathspec.spec.Spec.expand] the way a caller does and the rows are a
@@ -22,10 +22,10 @@ import difflib
 import sys
 from pathlib import Path
 
-from mathspec.advising import advice
+from mathspec._advising import advice
+from mathspec._typesetting import FORMATS, typeset
+from mathspec._validation import to_spec
 from mathspec.errors import MathSpecError
-from mathspec.typesetting import FORMATS, typeset
-from mathspec.validation import to_spec
 
 
 def parser() -> argparse.ArgumentParser:

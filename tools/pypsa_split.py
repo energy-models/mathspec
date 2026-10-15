@@ -41,7 +41,7 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 from mathspec import merge, to_spec
-from mathspec.canonical import canonical_yaml
+from mathspec._canonical import canonical_yaml
 from mathspec.errors import LanguageError
 
 if TYPE_CHECKING:

@@ -129,7 +129,7 @@ ConstraintSense = ComparisonOperator
 
 #: Where a degree-2 product may stand in the math a solver sees. An objective
 #: and a constraint take ``variable * variable``; a bound and a ``piecewise:``
-#: link are read affinely (``mathspec.degree``), so those are the two.
+#: link are read affinely (``mathspec._degree``), so those are the two.
 QuadraticPosition = Literal['objective', 'constraint']
 
 #: The dtype a dimension index may declare (the entry rules), and what
@@ -235,7 +235,7 @@ class Multiply:
     """Product of two operands.
 
     Affine where at least one factor is variable-free; degree 2 where neither
-    is, which ``mathspec.degree`` admits in a [`QuadraticPosition`][] alone.
+    is, which ``mathspec._degree`` admits in a [`QuadraticPosition`][] alone.
     """
 
     left: Expression
@@ -246,7 +246,7 @@ class Multiply:
 class Power:
     """``base ** exponent``, both variable-free wherever the math reads it.
 
-    The language refuses a variable anywhere under it (``mathspec.degree``),
+    The language refuses a variable anywhere under it (``mathspec._degree``),
     so in the program a solver sees it is degree 0 and folds to one number per
     coordinate like any other parameter arithmetic.
     """
@@ -257,7 +257,7 @@ class Power:
 
 @dataclass(frozen=True)
 class Divide:
-    """Quotient ``numerator / divisor``, the divisor variable-free wherever the math reads it (``mathspec.degree``)."""
+    """Quotient ``numerator / divisor``, the divisor variable-free wherever the math reads it (``mathspec._degree``)."""
 
     numerator: Expression
     divisor: Expression
@@ -427,7 +427,7 @@ class ExpressionReference:
 #: *closed*: nothing registers into it, so a tool that walks it ends in
 #: ``assert_never`` and a node added without a branch is a type error at the
 #: site that must grow one, rather than a ``LanguageError`` raised at the first
-#: spec that uses it. The degree rules (``mathspec.degree``) hold on every
+#: spec that uses it. The degree rules (``mathspec._degree``) hold on every
 #: tree the math reads — [`Program.roots`][], a bound, and a named expression
 #: that is ``in_math`` — affine but where a [`QuadraticPosition`][] admits a
 #: [`Multiply`][] of two variable-carrying operands. A
@@ -1142,7 +1142,7 @@ class Program:
         rows sum over its breakpoint dimension; ask the program of
         ``spec.expand('piecewise')``.
         """
-        from mathspec.separability import separabilities
+        from mathspec._separability import separabilities
 
         return Sealed(separabilities(self))
 

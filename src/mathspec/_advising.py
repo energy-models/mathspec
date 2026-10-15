@@ -11,9 +11,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec.boundedness import unbounded_notes
+from mathspec._boundedness import unbounded_notes
+from mathspec._validation import to_spec
 from mathspec.program import Advice, Join, Program, walk
-from mathspec.validation import to_spec
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

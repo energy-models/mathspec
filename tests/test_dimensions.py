@@ -10,11 +10,11 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 
-from mathspec.dimensions import DimensionError, _check_where_dims, dims_of
+from mathspec._dimensions import DimensionError, _check_where_dims, dims_of
+from mathspec._resolution import Namespace
+from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
 from mathspec.program import Axis, Column, Join, Mask, RelationPairComparison, Sum
-from mathspec.resolution import Namespace
-from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, expression_of, spec_of, varied, where_of
 
 if TYPE_CHECKING:

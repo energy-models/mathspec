@@ -12,10 +12,10 @@ from functools import partial
 import pytest
 
 from mathspec import to_spec
+from mathspec._expansion import parse_and_expand
+from mathspec._resolution import Namespace
 from mathspec.errors import LanguageError
-from mathspec.expansion import parse_and_expand
 from mathspec.program import Axis, ExpressionReference, Multiply, ParameterReference, Sum, Translate, VariableReference
-from mathspec.resolution import Namespace
 from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, comparison_of, expression_of, spec_of
 
 WEIGHTED_SUM = {
@@ -409,7 +409,7 @@ def test_a_call_binding_the_dimension_a_partition_steps_along_builds_it():
 
 def test_a_named_expression_is_resolved_once_however_many_uses(monkeypatch):
     """Every use parsed, expanded and resolved the entry again, and a cased one's arms with it."""
-    from mathspec import resolution
+    from mathspec import _resolution as resolution
 
     resolved: list[str] = []
     named = resolution._named

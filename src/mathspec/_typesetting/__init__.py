@@ -28,22 +28,22 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, TypedDict, Unpack
 
+from mathspec._typesetting.latex import LatexFormat
+from mathspec._typesetting.legend import Legend, notice
+from mathspec._typesetting.markdown import MarkdownFormat
+from mathspec._typesetting.symbols import SymbolTable, symbols_for
+from mathspec._typesetting.typst import TypstFormat
+from mathspec._typesetting.walk import Walk
+from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
 from mathspec.program import Program
-from mathspec.typesetting.latex import LatexFormat
-from mathspec.typesetting.legend import Legend, notice
-from mathspec.typesetting.markdown import MarkdownFormat
-from mathspec.typesetting.symbols import SymbolTable, symbols_for
-from mathspec.typesetting.typst import TypstFormat
-from mathspec.typesetting.walk import Walk
-from mathspec.validation import to_spec
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
+    from mathspec._typesetting.format import Format
     from mathspec.spec import Spec
-    from mathspec.typesetting.format import Format
 
 __all__ = [
     'FORMATS',

@@ -19,9 +19,9 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from mathspec._typesetting import to_markdown
+from mathspec._validation import to_spec
 from mathspec.spec import PIECEWISE_METHODS
-from mathspec.typesetting import to_markdown
-from mathspec.validation import to_spec
 from tools._page import ROOT, sidecar_for, splice, split_math, without_header
 from tools._page import main as page_main
 

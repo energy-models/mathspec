@@ -26,7 +26,7 @@ from mathspec._expression_parser import (
 from mathspec.errors import SchemaError
 
 if TYPE_CHECKING:
-    from mathspec.resolution import Namespace
+    from mathspec._resolution import Namespace
     from mathspec.spec import MacroSpec
 
 

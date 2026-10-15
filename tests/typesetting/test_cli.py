@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 import mathspec.__main__ as front
-from mathspec.typesetting import FORMATS
+from mathspec._typesetting import FORMATS
 from tests.fixtures import EXAMPLES
 from tests.typesetting import golden
 

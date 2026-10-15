@@ -15,6 +15,9 @@ and three modules hold the rest:
 | `mathspec.program` | what the file means: `Program`, its nodes, and `Advice` | [Program API](program.md) |
 | `mathspec.errors`  | what you catch: the error tree, and `did_you_mean`      | [Errors](#errors) below   |
 
+A module whose name starts with an underscore is not public API
+([where a name lives](../about/what-counts-as-public-api.md#where-a-name-lives)).
+
 <!-- prettier-ignore-start -->
 
 ## Loading

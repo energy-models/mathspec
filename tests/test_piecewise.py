@@ -15,8 +15,8 @@ from typing import get_args
 
 import pytest
 
+from mathspec._piecewise import expand_piecewise
 from mathspec.errors import LanguageError, SchemaError
-from mathspec.piecewise import expand_piecewise
 from mathspec.program import Assumption, VariableReference, assumption_message
 from mathspec.spec import Curvature
 from tests.fixtures import DISPATCH_MODEL, expanded, raw_of, spec_of, varied
