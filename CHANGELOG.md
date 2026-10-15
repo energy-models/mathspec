@@ -12,7 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(language)!: a missing row is refused only where the model reads it, and the program says where that is ([#880](https://github.com/energy-models/mathspec/pull/880))
+- feat(language)!: a missing row is refused only where the model reads it, a file names its value instead of neutral, and the program says where each parameter is read ([#880](https://github.com/energy-models/mathspec/pull/880))
 - refactor(api)!: a module outside spec, program and errors has a name that starts with an underscore ([#878](https://github.com/energy-models/mathspec/pull/878))
 - feat(cli)!: `python -m mathspec diff` compares two specs in the canonical form, and `canonical` no longer rewrites or checks a file ([#874](https://github.com/energy-models/mathspec/pull/874))
 - feat(spec)!: a spec written back out puts short lists and mappings of names on one line ([#871](https://github.com/energy-models/mathspec/pull/871))
