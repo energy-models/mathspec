@@ -38,6 +38,7 @@ from mathspec.program import (
     ExpressionComparison,
     Join,
     JoinColumns,
+    JoinedPredicate,
     Multiply,
     NamedExpression,
     NamedMask,
@@ -96,7 +97,13 @@ def _draw(program: Program, seed: int) -> Data:
         table = {}
         for key in itertools.product(*(LABELS[d] for d in declared.dims)):
             if declared.missing == 'refused' or rng.random() < 0.6:
-                table[key] = float(rng.randint(1, 3) if declared.dtype == 'int' else rng.choice([0, 0, 0, 1, 2]))
+                table[key] = float(
+                    rng.randint(1, 3)
+                    if declared.dtype == 'int'
+                    else rng.randint(0, 1)
+                    if declared.dtype == 'bool'
+                    else rng.choice([0, 0, 0, 1, 2])
+                )
         tables[name] = table
     return Data(tables, {g: rng.choice(LABELS['bus']) for g in LABELS['g']})
 
@@ -155,10 +162,8 @@ class Oracle:
                 summed = self.total(self.value(e.operand, {**at, e.along: s}) for s in sources if s is not None)
                 return summed[0], summed[1] | self.amount_read(e.width, at)
             case Cases(regions=regions):
-                for region in regions:
-                    if self.holds(region.when.root, at):
-                        return self.value(region.value, at)
-                return None
+                whens = [self.holds(region.when.root, at, evaluated=True) for region in regions]
+                return next((self.value(r.value, at) for r, w in zip(regions, whens, strict=True) if w), None)
             case NamedExpression(body=body):
                 return self.value(body, at)
         raise AssertionError(f'the oracle does not build {type(e).__name__}')
@@ -195,33 +200,51 @@ class Oracle:
 
     # -- predicates over data, for the masks a model writes and the masks mathspec derives --
 
-    def holds(self, p: Predicate, at: Coord) -> bool:
+    def holds(self, p: Predicate, at: Coord, *, evaluated: bool = False) -> bool:
+        """Whether *p* holds at *at*; where *evaluated*, the model evaluates *p* there, so each bare flag is read.
+
+        Both sides of a connective are evaluated, as the model evaluates them.
+        """
         match p:
             case BooleanLiteral(value=value):
                 return value
             case And(left=left, right=right):
-                return self.holds(left, at) and self.holds(right, at)
+                sides = self.holds(left, at, evaluated=evaluated), self.holds(right, at, evaluated=evaluated)
+                return all(sides)
             case Or(left=left, right=right):
-                return self.holds(left, at) or self.holds(right, at)
+                sides = self.holds(left, at, evaluated=evaluated), self.holds(right, at, evaluated=evaluated)
+                return any(sides)
             case Not(operand=operand):
-                return not self.holds(operand, at)
+                return not self.holds(operand, at, evaluated=evaluated)
             case NamedMask(body=body):
-                return self.holds(body, at)
+                return self.holds(body, at, evaluated=evaluated)
             case ParameterComparison(name=name, op=op, value=literal):
                 found = self.data.tables[name].get(_key(self.program.parameters[name].dims, at))
                 return found is not None and _compare(found, op, literal)
             case ParameterDefined(name=name):
-                return _key(self.program.parameters[name].dims, at) in self.data.tables[name]
+                declared = self.program.parameters[name]
+                key = _key(declared.dims, at)
+                if declared.dtype != 'bool':
+                    return key in self.data.tables[name]
+                if evaluated and declared.missing == 'refused':
+                    self.reads[name].add(key)
+                return bool(self.data.tables[name].get(key, 0.0))
             case VariableDefined(name=name):
                 where = self.program.variables[name].where
                 return where is None or self.holds(where.root, at)
             case DimensionComparison(name=name, op=op, value=literal):
                 return _compare(at[name], op, literal)
             case CountComparison(predicate=predicate, over=over, op=op, value=literal):
-                count = sum(self.holds(predicate.root, {**at, over: label}) for label in LABELS[over])
-                return _compare(count, op, literal)
+                found = [self.holds(predicate.root, {**at, over: label}, evaluated=evaluated) for label in LABELS[over]]
+                return _compare(sum(found), op, literal)
             case WindowPredicate():
-                return any(self.holds(p.operand.root, {**at, p.along: s}) for s in self.window(p, at))
+                found = [
+                    self.holds(p.operand.root, {**at, p.along: s}, evaluated=evaluated) for s in self.window(p, at)
+                ]
+                return any(found)
+            case JoinedPredicate(operand=operand, columns=columns):
+                [row] = self.rows(columns, at, inner_frame=True) or [None]
+                return row is not None and self.holds(operand.root, row, evaluated=evaluated)
             case ExpressionComparison(left=left, op=op, right=right):
                 sides = self.number(left, at), self.number(right, at)
                 return None not in sides and _compare(sides[0], op, sides[1])
@@ -254,7 +277,7 @@ class Oracle:
         program = self.program
         for constraint in program.constraints.values():
             for at in _coords(constraint.dims):
-                if constraint.where is not None and not self.holds(constraint.where.root, at):
+                if constraint.where is not None and not self.holds(constraint.where.root, at, evaluated=True):
                     continue
                 sides = self.value(constraint.lhs, at), self.value(constraint.rhs, at)
                 if None in sides or not (sides[0][0] | sides[1][0]):
@@ -264,7 +287,7 @@ class Oracle:
             self.record(found[1])
         for variable in program.variables.values():
             for at in _coords(variable.dims):
-                if variable.where is not None and not self.holds(variable.where.root, at):
+                if variable.where is not None and not self.holds(variable.where.root, at, evaluated=True):
                     continue
                 for bound in (variable.lower, variable.upper):
                     if bound is not None and (found := self.value(bound, at)) is not None:
@@ -396,6 +419,50 @@ MODELS = [
             'constraints.c': {'dims': ['t', 'g'], 'expression': 's + y <= p'},
         },
         id='a-variable-read-as-a-number',
+    ),
+    pytest.param(
+        {
+            'parameters.on': {'dims': ['g'], 'dtype': 'bool'},
+            'variables.z': {'dims': ['g'], 'where': 'on', 'bounds': {'upper': 'p'}},
+        },
+        id='a-flag-masking-a-variable',
+    ),
+    pytest.param(
+        {
+            'parameters.on': {'dims': ['t', 'g'], 'dtype': 'bool'},
+            'expressions.e': {
+                'dims': ['t', 'g'],
+                'cases': {'on': {'when': 'on', 'expression': 'p * y'}},
+                'otherwise': 'y',
+            },
+            'constraints.c': {'dims': ['t', 'g'], 'where': 'p0 > 0', 'expression': 'e <= 1'},
+        },
+        id='a-flag-in-a-case',
+    ),
+    pytest.param(
+        {
+            'parameters.on': {'dims': ['t', 'g'], 'dtype': 'bool'},
+            'constraints.c': {'dims': ['t', 'g'], 'where': 'shift(on, along=t, offset=1)', 'expression': 'y <= 1'},
+        },
+        id='a-flag-shifted-in-a-where',
+    ),
+    pytest.param(
+        {
+            'parameters.bus_on': {'dims': ['bus'], 'dtype': 'bool'},
+            'constraints.c': {'dims': ['t', 'g'], 'where': 'at(bus_on, by=gen_bus[bus])', 'expression': 'y <= 1'},
+        },
+        id='a-flag-through-a-map',
+    ),
+    pytest.param(
+        {
+            'parameters.on': {'dims': ['t', 'g'], 'dtype': 'bool'},
+            'variables.z': {'dims': ['g'], 'where': 'count(on, over=t) > 1', 'bounds': {'upper': 'p'}},
+        },
+        id='a-flag-counted',
+    ),
+    pytest.param(
+        {'constraints.c': {'dims': ['t', 'g'], 'where': 'p0 AND p0 > 0', 'expression': 'y <= 1'}},
+        id='a-guard-reads-no-number',
     ),
 ]
 

@@ -38,9 +38,11 @@ from mathspec.program import (
     ExpressionComparison,
     Join,
     JoinColumns,
+    JoinedPredicate,
     Mask,
     Multiply,
     NamedExpression,
+    NamedMask,
     Negate,
     Not,
     Or,
@@ -87,6 +89,11 @@ def _or(*predicates: Predicate) -> Predicate:
     return Mask(reduce(Or, dict.fromkeys(predicates), _FALSE)).root
 
 
+def _swapped(columns: JoinColumns) -> JoinColumns:
+    """The join that reads *columns* backwards: it joins on what *columns* groups by, and groups by what it joins on."""
+    return JoinColumns(columns.name, columns.relation, joined=columns.grouped, grouped=columns.joined)
+
+
 def _positive(expression: Expression, dims: tuple[str, ...]) -> Predicate:
     """Where *expression* is above zero, and false where it is null."""
     return ExpressionComparison(expression, '>', Constant(0.0), dims)
@@ -107,24 +114,30 @@ class _Reads:
         self._present: dict[Expression, Predicate] = {}
         self._live: dict[Expression, Predicate] = {}
         self._built: dict[str, Predicate] = {}
+        self._cases: dict[Expression, bool] = {}
 
     def run(self) -> None:
         program = self.program
         for name, constraint in program.constraints.items():
             built = self.built(name, constraint)
-            self.visit(constraint.lhs, built)
-            self.visit(constraint.rhs, built)
+            where = _TRUE if constraint.where is None else constraint.where.root
+            self.visit_mask(where, _TRUE)
+            self.visit(constraint.lhs, built, where)
+            self.visit(constraint.rhs, built, where)
         if program.objective is not None:
             expression = program.objective.expression
-            self.visit(expression, self.present(expression))
+            self.visit(expression, self.present(expression), _TRUE)
         for name, variable in program.variables.items():
-            exists = _TRUE if variable.where is None else VariableDefined(name, variable.dims)
+            exists = _TRUE
+            if variable.where is not None:
+                self.visit_mask(variable.where.root, _TRUE)
+                exists = VariableDefined(name, variable.dims)
             for bound in (variable.lower, variable.upper):
                 if bound is not None:
-                    self.visit(bound, exists)
+                    self.visit(bound, exists, exists)
         for entry in program.expressions.values():
             if not entry.in_math:
-                self.visit(entry.expression, self.present(entry.expression))
+                self.visit(entry.expression, self.present(entry.expression), _TRUE)
 
     def built(self, name: str, constraint: ConstraintDeclaration) -> Predicate:
         """Where *constraint* has a row: its mask holds, absence removed neither side, and a variable term is left."""
@@ -327,49 +340,100 @@ class _Reads:
 
     # -- read, top-down ---------------------------------------------------------
 
-    def visit(self, e: Expression, read: Predicate) -> None:
-        """Hand *read*, the mask over *e*'s frame where its value goes into the model, down to every leaf under *e*."""
-        if isinstance(read, BooleanLiteral) and not read.value:
+    def visit(self, e: Expression, read: Predicate, evaluated: Predicate) -> None:
+        """Hand the masks over *e*'s frame down to every leaf under *e*.
+
+        *read* holds where the value of *e* goes into the model, and
+        *evaluated* where the model computes *e* at all: a row is evaluated
+        wherever its ``where`` holds, and read only where it is built. A
+        parameter takes *read*; the flag in a case's ``when`` takes
+        *evaluated*. *evaluated* stops at the first subtree with no case in it.
+        """
+        if not self.has_case(e):
+            evaluated = _FALSE
+        if read == _FALSE and evaluated == _FALSE:
             return
         match e:
             case Parameter(name=name):
                 declared = self.program.parameters.get(name)
                 if declared is not None and declared.missing == 'refused':
-                    self.read[name] = _or(self.read.get(name, _FALSE), self.project(read, declared.dims))
+                    self.record(name, read, declared.dims)
             case Constant() | Variable() | Dual():
                 return
             case Negate() | Add() | Multiply() | Divide() | Power():
                 for child in children(e):
-                    self.visit(child, read)
+                    self.visit(child, read, evaluated)
             case Sum(operand=Join(operand=inner, columns=columns)) if columns.axes:
-                self.visit(inner, _and(self.back_join(columns, read, e), self.present(inner)))
+                self.visit(
+                    inner,
+                    _and(self.back_join(columns, read, e), self.present(inner)),
+                    self.back_join(columns, evaluated, e),
+                )
             case Sum(operand=operand):
-                self.visit(operand, _and(read, self.present(operand)))
+                self.visit(operand, _and(read, self.present(operand)), evaluated)
             case Join(operand=operand, columns=columns):
-                self.visit(operand, self.back_join(columns, read, e))
+                self.visit(operand, self.back_join(columns, read, e), self.back_join(columns, evaluated, e))
             case Translate():
                 self.amount(e.offset, read)
-                self.visit(e.operand, self.back_shift(e, read))
+                self.visit(e.operand, self.back_shift(e, read), self.back_shift(e, evaluated))
             case WindowSum():
                 self.amount(e.width, read)
-                self.visit(e.operand, _and(self.window_ahead(e, read), self.present(e.operand)))
+                ahead = self.window_ahead(e, read)
+                self.visit(e.operand, _and(ahead, self.present(e.operand)), self.window_ahead(e, evaluated))
             case Cases(regions=regions):
                 for region in regions:
-                    self.visit(region.value, _and(read, region.when.root))
+                    self.visit_mask(region.when.root, evaluated)
+                    self.visit(region.value, _and(read, region.when.root), _and(evaluated, region.when.root))
             case NamedExpression(body=body):
-                self.visit(body, read)
+                self.visit(body, read, evaluated)
             case _:
                 assert_never(e)
+
+    def has_case(self, e: Expression) -> bool:
+        """Whether a case stands under *e*, so its ``when`` needs to know where the model evaluates it."""
+        if e not in self._cases:
+            self._cases[e] = isinstance(e, Cases) or any(self.has_case(child) for child in children(e))
+        return self._cases[e]
+
+    def visit_mask(self, p: Predicate, evaluated: Predicate) -> None:
+        """Hand *evaluated*, where the model evaluates *p*, to each bare ``bool`` name under *p*: a flag reads its value."""
+        if evaluated == _FALSE:
+            return
+        match p:
+            case ParameterDefined(name=name):
+                declared = self.program.parameters.get(name)
+                if declared is not None and declared.dtype == 'bool' and declared.missing == 'refused':
+                    self.record(name, evaluated, declared.dims)
+            case And(left=left, right=right) | Or(left=left, right=right):
+                self.visit_mask(left, evaluated)
+                self.visit_mask(right, evaluated)
+            case Not(operand=operand):
+                self.visit_mask(operand, evaluated)
+            case NamedMask(body=body):
+                self.visit_mask(body, evaluated)
+            case CountComparison(predicate=predicate, over=over):
+                self.visit_mask(predicate.root, self.project(evaluated, Mask(evaluated).dims - {over}))
+            case WindowPredicate():
+                looked_at = self.window(
+                    evaluated, p.along, p.offset, p.width, ahead=not p.ahead, wrap=p.wrap, partition=p.partition
+                )
+                self.visit_mask(p.operand.root, looked_at)
+            case JoinedPredicate(operand=operand, columns=columns, dims=dims):
+                self.visit_mask(operand.root, self.through(_swapped(columns), evaluated, frozenset(dims)))
+            case _:
+                return
+
+    def record(self, name: str, read: Predicate, dims: tuple[str, ...]) -> None:
+        self.read[name] = _or(self.read.get(name, _FALSE), self.project(read, dims))
 
     def amount(self, amount: int | str, read: Predicate) -> None:
         """A named offset or width is read wherever the operator it sizes is."""
         if isinstance(amount, str):
-            self.visit(Parameter(amount), read)
+            self.visit(Parameter(amount), read, _FALSE)
 
     def back_join(self, columns: JoinColumns, read: Predicate, e: Expression) -> Predicate:
         """Where the operand of a join on *columns* is read, given *read* at the join *e*: the join with its columns swapped."""
-        swapped = JoinColumns(columns.name, columns.relation, joined=columns.grouped, grouped=columns.joined)
-        return self.through(swapped, read, self.frame(e))
+        return self.through(_swapped(columns), read, self.frame(e))
 
     def back_shift(self, e: Translate, read: Predicate) -> Predicate:
         """Where the operand of *e* is read: *read* looked at from the other side of the offset."""
