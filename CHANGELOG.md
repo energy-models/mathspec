@@ -12,8 +12,8 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## 0.3.0 (2026-10-15)
 
-The syntax and implementation for relations was changed to a join and sum logic with a new syntax `zone_of[zone]`. A file can now say what a missing row means with `missing:` and refuses missing data by default. A new `masks:` spec is used for reusable predicates. This release breaks files and imports that 0.2.1 loads. The
-language version stays `0`. Dimensions get an `ordered: true` key if their order is meaningful for the model.
+The syntax and implementation for relations was changed to a join and sum logic with a new syntax `zone_of[zone]`. A file can now say what a missing row means with `missing:` and refuses missing data by defaulter both parameters and relations. A new `masks:` spec is introduced for reusable predicates. Dimensions get an `ordered: true` key if their order is meaningful for the model, and order sensitive operations are refused on unordered operations. This release breaks files and imports that 0.2.1 loads as well as the program api. The
+language version stays `0`.
 
 - A missing row of a parameter, or of a relation, is refused by default. A relation needs a row for every combination of its key's dimensions, so a sparse bare relation declares `missing: absent`. Opt in to allowing sparse data and define their meaning with the new `missing:` key. 0.2.1 read a missing parameter row as neutral, and `missing: neutral` keeps that reading. A variable's `absence: undefined` and `absence: zero` are now `missing: absent` and `missing: neutral`
   ([#810](https://github.com/energy-models/mathspec/pull/810), [#879](https://github.com/energy-models/mathspec/pull/879)).
