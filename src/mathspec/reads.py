@@ -10,13 +10,22 @@ frame: *present* is where absence has not removed the node's value, and
 *live* is where the value still carries a variable term, because a row with
 none is not built. The third runs top-down: *read* is where a node's value
 goes into the model, and each operator hands it to its operand the way the
-operator moved the value the other way — a shift by ``k`` steps it back by
-``k``, a lookup becomes the sum that inverts it, and a sum the lookup.
+operator moved the value the other way — a shift back by ``k`` becomes a
+window ahead by ``k``, a lookup becomes the sum that inverts it, and a sum
+the lookup.
 
-Every step is a node a tool already evaluates. An expression enters a
-predicate as ``> 0`` of an indicator, ``1`` where a predicate holds and ``0``
-elsewhere, so a null from a vacated shift or a missing map row reads as
-false there instead of spreading into the next sum.
+A bare ``bool`` name in a ``where`` is read too, wherever the model
+evaluates that ``where``, which is wider than where it reads: a row's
+``where`` is evaluated at every coordinate, built or not. The top-down walk
+carries that second mask beside *read*, down to the ``when`` of each case,
+and a walk over each mask hands it to the flags under ``count``, ``shift``
+and ``at``.
+
+Every step is a node a tool already evaluates. A shift or a window is a
+[`WindowPredicate`][mathspec.program.WindowPredicate]. A read through a
+relation is a join of an indicator, ``1`` where a predicate holds and ``0``
+elsewhere, compared ``> 0``, so a missing map row reads as false there
+instead of spreading into the next sum.
 """
 
 from __future__ import annotations

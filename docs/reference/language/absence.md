@@ -156,7 +156,10 @@ The model reads a parameter where its value goes into the model it builds:
 | a bare `bool` name in a `where`                                  | each coordinate where the model evaluates that `where`                   |
 
 A row that an absent term removes is not built, so the model reads no
-parameter in that row.
+parameter in that row. A tool does not have to build the model to apply this
+rule: [`program.reads`](../reading.md#where-the-model-reads-each-parameter)
+gives the mask of each `refused` parameter, which the tool evaluates when it
+attaches the data.
 
 A `where` reads one kind of parameter: a bare `bool` name, such as
 `where: committable`, reads the value of the flag. The model evaluates the

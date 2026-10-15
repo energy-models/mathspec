@@ -134,6 +134,32 @@ a numeric parameter asks whether the data has a row, so a value does not answer
 it. A `ParameterDefined` on a `bool` parameter reads the value. Under
 `'absent'`, a bound that reads a missing row leaves that side open.
 
+## Where the model reads each parameter
+
+`program.reads` maps each `'refused'` parameter to a `Mask` over the dims of
+that parameter. The mask holds at each coordinate where the model reads the
+parameter ([where a parameter is read](language/absence.md#where-a-parameter-is-read)).
+An engine evaluates the mask as it evaluates a `where`, when it attaches the
+data, and refuses a missing row where the mask holds. It does not build a row
+first. The mask of a parameter that the model never reads is false everywhere.
+
+Like the footprint, the masks answer for the rows that the program holds. The
+program reads the tables of the curve nowhere, because the curve is not a row
+until the expansion writes it out. The expanded program reads them at every
+breakpoint:
+
+```python
+from mathspec.program import BooleanLiteral
+
+program.reads['bp_x'].root == BooleanLiteral(False)  # True
+rows.reads['bp_x'].root == BooleanLiteral(True)  # True
+```
+
+A mask is built from the predicate nodes below. A read through a relation
+compares an expression of `Cases`, `Join` and `Sum` nodes with `0`. Only
+`program.reads` writes a `WindowPredicate` wider than one position, or one
+that looks ahead by a named offset.
+
 ## Nodes and masks
 
 Import the node classes from `mathspec.program` to test a node with
@@ -172,8 +198,10 @@ both mask the same coordinates.
 
 Three predicates read another predicate rather than a declaration. A
 `CountComparison` carries the mask it counts and the dimension it counts away.
-A `TranslatedPredicate` carries the mask it reads at a neighbouring
-coordinate. A `JoinedPredicate` carries the mask it reads through a
+A `WindowPredicate` carries the mask it reads at the positions of a window
+along one dimension: back or ahead by an `offset`, over a `width`, with `wrap`
+and a `partition`. A file's `shift` of a predicate is a window of one position.
+A `JoinedPredicate` carries the mask it reads through a
 relation, and the `JoinColumns` it joins on and groups by. Each holds that
 mask as a `Mask`, where a connective holds a bare predicate, so the walk
 recurses through a connective and stops at these. `.names_read` and `.dims` see
