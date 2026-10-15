@@ -40,6 +40,12 @@ module:
 them to give them to the typesetter. `tests/test_public_surface.py` checks
 that each module obeys its rule.
 
+Every other module starts with an underscore, such as `mathspec._canonical` or
+`mathspec._typesetting`. Python lets you import from one, but no name in it is
+public API, so a release can rename, move or delete it. Import the name from
+the four modules above instead: `from mathspec import to_latex`, not
+`from mathspec._typesetting import to_latex`.
+
 ## What every function keeps
 
 - A function keeps no state. It uses no registry, no plugin, and no setting
