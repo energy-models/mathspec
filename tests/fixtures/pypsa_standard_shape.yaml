@@ -954,11 +954,9 @@ relations:
   - Line_bus0
   - Line_bus1
   - Link_bus0
-  - Link_output_bus
-  - Link_output_link
+  - Link_output_connects
   - Load_bus
-  - Process_output_bus
-  - Process_output_process
+  - Process_output_connects
   - StorageUnit_bus
   - Store_bus
   - Transformer_bus0

@@ -1421,32 +1421,26 @@ relations:
     description: the bus a link leaves
     key: link
     values: bus
-  Link_output_link:
-    description: the link an output port belongs to
-    key: link_output
-    values: link
-  Link_output_bus:
+  Link_output_connects:
     description: >-
-      the bus an output port delivers to — PyPSA's `bus1`, `bus2`, … columns.
-      A link of three output ports is three labels here rather than a third
-      relation, so the file states any number of them
+      the link an output port belongs to and the bus it delivers to — PyPSA's
+      `bus1`, `bus2`, … columns read long. A link of three output ports is
+      three labels here rather than a third relation, so the file states any
+      number of them
     key: link_output
-    values: bus
+    values: [link, bus]
   Process_carrier:
     description: the carrier a process converts from
     key: process
     values: carrier
-  Process_output_process:
-    description: the process a port belongs to
-    key: process_output
-    values: process
-  Process_output_bus:
+  Process_output_connects:
     description: >-
-      the bus a port draws from or delivers to — PyPSA's `bus0`, `bus1`, …
-      columns. A process of three ports is three labels here rather than a
-      third relation, so the file states any number of them
+      the process a port belongs to and the bus it draws from or delivers to —
+      PyPSA's `bus0`, `bus1`, … columns read long. A process of three ports is
+      three labels here rather than a third relation, so the file states any
+      number of them
     key: process_output
-    values: bus
+    values: [process, bus]
   Load_bus:
     description: the bus a load sits on
     key: load
@@ -2301,8 +2295,8 @@ expressions:
     cases:
       wrapping:
         when: Link_output_cyclic_delay
-        expression: shift(at(Link_p, by=Link_output_link[link]), along=snapshot, offset=Link_output_delay, edge='wrap', within=snapshot_period[period]) * Link_efficiency
-    otherwise: shift(at(Link_p, by=Link_output_link[link]), along=snapshot, offset=Link_output_delay, edge=0, within=snapshot_period[period]) * Link_efficiency
+        expression: shift(at(Link_p, by=Link_output_connects[link]), along=snapshot, offset=Link_output_delay, edge='wrap', within=snapshot_period[period]) * Link_efficiency
+    otherwise: shift(at(Link_p, by=Link_output_connects[link]), along=snapshot, offset=Link_output_delay, edge=0, within=snapshot_period[period]) * Link_efficiency
   Process_output_arrival:
     description: >-
       what a process transfers at a port at a snapshot — its internal power
@@ -2316,8 +2310,8 @@ expressions:
     cases:
       wrapping:
         when: Process_output_cyclic_delay
-        expression: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge='wrap', within=snapshot_period[period]) * Process_rate
-    otherwise: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge=0, within=snapshot_period[period]) * Process_rate
+        expression: shift(at(Process_p, by=Process_output_connects[process]), along=snapshot, offset=Process_output_delay, edge='wrap', within=snapshot_period[period]) * Process_rate
+    otherwise: shift(at(Process_p, by=Process_output_connects[process]), along=snapshot, offset=Process_output_delay, edge=0, within=snapshot_period[period]) * Process_rate
   GlobalConstraint_energy_weight:
     description: >-
       what one unit of power at a snapshot counts for in a row — the
@@ -2638,11 +2632,11 @@ expressions:
   Link_injection:
     expression: >-
       -sum(Link_p, over=link, by=Link_bus0[bus])
-      + sum(Link_output_arrival, over=link_output, by=Link_output_bus[bus])
+      + sum(Link_output_arrival, over=link_output, by=Link_output_connects[bus])
   Load_injection: sum(Load_demand, over=load, by=Load_bus[bus])
   Process_injection:
     expression: >-
-      sum(Process_output_arrival, over=process_output, by=Process_output_bus[bus])
+      sum(Process_output_arrival, over=process_output, by=Process_output_connects[bus])
   StorageUnit_injection:
     expression: >-
       sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), over=storage_unit, by=StorageUnit_bus[bus])

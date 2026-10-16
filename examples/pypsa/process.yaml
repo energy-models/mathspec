@@ -55,17 +55,14 @@ relations:
     description: the carrier a process converts from
     key: process
     values: carrier
-  Process_output_process:
-    description: the process a port belongs to
-    key: process_output
-    values: process
-  Process_output_bus:
+  Process_output_connects:
     description: >-
-      the bus a port draws from or delivers to — PyPSA's `bus0`, `bus1`, …
-      columns. A process of three ports is three labels here rather than a
-      third relation, so the file states any number of them
+      the process a port belongs to and the bus it draws from or delivers to —
+      PyPSA's `bus0`, `bus1`, … columns read long. A process of three ports is
+      three labels here rather than a third relation, so the file states any
+      number of them
     key: process_output
-    values: bus
+    values: [process, bus]
 
 parameters:
   Process_p_nom:
@@ -231,8 +228,8 @@ expressions:
     cases:
       wrapping:
         when: Process_output_cyclic_delay
-        expression: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge='wrap', within=snapshot_period[period]) * Process_rate
-    otherwise: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge=0, within=snapshot_period[period]) * Process_rate
+        expression: shift(at(Process_p, by=Process_output_connects[process]), along=snapshot, offset=Process_output_delay, edge='wrap', within=snapshot_period[period]) * Process_rate
+    otherwise: shift(at(Process_p, by=Process_output_connects[process]), along=snapshot, offset=Process_output_delay, edge=0, within=snapshot_period[period]) * Process_rate
   Process_tech_capacity_expansion:
     expression: sum(Process_p_nom_ext * Process_tech_capacity_weight, over=process)
     adds_to: tech_capacity_expansion
@@ -250,7 +247,7 @@ expressions:
     adds_to: Carrier_additions
   Process_injection:
     expression: >-
-      sum(Process_output_arrival, over=process_output, by=Process_output_bus[bus])
+      sum(Process_output_arrival, over=process_output, by=Process_output_connects[bus])
     adds_to: Bus_injection
 
 masks:
