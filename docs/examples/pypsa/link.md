@@ -68,17 +68,14 @@ relations:
     description: the bus a link leaves
     key: link
     values: bus
-  Link_output_link:
-    description: the link an output port belongs to
-    key: link_output
-    values: link
-  Link_output_bus:
+  Link_output_connects:
     description: >-
-      the bus an output port delivers to — PyPSA's `bus1`, `bus2`, … columns.
-      A link of three output ports is three labels here rather than a third
-      relation, so the file states any number of them
+      the link an output port belongs to and the bus it delivers to — PyPSA's
+      `bus1`, `bus2`, … columns read long. A link of three output ports is
+      three labels here rather than a third relation, so the file states any
+      number of them
     key: link_output
-    values: bus
+    values: [link, bus]
 
 parameters:
   Link_p_nom:
@@ -260,8 +257,8 @@ expressions:
     cases:
       wrapping:
         when: Link_output_cyclic_delay
-        expression: shift(at(Link_p, by=Link_output_link[link]), along=snapshot, offset=Link_output_delay, edge='wrap', within=snapshot_period[period]) * Link_efficiency
-    otherwise: shift(at(Link_p, by=Link_output_link[link]), along=snapshot, offset=Link_output_delay, edge=0, within=snapshot_period[period]) * Link_efficiency
+        expression: shift(at(Link_p, by=Link_output_connects[link]), along=snapshot, offset=Link_output_delay, edge='wrap', within=snapshot_period[period]) * Link_efficiency
+    otherwise: shift(at(Link_p, by=Link_output_connects[link]), along=snapshot, offset=Link_output_delay, edge=0, within=snapshot_period[period]) * Link_efficiency
   Link_transmission_volume_expansion:
     expression: sum(Link_p_nom_ext * Link_volume_weight, over=link)
     adds_to: transmission_volume_expansion
@@ -286,7 +283,7 @@ expressions:
   Link_injection:
     expression: >-
       -sum(Link_p, over=link, by=Link_bus0[bus])
-      + sum(Link_output_arrival, over=link_output, by=Link_output_bus[bus])
+      + sum(Link_output_arrival, over=link_output, by=Link_output_connects[bus])
     adds_to: Bus_injection
 
 masks:
@@ -391,9 +388,9 @@ assumptions:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Link\_bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{Link\_output\_bus}: \mathcal{O} \to \mathcal{N}`$ — network nodes |
-| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_carrier}: \mathcal{L} \to \mathcal{I},\ \mathrm{Link\_bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{Link\_output\_link}: \mathcal{O} \to \mathcal{L}`$ — controllable connections, each from one bus to the buses it delivers to |
-| $`\mathcal{O}`$ | index $`o`$ — `link_output` with $`\mathrm{Link\_output\_link}: \mathcal{O} \to \mathcal{L},\ \mathrm{Link\_output\_bus}: \mathcal{O} \to \mathcal{N}`$ — a link's output ports, one label per port a link declares — PyPSA's `bus1`, `bus2`, … columns read long, so a link of any number of output ports is one term in the balance, data prep |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Link\_bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{Link\_output\_connects}: \mathcal{O} \to \mathcal{L} \times \mathcal{N}`$ — network nodes |
+| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_carrier}: \mathcal{L} \to \mathcal{I},\ \mathrm{Link\_bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{Link\_output\_connects}: \mathcal{O} \to \mathcal{L} \times \mathcal{N}`$ — controllable connections, each from one bus to the buses it delivers to |
+| $`\mathcal{O}`$ | index $`o`$ — `link_output` with $`\mathrm{Link\_output\_connects}: \mathcal{O} \to \mathcal{L} \times \mathcal{N}`$ — a link's output ports, one label per port a link declares — PyPSA's `bus1`, `bus2`, … columns read long, so a link of any number of output ports is one term in the balance, data prep |
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
 | $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Link\_carrier}: \mathcal{L} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
@@ -509,7 +506,7 @@ F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{
 **`Link_output_arrival`**
 
 ```math
-\overrightarrow{f}_{\xi,t,o} = \begin{cases} f_{\xi,t \ominus^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{f},\mathrm{Link\_output\_link}(o)} \cdot \eta_{\xi,t,o} & \text{if } \mathrm{cyc}^{f}_{o} \\ f_{\xi,t \boxminus_{0}^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{f},\mathrm{Link\_output\_link}(o)} \cdot \eta_{\xi,t,o} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ o \in \mathcal{O}
+\overrightarrow{f}_{\xi,t,o} = \begin{cases} f_{\xi,t \ominus^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{f},\mathrm{Link\_output\_connects.link}(o)} \cdot \eta_{\xi,t,o} & \text{if } \mathrm{cyc}^{f}_{o} \\ f_{\xi,t \boxminus_{0}^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{f},\mathrm{Link\_output\_connects.link}(o)} \cdot \eta_{\xi,t,o} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ o \in \mathcal{O}
 ```
 
 **`Link_transmission_volume_expansion`**
@@ -551,7 +548,7 @@ F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{
 **`Link_injection`**
 
 ```math
-\mathit{Link\_injection}_{\xi,t,n} = -\left( \sum_{l \in \mathcal{L} \,:\, \mathrm{Link\_bus0}(l) = n} f_{\xi,t,l} \right) + \sum_{o \in \mathcal{O} \,:\, \mathrm{Link\_output\_bus}(o) = n} \overrightarrow{f}_{\xi,t,o} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+\mathit{Link\_injection}_{\xi,t,n} = -\left( \sum_{l \in \mathcal{L} \,:\, \mathrm{Link\_bus0}(l) = n} f_{\xi,t,l} \right) + \sum_{o \in \mathcal{O} \,:\, \mathrm{Link\_output\_connects.bus}(o) = n} \overrightarrow{f}_{\xi,t,o} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
 ```
 
 #### Subject to

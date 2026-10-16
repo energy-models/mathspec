@@ -61,17 +61,14 @@ relations:
     description: the bus a link leaves
     key: link
     values: bus
-  Link_output_link:
-    description: the link an output port belongs to
-    key: link_output
-    values: link
-  Link_output_bus:
+  Link_output_connects:
     description: >-
-      the bus an output port delivers to — PyPSA's `bus1`, `bus2`, … columns.
-      A link of three output ports is three labels here rather than a third
-      relation, so the file states any number of them
+      the link an output port belongs to and the bus it delivers to — PyPSA's
+      `bus1`, `bus2`, … columns read long. A link of three output ports is
+      three labels here rather than a third relation, so the file states any
+      number of them
     key: link_output
-    values: bus
+    values: [link, bus]
 
 parameters:
   Link_p_nom:
@@ -253,8 +250,8 @@ expressions:
     cases:
       wrapping:
         when: Link_output_cyclic_delay
-        expression: shift(at(Link_p, by=Link_output_link[link]), along=snapshot, offset=Link_output_delay, edge='wrap', within=snapshot_period[period]) * Link_efficiency
-    otherwise: shift(at(Link_p, by=Link_output_link[link]), along=snapshot, offset=Link_output_delay, edge=0, within=snapshot_period[period]) * Link_efficiency
+        expression: shift(at(Link_p, by=Link_output_connects[link]), along=snapshot, offset=Link_output_delay, edge='wrap', within=snapshot_period[period]) * Link_efficiency
+    otherwise: shift(at(Link_p, by=Link_output_connects[link]), along=snapshot, offset=Link_output_delay, edge=0, within=snapshot_period[period]) * Link_efficiency
   Link_transmission_volume_expansion:
     expression: sum(Link_p_nom_ext * Link_volume_weight, over=link)
     adds_to: transmission_volume_expansion
@@ -279,7 +276,7 @@ expressions:
   Link_injection:
     expression: >-
       -sum(Link_p, over=link, by=Link_bus0[bus])
-      + sum(Link_output_arrival, over=link_output, by=Link_output_bus[bus])
+      + sum(Link_output_arrival, over=link_output, by=Link_output_connects[bus])
     adds_to: Bus_injection
 
 masks:
