@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+name: Fuzz
+
+# Nightly, on mutants no pull request ran. It fails only on a kind of finding
+# tests/fuzz/kinds.json does not name, so a red night is something new to
+# file. The seeds come from the day of the year, so no two nights repeat.
+
+on:
+  schedule:
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fresh:
+    name: fresh seeds
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          locked: true
+          cache: true
+          environments: default
+
+      - name: Fifty thousand mutants the baseline never ran
+        run: |
+          start=$(( 1000000 + 10#$(date -u +%j) * 50000 ))
+          pixi run fuzz-fresh "$start:$(( start + 50000 ))"

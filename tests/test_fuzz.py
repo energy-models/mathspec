@@ -99,19 +99,19 @@ UNCLEAN = {
 REDUCED = [
     pytest.param(
         CASED,
-        marks=_found('the canonical form keeps cases: in file order, though the cases carry no order'),
+        marks=_found('#890 — the canonical form keeps cases: in file order, though the cases carry no order'),
         id='the order of cases',
     ),
     pytest.param(
         KEYED,
         marks=_found(
-            'the canonical form keeps the columns of a relation written as a mapping, key: or values:, in file order'
+            '#890 — the canonical form keeps the columns of a relation written as a mapping, key: or values:, in file order'
         ),
         id='the order of named relation columns',
     ),
     pytest.param(
         LINES,
-        marks=_found('a method: lp curve over links with different dims loads, and its expansion is refused'),
+        marks=_found('#891 — a method: lp curve over links with different dims loads, and its expansion is refused'),
         id='a curve as lines over links of different dims',
     ),
 ]

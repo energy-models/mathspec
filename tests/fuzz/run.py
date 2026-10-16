@@ -17,8 +17,10 @@ from __future__ import annotations
 
 import argparse
 import collections
+import json
 import multiprocessing
 import os
+from pathlib import Path
 from typing import Any
 
 import yaml
@@ -75,8 +77,37 @@ def _campaign(seeds: range, jobs: int, hash_seed: str) -> dict[int, dict[str, An
     return records
 
 
+def _found(records: dict[int, dict[str, Any]]) -> dict[str, list[str]]:
+    """Each seed with a finding, and the signatures it has, sorted: the shape a baseline file holds."""
+    found = {str(seed): sorted({f['signature'] for f in r['findings']}) for seed, r in records.items()}
+    return {seed: signatures for seed, signatures in found.items() if signatures}
+
+
+def against_baseline(found: dict[str, list[str]], baseline: dict[str, list[str]], seeds: range) -> list[str]:
+    """What differs from *baseline* over *seeds*: a finding it does not hold, and one it holds that did not recur.
+
+    Both directions fail, as a strict ``xfail`` does: a fix that removes a
+    finding leaves the baseline stale until it is written again.
+    """
+    problems = []
+    for seed in seeds:
+        now, then = set(found.get(str(seed), ())), set(baseline.get(str(seed), ()))
+        problems += [f'seed {seed}: new finding — {s}' for s in sorted(now - then)]
+        problems += [f'seed {seed}: no longer found, so drop it from the baseline — {s}' for s in sorted(then - now)]
+    return problems
+
+
+def against_kinds(found: dict[str, list[str]], kinds: dict[str, str]) -> list[str]:
+    """Every signature that *kinds* does not name, with the first seed that has it."""
+    seen: dict[str, str] = {}
+    for seed, signatures in sorted(found.items(), key=lambda kv: int(kv[0])):
+        for signature in signatures:
+            seen.setdefault(signature, seed)
+    return [f'a new kind of finding, first at seed {seed} — {s}' for s, seed in sorted(seen.items()) if s not in kinds]
+
+
 def main(argv: list[str] | None = None) -> int:
-    """Run the campaign; exit 1 if anything was found."""
+    """Run the campaign; exit 1 on a finding, or on a difference from ``--baseline`` or ``--known``."""
     front = argparse.ArgumentParser(prog='python -m tests.fuzz')
     front.add_argument('--seeds', default='0:500', help='a seed, or a range start:stop')
     front.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
@@ -84,6 +115,10 @@ def main(argv: list[str] | None = None) -> int:
         '--hash-seeds', action='store_true', help='run twice under two hash seeds and compare the output'
     )
     front.add_argument('-v', '--verbose', action='store_true', help='print every finding in full, and the mutant')
+    gate = front.add_mutually_exclusive_group()
+    gate.add_argument('--baseline', type=Path, help='fail only where the findings differ from this file, seed by seed')
+    gate.add_argument('--known', type=Path, help='fail only on a kind of finding this file does not name')
+    gate.add_argument('--write-baseline', type=Path, help='write the findings to this file, and pass')
     args = front.parse_args(argv)
 
     seeds = _seeds(args.seeds)
@@ -111,4 +146,22 @@ def main(argv: list[str] | None = None) -> int:
     print(f'{len(seeds)} seeds, {accepted} accepted by the language')
     for signature, hit in sorted(groups.items(), key=lambda kv: -len(kv[1])):
         print(f'{len(hit):5d}  {signature}\n       seeds {hit[:8]}')
+
+    found = _found(records)
+    if args.write_baseline is not None:
+        args.write_baseline.write_text(json.dumps(found, indent=1, sort_keys=True) + '\n', encoding='utf-8')
+        print(f'wrote {len(found)} seeds with findings to {args.write_baseline}')
+        return 0
+    if args.baseline is not None or args.known is not None:
+        path = args.baseline or args.known
+        expected = json.loads(path.read_text(encoding='utf-8'))
+        problems = against_baseline(found, expected, seeds) if args.baseline else against_kinds(found, expected)
+        print('\n'.join(problems) or f'every finding is one {path} already holds')
+        if problems and args.baseline:
+            print(f'\nPrint a seed with `python -m tests.fuzz --seeds <n> -v`. After a fix, or a change to the '
+                  f'mutator, write the baseline again: `python -m tests.fuzz --seeds {args.seeds} --write-baseline {path}`.')  # fmt: skip
+        elif problems:
+            print(f'\nPrint a seed with `python -m tests.fuzz --seeds <n> -v`, file what it shows, and add the kind '
+                  f'to {path} under the issue.')  # fmt: skip
+        return int(bool(problems))
     return int(bool(groups))
