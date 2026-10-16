@@ -35,6 +35,12 @@ path = ["examples/references/pypsa/references.json"]
 SPDX-FileCopyrightText = "mathspec contributors"
 SPDX-License-Identifier = "CC0-1.0"
 
+# The fuzzer's record of what it finds, written by `python -m tests.fuzz`.
+[[annotations]]
+path = ["tests/fuzz/baseline.json", "tests/fuzz/kinds.json"]
+SPDX-FileCopyrightText = "mathspec contributors"
+SPDX-License-Identifier = "CC0-1.0"
+
 # The rung scripts and the spine are printed verbatim on the docs pages —
 # `tools/gallery.py` shows each as the artifact under review — so an in-file
 # header would render as license boilerplate on every rung.
