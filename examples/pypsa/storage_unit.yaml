@@ -103,6 +103,7 @@ parameters:
   StorageUnit_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [storage_unit]
+    missing: absent
   StorageUnit_p_min_pu:
     description: most storing, per unit of nominal power and negated
     dims: [scenario, snapshot, storage_unit]

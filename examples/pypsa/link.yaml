@@ -120,6 +120,7 @@ parameters:
   Link_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [link]
+    missing: absent
   Link_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Link_p_nom

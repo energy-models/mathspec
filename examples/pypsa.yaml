@@ -172,6 +172,7 @@ parameters:
   Generator_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [generator]
+    missing: absent
   Generator_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Generator_p_nom
@@ -335,6 +336,7 @@ parameters:
   Link_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [link]
+    missing: absent
   Link_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Link_p_nom
@@ -522,6 +524,7 @@ parameters:
   Process_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [process]
+    missing: absent
   Process_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Process_p_nom
@@ -868,6 +871,7 @@ parameters:
   StorageUnit_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [storage_unit]
+    missing: absent
   StorageUnit_p_min_pu:
     description: most storing, per unit of nominal power and negated
     dims: [scenario, snapshot, storage_unit]
@@ -970,6 +974,7 @@ parameters:
   Store_e_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [store]
+    missing: absent
   Store_e_min_pu:
     description: least energy held, per unit of nominal capacity — negative for a store that may go short
     dims: [scenario, snapshot, store]
@@ -1049,6 +1054,7 @@ parameters:
   Line_s_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [line]
+    missing: absent
   Line_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, line]
@@ -1140,6 +1146,7 @@ parameters:
   Transformer_s_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [transformer]
+    missing: absent
   Transformer_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, transformer]

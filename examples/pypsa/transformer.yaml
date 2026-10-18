@@ -79,6 +79,7 @@ parameters:
   Transformer_s_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [transformer]
+    missing: absent
   Transformer_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, transformer]

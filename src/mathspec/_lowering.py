@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 from mathspec._dimensions import check_spec, dims_of
 from mathspec._expansion import expand, parse_template
-from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, resolve_links
+from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec._resolution import (
     Namespace,
     mask_of,
@@ -255,7 +255,7 @@ def lower(spec: Spec) -> Program:
         ),
         description=spec.description,
     )
-    if errors := emitted_name_errors(spec, program):
+    if errors := [*emitted_name_errors(spec, program), *refused_under_points(spec)]:
         raise SchemaError('\n'.join(errors))
     check_spec(spec, program)
     return program

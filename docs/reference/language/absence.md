@@ -40,27 +40,30 @@ have, because a null or NaN value is [refused](parameters-variables-constraints.
 the data is attached. The parameter's [`missing:`](parameters-variables-constraints.md#a-missing-row)
 key says what a missing row is:
 
-| `missing:`            | A missing row                                                                                 |
-| --------------------- | --------------------------------------------------------------------------------------------- |
-| `refused`, by default | is refused where the model reads it ([where a parameter is read](#where-a-parameter-is-read)) |
-| `absent`              | is absence, by the rules on this page                                                         |
-| a value               | reads as that value, wherever the model reads the parameter                                   |
+| `missing:`            | A missing row                                               |
+| --------------------- | ----------------------------------------------------------- |
+| `refused`, by default | is refused when the data is attached                        |
+| `absent`              | is absence, by the rules on this page                       |
+| a value               | reads as that value, wherever the model reads the parameter |
 
-A value is the same number at every position, so the file says what a missing
-row is: `missing: 0` for a cost that is zero, `missing: 1` for an efficiency
-that is one, and `missing: false` for a flag that is off. The table below says
-what a missing row does at each position:
+Under `refused`, the table has a row at every combination of the labels of its
+dimensions, so no position ever reads a missing row. A value is the same
+number at every position, so the file says what a missing row is: `missing: 0`
+for a cost that is zero, `missing: 1` for an efficiency that is one, and
+`missing: false` for a flag that is off. The table below says what a missing
+row of an `absent` parameter, or of a parameter with a value, does at each
+position:
 
-| Position                                                    | `refused`  | `absent`                              | a value                                 |
-| ----------------------------------------------------------- | ---------- | ------------------------------------- | --------------------------------------- |
-| a coefficient, or a constant on either side of a comparison | is refused | removes the row                       | reads the value                         |
-| a factor of a summand in a `sum`                            | is refused | removes the summand, not the row      | reads the value                         |
-| a divisor                                                   | is refused | removes the row                       | reads the value. `0` is refused at load |
-| a `bounds:` entry                                           | is refused | leaves that side of the variable open | reads the value                         |
-| the amount of an `offset=` or a `window=`                   | is refused | makes the operator absent there       | reads the value                         |
-| a comparison in a `where`                                   | is false   | is false                              | compares the value                      |
-| a bare `bool` name in a `where`                             | is refused | is false                              | reads the value                         |
-| a bare number or label in a `where`                         | is false   | is false                              | is false                                |
+| Position                                                    | `absent`                              | a value                                 |
+| ----------------------------------------------------------- | ------------------------------------- | --------------------------------------- |
+| a coefficient, or a constant on either side of a comparison | removes the row                       | reads the value                         |
+| a factor of a summand in a `sum`                            | removes the summand, not the row      | reads the value                         |
+| a divisor                                                   | removes the row                       | reads the value. `0` is refused at load |
+| a `bounds:` entry                                           | leaves that side of the variable open | reads the value                         |
+| the amount of an `offset=` or a `window=`                   | makes the operator absent there       | reads the value                         |
+| a comparison in a `where`                                   | is false                              | compares the value                      |
+| a bare `bool` name in a `where`                             | is false                              | reads the value                         |
+| a bare number or label in a `where`                         | is false                              | is false                                |
 
 A value of `0` as an amount reads `shift(x, along=t, offset=0)` as `x` itself,
 and sums nothing under `sum_back(x, along=t, window=0)`. A curve needs a row at
@@ -116,67 +119,34 @@ write `where: rel_max` on the constraint.
 | `shift(x, along=d, offset=n)`    | one position, `n` back          | _is_ the output, so it spreads       |
 | `at(x, by=relation[c])`          | one position, through the map   | _is_ the output, so it spreads       |
 
-## Where a parameter is read
+## A table with gaps on purpose
 
-A `refused` parameter needs a row at each coordinate where the model reads its
-value, and at no other coordinate. A tool builds the masks first, because the
-masks decide which variables and rows exist. Then the tool refuses a missing
-row at a coordinate the model reads, and names the parameter and the
-coordinate.
+A table that has rows only where the model needs them is declared
+`missing: absent`. An [assumption](assumptions.md) then says where the table
+must have a row, and the tool that attaches the data checks it:
 
 ```yaml
 dimensions:
   g: { dtype: str }
 parameters:
   capacity: { dims: [g] }
-  p_max: { dims: [g] } # refused, by default
+  p_max: { dims: [g], missing: absent }
 variables:
   dispatch:
     dims: [g]
     where: "capacity > 0"
     bounds: { lower: 0, upper: p_max }
+assumptions:
+  p_max_where_dispatch_exists:
+    holds: "p_max"
+    where: "capacity > 0"
 ```
 
-With `capacity = {wind: 10, gas: 5, old: 0}`, the model has no `dispatch[old]`.
-So the model never reads `p_max[old]`, and a `p_max` table with rows for `wind`
-and `gas` only is accepted. A `p_max` table with no row for `gas` is refused,
-because the model reads the upper bound of `dispatch[gas]`.
-
-The model reads a parameter where its value goes into the model it builds:
-
-| The parameter stands as                                                                | The model reads it at                                                                               |
-| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| a coefficient, a divisor or a constant in a constraint                                 | each row that the model builds                                                                      |
-| a factor of a summand in `sum` or `sum_back`                                           | each summand that exists, so not where the summand has an absent factor                             |
-| a `bounds:` entry                                                                      | each coordinate where the variable exists                                                           |
-| the amount of an `offset=` or a `window=`                                              | each coordinate where a row that the model builds evaluates the operator                            |
-| a term of the objective                                                                | each term that exists                                                                               |
-| a term of a [reported expression](named.md#reported-expressions)                       | each coordinate where the expression is reported                                                    |
-| a values parameter of a [`piecewise:`](piecewise.md) entry                             | each breakpoint that the curve runs through                                                         |
-| a bare `bool` name in a `where`                                                        | each coordinate where the model evaluates that `where`                                              |
-| a term with [`adds_to:`](parameters-variables-constraints.md#terms) a given expression | each coordinate where the term is present, because the file cannot see where its host reads the sum |
-| a bare `bool` name in an `assumptions:` entry                                          | every coordinate of the frame of the assumption                                                     |
-
-A row that an absent term removes is not built, so the model reads no
-parameter in that row. The tool that builds the model refuses a missing row
-where the model reads it, and names the parameter and the coordinate. The tool
-decides when it checks. A table with a row at every coordinate meets the rule,
-so a tool can accept it when it attaches the data.
-
-A `where` reads one kind of parameter: a bare `bool` name, such as
-`where: committable`, reads the value of the flag. The model evaluates the
-`where` of a variable or a constraint at every coordinate of its dims, and the
-`when` of a case wherever it evaluates the expression that holds the case. A
-flag under `count`, `shift` or `at` in a `where` is read at each position that
-the operator looks at, and a flag in a [mask](named.md#masks) wherever the
-mask is evaluated. Both sides of `AND` and `OR` are evaluated.
-
-Every other part of a `where` reads no parameter. A bare number or label asks
-whether the table has a row. A comparison at a missing row is false, unless the
-`missing:` of the parameter names a value. So `where: "capacity > 0"` above is
-false at a generator with no `capacity` row, and that generator has no
-`dispatch`. Because a comparison reads nothing, `where: "cost AND cost > 0"`
-selects the rows of a sparse `refused` table `cost` without refusing it.
+With `capacity = {wind: 10, gas: 5, old: 0}`, the model has no `dispatch[old]`,
+so a `p_max` table with rows for `wind` and `gas` only is accepted. A table with
+no row for `gas` fails the assumption, because `capacity > 0` holds at `gas`.
+Without the assumption, a missing `p_max[gas]` leaves the upper bound of
+`dispatch[gas]` open.
 
 ## What a missing coordinate means
 
@@ -223,6 +193,6 @@ the solved numbers it reads, by the rules above. A quotient is absent where its
 divisor is absent, and where its divisor is exactly zero, whether a solve or the
 data gave that zero. A solved value is read as the engine reads it back, so
 an engine may read a value within its solver's tolerance of zero as zero. A
-divisor parameter with a missing row where the quotient is read is refused,
-unless the parameter is `missing: absent` or names a value other than `0`. A deleted row has
-[no dual](named.md#reading-a-constraints-dual).
+missing row of an `absent` divisor parameter makes the quotient absent, and
+`to_spec` refuses a divisor that a `missing: 0` parameter can make zero. A
+deleted row has [no dual](named.md#reading-a-constraints-dual).

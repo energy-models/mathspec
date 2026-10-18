@@ -103,6 +103,7 @@ parameters:
   Store_e_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [store]
+    missing: absent
   Store_e_min_pu:
     description: least energy held, per unit of nominal capacity — negative for a store that may go short
     dims: [scenario, snapshot, store]

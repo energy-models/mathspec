@@ -68,26 +68,26 @@ parameters:
   active: { dims: [generator], dtype: bool, missing: true }
 ```
 
-| `missing:`            | A missing row                                                                                                                                 |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `refused`, by default | is refused where the model reads it ([where a parameter is read](absence.md#where-a-parameter-is-read)), and the refusal names the coordinate |
-| `absent`              | is [absence](absence.md): it takes the row of a term that reads it, and is one summand fewer in a sum                                         |
-| a value               | reads as that value, wherever a value is read ([what a missing row does](absence.md#what-creates-absence))                                    |
+| `missing:`            | A missing row                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `refused`, by default | is refused when the data is attached, and the refusal names the coordinate                                 |
+| `absent`              | is [absence](absence.md): it takes the row of a term that reads it, and is one summand fewer in a sum      |
+| a value               | reads as that value, wherever a value is read ([what a missing row does](absence.md#what-creates-absence)) |
 
-A tool does not build the model from data that has no row where the model
-reads a `refused` parameter. Each tool decides how it reports this: it may
-raise at the first gap, or list every missing coordinate.
+A consumer does not build the model from data with a refused row, and each
+consumer decides how it reports this: it may raise at the first gap, or list
+every missing coordinate. A table with gaps on purpose is declared `absent`,
+and an [assumption](absence.md#a-table-with-gaps-on-purpose) says where it
+must have a row.
 
 A bare numeric name in a `where` asks whether the data has a row, whatever the
-`missing:`, so `where: p_nom_max` selects the rows the data gives. A comparison
-at a missing row reads a value that the `missing:` names, so
-`where: efficiency <= 1` is true at a missing row of `efficiency` above, which
-reads `1` there. Under `refused` and `absent`, a comparison at a
-missing row is false, because a comparison does not read the parameter
-([where a parameter is read](absence.md#where-a-parameter-is-read)). A bare
-`bool` name reads its value, so `where: active` reads `true` at a missing row.
-Under `refused`, a bare `bool` name is read wherever the model evaluates the
-`where`, so a missing row there is refused.
+`missing:`, so `where: p_nom_max` selects the rows the data gives. Under
+`refused` every coordinate has a row, so a bare `float` name asks only "is it
+finite?", and a bare `int` or `str` name is a load error. A comparison reads the
+value, so `where: efficiency <= 1` is true at a missing row of `efficiency`
+above, which reads `1` there. Under `absent`, a comparison at a missing row is
+false. A bare `bool` name reads its value, so `where: active` reads `true` at a
+missing row.
 
 A value has the parameter's dtype:
 
@@ -101,7 +101,8 @@ A value has the parameter's dtype:
 A NaN, a quoted number and `missing: null` are refused. A `given:` parameter
 has no `missing:`, because the file that declares the parameter owns it. A
 parameter that a [`piecewise:`](piecewise.md#missing-breakpoints) entry reads
-takes `missing:` too.
+takes `missing:` too, and a values parameter of a curve with `points:` declares
+a `missing:` other than `refused`.
 
 The typeset legend prints what a missing row means beside the parameter, such
 as `` `0` where the data has no row ``, and prints nothing for `refused`.

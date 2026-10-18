@@ -92,30 +92,34 @@ piecewise:
       - [op_cost, bp_y]
 ```
 
-The tables stop where the curve stops, and the curve reads no row past its last
-breakpoint ([missing breakpoints](#missing-breakpoints)). A row missing from
-`bp_y` where `bp_x` has one is still refused. Where the length is its own data,
-name a boolean parameter instead, whose marked breakpoints must be one
-consecutive run, anywhere along the dimension.
+Each values parameter declares `missing: absent` or a value, because its table
+stops where the curve stops ([missing breakpoints](#missing-breakpoints)). A
+row missing from `bp_y` where `bp_x` has one is still refused. Where the length
+is its own data, name a boolean parameter instead, whose marked breakpoints
+must be one consecutive run, anywhere along the dimension.
 
 ### Missing breakpoints
 
 A parameter that an entry reads takes [`missing:`](parameters-variables-constraints.md#a-missing-row)
 like any other parameter, and reads it the same inside and outside the curve.
-Inside the curve, every reading builds the same curve: the curve reads a table
-only at the breakpoints that `points:` marks, and there the `<entry>_complete`
-assumption refuses a missing row. The readings differ where an expression
-outside the curve reads the table:
+A values parameter of a curve with `points:` may **not** be `refused`, because
+the curve stops where the mask stops, so the table has no rows past it by
+design. `refused` says that every row is there, so the curve never runs short
+and a mask that names the table marks every breakpoint. `to_spec` refuses the
+file:
 
-| `missing:` of a values parameter | A missing row read outside the curve |
-| -------------------------------- | ------------------------------------ |
-| `refused`, by default            | is refused                           |
-| `absent`                         | removes the term                     |
-| a value, such as `0`             | reads that value                     |
+```text
+parameter 'bp_y' is refused where a row is missing, and piecewise 'cost_curve' reads it under points: 'bp_x', which stops the curve where its rows stop. Declare missing: absent, or a value of its dtype.
+```
 
-Keep the default where no expression outside the curve reads the table past its
-last breakpoint. Use `absent` where no number stands for a breakpoint the curve
-does not have, and a value where one does.
+Declare `missing: absent` or a value on each values parameter of the entry.
+Both build the same curve, because the curve reads a table only inside the
+mask, and there the `<entry>_complete` assumption still refuses a missing row.
+They differ where an expression outside the curve reads the table: `absent`
+removes the term, and a value such as `0` reads that value. Use `absent` where
+no number stands for a breakpoint the curve does not have, and a value where
+one does. A values parameter of a curve with no `points:`, and a boolean
+`points:` mask, read the default, `refused`.
 
 ### `method`
 
