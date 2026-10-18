@@ -49,7 +49,7 @@ relations:
 parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
-  cost: { dims: [generator], missing: neutral } # a reading: the legend names it
+  cost: { dims: [generator], missing: 0 } # a reading: the legend names it
   load: { dims: [snapshot, bus] }
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
@@ -59,8 +59,8 @@ parameters:
   lead: { dims: [generator], dtype: int }
   budget: { dims: [] } # scalar: the legend says so rather than printing an empty product
   growth: { dims: [] } # the base of a power; the exponent is `lead`, a column
-  bp_x: { dims: [generator, bp], missing: neutral } # the x-axis of every curve below, and what a derived mask is read from
-  bp_y: { dims: [generator, bp], missing: neutral }
+  bp_x: { dims: [generator, bp], missing: 0 } # the x-axis of every curve below, and what a derived mask is read from
+  bp_y: { dims: [generator, bp], missing: 0 }
   bp_heat: { dims: [generator, bp] }
   bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a piecewise entry has a mask to print
 ```
@@ -83,7 +83,7 @@ parameters:
 |---|---|
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
-| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, `neutral` where the data has no row |
+| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{T} \times \mathcal{B}`$ |
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
@@ -93,8 +93,8 @@ parameters:
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
 | $`\mathrm{budget}`$ | `budget` (scalar) |
 | $`\mathrm{growth}`$ | `growth` (scalar) |
-| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{G} \times \mathcal{A}`$, `neutral` where the data has no row |
-| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{G} \times \mathcal{A}`$, `neutral` where the data has no row |
+| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{G} \times \mathcal{A}`$, $`0`$ where the data has no row |
+| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{G} \times \mathcal{A}`$, $`0`$ where the data has no row |
 | $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{G} \times \mathcal{A}`$ |
 | $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{G} \times \mathcal{A}`$ |
 
@@ -117,7 +117,7 @@ parameters:
 | $`\mathit{units}`$ | `units` over $`\mathcal{G}`$ |
 | $`\mathit{spare}`$ | `spare` over $`\mathcal{G}`$ |
 | $`\mathit{reserve}`$ | `reserve` (scalar) |
-| $`\mathit{headroom}`$ | `headroom` (scalar), `neutral` where the mask leaves it out |
+| $`\mathit{headroom}`$ | `headroom` (scalar), $`0`$ where the mask leaves it out |
 | $`\mathit{weight}`$ | `weight` over $`\mathcal{T} \times \mathcal{G}`$ |
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{T} \times \mathcal{G}`$ |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{T} \times \mathcal{G}`$ |
@@ -266,14 +266,14 @@ variables:
 
 #### Scalar variable with a condition
 
-scalar too, but masked, so the condition stands with no set beside it; neutral, so the legend names the reading
+scalar too, but masked, so the condition stands with no set beside it; 0, so the legend names the value
 
 ```yaml
 variables:
   headroom:
     dims: []
     where: "budget"
-    missing: neutral
+    missing: 0
     bounds: { lower: 0 }
 ```
 

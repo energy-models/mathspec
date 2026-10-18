@@ -120,7 +120,6 @@ parameters:
   Link_p_nom_mod:
     description: the module size a build comes in whole numbers of; no value means the build is continuous
     dims: [link]
-    missing: neutral
   Link_modules_installed:
     description: >-
       how many whole modules a committable build has in place: `Link_p_nom
@@ -157,7 +156,7 @@ parameters:
   Link_p_set:
     description: a given flow schedule; a link without one has no row here
     dims: [scenario, snapshot, link]
-    missing: neutral
+    missing: 0
   Link_p_nom_min:
     description: least nominal power an extendable link may be built at
     dims: [scenario, link]
@@ -175,7 +174,7 @@ parameters:
   Link_p_nom_set:
     description: a given nominal power for an extendable link; one without a value has no row here
     dims: [link]
-    missing: neutral
+    missing: 0
   Link_volume_weight:
     description: >-
       the link's length in each scenario where its carrier is in the row's
@@ -183,7 +182,7 @@ parameters:
       link outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [scenario, global_constraint, link]
-    missing: neutral
+    missing: 0
   Link_expansion_cost_weight:
     description: >-
       the link's capital cost where its carrier is in the row's set, times
@@ -194,14 +193,14 @@ parameters:
       `Link_capital_cost` without `fom_cost` (`components.py:1151-1169`,
       `global_constraints.py:870-879`)
     dims: [scenario, global_constraint, link]
-    missing: neutral
+    missing: 0
   Link_tech_capacity_weight:
     description: >-
       one where the link is in the row's carrier-and-bus set — data prep; one
       outside it, or one that does not stand in the row's `investment_period`,
       has no row
     dims: [global_constraint, link]
-    missing: neutral
+    missing: 0
 
 variables:
   Link_p:
