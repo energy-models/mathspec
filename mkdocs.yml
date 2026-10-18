@@ -62,6 +62,7 @@ nav:
       - Typeset the math: reference/typeset.md
       - Python API: reference/api.md
       - Glossary: reference/glossary.md
+      - Changelog: reference/changelog.md
       - Examples:
           - examples/index.md
           - Least-cost dispatch: examples/dispatch.md
@@ -77,7 +78,6 @@ nav:
       - The limits: about/limits.md
       - Versions: about/versions.md
       - Relations as linear maps: about/relations-as-linear-maps.md
-      - Changelog: changelog.md
   # Everything a spec writer does not need, grouped by reader: whoever
   # writes a tool against `Spec` and `Program` (an engine such as specsolve, a
   # renderer, a checker), whoever changes mathspec itself, and the proofs of
@@ -221,7 +221,7 @@ markdown_extensions:
   - pymdownx.inlinehilite
   # `check_paths` so a renamed include fails the build rather than rendering
   # as nothing. `docs/index.md` pulls sections of the README through this, and
-  # `docs/changelog.md` is the whole of CHANGELOG.md.
+  # `docs/reference/changelog.md` is the whole of CHANGELOG.md.
   - pymdownx.snippets:
       check_paths: true
   # The other half of the math, beside the `arithmatex` entry above: the
