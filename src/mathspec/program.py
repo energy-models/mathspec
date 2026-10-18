@@ -63,6 +63,7 @@ __all__ = [
     'ExpressionReference',
     'Footprint',
     'Given',
+    'GivenParameter',
     'GivenTargets',
     'Join',
     'JoinColumns',
@@ -691,9 +692,9 @@ class Parameter:
     dims: tuple[str, ...]
     dtype: ParameterDtype = 'float'
     #: What a missing row means, or the value it reads as wherever a value is
-    #: read; ``None`` for a given parameter, whose declaring file says. A bare
-    #: numeric name in a ``where`` still asks whether the data has a row.
-    missing: ParameterMissing | None = 'refused'
+    #: read. A bare numeric name in a ``where`` still asks whether the data has
+    #: a row.
+    missing: ParameterMissing = 'refused'
     description: str | None = None
 
 
@@ -725,6 +726,18 @@ class Given:
 
 
 @dataclass(frozen=True)
+class GivenParameter:
+    """Data this program reads and another file declares: the frame the dim rules read, and the dtype a where compares against.
+
+    What a missing row means is the declaring file's ``missing:``, so it is not here.
+    """
+
+    dims: tuple[str, ...]
+    dtype: ParameterDtype = 'float'
+    description: str | None = None
+
+
+@dataclass(frozen=True)
 class GivenTargets:
     """What a program reads and does not build, by kind.
 
@@ -733,7 +746,7 @@ class GivenTargets:
     """
 
     #: Data another file declares, by name, with the dtype a where compares against.
-    parameters: Mapping[str, Parameter] = Sealed({})
+    parameters: Mapping[str, GivenParameter] = Sealed({})
     #: Columns the host model provides, by name.
     variables: Mapping[str, Given] = Sealed({})
     #: Row families the host model provides, by name, read back after the solve.

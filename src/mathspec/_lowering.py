@@ -39,6 +39,7 @@ from mathspec.program import (
     Dimension,
     ExpressionReference,
     Given,
+    GivenParameter,
     GivenTargets,
     Link,
     Mask,
@@ -245,8 +246,7 @@ def lower(spec: Spec) -> Program:
         masks=masks,
         given=GivenTargets(
             parameters={
-                name: Parameter(tuple(g.dims), g.dtype, None, g.description)
-                for name, g in spec.given.parameters.items()
+                name: GivenParameter(tuple(g.dims), g.dtype, g.description) for name, g in spec.given.parameters.items()
             },
             variables={name: Given(tuple(g.dims), g.description) for name, g in spec.given.variables.items()},
             constraints={name: Given(tuple(g.dims), g.description) for name, g in spec.given.constraints.items()},

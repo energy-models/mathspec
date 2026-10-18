@@ -121,9 +121,10 @@ written  # "assumption 'cost_is_never_negative' does not hold for the data attac
 ```
 
 `program.parameters[name].missing` says what a missing row of that parameter
-means: `'refused'`, `'absent'`, or the value that the row reads as.
-It is `None` for a given parameter, because the file that declares the
-parameter says. The program of `spec.expand(...)` reports the same readings.
+means: `'refused'`, `'absent'`, or the value that the row reads as. A given
+parameter is a `GivenParameter` under `program.given.parameters`, with its
+`dims` and `dtype` and no `missing`, because the file that declares the
+parameter says. The program of `spec.expand(...)` reports the same values.
 `program.relations[name].missing` is `'refused'` or `'absent'`.
 
 Under `'refused'`, the engine does not build the model from a table with a

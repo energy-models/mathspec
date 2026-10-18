@@ -246,9 +246,9 @@ class Legend:
         product = self.format.joined([self.symbols.set[d] for d in dims], self._op('times'))
         return f' over {self.format.math(product)}'
 
-    def _missing(self, value: ParameterMissing | None, default: str = 'refused', where: str = _NO_ROW) -> str:
+    def _missing(self, value: ParameterMissing, default: str = 'refused', where: str = _NO_ROW) -> str:
         """What *where* means: the reading or the value ``missing:`` names, and nothing for the *default* reading."""
-        if value is None or value == default:
+        if value == default:
             return ''
         if isinstance(value, str | bool):
             shown = self.format.mono(str(value).lower())
