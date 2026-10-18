@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
     from mathspec._typesetting.format import Format, OperatorName
     from mathspec._typesetting.symbols import Symbols
-    from mathspec.program import Expression, Mask, Missing, Program, Relation
+    from mathspec.program import Expression, Mask, ParameterMissing, Program, Relation
 
 #: What a translation does with the row the shift vacates. Three policies get
 #: three spellings because they are three different equations at the boundary.
@@ -246,7 +246,7 @@ class Legend:
         product = self.format.joined([self.symbols.set[d] for d in dims], self._op('times'))
         return f' over {self.format.math(product)}'
 
-    def _missing(self, value: Missing | None, default: str = 'refused', where: str = _NO_ROW) -> str:
+    def _missing(self, value: ParameterMissing | None, default: str = 'refused', where: str = _NO_ROW) -> str:
         """What *where* means: the reading or the value ``missing:`` names, and nothing for the *default* reading."""
         if value is None or value == default:
             return ''

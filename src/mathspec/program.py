@@ -70,8 +70,6 @@ __all__ = [
     'Link',
     'Mask',
     'MaskReference',
-    'Missing',
-    'MissingReading',
     'Multiply',
     'NamedExpression',
     'NamedMask',
@@ -84,6 +82,7 @@ __all__ = [
     'ParameterComparison',
     'ParameterDefined',
     'ParameterDtype',
+    'ParameterMissing',
     'ParameterReference',
     'Partition',
     'Piecewise',
@@ -98,6 +97,7 @@ __all__ = [
     'Relation',
     'RelationComparison',
     'RelationDefined',
+    'RelationMissing',
     'RelationPairComparison',
     'Separability',
     'Sos',
@@ -149,12 +149,12 @@ DeclaredDtype = ParameterDtype | DimensionDtype
 #: The domain a variable may declare.
 VariableDomain = Literal['continuous', 'integer', 'binary']
 
-#: What a missing row of a parameter or a relation means. ``refused`` refuses
-#: the data. ``absent`` removes the row of a term that reads it.
-MissingReading = Literal['refused', 'absent']
+#: A relation's ``missing:``. ``refused`` refuses data that leaves a key
+#: combination out, and ``absent`` reads it as no row.
+RelationMissing = Literal['refused', 'absent']
 
-#: A parameter's ``missing:``: a reading, or the value a missing row reads as.
-Missing = MissingReading | bool | float
+#: A parameter's ``missing:``: what a relation takes, or the value a missing row reads as.
+ParameterMissing = RelationMissing | bool | float
 
 #: A variable's ``missing:``. ``absent``, the default, removes the row of a term
 #: that carries the variable where its ``where`` masks it out. A number is what
@@ -491,7 +491,7 @@ class Relation:
     key: tuple[str, ...]
     #: Whether every combination of the key's roles needs a row: ``refused``
     #: or ``absent``.
-    missing: MissingReading = 'refused'
+    missing: RelationMissing = 'refused'
     description: str | None = None
 
     @property
@@ -693,7 +693,7 @@ class Parameter:
     #: What a missing row means, or the value it reads as wherever a value is
     #: read; ``None`` for a given parameter, whose declaring file says. A bare
     #: numeric name in a ``where`` still asks whether the data has a row.
-    missing: Missing | None = 'refused'
+    missing: ParameterMissing | None = 'refused'
     description: str | None = None
 
 

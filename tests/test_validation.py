@@ -2414,7 +2414,7 @@ def test_inf_and_dot_inf_load_as_one_number():
 @pytest.mark.parametrize(
     ('dtype', 'written', 'fragment'),
     [
-        pytest.param('float', None, 'missing: null on a parameter names no reading', id='null'),
+        pytest.param('float', None, 'missing: null on a parameter says nothing', id='null'),
         pytest.param(
             'float', 'zero', "missing is the string 'zero'. It takes refused, absent, or a value", id='a-word'
         ),
@@ -2510,7 +2510,7 @@ def test_a_relation_says_whether_every_key_combination_needs_a_row(declared, rea
             {'key': 'g', 'values': 'h', 'missing': True}, 'missing: true on a relation', id='a-flag-as-a-value'
         ),
         pytest.param(
-            {'key': 'g', 'values': 'h', 'missing': None}, 'missing: null on a relation names no reading', id='null'
+            {'key': 'g', 'values': 'h', 'missing': None}, 'missing: null on a relation says nothing', id='null'
         ),
     ],
 )
@@ -2526,7 +2526,7 @@ def test_a_relation_missing_that_reads_nothing_is_refused(relation, fragment):
         pytest.param(
             float('inf'), 'missing: inf on a variable, which takes absent or a finite number', id='an-infinity'
         ),
-        pytest.param(None, 'missing: null on a variable names no reading', id='null'),
+        pytest.param(None, 'missing: null on a variable says nothing', id='null'),
     ],
 )
 def test_a_variable_missing_that_reads_data_is_refused(written, fragment):

@@ -36,11 +36,11 @@ from mathspec._operators import BUILTIN_NAMES
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
     DimensionDtype,
-    MissingReading,
     ObjectiveSense,
     ParameterDtype,
     PiecewiseMethod,
     Program,
+    RelationMissing,
     SosType,
     VariableDomain,
 )
@@ -137,7 +137,7 @@ NUMERIC_DTYPES: frozenset[ParameterDtype] = frozenset({'float', 'int'})
 #: and ``-inf`` as the numbers they name, which an editor would otherwise flag.
 _MISSING_SCHEMA: dict[str, object] = {
     'anyOf': [
-        {'enum': list(get_args(MissingReading))},
+        {'enum': list(get_args(RelationMissing))},
         {'type': 'boolean'},
         {'type': 'number'},
         {'enum': ['inf', '-inf']},
@@ -147,8 +147,8 @@ _MISSING_SCHEMA: dict[str, object] = {
 #: What a variable's ``missing:`` is written as: ``absent``, or a finite number.
 _VARIABLE_MISSING_SCHEMA: dict[str, object] = {'anyOf': [{'enum': ['absent']}, {'type': 'number'}]}
 
-#: The spellings of a missing row, for a refusal to list.
-_READINGS = ', '.join(get_args(MissingReading))
+#: The words a parameter's ``missing:`` takes beside a value, for a refusal to list.
+_WORDS = ', '.join(get_args(RelationMissing))
 
 
 def _without_refused(written: dict[str, object]) -> dict[str, object]:
@@ -165,7 +165,7 @@ def _as_yaml(v: object) -> str:
 
 def _missing_null(kind: str, rewrite: str) -> ValueError:
     """``missing: null`` reads as either the default or an absent row, so it is refused for the word that says which."""
-    return ValueError(f'missing: null on {kind} names no reading. {rewrite}')
+    return ValueError(f'missing: null on {kind} says nothing. {rewrite}')
 
 
 #: Every formulation, in the order [`Spec.expand`][] writes them out: a curve
@@ -237,7 +237,7 @@ class RelationSpec(_StrictSpec):
     #: Whether every combination of the key's dimensions needs a row:
     #: ``refused`` refuses data that leaves one out, and ``absent`` reads it
     #: as no row.
-    missing: MissingReading = 'refused'
+    missing: RelationMissing = 'refused'
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -248,7 +248,7 @@ class RelationSpec(_StrictSpec):
             raise _missing_null(
                 'a relation', 'Write absent where a key combination may have no row, or leave the key out for refused.'
             )
-        if v not in get_args(MissingReading):
+        if v not in get_args(RelationMissing):
             msg = (
                 f'missing: {_as_yaml(v)} on a relation, which takes refused or absent. A key combination with no '
                 f'row is refused, or is not in the relation.'
@@ -324,7 +324,7 @@ class ParameterSpec(_StrictSpec):
 
     dims: list[str]
     dtype: ParameterDtype = 'float'
-    missing: Annotated[MissingReading | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
+    missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -337,11 +337,11 @@ class ParameterSpec(_StrictSpec):
             )
         if v in ('inf', '-inf'):
             return float(cast('str', v))
-        if isinstance(v, str) and v not in get_args(MissingReading):
-            msg = f'missing is the string {v!r}. It takes {_READINGS}, or a value: a number, true or false.'
+        if isinstance(v, str) and v not in get_args(RelationMissing):
+            msg = f'missing is the string {v!r}. It takes {_WORDS}, or a value: a number, true or false.'
             raise ValueError(msg)
         if isinstance(v, float) and math.isnan(v):
-            msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _READINGS + '.'
+            msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _WORDS + '.'
             raise ValueError(msg)
         return v
 
