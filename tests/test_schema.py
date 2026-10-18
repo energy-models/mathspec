@@ -11,7 +11,7 @@ equal to the models is this file.
 """
 
 import json
-from typing import get_args
+from typing import Literal, get_args
 
 import pytest
 
@@ -58,8 +58,8 @@ def test_no_definition_refers_only_to_itself():
     [
         pytest.param('ObjectiveSpec', 'sense', spec.ObjectiveSense, id='sense'),
         pytest.param('VariableSpec', 'domain', spec.VariableDomain, id='domain'),
-        pytest.param('VariableSpec', 'missing', spec.VariableReading, id='variable-missing'),
-        pytest.param('RelationSpec', 'missing', spec.RelationMissing, id='relation-missing'),
+        pytest.param('VariableSpec', 'missing', Literal['absent'], id='variable-missing'),
+        pytest.param('RelationSpec', 'missing', spec.MissingReading, id='relation-missing'),
         pytest.param('ParameterSpec', 'missing', spec.MissingReading, id='parameter-missing'),
         pytest.param('ParameterSpec', 'dtype', spec.ParameterDtype, id='parameter-dtype'),
         pytest.param('DimensionSpec', 'dtype', spec.DimensionDtype, id='dimension-dtype'),

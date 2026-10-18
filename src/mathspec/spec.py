@@ -41,10 +41,8 @@ from mathspec.program import (
     ParameterDtype,
     PiecewiseMethod,
     Program,
-    RelationMissing,
     SosType,
     VariableDomain,
-    VariableReading,
 )
 
 if TYPE_CHECKING:
@@ -146,10 +144,8 @@ _MISSING_SCHEMA: dict[str, object] = {
     ],
 }
 
-#: What a variable's ``missing:`` is written as: the one reading, or a finite number.
-_VARIABLE_MISSING_SCHEMA: dict[str, object] = {
-    'anyOf': [{'enum': list(get_args(VariableReading))}, {'type': 'number'}],
-}
+#: What a variable's ``missing:`` is written as: ``absent``, or a finite number.
+_VARIABLE_MISSING_SCHEMA: dict[str, object] = {'anyOf': [{'enum': ['absent']}, {'type': 'number'}]}
 
 #: The spellings of a missing row, for a refusal to list.
 _READINGS = ', '.join(get_args(MissingReading))
@@ -241,7 +237,7 @@ class RelationSpec(_StrictSpec):
     #: Whether every combination of the key's dimensions needs a row:
     #: ``refused`` refuses data that leaves one out, and ``absent`` reads it
     #: as no row.
-    missing: RelationMissing = 'refused'
+    missing: MissingReading = 'refused'
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -252,7 +248,7 @@ class RelationSpec(_StrictSpec):
             raise _missing_null(
                 'a relation', 'Write absent where a key combination may have no row, or leave the key out for refused.'
             )
-        if v not in get_args(RelationMissing):
+        if v not in get_args(MissingReading):
             msg = (
                 f'missing: {_as_yaml(v)} on a relation, which takes refused or absent. A key combination with no '
                 f'row is refused, or is not in the relation.'
@@ -358,7 +354,7 @@ class ParameterSpec(_StrictSpec):
     def _a_value_fits_the_dtype(self) -> ParameterSpec:
         """A value fills rows of the column, so it has the column's dtype, and a label has none."""
         v = self.missing
-        if self.dtype == 'str' and v not in ('refused', 'absent'):
+        if self.dtype == 'str' and not isinstance(v, str):
             msg = f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill.'
             raise ValueError(msg)
         if isinstance(v, str):
@@ -423,7 +419,7 @@ class VariableSpec(_StrictSpec):
     where: str | None = None
     bounds: BoundsSpec = BoundsSpec()
     domain: VariableDomain = 'continuous'
-    missing: Annotated[VariableReading | int | float, WithJsonSchema(_VARIABLE_MISSING_SCHEMA)] = 'absent'
+    missing: Annotated[Literal['absent'] | int | float, WithJsonSchema(_VARIABLE_MISSING_SCHEMA)] = 'absent'
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -441,24 +437,21 @@ class VariableSpec(_StrictSpec):
         raise ValueError(msg)
 
     @model_validator(mode='after')
-    def _a_number_needs_a_mask(self) -> VariableSpec:
-        """``missing:`` says what a masked-out coordinate means, so one must be missable."""
-        if self.missing != 'absent' and self.where is None:
-            msg = (
-                f'missing: {self.missing} needs a `where:`. A variable with no mask exists at every '
-                f'coordinate of its dims, so nothing is missing. Add a `where:`, or delete `missing:`.'
-            )
-            raise ValueError(msg)
-        return self
-
-    @model_validator(mode='after')
     def _a_number_fits_the_variable(self) -> VariableSpec:
-        """The number stands for the variable, so it lies in the variable's domain and inside its literal bounds."""
+        """The number stands for the variable where its mask leaves it out, so a mask must leave something out.
+
+        The number lies in the variable's domain and inside its literal bounds.
+        """
         v = self.missing
         if isinstance(v, str):
             return self
         lower, upper = self.bounds.lower, self.bounds.upper
-        if self.domain == 'binary' and v not in (0, 1):
+        if self.where is None:
+            msg = (
+                f'missing: {_as_yaml(v)} needs a `where:`. A variable with no mask exists at every '
+                f'coordinate of its dims, so nothing is missing. Add a `where:`, or delete `missing:`.'
+            )
+        elif self.domain == 'binary' and v not in (0, 1):
             msg = f'missing: {_as_yaml(v)} on a binary variable, which takes 0 or 1.'
         elif self.domain == 'integer' and not float(v).is_integer():
             msg = f'missing: {_as_yaml(v)} on an integer variable, which takes an integer.'

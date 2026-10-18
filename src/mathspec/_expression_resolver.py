@@ -98,7 +98,7 @@ def _zero_where_missing(e: Expression, parameters: Mapping[str, ParameterSpec]) 
     match e:
         case ParameterReference(name=name):
             declared = parameters.get(name)
-            zero = declared is not None and not isinstance(declared.missing, bool) and declared.missing == 0
+            zero = declared is not None and declared.missing == 0
             return name if zero else None
         case Negate(operand=operand) | Sum(operand=operand) | WindowSum(operand=operand) | Translate(operand=operand):
             return _zero_where_missing(operand, parameters)

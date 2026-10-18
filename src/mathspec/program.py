@@ -98,7 +98,6 @@ __all__ = [
     'Relation',
     'RelationComparison',
     'RelationDefined',
-    'RelationMissing',
     'RelationPairComparison',
     'Separability',
     'Sos',
@@ -111,7 +110,6 @@ __all__ = [
     'VariableDefined',
     'VariableDomain',
     'VariableMissing',
-    'VariableReading',
     'VariableReference',
     'WindowSum',
     'assumption_message',
@@ -151,23 +149,17 @@ DeclaredDtype = ParameterDtype | DimensionDtype
 #: The domain a variable may declare.
 VariableDomain = Literal['continuous', 'integer', 'binary']
 
-#: What a missing row means. ``refused`` refuses the data. ``absent`` removes
-#: the row of a term that reads it.
+#: What a missing row of a parameter or a relation means. ``refused`` refuses
+#: the data. ``absent`` removes the row of a term that reads it.
 MissingReading = Literal['refused', 'absent']
 
 #: A parameter's ``missing:``: a reading, or the value a missing row reads as.
 Missing = MissingReading | bool | float
 
-#: A relation's ``missing:``. A key combination with no row is refused, or is not in the relation.
-RelationMissing = Literal['refused', 'absent']
-
-#: What a masked variable means where its ``where`` masks it out. ``absent`` is
-#: the default: a term that carries it removes its row.
-VariableReading = Literal['absent']
-
-#: A variable's ``missing:``: ``absent``, or the number the quantity *is* where
-#: its ``where`` masks it out, so the term reads that number and the row stands.
-VariableMissing = VariableReading | float
+#: A variable's ``missing:``. ``absent``, the default, removes the row of a term
+#: that carries the variable where its ``where`` masks it out. A number is what
+#: the quantity is there, so the term reads that number and the row stands.
+VariableMissing = Literal['absent'] | float
 
 #: Which way an objective is optimised (the entry rules).
 ObjectiveSense = Literal['minimize', 'maximize']
@@ -499,7 +491,7 @@ class Relation:
     key: tuple[str, ...]
     #: Whether every combination of the key's roles needs a row: ``refused``
     #: or ``absent``.
-    missing: RelationMissing = 'refused'
+    missing: MissingReading = 'refused'
     description: str | None = None
 
     @property
