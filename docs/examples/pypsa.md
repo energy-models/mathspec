@@ -139,7 +139,7 @@ def build():
 | PyPSA                                                 | status | note                                                          |
 | ----------------------------------------------------- | ------ | ------------------------------------------------------------- |
 | [`StorageUnit-p_dispatch`, `-p_store`, `-state_of_charge`, `Store-e`, `Store-p`](#variable-domains) | done |                                 |
-| [`StorageUnit-spill`](#variable-domains)              | done   | `where: inflow > 0`, `missing: neutral`; bounds on the variable, as PyPSA's |
+| [`StorageUnit-spill`](#variable-domains)              | done   | `where: inflow > 0`, `missing: 0`; bounds on the variable, as PyPSA's |
 | [`StorageUnit-fix-*`](#storageunit-fix-p_dispatch-lower), [`Store-fix-e-*`](#store-fix-e-lower) | done |                                 |
 | [`StorageUnit-energy_balance`](#storageunit-energy_balance) | done | the charge carried into a snapshot is a cased quantity — cyclic, opening, carried; `(1-loss)**eh` is prep |
 | [`StorageUnit-energy_balance`](#storageunit-energy_balance) with efficiencies per snapshot | done | rung 60 |
@@ -5325,7 +5325,7 @@ it both solve to `7946.733333333334`, and the risk preference adds 3 rows
 
 In the file, the columns, the rows and the refusal stand where `CVaR_omega`
 has a row, and a value of `0.0` is a row. Data prep writes the row only where
-a risk preference is set. The columns take `missing: neutral`, so the
+a risk preference is set. The columns take `missing: 0`, so the
 objective term `CVaR_omega * CVaR` stands without them.
 
 | PyPSA | status | note |
