@@ -57,9 +57,12 @@ variable with no constraint row.
 | `SchemaError`    | `LanguageError` | Something in the file: an unknown key, a malformed entry, or a bad symbol table                                                 |
 | `DimensionError` | `LanguageError` | Dimensions that disagree, such as a constraint whose expression does not equal its `dims`                                       |
 
-One load lists every fault it finds in the file, one to a line. The error is a
-`DimensionError` when every fault breaks a dimension rule, and a `SchemaError`
-when any fault is of another kind.
+A load reads every expression and `where:` in the file, and then lists each
+fault it found, one to a line. The error is a `DimensionError` when every fault
+breaks a dimension rule, and a `SchemaError` when any fault is of another kind.
+After that, the load checks the rules on whole entries, such as a constraint
+whose expression does not carry its `dims:`. That `DimensionError` names the
+first entry that breaks a rule.
 
 You can reproduce each of these errors from the YAML alone.
 
