@@ -29,7 +29,7 @@ Upgrade mathspec, or write the version this file targets.
 ```
 
 A release that starts or stops reading a language version says so in the
-[changelog](../changelog.md).
+[changelog](../reference/changelog.md).
 
 ## What to pin
 
