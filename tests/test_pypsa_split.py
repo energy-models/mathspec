@@ -8,9 +8,9 @@ Each fragment reads what another topic declares under `given:`. A sum every
 component adds to (the bus balance, the operating cost, the global
 constraints) is one each component adds a term to: a named expression of its
 own, such as `Generator_injection`, whose `adds_to:` names the sum its file
-reads under `given:`. One fragment reads each sum without adding to it, with
-its description. So a component is a family of files, and leaving the family
-out leaves a whole model.
+reads under `given:`. The surface reads each sum without adding to it, with
+its description, and power flow reads the cycle sum. So a component is one
+file, and leaving it out leaves a whole model.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from mathspec.errors import LanguageError
 from tests.fixtures import BALANCE
 from tests.test_terms import DEMAND, FLEET
 from tools.gallery import split_index
-from tools.pypsa_split import SOURCE, SUM_HOME, Model, _term_entry, fragments
+from tools.pypsa_split import SOURCE, Model, _term_entry, fragments, home
 
 FOLDER = Path(__file__).resolve().parent.parent / 'examples' / 'pypsa'
 PATHS = {path.stem: path for path in sorted(FOLDER.glob('*.yaml'))}
@@ -64,10 +64,10 @@ def test_the_fragments_are_what_the_splitter_writes(model):
     assert all(PATHS[name].read_text() == text for name, text in written.items())
 
 
-#: What a model may leave out, as the fragment names or name prefixes it
-#: drops. A component comes as a family; security reads the branches. The
-#: reader of a sum no model goes without is not listed: leaving it out leaves
-#: its terms with nothing else reading them, which the test below holds.
+#: What a model may leave out, as the fragments it drops. Security reads the
+#: branches, and power flow reads what only the branches add. The surface,
+#: which reads every other sum, is not listed: leaving it out leaves the terms
+#: with nothing else reading them, which the test below holds.
 OPTIONAL = [
     'carrier',
     'cost',
@@ -79,23 +79,16 @@ OPTIONAL = [
     'generator',
     'link',
     'process',
-    'generator_ramping',
-    'link_ramping',
-    'process_ramping',
     'line security',
     'transformer security',
     'line transformer security power_flow',
 ]
 
 
-def _family(name: str, dropped: list[str]) -> bool:
-    return any(name == d or (name.startswith(f'{d}_') and d in ('generator', 'link', 'process')) for d in dropped)
-
-
 @pytest.mark.parametrize('dropped', OPTIONAL, ids=[d.replace(' ', '+') for d in OPTIONAL])
 def test_leaving_a_topic_out_leaves_a_whole_model(dropped):
-    kept = {name: path for name, path in PATHS.items() if not _family(name, dropped.split())}
-    assert len(kept) < len(PATHS), f'{dropped} names a fragment'
+    kept = {name: path for name, path in PATHS.items() if name not in dropped.split()}
+    assert len(kept) == len(PATHS) - len(dropped.split()), f'{dropped} names fragments'
     assert not merge(list(kept.values())).program.given, f'nothing that stays reads what {dropped} declares'
 
 
@@ -110,15 +103,15 @@ def test_every_sum_is_read_with_its_description_in_one_fragment_that_adds_nothin
         )
         for name in model.sums
     }
-    assert described == {name: [SUM_HOME.get(name, 'settings')] for name in model.sums}, (
-        'the reader of a sum no model goes without carries its description, and settings carries the rest'
+    assert described == {name: [home(name)] for name in model.sums}, (
+        'the surface carries the description of every sum, and power flow that of the cycle sum'
     )
 
 
 @pytest.mark.parametrize(
     ('dropped', 'sum_name'),
     [
-        pytest.param('network', 'Bus_injection', id='the-bus-balance'),
+        pytest.param('surface', 'total_cost', id='the-surface'),
         pytest.param('power_flow', 'Cycle_angle_sum', id='kirchhoff-with-the-branches-kept'),
     ],
 )

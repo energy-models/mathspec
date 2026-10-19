@@ -15,12 +15,15 @@ adds its share to, as the sum of named terms: `Bus_injection` is
 reads `Bus_injection == 0`. The objective reads the hub `total_cost`. A
 fragment owns the entries of its topic, its terms among them, and reads
 what another topic declares under `given:`; each term names the hub it adds to
-with `adds_to:`, and the fragment reads that hub under `given:`. One fragment
-reads each hub without adding to it, with its description, so the terms always
-have a reader, and a new component is one new fragment. The reader of
-`total_cost` also sets the objective. A mask goes to the topic its name
-names, as any entry does, and a fragment that reads another topic's
-mask reads it under `given: masks:`.
+with `adds_to:`, and the fragment reads that hub under `given:`. A topic is a
+PyPSA class, or a part of the system that a model may leave out. The
+`surface` fragment reads every hub without adding to it, with its
+description, so the terms always have a reader, and a new component is one
+new fragment. The surface also holds the weightings, the bus balance and the
+objective. The cycle sum is the exception: `power_flow` reads it, so a model
+without passive branches leaves Kirchhoff's row out with them. A mask goes to
+the topic its name names, as any entry does, and a fragment that reads
+another topic's mask reads it under `given: masks:`.
 
 `merge` then writes each hub as the file does, so `check` is one comparison:
 the merged fragments and the one file have one canonical form.
@@ -63,7 +66,7 @@ PREFIX_TOPIC = {
     'Line': 'line',
     'Transformer': 'transformer',
     'Load': 'load',
-    'Bus': 'network',
+    'Bus': 'surface',
     'Kirchhoff': 'power_flow',
     'Cycle': 'power_flow',
     'CVaR': 'cost',
@@ -76,9 +79,9 @@ PREFIX_TOPIC = {
 #: topic reads: the risk preference, and how a snapshot counts in a global
 #: constraint, which a component's share of one reads.
 NAME_TOPIC = {
-    'CVaR_omega': 'settings',
-    'GlobalConstraint_counts_snapshot': 'settings',
-    'GlobalConstraint_energy_weight': 'settings',
+    'CVaR_omega': 'surface',
+    'GlobalConstraint_counts_snapshot': 'surface',
+    'GlobalConstraint_energy_weight': 'surface',
     'scenario_opex': 'cost',
     'primary_energy': 'global_constraints',
     'operational_limit': 'global_constraints',
@@ -103,39 +106,24 @@ HUBS = (
 )
 
 #: The fragment that reads a hub without adding to it, and carries its
-#: description: the reader where a model without it is never wanted, so the
-#: terms have no reader without it, and `settings` where the reader may go.
-SUM_HOME = {'Bus_injection': 'network', 'Cycle_angle_sum': 'power_flow'}
-
-#: The component each topic that adds a term is named after.
-TOPIC_PREFIX = {topic: prefix for prefix, topic in PREFIX_TOPIC.items() if prefix[0].isupper()} | {
-    'power_flow': 'Cycle'
-}
+#: description: the surface, which every model takes, and power flow for the
+#: cycle sum, which a model leaves out with the passive branches.
+SURFACE = 'surface'
+SUM_HOME = {'Cycle_angle_sum': 'power_flow'}
 
 Key = tuple[str, str]
 
 
-#: The components with unit commitment, whose entries are cut by feature.
-COMMITTABLE = ('Generator', 'Link', 'Process')
-
-#: A feature of a committable component, by a pattern on the rest of the name;
-#: the first that matches wins, and a name none matches is the component's own.
-FEATURES = (
-    ('maintenance', re.compile(r'maint')),
-    ('ramping', re.compile(r'ramp|_rate$|allowance|previous_p$|p_init|came_in_running')),
-    ('commitment', re.compile(r'status|start_up|shut_down|stand_by|committable|com_|must_stay|min_up|min_down|big_m')),
-)
+def home(hub: str) -> str:
+    """The fragment that reads *hub* without adding to it, and carries its description."""
+    return SUM_HOME.get(hub, SURFACE)
 
 
 def topic(name: str) -> str:
     """The fragment an entry of *name* goes to."""
     if 'security' in name or 'BODF' in name:
         return 'security'
-    prefix, _, rest = name.partition('_')
-    base = NAME_TOPIC.get(name) or PREFIX_TOPIC.get(prefix, 'settings')
-    if prefix in COMMITTABLE:
-        return next((f'{base}_{feature}' for feature, pattern in FEATURES if pattern.search(rest)), base)
-    return base
+    return NAME_TOPIC.get(name) or PREFIX_TOPIC.get(name.partition('_')[0], SURFACE)
 
 
 # ---------------------------------------------------------------------------
@@ -190,15 +178,12 @@ class Model:
         self.data: dict[str, Any] = yaml.safe_load(text)
         self.entries = _sliced(text)
         self.kind = {n: s for s in SECTIONS if s not in ('constraints', 'assumptions') for n in self.data.get(s, {})}
-        #: hub -> the topic of each term -> the term, in the order the topics sort in.
-        self.shares: dict[str, dict[str, str]] = {}
-        for hub in HUBS:
-            terms = IDENT.findall(_entry(self.data['expressions'][hub])['expression'])
-            by_topic = {self._owner(_entry(self.data['expressions'][term])['expression']): term for term in terms}
-            assert len(by_topic) == len(terms), f'{hub}: one term per topic'
-            self.shares[hub] = dict(sorted(by_topic.items()))
         #: term -> the hub it adds to.
-        self.terms = {term: hub for hub, by_topic in self.shares.items() for term in by_topic.values()}
+        self.terms = {
+            term: hub for hub in HUBS for term in IDENT.findall(_entry(self.data['expressions'][hub])['expression'])
+        }
+        #: term -> the topic it belongs to.
+        self.owner = {term: self._owner(_entry(self.data['expressions'][term])['expression']) for term in self.terms}
         frames = self.frames()
         self.sums = {
             hub: {'dims': list(frames[hub]), 'description': _entry(self.data['expressions'][hub]).get('description')}
@@ -229,10 +214,6 @@ class Model:
             **{name: m.dims for name, m in program.masks.items()},
         }
 
-    def home(self, name: str) -> str:
-        """The fragment that reads the hub *name* without adding to it, and carries its description."""
-        return SUM_HOME.get(name, 'settings')
-
 
 # ---------------------------------------------------------------------------
 # the fragments
@@ -246,17 +227,14 @@ def fragments(model: Model) -> dict[str, str]:
     for key in model.keys:
         if key[0] not in FRAME and not (key[0] == 'expressions' and (key[1] in HUBS or key[1] in model.terms)):
             owned[topic(key[1])].add(key)
-    for by_topic in model.shares.values():
-        for name, term in by_topic.items():
-            owned[name].add(('expressions', term))
-    homes = {model.home(hub) for hub in HUBS}
-
+    for term, name in model.owner.items():
+        owned[name].add(('expressions', term))
     written = {}
-    for name in sorted({*owned, *homes}):
+    for name in sorted({*owned, *map(home, HUBS)}):
         mine = owned[name]
-        adds = {hub: by_topic[name] for hub, by_topic in model.shares.items() if name in by_topic}
-        homes_here = {hub for hub in HUBS if model.home(hub) == name}
-        read = set().union(*(model.names_in(model.data[s][n]) for s, n in mine), homes_here, adds)
+        adds = {term: hub for term, hub in model.terms.items() if model.owner[term] == name}
+        homes_here = {hub for hub in HUBS if home(hub) == name}
+        read = set().union(*(model.names_in(model.data[s][n]) for s, n in mine), homes_here, adds.values())
         given = {model.key(n) for n in read if model.key(n)[0] not in FRAME and model.key(n) not in mine}
         stated = {
             **{n: model.data[s][n]['dims'] for s, n in given if s in ('parameters', 'variables')},
@@ -305,11 +283,10 @@ def _fragment(
     parts = [HEADER]
     if given:
         parts.append('given:\n' + ''.join(_given(model, kind, given, stated, homes) for kind in GIVEN_KINDS))
-    hubs = {term: hub for hub, term in adds.items()}
     for section in SECTIONS:
         entries = [
-            _term_entry(model.entries[key], hubs[key[1]])
-            if section == 'expressions' and key[1] in hubs
+            _term_entry(model.entries[key], adds[key[1]])
+            if section == 'expressions' and key[1] in adds
             else model.entries[key]
             for key in model.keys
             if key[0] == section and key in included

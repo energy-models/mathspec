@@ -3,9 +3,9 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Settings
+# The surface
 
-This file states the weightings, the risk preference and the flags that every topic reads. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It also reads eight totals under `given:`: `total_cost`, `scenario_opex`, `Carrier_additions` and the five global-constraint sums. A model may leave out the other readers of these totals, so this file makes sure that the terms the components add always have a reader. It sets the objective, which reads `total_cost`.
+This file states what every model shares: the weightings, the risk preference, the flags, the balance at each bus and the objective. It is one of the [14 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads every sum that the components add to under `given:`, with its description, and adds nothing to them, so the terms always have a reader. The cycle sum is the exception, and [power flow](power_flow.md) reads it. The objective reads `total_cost`.
 
 <!-- gallery:begin -->
 ```yaml
@@ -60,6 +60,12 @@ given:
         carrier, counting each build in the first period it stands in. Like
         PyPSA, it sums only the components that carry a carrier attribute, so a
         transformer, which has none, counts in no carrier
+    Bus_injection:
+      dims: [scenario, snapshot, bus]
+      description: >-
+        what every component puts into a bus, less what it takes out of it;
+        PyPSA writes each term into the balance, and a load on its right-hand
+        side
 
 dimensions:
   scenario:
@@ -68,6 +74,8 @@ dimensions:
     description: dispatch periods
     dtype: datetime
     ordered: true
+  bus:
+    description: network nodes
   global_constraint:
     description: PyPSA's `GlobalConstraint` rows, one label per declared limit
   period:
@@ -149,6 +157,22 @@ expressions:
         expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
     otherwise: 0
 
+constraints:
+  Bus_nodal_balance:
+    description: >-
+      `Bus-nodal_balance` — what is generated at a bus, storage dispatch and
+      stores included, less what the links take away, plus what arrives over
+      them after losses and any delay at every port they deliver to, each
+      process port drawing or delivering at its own rate and each passive branch
+      carrying its flow, meets the load there, less half of every incident
+      line's and transformer's loss — PyPSA dissipates a branch's loss half at
+      either end. Each generator, storage unit, store and load term enters
+      with its component's `sign` (`constraints.py:1404-1405`, `:1514`), and
+      an inactive load not at all. A bus nothing is attached to has no row; PyPSA refuses one that
+      carries load, and this file does not yet.
+    dims: [scenario, snapshot, bus]
+    expression: Bus_injection == 0
+
 objective:
   sense: minimize
   expression: total_cost
@@ -166,6 +190,7 @@ objective:
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression another file defines — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:415-432`) |
 | $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression another file defines — what the system costs — capacity once per active period at its expected cost over the scenarios, operation in expectation over the scenarios, and a share of it at the tail |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression another file defines — what a carrier adds in a period — every extendable component of that carrier, counting each build in the first period it stands in. Like PyPSA, it sums only the components that carry a carrier attribute, so a transformer, which has none, counts in no carrier |
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression another file defines — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
 
 #### Sets
 
@@ -173,6 +198,7 @@ objective:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` — network nodes |
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
 | $`\mathcal{I}`$ | index $`i`$ — `carrier` — energy carriers, what a growth limit is set per |
@@ -209,5 +235,13 @@ objective:
 
 ```math
 \min \mathit{total\_cost}
+```
+
+#### Subject to
+
+**`Bus_nodal_balance`**
+
+```math
+\mathit{Bus\_injection}_{\xi,t,n} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
 ```
 <!-- gallery:end -->

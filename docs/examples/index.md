@@ -22,7 +22,7 @@ repository.
 
 The PyPSA pages start at [PyPSA in one file](pypsa.md). They state the model
 that PyPSA builds, as a proof of concept, and they sit in the Development
-section. [PyPSA in 24 files](pypsa/index.md) composes the same spec from
+section. [PyPSA in 14 files](pypsa/index.md) composes the same spec from
 fragments.
 
 To print the math of your own spec, see

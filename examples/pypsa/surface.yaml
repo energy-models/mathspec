@@ -53,6 +53,12 @@ given:
         carrier, counting each build in the first period it stands in. Like
         PyPSA, it sums only the components that carry a carrier attribute, so a
         transformer, which has none, counts in no carrier
+    Bus_injection:
+      dims: [scenario, snapshot, bus]
+      description: >-
+        what every component puts into a bus, less what it takes out of it;
+        PyPSA writes each term into the balance, and a load on its right-hand
+        side
 
 dimensions:
   scenario:
@@ -61,6 +67,8 @@ dimensions:
     description: dispatch periods
     dtype: datetime
     ordered: true
+  bus:
+    description: network nodes
   global_constraint:
     description: PyPSA's `GlobalConstraint` rows, one label per declared limit
   period:
@@ -141,6 +149,22 @@ expressions:
         when: GlobalConstraint_counts_snapshot
         expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
     otherwise: 0
+
+constraints:
+  Bus_nodal_balance:
+    description: >-
+      `Bus-nodal_balance` — what is generated at a bus, storage dispatch and
+      stores included, less what the links take away, plus what arrives over
+      them after losses and any delay at every port they deliver to, each
+      process port drawing or delivering at its own rate and each passive branch
+      carrying its flow, meets the load there, less half of every incident
+      line's and transformer's loss — PyPSA dissipates a branch's loss half at
+      either end. Each generator, storage unit, store and load term enters
+      with its component's `sign` (`constraints.py:1404-1405`, `:1514`), and
+      an inactive load not at all. A bus nothing is attached to has no row; PyPSA refuses one that
+      carries load, and this file does not yet.
+    dims: [scenario, snapshot, bus]
+    expression: Bus_injection == 0
 
 objective:
   sense: minimize
