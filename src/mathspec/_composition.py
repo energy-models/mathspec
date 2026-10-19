@@ -43,9 +43,9 @@ What that means for each section:
   so a composed spec takes more terms in a later merge. A definition
   written as ``cases:`` takes no term. Where no fragment defines the
   name, the composed spec defines it as its terms, over the dims of the
-  frame the readers state in one order that a term carries. Some fragment then has to read the name for
-  more than adding to it: read it without adding to it, or use it in its
-  math. A name only its terms read, or only one fragment reads, is what a
+  frame the readers state in one order that a term carries. Some fragment
+  then has to read the name for more than adding to it: read it without
+  adding to it, or use it in its math. A name only its terms read, or only one fragment reads, is what a
   misspelt ``given:`` entry looks like, so it is refused. A term that
   reads its own sum through another fragment is refused, both named.
 * **A given entry is folded** into the entry that introduces the
