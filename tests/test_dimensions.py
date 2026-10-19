@@ -7,7 +7,10 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, ClassVar
+from collections.abc import Iterator, Mapping
+from dataclasses import fields, is_dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, ClassVar, cast, get_args
 
 import pytest
 
@@ -15,8 +18,28 @@ from mathspec._dimensions import DimensionError, _check_where_dims, dims_of
 from mathspec._resolution import Namespace
 from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
-from mathspec.program import Axis, Column, Join, Mask, RelationPairComparison, Sum
-from tests.fixtures import DISPATCH_MODEL, expression_of, spec_of, varied, where_of
+from mathspec.program import (
+    Axis,
+    Cases,
+    Column,
+    Constant,
+    Dual,
+    Expression,
+    ExpressionReference,
+    Join,
+    Mask,
+    ParameterReference,
+    RelationPairComparison,
+    Sum,
+    Translate,
+    VariableReference,
+    WindowSum,
+    children,
+)
+from tests.fixtures import DISPATCH_MODEL, SPECS, expression_of, spec_of, varied, where_of
+
+#: Every class an expression node is an instance of.
+EXPRESSION_NODES = get_args(Expression)
 
 if TYPE_CHECKING:
     from mathspec.spec import Spec
@@ -726,3 +749,73 @@ def test_a_row_over_more_dims_than_the_entry_it_reads_is_refused():
     row = {'constraints.capped': {'dims': ['snapshot', 'generator'], 'expression': 'cap <= 10'}}
     with pytest.raises(DimensionError, match=r"does not carry \['snapshot'\], which its dims: declares"):
         to_spec(varied(DISPATCH_MODEL, **row, **{'expressions.cap': 'sum(p, over=snapshot) - p_max'}))
+
+
+# ---------------------------------------------------------------------------
+# every expression node states its frame
+# ---------------------------------------------------------------------------
+
+#: Every spec in the repository, before and after each expansion pair.
+FRAMED_SPECS = [
+    *SPECS,
+    *sorted((Path(__file__).parent / 'expand').glob('*/*.yaml')),
+    Path(__file__).parent / 'typesetting' / 'golden' / 'model.yaml',
+]
+
+
+def _derived(node: Expression, spec: Spec) -> frozenset[str]:
+    """The frame of *node* by the rules of the language reference, derived from the spec without reading ``dims``."""
+    if isinstance(node, Constant):
+        return frozenset()
+    if isinstance(node, ParameterReference):
+        return frozenset({**spec.parameters, **spec.given.parameters}[node.name].dims)
+    if isinstance(node, VariableReference):
+        return frozenset({**spec.variables, **spec.given.variables, **spec.given.expressions}[node.name].dims or ())
+    if isinstance(node, Dual):
+        return frozenset({**spec.constraints, **spec.given.constraints}[node.constraint].dims)
+    if isinstance(node, ExpressionReference):
+        return _derived(node.body, spec)
+    if isinstance(node, Cases):
+        return frozenset().union(*(_derived(r.value, spec) | r.when.dims for r in node.regions))
+    if isinstance(node, Join):
+        joined = _derived(node.operand, spec) - set(node.columns.joined_dims)
+        return joined | set(node.columns.grouped_dims)
+    if isinstance(node, Sum):
+        return _derived(node.operand, spec) - {axis.dimension for axis in node.over if axis.column is None}
+    if isinstance(node, Translate | WindowSum):
+        return _derived(node.operand, spec)
+    return frozenset().union(*(_derived(child, spec) for child in children(node)))
+
+
+def _expressions(root: object) -> Iterator[Expression]:
+    """Every expression node reachable from *root*, a program or any part of one, each once."""
+    seen: set[int] = set()
+    stack = [root]
+    while stack:
+        item = stack.pop()
+        if id(item) in seen or isinstance(item, str | int | float | bool | None):
+            continue
+        seen.add(id(item))
+        if isinstance(item, EXPRESSION_NODES):
+            yield cast('Expression', item)
+        if isinstance(item, Mapping):
+            stack.extend(item.values())
+        elif isinstance(item, tuple | list | frozenset):
+            stack.extend(item)
+        elif is_dataclass(item):
+            stack.extend(getattr(item, f.name) for f in fields(item))
+
+
+@pytest.mark.parametrize('path', FRAMED_SPECS, ids=lambda path: str(path.relative_to(Path(__file__).parent.parent)))
+def test_every_expression_node_states_its_frame_in_declaration_order(path):
+    """A consumer read a node's frame by deriving it again, as `dims_of` did at load and threw away."""
+    spec = spec_of(path)
+    for loaded in (spec, spec.expand()):
+        nodes = list(_expressions(loaded.program))
+        assert nodes, f'{path.name} lowers to no expression node'
+        for node in nodes:
+            derived = _derived(node, loaded)
+            assert node.dims == tuple(d for d in loaded.dimensions if d in derived), (
+                f'{type(node).__name__} in {path.name} states {node.dims}, and the rules give {sorted(derived)} in '
+                f'the order dimensions: declares'
+            )

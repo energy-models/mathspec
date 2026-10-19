@@ -51,56 +51,38 @@ from mathspec.program import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from mathspec.program import Program
     from mathspec.spec import Spec
 
 
 def dims_of(node: Expression, spec: Spec, context: str) -> frozenset[str]:
-    """The dim set of a resolved expression, checking every rule on the way.
+    """The dims a resolved expression states, with every rule under it checked on the way.
+
+    A named expression's body is checked once, as its entry, by [`check_spec`][].
 
     Raises:
         DimensionError: On the first rule broken.
     """
-    if isinstance(node, Constant):
-        return frozenset()
-
-    if isinstance(node, ParameterReference):
-        return frozenset({**spec.parameters, **spec.given.parameters}[node.name].dims)
-
-    if isinstance(node, VariableReference):
-        columns = {**spec.variables, **spec.given.variables, **spec.given.expressions}
-        return frozenset(columns[node.name].dims or ())
-
-    if isinstance(node, Dual):
-        return frozenset({**spec.constraints, **spec.given.constraints}[node.constraint].dims)
-
-    if isinstance(node, ExpressionReference):
-        return _named_dims(node, spec, context)
-
-    if isinstance(node, Cases):
-        return frozenset().union(*(dims_of(region.value, spec, context) for region in node.regions))
-
-    if isinstance(node, Negate | Add | Multiply | Power | Divide):
-        return frozenset().union(*(dims_of(child, spec, context) for child in children(node)))
-
-    if isinstance(node, Sum):
-        return _sum_dims(node, spec, context)
-    inner = dims_of(node.operand, spec, context)
-    if isinstance(node, Join):
+    if isinstance(node, Constant | ParameterReference | VariableReference | Dual | ExpressionReference):
+        pass
+    elif isinstance(node, Cases):
+        for region in node.regions:
+            dims_of(region.value, spec, context)
+    elif isinstance(node, Negate | Add | Multiply | Power | Divide):
+        for child in children(node):
+            dims_of(child, spec, context)
+    elif isinstance(node, Sum):
+        _check_sum(node, spec, context)
+    elif isinstance(node, Join):
         assert not node.columns.axes, 'a join that opens axes is read only by the sum that closes them'
-        return join_dims(node.columns, inner, context, 'the expression')
-    if isinstance(node, Translate | WindowSum):
-        return _translation_dims(node, inner, spec, context)
-
-    assert_never(node)
-
-
-def _named_dims(node: ExpressionReference, spec: Spec, context: str) -> frozenset[str]:
-    """An entry's declared frame where it has one, else its body's."""
-    declared = spec.expressions[node.name].dims
-    if declared is not None:
-        return frozenset(declared)
-    return dims_of(node.body, spec, context)
+        join_dims(node.columns, dims_of(node.operand, spec, context), context, 'the expression')
+    elif isinstance(node, Translate | WindowSum):
+        _check_translation(node, dims_of(node.operand, spec, context), spec, context)
+    else:
+        assert_never(node)
+    return frozenset(node.dims)
 
 
 def _not_carried(context: str, call: str, inner: frozenset[str], rewrite: str) -> str:
@@ -108,23 +90,23 @@ def _not_carried(context: str, call: str, inner: frozenset[str], rewrite: str) -
     return f'{context}: {call} but the expression has only the dims {sorted(inner)}. {rewrite}.'
 
 
-def _sum_dims(node: Sum, spec: Spec, context: str) -> frozenset[str]:
+def _check_sum(node: Sum, spec: Spec, context: str) -> None:
     """``sum`` reduces each dim in ``over`` away, so the operand carries every one.
 
     The axes a join opens never reach a frame: the sum over the join closes
-    every one, so its frame is the join's frame less them.
+    every one, and the join's own rules are the sum's.
     """
     if isinstance(node.operand, Join) and node.operand.columns.axes:
         join = node.operand
         assert node.over == join.columns.axes, 'a sum through a relation closes exactly the axes its join opens'
-        return join_dims(join.columns, dims_of(join.operand, spec, context), context, 'the expression')
+        join_dims(join.columns, dims_of(join.operand, spec, context), context, 'the expression')
+        return
     inner = dims_of(node.operand, spec, context)
     for summed in node.over:
         if summed.dimension not in inner:
             raise DimensionError(
                 _not_carried(context, f'sum(over={summed})', inner, 'Remove the sum, or correct the dimension')
             )
-    return inner - {axis.dimension for axis in node.over}
 
 
 def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand: str) -> frozenset[str]:
@@ -160,14 +142,19 @@ def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand
             f'dimension.'
         )
     _check_joined(call, columns, inner, context)
-    return (inner - set(columns.joined_dims)) | set(columns.grouped_dims)
+    return joined(columns, inner)
+
+
+def joined(columns: JoinColumns, inner: Iterable[str]) -> frozenset[str]:
+    """The dims a join on *columns* leaves of *inner*: the dims joined on go, and the dims grouped by arrive."""
+    return (frozenset(inner) - set(columns.joined_dims)) | set(columns.grouped_dims)
 
 
 #: The operator name a file writes for each translation, which its refusals quote.
 _VERBS: dict[type[Translate | WindowSum], str] = {Translate: 'shift', WindowSum: 'sum_back'}
 
 
-def _translation_dims(node: Translate | WindowSum, inner: frozenset[str], spec: Spec, context: str) -> frozenset[str]:
+def _check_translation(node: Translate | WindowSum, inner: frozenset[str], spec: Spec, context: str) -> None:
     """``shift`` and ``sum_back`` keep every dim, and a named amount and a partition are checked here."""
     verb = _VERBS[type(node)]
     if node.along not in inner:
@@ -183,7 +170,6 @@ def _translation_dims(node: Translate | WindowSum, inner: frozenset[str], spec: 
     if node.partition is not None:
         within = f'{node.partition.name}[{", ".join(node.partition.grouped)}]'
         _check_joined(f'{verb}(along={node.along}, within={within})', node.partition, inner, context)
-    return inner
 
 
 def _check_joined(call: str, use: JoinColumns | Partition, inner: frozenset[str], context: str) -> None:
@@ -261,6 +247,7 @@ def check_spec(spec: Spec, program: Program) -> None:
     for ename, entry in program.expressions.items():
         declared = spec.expressions[ename]
         if declared.dims is None:
+            dims_of(entry.expression, spec, f"Named expression '{ename}'")
             continue
         frame = frozenset(declared.dims)
         if not isinstance(entry.expression, Cases):

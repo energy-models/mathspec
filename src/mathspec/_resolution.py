@@ -142,6 +142,11 @@ class Namespace:
         #: the first time anything reads the name.
         self._masks: dict[str, tuple[MaskReference | None, tuple[str, ...]]] = {}
 
+    def framed(self, *frames: Iterable[str]) -> tuple[str, ...]:
+        """The dims *frames* carry together, in the order ``dimensions:`` declares them: what a node states as ``dims``."""
+        carried = set().union(*frames)
+        return tuple(d for d in self.spec.dimensions if d in carried)
+
     def named(self, name: str, context: str) -> ExpressionReference:
         """The ``expressions:`` entry *name* as the node that stands where its name is written.
 
@@ -492,7 +497,7 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
     if not entry.cases:
         assert entry.expression is not None
         body = resolve_expression_text(entry.expression, ns, context, errors, ceiling=None)
-        return None if body is None else ExpressionReference(name, body)
+        return None if body is None else ExpressionReference(name, body, dims=body.dims)
 
     found = len(errors)
     regions: list[Region] = []
@@ -515,7 +520,9 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
     if len(errors) > found:
         return None
     left_over = Region(remainder(region.when for region in regions), fallback)
-    return ExpressionReference(name, Cases((*regions, left_over)))
+    every = (*regions, left_over)
+    cases = Cases(every, dims=ns.framed(*(r.value.dims for r in every), *(r.when.dims for r in every)))
+    return ExpressionReference(name, cases, dims=cases.dims)
 
 
 def _mask(name: str, entry: MaskSpec, ns: Namespace, errors: list[str]) -> MaskReference | None:

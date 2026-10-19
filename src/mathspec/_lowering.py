@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec._dimensions import check_spec, dims_of
+from mathspec._dimensions import check_spec
 from mathspec._expansion import expand, parse_template
 from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec._resolution import (
@@ -143,9 +143,9 @@ def lower(spec: Spec) -> Program:
         if where is not None and (refusal := self_existence(where, vname, f"Variable '{vname}'")) is not None:
             errors.append(refusal)
         if vdef.domain == 'binary':
-            lower_bound, upper_bound = Constant(0.0), Constant(1.0)
+            lower_bound, upper_bound = Constant(0.0, dims=()), Constant(1.0, dims=())
         else:
-            lower_bound, upper_bound = _bound(vdef.bounds.lower), _bound(vdef.bounds.upper)
+            lower_bound, upper_bound = _bound(vdef.bounds.lower, ns), _bound(vdef.bounds.upper, ns)
         variables[vname] = Variable(
             tuple(vdef.dims),
             where=mask_of(where),
@@ -341,18 +341,15 @@ def _loop(target: str, entry: ExpressionReference, sums: Mapping[str, list[Expre
 def _frame_of(name: str, entry: ExpressionReference, spec: Spec) -> tuple[str, ...]:
     """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's in file order."""
     declared = spec.expressions[name].dims
-    if declared is not None:
-        return tuple(declared)
-    carried = dims_of(entry.body, spec, f"Named expression '{name}'")
-    return tuple(d for d in spec.dimensions if d in carried)
+    return entry.dims if declared is None else tuple(declared)
 
 
-def _bound(value: float | str | None) -> Constant | ParameterReference | None:
+def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterReference | None:
     if value is None:
         return None
     if isinstance(value, str):
-        return ParameterReference(value)
-    return Constant(value)
+        return ParameterReference(value, dims=ns.framed(ns.leaf_dims[value]))
+    return Constant(value, dims=())
 
 
 def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:
