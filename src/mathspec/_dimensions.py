@@ -4,10 +4,12 @@
 
 """Static dim-set checking — a type system whose type is a set of dim names.
 
-Every node's dim set is computable before any data is attached, so this pass runs
-at load on the resolved tree. The per-node rules are the "Dim algebra" table in
-``docs/reference/language/expressions.md``; a constraint's two sides together
-must equal its ``dims``, and a where or a bound may not exceed the frame.
+Every node states its dims, so every rule is decided at load. Resolution holds
+each node to the rule of its operator as it builds the node ([`check_node`][]);
+the rules are the "Dim algebra" table in
+``docs/reference/language/expressions.md``. [`check_spec`][] holds each entry
+to its own: a constraint's two sides together equal its ``dims``, and a where
+or a bound may not exceed the frame.
 """
 
 from __future__ import annotations
@@ -16,28 +18,19 @@ from typing import TYPE_CHECKING, assert_never
 
 from mathspec.errors import DimensionError, case_context
 from mathspec.program import (
-    Add,
     Cases,
-    Constant,
     CountComparison,
     DimensionComparison,
     DimensionPosition,
-    Divide,
-    Dual,
     Expression,
     ExpressionComparison,
-    ExpressionReference,
     Join,
     JoinColumns,
     JoinedPredicate,
     Mask,
-    Multiply,
-    Negate,
     ParameterComparison,
     ParameterDefined,
-    ParameterReference,
     Partition,
-    Power,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -45,9 +38,7 @@ from mathspec.program import (
     Translate,
     TranslatedPredicate,
     VariableDefined,
-    VariableReference,
     WindowSum,
-    children,
 )
 
 if TYPE_CHECKING:
@@ -57,32 +48,22 @@ if TYPE_CHECKING:
     from mathspec.spec import Spec
 
 
-def dims_of(node: Expression, spec: Spec, context: str) -> frozenset[str]:
-    """The dims a resolved expression states, with every rule under it checked on the way.
+def check_node(node: Sum | Join | Translate | WindowSum, spec: Spec, context: str) -> None:
+    """The dim rule *node*'s own operator holds it to, on the frames its operands state.
 
-    A named expression's body is checked once, as its entry, by [`check_spec`][].
+    Resolution calls it on each node it builds, so a tree is checked once,
+    bottom up, and no pass walks it again.
 
     Raises:
-        DimensionError: On the first rule broken.
+        DimensionError: *node* breaks the rule.
     """
-    if isinstance(node, Constant | ParameterReference | VariableReference | Dual | ExpressionReference):
-        pass
-    elif isinstance(node, Cases):
-        for region in node.regions:
-            dims_of(region.value, spec, context)
-    elif isinstance(node, Negate | Add | Multiply | Power | Divide):
-        for child in children(node):
-            dims_of(child, spec, context)
-    elif isinstance(node, Sum):
-        _check_sum(node, spec, context)
+    inner = frozenset(node.operand.dims)
+    if isinstance(node, Sum):
+        _check_sum(node, inner, context)
     elif isinstance(node, Join):
-        assert not node.columns.axes, 'a join that opens axes is read only by the sum that closes them'
-        join_dims(node.columns, dims_of(node.operand, spec, context), context, 'the expression')
-    elif isinstance(node, Translate | WindowSum):
-        _check_translation(node, dims_of(node.operand, spec, context), spec, context)
+        join_dims(node.columns, inner, context, 'the expression')
     else:
-        assert_never(node)
-    return frozenset(node.dims)
+        _check_translation(node, inner, spec, context)
 
 
 def _not_carried(context: str, call: str, inner: frozenset[str], rewrite: str) -> str:
@@ -90,18 +71,15 @@ def _not_carried(context: str, call: str, inner: frozenset[str], rewrite: str) -
     return f'{context}: {call} but the expression has only the dims {sorted(inner)}. {rewrite}.'
 
 
-def _check_sum(node: Sum, spec: Spec, context: str) -> None:
+def _check_sum(node: Sum, inner: frozenset[str], context: str) -> None:
     """``sum`` reduces each dim in ``over`` away, so the operand carries every one.
 
     The axes a join opens never reach a frame: the sum over the join closes
     every one, and the join's own rules are the sum's.
     """
     if isinstance(node.operand, Join) and node.operand.columns.axes:
-        join = node.operand
-        assert node.over == join.columns.axes, 'a sum through a relation closes exactly the axes its join opens'
-        join_dims(join.columns, dims_of(join.operand, spec, context), context, 'the expression')
+        assert node.over == node.operand.columns.axes, 'a sum through a relation closes exactly the axes its join opens'
         return
-    inner = dims_of(node.operand, spec, context)
     for summed in node.over:
         if summed.dimension not in inner:
             raise DimensionError(
@@ -247,11 +225,10 @@ def check_spec(spec: Spec, program: Program) -> None:
     for ename, entry in program.expressions.items():
         declared = spec.expressions[ename]
         if declared.dims is None:
-            dims_of(entry.expression, spec, f"Named expression '{ename}'")
             continue
         frame = frozenset(declared.dims)
         if not isinstance(entry.expression, Cases):
-            carried = _check_body_dims(entry.expression, spec, frame, f"Named expression '{ename}'")
+            carried = _check_body_dims(entry.expression, frame, f"Named expression '{ename}'")
             _check_frame_is_carried(ename, frame, carried, 'the body does not carry')
             continue
         carried = frozenset[str]()
@@ -259,7 +236,7 @@ def check_spec(spec: Spec, program: Program) -> None:
             context = case_context(ename, label)
             if label is not None:
                 _check_where_dims(region.when, frame, context)
-            carried |= _check_value_dims(region.value, spec, frame, context) | region.when.dims
+            carried |= _check_value_dims(region.value, frame, context) | region.when.dims
         _check_frame_is_carried(ename, frame, carried, 'no case value and no `when:` carries')
 
     for ename, entry in program.expressions.items():
@@ -276,7 +253,7 @@ def check_spec(spec: Spec, program: Program) -> None:
         frame = frozenset(constraint.dims)
         context = f"Constraint '{cname}'"
         _check_where_dims(constraint.where, frame, context)
-        got = dims_of(constraint.lhs, spec, context) | dims_of(constraint.rhs, spec, context)
+        got = frozenset((*constraint.lhs.dims, *constraint.rhs.dims))
         if got != frame:
             stray, missing = sorted(got - frame), sorted(frame - got)
             detail = (
@@ -289,7 +266,7 @@ def check_spec(spec: Spec, program: Program) -> None:
 
     if program.objective is not None:
         context = 'The objective'
-        got = dims_of(program.objective.expression, spec, context)
+        got = program.objective.expression.dims
         if got:
             raise DimensionError(
                 f'{context}: the expression carries dims {sorted(got)}, and an objective is one '
@@ -298,13 +275,13 @@ def check_spec(spec: Spec, program: Program) -> None:
             )
 
 
-def _check_value_dims(node: Expression, spec: Spec, frame: frozenset[str], context: str) -> frozenset[str]:
+def _check_value_dims(node: Expression, frame: frozenset[str], context: str) -> frozenset[str]:
     """A region's value may only carry dims the frame does — the ``otherwise:`` included.
 
     A wider one would give the quantity dims its entry does not, which is
     the second answer a ``dims:`` exists to avoid.
     """
-    got = dims_of(node, spec, context)
+    got = frozenset(node.dims)
     if not got <= frame:
         raise DimensionError(
             f'{context}: the value carries dims {sorted(got - frame)} outside the dims: '
@@ -313,9 +290,9 @@ def _check_value_dims(node: Expression, spec: Spec, frame: frozenset[str], conte
     return got
 
 
-def _check_body_dims(node: Expression, spec: Spec, frame: frozenset[str], context: str) -> frozenset[str]:
+def _check_body_dims(node: Expression, frame: frozenset[str], context: str) -> frozenset[str]:
     """A plain entry's body may only carry dims its declared frame does; the dims it carries come back."""
-    got = dims_of(node, spec, context)
+    got = frozenset(node.dims)
     if not got <= frame:
         raise DimensionError(
             f'{context}: the body carries dims {sorted(got - frame)} outside the dims: {sorted(frame)}. '

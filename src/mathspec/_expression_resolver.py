@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, assert_never, cast
 
-from mathspec._dimensions import dims_of, joined
+from mathspec._dimensions import check_node, joined
 from mathspec._expression_parser import (
     MAX_DEPTH,
     ArithmeticNode,
@@ -297,26 +297,32 @@ class ExpressionResolver:
         if grouping is None:
             return None
         join, plain = grouping
-        grouped = self._summed(self._joined(operand, join), join.axes)
-        return self._summed(grouped, tuple(Axis(d) for d in plain)) if plain else grouped
+        if (through := self._joined(operand, join)) is None:
+            return None
+        grouped = self._summed(through, join.axes)
+        return self._summed(grouped, tuple(Axis(d) for d in plain)) if plain and grouped is not None else grouped
 
-    def _summed(self, operand: Expression, over: tuple[Axis, ...]) -> Sum:
+    def _summed(self, operand: Expression, over: tuple[Axis, ...]) -> Sum | None:
         """A [`Sum`][mathspec.program.Sum] over *over*, which removes the dims its plain axes name; a join's axes are no dims."""
         closed = {axis.dimension for axis in over if axis.column is None}
-        return Sum(operand, over, dims=tuple(d for d in operand.dims if d not in closed))
+        return self._checked(Sum(operand, over, dims=tuple(d for d in operand.dims if d not in closed)))
 
-    def _joined(self, operand: Expression, columns: JoinColumns) -> Join:
+    def _joined(self, operand: Expression, columns: JoinColumns) -> Join | None:
         """A [`Join`][mathspec.program.Join] of *operand* on *columns*, over the dims the join leaves."""
-        return Join(operand, columns, dims=self.ns.framed(joined(columns, operand.dims)))
+        return self._checked(Join(operand, columns, dims=self.ns.framed(joined(columns, operand.dims))))
 
-    def _at(self, operand: Expression, columns: ColumnsNode) -> Expression | None:
-        """``at(x, by=relation[column])``: *operand* read at the value of *columns* each row of the relation holds."""
+    def _checked[N: Sum | Join | Translate | WindowSum](self, node: N) -> N | None:
+        """*node*, or ``None`` with its refusal appended where it breaks the dim rule of its operator."""
         try:
-            inner = dims_of(operand, self.ns.spec, self.context)
+            check_node(node, self.ns.spec, self.context)
         except DimensionError as e:
             self.errors.append(str(e))
             return None
-        join = self.lookup(columns, inner)
+        return node
+
+    def _at(self, operand: Expression, columns: ColumnsNode) -> Expression | None:
+        """``at(x, by=relation[column])``: *operand* read at the value of *columns* each row of the relation holds."""
+        join = self.lookup(columns, frozenset(operand.dims))
         return None if join is None else self._joined(operand, join)
 
     def _translation(
@@ -338,7 +344,9 @@ class ExpressionResolver:
             assert offset is not None
             if not self._edge_fits(operand, offset, wrap=wrap, fill=fill):
                 return None
-            return Translate(operand, along, offset, wrap=wrap, fill=fill, partition=partition, dims=operand.dims)
+            return self._checked(
+                Translate(operand, along, offset, wrap=wrap, fill=fill, partition=partition, dims=operand.dims)
+            )
         if fill is not None:
             self.errors.append(
                 f"{self.context}: sum_back(edge=...) takes 'wrap' or nothing. To add a constant, "
@@ -347,15 +355,11 @@ class ExpressionResolver:
             return None
         width = amounts['window']
         assert width is not None
-        return WindowSum(operand, along, width, wrap=wrap, partition=partition, dims=operand.dims)
+        return self._checked(WindowSum(operand, along, width, wrap=wrap, partition=partition, dims=operand.dims))
 
     def _bare_sum(self, operand: Expression) -> Expression | None:
         """``sum(x)`` with no ``over=`` or ``by=`` reduces every dim the operand carries, which it has to carry some of."""
-        try:
-            inner = dims_of(operand, self.ns.spec, self.context)
-        except DimensionError as e:
-            self.errors.append(str(e))
-            return None
+        inner = operand.dims
         if not inner:
             self.errors.append(
                 f'{self.context}: sum() has no over= or by=, and its operand has no dimensions to sum over. '

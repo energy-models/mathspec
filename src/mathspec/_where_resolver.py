@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple, assert_never, cast
 
 import mathspec._degree as degree
-from mathspec._dimensions import dims_of, join_dims
+from mathspec._dimensions import join_dims
 from mathspec._expansion import expand
 from mathspec._expression_parser import (
     ArithmeticNode,
@@ -408,7 +408,7 @@ class WhereResolver:
             else:
                 try:
                     degree.check_expression(side, context)
-                    dims |= dims_of(side, ns.spec, context)
+                    dims |= set(side.dims)
                 except LanguageError as e:
                     self.errors.append(str(e))
         if len(self.errors) > found:

@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast, get_args
 
 import pytest
 
-from mathspec._dimensions import DimensionError, _check_where_dims, dims_of
+from mathspec._dimensions import DimensionError, _check_where_dims
 from mathspec._resolution import Namespace
 from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
@@ -93,7 +93,7 @@ def _spec(**overrides) -> Spec:
 
 def _dims(expr: str) -> frozenset[str]:
     s = _spec()
-    return dims_of(expression_of(expr, Namespace(s), 't'), s, 't')
+    return frozenset(expression_of(expr, Namespace(s), 't').dims)
 
 
 @pytest.fixture
@@ -225,7 +225,7 @@ def test_dim_inference(expr, expected):
 
 def _dims_with(expr: str, **overrides) -> frozenset[str]:
     s = _spec(**overrides)
-    return dims_of(expression_of(expr, Namespace(s), 't'), s, 't')
+    return frozenset(expression_of(expr, Namespace(s), 't').dims)
 
 
 @pytest.mark.parametrize(
@@ -285,7 +285,7 @@ def test_a_join_opens_an_axis_for_the_column_it_drops_and_the_sum_over_it_closes
     node = expression_of('sum(p, over=snapshot, by=rep_of[rep])', Namespace(s), 't')
     assert isinstance(node, Sum) and isinstance(node.operand, Join)
     assert node.over == (Axis('snapshot', Column('rep_of', 'snapshot')),), 'the sum stands over the axis the join opens'
-    assert dims_of(node, s, 't') == {'generator', 'snapshot'}, 'and the sum over it leaves the frame the row keeps'
+    assert set(node.dims) == {'generator', 'snapshot'}, 'and the sum over it leaves the frame the row keeps'
 
 
 def test_a_sum_joins_on_a_key_column_and_a_value_column_together():
@@ -307,114 +307,93 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
 
 
 @pytest.mark.parametrize(
-    ('expr', 'error', 'match'),
+    ('expr', 'match'),
     [
         pytest.param(
             'sum(p, over=bus)',
-            DimensionError,
             r'sum\(over=bus\) but the expression has only the dims',
             id='sum-over-an-absent-dim-is-an-error-not-a-noop',
         ),
         pytest.param(
             'sum(p, over=[generator, bus])',
-            DimensionError,
             r'sum\(over=bus\) but the expression has only the dims',
             id='and-so-is-one-absent-dim-in-a-list',
         ),
         pytest.param(
             'sum(sum(p))',
-            SchemaError,
             r'its operand has no dimensions to sum over',
             id='a-bare-sum-of-a-scalar-is-an-error-not-a-noop',
         ),
         pytest.param(
             'sum(sum(p, over=bus))',
-            SchemaError,
             r'sum\(over=bus\) but the expression has only the dims',
             id='a-dim-fault-under-a-bare-sum-is-met-while-the-sum-is-built',
         ),
         pytest.param(
             'sum(sum(p, over=bus), over=generator)',
-            DimensionError,
             r'sum\(over=bus\) but the expression has only the dims',
-            id='and-the-same-fault-under-a-sum-over-a-named-dim-is-the-dim-rules',
+            id='and-the-same-fault-under-a-sum-over-a-named-dim',
         ),
         pytest.param(
             'sum(load, over=generator, by=gen_bus[bus])',
-            DimensionError,
             r"sum\(by=gen_bus\[bus\]\) joins on \['generator'\] to sum it away",
             id='sum-requires-the-grouped-dim',
         ),
         pytest.param(
             "shift(cost, along=snapshot, offset=1, edge='wrap')",
-            DimensionError,
             r'shift\(along=snapshot\) but the expression has only the dims',
             id='shift-requires-the-dim',
         ),
         pytest.param(
             "shift(p, along=snapshot, offset=cost, edge='wrap')",
-            SchemaError,
             r'declared dtype: float',
             id='a-named-offset-is-integral-58',
         ),
         pytest.param(
             "shift(p, along=snapshot, offset=horizon, edge='wrap')",
-            DimensionError,
             r"Declare 'horizon' over dims without 'snapshot'",
             id='a-named-offset-does-not-span-the-axis-it-steps-along',
         ),
         pytest.param(
             'sum_back(p, along=snapshot, window=cost)',
-            SchemaError,
             r'declared dtype: float',
             id='a-named-width-is-integral',
         ),
         pytest.param(
             'sum_back(p, along=snapshot, window=horizon)',
-            DimensionError,
             r"sum_back\(window=horizon\) steps along 'snapshot'",
             id='a-named-width-does-not-span-the-summed-axis',
         ),
         pytest.param(
             "shift(p, along=snapshot, offset=-spinup, edge='wrap')",
-            SchemaError,
             r'negates a named offset',
             id='a-named-offset-is-not-negated-at-the-call-62',
         ),
         pytest.param(
             'sum_back(p, along=snapshot, window=-spinup)',
-            SchemaError,
             r'A width has no sign',
             id='a-named-width-has-no-direction-to-negate',
         ),
         pytest.param(
             "shift(p, along=snapshot, offset=bus_lead, edge='wrap')",
-            DimensionError,
             r"varies over \['bus'\], which the expression does not carry",
             id='a-named-offset-is-read-where-the-expression-has-a-coordinate',
         ),
         pytest.param(
             'sum(cost, over=generator, by=gen_zone[zone])',
-            DimensionError,
             r"sum\(by=gen_zone\[zone\]\) joins on \['snapshot'\]",
             id='a-grouped-sum-needs-the-keys-it-joins-on',
         ),
         pytest.param(
             "shift(cost, along=generator, offset=1, edge='wrap', within=gen_zone[zone])",
-            DimensionError,
             r"within=gen_zone\[zone\]\) joins on \['snapshot'\]",
             id='a-partition-needs-the-keys-it-joins-on',
         ),
     ],
 )
-def test_an_ill_dimensioned_expression_is_rejected(expr, error, match):
-    """The class says which pass refused: what resolution needs to build a node is a `SchemaError`, and a rule on a built tree's dims a `DimensionError`.
-
-    A dim fault under a bare `sum()` is met while the sum is built, since the
-    dims it reduces are the operand's, and the same fault under a sum over a
-    named dim is met by the dim rules.
-    """
-    with pytest.raises(error, match=match):
+def test_an_ill_dimensioned_expression_is_rejected(expr, match):
+    """Each node is held to its operator's rule as it is built, so a dim fault is a `SchemaError` beside the others."""
+    with pytest.raises(SchemaError, match=match):
         _dims(expr)
 
 
@@ -430,7 +409,7 @@ def test_an_ill_dimensioned_expression_is_rejected(expr, error, match):
 )
 def test_two_joined_columns_do_not_share_a_dimension(expr, diag):
     """The operand carries one coordinate per dimension, so the `over=` column and an unnamed key column cannot share one."""
-    with pytest.raises(DimensionError, match=r"joins 'diag' on \[.*\] through more than one column"):
+    with pytest.raises(SchemaError, match=r"joins 'diag' on \[.*\] through more than one column"):
         _dims_with(expr, **{'relations.diag': diag})
 
 
@@ -808,7 +787,7 @@ def _expressions(root: object) -> Iterator[Expression]:
 
 @pytest.mark.parametrize('path', FRAMED_SPECS, ids=lambda path: str(path.relative_to(Path(__file__).parent.parent)))
 def test_every_expression_node_states_its_frame_in_declaration_order(path):
-    """A consumer read a node's frame by deriving it again, as `dims_of` did at load and threw away."""
+    """A consumer read a node's frame by deriving it again, as the loader did to check it and then threw away."""
     spec = spec_of(path)
     for loaded in (spec, spec.expand()):
         nodes = list(_expressions(loaded.program))

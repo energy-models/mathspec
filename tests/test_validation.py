@@ -2341,10 +2341,10 @@ def test_each_entry_is_resolved_once_however_many_readers(monkeypatch):
 )
 def test_a_plain_entry_that_breaks_a_dim_rule_is_refused_at_load_under_its_own_name(constraints):
     """An entry nothing read loaded and failed only when printed, and one a constraint read was
-    refused under the constraint's name. The program reads an entry's frame off its body at
-    load, so the fault is the entry's, wherever it is read."""
+    refused under the constraint's name. Resolution checks each node as it builds the entry's
+    body, so the fault is the entry's, wherever it is read."""
     model = varied(SMALL_MODEL, expressions={'bad': {'expression': 'sum(k, over=g)'}}, constraints=constraints)
-    with pytest.raises(DimensionError, match=r"^Named expression 'bad': sum\(over=g\)"):
+    with pytest.raises(SchemaError, match=r"(?m)^Named expression 'bad': sum\(over=g\)"):
         to_spec(model)
 
 

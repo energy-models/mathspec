@@ -88,7 +88,7 @@ LK2 = Relation((('g', 'g'), ('z', 'z')), ('g',))
 LK_JOIN = JoinColumns('lk', LK, ('g',), ('h',))
 AT_BUS = Relation((('g', 'g'), ('bus', 'bus')), ('g',))
 
-#: `fixtures.SMALL_MODEL` plus a second relation and a per-entity
+#: `fixtures.SMALL_MODEL` plus a second relation and an integer
 #: offset. Which node a construct becomes is mostly a claim about the dim it
 #: joins on and the dim it groups by, and stating that needs a third dimension
 #: and two relations over one of them.
@@ -97,7 +97,7 @@ SHAPES_MODEL = varied(
     **{
         'dimensions.z': {'dtype': 'str'},
         'relations.lk2': {'key': 'g', 'values': 'z'},
-        'parameters.lead': {'dims': ['g'], 'dtype': 'int'},
+        'parameters.lead': {'dims': [], 'dtype': 'int'},
     },
 )
 
