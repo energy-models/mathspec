@@ -1,0 +1,79 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+name: CodSpeed
+
+# A report, not a gate. CodSpeed comments on a pull request with each
+# benchmark of benchmarks/ against main; the CI workflow is the gate, and it
+# already runs every benchmark once as a test.
+#
+# `simulation` counts the instructions of one round under a CPU simulator.
+# mathspec is pure Python with no I/O and no threads, so that count is the
+# cost, and it is stable on a shared runner, where wall time is noise.
+# specsolve and linopy also run the walltime and memory instruments. Walltime
+# needs CodSpeed's metered macro runners; memory is one more value of `mode:`
+# below, for when a change is about memory.
+#
+# A separate workflow, so a red run here never reads as a red gate. It is one
+# more billed minute, so it runs only when something it measures changes.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - src/**
+      - benchmarks/**
+      - examples/**
+      - pixi.toml
+      - pixi.lock
+      - .github/workflows/codspeed.yml
+  pull_request:
+    paths:
+      - src/**
+      - benchmarks/**
+      - examples/**
+      - pixi.toml
+      - pixi.lock
+      - .github/workflows/codspeed.yml
+  workflow_dispatch:
+
+# A push to main never cancels: a dropped run leaves a commit with no baseline
+# for the next pull request to compare against.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  benchmarks:
+    name: CodSpeed
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    permissions:
+      contents: read
+      # OIDC authentication with CodSpeed, so the repository holds no token.
+      id-token: write
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          locked: true
+          cache: true
+          environments: default
+
+      - name: Run the benchmarks under CodSpeed
+        uses: CodSpeedHQ/action@c4fd08a3a159bd0cc208da1e0edf32b8c47d75e5 # v5.4.0
+        with:
+          mode: simulation
+          run: pixi run pytest benchmarks --codspeed
