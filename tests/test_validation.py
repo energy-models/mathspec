@@ -2344,7 +2344,7 @@ def test_a_plain_entry_that_breaks_a_dim_rule_is_refused_at_load_under_its_own_n
     refused under the constraint's name. Resolution checks each node as it builds the entry's
     body, so the fault is the entry's, wherever it is read."""
     model = varied(SMALL_MODEL, expressions={'bad': {'expression': 'sum(k, over=g)'}}, constraints=constraints)
-    with pytest.raises(SchemaError, match=r"(?m)^Named expression 'bad': sum\(over=g\)"):
+    with pytest.raises(DimensionError, match=r"(?m)^Named expression 'bad': sum\(over=g\)"):
         to_spec(model)
 
 

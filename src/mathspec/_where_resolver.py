@@ -266,7 +266,7 @@ class WhereResolver:
         try:
             dims = join_dims(by, mask.dims, context, 'the predicate')
         except DimensionError as refusal:
-            self.errors.append(str(refusal))
+            self.errors.append(self.ns.refused_dims(refusal))
             return node
         return JoinedPredicate(mask, by, tuple(sorted(dims)))
 

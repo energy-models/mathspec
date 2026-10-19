@@ -97,8 +97,9 @@ def lower(spec: Spec) -> Program:
         SchemaError: Listing every problem found, one per line. A name a set
             or curve writes that the file declares is listed once every other
             problem is gone, since it is read off the curve as lowered.
-        DimensionError: The first dim rule an entry breaks, once every
-            name resolves.
+        DimensionError: Listing every dim rule an operator breaks, where
+            nothing else is wrong; else the first rule an entry breaks, once
+            every name resolves.
     """
     errors = reference_errors(spec)
     if errors:
@@ -187,7 +188,7 @@ def lower(spec: Spec) -> Program:
         curves[pname] = links
 
     if errors:
-        raise SchemaError('\n'.join(errors))
+        raise ns.error(errors)
 
     roots = [side for c in constraints.values() for side in (c.lhs, c.rhs)]
     if objective is not None:

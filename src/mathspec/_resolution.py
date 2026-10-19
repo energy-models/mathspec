@@ -34,7 +34,7 @@ from mathspec._where_parser import (
     parse_where,
 )
 from mathspec._where_resolver import WhereResolver
-from mathspec.errors import LanguageError, SchemaError, case_context, prefixed
+from mathspec.errors import DimensionError, LanguageError, SchemaError, case_context, prefixed
 from mathspec.program import (
     BooleanLiteral,
     Cases,
@@ -77,8 +77,10 @@ class Namespace:
         'bodies',
         'constraints',
         'defaults',
+        'dimension_refusals',
         'dimensions',
         'dtypes',
+        'follow_ons',
         'given_masks',
         'leaf_dims',
         'masks',
@@ -141,6 +143,29 @@ class Namespace:
         #: mask -> its resolved node, or ``None``, and its refusals; filled
         #: the first time anything reads the name.
         self._masks: dict[str, tuple[MaskReference | None, tuple[str, ...]]] = {}
+        #: The refusals a dim rule wrote, which [`error`][] reports as a
+        #: ``DimensionError`` when nothing else is wrong.
+        self.dimension_refusals: set[str] = set()
+        #: The refusals that only point at an entry's own, which leave the
+        #: class of the error to that entry's.
+        self.follow_ons: set[str] = set()
+
+    def refused_dims(self, refusal: DimensionError) -> str:
+        """*refusal*'s text, recorded as a dim rule's."""
+        self.dimension_refusals.add(text := str(refusal))
+        return text
+
+    def error(self, errors: list[str]) -> SchemaError | DimensionError:
+        """The one error that lists every refusal in *errors*.
+
+        It is a ``DimensionError`` where every fault is a dim rule's, so the
+        class says what is wrong wherever resolution met it, and a
+        ``SchemaError`` where anything else is.
+        """
+        faults = [e for e in errors if e not in self.follow_ons]
+        if faults and all(e in self.dimension_refusals for e in faults):
+            return DimensionError('\n'.join(errors))
+        return SchemaError('\n'.join(errors))
 
     def framed(self, *frames: Iterable[str]) -> tuple[str, ...]:
         """The dims *frames* carry together, in the order ``dimensions:`` declares them: what a node states as ``dims``."""
@@ -161,6 +186,7 @@ class Namespace:
         node, _ = self.named_entry(name)
         if node is None:
             msg = f"{context}: named expression '{name}' does not load. Fix the error listed for '{name}' first."
+            self.follow_ons.add(msg)
             raise SchemaError(msg)
         return node
 
@@ -185,6 +211,7 @@ class Namespace:
         node, _ = self.mask_entry(name)
         if node is None:
             msg = f"{context}: mask '{name}' does not load. Its refusal is listed with it."
+            self.follow_ons.add(msg)
             raise SchemaError(msg)
         return node
 

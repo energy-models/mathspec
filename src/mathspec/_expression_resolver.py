@@ -316,7 +316,7 @@ class ExpressionResolver:
         try:
             check_node(node, self.ns.spec, self.context)
         except DimensionError as e:
-            self.errors.append(str(e))
+            self.errors.append(self.ns.refused_dims(e))
             return None
         return node
 
