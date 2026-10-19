@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
@@ -664,20 +665,14 @@ def test_names_read_takes_both_sides_of_a_relation_pair():
 # a named expression's declared frame
 # ---------------------------------------------------------------------------
 
-#: A quantity that is one number per generator, read over every snapshot as well.
-FRAMED = varied(
-    DISPATCH_MODEL,
-    **{
-        'variables.build': {'dims': ['generator']},
-        'expressions.limit': {'dims': ['snapshot', 'generator'], 'expression': 'build * p_max'},
-    },
-)
+#: A quantity over every snapshot and generator, with its frame declared.
+FRAMED = varied(DISPATCH_MODEL, **{'expressions.limit': {'dims': ['snapshot', 'generator'], 'expression': 'p * p_max'}})
 
 
 def test_a_declared_frame_is_the_frame_as_written():
     """A plain entry's frame was its body's, in file order; declared, it is the dims: as written."""
     spec = to_spec(
-        varied(FRAMED, **{'expressions.limit': {'dims': ['generator', 'snapshot'], 'expression': 'build * p_max'}})
+        varied(FRAMED, **{'expressions.limit': {'dims': ['generator', 'snapshot'], 'expression': 'p * p_max'}})
     )
     assert spec.program.expressions['limit'].dims == ('generator', 'snapshot')
     assert spec.to_dict()['expressions']['limit']['dims'] == ['generator', 'snapshot'], 'and it round-trips'
@@ -689,10 +684,45 @@ def test_a_body_outside_its_declared_frame_is_refused():
         to_spec(wide)
 
 
-def test_a_declared_frame_is_read_at_every_coordinate_where_the_body_is_narrower():
-    """The row would repeat across `snapshot` on the body's own frame; the declared frame says that is meant."""
-    row = {'constraints.capped': {'dims': ['snapshot', 'generator'], 'expression': 'limit <= 10'}}
-    assert to_spec(varied(FRAMED, **row)).program.constraints['capped'].dims == ('snapshot', 'generator')
-    undeclared = varied(FRAMED, **row, **{'expressions.limit': 'build * p_max'})
+@pytest.mark.parametrize(
+    ('patch', 'extra', 'carrier'),
+    [
+        pytest.param(
+            {'expressions.limit': {'dims': ['snapshot', 'generator'], 'expression': 'p_max'}},
+            "['snapshot']",
+            'the body does not carry',
+            id='a-plain-body',
+        ),
+        pytest.param(
+            {
+                'parameters.flag': {'dims': ['generator'], 'dtype': 'bool'},
+                'expressions.limit': {
+                    'dims': ['snapshot', 'generator'],
+                    'cases': {'flagged': {'when': 'flag', 'expression': 'p_max'}},
+                    'otherwise': 5,
+                },
+            },
+            "['snapshot']",
+            'no case value and no `when:` carries',
+            id='cases',
+        ),
+    ],
+)
+def test_a_declared_frame_wider_than_the_body_is_refused(patch, extra, carrier):
+    """A frame wider than the body loaded, and a reference read the body as constant along the rest.
+
+    Substituted where the name stands, the body did not load: `sum(limit, over=snapshot)` loaded where
+    `sum(p_max, over=snapshot)` is refused, and specsolve could not build it. In a constraint the wider frame
+    only built the same row once per snapshot.
+    """
+    with pytest.raises(
+        DimensionError, match=re.escape(f"Named expression 'limit': dims: names {extra}, which {carrier}")
+    ):
+        to_spec(varied(DISPATCH_MODEL, **patch))
+
+
+def test_a_row_over_more_dims_than_the_entry_it_reads_is_refused():
+    """A row over `snapshot` that reads an entry over `generator` alone would be the same row once per snapshot."""
+    row = {'constraints.capped': {'dims': ['snapshot', 'generator'], 'expression': 'cap <= 10'}}
     with pytest.raises(DimensionError, match=r"does not carry \['snapshot'\], which its dims: declares"):
-        to_spec(undeclared)
+        to_spec(varied(DISPATCH_MODEL, **row, **{'expressions.cap': 'sum(p, over=snapshot) - p_max'}))

@@ -639,9 +639,10 @@ class ExpressionSpec(_StrictSpec):
             description: CO2 released, the quantity the cap bounds
 
     ``dims:`` declares the frame the quantity is read over. A plain entry may
-    leave it out, and its body then decides the frame; a body that carries a
-    dimension the frame does not name is refused, and one that carries fewer
-    is constant along the rest. A quantity whose value varies by region is
+    leave it out, and its body then decides the frame. A declared frame is
+    what the body carries: a body that carries a dimension the frame does not
+    name is refused, and so is a frame that names one the body does not
+    carry. A quantity whose value varies by region is
     written as ``cases:`` over a declared ``dims:``, with an ``otherwise:``
     for the rest — see the language reference.
 

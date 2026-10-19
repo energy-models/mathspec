@@ -31,17 +31,18 @@ expressions:
 
 An entry is a bare string, or a mapping with a `description:` and a `dims:`.
 The `dims:` are the **frame**, the dimensions the quantity is read over. When
-`dims:` is left out, the body decides the frame. When `dims:` is declared, the
-loader refuses a body that carries a dimension the frame does not name. The
-body may carry fewer dimensions, and then the quantity is constant along the
-rest, so a constraint over the whole frame reads it at every coordinate.
+`dims:` is left out, the body decides the frame. When `dims:` is declared, it
+sets the order of the indices, and it names the dimensions the body carries.
+The loader refuses a body that carries a dimension the frame does not name, and
+a frame that names a dimension the body does not carry. An expression that
+reads the entry broadcasts it along the rest of its own dimensions.
 
 ```yaml
 expressions:
-  cap:
-    dims: [snapshot, generator]
-    expression: p_max
-    description: the nominal capacity, the same in every snapshot
+  headroom:
+    dims: [generator, snapshot]
+    expression: p_max - p
+    description: the capacity a generator leaves unused in a snapshot
 ```
 
 [`adds_to:`](parameters-variables-constraints.md#terms) adds this expression as a term to the sum
@@ -120,7 +121,8 @@ A named expression carries **exactly one** of `expression:` and `cases:`.
   only what the case leaves.
 
 - Each `when:` and each value sits inside the frame, and a narrower case
-  broadcasts as a parameter with fewer dimensions does.
+  broadcasts as a parameter with fewer dimensions does. Each dimension of the
+  frame is carried by a value or a `when:`.
 
 A claimed coordinate can still have no value: the `otherwise:` above has none at
 the first snapshot, where a case claims every unit. To give such a coordinate a

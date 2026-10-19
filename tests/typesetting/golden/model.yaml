@@ -144,9 +144,9 @@ expressions:
   spend: # a plain named expression: its symbol prints where it is used, its body once as a definition
     description: what a snapshot's dispatch costs
     expression: sum(p * cost, over=generator)
-  rating: # a frame wider than the body, in an order of its own: the value is the same at every snapshot
+  rating: # a declared frame in an order of its own, which the body carries whole
     dims: [generator, snapshot]
-    expression: eta * p_max
+    expression: eta * p_max * sum(load, over=bus)
   lcoe: sum(p * cost) / sum(p) # nothing in the math reads it, so its divisor may carry a variable
   net: # a plain expression that opens with a minus
     description: what a snapshot spills, less what it lacks
@@ -173,7 +173,7 @@ constraints:
   starts: # names the cased expression: its symbol prints here, its block once below
     dims: [snapshot, generator]
     expression: p <= startup_cost
-  under_rating: # names the expression with a declared frame: the row reads it at every snapshot, though its body has no snapshot
+  under_rating: # names the expression with a declared frame, read in the row's own order
     dims: [snapshot, generator]
     expression: p <= rating
   balance: # sum over a relation
