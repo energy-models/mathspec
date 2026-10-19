@@ -1390,13 +1390,11 @@ class CountComparison:
 
 @dataclass(frozen=True)
 class TranslatedPredicate:
-    """*operand* read at a neighbouring coordinate — ``shift(points, along=bp, offset=1)``.
+    """*operand* read ``offset`` coordinates back along one dimension — ``shift(points, along=bp, offset=1)``.
 
-    False where the translation vacates, and there is no ``edge=`` to state.
-    The arithmetic translation needs one because no number is neutral and
-    inventing one changes the answer; false is what a missing row already
-    means in a mask, so the predicate form has the value the language already
-    gives it.
+    A negative ``offset`` reads forward. Where the shift reads past the edge,
+    the predicate is false, as a missing row is false in any mask, so the file
+    states no ``edge=``.
     """
 
     operand: Mask

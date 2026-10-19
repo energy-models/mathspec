@@ -210,7 +210,7 @@ The right-hand side is a whole number. A fraction, a parameter, and a
 comparison a count can never fail or never meet (`>= 0`, `< 0`, or any
 negative number) are load errors.
 
-### Reading a predicate at the previous coordinate
+### Reading a predicate at another coordinate
 
 `shift(<where_expr>, along=<dimension>, offset=<integer>)` reads the predicate
 `offset` coordinates back. It is **false** where the translation vacates, and
