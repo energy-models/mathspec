@@ -807,7 +807,7 @@ a named condition with its words: a use prints the symbol over the dims its cond
 ```yaml
 conditions:
   dispatchable:
-    where: "p_max > 0 AND NOT is_flexible"
+    condition: "p_max > 0 AND NOT is_flexible"
 ```
 
 ```math

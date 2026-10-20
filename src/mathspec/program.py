@@ -833,7 +833,7 @@ class NamedCondition:
     name up here.
     """
 
-    where: Mask
+    condition: Mask
     #: The frame the condition is read over: the dims its condition carries, in the
     #: order ``dimensions:`` declares them.
     dims: tuple[str, ...]

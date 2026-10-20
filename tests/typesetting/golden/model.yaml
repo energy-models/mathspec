@@ -162,7 +162,7 @@ expressions:
 
 conditions:
   dispatchable: # a named condition with its words: a use prints the symbol over the dims its condition reads, the condition prints once
-    where: "p_max > 0 AND NOT is_flexible"
+    condition: "p_max > 0 AND NOT is_flexible"
     description: a unit that dispatches and cannot be turned down
   priced_dispatch: "dispatchable AND spend_cap > 0" # the one-line form, reading another mask and a data-only entry
 

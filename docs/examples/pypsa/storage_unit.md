@@ -359,12 +359,12 @@ conditions:
     description: >-
       a storage unit with a fixed build that stands in the snapshot's period —
       PyPSA's `fix` rows
-    where: NOT StorageUnit_p_nom_extendable AND StorageUnit_active
+    condition: NOT StorageUnit_p_nom_extendable AND StorageUnit_active
   StorageUnit_ext:
     description: >-
       a storage unit with an extendable build that stands in the snapshot's
       period — PyPSA's `ext` rows
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    condition: StorageUnit_p_nom_extendable AND StorageUnit_active
 
 constraints:
   StorageUnit_fix_p_dispatch_lower:

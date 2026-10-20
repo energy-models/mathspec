@@ -88,8 +88,12 @@
       "anyOf": [
         {
           "additionalProperties": false,
-          "description": "A named condition: one condition, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.\n\nWritten in YAML as a bare string, or as a mapping once it carries a\n``description:``, and serialised back to whichever form it was written in::\n\n    conditions:\n      committable: \"Generator_committable AND Generator_active\"\n      stands:\n        where: build_year <= period_year AND period_year < build_year + lifetime\n        description: the generator stands in this period\n\nIts bare name in another condition stands for it, inside ``count``,\n``shift`` and ``at`` too. Its frame is the dims its condition reads, so\nit declares none. It is true or false, so it is never a value in an\nexpression.",
+          "description": "A named condition: one condition, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.\n\nWritten in YAML as a bare string, or as a mapping once it carries a\n``description:``, and serialised back to whichever form it was written in::\n\n    conditions:\n      committable: \"Generator_committable AND Generator_active\"\n      stands:\n        condition: build_year <= period_year AND period_year < build_year + lifetime\n        description: the generator stands in this period\n\nIts bare name in another condition stands for it, inside ``count``,\n``shift`` and ``at`` too. Its frame is the dims its condition reads, so\nit declares none. It is true or false, so it is never a value in an\nexpression.",
           "properties": {
+            "condition": {
+              "title": "Condition",
+              "type": "string"
+            },
             "description": {
               "anyOf": [
                 {
@@ -101,14 +105,10 @@
               ],
               "default": null,
               "title": "Description"
-            },
-            "where": {
-              "title": "Where",
-              "type": "string"
             }
           },
           "required": [
-            "where"
+            "condition"
           ],
           "title": "ConditionSpec",
           "type": "object"

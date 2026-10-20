@@ -157,7 +157,7 @@ conditions:
       a committable process with an extendable, non-modular build that stands
       in the snapshot's period — PyPSA's `com-ext` rows, whose status is
       relaxed against the chosen build
-    where: >-
+    condition: >-
       Process_committable
       AND Process_p_nom_extendable
       AND NOT (Process_p_nom_mod > 0)

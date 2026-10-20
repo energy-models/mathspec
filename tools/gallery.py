@@ -268,12 +268,13 @@ def declared_block(path: Path) -> str:
     objective = _section(math, 'Objective').strip().removeprefix('#### Objective').strip()
     equation = equations(_section(math, 'Subject to'))
     definition = equations(_section(math, 'Definitions')) if model.expressions else {}
-    mask = equations(_section(math, 'Conditions')) if model.conditions else {}
+    defined = equations(_section(math, 'Conditions')) if model.conditions else {}
     domains = _section(math, 'Variable domains').strip()
     assumption = equations(_section(math, 'Assumptions')) if model.assumptions else {}
     parts = [legend.strip()]
     parts.extend(
-        f'### `{name}`\n\n```yaml\n{entry(text, "conditions", name)}\n```\n\n{mask[name]}' for name in model.conditions
+        f'### `{name}`\n\n```yaml\n{entry(text, "conditions", name)}\n```\n\n{defined[name]}'
+        for name in model.conditions
     )
     parts.append(domains)
     parts.extend(

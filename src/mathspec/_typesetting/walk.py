@@ -759,7 +759,7 @@ class Walk:
         return Line(
             label=name,
             left=ctx.indexed(self.symbols.name[name], frame),
-            right=f'{self._op("iff")} {self._condition(entry.where.root, ctx)}',
+            right=f'{self._op("iff")} {self._condition(entry.condition.root, ctx)}',
             condition=self._quantifier(frame, ''),
         )
 

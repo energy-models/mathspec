@@ -157,7 +157,7 @@ conditions:
       a committable link with an extendable, non-modular build that stands in
       the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed
       against the chosen build
-    where: >-
+    condition: >-
       Link_committable
       AND Link_p_nom_extendable
       AND NOT (Link_p_nom_mod > 0)

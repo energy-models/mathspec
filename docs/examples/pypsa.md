@@ -5969,7 +5969,7 @@ Generator_com_ext:
     a committable generator with an extendable, non-modular build that
     stands in the snapshot's period — PyPSA's `com-ext` rows, whose status
     is relaxed against the chosen build
-  where: >-
+  condition: >-
     Generator_committable
     AND Generator_p_nom_extendable
     AND NOT (Generator_p_nom_mod > 0)
@@ -5988,7 +5988,7 @@ Generator_maint_ext:
     a maintainable generator with an extendable build, unless it is
     committable and modular, that stands in the snapshot's period — the
     maintenance rows against the chosen build
-  where: >-
+  condition: >-
     Generator_maintainable
     AND Generator_p_nom_extendable
     AND NOT (Generator_committable AND Generator_p_nom_mod > 0)
@@ -6006,7 +6006,7 @@ Generator_committed:
   description: >-
     a committable generator that stands in the snapshot's period — every
     unit-commitment row's set
-  where: Generator_committable AND Generator_active
+  condition: Generator_committable AND Generator_active
 ```
 
 ```math
@@ -6021,7 +6021,7 @@ Generator_ramps_from_previous:
     a snapshot whose ramp reads a previous output — any snapshot but its
     period's first, and the horizon's first where the generator comes in off
     or carries an initial output
-  where: >-
+  condition: >-
     position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
     (Generator_status_initial == 0 OR Generator_p_init))
 ```
@@ -6038,7 +6038,7 @@ Link_com_ext:
     a committable link with an extendable, non-modular build that stands in
     the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed
     against the chosen build
-  where: >-
+  condition: >-
     Link_committable
     AND Link_p_nom_extendable
     AND NOT (Link_p_nom_mod > 0)
@@ -6057,7 +6057,7 @@ Link_maint_ext:
     a maintainable link with an extendable build, unless it is committable
     and modular, that stands in the snapshot's period — the maintenance rows
     against the chosen build
-  where: >-
+  condition: >-
     Link_maintainable
     AND Link_p_nom_extendable
     AND NOT (Link_committable AND Link_p_nom_mod > 0)
@@ -6075,7 +6075,7 @@ Link_committed:
   description: >-
     a committable link that stands in the snapshot's period — every
     unit-commitment row's set
-  where: Link_committable AND Link_active
+  condition: Link_committable AND Link_active
 ```
 
 ```math
@@ -6090,7 +6090,7 @@ Link_ramps_from_previous:
     a snapshot whose ramp reads a previous output — any snapshot but its
     period's first, and the horizon's first where the link comes in off or
     carries an initial output
-  where: >-
+  condition: >-
     position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
     (Link_status_initial == 0 OR Link_p_init))
 ```
@@ -6107,7 +6107,7 @@ Process_com_ext:
     a committable process with an extendable, non-modular build that stands
     in the snapshot's period — PyPSA's `com-ext` rows, whose status is
     relaxed against the chosen build
-  where: >-
+  condition: >-
     Process_committable
     AND Process_p_nom_extendable
     AND NOT (Process_p_nom_mod > 0)
@@ -6126,7 +6126,7 @@ Process_maint_ext:
     a maintainable process with an extendable build, unless it is
     committable and modular, that stands in the snapshot's period — the
     maintenance rows against the chosen build
-  where: >-
+  condition: >-
     Process_maintainable
     AND Process_p_nom_extendable
     AND NOT (Process_committable AND Process_p_nom_mod > 0)
@@ -6144,7 +6144,7 @@ Process_committed:
   description: >-
     a committable process that stands in the snapshot's period — every
     unit-commitment row's set
-  where: Process_committable AND Process_active
+  condition: Process_committable AND Process_active
 ```
 
 ```math
@@ -6159,7 +6159,7 @@ Process_ramps_from_previous:
     a snapshot whose ramp reads a previous output — any snapshot but its
     period's first, and the horizon's first where the process comes in off
     or carries an initial output
-  where: >-
+  condition: >-
     position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
     (Process_status_initial == 0 OR Process_p_init))
 ```
@@ -6175,7 +6175,7 @@ StorageUnit_fix:
   description: >-
     a storage unit with a fixed build that stands in the snapshot's period —
     PyPSA's `fix` rows
-  where: NOT StorageUnit_p_nom_extendable AND StorageUnit_active
+  condition: NOT StorageUnit_p_nom_extendable AND StorageUnit_active
 ```
 
 ```math
@@ -6189,7 +6189,7 @@ StorageUnit_ext:
   description: >-
     a storage unit with an extendable build that stands in the snapshot's
     period — PyPSA's `ext` rows
-  where: StorageUnit_p_nom_extendable AND StorageUnit_active
+  condition: StorageUnit_p_nom_extendable AND StorageUnit_active
 ```
 
 ```math
@@ -6203,7 +6203,7 @@ Line_lossy:
   description: >-
     a line that stands in the snapshot's period, where the run models
     transmission losses
-  where: transmission_losses AND Line_active
+  condition: transmission_losses AND Line_active
 ```
 
 ```math
@@ -6217,7 +6217,7 @@ Transformer_lossy:
   description: >-
     a transformer that stands in the snapshot's period, where the run models
     transmission losses
-  where: transmission_losses AND Transformer_active
+  condition: transmission_losses AND Transformer_active
 ```
 
 ```math

@@ -112,7 +112,7 @@ def notice(program: Program) -> Noticed:
     for curve in program.piecewise.values():
         expressions(*(link.expression for link in curve.links))
     for named in program.conditions.values():
-        masks(named.where)
+        masks(named.condition)
     for entry in (*program.constraints.values(), *program.variables.values()):
         if entry.where is not None:
             masks(entry.where)

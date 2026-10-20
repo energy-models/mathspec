@@ -235,7 +235,7 @@ conditions:
     description: >-
       a committable generator that stands in the snapshot's period — every
       unit-commitment row's set
-    where: Generator_committable AND Generator_active
+    condition: Generator_committable AND Generator_active
 
 constraints:
   Generator_fix_p_lower:

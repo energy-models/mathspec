@@ -148,7 +148,7 @@ holds, and its value is the body's value. `children()` steps into the body, so
 a walk reads through it.
 
 A `ConditionReference` stands where a `conditions:` entry is read. Its `body` is the
-condition of the entry, the root of `program.conditions[name].where`, and it is true
+condition of the entry, the root of `program.conditions[name].condition`, and it is true
 where the body is true. `where_children()` steps into the body, so `.atoms`,
 `.names_read` and `.dims` read through it, and an engine that builds rows needs
 nothing from `program.conditions`.

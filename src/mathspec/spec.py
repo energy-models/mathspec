@@ -745,7 +745,7 @@ class ConditionSpec(_StrictSpec):
         conditions:
           committable: "Generator_committable AND Generator_active"
           stands:
-            where: build_year <= period_year AND period_year < build_year + lifetime
+            condition: build_year <= period_year AND period_year < build_year + lifetime
             description: the generator stands in this period
 
     Its bare name in another condition stands for it, inside ``count``,
@@ -757,13 +757,13 @@ class ConditionSpec(_StrictSpec):
     _label: ClassVar[str] = 'a condition entry'
 
     #: The condition, in the condition grammar.
-    where: str
+    condition: str
     description: str | None = None
 
     @model_validator(mode='before')
     @classmethod
     def _from_string(cls, data: object) -> object:
-        return {'where': data} if isinstance(data, str) else data
+        return {'condition': data} if isinstance(data, str) else data
 
     @classmethod
     @override
@@ -774,8 +774,8 @@ class ConditionSpec(_StrictSpec):
     @model_serializer
     def _as_written(self) -> str | dict[str, object]:
         if self.description is None:
-            return self.where
-        return {'where': self.where, 'description': self.description}
+            return self.condition
+        return {'condition': self.condition, 'description': self.description}
 
 
 class AssumptionSpec(_StrictSpec):

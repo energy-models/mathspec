@@ -89,7 +89,7 @@ def test_a_named_condition_and_a_constraint_of_one_name_are_refused_rather_than_
     shared = to_spec(
         {
             **spec.to_dict(),
-            'conditions': {'busy': {'where': 'load > 0'}},
+            'conditions': {'busy': {'condition': 'load > 0'}},
             'constraints': {'busy': {'dims': ['snapshot'], 'expression': 'sum(dispatch, over=generator) >= load'}},
         }
     )

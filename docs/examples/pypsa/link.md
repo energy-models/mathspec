@@ -294,7 +294,7 @@ conditions:
     description: >-
       a committable link that stands in the snapshot's period — every
       unit-commitment row's set
-    where: Link_committable AND Link_active
+    condition: Link_committable AND Link_active
 
 constraints:
   Link_fix_p_lower:

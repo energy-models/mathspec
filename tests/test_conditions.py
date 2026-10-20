@@ -37,7 +37,7 @@ CORE: dict[str, Any] = {
         'period_year': {'dims': ['period']},
         'p_nom': {'dims': ['generator']},
     },
-    'conditions': {'stands': {'where': STANDS, 'description': 'the unit stands in this period'}},
+    'conditions': {'stands': {'condition': STANDS, 'description': 'the unit stands in this period'}},
     'variables': {'p': {'dims': FRAME, 'where': 'stands', 'bounds': {'lower': 0}}},
     'constraints': {'cap': {'dims': FRAME, 'where': 'stands', 'expression': 'p <= p_nom'}},
     'objective': {'sense': 'minimize', 'expression': 'sum(p, over=[period, generator])'},
@@ -61,7 +61,9 @@ def test_a_named_condition_stands_where_its_name_is_written_with_its_condition_u
     program = to_spec(CORE).program
     where = program.constraints['cap'].where
     assert where is not None and isinstance(where.root, ConditionReference), 'the use keeps the name the file wrote'
-    assert where.root.body == program.conditions['stands'].where.root, 'and carries the condition the entry declares'
+    assert where.root.body == program.conditions['stands'].condition.root, (
+        'and carries the condition the entry declares'
+    )
     assert program.conditions['stands'].dims == ('period', 'generator')
     assert where.names_read == {'build_year', 'lifetime', 'period_year'}, 'a mask reads what its condition reads'
     assert where.dims == {'period', 'generator'}
@@ -115,7 +117,7 @@ def test_a_named_condition_declares_no_frame():
     its frame, so the closed schema now refuses ``dims:`` on a mask.
     """
     young = {
-        'conditions.young': {'dims': FRAME, 'where': 'lifetime > 10'},
+        'conditions.young': {'dims': FRAME, 'condition': 'lifetime > 10'},
         'constraints.total': {'dims': ['generator'], 'where': 'young', 'expression': 'sum(p, over=period) <= p_nom'},
     }
     with pytest.raises(LanguageError, match=r"conditions\.young: unknown key 'dims' in a condition entry"):
@@ -275,8 +277,8 @@ def test_two_fragments_that_define_one_named_condition_collide():
 
 
 def test_a_patch_rewrites_a_named_condition_s_condition():
-    laid = override(CORE, [{'conditions': {'stands': {'where': 'lifetime > 0'}}}])
-    assert laid.conditions['stands'].where == 'lifetime > 0'
+    laid = override(CORE, [{'conditions': {'stands': {'condition': 'lifetime > 0'}}}])
+    assert laid.conditions['stands'].condition == 'lifetime > 0'
     assert laid.conditions['stands'].description == 'the unit stands in this period', (
         'a patch says only what it changes'
     )
@@ -313,6 +315,6 @@ def test_the_fixtures_are_never_mutated():
 def test_a_named_condition_with_no_declared_frame_takes_the_dims_its_condition_reads():
     spec = to_spec(varied(SMALL_MODEL, **{'conditions.a': 'c > 0 AND flag'}))
     assert spec.program.conditions['a'].dims == ('g',)
-    assert spec.program.conditions['a'].where == Mask(spec.program.conditions['a'].where.root), (
+    assert spec.program.conditions['a'].condition == Mask(spec.program.conditions['a'].condition.root), (
         'the condition is folded'
     )

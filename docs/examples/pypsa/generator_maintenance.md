@@ -123,7 +123,7 @@ conditions:
       a maintainable generator with an extendable build, unless it is
       committable and modular, that stands in the snapshot's period — the
       maintenance rows against the chosen build
-    where: >-
+    condition: >-
       Generator_maintainable
       AND Generator_p_nom_extendable
       AND NOT (Generator_committable AND Generator_p_nom_mod > 0)

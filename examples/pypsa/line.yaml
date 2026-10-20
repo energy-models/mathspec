@@ -258,7 +258,7 @@ conditions:
     description: >-
       a line that stands in the snapshot's period, where the run models
       transmission losses
-    where: transmission_losses AND Line_active
+    condition: transmission_losses AND Line_active
 
 constraints:
   Line_fix_s_lower:

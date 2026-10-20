@@ -525,12 +525,12 @@ def _named_condition(name: str, entry: ConditionSpec, ns: Namespace, errors: lis
     or for none narrows nothing a `where:` could not say plainly.
     """
     context = f"Condition '{name}'"
-    body = resolve_where_text(entry.where, ns, context, errors)
+    body = resolve_where_text(entry.condition, ns, context, errors)
     if body is None:
         return None
     if isinstance(body, BooleanLiteral):
         errors.append(
-            f'{context}: the condition {entry.where!r} folds to {str(body.value).lower()}, so it '
+            f'{context}: the condition {entry.condition!r} folds to {str(body.value).lower()}, so it '
             f'{"admits every row" if body.value else "admits no row"} and names nothing a `where:` needs. '
             f'Delete it, or write the condition over the data.'
         )

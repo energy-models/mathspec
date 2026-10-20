@@ -266,7 +266,7 @@ conditions:
     description: >-
       a transformer that stands in the snapshot's period, where the run models
       transmission losses
-    where: transmission_losses AND Transformer_active
+    condition: transmission_losses AND Transformer_active
 
 constraints:
   Transformer_fix_s_lower:

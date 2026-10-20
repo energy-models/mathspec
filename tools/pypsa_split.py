@@ -18,9 +18,9 @@ what another topic declares under `given:`; each term names the hub it adds to
 with `adds_to:`, and the fragment reads that hub under `given:`. One fragment
 reads each hub without adding to it, with its description, so the terms always
 have a reader, and a new component is one new fragment. The reader of
-`total_cost` also sets the objective. A mask goes to the topic its name
-names, as any entry does, and a fragment that reads another topic's
-mask reads it under `given: conditions:`.
+`total_cost` also sets the objective. A named condition goes to the topic its
+name names, as any entry does, and a fragment that reads another topic's
+named condition reads it under `given: conditions:`.
 
 `merge` then writes each hub as the file does, so `check` is one comparison:
 the merged fragments and the one file have one canonical form.
@@ -231,7 +231,7 @@ class Model:
         return list(self.entries)
 
     def frames(self) -> dict[str, tuple[str, ...]]:
-        """The frame of every named expression and mask, read off the one file."""
+        """The frame of every named expression and named condition, read off the one file."""
         program = to_spec(self.data).program
         return {
             **{name: e.dims for name, e in program.expressions.items()},

@@ -204,7 +204,7 @@ parameters:
   p_nom: { dims: [generator] }
 conditions:
   stands:
-    where: build_year <= period_year AND period_year < build_year + lifetime
+    condition: build_year <= period_year AND period_year < build_year + lifetime
     description: the generator stands in this period
 variables:
   p:
@@ -232,7 +232,7 @@ p_{e,g} - p_{e - 1,g} \le 0.5 \cdot \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall
 
 | Field         |                                                                                |                |
 | ------------- | ------------------------------------------------------------------------------ | -------------- |
-| `where`       | required. The condition, in the [condition grammar](expressions.md#conditions) |                |
+| `condition`   | required. The condition, in the [condition grammar](expressions.md#conditions) |                |
 | `description` | free text                                                                      | default `null` |
 
 An entry with no `description:` may be the bare condition.

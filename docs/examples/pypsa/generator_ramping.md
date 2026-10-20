@@ -152,7 +152,7 @@ conditions:
       a snapshot whose ramp reads a previous output — any snapshot but its
       period's first, and the horizon's first where the generator comes in off
       or carries an initial output
-    where: >-
+    condition: >-
       position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
       (Generator_status_initial == 0 OR Generator_p_init))
 

@@ -120,7 +120,7 @@ conditions:
       a maintainable link with an extendable build, unless it is committable
       and modular, that stands in the snapshot's period — the maintenance rows
       against the chosen build
-    where: >-
+    condition: >-
       Link_maintainable
       AND Link_p_nom_extendable
       AND NOT (Link_committable AND Link_p_nom_mod > 0)
