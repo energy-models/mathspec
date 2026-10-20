@@ -60,7 +60,7 @@ parameters:
       `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [scenario, generator]
-    missing: 0
+    missing: absent
   Generator_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it

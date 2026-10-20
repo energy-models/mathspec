@@ -25,7 +25,7 @@ parameters:
   CVaR_alpha:
     description: PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega`
     dims: []
-    missing: 0
+    missing: absent
 
 variables:
   CVaR_a:
@@ -83,7 +83,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\alpha`$ | `CVaR_alpha` (scalar), $`0`$ where the data has no row — PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega` |
+| $`\alpha`$ | `CVaR_alpha` (scalar), `absent` where the data has no row — PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega` |
 
 #### Variables
 

@@ -60,7 +60,7 @@ parameters:
       `Process_maintenance_cover` and `Process_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [scenario, process]
-    missing: 0
+    missing: absent
   Process_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it
