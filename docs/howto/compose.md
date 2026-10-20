@@ -391,13 +391,21 @@ as the base spells it.
 ## A dimension redeclared
 
 A patch may add a dimension or a relation, and may restate one the base
-declares. The restatement says what the base says: half an entry is a
-second reading of the same name, and a field written at its default is the
-same as one left out. Changing one under the expressions already written
-over it is refused, and so is removing one:
+declares. Each field of a dimension or a relation has one of three roles:
+
+| Role  | Fields                                                 | In a patch                                    |
+| ----- | ------------------------------------------------------ | --------------------------------------------- |
+| space | a dimension's `dtype`, a relation's `key` and `values` | restated as the base declares it, or left out |
+| claim | a dimension's `ordered`, a relation's `missing`        | laid over the base's value                    |
+| prose | `description`                                          | laid over the base's value; `null` removes it |
+
+A patch that writes a field of the space restates the whole space. A field of
+the space that it leaves out reads as its default, so the restatement must say
+what the base says. A change of the space under the expressions already written
+over it is refused, and so is the removal of the entry:
 
 ```text
-patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch adjusts the math, not the coordinate space the math is already written over: each field but `ordered` and `description` has to read as the base reads it, and a field the patch leaves out reads as its default. Restate the dimension as its base declares it, leave it out, or give the patch a dimension of its own under a name of its own.
+patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch adjusts the math, not the coordinate space the math is already written over: each field but `description` and `ordered` has to read as the base reads it, and a field the patch leaves out reads as its default. Restate the dimension as its base declares it, leave it out, or give the patch a dimension of its own under a name of its own.
 ```
 
 `ordered` says that the members of a dimension have an order, and it does not

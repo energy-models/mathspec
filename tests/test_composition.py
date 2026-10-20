@@ -614,9 +614,27 @@ def test_a_patch_that_restates_a_shared_entry_gives_it_its_own_description(base,
     assert read(override(base, [patch])) == description, "the patch's description, not the base's"
 
 
-def test_a_patch_that_withdraws_ordered_is_refused():
+def test_a_patch_may_add_ordered_alone():
+    """A patch that wrote only `ordered: true` was compared as a whole restatement of the dimension.
+
+    Its `dtype` read as the default, so over a dimension of another dtype it was refused.
+    """
+    base = varied(DISPATCH_MODEL, **{'dimensions.generator.dtype': 'int'})
+    assert override(base, [{'dimensions': {'generator': {'ordered': True}}}]).dimensions['generator'].ordered
+
+
+@pytest.mark.parametrize(
+    'restated',
+    [
+        pytest.param({'dtype': 'int', 'ordered': False}, id='written-false'),
+        pytest.param({'ordered': False}, id='false-alone'),
+        pytest.param({'ordered': None}, id='null'),
+    ],
+)
+def test_a_patch_that_withdraws_ordered_is_refused(restated):
+    """`ordered: null` over an ordered dimension was refused by the schema, without the rewrite."""
     with pytest.raises(LanguageError, match=r"says the dimension 'snapshot' is not ordered") as raised:
-        override(DISPATCH_MODEL, [{'dimensions': {'snapshot': {'dtype': 'int', 'ordered': False}}}])
+        override(DISPATCH_MODEL, [{'dimensions': {'snapshot': restated}}])
     assert 'Leave `ordered` out of the patch' in str(raised.value), 'the refusal names the rewrite'
 
 
