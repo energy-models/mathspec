@@ -31,7 +31,7 @@ RELAXED_COMPOSED = ROOT / 'examples' / 'pypsa_linearized_uc.yaml'
 DEFAULT = (
     'surface',
     'power_flow',
-    'cost',
+    'risk',
     'carrier',
     'global_constraints',
     'security',

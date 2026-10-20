@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The surface
 
-This file states what every model shares: the weightings, the risk preference, the flags, the balance at each bus and the objective. It is one of the [fragments](index.md) that merge into `examples/pypsa.yaml`. It reads every sum that the components add to under `given:`, with its description, and adds nothing to them, so the terms always have a reader. The cycle sum is the exception, and [power flow](power_flow.md) reads it. The objective reads `total_cost`.
+This file states what every model shares: the weightings, the flags, the balance at each bus, the system cost and the objective. It is one of the [fragments](index.md) that merge into `examples/pypsa.yaml`. It defines `total_cost` as the operating cost in expectation over the scenarios, and the components and [the risk preference](risk.md) add to it. It reads every other sum that the components add to under `given:`, with its description, and adds nothing to them, so the terms always have a reader. The cycle sum is the exception, and [power flow](power_flow.md) reads it. The objective reads `total_cost`.
 
 <!-- gallery:begin -->
 ```yaml
@@ -47,12 +47,6 @@ given:
         snapshot's hours and its period, before the scenario's own weight; a
         start and a stop cost what they cost, unweighted, as PyPSA adds them
         (`optimize.py:415-432`)
-    total_cost:
-      dims: []
-      description: >-
-        what the system costs — capacity once per active period at its expected
-        cost over the scenarios, operation in expectation over the scenarios,
-        and a share of it at the tail
     Carrier_additions:
       dims: [period, carrier]
       description: >-
@@ -98,10 +92,6 @@ parameters:
   scenario_weight:
     description: PyPSA's `scenario_weightings.weight` — the probability of a future
     dims: [scenario]
-  CVaR_omega:
-    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one
-    dims: []
-    missing: neutral
   period_weight_objective:
     description: >-
       PyPSA's `investment_period_weightings.objective` — what a period's cost
@@ -145,6 +135,14 @@ parameters:
     missing: neutral
 
 expressions:
+  total_cost:
+    description: >-
+      what the system costs — operation in expectation over the scenarios,
+      weighted by each scenario's weight; each component adds its capacity,
+      once per active period at its expected cost over the scenarios, and a
+      risk preference adds a share of operation priced at the tail
+    dims: []
+    expression: sum(scenario_weight * scenario_opex, over=scenario)
   GlobalConstraint_energy_weight:
     description: >-
       what one unit of power at a snapshot counts for in a row — the
@@ -188,7 +186,6 @@ objective:
 | $`\mathit{transmission\_expansion\_cost}`$ | `transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$, an expression another file defines — what a `transmission_expansion_cost_limit` row totals — capital cost times the chosen build of the row's branches |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression another file defines — what a `tech_capacity_expansion_limit` row totals — the chosen build of the row's carrier-and-bus set |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression another file defines — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:415-432`) |
-| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression another file defines — what the system costs — capacity once per active period at its expected cost over the scenarios, operation in expectation over the scenarios, and a share of it at the tail |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression another file defines — what a carrier adds in a period — every extendable component of that carrier, counting each build in the first period it stands in. Like PyPSA, it sums only the components that carry a carrier attribute, so a transformer, which has none, counts in no carrier |
 | $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression another file defines — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
 
@@ -209,7 +206,6 @@ objective:
 |---|---|
 | $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.objective` — hours a snapshot stands for in the cost |
 | $`\pi`$ | `scenario_weight` over $`\Xi`$ — PyPSA's `scenario_weightings.weight` — the probability of a future |
-| $`\omega`$ | `CVaR_omega` (scalar), `neutral` where the data has no row — PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.objective` — what a period's cost weighs; PyPSA reads it only under `multi_investment_periods`, so data prep feeds one otherwise, whatever the column holds (`optimize.py:205-207`, `:264-266`) |
 | $`\mathrm{w}^{\mathrm{yr}}`$ | `period_weight_years` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.years` — what a period's energy weighs in a `primary_energy` or `operational_limit` row; PyPSA reads it only under `multi_investment_periods`, so data prep feeds one otherwise |
 | $`\mathrm{w}^{\mathrm{sto}}`$ | `snapshot_weightings_stores` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.stores` — hours a snapshot stands for in a storage balance |
@@ -221,9 +217,16 @@ objective:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar) — what the system costs — operation in expectation over the scenarios, weighted by each scenario's weight; each component adds its capacity, once per active period at its expected cost over the scenarios, and a risk preference adds a share of operation priced at the tail |
 | $`\mathit{w}^{\mathrm{gc}}`$ | `GlobalConstraint_energy_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — what one unit of power at a snapshot counts for in a row — the generator weighting times the years of the snapshot's period, where the row counts the snapshot, and nothing where it does not |
 
 #### Definitions
+
+**`total_cost`**
+
+```math
+\mathit{total\_cost} = \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi}
+```
 
 **`GlobalConstraint_energy_weight`**
 

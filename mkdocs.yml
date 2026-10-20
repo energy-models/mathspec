@@ -101,7 +101,8 @@ nav:
               - examples/pypsa/index.md
               - The surface: examples/pypsa/surface.md
               - Power flow: examples/pypsa/power_flow.md
-              - The cost: examples/pypsa/cost.md
+              - The risk preference: examples/pypsa/risk.md
+              - No risk preference: examples/pypsa/risk_neutral.md
               - Carriers: examples/pypsa/carrier.md
               - Global constraints: examples/pypsa/global_constraints.md
               - Security: examples/pypsa/security.md

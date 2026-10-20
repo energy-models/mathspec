@@ -5,7 +5,6 @@
 given:
   parameters:
     scenario_weight: { dims: [scenario] }
-    CVaR_omega: { dims: [] }
   expressions:
     scenario_opex: { dims: [scenario] }
     total_cost: { dims: [] }
@@ -15,6 +14,10 @@ dimensions:
     description: the futures dispatch is chosen in, each with a weight
 
 parameters:
+  CVaR_omega:
+    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one
+    dims: []
+    missing: neutral
   CVaR_alpha:
     description: PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega`
     dims: []
@@ -40,8 +43,13 @@ variables:
     missing: neutral
 
 expressions:
-  risk_weighted_opex:
-    expression: (1 - CVaR_omega) * sum(scenario_weight * scenario_opex, over=scenario) + CVaR_omega * CVaR
+  CVaR_tail_premium:
+    description: >-
+      what pricing the share `omega` of operation at the tail adds to its
+      expectation — `omega` times the tail's average less the expectation, so
+      the system cost is `(1 - omega)` of the expectation plus `omega` of the
+      tail
+    expression: CVaR_omega * (CVaR - sum(scenario_weight * scenario_opex, over=scenario))
     adds_to: total_cost
 
 constraints:

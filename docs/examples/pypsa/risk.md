@@ -3,16 +3,15 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# The cost
+# The risk preference
 
-This file states the expected operating cost and its tail, weighted by scenario. It is one of the [fragments](index.md) that merge into `examples/pypsa.yaml`. It adds a term to the sum `total_cost`. It reads `CVaR_omega`, `scenario_opex` and `scenario_weight`, which other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states PyPSA's risk preference: the share `CVaR_omega` of operating cost priced at the tail of the scenarios rather than in expectation. It is one of the [fragments](index.md) that merge into `examples/pypsa.yaml` and its variants. It declares `CVaR_omega`, and a model takes this file or [no risk preference](risk_neutral.md), never both. It adds a term to the sum `total_cost`, the share `omega` of the tail's average less the expectation. It reads `scenario_opex` and `scenario_weight`, which other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
 given:
   parameters:
     scenario_weight: { dims: [scenario] }
-    CVaR_omega: { dims: [] }
   expressions:
     scenario_opex: { dims: [scenario] }
     total_cost: { dims: [] }
@@ -22,6 +21,10 @@ dimensions:
     description: the futures dispatch is chosen in, each with a weight
 
 parameters:
+  CVaR_omega:
+    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one
+    dims: []
+    missing: neutral
   CVaR_alpha:
     description: PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega`
     dims: []
@@ -47,8 +50,13 @@ variables:
     missing: neutral
 
 expressions:
-  risk_weighted_opex:
-    expression: (1 - CVaR_omega) * sum(scenario_weight * scenario_opex, over=scenario) + CVaR_omega * CVaR
+  CVaR_tail_premium:
+    description: >-
+      what pricing the share `omega` of operation at the tail adds to its
+      expectation — `omega` times the tail's average less the expectation, so
+      the system cost is `(1 - omega)` of the expectation plus `omega` of the
+      tail
+    expression: CVaR_omega * (CVaR - sum(scenario_weight * scenario_opex, over=scenario))
     adds_to: total_cost
 
 constraints:
@@ -69,9 +77,8 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
-| $`\omega`$ | `CVaR_omega` (scalar), data another file declares |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression another file defines |
-| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `risk_weighted_opex` to |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `CVaR_tail_premium` to |
 
 #### Sets
 
@@ -83,6 +90,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
+| $`\omega`$ | `CVaR_omega` (scalar), `neutral` where the data has no row — PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one |
 | $`\alpha`$ | `CVaR_alpha` (scalar), `neutral` where the data has no row — PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega` |
 
 #### Variables
@@ -97,7 +105,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{risk\_weighted\_opex}`$ | `risk_weighted_opex` (scalar) |
+| $`\mathit{CVaR}^{\mathrm{tail,premium}}`$ | `CVaR_tail_premium` (scalar) — what pricing the share `omega` of operation at the tail adds to its expectation — `omega` times the tail's average less the expectation, so the system cost is `(1 - omega)` of the expectation plus `omega` of the tail |
 
 #### Variable domains
 
@@ -121,10 +129,10 @@ CVaR \in \mathbb{R} \qquad \text{where } \omega \text{ is defined}
 
 #### Definitions
 
-**`risk_weighted_opex`**
+**`CVaR_tail_premium`**
 
 ```math
-\mathit{risk\_weighted\_opex} = \left( 1 - \omega \right) \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi} \right) + \omega \cdot CVaR
+\mathit{CVaR}^{\mathrm{tail,premium}} = \omega \cdot \left( CVaR - \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi} \right) \right)
 ```
 
 #### Subject to

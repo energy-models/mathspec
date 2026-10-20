@@ -51,7 +51,7 @@ def test_a_fragment_loads_on_its_own(name):
 
 
 def test_the_default_set_is_every_fragment_but_the_alternatives():
-    alternatives = {f'{kind}/{layer}' for kind in CLASSES for layer in OUTSIDE_THE_DEFAULT}
+    alternatives = {'risk_neutral', *(f'{kind}/{layer}' for kind in CLASSES for layer in OUTSIDE_THE_DEFAULT)}
     assert sorted({*DEFAULT, *alternatives}) == sorted(PATHS), (
         'a fragment the composed file leaves out, or a name no file has'
     )
@@ -75,7 +75,6 @@ def test_each_sum_is_its_terms_by_name_and_each_term_stays():
 #: them, which the test below holds.
 OPTIONAL = [
     'carrier',
-    'cost',
     'global_constraints',
     'security',
     'load',
@@ -213,6 +212,34 @@ def test_no_commitment_refuses_a_committable_unit(kind):
     component = kind.capitalize()
     assumption = to_spec(FOLDER / kind / 'commitment_none.yaml').assumptions[f'{component}_none_committable']
     assert assumption.holds == f'NOT {component}_committable', 'the data may hold no committable unit'
+
+
+@pytest.mark.parametrize(
+    ('files', 'whole'),
+    [
+        pytest.param(('risk',), True, id='risk'),
+        pytest.param(('risk_neutral',), True, id='risk-neutral'),
+        pytest.param((), False, id='neither'),
+        pytest.param(('risk', 'risk_neutral'), False, id='both'),
+    ],
+)
+def test_a_model_takes_exactly_one_risk_file(files, whole):
+    """The components read `CVaR_omega` under `given:`, and only the two risk files declare it."""
+    others = [path for name, path in DEFAULT_PATHS.items() if name != 'risk']
+    try:
+        merged = not merge([*others, *(FOLDER / f'{name}.yaml' for name in files)]).program.given
+    except LanguageError:
+        merged = False
+    assert merged == whole, f'with {files or "no risk file"}: whole is {merged}'
+
+
+def test_no_risk_preference_refuses_a_set_one():
+    """Without it, a risk preference in the data of a model with no risk layer would be ignored."""
+    spec = to_spec(FOLDER / 'risk_neutral.yaml')
+    assert spec.assumptions['CVaR_omega_unset'].holds == 'NOT CVaR_omega', 'the data may set no risk preference'
+    assert spec.parameters['CVaR_omega'].dims == to_spec(FOLDER / 'risk.yaml').parameters['CVaR_omega'].dims, (
+        'the two risk files declare the flag alike'
+    )
 
 
 def test_the_split_index_names_a_hub_once_per_fragment_and_needs_a_described_reader():

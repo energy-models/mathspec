@@ -189,15 +189,6 @@ parameters:
     dims: [scenario]
     dtype: float
     description: PyPSA's `scenario_weightings.weight` — the probability of a future
-  CVaR_omega:
-    dims: []
-    dtype: float
-    missing: neutral
-    description: >-
-      PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation.
-      Data prep writes a row only where a risk preference is set.
-      Without a risk preference, the file has no CVaR variables or rows.
-      With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one
   period_weight_objective:
     dims: [period]
     dtype: float
@@ -227,6 +218,15 @@ parameters:
     description: >-
       whether a row counts a snapshot in a scenario — PyPSA's `investment_period`: every snapshot where the row names none, and only that period's where it names one, data prep.
       A row that names a period the run does not model has no label here, as PyPSA skips it (`global_constraints.py:372`); PyPSA reads the column only under `multi_investment_periods`, and fails on a row that names a period without it (`global_constraints.py:364-369`)
+  CVaR_omega:
+    dims: []
+    dtype: float
+    missing: neutral
+    description: >-
+      PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation.
+      Data prep writes a row only where a risk preference is set.
+      Without a risk preference, the file has no CVaR variables or rows.
+      With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one
   CVaR_alpha:
     dims: []
     dtype: float
@@ -1802,6 +1802,10 @@ variables:
     missing: absent
     description: '`Transformer-n_mod` — how many modules of an extendable modular build; none for a unit that is not active'
 expressions:
+  total_cost:
+    dims: []
+    expression: sum(scenario_weight * scenario_opex, over=scenario) + CVaR_tail_premium + Generator_capex + Link_capex + Process_capex + StorageUnit_capex + Store_capex + Line_capex + Transformer_capex
+    description: what the system costs — operation in expectation over the scenarios, weighted by each scenario's weight; each component adds its capacity, once per active period at its expected cost over the scenarios, and a risk preference adds a share of operation priced at the tail
   GlobalConstraint_energy_weight:
     dims: [scenario, global_constraint, snapshot]
     description: what one unit of power at a snapshot counts for in a row — the generator weighting times the years of the snapshot's period, where the row counts the snapshot, and nothing where it does not
@@ -1810,7 +1814,9 @@ expressions:
         when: GlobalConstraint_counts_snapshot
         expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
     otherwise: '0'
-  risk_weighted_opex: (1 - CVaR_omega) * sum(scenario_weight * scenario_opex, over=scenario) + CVaR_omega * CVaR
+  CVaR_tail_premium:
+    expression: CVaR_omega * (CVaR - sum(scenario_weight * scenario_opex, over=scenario))
+    description: what pricing the share `omega` of operation at the tail adds to its expectation — `omega` times the tail's average less the expectation, so the system cost is `(1 - omega)` of the expectation plus `omega` of the tail
   Carrier_relative_growth:
     dims: [carrier]
     description: the share of the previous period's additions a carrier's growth limit reads — PyPSA's `max_relative_growth` clipped at zero, so a negative share adds nothing and never tightens the limit
@@ -2301,10 +2307,6 @@ expressions:
     dims: [scenario]
     expression: Generator_opex + Generator_commitment_opex + Link_opex + Link_commitment_opex + Process_opex + Process_commitment_opex + StorageUnit_opex + Store_opex
     description: what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:415-432`)
-  total_cost:
-    dims: []
-    expression: risk_weighted_opex + Generator_capex + Link_capex + Process_capex + StorageUnit_capex + Store_capex + Line_capex + Transformer_capex
-    description: what the system costs — capacity once per active period at its expected cost over the scenarios, operation in expectation over the scenarios, and a share of it at the tail
   Carrier_additions:
     dims: [period, carrier]
     expression: Generator_additions + Link_additions + Process_additions + StorageUnit_additions + Store_additions + Line_additions

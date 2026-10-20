@@ -40,12 +40,6 @@ given:
         snapshot's hours and its period, before the scenario's own weight; a
         start and a stop cost what they cost, unweighted, as PyPSA adds them
         (`optimize.py:415-432`)
-    total_cost:
-      dims: []
-      description: >-
-        what the system costs — capacity once per active period at its expected
-        cost over the scenarios, operation in expectation over the scenarios,
-        and a share of it at the tail
     Carrier_additions:
       dims: [period, carrier]
       description: >-
@@ -91,10 +85,6 @@ parameters:
   scenario_weight:
     description: PyPSA's `scenario_weightings.weight` — the probability of a future
     dims: [scenario]
-  CVaR_omega:
-    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one
-    dims: []
-    missing: neutral
   period_weight_objective:
     description: >-
       PyPSA's `investment_period_weightings.objective` — what a period's cost
@@ -138,6 +128,14 @@ parameters:
     missing: neutral
 
 expressions:
+  total_cost:
+    description: >-
+      what the system costs — operation in expectation over the scenarios,
+      weighted by each scenario's weight; each component adds its capacity,
+      once per active period at its expected cost over the scenarios, and a
+      risk preference adds a share of operation priced at the tail
+    dims: []
+    expression: sum(scenario_weight * scenario_opex, over=scenario)
   GlobalConstraint_energy_weight:
     description: >-
       what one unit of power at a snapshot counts for in a row — the

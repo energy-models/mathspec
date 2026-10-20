@@ -5503,13 +5503,13 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 |---|---|
 | $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.objective` — hours a snapshot stands for in the cost |
 | $`\pi`$ | `scenario_weight` over $`\Xi`$ — PyPSA's `scenario_weightings.weight` — the probability of a future |
-| $`\omega`$ | `CVaR_omega` (scalar), `neutral` where the data has no row — PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.objective` — what a period's cost weighs; PyPSA reads it only under `multi_investment_periods`, so data prep feeds one otherwise, whatever the column holds (`optimize.py:205-207`, `:264-266`) |
 | $`\mathrm{w}^{\mathrm{yr}}`$ | `period_weight_years` over $`\mathcal{Y}`$ — PyPSA's `investment_period_weightings.years` — what a period's energy weighs in a `primary_energy` or `operational_limit` row; PyPSA reads it only under `multi_investment_periods`, so data prep feeds one otherwise |
 | $`\mathrm{w}^{\mathrm{sto}}`$ | `snapshot_weightings_stores` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.stores` — hours a snapshot stands for in a storage balance |
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$ — PyPSA's `snapshot_weightings.generators` — hours a snapshot stands for in an energy total |
 | $`\mathrm{lossy}`$ | `transmission_losses` (scalar) — whether the network dissipates transmission losses — PyPSA's `transmission_losses` read as a flag; its mode, tangents or secants, only decides how data prep fills the `segment` axis, the rows are the same; false with no segments is a lossless run. A security-constrained run over a network with passive branches builds no loss: PyPSA does not hand the keyword to `create_model` (`abstract.py:528-532`) but to the solver (`:548`), so data prep feeds false there |
 | $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$, `neutral` where the data has no row — whether a row counts a snapshot in a scenario — PyPSA's `investment_period`: every snapshot where the row names none, and only that period's where it names one, data prep. A row that names a period the run does not model has no label here, as PyPSA skips it (`global_constraints.py:372`); PyPSA reads the column only under `multi_investment_periods`, and fails on a row that names a period without it (`global_constraints.py:364-369`) |
+| $`\omega`$ | `CVaR_omega` (scalar), `neutral` where the data has no row — PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one |
 | $`\alpha`$ | `CVaR_alpha` (scalar), `neutral` where the data has no row — PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega` |
 | $`\overline{\Delta}`$ | `Carrier_max_growth` over $`\mathcal{I}`$, `neutral` where the data has no row — most capacity of a carrier that may be added in a period; no value means no limit. The least over the scenarios, as PyPSA takes it (`global_constraints.py:227-231`), data prep. PyPSA reads it only under `multi_investment_periods` (`global_constraints.py:220-221`), so data prep feeds no value otherwise |
 | $`\mathrm{r}`$ | `Carrier_max_relative_growth` over $`\mathcal{I}`$ — share of the previous period's additions that may be added on top — the least over the scenarios, as PyPSA takes it, data prep |
@@ -5845,8 +5845,9 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar) — what the system costs — operation in expectation over the scenarios, weighted by each scenario's weight; each component adds its capacity, once per active period at its expected cost over the scenarios, and a risk preference adds a share of operation priced at the tail |
 | $`\mathit{w}^{\mathrm{gc}}`$ | `GlobalConstraint_energy_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$ — what one unit of power at a snapshot counts for in a row — the generator weighting times the years of the snapshot's period, where the row counts the snapshot, and nothing where it does not |
-| $`\mathit{risk\_weighted\_opex}`$ | `risk_weighted_opex` (scalar) |
+| $`\mathit{CVaR}^{\mathrm{tail,premium}}`$ | `CVaR_tail_premium` (scalar) — what pricing the share `omega` of operation at the tail adds to its expectation — `omega` times the tail's average less the expectation, so the system cost is `(1 - omega)` of the expectation plus `omega` of the tail |
 | $`\mathrm{r}^{+}`$ | `Carrier_relative_growth` over $`\mathcal{I}`$ — the share of the previous period's additions a carrier's growth limit reads — PyPSA's `max_relative_growth` clipped at zero, so a negative share adds nothing and never tightens the limit |
 | $`\hat{s}`$ | `Outage_s` over $`\Xi \times \mathcal{T} \times \mathcal{K}^{\mathrm{out}}`$ — the flow an outage takes off its branch — the outaged line's or transformer's flow before it goes out |
 | $`\mathrm{p}^{\mathrm{av}}`$ | `Generator_p_nom_available` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the build a unit's output limits are taken against in a snapshot — the effective build, less what maintenance takes out of it, where a maintenance file adds that |
@@ -5958,7 +5959,6 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathit{transmission\_expansion\_cost}`$ | `transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$ — what a `transmission_expansion_cost_limit` row totals — capital cost times the chosen build of the row's branches |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$ — what a `tech_capacity_expansion_limit` row totals — the chosen build of the row's carrier-and-bus set |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$ — what a future costs to run — every operating term, weighted by the snapshot's hours and its period, before the scenario's own weight; a start and a stop cost what they cost, unweighted, as PyPSA adds them (`optimize.py:415-432`) |
-| $`\mathit{total\_cost}`$ | `total_cost` (scalar) — what the system costs — capacity once per active period at its expected cost over the scenarios, operation in expectation over the scenarios, and a share of it at the tail |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$ — what a carrier adds in a period — every extendable component of that carrier, counting each build in the first period it stands in. Like PyPSA, it sums only the components that carry a carrier attribute, so a transformer, which has none, counts in no carrier |
 | $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
 | $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ — the voltage angle differences around a cycle: every branch flow times its cycle weight, and every transformer phase shift |
@@ -6480,6 +6480,19 @@ N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:
 N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0 \wedge \mathrm{act}^{\sigma}_{m}
 ```
 
+### `total_cost`
+
+```yaml
+total_cost:
+  dims: []
+  expression: sum(scenario_weight * scenario_opex, over=scenario) + CVaR_tail_premium + Generator_capex + Link_capex + Process_capex + StorageUnit_capex + Store_capex + Line_capex + Transformer_capex
+  description: what the system costs — operation in expectation over the scenarios, weighted by each scenario's weight; each component adds its capacity, once per active period at its expected cost over the scenarios, and a risk preference adds a share of operation priced at the tail
+```
+
+```math
+\mathit{total\_cost} = \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi} + \mathit{CVaR}^{\mathrm{tail,premium}} + \mathit{Generator\_capex} + \mathit{Link\_capex} + \mathit{Process\_capex} + \mathit{StorageUnit\_capex} + \mathit{Store\_capex} + \mathit{Line\_capex} + \mathit{Transformer\_capex}
+```
+
 ### `GlobalConstraint_energy_weight`
 
 ```yaml
@@ -6497,14 +6510,16 @@ GlobalConstraint_energy_weight:
 \mathit{w}^{\mathrm{gc}}_{\xi,g,t} = \begin{cases} \mathrm{w}^{\mathrm{gen}}_{t} \cdot \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{in}_{\xi,g,t} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
-### `risk_weighted_opex`
+### `CVaR_tail_premium`
 
 ```yaml
-risk_weighted_opex: (1 - CVaR_omega) * sum(scenario_weight * scenario_opex, over=scenario) + CVaR_omega * CVaR
+CVaR_tail_premium:
+  expression: CVaR_omega * (CVaR - sum(scenario_weight * scenario_opex, over=scenario))
+  description: what pricing the share `omega` of operation at the tail adds to its expectation — `omega` times the tail's average less the expectation, so the system cost is `(1 - omega)` of the expectation plus `omega` of the tail
 ```
 
 ```math
-\mathit{risk\_weighted\_opex} = \left( 1 - \omega \right) \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi} \right) + \omega \cdot CVaR
+\mathit{CVaR}^{\mathrm{tail,premium}} = \omega \cdot \left( CVaR - \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot \mathit{scenario\_opex}_{\xi} \right) \right)
 ```
 
 ### `Carrier_relative_growth`
@@ -7994,19 +8009,6 @@ scenario_opex:
 
 ```math
 \mathit{scenario\_opex}_{\xi} = \mathit{Generator\_opex}_{\xi} + \mathit{Generator\_commitment\_opex}_{\xi} + \mathit{Link\_opex}_{\xi} + \mathit{Link\_commitment\_opex}_{\xi} + \mathit{Process\_opex}_{\xi} + \mathit{Process\_commitment\_opex}_{\xi} + \mathit{StorageUnit\_opex}_{\xi} + \mathit{Store\_opex}_{\xi} \qquad \forall\, \xi \in \Xi
-```
-
-### `total_cost`
-
-```yaml
-total_cost:
-  dims: []
-  expression: risk_weighted_opex + Generator_capex + Link_capex + Process_capex + StorageUnit_capex + Store_capex + Line_capex + Transformer_capex
-  description: what the system costs — capacity once per active period at its expected cost over the scenarios, operation in expectation over the scenarios, and a share of it at the tail
-```
-
-```math
-\mathit{total\_cost} = \mathit{risk\_weighted\_opex} + \mathit{Generator\_capex} + \mathit{Link\_capex} + \mathit{Process\_capex} + \mathit{StorageUnit\_capex} + \mathit{Store\_capex} + \mathit{Line\_capex} + \mathit{Transformer\_capex}
 ```
 
 ### `Carrier_additions`
