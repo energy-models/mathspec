@@ -665,7 +665,7 @@ def test_names_read_takes_both_sides_of_a_relation_pair():
 # a named expression's declared frame
 # ---------------------------------------------------------------------------
 
-#: A quantity over every snapshot and generator, with its frame declared.
+#: A quantity over every snapshot and generator, with its dims declared.
 FRAMED = varied(DISPATCH_MODEL, **{'expressions.limit': {'dims': ['snapshot', 'generator'], 'expression': 'p * p_max'}})
 
 
@@ -685,13 +685,13 @@ def test_a_body_outside_its_declared_frame_is_refused():
 
 
 @pytest.mark.parametrize(
-    ('patch', 'extra', 'carrier'),
+    ('patch', 'extra', 'subject'),
     [
         pytest.param(
             {'expressions.limit': {'dims': ['snapshot', 'generator'], 'expression': 'p_max'}},
             "['snapshot']",
-            'the body does not carry',
-            id='a-plain-body',
+            'the expression is not',
+            id='a-plain-expression',
         ),
         pytest.param(
             {
@@ -703,20 +703,21 @@ def test_a_body_outside_its_declared_frame_is_refused():
                 },
             },
             "['snapshot']",
-            'no case value and no `when:` carries',
+            'no case value and no `when:` is',
             id='cases',
         ),
     ],
 )
-def test_a_declared_frame_wider_than_the_body_is_refused(patch, extra, carrier):
-    """A frame wider than the body loaded, and a reference read the body as constant along the rest.
+def test_a_dims_that_gives_a_dim_the_expression_is_not_indexed_over_is_refused(patch, extra, subject):
+    """Such a `dims:` loaded, and a reference read the expression as constant along the extra dim.
 
-    Substituted where the name stands, the body did not load: `sum(limit, over=snapshot)` loaded where
-    `sum(p_max, over=snapshot)` is refused, and specsolve could not build it. In a constraint the wider frame
+    Substituted where the name stands, the expression did not load: `sum(limit, over=snapshot)` loaded where
+    `sum(p_max, over=snapshot)` is refused, and specsolve could not build it. In a constraint the extra dim
     only built the same row once per snapshot.
     """
     with pytest.raises(
-        DimensionError, match=re.escape(f"Named expression 'limit': dims: names {extra}, which {carrier}")
+        DimensionError,
+        match=re.escape(f"Named expression 'limit': dims: gives {extra}, but {subject} indexed over {extra}"),
     ):
         to_spec(varied(DISPATCH_MODEL, **patch))
 

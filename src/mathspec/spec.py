@@ -638,11 +638,12 @@ class ExpressionSpec(_StrictSpec):
             expression: sum(p * rate, over=generator)
             description: CO2 released, the quantity the cap bounds
 
-    ``dims:`` declares the frame the quantity is read over. A plain entry may
-    leave it out, and its body then decides the frame. A declared frame is
-    what the body carries: a body that carries a dimension the frame does not
-    name is refused, and so is a frame that names one the body does not
-    carry. A quantity whose value varies by region is
+    ``dims:`` gives the dimensions over which the quantity is indexed. A plain
+    entry may leave it out, and its expression then decides them. A declared
+    ``dims:`` gives exactly the dimensions over which the expression is
+    indexed: an expression indexed over a dimension ``dims:`` does not give is
+    refused, and so is a ``dims:`` that gives one over which the expression is
+    not indexed. A quantity whose value varies by region is
     written as ``cases:`` over a declared ``dims:``, with an ``otherwise:``
     for the rest — see the language reference.
 
