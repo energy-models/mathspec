@@ -26,7 +26,7 @@ from dataclasses import dataclass, fields, replace
 from functools import cached_property
 from typing import TYPE_CHECKING, Literal, assert_never
 
-from mathspec._expression_parser import ComparisonOperator
+from mathspec._expression_parser import Sense
 from mathspec._sealed import Sealed
 from mathspec.errors import did_you_mean
 
@@ -46,8 +46,8 @@ __all__ = [
     'BooleanLiteral',
     'Cases',
     'Column',
+    'ComparisonOperator',
     'Condition',
-    'ConditionOperator',
     'ConditionReference',
     'Connective',
     'Constant',
@@ -125,7 +125,7 @@ __all__ = [
 ]
 
 
-ConstraintSense = ComparisonOperator
+ConstraintSense = Sense
 
 #: Where a degree-2 product may stand in the math a solver sees. An objective
 #: and a constraint take ``variable * variable``; a bound and a ``piecewise:``
@@ -1239,7 +1239,7 @@ def variables_of(*expressions: Expression) -> frozenset[str]:
 # ---------------------------------------------------------------------------
 
 
-ConditionOperator = Literal['<=', '>=', '==', '!=', '<', '>']
+ComparisonOperator = Literal['<=', '>=', '==', '!=', '<', '>']
 
 
 @dataclass(frozen=True)
@@ -1273,7 +1273,7 @@ class ParameterComparison:
     """Compare a parameter against a literal, element-wise."""
 
     name: str
-    op: ConditionOperator
+    op: ComparisonOperator
     value: float | str
     dims: tuple[str, ...]
 
@@ -1289,7 +1289,7 @@ class ExpressionComparison:
     """
 
     left: Expression
-    op: ConditionOperator
+    op: ComparisonOperator
     right: Expression
     dims: tuple[str, ...]
 
@@ -1299,7 +1299,7 @@ class DimensionComparison:
     """Compare a dimension's own coordinates against a literal."""
 
     name: str
-    op: ConditionOperator
+    op: ComparisonOperator
     value: float | str | datetime.date
 
 
@@ -1313,7 +1313,7 @@ class DimensionPosition:
     """
 
     name: str
-    op: ConditionOperator
+    op: ComparisonOperator
     position: int
     partition: Partition | None = None
 
@@ -1328,7 +1328,7 @@ class RelationComparison:
 
     name: str
     column: str
-    op: ConditionOperator
+    op: ComparisonOperator
     value: float | str | datetime.date
     dims: tuple[str, ...] = ()
 
@@ -1345,7 +1345,7 @@ class RelationPairComparison:
     column: str
     other: str
     other_column: str
-    op: ConditionOperator
+    op: ComparisonOperator
     dims: tuple[str, ...] = ()
 
 
@@ -1375,7 +1375,7 @@ class CountComparison:
 
     condition: Mask
     over: str
-    op: ConditionOperator
+    op: ComparisonOperator
     value: float
     dims: tuple[str, ...]
 

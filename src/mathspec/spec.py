@@ -31,7 +31,7 @@ from pydantic import (
     model_validator,
 )
 
-from mathspec._expression_parser import NAME, ComparisonOperator
+from mathspec._expression_parser import NAME, Sense
 from mathspec._operators import BUILTIN_NAMES
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
@@ -842,7 +842,7 @@ class PiecewiseLinkSpec(_StrictSpec):
 
     expression: str
     values: str
-    sign: ComparisonOperator = '=='
+    sign: Sense = '=='
 
     @model_validator(mode='before')
     @classmethod
