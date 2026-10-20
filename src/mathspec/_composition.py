@@ -79,12 +79,12 @@ What a patch may say, and what is refused:
 * **Patches are laid in order.** Each is laid on the base with every
   earlier patch laid on it, so a later patch wins a field an earlier one
   writes, and edits or removes an entry an earlier one creates.
-* **A patch adjusts the math, not the coordinate space.** A ``dimensions`` or
-  ``relations`` entry may be added or restated, never changed and never
-  removed. Its claims, ``ordered`` or ``missing``, and its description are
-  laid over the base's as fields, and may be named alone. A dimension may
-  gain ``ordered: true`` and may not lose it. Every other field is its space,
-  which a patch restates in full as the schema reads its base, or leaves out.
+* **A patch adds a dimension or a relation, and does not change one its
+  base declares.** It may change only the ``description``, a dimension's
+  ``ordered`` and a relation's ``missing``, and may write them alone. A
+  dimension may gain ``ordered: true`` and may not lose it. An entry that
+  writes any other field must declare it as the base does, a field it leaves
+  out reading as its default.
 * ``null`` **makes what it names absent.** An entry set to ``null`` is
   removed, and a removal of what the base does not declare is refused. A field
   set to ``null`` is dropped, and takes its default when the result loads:
@@ -117,10 +117,9 @@ if TYPE_CHECKING:
 
 SHARED_SECTIONS = ('dimensions', 'relations')
 
-#: The fields of a shared entry that claim something about its space or its data
-#: rather than being the space. With ``description``, which is prose, these are
-#: the fields a patch lays over; every other field is the space.
-CLAIMS: dict[str, frozenset[str]] = {'dimensions': frozenset({'ordered'}), 'relations': frozenset({'missing'})}
+#: The fields of a dimension or a relation, other than ``description``, that a
+#: patch may change. A patch may not change any other field of one its base declares.
+SETTINGS: dict[str, frozenset[str]] = {'dimensions': frozenset({'ordered'}), 'relations': frozenset({'missing'})}
 
 OWNED_SECTIONS = tuple(
     name
@@ -293,9 +292,9 @@ def _agreed(
     neither entry is the one being restated, so a field only one of them
     sets to something other than its default is a difference nothing settles.
     *owner* is the schema class the section belongs to, which reads each
-    entry. Prose is not a claim, so the first description given is carried.
-    A dimension's ``ordered`` folds by [`_ordered`][], and every other claim
-    has to agree.
+    entry. A description is text about the entry rather than part of it, so
+    the first one given is carried. A dimension's ``ordered`` folds by
+    [`_ordered`][], and every other field has to agree.
     """
     merged: dict[str, object] = {}
     for name, sections in read.items():
@@ -601,8 +600,8 @@ def _fits(
         frame = set(cast('list[str]', _mapping(introduced)['dims']))
         fits = frame == stated
     said, owned = _read(GivenSpec, kind, reading), _read(Spec, kind, introduced)
-    claimed = said.model_fields_set - {'dims', 'description'}
-    if fits and all(getattr(said, f) == getattr(owned, f) for f in claimed):
+    written = said.model_fields_set - {'dims', 'description'}
+    if fits and all(getattr(said, f) == getattr(owned, f) for f in written):
         return
     how = f'over {sorted(frame)}' if kind in ('expressions', 'conditions') else f'as {introduced!r}'
     author = _author_of(read, kind, key)
@@ -832,16 +831,16 @@ def _given(declared: dict[str, object], patch: dict[str, object], name: str) -> 
 def _shared(declared: dict[str, object], patch: dict[str, object], section: str, name: str) -> dict[str, object]:
     """One ``dimensions`` or ``relations`` section: a patch adds one or restates one, never changes or drops it.
 
-    A claim of [`CLAIMS`][] and the description are laid over the base as
-    fields, and ``null`` on one puts back its default. A dimension may gain
+    A patch may change the description and the [`SETTINGS`][] of one its
+    base declares, and ``null`` puts back the default. A dimension may gain
     ``ordered: true`` and may not lose it, because a construct in the base
-    may step along it. Every other field is the space, and a patch that
-    writes any of it restates all of it: the restatement has to read as the
-    base reads it, a field it leaves out reading as its default.
+    may step along it. An entry that writes any other field, or no field,
+    declares the whole entry again: it has to say what the base says, a
+    field it leaves out reading as its default.
     """
     out = dict(declared)
     singular = _singular(section)
-    laid = CLAIMS[section] | {'description'}
+    changeable = SETTINGS[section] | {'description'}
     for key, entry in patch.items():
         if entry is None:
             raise LanguageError(
@@ -851,9 +850,9 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
         if key not in out:
             out[key] = entry
             continue
-        written = {f: v for f, v in _mapping(entry).items() if f in laid}
-        space = {f: v for f, v in _mapping(entry).items() if f not in laid}
-        base, out[key] = out[key], _lay(out[key], written)
+        changed = {f: v for f, v in _mapping(entry).items() if f in changeable}
+        restated = {f: v for f, v in _mapping(entry).items() if f not in changeable}
+        base, out[key] = out[key], _lay(out[key], changed)
         was, now = (getattr(_read(Spec, section, e), 'ordered', False) for e in (base, out[key]))
         if was and not now:
             raise LanguageError(
@@ -861,15 +860,15 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
                 f'ordered. A patch can add `ordered: true` but cannot remove it, because a construct in the base '
                 f'may step along it. Leave `ordered` out of the patch.'
             )
-        if written and not space:
+        if changed and not restated:
             continue
-        if not _same(Spec, section, out[key], space, aside=laid):
-            fields = ' and '.join(f'`{f}`' for f in sorted(laid))
+        if not _same(Spec, section, out[key], restated, aside=changeable):
+            fields = ' and '.join(f'`{f}`' for f in sorted(changeable))
             raise LanguageError(
                 f"patch '{name}' declares the {singular} '{key}' as {entry!r}, where its base "
-                f'declares {base!r}. A patch adjusts the math, not the coordinate space the math is '
-                f'already written over: each field but {fields} has to read as the base reads it, and a '
-                f'field the patch leaves out reads as its default. Restate the {singular} as its base '
+                f'declares {base!r}. A patch may change only {fields} of {_a(singular)} its base declares, '
+                f'because the math in the base is already written over it. Every other field must be as the '
+                f'base declares it, and a field the patch leaves out reads as its default. Restate the {singular} as its base '
                 f'declares it, leave it out, or give the patch {_a(singular)} of its own under a name of its own.'
             )
     return out

@@ -390,22 +390,23 @@ as the base spells it.
 
 ## A dimension redeclared
 
-A patch may add a dimension or a relation, and may restate one the base
-declares. Each field of a dimension or a relation has one of three roles:
+A patch may add a dimension or a relation. For one that the base declares, a
+patch may change three fields and no others:
 
-| Role  | Fields                                                 | In a patch                                    |
-| ----- | ------------------------------------------------------ | --------------------------------------------- |
-| space | a dimension's `dtype`, a relation's `key` and `values` | restated as the base declares it, or left out |
-| claim | a dimension's `ordered`, a relation's `missing`        | laid over the base's value                    |
-| prose | `description`                                          | laid over the base's value; `null` removes it |
+| Field         | On                        | What the patch may do                                                     |
+| ------------- | ------------------------- | ------------------------------------------------------------------------- |
+| `description` | a dimension or a relation | replace the base's text, or remove it with `null`                         |
+| `ordered`     | a dimension               | set it to `true`, but not to `false` or `null` where the base has `true`  |
+| `missing`     | a relation                | replace the base's value, or put back the default, `refused`, with `null` |
 
-A patch that writes a field of the space restates the whole space. A field of
-the space that it leaves out reads as its default, so the restatement must say
-what the base says. A change of the space under the expressions already written
-over it is refused, and so is the removal of the entry:
+An entry that writes only these fields changes only these fields. An entry that
+writes any other field, or no field, must declare the dimension or the relation
+as the base does, and a field it leaves out reads as its default. The math in
+the base is already written over the dimension, so a patch that changes it is
+refused, and so is a patch that removes it:
 
 ```text
-patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch adjusts the math, not the coordinate space the math is already written over: each field but `description` and `ordered` has to read as the base reads it, and a field the patch leaves out reads as its default. Restate the dimension as its base declares it, leave it out, or give the patch a dimension of its own under a name of its own.
+patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch may change only `description` and `ordered` of a dimension its base declares, because the math in the base is already written over it. Every other field must be as the base declares it, and a field the patch leaves out reads as its default. Restate the dimension as its base declares it, leave it out, or give the patch a dimension of its own under a name of its own.
 ```
 
 `ordered` says that the members of a dimension have an order, and it does not
@@ -417,10 +418,9 @@ it, because a construct in the base may already step along `snapshot`:
 patch 'unordered.yaml' says the dimension 'snapshot' is not ordered, where its base declares it ordered. A patch can add `ordered: true` but cannot remove it, because a construct in the base may step along it. Leave `ordered` out of the patch.
 ```
 
-`missing:` is a claim about the data, not the coordinate space. A patch may
-change it on a relation as on a parameter, and may name it alone:
-`relations: {gen_bus: {missing: absent}}`. `null` puts the default, `refused`,
-back.
+`missing:` says what a key with no row in the data means. A patch may change it
+on a relation as on a parameter, and may write it alone:
+`relations: {gen_bus: {missing: absent}}`.
 
 ## A section set to `null`
 

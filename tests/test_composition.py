@@ -685,7 +685,7 @@ ABSENT_SURFACE = varied(SURFACE, **{'relations.port_bus.missing': 'absent'})
     ],
 )
 def test_a_patch_changes_what_a_key_the_map_leaves_out_means(base, relation, missing):
-    """`missing:` is a claim about the data, not the coordinate space, and a patch that wrote it was refused as one."""
+    """`missing:` says what a key with no row means, and a patch that wrote it was refused as a change of the relation."""
     assert override(base, [{'relations': {'port_bus': relation}}]).relations['port_bus'].missing == missing
 
 
