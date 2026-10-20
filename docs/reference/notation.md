@@ -133,7 +133,7 @@ parameters:
 | $`\mathrm{rating}`$ | `rating` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{lcoe}`$ | `lcoe` (scalar) |
 | $`\mathit{net}`$ | `net` over $`\mathcal{T}`$ — what a snapshot spills, less what it lacks |
-| $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{T} \times \mathcal{B}`$ |
+| $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{B} \times \mathcal{T}`$ |
 | $`\mathrm{startup\_cost}`$ | `startup_cost` over $`\mathcal{T} \times \mathcal{G}`$ — what starting a unit in this snapshot costs, which the horizon's edge changes |
 
 #### Notation
@@ -795,7 +795,7 @@ expressions:
 ```
 
 ```math
-\mathit{marginal\_price}_{t,b} = \lambda_{\mathrm{balance},t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+\mathit{marginal\_price}_{b,t} = \lambda_{\mathrm{balance},t,b} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
 ```
 
 ### Named conditions
@@ -1059,37 +1059,37 @@ piecewise:
 ```
 
 ```math
-\left( \mathit{shipment}_{p,m},\ \mathit{scaled}_{p,m} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{b},\ \mathrm{y}_{b}) \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\left( \mathit{shipment}_{p,m},\ \mathit{scaled}_{p,m} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{b},\ \mathrm{y}_{b}) \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 Written out by `spec.expand()`:
 
 ```math
-0 \le \lambda_{p,m,b} \le 1 \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M},\ b \in \mathcal{B}
+0 \le \lambda_{m,p,b} \le 1 \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P},\ b \in \mathcal{B}
 ```
 
 ```math
-\delta_{p,m,b} \in \{0, 1\} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M},\ b \in \mathcal{B}
+\delta_{m,p,b} \in \{0, 1\} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P},\ b \in \mathcal{B}
 ```
 
 ```math
-\sum_{b \in \mathcal{B}} \lambda_{p,m,b} = 1 \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\sum_{b \in \mathcal{B}} \lambda_{m,p,b} = 1 \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
-\mathit{shipment}_{p,m} = \sum_{b \in \mathcal{B}} \lambda_{p,m,b} \cdot \mathrm{x}_{b} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\mathit{shipment}_{p,m} = \sum_{b \in \mathcal{B}} \lambda_{m,p,b} \cdot \mathrm{x}_{b} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
-\mathit{scaled}_{p,m} = \sum_{b \in \mathcal{B}} \lambda_{p,m,b} \cdot \mathrm{y}_{b} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\mathit{scaled}_{p,m} = \sum_{b \in \mathcal{B}} \lambda_{m,p,b} \cdot \mathrm{y}_{b} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
-\sum_{b \in \mathcal{B}} \delta_{p,m,b} \le 1 \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\sum_{b \in \mathcal{B}} \delta_{m,p,b} \le 1 \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
-\lambda_{p,m,b} \le \delta_{p,m,b} + \delta_{p,m,b \boxminus_{0} 1} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M},\ b \in \mathcal{B}
+\lambda_{m,p,b} \le \delta_{m,p,b} + \delta_{m,p,b \boxminus_{0} 1} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P},\ b \in \mathcal{B}
 ```
 
 ```math
@@ -1122,29 +1122,29 @@ piecewise:
 ```
 
 ```math
-\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 Written out by `spec.expand()`:
 
 ```math
-0 \le \lambda_{t,g,b} \le 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B}
+0 \le \lambda_{g,t,b} \le 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B}
 ```
 
 ```math
-\sum_{b \in \mathcal{B}} \lambda_{t,g,b} = 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\sum_{b \in \mathcal{B}} \lambda_{g,t,b} = 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\mathit{dispatch}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{dispatch}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{g,t,b} \cdot \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{g,t,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\left( \lambda_{t,g,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \lambda_{g,t,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
@@ -1177,25 +1177,25 @@ piecewise:
 ```
 
 ```math
-\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{conv}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{conv}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 Written out by `spec.expand()`:
 
 ```math
-0 \le \lambda_{t,g,b} \le 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B}
+0 \le \lambda_{g,t,b} \le 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B}
 ```
 
 ```math
-\sum_{b \in \mathcal{B}} \lambda_{t,g,b} = 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\sum_{b \in \mathcal{B}} \lambda_{g,t,b} = 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\mathit{dispatch}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{dispatch}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{g,t,b} \cdot \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{g,t,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
@@ -1235,21 +1235,21 @@ piecewise:
 ```
 
 ```math
-\mathit{op\_cost}_{t,g} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b})(\mathit{dispatch}_{t,g}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{op\_cost}_{t,g} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b})(\mathit{dispatch}_{t,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 Written out by `spec.expand()`:
 
 ```math
-\mathit{op\_cost}_{t,g} \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \ge \left( \mathrm{y}_{g,b} - \mathrm{y}_{g,b \boxminus_{0} 1} \right) \cdot \left( \mathit{dispatch}_{t,g} - \mathrm{x}_{g,b} \right) + \mathrm{y}_{g,b} \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) > 0
+\mathit{op\_cost}_{t,g} \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \ge \left( \mathrm{y}_{g,b} - \mathrm{y}_{g,b \boxminus_{0} 1} \right) \cdot \left( \mathit{dispatch}_{t,g} - \mathrm{x}_{g,b} \right) + \mathrm{y}_{g,b} \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) > 0
 ```
 
 ```math
-\mathit{dispatch}_{t,g} \ge \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = 0
+\mathit{dispatch}_{t,g} \ge \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = 0
 ```
 
 ```math
-\mathit{dispatch}_{t,g} \le \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = \lvert \mathcal{B} \rvert - 1
+\mathit{dispatch}_{t,g} \le \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = \lvert \mathcal{B} \rvert - 1
 ```
 
 ```math

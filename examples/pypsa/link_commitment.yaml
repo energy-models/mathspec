@@ -24,7 +24,7 @@ given:
   expressions:
     scenario_opex: { dims: [scenario] }
   conditions:
-    Link_committed: { dims: [snapshot, link] }
+    Link_committed: { dims: [link, snapshot] }
 
 dimensions:
   scenario:

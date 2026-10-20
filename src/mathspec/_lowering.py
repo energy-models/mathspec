@@ -134,8 +134,7 @@ def lower(spec: Spec) -> Program:
         errors.extend(refusals)
         if named is not None:
             body = Mask(named.body)
-            frame = tuple(d for d in spec.dimensions if d in body.dims)
-            conditions[mname] = NamedCondition(body, frame, mdef.description)
+            conditions[mname] = NamedCondition(body, tuple(sorted(body.dims)), mdef.description)
 
     variables = {}
     for vname, vdef in spec.variables.items():
@@ -339,12 +338,11 @@ def _loop(target: str, entry: ExpressionReference, sums: Mapping[str, list[Expre
 
 
 def _frame_of(name: str, entry: ExpressionReference, spec: Spec) -> tuple[str, ...]:
-    """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's in file order."""
+    """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's, sorted by name."""
     declared = spec.expressions[name].dims
     if declared is not None:
         return tuple(declared)
-    carried = dims_of(entry.body, spec, f"Named expression '{name}'")
-    return tuple(d for d in spec.dimensions if d in carried)
+    return tuple(sorted(dims_of(entry.body, spec, f"Named expression '{name}'")))
 
 
 def _bound(value: float | str | None) -> Constant | ParameterReference | None:

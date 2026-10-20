@@ -15,7 +15,7 @@ given:
     Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
     Generator_p_nom_ext: { dims: [generator] }
   conditions:
-    Generator_committed: { dims: [snapshot, generator] }
+    Generator_committed: { dims: [generator, snapshot] }
 
 dimensions:
   scenario:

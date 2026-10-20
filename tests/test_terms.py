@@ -659,9 +659,9 @@ def test_a_given_expression_prints_no_line_of_its_own(spec):
 def test_the_composed_sum_prints_its_terms_by_name():
     composed = merge([FLEET, DEMAND, BALANCE])
     assert typeset_line(composed, 'injection', 'typst', inline_expressions=False) == (
-        'italic("injection")_(t,b) = italic("generator_injection")_(t,b) + upright("demand_injection")_(t,b) '
+        'italic("injection")_(t,b) = italic("generator_injection")_(b,t) + upright("demand_injection")_(b,t) '
         'quad forall t in cal(T), b in cal(B)'
-    )
+    ), 'the sum keeps the dims its reader declares, and a term that declares none prints them sorted by name'
 
 
 @pytest.mark.parametrize('fmt', sorted(FORMATS))
