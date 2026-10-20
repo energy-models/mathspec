@@ -22,6 +22,7 @@ package-private, because a consumer reads a program instead.
 from mathspec import errors, program, spec
 from mathspec._advising import advice
 from mathspec._composition import merge, override
+from mathspec._renaming import rename
 from mathspec._typesetting import (
     FormatName,
     SymbolTable,
@@ -41,6 +42,7 @@ __all__ = [
     'merge',
     'override',
     'program',
+    'rename',
     'spec',
     'to_latex',
     'to_markdown',

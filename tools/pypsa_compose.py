@@ -14,18 +14,24 @@ PyPSA pages, the rungs and every engine read.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
-from mathspec import merge
+from mathspec import merge, rename, to_spec
 from tools._page import ROOT
 from tools._page import main as page_main
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from mathspec.spec import Spec
+
 FRAGMENTS = ROOT / 'examples' / 'pypsa'
 COMPOSED = ROOT / 'examples' / 'pypsa.yaml'
 RELAXED_COMPOSED = ROOT / 'examples' / 'pypsa_linearized_uc.yaml'
+TEMPLATES = FRAGMENTS / 'committable'
+
+#: Each committable class: its dimension, and the prefix of its names.
+CLASSES = {'generator': 'Generator', 'link': 'Link', 'process': 'Process'}
 
 #: The fragments of the default set, in the order the composed file lists their entries.
 DEFAULT = (
@@ -92,19 +98,51 @@ HEADER = (
 # REUSE-IgnoreEnd
 
 
-def paths(names: tuple[str, ...]) -> list[Path]:
-    """The fragment files of *names*, in that order."""
-    return [FRAGMENTS / f'{name}.yaml' for name in names]
+def fragment(name: str) -> Path | Spec:
+    """The fragment *name*: its file, or a committable layer such as ``link/ramping`` renamed for its class.
+
+    A committable layer is written once under `committable/`, over the
+    dimension `unit` and names that start with `Unit_`, and each class takes
+    it under its own names.
+    """
+    path = FRAGMENTS / f'{name}.yaml'
+    kind, _, layer = name.partition('/')
+    if kind not in CLASSES or path.exists():
+        return path
+    template = to_spec(TEMPLATES / f'{layer}.yaml')
+    return rename(
+        template, {'unit': kind} | {old: CLASSES[kind] + old.removeprefix('Unit') for old in _placeholders(template)}
+    )
+
+
+def names() -> list[str]:
+    """Every fragment's name: each file but a template, and each template under each class, such as ``link/ramping``."""
+    files = [path for path in FRAGMENTS.rglob('*.yaml') if TEMPLATES not in path.parents]
+    layers = [f'{kind}/{path.stem}' for kind in CLASSES for path in TEMPLATES.glob('*.yaml')]
+    return sorted([*(path.relative_to(FRAGMENTS).with_suffix('').as_posix() for path in files), *layers])
+
+
+def fragments(names: tuple[str, ...]) -> list[Path | Spec]:
+    """The fragments of *names*, in that order."""
+    return [fragment(name) for name in names]
+
+
+def _placeholders(template: Spec) -> list[str]:
+    """The names a template declares or reads under ``given:`` that start with `Unit_`, which a class renames."""
+    read = template.to_dict()
+    given = cast('dict[str, dict[str, object]]', read.get('given', {}))
+    sections = [entries for section, entries in read.items() if section != 'given' and isinstance(entries, dict)]
+    return [name for entries in (*given.values(), *sections) for name in entries if name.startswith('Unit_')]
 
 
 def composed(_text: str = '') -> str:
     """The composed file: the default set merged, under its header."""
-    return HEADER + merge(paths(DEFAULT), description=DESCRIPTION).to_yaml()
+    return HEADER + merge(fragments(DEFAULT), description=DESCRIPTION).to_yaml()
 
 
 def relaxed(_text: str = '') -> str:
     """The relaxed composed file: the relaxed set merged, under its header."""
-    return HEADER + merge(paths(RELAXED), description=RELAXED_DESCRIPTION).to_yaml()
+    return HEADER + merge(fragments(RELAXED), description=RELAXED_DESCRIPTION).to_yaml()
 
 
 def main(argv: list[str] | None = None) -> int:

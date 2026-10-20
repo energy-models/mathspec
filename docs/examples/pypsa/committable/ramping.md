@@ -3,32 +3,32 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Generators, the ramping
+# Committable classes, the ramping
 
-This file states the ramp limits of PyPSA's `Generator`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. It reads the status from [the commitment](commitment.md) or from [no commitment](commitment_none.md). It reads `Generator_active`, `Generator_big_m`, `Generator_com_ext`, `Generator_committable`, `Generator_p`, `Generator_p_nom_committed` and 9 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
+This file states the ramp limits of PyPSA's `Generator`, `Link` and `Process`. It is written once and each class takes it under its own names, as [the commitment](commitment.md) says. Each of those is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. The math below prints the generator's. It reads the status from [the commitment](commitment.md) or from [no commitment](commitment_none.md). It reads `Unit_active`, `Unit_big_m`, `Unit_com_ext`, `Unit_committable`, `Unit_p`, `Unit_p_nom_committed` and 9 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
 given:
   parameters:
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
-    Generator_committable: { dims: [generator], dtype: bool }
-    Generator_status_initial: { dims: [scenario, generator], dtype: int }
-    Generator_p_nom_mod: { dims: [generator] }
-    Generator_big_m: { dims: [scenario, generator] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
+    Unit_p_nom_extendable: { dims: [unit], dtype: bool }
+    Unit_committable: { dims: [unit], dtype: bool }
+    Unit_status_initial: { dims: [scenario, unit], dtype: int }
+    Unit_p_nom_mod: { dims: [unit] }
+    Unit_big_m: { dims: [scenario, unit] }
+    Unit_active: { dims: [snapshot, unit], dtype: bool }
   variables:
-    Generator_p: { dims: [scenario, snapshot, generator] }
-    Generator_status: { dims: [scenario, snapshot, generator] }
-    Generator_start_up: { dims: [scenario, snapshot, generator] }
-    Generator_shut_down: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom_ext: { dims: [generator] }
+    Unit_p: { dims: [scenario, snapshot, unit] }
+    Unit_status: { dims: [scenario, snapshot, unit] }
+    Unit_start_up: { dims: [scenario, snapshot, unit] }
+    Unit_shut_down: { dims: [scenario, snapshot, unit] }
+    Unit_p_nom_ext: { dims: [unit] }
   expressions:
-    Generator_previous_status: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom_effective: { dims: [scenario, generator] }
-    Generator_p_nom_committed: { dims: [scenario, generator] }
+    Unit_previous_status: { dims: [scenario, snapshot, unit] }
+    Unit_p_nom_effective: { dims: [scenario, unit] }
+    Unit_p_nom_committed: { dims: [scenario, unit] }
   masks:
-    Generator_com_ext: { dims: [snapshot, generator] }
+    Unit_com_ext: { dims: [snapshot, unit] }
 
 dimensions:
   scenario:
@@ -37,8 +37,8 @@ dimensions:
     description: dispatch periods
     dtype: datetime
     ordered: true
-  generator:
-    description: generating units, each on one bus
+  unit:
+    description: the units of the class this layer is renamed for
   period:
     description: investment periods — PyPSA's `investment_periods`
     dtype: int
@@ -51,203 +51,203 @@ relations:
     values: period
 
 parameters:
-  Generator_ramp_limit_up:
-    description: most a generator may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
-    dims: [scenario, snapshot, generator]
+  Unit_ramp_limit_up:
+    description: most a unit may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
+    dims: [scenario, snapshot, unit]
     missing: neutral
-  Generator_ramp_limit_down:
-    description: most a generator may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
-    dims: [scenario, snapshot, generator]
+  Unit_ramp_limit_down:
+    description: most a unit may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
+    dims: [scenario, snapshot, unit]
     missing: neutral
-  Generator_ramp_limit_start_up:
+  Unit_ramp_limit_start_up:
     description: most output in the snapshot a unit starts, per unit of nominal power; no value means no limit
-    dims: [scenario, generator]
+    dims: [scenario, unit]
     missing: neutral
-  Generator_ramp_limit_shut_down:
+  Unit_ramp_limit_shut_down:
     description: most output in the snapshot before a unit stops, per unit of nominal power; no value means no limit
-    dims: [scenario, generator]
+    dims: [scenario, unit]
     missing: neutral
-  Generator_p_init:
+  Unit_p_init:
     description: >-
       the output a unit brought into the horizon — PyPSA's `p_init`, read
       only where the unit came in running; no value means it is unknown, so
       the unit carries no ramp row at the first snapshot
-    dims: [scenario, generator]
+    dims: [scenario, unit]
     missing: neutral
 
 expressions:
-  Generator_previous_p:
+  Unit_previous_p:
     description: >-
-      the output a generator carries into a snapshot — at the first, the
+      the output a unit carries into a snapshot — at the first, the
       `p_init` it brought in where it came in running and nothing where it
       came in off; the previous snapshot's after that
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     cases:
-      opening: { when: "position(snapshot) == 0", expression: Generator_status_initial * Generator_p_init }
-    otherwise: shift(Generator_p, along=snapshot, offset=1)
-  Generator_ramp_up_rate:
+      opening: { when: "position(snapshot) == 0", expression: Unit_status_initial * Unit_p_init }
+    otherwise: shift(Unit_p, along=snapshot, offset=1)
+  Unit_ramp_up_rate:
     description: >-
       the ramp limit a unit's up row reads — PyPSA's `ramp_limit_up`, or the
       full build where it has none, since a start-up ramp alone builds the row
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     cases:
-      given: { when: Generator_ramp_limit_up, expression: Generator_ramp_limit_up }
+      given: { when: Unit_ramp_limit_up, expression: Unit_ramp_limit_up }
     otherwise: 1
-  Generator_ramp_down_rate:
+  Unit_ramp_down_rate:
     description: >-
       the ramp limit a unit's down row reads — PyPSA's `ramp_limit_down`, or
       the full build where it has none, since a shut-down ramp alone builds the row
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     cases:
-      given: { when: Generator_ramp_limit_down, expression: Generator_ramp_limit_down }
+      given: { when: Unit_ramp_limit_down, expression: Unit_ramp_limit_down }
     otherwise: 1
-  Generator_start_up_rate:
+  Unit_start_up_rate:
     description: >-
       the start-up ramp a unit's up row reads — PyPSA's `ramp_limit_start_up`,
       or the full build where it has none
-    dims: [scenario, generator]
+    dims: [scenario, unit]
     cases:
-      given: { when: Generator_ramp_limit_start_up, expression: Generator_ramp_limit_start_up }
+      given: { when: Unit_ramp_limit_start_up, expression: Unit_ramp_limit_start_up }
     otherwise: 1
-  Generator_shut_down_rate:
+  Unit_shut_down_rate:
     description: >-
       the shut-down ramp a unit's down row reads — PyPSA's
       `ramp_limit_shut_down`, or the full build where it has none
-    dims: [scenario, generator]
+    dims: [scenario, unit]
     cases:
-      given: { when: Generator_ramp_limit_shut_down, expression: Generator_ramp_limit_shut_down }
+      given: { when: Unit_ramp_limit_shut_down, expression: Unit_ramp_limit_shut_down }
     otherwise: 1
-  Generator_ramp_up_allowance:
+  Unit_ramp_up_allowance:
     description: >-
-      how far a generator may raise output between two snapshots — its ramp
+      how far a unit may raise output between two snapshots — its ramp
       limit of the build while it stays on, plus its start-up ramp in the
       snapshot it turns on
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     cases:
       committed:
-        when: Generator_committable
+        when: Unit_committable
         expression: >-
-          Generator_ramp_up_rate * Generator_p_nom_committed * Generator_previous_status
-          + Generator_start_up_rate * Generator_p_nom_committed
-          * (Generator_status - Generator_previous_status)
-    otherwise: Generator_ramp_up_rate * Generator_p_nom_effective
-  Generator_ramp_down_allowance:
+          Unit_ramp_up_rate * Unit_p_nom_committed * Unit_previous_status
+          + Unit_start_up_rate * Unit_p_nom_committed
+          * (Unit_status - Unit_previous_status)
+    otherwise: Unit_ramp_up_rate * Unit_p_nom_effective
+  Unit_ramp_down_allowance:
     description: >-
-      how far a generator may lower output between two snapshots — its ramp
+      how far a unit may lower output between two snapshots — its ramp
       limit of the build while it stays on, plus its shut-down ramp in the
       snapshot it turns off
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     cases:
       committed:
-        when: Generator_committable
+        when: Unit_committable
         expression: >-
-          Generator_ramp_down_rate * Generator_p_nom_committed * Generator_status
-          + Generator_shut_down_rate * Generator_p_nom_committed
-          * (Generator_previous_status - Generator_status)
-    otherwise: Generator_ramp_down_rate * Generator_p_nom_effective
+          Unit_ramp_down_rate * Unit_p_nom_committed * Unit_status
+          + Unit_shut_down_rate * Unit_p_nom_committed
+          * (Unit_previous_status - Unit_status)
+    otherwise: Unit_ramp_down_rate * Unit_p_nom_effective
 
 masks:
-  Generator_ramps_from_previous:
+  Unit_ramps_from_previous:
     description: >-
       a snapshot whose ramp reads a previous output — any snapshot but its
-      period's first, and the horizon's first where the generator comes in off
+      period's first, and the horizon's first where the unit comes in off
       or carries an initial output
     where: >-
       position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
-      (Generator_status_initial == 0 OR Generator_p_init))
+      (Unit_status_initial == 0 OR Unit_p_init))
 
 constraints:
-  Generator_p_ramp_limit_up_run_big_m:
+  Unit_p_ramp_limit_up_run_big_m:
     description: >-
-      `Generator-p-ramp_limit_up-run-bigM` — a committed extendable unit
+      `-p-ramp_limit_up-run-bigM` — a committed extendable unit
       raises output no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns on
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     where: >-
-      Generator_com_ext
-      AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND Generator_ramps_from_previous
+      Unit_com_ext
+      AND (Unit_ramp_limit_up OR Unit_ramp_limit_start_up)
+      AND Unit_ramps_from_previous
     expression: >-
-      Generator_p - Generator_previous_p <=
-      Generator_ramp_up_rate * Generator_p_nom_ext
-      + Generator_big_m - Generator_big_m * Generator_previous_status
-  Generator_p_ramp_limit_up_start_big_m:
+      Unit_p - Unit_previous_p <=
+      Unit_ramp_up_rate * Unit_p_nom_ext
+      + Unit_big_m - Unit_big_m * Unit_previous_status
+  Unit_p_ramp_limit_up_start_big_m:
     description: >-
-      `Generator-p-ramp_limit_up-start-bigM` — in the snapshot it turns on, a
+      `-p-ramp_limit_up-start-bigM` — in the snapshot it turns on, a
       committed extendable unit ramps no further than its start-up ramp of
       the chosen build; the big M releases the row everywhere else
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     where: >-
-      Generator_com_ext
-      AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND Generator_ramps_from_previous
+      Unit_com_ext
+      AND (Unit_ramp_limit_up OR Unit_ramp_limit_start_up)
+      AND Unit_ramps_from_previous
     expression: >-
-      Generator_p - Generator_previous_p <=
-      Generator_start_up_rate * Generator_p_nom_ext
-      + Generator_big_m - Generator_big_m * Generator_start_up
-  Generator_p_ramp_limit_down_run_big_m:
+      Unit_p - Unit_previous_p <=
+      Unit_start_up_rate * Unit_p_nom_ext
+      + Unit_big_m - Unit_big_m * Unit_start_up
+  Unit_p_ramp_limit_down_run_big_m:
     description: >-
-      `Generator-p-ramp_limit_down-run-bigM` — a committed extendable unit
+      `-p-ramp_limit_down-run-bigM` — a committed extendable unit
       lowers output no faster than its limit of the chosen build; the big M
       releases the row in the snapshot it turns off
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     where: >-
-      Generator_com_ext
-      AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND Generator_ramps_from_previous
+      Unit_com_ext
+      AND (Unit_ramp_limit_down OR Unit_ramp_limit_shut_down)
+      AND Unit_ramps_from_previous
     expression: >-
-      Generator_previous_p - Generator_p <=
-      Generator_ramp_down_rate * Generator_p_nom_ext
-      + Generator_big_m - Generator_big_m * Generator_status
-  Generator_p_ramp_limit_down_shut_big_m:
+      Unit_previous_p - Unit_p <=
+      Unit_ramp_down_rate * Unit_p_nom_ext
+      + Unit_big_m - Unit_big_m * Unit_status
+  Unit_p_ramp_limit_down_shut_big_m:
     description: >-
-      `Generator-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off,
+      `-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off,
       a committed extendable unit ramps no further than its shut-down ramp of
       the chosen build; the big M releases the row everywhere else
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     where: >-
-      Generator_com_ext
-      AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND Generator_ramps_from_previous
+      Unit_com_ext
+      AND (Unit_ramp_limit_down OR Unit_ramp_limit_shut_down)
+      AND Unit_ramps_from_previous
     expression: >-
-      Generator_previous_p - Generator_p <=
-      Generator_shut_down_rate * Generator_p_nom_ext
-      + Generator_big_m - Generator_big_m * Generator_shut_down
-  Generator_p_ramp_limit_up:
+      Unit_previous_p - Unit_p <=
+      Unit_shut_down_rate * Unit_p_nom_ext
+      + Unit_big_m - Unit_big_m * Unit_shut_down
+  Unit_p_ramp_limit_up:
     description: >-
-      `Generator-p-ramp_limit_up` — a generator raises output no faster than
+      `-p-ramp_limit_up` — a unit raises output no faster than
       its ramp limit of the build, and a committed one no further than its
       start-up ramp in the snapshot it turns on. A unit that came into the
       horizon running carries a row at the first snapshot only where its
       `p_init` gives the output it brought in, and no unit carries one at
       the start of a later investment period — nor does any unit a big M releases instead
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     where: >-
-      (Generator_ramp_limit_up OR Generator_ramp_limit_start_up)
-      AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-      AND Generator_ramps_from_previous
-      AND Generator_active
-    expression: Generator_p - Generator_previous_p <= Generator_ramp_up_allowance
-  Generator_p_ramp_limit_down:
+      (Unit_ramp_limit_up OR Unit_ramp_limit_start_up)
+      AND NOT (Unit_committable AND Unit_p_nom_extendable AND NOT (Unit_p_nom_mod > 0))
+      AND Unit_ramps_from_previous
+      AND Unit_active
+    expression: Unit_p - Unit_previous_p <= Unit_ramp_up_allowance
+  Unit_p_ramp_limit_down:
     description: >-
-      `Generator-p-ramp_limit_down` — a generator lowers output no faster than
+      `-p-ramp_limit_down` — a unit lowers output no faster than
       its ramp limit of the build, and a committed one no further than its
       shut-down ramp in the snapshot it turns off. A unit that came into the
       horizon running carries a row at the first snapshot only where its
       `p_init` gives the output it brought in, and no unit carries one at
       the start of a later investment period — nor does any unit a big M releases instead
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     where: >-
-      (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
-      AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
-      AND Generator_ramps_from_previous
-      AND Generator_active
-    expression: Generator_previous_p - Generator_p <= Generator_ramp_down_allowance
+      (Unit_ramp_limit_down OR Unit_ramp_limit_shut_down)
+      AND NOT (Unit_committable AND Unit_p_nom_extendable AND NOT (Unit_p_nom_mod > 0))
+      AND Unit_ramps_from_previous
+      AND Unit_active
+    expression: Unit_previous_p - Unit_p <= Unit_ramp_down_allowance
 
 assumptions:
-  Generator_came_in_running_unless_committable:
-    holds: "Generator_status_initial == 1"
-    where: "NOT Generator_committable AND (Generator_ramp_limit_up OR Generator_ramp_limit_down OR Generator_ramp_limit_start_up OR Generator_ramp_limit_shut_down)"
+  Unit_came_in_running_unless_committable:
+    holds: "Unit_status_initial == 1"
+    where: "NOT Unit_committable AND (Unit_ramp_limit_up OR Unit_ramp_limit_down OR Unit_ramp_limit_start_up OR Unit_ramp_limit_shut_down)"
     description: >-
       PyPSA reads `up_time_before` of a unit that is not committable in its
       ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp
@@ -287,15 +287,15 @@ assumptions:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units, each on one bus |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` — the units of the class this layer is renamed for |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{ru}`$ | `Generator_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — most a generator may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{rd}`$ | `Generator_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — most a generator may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{ru}`$ | `Generator_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — most a unit may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{rd}`$ | `Generator_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — most a unit may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
 | $`\mathrm{ru}^{\mathrm{up}}`$ | `Generator_ramp_limit_start_up` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — most output in the snapshot a unit starts, per unit of nominal power; no value means no limit |
 | $`\mathrm{rd}^{\mathrm{dn}}`$ | `Generator_ramp_limit_shut_down` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — most output in the snapshot before a unit stops, per unit of nominal power; no value means no limit |
 | $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot |
@@ -304,19 +304,19 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{prev}`$ | `Generator_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the generator comes in off or carries an initial output |
+| $`\mathrm{prev}`$ | `Generator_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the unit comes in off or carries an initial output |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{p}`$ | `Generator_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the output a generator carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
+| $`\overleftarrow{p}`$ | `Generator_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the output a unit carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
 | $`\widetilde{\mathrm{ru}}`$ | `Generator_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the ramp limit a unit's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row |
 | $`\widetilde{\mathrm{rd}}`$ | `Generator_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the ramp limit a unit's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row |
 | $`\widetilde{\mathrm{ru}}^{\mathrm{up}}`$ | `Generator_start_up_rate` over $`\Xi \times \mathcal{G}`$ — the start-up ramp a unit's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none |
 | $`\widetilde{\mathrm{rd}}^{\mathrm{dn}}`$ | `Generator_shut_down_rate` over $`\Xi \times \mathcal{G}`$ — the shut-down ramp a unit's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none |
-| $`\Delta^{+}`$ | `Generator_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how far a generator may raise output between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
-| $`\Delta^{-}`$ | `Generator_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how far a generator may lower output between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
+| $`\Delta^{+}`$ | `Generator_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how far a unit may raise output between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
+| $`\Delta^{-}`$ | `Generator_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how far a unit may lower output between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 
 #### Notation
 

@@ -17,6 +17,7 @@ import json
 import re
 import textwrap
 from functools import partial
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import yaml
@@ -27,11 +28,12 @@ from mathspec.program import Add, Constant, ExpressionReference
 from tools._page import ROOT, sidecar_for, splice, split_math, tab, without_header
 from tools._page import main as page_main
 from tools.notation import equations
+from tools.pypsa_compose import CLASSES, TEMPLATES, fragment
+from tools.pypsa_compose import names as fragment_names
 from tools.spec_math import OPERATORS, PROBES, _section, rendered_probe
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-    from pathlib import Path
 
     from mathspec.spec import Spec
 
@@ -92,7 +94,7 @@ DECLARED = {
 VARIANTS = {
     'pypsa_linearized_uc.md': (
         ROOT / 'examples' / 'pypsa_linearized_uc.yaml',
-        [PYPSA / kind / 'status_relaxed.yaml' for kind in ('generator', 'link', 'process')],
+        [fragment(f'{kind}/status_relaxed') for kind in CLASSES],
     ),
 }
 
@@ -132,8 +134,11 @@ def symbols_for(model: Spec, table_path: Path = LIBRARY_SYMBOLS) -> dict[str, An
 
 
 def fragment_block(path: Path, table_path: Path) -> str:
-    """One fragment, then its document in the notation the whole composition prints in."""
-    model = to_spec(path)
+    """One fragment, then its document in the notation the whole composition prints in.
+
+    A template has no symbols of its own, so it prints as the generator's layer.
+    """
+    model = to_spec(fragment(f'generator/{path.stem}') if TEMPLATES in path.parents else path)
     printed = to_markdown(model, symbols=symbols_for(model, table_path), numbered=False)
     return f'```yaml\n{without_header(path)}\n```\n\n{printed.strip()}'
 
@@ -146,11 +151,19 @@ def split_index_block() -> str:
     the sum, or else the one that reads it with its description and adds
     nothing to it.
     """
-    return split_index({fragment_name(path): to_spec(path) for path in sorted(PYPSA.rglob('*.yaml'))})
+    return split_index({name: to_spec(fragment(name)) for name in fragment_names()})
+
+
+def page_of(name: str) -> str:
+    """The page that shows the fragment *name*: its own, or its template's for a layer a class renames."""
+    kind, _, layer = name.partition('/')
+    if kind in CLASSES and not (PYPSA / f'{name}.yaml').exists():
+        return f'{TEMPLATES.name}/{layer}'
+    return name
 
 
 def split_index(specs: Mapping[str, Spec]) -> str:
-    """The two tables for *specs*, each fragment under its name.
+    """The two tables for *specs*, each fragment under its name and linked to its page.
 
     Raises:
         ValueError: A sum that no fragment reads with a description while
@@ -180,9 +193,9 @@ def split_index(specs: Mapping[str, Spec]) -> str:
     sums = ['| Sum | Over | Read in | The terms, by the fragment that adds each |', '| --- | --- | --- | --- |']
     for hub, by_fragment in sorted(terms.items(), key=lambda item: -len(item[1])):
         reader, dims = readers[hub]
-        cells = ', '.join(f'[`{term}`]({fragment}.md)' for fragment, term in sorted(by_fragment))
+        cells = ', '.join(f'[`{term}`]({page_of(name)}.md)' for name, term in sorted(by_fragment))
         over = f'`{", ".join(dims)}`' if dims else 'scalar'
-        sums.append(f'| `{hub}` | {over} | [{reader}]({reader}.md) | {cells} |')
+        sums.append(f'| `{hub}` | {over} | [{reader}]({page_of(reader)}.md) | {cells} |')
     files = [
         '| Fragment | Parameters | Variables | Constraints | Reads | Adds to |',
         '| --- | --- | --- | --- | --- | --- |',
@@ -195,7 +208,7 @@ def split_index(specs: Mapping[str, Spec]) -> str:
         )
         adds = ', '.join(f'`{hub}`' for hub in hubs)
         files.append(
-            f'| [{name}]({name}.md) | {len(spec.parameters)} | {len(spec.variables)} | {len(spec.constraints)} '
+            f'| [{name}]({page_of(name)}.md) | {len(spec.parameters)} | {len(spec.variables)} | {len(spec.constraints)} '
             f'| {reads} | {adds} |'
         )
     return '### The sums\n\n' + '\n'.join(sums) + '\n\n### The fragments\n\n' + '\n'.join(files)
@@ -258,6 +271,10 @@ def _names_for(name: str, description: str | None) -> list[str]:
 
     One entry answers to one PyPSA name as a rule; an entry whose rows PyPSA
     names differently by mode lists them all before the dash, the first canonical.
+
+    A template writes a row without its component, as ``-com-p-lower``,
+    since each class takes it under its own name; the component of the
+    entry's name goes in front.
     """
     text = description or ''
     head = text.split(' — ', 1)[0] if ' — ' in text else (re.match(r'`[^`]+`', text) or [''])[0]
@@ -265,7 +282,8 @@ def _names_for(name: str, description: str | None) -> list[str]:
     if not names:
         msg = f'{name}: the description does not start with a name in backticks. Start it with the name it stands for.'
         raise ValueError(msg)
-    return names
+    component = name.split('_', 1)[0]
+    return [f'{component}{other}' if other.startswith('-') else other for other in names]
 
 
 def _stands_for(name: str, description: str | None) -> str:
@@ -315,10 +333,10 @@ def declared_block(path: Path) -> str:
     return '\n\n'.join(parts)
 
 
-def variant_block(composed: Path, fragments: list[Path]) -> str:
+def variant_block(composed: Path, fragments: list[Path | Spec]) -> str:
     """The variant's description, then every entry its own fragments write, as YAML beside the line it prints."""
     model = to_spec(composed)
-    texts = [without_header(fragment) for fragment in fragments]
+    texts = [without_header(source) if isinstance(source, Path) else source.to_yaml() for source in fragments]
     written = [yaml.safe_load(text) for text in texts]
     headings = {
         'variables': {name: _stands_for(name, variable.description) for name, variable in model.variables.items()},

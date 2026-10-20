@@ -1,0 +1,118 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+given:
+  parameters:
+    Unit_active: { dims: [snapshot, unit], dtype: bool }
+    Unit_committable: { dims: [unit], dtype: bool }
+    Unit_p_max_pu: { dims: [scenario, snapshot, unit] }
+    Unit_p_min_pu: { dims: [scenario, snapshot, unit] }
+    Unit_p_nom: { dims: [scenario, unit] }
+    Unit_p_nom_extendable: { dims: [unit], dtype: bool }
+    Unit_p_nom_mod: { dims: [unit] }
+    Unit_shut_down_cost: { dims: [scenario, snapshot, unit] }
+    Unit_start_up_cost: { dims: [scenario, snapshot, unit] }
+  variables:
+    Unit_p: { dims: [scenario, snapshot, unit] }
+  expressions:
+    Unit_ramp_down_rate: { dims: [scenario, snapshot, unit] }
+    Unit_ramp_up_rate: { dims: [scenario, snapshot, unit] }
+    Unit_shut_down_rate: { dims: [scenario, unit] }
+    Unit_start_up_rate: { dims: [scenario, unit] }
+  masks:
+    Unit_committed: { dims: [snapshot, unit] }
+
+dimensions:
+  scenario:
+    description: the futures dispatch is chosen in, each with a weight
+  snapshot:
+    description: dispatch periods
+    dtype: datetime
+    ordered: true
+  unit:
+    description: the units of the class this layer is renamed for
+
+variables:
+  Unit_status:
+    description: >-
+      `-status` — how much of a committable unit is on, a share in [0, 1]
+      rather than an integer: the relaxation the keyword solves
+      (`variables.py:86-87`)
+    dims: [scenario, snapshot, unit]
+    where: Unit_committed
+    bounds:
+      lower: 0
+      upper: 1
+  Unit_start_up:
+    description: "`-start_up` — how much of a committable unit turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)"
+    dims: [scenario, snapshot, unit]
+    where: Unit_committed
+    bounds:
+      lower: 0
+      upper: 1
+  Unit_shut_down:
+    description: "`-shut_down` — how much of a committable unit turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)"
+    dims: [scenario, snapshot, unit]
+    where: Unit_committed
+    bounds:
+      lower: 0
+      upper: 1
+
+constraints:
+  Unit_com_p_before:
+    description: >-
+      `-com-p-before` — the output a unit had entering this snapshot fits
+      the share of it still on, less the share it is shutting down at the
+      shut-down ramp (`constraints.py:635-649`). The translated terms vacate
+      the first snapshot, as PyPSA's `sns[1:]` does
+    dims: [scenario, snapshot, unit]
+    where: Unit_committable AND NOT Unit_p_nom_extendable AND count(count(Unit_start_up_cost != Unit_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Unit_active
+    expression: >-
+      shift(Unit_p, along=snapshot, offset=1)
+      - Unit_shut_down_rate * Unit_p_nom * shift(Unit_status, along=snapshot, offset=1)
+      - (Unit_p_max_pu * Unit_p_nom - Unit_shut_down_rate * Unit_p_nom)
+      * (Unit_status - Unit_start_up) <= 0
+  Unit_com_p_current:
+    description: >-
+      `-com-p-current` — output fits the share on, and the share starting
+      up only up to the start-up ramp (`constraints.py:652-665`)
+    dims: [scenario, snapshot, unit]
+    where: Unit_committable AND NOT Unit_p_nom_extendable AND count(count(Unit_start_up_cost != Unit_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND position(snapshot) > 0 AND Unit_active
+    expression: >-
+      Unit_p - Unit_p_max_pu * Unit_p_nom * Unit_status
+      + (Unit_p_max_pu * Unit_p_nom - Unit_start_up_rate * Unit_p_nom) * Unit_start_up <= 0
+  Unit_com_partly_start_up:
+    description: >-
+      `-com-partly-start-up` — raising output while a share is starting up
+      is bounded by the ramp of the share on and the start-up ramp of the
+      share coming on (`constraints.py:667-682`)
+    dims: [scenario, snapshot, unit]
+    where: Unit_committable AND NOT Unit_p_nom_extendable AND count(count(Unit_start_up_cost != Unit_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Unit_active
+    expression: >-
+      Unit_p - shift(Unit_p, along=snapshot, offset=1)
+      - (Unit_p_min_pu * Unit_p_nom + Unit_ramp_up_rate * Unit_p_nom) * Unit_status
+      + Unit_p_min_pu * Unit_p_nom * shift(Unit_status, along=snapshot, offset=1)
+      + (Unit_p_min_pu * Unit_p_nom + Unit_ramp_up_rate * Unit_p_nom - Unit_start_up_rate * Unit_p_nom)
+      * Unit_start_up <= 0
+  Unit_com_partly_shut_down:
+    description: >-
+      `-com-partly-shut-down` — lowering output while a share is shutting
+      down is bounded likewise, by the shut-down ramp (`constraints.py:684-699`)
+    dims: [scenario, snapshot, unit]
+    where: Unit_committable AND NOT Unit_p_nom_extendable AND count(count(Unit_start_up_cost != Unit_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Unit_active
+    expression: >-
+      shift(Unit_p, along=snapshot, offset=1) - Unit_p
+      - Unit_shut_down_rate * Unit_p_nom * shift(Unit_status, along=snapshot, offset=1)
+      + (Unit_shut_down_rate * Unit_p_nom - Unit_ramp_down_rate * Unit_p_nom) * Unit_status
+      - (Unit_p_min_pu * Unit_p_nom + Unit_ramp_down_rate * Unit_p_nom - Unit_shut_down_rate * Unit_p_nom)
+      * Unit_start_up <= 0
+
+assumptions:
+  Unit_committable_is_not_modular:
+    holds: "NOT (Unit_p_nom_mod > 0)"
+    where: "Unit_committable AND count(Unit_active, over=snapshot) > 0"
+    description: >-
+      a modular committable unit counts its status in modules, which the
+      relaxation cannot share out — PyPSA refuses it under the keyword
+      (`optimize.py:783-784`, `consistency.py:1540-1581`)

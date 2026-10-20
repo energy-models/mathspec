@@ -12,10 +12,11 @@ reads under `given:`. The surface reads each sum without adding to it, with
 its description, and power flow reads the cycle sum. So a component is one
 file, and leaving it out leaves a whole model.
 
-`Generator`, `Link` and `Process` are each a folder of layers. The class reads
-its commitment flag under `given:`, and exactly one of `commitment.yaml` and
-`commitment_none.yaml` declares it. The commitment reads its status the same
-way, from `status_integer.yaml` or `status_relaxed.yaml`.
+`Generator`, `Link` and `Process` each take the layers under `committable/`,
+written once and renamed for the class, so `link/ramping` is the ramping under
+the link's names. The class reads its commitment flag under `given:`, and
+exactly one of `commitment` and `commitment_none` declares it. The commitment
+reads its status the same way, from `status_integer` or `status_relaxed`.
 """
 
 from __future__ import annotations
@@ -31,12 +32,11 @@ from mathspec.errors import LanguageError
 from tests.fixtures import BALANCE
 from tests.test_terms import DEMAND, FLEET
 from tools.gallery import fragment_name, split_index
-from tools.pypsa_compose import DEFAULT, paths
+from tools.pypsa_compose import CLASSES, DEFAULT, fragment, fragments, names
 
 FOLDER = Path(__file__).resolve().parent.parent / 'examples' / 'pypsa'
 PATHS = {fragment_name(path): path for path in sorted(FOLDER.rglob('*.yaml'))}
-DEFAULT_PATHS = dict(zip(DEFAULT, paths(DEFAULT), strict=True))
-CLASSES = ('generator', 'link', 'process')
+DEFAULT_PATHS = dict(zip(DEFAULT, fragments(DEFAULT), strict=True))
 LAYERS = ('commitment', 'commitment_none', 'status_integer', 'status_relaxed', 'ramping', 'maintenance')
 OUTSIDE_THE_DEFAULT = ('commitment_none', 'status_relaxed')
 
@@ -52,19 +52,19 @@ def test_a_fragment_loads_on_its_own(name):
 
 def test_the_default_set_is_every_fragment_but_the_alternatives():
     alternatives = {'risk_neutral', *(f'{kind}/{layer}' for kind in CLASSES for layer in OUTSIDE_THE_DEFAULT)}
-    assert sorted({*DEFAULT, *alternatives}) == sorted(PATHS), (
+    assert sorted({*DEFAULT, *alternatives}) == names(), (
         'a fragment the composed file leaves out, or a name no file has'
     )
-    assert not merge(paths(DEFAULT)).program.given, 'every name a fragment reads, another fragment declares'
+    assert not merge(fragments(DEFAULT)).program.given, 'every name a fragment reads, another fragment declares'
 
 
 def test_each_sum_is_its_terms_by_name_and_each_term_stays():
-    merged = merge(paths(DEFAULT))
+    merged = merge(fragments(DEFAULT))
     assert merged.expressions['Bus_injection'].expression == (
         'Generator_injection + Link_injection + Process_injection + StorageUnit_injection + Store_injection'
         ' + Line_injection + Transformer_injection + Load_injection'
     ), 'the terms in the order the default set lists the files'
-    terms = {name for path in PATHS.values() for name, entry in to_spec(path).expressions.items() if entry.adds_to}
+    terms = {term for name in names() for term, entry in to_spec(fragment(name)).expressions.items() if entry.adds_to}
     assert terms <= set(merged.expressions), 'every term is a named expression of the composed spec'
 
 
@@ -102,7 +102,7 @@ def test_leaving_a_topic_out_leaves_a_whole_model(dropped):
 
 
 def test_every_sum_is_read_with_its_description_in_one_fragment_that_adds_nothing():
-    specs = {name: to_spec(path) for name, path in PATHS.items()}
+    specs = {name: to_spec(fragment(name)) for name in names()}
     defined = {name for spec in specs.values() for name, entry in spec.expressions.items() if not entry.adds_to}
     sums = {e.adds_to for spec in specs.values() for e in spec.expressions.values() if e.adds_to} - defined
     described = {
@@ -137,7 +137,7 @@ def test_leaving_out_the_reader_of_a_sum_no_model_goes_without_is_refused(droppe
 @pytest.mark.parametrize('fmt', sorted(FORMATS))
 def test_every_fragment_and_the_composition_print(fmt):
     assert all(typeset(path, fmt) for path in PATHS.values()), f'a fragment rendered nothing in {fmt}'
-    assert typeset(merge(paths(DEFAULT)), fmt)
+    assert typeset(merge(fragments(DEFAULT)), fmt)
 
 
 def _whole(layers: tuple[str, ...]) -> bool:
@@ -156,7 +156,7 @@ def _whole(layers: tuple[str, ...]) -> bool:
     return len(status) == 1 and ('status_relaxed' not in taken or 'ramping' in taken)
 
 
-@pytest.mark.parametrize('kind', CLASSES)
+@pytest.mark.parametrize('kind', list(CLASSES))
 @pytest.mark.parametrize(
     'layers',
     [combo for k in range(len(LAYERS) + 1) for combo in itertools.combinations(LAYERS, k)],
@@ -165,7 +165,7 @@ def _whole(layers: tuple[str, ...]) -> bool:
 def test_a_class_is_whole_exactly_when_its_slots_are_filled_once(kind, layers):
     """A slot no file fills leaves a name unread, a slot two files fill declares it twice."""
     others = [path for name, path in DEFAULT_PATHS.items() if not name.startswith(f'{kind}/')]
-    files = [*others, *(FOLDER / kind / f'{layer}.yaml' for layer in ('class', *layers))]
+    files = [*others, *(fragment(f'{kind}/{layer}') for layer in ('class', *layers))]
     try:
         whole = not merge(files).program.given
     except LanguageError:
@@ -185,14 +185,14 @@ def _signature(spec, name):
     return 'masks', tuple(program.masks[name].dims)
 
 
-@pytest.mark.parametrize('kind', CLASSES)
+@pytest.mark.parametrize('kind', list(CLASSES))
 def test_no_commitment_declares_what_the_commitment_declares_alike(kind):
     """Ramping and maintenance read these names from whichever file is in, so the two must agree name for name.
 
     The integer status is the commitment's: the relaxed one differs from it on purpose.
     """
     empty, commitment, status = (
-        to_spec(FOLDER / kind / f'{name}.yaml') for name in ('commitment_none', 'commitment', 'status_integer')
+        to_spec(fragment(f'{kind}/{name}')) for name in ('commitment_none', 'commitment', 'status_integer')
     )
     names = [*empty.parameters, *empty.variables, *empty.expressions, *empty.masks]
     assert len(names) == 9, (
@@ -206,11 +206,11 @@ def test_no_commitment_declares_what_the_commitment_declares_alike(kind):
     assert not differ, f'{kind}: no commitment and the commitment declare these differently: {differ}'
 
 
-@pytest.mark.parametrize('kind', CLASSES)
+@pytest.mark.parametrize('kind', list(CLASSES))
 def test_no_commitment_refuses_a_committable_unit(kind):
     """Without it, a committable unit in data with no commitment layer would have no output limits."""
-    component = kind.capitalize()
-    assumption = to_spec(FOLDER / kind / 'commitment_none.yaml').assumptions[f'{component}_none_committable']
+    component = CLASSES[kind]
+    assumption = to_spec(fragment(f'{kind}/commitment_none')).assumptions[f'{component}_none_committable']
     assert assumption.holds == f'NOT {component}_committable', 'the data may hold no committable unit'
 
 

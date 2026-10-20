@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(composition): `rename` gives a spec other names, so one fragment can serve several classes in one merge ([#905](https://github.com/energy-models/mathspec/pull/905))
 - docs: the compose guide says how to add or remove a term on a merged spec ([#901](https://github.com/energy-models/mathspec/pull/901))
 - fix(composition): a fragment returned by `override` merges as the file it came from does ([#900](https://github.com/energy-models/mathspec/pull/900))
 - docs(pypsa): the PyPSA spec is written as fragments, with each committable class, the relaxed commitment and the risk preference as layers that a model takes or leaves out ([#902](https://github.com/energy-models/mathspec/pull/902))

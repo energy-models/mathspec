@@ -3,30 +3,30 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Generators, the maintenance
+# Committable classes, the maintenance
 
-This file states the maintenance of PyPSA's `Generator`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. It takes what is under maintenance out of the build, which [the class](class.md) defines as `Generator_p_nom_available`, and out of the status, which [the commitment](commitment.md) or [no commitment](commitment_none.md) defines as `Generator_status_available`. It adds a term to each of these sums: `Generator_p_nom_available` and `Generator_status_available`. It reads `Generator_active`, `Generator_committable`, `Generator_committed`, `Generator_p_nom`, `Generator_p_nom_ext`, `Generator_p_nom_extendable` and 5 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
+This file states the maintenance of PyPSA's `Generator`, `Link` and `Process`. It is written once and each class takes it under its own names, as [the commitment](commitment.md) says. Each of those is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. The math below prints the generator's. It takes what is under maintenance out of the build, which the class defines as `Unit_p_nom_available`, and out of the status, which [the commitment](commitment.md) or [no commitment](commitment_none.md) defines as `Unit_status_available`. It adds a term to each of these sums: `Unit_p_nom_available` and `Unit_status_available`. It reads `Unit_active`, `Unit_committable`, `Unit_committed`, `Unit_p_nom`, `Unit_p_nom_ext`, `Unit_p_nom_extendable` and 5 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
 given:
   parameters:
-    Generator_p_nom: { dims: [scenario, generator] }
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
-    Generator_committable: { dims: [generator], dtype: bool }
-    Generator_p_nom_mod: { dims: [generator] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
+    Unit_p_nom: { dims: [scenario, unit] }
+    Unit_p_nom_extendable: { dims: [unit], dtype: bool }
+    Unit_committable: { dims: [unit], dtype: bool }
+    Unit_p_nom_mod: { dims: [unit] }
+    Unit_active: { dims: [snapshot, unit], dtype: bool }
     snapshot_weightings_generators: { dims: [snapshot] }
-    Generator_p_nom_min: { dims: [scenario, generator] }
-    Generator_p_nom_max: { dims: [scenario, generator] }
+    Unit_p_nom_min: { dims: [scenario, unit] }
+    Unit_p_nom_max: { dims: [scenario, unit] }
   variables:
-    Generator_status: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom_ext: { dims: [generator] }
+    Unit_status: { dims: [scenario, snapshot, unit] }
+    Unit_p_nom_ext: { dims: [unit] }
   expressions:
-    Generator_p_nom_available: { dims: [scenario, snapshot, generator] }
-    Generator_status_available: { dims: [scenario, snapshot, generator] }
+    Unit_p_nom_available: { dims: [scenario, snapshot, unit] }
+    Unit_status_available: { dims: [scenario, snapshot, unit] }
   masks:
-    Generator_committed: { dims: [snapshot, generator] }
+    Unit_committed: { dims: [snapshot, unit] }
 
 dimensions:
   scenario:
@@ -35,230 +35,230 @@ dimensions:
     description: dispatch periods
     dtype: datetime
     ordered: true
-  generator:
-    description: generating units, each on one bus
+  unit:
+    description: the units of the class this layer is renamed for
 
 relations:
-  Generator_maintenance_cover:
+  Unit_maintenance_cover:
     description: >-
       the snapshots a maintenance event covers, by the snapshot it starts in —
       in a scenario, the start and the snapshots after it, until their
       generator weightings reach that scenario's `maintenance_duration`, data prep; no
-      rows for a generator that is
+      rows for a unit that is
       not maintainable
-    key: { scenario: scenario, generator: generator, start: snapshot, covered: snapshot }
+    key: { scenario: scenario, unit: unit, start: snapshot, covered: snapshot }
     missing: absent
 
 parameters:
-  Generator_maintainable:
+  Unit_maintainable:
     description: >-
-      whether a generator must be taken off for maintenance within the horizon — in
+      whether a unit must be taken off for maintenance within the horizon — in
       any scenario, as PyPSA takes the union over them (`components.py:1016-1019`)
-    dims: [generator]
+    dims: [unit]
     dtype: bool
-  Generator_maintenance_pu:
+  Unit_maintenance_pu:
     description: the share of the build a maintenance event takes off
-    dims: [scenario, generator]
-  Generator_maintenance_events:
+    dims: [scenario, unit]
+  Unit_maintenance_events:
     description: how many maintenance events the horizon holds
-    dims: [scenario, generator]
+    dims: [scenario, unit]
     dtype: int
-  Generator_maintenance_duration:
+  Unit_maintenance_duration:
     description: >-
       the hours of generator weightings one maintenance event covers —
-      PyPSA's `maintenance_duration`; no value where the generator is not
+      PyPSA's `maintenance_duration`; no value where the unit is not
       maintainable. No row reads it: data prep turns it into
-      `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the
+      `Unit_maintenance_cover` and `Unit_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
-    dims: [scenario, generator]
+    dims: [scenario, unit]
     missing: neutral
-  Generator_maintenance_start_blocked:
+  Unit_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it
-      would cover run past the end of the horizon or into one the generator does
+      would cover run past the end of the horizon or into one the unit does
       not stand in — PyPSA's `active & ~valid`, from `maintenance_duration`
       and the generator weightings, data prep
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     dtype: bool
 
 variables:
-  Generator_maintenance:
+  Unit_maintenance:
     description: >-
-      `Generator-maintenance` — whether a maintainable generator is in maintenance:
+      `-maintenance` — whether a maintainable unit is in maintenance:
       continuous, and one exactly where an event covers the snapshot
-    dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_active
+    dims: [scenario, snapshot, unit]
+    where: Unit_maintainable AND Unit_active
     missing: neutral
     bounds:
       lower: 0
       upper: 1
-  Generator_maintenance_start:
-    description: "`Generator-maintenance_start` — whether a maintenance event starts in this snapshot"
-    dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_active
+  Unit_maintenance_start:
+    description: "`-maintenance_start` — whether a maintenance event starts in this snapshot"
+    dims: [scenario, snapshot, unit]
+    where: Unit_maintainable AND Unit_active
     missing: neutral
     domain: binary
-  Generator_maintenance_capacity:
+  Unit_maintenance_capacity:
     description: >-
-      `Generator-maintenance_capacity` — the chosen build while in maintenance, zero
+      `-maintenance_capacity` — the chosen build while in maintenance, zero
       otherwise: the product the `maintcap` rows linearize
-    dims: [scenario, snapshot, generator]
-    where: Generator_maint_ext
+    dims: [scenario, snapshot, unit]
+    where: Unit_maint_ext
     missing: neutral
     bounds:
       lower: 0
-  Generator_maintenance_status:
+  Unit_maintenance_status:
     description: >-
-      `Generator-maintenance_status` — the status while in maintenance, zero
+      `-maintenance_status` — the status while in maintenance, zero
       otherwise: the product the `maint-status` rows linearize, so a unit in
       maintenance may also be off
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     where: >-
-      Generator_maintainable
-      AND Generator_committed
-      AND NOT (Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0))
+      Unit_maintainable
+      AND Unit_committed
+      AND NOT (Unit_p_nom_extendable AND NOT (Unit_p_nom_mod > 0))
     missing: neutral
     bounds:
       lower: 0
 
 expressions:
-  Generator_maintenance_outage:
+  Unit_maintenance_outage:
     description: >-
       the build maintenance takes out of a unit — the chosen share where the
       build is extendable, the given build while it is under maintenance
       otherwise
-    dims: [scenario, snapshot, generator]
+    dims: [scenario, snapshot, unit]
     cases:
-      extendable: { when: Generator_p_nom_extendable, expression: -Generator_maintenance_pu * Generator_maintenance_capacity }
-    otherwise: -Generator_maintenance_pu * Generator_p_nom * Generator_maintenance
-    adds_to: Generator_p_nom_available
-  Generator_maintenance_status_outage:
-    expression: -Generator_maintenance_pu * Generator_maintenance_status
-    adds_to: Generator_status_available
+      extendable: { when: Unit_p_nom_extendable, expression: -Unit_maintenance_pu * Unit_maintenance_capacity }
+    otherwise: -Unit_maintenance_pu * Unit_p_nom * Unit_maintenance
+    adds_to: Unit_p_nom_available
+  Unit_maintenance_status_outage:
+    expression: -Unit_maintenance_pu * Unit_maintenance_status
+    adds_to: Unit_status_available
 
 masks:
-  Generator_maint_ext:
+  Unit_maint_ext:
     description: >-
-      a maintainable generator with an extendable build, unless it is
+      a maintainable unit with an extendable build, unless it is
       committable and modular, that stands in the snapshot's period — the
       maintenance rows against the chosen build
     where: >-
-      Generator_maintainable
-      AND Generator_p_nom_extendable
-      AND NOT (Generator_committable AND Generator_p_nom_mod > 0)
-      AND Generator_active
+      Unit_maintainable
+      AND Unit_p_nom_extendable
+      AND NOT (Unit_committable AND Unit_p_nom_mod > 0)
+      AND Unit_active
 
 constraints:
-  Generator_maint_event_count:
-    description: "`Generator-maint-event-count` — a maintainable generator holds its number of maintenance events over the horizon"
-    dims: [scenario, generator]
-    where: Generator_maintainable
-    expression: sum(Generator_maintenance_start, over=snapshot) == Generator_maintenance_events
-  Generator_maint_window:
+  Unit_maint_event_count:
+    description: "`-maint-event-count` — a maintainable unit holds its number of maintenance events over the horizon"
+    dims: [scenario, unit]
+    where: Unit_maintainable
+    expression: sum(Unit_maintenance_start, over=snapshot) == Unit_maintenance_events
+  Unit_maint_window:
     description: >-
-      `Generator-maint-window` — a generator is in maintenance exactly where an event it
+      `-maint-window` — a unit is in maintenance exactly where an event it
       started covers the snapshot; two events do not overlap, since the
       maintenance status is at most one
-    dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_active
-    expression: Generator_maintenance == sum(Generator_maintenance_start, over=start, by=Generator_maintenance_cover[covered])
-  Generator_maint_start_horizon:
-    description: "`Generator-maint-start-horizon` — no event starts where it could not run its whole duration"
-    dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_active AND Generator_maintenance_start_blocked
-    expression: Generator_maintenance_start == 0
-  Generator_maintcap_upper:
+    dims: [scenario, snapshot, unit]
+    where: Unit_maintainable AND Unit_active
+    expression: Unit_maintenance == sum(Unit_maintenance_start, over=start, by=Unit_maintenance_cover[covered])
+  Unit_maint_start_horizon:
+    description: "`-maint-start-horizon` — no event starts where it could not run its whole duration"
+    dims: [scenario, snapshot, unit]
+    where: Unit_maintainable AND Unit_active AND Unit_maintenance_start_blocked
+    expression: Unit_maintenance_start == 0
+  Unit_maintcap_upper:
     description: >-
-      `Generator-maintcap_upper` — the build taken off is at most the chosen build in
+      `-maintcap_upper` — the build taken off is at most the chosen build in
       maintenance, and at most the build less its floor out of it
-    dims: [scenario, snapshot, generator]
-    where: Generator_maint_ext
-    expression: Generator_maintenance_capacity <= Generator_p_nom_ext - Generator_p_nom_min * (1 - Generator_maintenance)
-  Generator_maintcap_upper_nommax:
-    description: "`Generator-maintcap_upper_nommax` — out of maintenance, no build is taken off"
-    dims: [scenario, snapshot, generator]
-    where: Generator_maint_ext
-    expression: Generator_maintenance_capacity <= Generator_p_nom_max * Generator_maintenance
-  Generator_maintcap_lower_nommax:
-    description: "`Generator-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off"
-    dims: [scenario, snapshot, generator]
-    where: Generator_maint_ext
-    expression: Generator_maintenance_capacity >= Generator_p_nom_ext - Generator_p_nom_max * (1 - Generator_maintenance)
-  Generator_maintcap_lower_nommin:
-    description: "`Generator-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off"
-    dims: [scenario, snapshot, generator]
-    where: Generator_maint_ext AND Generator_p_nom_min > 0
-    expression: Generator_maintenance_capacity >= Generator_p_nom_min * Generator_maintenance
-  Generator_maint_status_le_status:
-    description: "`Generator-maint-status-le-status` — the status in maintenance is at most the status"
-    dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
-    expression: Generator_maintenance_status <= Generator_status
-  Generator_maint_status_le_maint:
-    description: "`Generator-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
-    dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
-    expression: Generator_maintenance_status <= Generator_maintenance
-  Generator_maint_status_lb:
-    description: "`Generator-maint-status-lb` — on and in maintenance, the status in maintenance is one"
-    dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
-    expression: Generator_maintenance_status >= Generator_status + Generator_maintenance - 1
-  Generator_maint_modstatus_le_status:
-    description: "`Generator-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
-    dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
-    expression: Generator_maintenance_status <= Generator_status
-  Generator_maint_modstatus_le_maint:
+    dims: [scenario, snapshot, unit]
+    where: Unit_maint_ext
+    expression: Unit_maintenance_capacity <= Unit_p_nom_ext - Unit_p_nom_min * (1 - Unit_maintenance)
+  Unit_maintcap_upper_nommax:
+    description: "`-maintcap_upper_nommax` — out of maintenance, no build is taken off"
+    dims: [scenario, snapshot, unit]
+    where: Unit_maint_ext
+    expression: Unit_maintenance_capacity <= Unit_p_nom_max * Unit_maintenance
+  Unit_maintcap_lower_nommax:
+    description: "`-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off"
+    dims: [scenario, snapshot, unit]
+    where: Unit_maint_ext
+    expression: Unit_maintenance_capacity >= Unit_p_nom_ext - Unit_p_nom_max * (1 - Unit_maintenance)
+  Unit_maintcap_lower_nommin:
+    description: "`-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off"
+    dims: [scenario, snapshot, unit]
+    where: Unit_maint_ext AND Unit_p_nom_min > 0
+    expression: Unit_maintenance_capacity >= Unit_p_nom_min * Unit_maintenance
+  Unit_maint_status_le_status:
+    description: "`-maint-status-le-status` — the status in maintenance is at most the status"
+    dims: [scenario, snapshot, unit]
+    where: Unit_maintainable AND Unit_committed AND NOT Unit_p_nom_extendable AND NOT (Unit_p_nom_mod > 0)
+    expression: Unit_maintenance_status <= Unit_status
+  Unit_maint_status_le_maint:
+    description: "`-maint-status-le-maint` — out of maintenance, the status in maintenance is zero"
+    dims: [scenario, snapshot, unit]
+    where: Unit_maintainable AND Unit_committed AND NOT Unit_p_nom_extendable AND NOT (Unit_p_nom_mod > 0)
+    expression: Unit_maintenance_status <= Unit_maintenance
+  Unit_maint_status_lb:
+    description: "`-maint-status-lb` — on and in maintenance, the status in maintenance is one"
+    dims: [scenario, snapshot, unit]
+    where: Unit_maintainable AND Unit_committed AND NOT Unit_p_nom_extendable AND NOT (Unit_p_nom_mod > 0)
+    expression: Unit_maintenance_status >= Unit_status + Unit_maintenance - 1
+  Unit_maint_modstatus_le_status:
+    description: "`-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on"
+    dims: [scenario, snapshot, unit]
+    where: Unit_maintainable AND Unit_committed AND Unit_p_nom_mod > 0
+    expression: Unit_maintenance_status <= Unit_status
+  Unit_maint_modstatus_le_maint:
     description: >-
-      `Generator-maint-modstatus-le-maint` — out of maintenance, no module is on in
+      `-maint-modstatus-le-maint` — out of maintenance, no module is on in
       maintenance; in it, at most the modules the build cap holds
-    dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
-    expression: Generator_maintenance_status <= Generator_p_nom_max / Generator_p_nom_mod * Generator_maintenance
-  Generator_maint_modstatus_lb:
-    description: "`Generator-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
-    dims: [scenario, snapshot, generator]
-    where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
-    expression: Generator_maintenance_status >= Generator_status - Generator_p_nom_max / Generator_p_nom_mod * (1 - Generator_maintenance)
+    dims: [scenario, snapshot, unit]
+    where: Unit_maintainable AND Unit_committed AND Unit_p_nom_mod > 0
+    expression: Unit_maintenance_status <= Unit_p_nom_max / Unit_p_nom_mod * Unit_maintenance
+  Unit_maint_modstatus_lb:
+    description: "`-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
+    dims: [scenario, snapshot, unit]
+    where: Unit_maintainable AND Unit_committed AND Unit_p_nom_mod > 0
+    expression: Unit_maintenance_status >= Unit_status - Unit_p_nom_max / Unit_p_nom_mod * (1 - Unit_maintenance)
 
 assumptions:
-  Generator_maintenance_events_positive:
-    holds: "Generator_maintenance_events > 0"
-    where: "Generator_maintainable"
+  Unit_maintenance_events_positive:
+    holds: "Unit_maintenance_events > 0"
+    where: "Unit_maintainable"
     description: >-
-      a maintainable generator with no event schedules no maintenance —
+      a maintainable unit with no event schedules no maintenance —
       PyPSA refuses it (`consistency.py:1493`)
-  Generator_maintenance_duration_positive:
-    holds: "Generator_maintenance_duration > 0"
-    where: "Generator_maintainable"
+  Unit_maintenance_duration_positive:
+    holds: "Unit_maintenance_duration > 0"
+    where: "Unit_maintainable"
     description: >-
       an event that covers no hours is no maintenance window — PyPSA
       refuses it (`consistency.py:1483`)
-  Generator_maintenance_duration_fits_the_horizon:
-    holds: "Generator_maintenance_duration <= sum(snapshot_weightings_generators, over=snapshot)"
-    where: "Generator_maintainable"
+  Unit_maintenance_duration_fits_the_horizon:
+    holds: "Unit_maintenance_duration <= sum(snapshot_weightings_generators, over=snapshot)"
+    where: "Unit_maintainable"
     description: >-
       one event longer than the horizon, in generator weightings, blocks
       every start and makes the event count infeasible — PyPSA refuses it
       (`consistency.py:1504`)
-  Generator_maintenance_events_fit_the_horizon:
-    holds: "Generator_maintenance_duration * Generator_maintenance_events <= sum(snapshot_weightings_generators, over=snapshot)"
-    where: "Generator_maintainable"
+  Unit_maintenance_events_fit_the_horizon:
+    holds: "Unit_maintenance_duration * Unit_maintenance_events <= sum(snapshot_weightings_generators, over=snapshot)"
+    where: "Unit_maintainable"
     description: >-
-      the events together longer than the horizon, in generator
+      the events together longer than the horizon, in unit
       weightings, cannot all be scheduled — PyPSA refuses it
       (`consistency.py:1516`)
-  Generator_maintenance_build_cap_is_finite:
-    holds: "Generator_p_nom_max < inf"
-    where: "Generator_maintainable AND Generator_p_nom_extendable"
+  Unit_maintenance_build_cap_is_finite:
+    holds: "Unit_p_nom_max < inf"
+    where: "Unit_maintainable AND Unit_p_nom_extendable"
     description: >-
       the `maintcap` rows hold the chosen build in maintenance against
       `p_nom_max`, so an infinite cap is an infinite coefficient — PyPSA
       refuses it (`consistency.py:1528`)
-  Generator_maintenance_module_count_is_finite:
-    holds: "Generator_p_nom_max < inf"
-    where: "Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_p_nom_mod > 0"
+  Unit_maintenance_module_count_is_finite:
+    holds: "Unit_p_nom_max < inf"
+    where: "Unit_maintainable AND Unit_committable AND NOT Unit_p_nom_extendable AND Unit_p_nom_mod > 0"
     description: >-
       the `maint-modstatus` rows bound the modules on in maintenance by
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
@@ -290,32 +290,32 @@ assumptions:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — dispatch periods |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — generating units, each on one bus |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — the units of the class this layer is renamed for |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{mnt}`$ | `Generator_maintainable` over $`\mathcal{G}`$ — whether a generator must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
+| $`\mathrm{mnt}`$ | `Generator_maintainable` over $`\mathcal{G}`$ — whether a unit must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
 | $`\gamma`$ | `Generator_maintenance_pu` over $`\Xi \times \mathcal{G}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{\mathrm{mnt}}`$ | `Generator_maintenance_events` over $`\Xi \times \mathcal{G}`$ — how many maintenance events the horizon holds |
-| $`\tau^{\mathrm{mnt}}`$ | `Generator_maintenance_duration` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the generator is not maintainable. No row reads it: data prep turns it into `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the assumptions hold it to the horizon |
-| $`\mathrm{blk}`$ | `Generator_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the generator does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
+| $`\tau^{\mathrm{mnt}}`$ | `Generator_maintenance_duration` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the unit is not maintainable. No row reads it: data prep turns it into `Unit_maintenance_cover` and `Unit_maintenance_start_blocked`, and the assumptions hold it to the horizon |
+| $`\mathrm{blk}`$ | `Generator_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the unit does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 
 #### Masks
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{on}^{\mathrm{mnt,ext}}`$ | `Generator_maint_ext` over $`\mathcal{T} \times \mathcal{G}`$ — a maintainable generator with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
+| $`\mathrm{on}^{\mathrm{mnt,ext}}`$ | `Generator_maint_ext` over $`\mathcal{T} \times \mathcal{G}`$ — a maintainable unit with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`\mu`$ | `Generator_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance` — whether a maintainable generator is in maintenance: continuous, and one exactly where an event covers the snapshot |
-| $`\mu^{\mathrm{up}}`$ | `Generator_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_start` — whether a maintenance event starts in this snapshot |
-| $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
-| $`\mu^{u}`$ | `Generator_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
+| $`\mu`$ | `Generator_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `-maintenance` — whether a maintainable unit is in maintenance: continuous, and one exactly where an event covers the snapshot |
+| $`\mu^{\mathrm{up}}`$ | `Generator_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `-maintenance_start` — whether a maintenance event starts in this snapshot |
+| $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
+| $`\mu^{u}`$ | `Generator_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
 
 #### Definitions
 
