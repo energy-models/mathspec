@@ -505,7 +505,7 @@ def test_assumptions_carry_the_file_s_entries_and_the_curves_behind_them():
 
 
 def test_an_assumption_lowers_both_of_its_masks():
-    """The condition and the ``where`` are rebuilt on program expressions, as every other mask is."""
+    """The ``holds`` and the ``where`` are rebuilt on program expressions, as every other mask is."""
     program = to_spec(varied(SHAPES_MODEL, assumptions={'sound': {'holds': 'c <= 0.5 * k', 'where': 'flag'}})).program
     assumption = program.assumptions['sound']
 

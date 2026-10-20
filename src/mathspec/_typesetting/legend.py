@@ -117,7 +117,7 @@ def notice(program: Program) -> Noticed:
         if entry.where is not None:
             masks(entry.where)
     for assumption in program.assumptions.values():
-        masks(assumption.condition)
+        masks(assumption.holds)
         if assumption.where is not None:
             masks(assumption.where)
     return Noticed(frozenset(policies), grouped, frozenset(positions), frozenset(numeric))
