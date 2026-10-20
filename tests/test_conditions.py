@@ -64,7 +64,9 @@ def test_a_named_condition_stands_where_its_name_is_written_with_its_condition_u
     assert where.root.body == program.conditions['stands'].condition.root, (
         'and carries the condition the entry declares'
     )
-    assert program.conditions['stands'].dims == ('period', 'generator')
+    assert program.conditions['stands'].dims == ('generator', 'period'), (
+        'a named condition is indexed over the dims its condition reads, sorted by name'
+    )
     assert where.names_read == {'build_year', 'lifetime', 'period_year'}, 'a mask reads what its condition reads'
     assert where.dims == {'period', 'generator'}
 

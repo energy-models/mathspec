@@ -195,12 +195,14 @@ def test_expansion_is_idempotent():
         pytest.param(['generator', 'snapshot', 'bp'], id='generator-first'),
     ],
 )
-def test_the_emitted_foreach_follows_file_order(order):
+def test_the_emitted_frame_is_sorted_by_name_whatever_order_the_file_declares(order):
     """The frame is a set until something orders it, and a set iterates the
     same way for the same names within one process — so a run that reads the
-    set rather than the entry fails one of the two orderings."""
+    set rather than sorting it fails one of the two orderings."""
     spec = spec_of(TWO_DIM, dimensions={d: TWO_DIM['dimensions'][d] for d in order})
-    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == order
+    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == ['generator', 'snapshot', 'bp'], (
+        'the frame sorted by name, then the breakpoint dimension'
+    )
 
 
 @pytest.mark.parametrize(

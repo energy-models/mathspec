@@ -15,7 +15,7 @@ given:
     Link_status: { dims: [scenario, snapshot, link], domain: integer }
     Link_p_nom_ext: { dims: [link] }
   conditions:
-    Link_committed: { dims: [snapshot, link] }
+    Link_committed: { dims: [link, snapshot] }
 
 dimensions:
   scenario:

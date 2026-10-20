@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import pytest
 
@@ -16,7 +16,7 @@ from mathspec._resolution import Namespace
 from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
 from mathspec.program import Axis, Column, Join, Mask, RelationPairComparison, Sum
-from tests.fixtures import DISPATCH_MODEL, expression_of, spec_of, varied, where_of
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, expression_of, spec_of, varied, where_of
 
 if TYPE_CHECKING:
     from mathspec.spec import Spec
@@ -727,3 +727,15 @@ def test_a_row_over_more_dims_than_the_entry_it_reads_is_refused():
     row = {'constraints.capped': {'dims': ['snapshot', 'generator'], 'expression': 'cap <= 10'}}
     with pytest.raises(DimensionError, match=r"does not carry \['snapshot'\], which its dims: declares"):
         to_spec(varied(DISPATCH_MODEL, **row, **{'expressions.cap': 'sum(p, over=snapshot) - p_max'}))
+
+
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_the_order_of_dimensions_reaches_no_value_of_the_program(path):
+    """The dims of a named condition, of a named expression that declares none, of a piecewise curve and of a
+    comparison of two expressions in a condition were in the order `dimensions:` declares. Two files that
+    differ only in that order loaded to different programs."""
+    spec = to_spec(path)
+    data = spec.to_dict()
+    reversed_order = to_spec({**data, 'dimensions': dict(reversed(cast('dict', data['dimensions']).items()))})
+    assert reversed_order.program == spec.program, 'the order of dimensions: changes no value of the program'
+    assert reversed_order.expand().program == spec.expand().program, 'nor of the program its expansion lowers to'

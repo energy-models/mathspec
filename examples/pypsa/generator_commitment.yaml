@@ -24,7 +24,7 @@ given:
   expressions:
     scenario_opex: { dims: [scenario] }
   conditions:
-    Generator_committed: { dims: [snapshot, generator] }
+    Generator_committed: { dims: [generator, snapshot] }
 
 dimensions:
   scenario:

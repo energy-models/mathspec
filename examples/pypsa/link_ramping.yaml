@@ -21,7 +21,7 @@ given:
     Link_previous_status: { dims: [scenario, snapshot, link] }
     Link_p_nom_committed: { dims: [scenario, link] }
   conditions:
-    Link_com_ext: { dims: [snapshot, link] }
+    Link_com_ext: { dims: [link, snapshot] }
 
 dimensions:
   scenario:
