@@ -172,7 +172,7 @@ The mask also answers four questions:
 - `.conjuncts` flattens the `AND` spine, and stops at an `OR` or a `NOT`.
 - `.names_read` gives the entries the mask names.
 - `.atoms` gives its leaves, with the connectives removed.
-- `.dims` gives the dimensions the mask is read at.
+- `.dims` gives the dimensions the mask is read at, sorted by name.
 
 A comparison of expressions arrives as an `ExpressionComparison`. Its two
 sides are program expressions like a constraint's, and its `dims` are every

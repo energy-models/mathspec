@@ -303,7 +303,7 @@ def test_a_lowered_mask_answers_its_dims_conjuncts_and_atoms(variable, where, di
     `atoms` crosses the `OR` that `conjuncts` stops at."""
     mask = to_spec(varied(SMALL_MODEL, **{f'variables.{variable}.where': where})).program.variables[variable].where
 
-    assert mask.dims == frozenset(dims)
+    assert mask.dims == tuple(sorted(dims))
     assert len(mask.conjuncts) == conjuncts, 'an OR is one conjunct, a leaf is one conjunct'
     assert len(mask.atoms) == atoms, 'the leaves of every arm, connectives removed'
 
@@ -343,8 +343,8 @@ def test_a_synthetic_condition_answers_its_own_dims():
     """
     b = ParameterDefined('load', ('snapshot',))
 
-    assert Mask(Not(CAPACITY_POSITIVE)).dims == {'generator'}, 'negation keeps the dims it negates'
-    assert (Mask(CAPACITY_POSITIVE) & Mask(b)).dims == {'generator', 'snapshot'}, 'conjunction unions both sides'
+    assert Mask(Not(CAPACITY_POSITIVE)).dims == ('generator',), 'negation keeps the dims it negates'
+    assert (Mask(CAPACITY_POSITIVE) & Mask(b)).dims == ('generator', 'snapshot'), 'conjunction unions both sides'
     assert (Mask(CAPACITY_POSITIVE) & Mask(b)).root == And(CAPACITY_POSITIVE, b), (
         'the conjunction joins the roots under one AND'
     )
@@ -378,7 +378,7 @@ def test_a_held_leaf_walk_is_taken_after_the_fold_absorbed_a_branch():
     assert absorbed.root == BooleanLiteral(False)
     assert absorbed.atoms == (), 'the absorbed leaf is not among them'
     assert absorbed.names_read == frozenset(), 'nor named'
-    assert absorbed.dims == frozenset(), 'nor read at any dim'
+    assert absorbed.dims == (), 'nor read at any dim'
 
 
 def test_a_mask_over_an_unresolved_tree_is_refused_at_construction():
@@ -798,7 +798,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     ], 'a comparison and an existence are both read at the key of a keyed relation'
     first_where = program.variables['first'].where
     assert first_where is not None
-    assert first_where.dims == {'generator', 'snapshot'}, 'a position within a group is read at every key column'
+    assert first_where.dims == ('generator', 'snapshot'), 'a position within a group is read at every key column'
 
 
 def test_a_binary_variable_lowers_to_a_binary_domain():
@@ -1073,9 +1073,9 @@ def test_a_region_s_when_is_a_mask_with_its_own_dims():
     assert all(isinstance(r.when, Mask) for r in (always_on, boundary, remainder)), (
         'every region, the synthesized remainder included, carries its condition as a Mask'
     )
-    assert always_on.when.dims == frozenset({'g'}), "`not committable` reads the parameter's dims"
-    assert boundary.when.dims == frozenset({'g', 't'}), 'the position comparison adds its dimension'
-    assert remainder.when.dims == frozenset({'g', 't'}), 'the remainder reads every dim the stated cases do'
+    assert always_on.when.dims == ('g',), "`not committable` reads the parameter's dims"
+    assert boundary.when.dims == ('g', 't'), 'the position comparison adds its dimension'
+    assert remainder.when.dims == ('g', 't'), 'the remainder reads every dim the stated cases do'
 
 
 def test_the_lowered_regions_are_still_proved_apart():

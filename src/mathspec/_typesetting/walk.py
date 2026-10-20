@@ -871,7 +871,7 @@ class Walk:
         """One assumption: the condition over the frame both its masks name, under its ``where``."""
         assumption = self.program.assumptions[name]
         holds, where = assumption.holds, assumption.where
-        frame = sorted(holds.dims | (where.dims if where is not None else frozenset()))
+        frame = sorted({*holds.dims, *(where.dims if where is not None else ())})
         ctx = self._context(frame)
         if isinstance(holds.root, AlignedComparison):
             left, right = self.sides(holds.root, ctx)

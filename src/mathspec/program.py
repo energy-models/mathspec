@@ -1706,14 +1706,14 @@ class Mask:
         return frozenset(name for atom in self.atoms for name in _atom_names(atom))
 
     @property
-    def dims(self) -> frozenset[str]:
-        """The dims the mask is read at — the union of what each leaf carries.
+    def dims(self) -> tuple[str, ...]:
+        """The dims the mask is read at, sorted by name — the union of what each leaf carries.
 
         Empty for a mask over nothing but literals. Read off the leaves, which
         resolution stamped with their entries' dims, so a condition built
         from resolved pieces answers exactly as an entry's own does.
         """
-        return frozenset(dim for atom in self.atoms for dim in _atom_dims(atom))
+        return tuple(sorted({dim for atom in self.atoms for dim in _atom_dims(atom)}))
 
     def __invert__(self) -> Mask:
         """The mask admitting exactly the rows this one refuses — construction folds a double negation or a literal flip."""

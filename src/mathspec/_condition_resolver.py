@@ -240,13 +240,13 @@ class ConditionResolver:
         if along.name not in mask.dims:
             self.errors.append(
                 f"{context}: shift(<condition>, along='{along.name}') steps along a dimension the condition does "
-                f'not read. Step along one of {_listed(sorted(mask.dims))}.'
+                f'not read. Step along one of {_listed(list(mask.dims))}.'
             )
             return node
         if self.ns.unordered(along.name):
             self.errors.append(unordered(context, f'shift(<condition>, along={along.name})', along.name))
             return node
-        return TranslatedCondition(mask, along.name, int(offset.value), sorted_dims(mask.dims))
+        return TranslatedCondition(mask, along.name, int(offset.value), mask.dims)
 
     def _joined(self, node: UnresolvedConditionCallNode, mask: Mask) -> Condition | UnresolvedConditionNode:
         """``at(<condition>, by=relation[column])`` — the condition read through a relation, as ``at`` reads an array.
@@ -260,11 +260,11 @@ class ConditionResolver:
             self.errors.append(refusal)
             return node
         columns = self._expressions.columns_ref(node.kwargs['by'], 'at', 'by')
-        by = None if columns is None else self._expressions.lookup(columns, mask.dims)
+        by = None if columns is None else self._expressions.lookup(columns, frozenset(mask.dims))
         if by is None:
             return node
         try:
-            dims = join_dims(by, mask.dims, context, 'the condition')
+            dims = join_dims(by, frozenset(mask.dims), context, 'the condition')
         except DimensionError as refusal:
             self.errors.append(self.ns.refused_dims(refusal))
             return node
@@ -307,10 +307,10 @@ class ConditionResolver:
         if over.name not in mask.dims:
             self.errors.append(
                 f"{context}: count(<condition>, over='{over.name}') counts along a dimension the condition does "
-                f'not read. Count along one of {_listed(sorted(mask.dims))}.'
+                f'not read. Count along one of {_listed(list(mask.dims))}.'
             )
             return node
-        dims = sorted_dims(mask.dims - {over.name})
+        dims = tuple(d for d in mask.dims if d != over.name)
         return CountComparison(mask, over.name, node.op, value.value, dims)
 
     def _comparison(self, node: UnresolvedComparisonNode) -> Condition | UnresolvedConditionNode:

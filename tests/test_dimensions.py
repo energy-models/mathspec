@@ -625,7 +625,7 @@ def test_a_condition_is_read_at_the_coordinates_its_leaves_are_read_at(namespace
     where = where_of(condition, namespace, 'test')
 
     assert where is not None, 'a condition the connectives cannot settle survives the fold'
-    assert where.dims == expected
+    assert where.dims == tuple(sorted(expected))
 
 
 def test_a_condition_that_admits_every_row_has_no_leaves_left_to_read(namespace):
@@ -644,7 +644,7 @@ def test_the_frame_check_and_the_reading_walk_the_same_leaves(namespace):
     where = where_of('p_max > 0', namespace, 'test')
     assert where is not None
 
-    assert where.dims == {'generator'}, 'read at the generator axis'
+    assert where.dims == ('generator',), 'read at the generator axis'
     with pytest.raises(DimensionError, match=r"where-parameter 'p_max' reads dims \['generator'\]"):
         _check_condition_dims(where, frozenset({'snapshot'}), 'test')
 
@@ -777,7 +777,7 @@ def _derived(node: Expression, spec: Spec) -> frozenset[str]:
     if isinstance(node, ExpressionReference):
         return _derived(node.body, spec)
     if isinstance(node, Cases):
-        return frozenset().union(*(_derived(r.value, spec) | r.when.dims for r in node.regions))
+        return frozenset().union(*(_derived(r.value, spec) | frozenset(r.when.dims) for r in node.regions))
     if isinstance(node, Join):
         joined = _derived(node.operand, spec) - set(node.columns.joined_dims)
         return joined | set(node.columns.grouped_dims)
@@ -876,7 +876,10 @@ def test_the_order_a_file_writes_dimensions_in_reaches_no_value_of_the_program(p
 
 
 def _dims_tuples(root: object) -> Iterator[tuple[str, tuple[str, ...]]]:
-    """Every ``dims`` and ``frame`` a program holds, at any depth, under the name of the class that holds it."""
+    """Every ``dims`` and ``frame`` a program holds, at any depth, under the name of the class that holds it.
+
+    `Mask.dims` is a property rather than a field, so the walk asks each mask for it.
+    """
     seen: set[int] = set()
     stack = [root]
     while stack:
@@ -884,6 +887,8 @@ def _dims_tuples(root: object) -> Iterator[tuple[str, tuple[str, ...]]]:
         if id(item) in seen or isinstance(item, str | int | float | bool | None):
             continue
         seen.add(id(item))
+        if isinstance(item, Mask):
+            yield 'Mask', item.dims
         if isinstance(item, Mapping):
             stack.extend(item.values())
         elif isinstance(item, tuple | list | frozenset):

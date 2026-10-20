@@ -135,7 +135,7 @@ def lower(spec: Spec) -> Program:
         errors.extend(refusals)
         if named is not None:
             body = Mask(named.body)
-            conditions[mname] = NamedCondition(body, sorted_dims(body.dims), mdef.description)
+            conditions[mname] = NamedCondition(body, body.dims, mdef.description)
 
     variables = {}
     for vname, vdef in spec.variables.items():

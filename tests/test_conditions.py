@@ -68,7 +68,7 @@ def test_a_named_condition_stands_where_its_name_is_written_with_its_condition_u
         'a named condition is indexed over the dims its condition reads, sorted by name'
     )
     assert where.names_read == {'build_year', 'lifetime', 'period_year'}, 'a mask reads what its condition reads'
-    assert where.dims == {'period', 'generator'}
+    assert where.dims == ('generator', 'period')
 
 
 @pytest.mark.parametrize(
