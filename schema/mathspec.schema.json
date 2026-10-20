@@ -167,7 +167,7 @@
     },
     "DimensionSpec": {
       "additionalProperties": false,
-      "description": "A declared dimension, the dtype its coordinates must be, and whether their order means anything.\n\nA dimension is an axis and nothing else: it declares that the axis exists\nand what its coordinates are typed as, never which coordinates there are \u2014\nthose are data, and arrive when the data is attached. The maps its members carry \u2014 a\ngenerator's bus, a snapshot's period \u2014 are top-level ``relations:``\n([`RelationSpec`][]), keyed by their own name.",
+      "description": "A declared dimension, the dtype its coordinates must be, and whether their order means anything.\n\nA dimension is an axis and nothing else: it declares that the axis exists\nand what its coordinates are typed as. Which coordinates there are is data,\nand arrives when the data is attached; a ``dtype: {one_of: [...]}``\n([`OneOfSpec`][]) only names the labels a coordinate may have. The maps its members carry \u2014 a\ngenerator's bus, a snapshot's period \u2014 are top-level ``relations:``\n([`RelationSpec`][]), keyed by their own name.",
       "properties": {
         "description": {
           "anyOf": [
@@ -182,15 +182,22 @@
           "title": "Description"
         },
         "dtype": {
-          "default": "str",
-          "enum": [
-            "float",
-            "int",
-            "str",
-            "datetime"
+          "anyOf": [
+            {
+              "enum": [
+                "float",
+                "int",
+                "str",
+                "datetime"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/OneOfSpec"
+            }
           ],
-          "title": "Dtype",
-          "type": "string"
+          "default": "str",
+          "title": "Dtype"
         },
         "ordered": {
           "default": false,
@@ -617,6 +624,26 @@
         "expression"
       ],
       "title": "ObjectiveSpec",
+      "type": "object"
+    },
+    "OneOfSpec": {
+      "additionalProperties": false,
+      "description": "The labels a dimension allows, written ``dtype: {one_of: [...]}`` in place of ``dtype: str``.\n\nThe labels are strings, at least one and each once, kept in the order the\nfile lists them. A condition that compares the dimension, or a relation\ncolumn over it, against any other label is refused at load.",
+      "properties": {
+        "one_of": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "One Of",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "one_of"
+      ],
+      "title": "OneOfSpec",
       "type": "object"
     },
     "ParameterSpec": {
