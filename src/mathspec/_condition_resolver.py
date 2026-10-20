@@ -25,7 +25,7 @@ from mathspec._condition_parser import (
     UnresolvedConditionNode,
     UnresolvedCountNode,
 )
-from mathspec._dimensions import dims_of, join_dims
+from mathspec._dimensions import join_dims
 from mathspec._expansion import expand
 from mathspec._expression_parser import (
     ArithmeticNode,
@@ -266,7 +266,7 @@ class ConditionResolver:
         try:
             dims = join_dims(by, mask.dims, context, 'the condition')
         except DimensionError as refusal:
-            self.errors.append(str(refusal))
+            self.errors.append(self.ns.refused_dims(refusal))
             return node
         return JoinedCondition(mask, by, tuple(sorted(dims)))
 
@@ -408,7 +408,7 @@ class ConditionResolver:
             else:
                 try:
                     degree.check_expression(side, context)
-                    dims |= dims_of(side, ns.spec, context)
+                    dims |= set(side.dims)
                 except LanguageError as e:
                     self.errors.append(str(e))
         if len(self.errors) > found:

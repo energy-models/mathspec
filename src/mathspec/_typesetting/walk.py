@@ -209,7 +209,11 @@ def _unsigned(node: Expression) -> Expression | None:
     if isinstance(node, Multiply | Divide):
         first, second = (node.left, node.right) if isinstance(node, Multiply) else (node.numerator, node.divisor)
         if (head := _unsigned(first)) is not None:
-            return Multiply(head, second) if isinstance(node, Multiply) else Divide(head, second)
+            return (
+                Multiply(head, second, dims=node.dims)
+                if isinstance(node, Multiply)
+                else Divide(head, second, dims=node.dims)
+            )
     return None
 
 
@@ -385,7 +389,9 @@ class Walk:
         precedence = _PRECEDENCE[op]
         operand = self._substituted(node.right)
         if op == '+' and isinstance(operand, Add):
-            return self._binary(Add(Add(node.left, operand.left), operand.right), ctx)
+            head = {*node.left.dims, *operand.left.dims}
+            joined = Add(node.left, operand.left, dims=tuple(d for d in node.dims if d in head))
+            return self._binary(Add(joined, operand.right, dims=node.dims), ctx)
         left = self._expression(node.left, ctx, need=precedence)
         if op == '+':
             while (unsigned := _unsigned(operand)) is not None:
