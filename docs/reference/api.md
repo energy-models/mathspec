@@ -30,7 +30,7 @@ A module whose name starts with an underscore is not public API
 
 ## Composing
 
-[Compose a spec from several files](../howto/compose.md) shows both in use.
+[Compose a spec from several files](../howto/compose.md) shows each in use.
 
 ::: mathspec.merge
     options:
@@ -39,6 +39,12 @@ A module whose name starts with an underscore is not public API
       heading_level: 3
 
 ::: mathspec.override
+    options:
+      show_root_heading: true
+      show_root_toc_entry: true
+      heading_level: 3
+
+::: mathspec.rename
     options:
       show_root_heading: true
       show_root_toc_entry: true

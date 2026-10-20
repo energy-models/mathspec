@@ -11,7 +11,8 @@ of the math. `override` lays **patches** over a **base**, where the base is the
 spec a framework ships and a patch is the change a project makes to it. Both functions load every fragment and the base with
 [`to_spec`](../reference/language/errors.md#what-to_spec-checks) first, and
 return the composed spec loaded the same way. Both take their files as a list,
-and you can nest them as `override(merge([…]), […])`.
+and you can nest them as `override(merge([…]), […])`. `rename` gives one file
+other names, so that one fragment can serve several classes in one `merge`.
 
 ## A library of components
 
@@ -198,6 +199,110 @@ A library can also couple its components through a flow variable per port,
 which each component pins at its own port.
 [A component library](../examples/library/index.md) is written that way.
 
+## One fragment for several classes
+
+1. **Write the fragment once, over placeholder names.** Here the class is the
+   dimension `unit`, and each entry of the class starts with `Unit_`. The file
+   is a spec of its own.
+
+   ```yaml title="unit.yaml"
+   given:
+     expressions:
+       Bus_injection: { dims: [snapshot, bus] }
+       total_cost: { dims: [] }
+   dimensions:
+     snapshot: { dtype: int }
+     bus: { dtype: str }
+     unit: { dtype: str }
+   relations:
+     Unit_bus: { key: unit, values: bus }
+   parameters:
+     Unit_p_nom: { dims: [unit] }
+     Unit_marginal_cost: { dims: [unit] }
+   variables:
+     Unit_p: { dims: [snapshot, unit], bounds: { lower: 0, upper: Unit_p_nom } }
+   expressions:
+     Unit_injection:
+       expression: sum(Unit_p, over=unit, by=Unit_bus[bus])
+       adds_to: Bus_injection
+     Unit_cost:
+       expression: sum(Unit_p * Unit_marginal_cost)
+       adds_to: total_cost
+   ```
+
+2. **Give each class its names with `rename`, and merge the results.**
+   `rename` takes a map from each old name to its new name, and returns the
+   spec loaded.
+
+   ```python
+   import mathspec as ms
+
+   UNIT = ('Unit_bus', 'Unit_p_nom', 'Unit_marginal_cost', 'Unit_p', 'Unit_injection', 'Unit_cost')
+
+
+   def named(prefix, dim):
+       return {'unit': dim} | {name: prefix + name.removeprefix('Unit') for name in UNIT}
+
+
+   spec = ms.merge(
+       [
+           'network.yaml',
+           ms.rename('unit.yaml', named('Gas', 'gas')),
+           ms.rename('unit.yaml', named('Wind', 'wind')),
+           'load.yaml',
+       ]
+   )
+   ```
+
+   `spec` builds `Gas_p` and `Wind_p`. `Bus_injection` is
+   `Gas_injection + Wind_injection + Load_injection`, and `total_cost` is
+   `Gas_cost + Wind_cost`. `merge` reads each renamed spec as it reads a file
+   with those names written in it. A refusal names a renamed spec by its place
+   in the list, such as `'#2'`.
+
+## What a rename changes
+
+| The text                                                                         | What happens                                                                               |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| a name the spec declares, or reads under `given:`                                | it is renamed as the key of its entry and everywhere the spec writes it, `given:` included |
+| a relation column with the spelling of a renamed name, such as `Unit_bus[unit]`  | it is renamed with the name, because a call reads the relation by its columns              |
+| a longer name, a keyword such as `over=`, a quoted label, a number such as `1e6` | it stays as written                                                                        |
+| the text around a renamed name                                                   | it keeps its layout. Only the name changes                                                 |
+| a `description`, a case label, a macro argument and the macro text that reads it | it stays as written                                                                        |
+
+All the names in the map change at the same time, so two names can swap.
+`rename('unit.yaml', {})` returns the file loaded. If you rename back with the
+inverse map, the spec has the canonical form of the file.
+
+## A map that rename refuses
+
+`rename` refuses a map before it renames anything. A name the spec does not
+have:
+
+```text
+rename names 'Unit_pnom', which the spec neither declares nor reads under 'given:'. Did you mean 'Unit_p_nom'?
+```
+
+A new name that the spec already uses for an entry the map does not rename:
+
+```text
+rename gives the variable 'Unit_p' the name 'Unit_p_nom', which the spec keeps for its parameter 'Unit_p_nom'. Rename that one too, or choose another name.
+```
+
+Two names with one new name:
+
+```text
+rename gives 'Unit_p' and 'Unit_p_nom' the one name 'Gas_p'. Give each a name of its own.
+```
+
+The renamed spec goes through
+[`to_spec`](../reference/language/errors.md#what-to_spec-checks), so a new
+name that the language keeps is refused with the message `to_spec` gives:
+
+```text
+Variable 'sum' collides with the built-in operator 'sum'. Rename the variable.
+```
+
 ## What a fragment may share
 
 | The entry                                         | What happens                                                                                                                                                                                                            |
@@ -225,6 +330,9 @@ declare a generator fleet:
 ```text
 fragments 'gas.yaml' and 'coal.yaml' both declare the parameter 'Generator_p_nom'. If they are two rows of a dimension, merge the fragment once and put both rows in the data. Otherwise, rename one of them.
 ```
+
+[`rename`](#one-fragment-for-several-classes) gives one of them other names
+without a change to its file.
 
 A term is a named expression, so the terms of two fragments need two names.
 Name each term after its component, such as `Generator_injection` and

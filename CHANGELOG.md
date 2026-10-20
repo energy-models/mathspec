@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(composition): `rename` gives a spec other names, so one fragment can serve several classes in one merge ([#PR](https://github.com/energy-models/mathspec/pull/PR))
 - docs: the compose guide says how to add or remove a term on a merged spec ([#901](https://github.com/energy-models/mathspec/pull/901))
 - fix(composition): a fragment returned by `override` merges as the file it came from does ([#900](https://github.com/energy-models/mathspec/pull/900))
 - docs: the changelog is listed under Reference rather than About ([#895](https://github.com/energy-models/mathspec/pull/895))
