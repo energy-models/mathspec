@@ -25,6 +25,7 @@ docs/examples/library/generator.md
 docs/examples/library/load.md
 docs/examples/library/composed.md
 docs/examples/pypsa/*.md
+docs/examples/pypsa/*/*.md
 
 # `tools/pypsa_compose.py` writes this file from the fragments under
 # `examples/pypsa/`, in the layout `Spec.to_yaml` gives, and prettier would

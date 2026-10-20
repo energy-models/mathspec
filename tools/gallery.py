@@ -44,6 +44,13 @@ PYPSA = ROOT / 'examples' / 'pypsa'
 #: PyPSA split prints in the one file's table, cut the same way.
 LIBRARY_SYMBOLS = ROOT / 'examples' / 'symbols' / 'library.yaml'
 PYPSA_SYMBOLS = ROOT / 'examples' / 'symbols' / 'pypsa.yaml'
+
+
+def fragment_name(path: Path) -> str:
+    """A PyPSA fragment's name: its path under `examples/pypsa/`, such as ``generator/class``."""
+    return path.relative_to(PYPSA).with_suffix('').as_posix()
+
+
 BEGIN, END = '<!-- gallery:begin -->', '<!-- gallery:end -->'
 
 #: Page -> the spec it shows. One spec per page, because a gallery of
@@ -54,7 +61,7 @@ MODELS = {
     'library/surface.md': LIBRARY / 'surface.yaml',
     'library/generator.md': LIBRARY / 'generator.yaml',
     'library/load.md': LIBRARY / 'load.yaml',
-    **{f'pypsa/{path.stem}.md': path for path in sorted(PYPSA.glob('*.yaml'))},
+    **{f'pypsa/{fragment_name(path)}.md': path for path in sorted(PYPSA.rglob('*.yaml'))},
 }
 
 #: The index of the PyPSA split: its two tables are read off the fragments.
@@ -134,10 +141,11 @@ def split_index_block() -> str:
     """The PyPSA split's two tables: each sum with the fragment that reads it and the terms, and each fragment.
 
     Both are read off the fragments, so the index cannot name a term or a
-    reader the files no longer have. The reader is the fragment that reads
-    the sum with its description and adds nothing to it.
+    reader the files no longer have. The reader is the fragment that defines
+    the sum, or else the one that reads it with its description and adds
+    nothing to it.
     """
-    return split_index({path.stem: to_spec(path) for path in sorted(PYPSA.glob('*.yaml'))})
+    return split_index({fragment_name(path): to_spec(path) for path in sorted(PYPSA.rglob('*.yaml'))})
 
 
 def split_index(specs: Mapping[str, Spec]) -> str:
@@ -157,6 +165,10 @@ def split_index(specs: Mapping[str, Spec]) -> str:
         for hub, entry in spec.given.expressions.items():
             if entry.description and hub not in adds:
                 readers[hub] = (name, tuple(entry.dims))
+    for name, spec in specs.items():
+        for hub, expression in spec.expressions.items():
+            if hub in terms and expression.adds_to is None and hub not in readers:
+                readers[hub] = (name, tuple(expression.dims or ()))
     if unread := sorted(set(terms) - set(readers)):
         spelled = ', '.join(f'{hub!r}' for hub in unread)
         msg = (
@@ -426,7 +438,7 @@ def block(page: str) -> str:
         return split_index_block()
     if MODELS[page].parent == LIBRARY:
         return fragment_block(MODELS[page], LIBRARY_SYMBOLS)
-    if MODELS[page].parent == PYPSA:
+    if PYPSA in MODELS[page].parents:
         return fragment_block(MODELS[page], PYPSA_SYMBOLS)
     return model_block(MODELS[page])
 

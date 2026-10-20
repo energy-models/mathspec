@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The surface
 
-This file states what every model shares: the weightings, the risk preference, the flags, the balance at each bus and the objective. It is one of the [14 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads every sum that the components add to under `given:`, with its description, and adds nothing to them, so the terms always have a reader. The cycle sum is the exception, and [power flow](power_flow.md) reads it. The objective reads `total_cost`.
+This file states what every model shares: the weightings, the risk preference, the flags, the balance at each bus and the objective. It is one of the [fragments](index.md) that merge into `examples/pypsa.yaml`. It reads every sum that the components add to under `given:`, with its description, and adds nothing to them, so the terms always have a reader. The cycle sum is the exception, and [power flow](power_flow.md) reads it. The objective reads `total_cost`.
 
 <!-- gallery:begin -->
 ```yaml

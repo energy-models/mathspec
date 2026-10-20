@@ -3,10 +3,10 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# PyPSA in 14 files
+# PyPSA in fragments
 
 You can read the PyPSA spec here one component at a time. The spec is written
-as 14 **fragments**, one file per topic under `examples/pypsa/`. `merge`
+as **fragments**, one file per topic under `examples/pypsa/`. `merge`
 joins them into one spec, and `tools/pypsa_compose.py` writes that spec out as
 `examples/pypsa.yaml`, which [PyPSA in one file](../pypsa.md) indexes. Edit
 the fragments; a check fails when the written file no longer matches them.
@@ -18,13 +18,13 @@ fragment lists each name that it reads but does not declare under
 share from every component, such as the bus balance or the operating cost. A
 component names its share of such a sum as an expression of its own, a
 [term](../../reference/language/parameters-variables-constraints.md#terms), whose `adds_to:` key
-names the sum. The surface reads each sum and adds nothing to it, so the terms
+names the sum. The surface reads each sum of the system and adds nothing to it, so the terms
 always have a reader. To add a component, you add one file, and the surface
 does not change.
 
 ## What each file says
 
-The fragments are of three kinds:
+The fragments are of four kinds:
 
 - **The surface holds what every model shares.** It holds the weightings, the
   risk preference and the flags that every topic reads, and the balance at
@@ -32,9 +32,10 @@ The fragments are of three kinds:
   which reads `total_cost`.
 - **A component file owns one PyPSA class.** It holds the dimension, the data,
   the variables, the rows and the share of each sum of the class of that name.
-  `Generator`, `Link` and `Process` also carry their unit commitment, their
-  ramp limits and their maintenance. These three files read alike, because
-  PyPSA builds the same rows for each class.
+- **A layer adds one feature to a committable class.** `Generator`, `Link` and
+  `Process` each have a folder: the class, its commitment, its ramping and its
+  maintenance. A layer reads only the layers below it. The three folders read
+  alike, because PyPSA builds the same rows for each class.
 - **A system file holds a part of the system that a model may leave out.**
   These are the operating cost at risk, the carriers, the global constraints,
   security and power flow. Power flow reads `Cycle_angle_sum`, the sum that
@@ -45,16 +46,22 @@ The fragments are of three kinds:
 
 | Sum | Over | Read in | The terms, by the fragment that adds each |
 | --- | --- | --- | --- |
-| `total_cost` | scalar | [surface](surface.md) | [`risk_weighted_opex`](cost.md), [`Generator_capex`](generator.md), [`Line_capex`](line.md), [`Link_capex`](link.md), [`Process_capex`](process.md), [`StorageUnit_capex`](storage_unit.md), [`Store_capex`](store.md), [`Transformer_capex`](transformer.md) |
-| `scenario_opex` | `scenario` | [surface](surface.md) | [`Generator_commitment_opex`](generator.md), [`Generator_opex`](generator.md), [`Link_commitment_opex`](link.md), [`Link_opex`](link.md), [`Process_commitment_opex`](process.md), [`Process_opex`](process.md), [`StorageUnit_opex`](storage_unit.md), [`Store_opex`](store.md) |
-| `Bus_injection` | `scenario, snapshot, bus` | [surface](surface.md) | [`Generator_injection`](generator.md), [`Line_injection`](line.md), [`Link_injection`](link.md), [`Load_injection`](load.md), [`Process_injection`](process.md), [`StorageUnit_injection`](storage_unit.md), [`Store_injection`](store.md), [`Transformer_injection`](transformer.md) |
-| `tech_capacity_expansion` | `global_constraint` | [surface](surface.md) | [`Generator_tech_capacity_expansion`](generator.md), [`Line_tech_capacity_expansion`](line.md), [`Link_tech_capacity_expansion`](link.md), [`Process_tech_capacity_expansion`](process.md), [`StorageUnit_tech_capacity_expansion`](storage_unit.md), [`Store_tech_capacity_expansion`](store.md) |
-| `Carrier_additions` | `period, carrier` | [surface](surface.md) | [`Generator_additions`](generator.md), [`Line_additions`](line.md), [`Link_additions`](link.md), [`Process_additions`](process.md), [`StorageUnit_additions`](storage_unit.md), [`Store_additions`](store.md) |
-| `primary_energy` | `scenario, global_constraint` | [surface](surface.md) | [`Generator_primary_energy`](generator.md), [`StorageUnit_primary_energy`](storage_unit.md), [`Store_primary_energy`](store.md) |
-| `operational_limit` | `scenario, global_constraint` | [surface](surface.md) | [`Generator_operational_limit`](generator.md), [`StorageUnit_operational_limit`](storage_unit.md), [`Store_operational_limit`](store.md) |
-| `transmission_volume_expansion` | `scenario, global_constraint` | [surface](surface.md) | [`Line_transmission_volume_expansion`](line.md), [`Link_transmission_volume_expansion`](link.md) |
-| `transmission_expansion_cost` | `scenario, global_constraint` | [surface](surface.md) | [`Line_transmission_expansion_cost`](line.md), [`Link_transmission_expansion_cost`](link.md) |
+| `total_cost` | scalar | [surface](surface.md) | [`risk_weighted_opex`](cost.md), [`Generator_capex`](generator/class.md), [`Line_capex`](line.md), [`Link_capex`](link/class.md), [`Process_capex`](process/class.md), [`StorageUnit_capex`](storage_unit.md), [`Store_capex`](store.md), [`Transformer_capex`](transformer.md) |
+| `scenario_opex` | `scenario` | [surface](surface.md) | [`Generator_opex`](generator/class.md), [`Generator_commitment_opex`](generator/commitment.md), [`Link_opex`](link/class.md), [`Link_commitment_opex`](link/commitment.md), [`Process_opex`](process/class.md), [`Process_commitment_opex`](process/commitment.md), [`StorageUnit_opex`](storage_unit.md), [`Store_opex`](store.md) |
+| `Bus_injection` | `scenario, snapshot, bus` | [surface](surface.md) | [`Generator_injection`](generator/class.md), [`Line_injection`](line.md), [`Link_injection`](link/class.md), [`Load_injection`](load.md), [`Process_injection`](process/class.md), [`StorageUnit_injection`](storage_unit.md), [`Store_injection`](store.md), [`Transformer_injection`](transformer.md) |
+| `tech_capacity_expansion` | `global_constraint` | [surface](surface.md) | [`Generator_tech_capacity_expansion`](generator/class.md), [`Line_tech_capacity_expansion`](line.md), [`Link_tech_capacity_expansion`](link/class.md), [`Process_tech_capacity_expansion`](process/class.md), [`StorageUnit_tech_capacity_expansion`](storage_unit.md), [`Store_tech_capacity_expansion`](store.md) |
+| `Carrier_additions` | `period, carrier` | [surface](surface.md) | [`Generator_additions`](generator/class.md), [`Line_additions`](line.md), [`Link_additions`](link/class.md), [`Process_additions`](process/class.md), [`StorageUnit_additions`](storage_unit.md), [`Store_additions`](store.md) |
+| `primary_energy` | `scenario, global_constraint` | [surface](surface.md) | [`Generator_primary_energy`](generator/class.md), [`StorageUnit_primary_energy`](storage_unit.md), [`Store_primary_energy`](store.md) |
+| `operational_limit` | `scenario, global_constraint` | [surface](surface.md) | [`Generator_operational_limit`](generator/class.md), [`StorageUnit_operational_limit`](storage_unit.md), [`Store_operational_limit`](store.md) |
+| `transmission_volume_expansion` | `scenario, global_constraint` | [surface](surface.md) | [`Line_transmission_volume_expansion`](line.md), [`Link_transmission_volume_expansion`](link/class.md) |
+| `transmission_expansion_cost` | `scenario, global_constraint` | [surface](surface.md) | [`Line_transmission_expansion_cost`](line.md), [`Link_transmission_expansion_cost`](link/class.md) |
 | `Cycle_angle_sum` | `scenario, snapshot, cycle` | [power_flow](power_flow.md) | [`Line_angle_sum`](line.md), [`Transformer_angle_sum`](transformer.md) |
+| `Generator_p_nom_available` | `scenario, snapshot, generator` | [generator/class](generator/class.md) | [`Generator_maintenance_outage`](generator/maintenance.md) |
+| `Generator_status_available` | `scenario, snapshot, generator` | [generator/commitment](generator/commitment.md) | [`Generator_maintenance_status_outage`](generator/maintenance.md) |
+| `Link_p_nom_available` | `scenario, snapshot, link` | [link/class](link/class.md) | [`Link_maintenance_outage`](link/maintenance.md) |
+| `Link_status_available` | `scenario, snapshot, link` | [link/commitment](link/commitment.md) | [`Link_maintenance_status_outage`](link/maintenance.md) |
+| `Process_p_nom_available` | `scenario, snapshot, process` | [process/class](process/class.md) | [`Process_maintenance_outage`](process/maintenance.md) |
+| `Process_status_available` | `scenario, snapshot, process` | [process/commitment](process/commitment.md) | [`Process_maintenance_status_outage`](process/maintenance.md) |
 
 ### The fragments
 
@@ -62,13 +69,25 @@ The fragments are of three kinds:
 | --- | --- | --- | --- | --- | --- |
 | [carrier](carrier.md) | 2 | 0 | 1 | 1 |  |
 | [cost](cost.md) | 1 | 3 | 2 | 4 | `total_cost` |
-| [generator](generator.md) | 44 | 10 | 50 | 13 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [generator/class](generator/class.md) | 24 | 3 | 11 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [generator/commitment](generator/commitment.md) | 10 | 3 | 20 | 15 | `scenario_opex` |
+| [generator/commitment_none](generator/commitment_none.md) | 3 | 3 | 0 | 1 |  |
+| [generator/maintenance](generator/maintenance.md) | 5 | 4 | 13 | 12 | `Generator_p_nom_available`, `Generator_status_available` |
+| [generator/ramping](generator/ramping.md) | 5 | 0 | 6 | 14 |  |
 | [global_constraints](global_constraints.md) | 3 | 0 | 15 | 6 |  |
 | [line](line.md) | 22 | 4 | 14 | 9 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
-| [link](link.md) | 44 | 10 | 48 | 12 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [link/class](link/class.md) | 24 | 3 | 9 | 13 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [link/commitment](link/commitment.md) | 10 | 3 | 20 | 15 | `scenario_opex` |
+| [link/commitment_none](link/commitment_none.md) | 3 | 3 | 0 | 1 |  |
+| [link/maintenance](link/maintenance.md) | 5 | 4 | 13 | 12 | `Link_p_nom_available`, `Link_status_available` |
+| [link/ramping](link/ramping.md) | 5 | 0 | 6 | 14 |  |
 | [load](load.md) | 3 | 0 | 0 | 1 | `Bus_injection` |
 | [power_flow](power_flow.md) | 0 | 0 | 1 | 1 |  |
-| [process](process.md) | 42 | 10 | 48 | 10 | `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [process/class](process/class.md) | 22 | 3 | 9 | 11 | `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [process/commitment](process/commitment.md) | 10 | 3 | 20 | 15 | `scenario_opex` |
+| [process/commitment_none](process/commitment_none.md) | 3 | 3 | 0 | 1 |  |
+| [process/maintenance](process/maintenance.md) | 5 | 4 | 13 | 12 | `Process_p_nom_available`, `Process_status_available` |
+| [process/ramping](process/ramping.md) | 5 | 0 | 6 | 14 |  |
 | [security](security.md) | 2 | 0 | 8 | 10 |  |
 | [storage_unit](storage_unit.md) | 36 | 6 | 21 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
 | [store](store.md) | 29 | 4 | 11 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
@@ -85,3 +104,29 @@ under `given:`. You may not leave out the surface, because the terms of the
 components would then add to a sum that no fragment reads, and `merge` refuses
 the files. For the same reason, you may not leave out power flow while a line
 or a transformer is in.
+
+## Choosing the layers of a class
+
+A committable class takes its class file, then one of two files for its
+commitment, then any of its ramping and its maintenance:
+
+| Layer | What it adds | Without it |
+| --- | --- | --- |
+| `commitment.yaml` | the status, its starts and stops, and the rows of a committed unit | take `commitment_none.yaml` |
+| `commitment_none.yaml` | the names the ramping and the maintenance read, each masked empty | take `commitment.yaml` |
+| `ramping.yaml` | the ramp limits | no unit is held to a ramp limit |
+| `maintenance.yaml` | the maintenance events, and what they take out of the build and the status | no unit is maintained |
+
+The class reads `Generator_committable` under `given:`, and only the two
+commitment files declare it. A class with neither file leaves the name under
+`given:`, and an engine refuses the spec. A class with both is refused by
+`merge`, because two files declare the name. `commitment_none.yaml` declares
+an assumption that no unit is committable, so data that holds a committable
+unit is refused when it is attached, rather than leaving that unit without
+output limits.
+
+The maintenance adds to two sums that the lower layers define:
+`Generator_p_nom_available` in the class, the build the output limits are
+taken against, and `Generator_status_available` in either commitment file.
+Without the maintenance layer, each sum is its body. The maintenance data is
+then declared by no file, so an engine refuses it when it is attached.
