@@ -361,7 +361,7 @@ class Walk:
     def _dual(self, node: Dual, ctx: _Context) -> str:
         """λ subscripted by the constraint's symbol, then the indices of the constraint's own frame."""
         frames = {**self.program.constraints, **self.program.given.constraints}
-        frame = sorted(frames[node.constraint].dims)
+        frame = frames[node.constraint].dims
         return self.format.subscript(
             self._op('dual'), [self.symbols.constraint[node.constraint], *(ctx.subscript(d) for d in frame)]
         )

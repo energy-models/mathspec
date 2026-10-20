@@ -235,7 +235,7 @@ def lower(spec: Spec) -> Program:
         expressions={
             name: NamedExpression(
                 entry.body,
-                _frame_of(name, entry, spec),
+                entry.dims,
                 in_math=name in in_math,
                 description=spec.expressions[name].description,
                 adds_to=spec.expressions[name].adds_to,
@@ -338,17 +338,11 @@ def _loop(target: str, entry: ExpressionReference, sums: Mapping[str, list[Expre
     return None
 
 
-def _frame_of(name: str, entry: ExpressionReference, spec: Spec) -> tuple[str, ...]:
-    """The dims an entry is read over, sorted by name: the ``dims:`` it declares, else its body's."""
-    declared = spec.expressions[name].dims
-    return entry.dims if declared is None else sorted_dims(declared)
-
-
 def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterReference | None:
     if value is None:
         return None
     if isinstance(value, str):
-        return ParameterReference(value, dims=sorted_dims(ns.leaf_dims[value]))
+        return ParameterReference(value, dims=ns.leaf_dims[value])
     return Constant(value, dims=())
 
 

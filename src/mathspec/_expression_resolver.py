@@ -200,13 +200,13 @@ class ExpressionResolver:
                 return None
         match self.ns.kind(node.name):
             case 'variable':
-                return VariableReference(node.name, dims=sorted_dims(self.ns.leaf_dims[node.name]))
+                return VariableReference(node.name, dims=self.ns.leaf_dims[node.name])
             case 'parameter':
                 dtype = self.ns.dtypes.get(node.name)
                 if dtype is not None and dtype not in NUMERIC_DTYPES:
                     self.errors.append(not_a_number(node.name, dtype, self.context))
                     return None
-                return ParameterReference(node.name, dims=sorted_dims(self.ns.leaf_dims[node.name]))
+                return ParameterReference(node.name, dims=self.ns.leaf_dims[node.name])
             case 'dimension':
                 self.errors.append(
                     f"{self.context}: '{node.name}' is a dimension, and a dimension is "
