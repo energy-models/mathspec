@@ -172,7 +172,7 @@ class Subject:
 class _Grid:
     """The cells to check, and what reading an atom on one of them needs.
 
-    ``subjects`` is keyed by ``id(node)``: the where nodes are ``@dataclass``
+    ``subjects`` is keyed by ``id(node)``: the condition nodes are ``@dataclass``
     with ``eq=True`` and so unhashable. The memo is valid while the masks are alive.
     """
 

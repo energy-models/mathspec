@@ -125,7 +125,7 @@ def test_a_named_condition_declares_no_frame():
 
 
 def test_a_variable_that_asks_through_a_named_condition_whether_it_exists_is_refused():
-    """The where resolver refused the bare name only: a mask's condition is read under the mask's own name."""
+    """The condition resolver refused the bare name only: a named condition is read under its own name."""
     with pytest.raises(
         LanguageError, match=r"variable 'p' asks whether it exists in its own `where:`, through a named condition"
     ):

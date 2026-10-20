@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 
-from mathspec._dimensions import DimensionError, _check_where_dims, dims_of
+from mathspec._dimensions import DimensionError, _check_condition_dims, dims_of
 from mathspec._resolution import Namespace
 from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
@@ -623,7 +623,7 @@ def test_the_frame_check_and_the_reading_walk_the_same_leaves(namespace):
 
     assert where.dims == {'generator'}, 'read at the generator axis'
     with pytest.raises(DimensionError, match=r"where-parameter 'p_max' reads dims \['generator'\]"):
-        _check_where_dims(where, frozenset({'snapshot'}), 'test')
+        _check_condition_dims(where, frozenset({'snapshot'}), 'test')
 
 
 @pytest.mark.parametrize(

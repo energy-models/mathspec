@@ -23,10 +23,10 @@ from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, 
 from mathspec._resolution import (
     Namespace,
     mask_of,
+    resolve_condition_text,
     resolve_constraint_text,
     resolve_expression,
     resolve_expression_text,
-    resolve_where_text,
     self_existence,
 )
 from mathspec._validation import emitted_name_errors, reference_errors
@@ -139,7 +139,7 @@ def lower(spec: Spec) -> Program:
 
     variables = {}
     for vname, vdef in spec.variables.items():
-        where = resolve_where_text(vdef.where, ns, f"Variable '{vname}'", errors, self_variable=vname)
+        where = resolve_condition_text(vdef.where, ns, f"Variable '{vname}'", errors, self_variable=vname)
         if where is not None and (refusal := self_existence(where, vname, f"Variable '{vname}'")) is not None:
             errors.append(refusal)
         if vdef.domain == 'binary':
@@ -159,7 +159,7 @@ def lower(spec: Spec) -> Program:
     constraints: dict[str, Constraint] = {}
     for cname, cdef in spec.constraints.items():
         context = f"Constraint '{cname}'"
-        where = resolve_where_text(cdef.where, ns, context, errors)
+        where = resolve_condition_text(cdef.where, ns, context, errors)
         if (sides := resolve_constraint_text(cdef.expression, ns, context, errors)) is not None:
             lhs, sense, rhs = sides
             constraints[cname] = Constraint(
@@ -365,8 +365,8 @@ def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[st
     """
     context = f"Assumption '{name}'"
     found = len(errors)
-    holds = resolve_where_text(entry.holds, ns, context, errors)
-    where = resolve_where_text(entry.where, ns, f'{context}, where', errors)
+    holds = resolve_condition_text(entry.holds, ns, context, errors)
+    where = resolve_condition_text(entry.where, ns, f'{context}, where', errors)
     if isinstance(holds, BooleanLiteral):
         errors.append(_decided_assumption(context, entry.holds, value=holds.value))
     if isinstance(where, BooleanLiteral):

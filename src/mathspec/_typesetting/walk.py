@@ -76,7 +76,7 @@ _ATOM = 5
 
 #: The same for a condition: ``OR`` binds loosest, then ``AND``, then ``NOT``;
 #: a comparison sits above the connectives and is bracketed under none.
-_WHERE_PRECEDENCE = {'or': 0, 'and': 1, 'comparison': 2, 'not': 3}
+_CONDITION_PRECEDENCE = {'or': 0, 'and': 1, 'comparison': 2, 'not': 3}
 
 #: The conditions that are one relation between two sides, which a line may
 #: align on the way it aligns a constraint.
@@ -523,11 +523,11 @@ class Walk:
     # -- conditions --------------------------------------------------------
 
     def _condition(self, node: Condition, ctx: _Context, *, need: int = 0) -> str:
-        text, precedence = self._where(node, ctx)
+        text, precedence = self._boolean(node, ctx)
         return self.format.parenthesise(text) if precedence < need else text
 
-    def _where(self, node: Condition, ctx: _Context) -> tuple[str, int]:
-        comparison = _WHERE_PRECEDENCE['comparison']
+    def _boolean(self, node: Condition, ctx: _Context) -> tuple[str, int]:
+        comparison = _CONDITION_PRECEDENCE['comparison']
         if isinstance(node, BooleanLiteral):
             assert not node.value, 'an always-true mask is folded away or refused before anything prints it'
             return self._op('false'), _ATOM
@@ -553,27 +553,27 @@ class Walk:
 
         if isinstance(node, TranslatedCondition):
             moved = ctx.translated(node.along, _Step(node.offset, 'plain'))
-            return self._where(node.operand.root, moved)
+            return self._boolean(node.operand.root, moved)
 
         if isinstance(node, JoinedCondition):
-            return self._where(node.operand.root, self._looked_up(node.columns, ctx))
+            return self._boolean(node.operand.root, self._looked_up(node.columns, ctx))
 
         if isinstance(node, RelationDefined):
             return self._relation_row(node.name, self._frame_key(node.name, ctx)), comparison
 
         if isinstance(node, Not):
             return (
-                f'{self._op("not")} {self._condition(node.operand, ctx, need=_WHERE_PRECEDENCE["not"])}',
-                _WHERE_PRECEDENCE['not'],
+                f'{self._op("not")} {self._condition(node.operand, ctx, need=_CONDITION_PRECEDENCE["not"])}',
+                _CONDITION_PRECEDENCE['not'],
             )
 
         if isinstance(node, And):
-            need = _WHERE_PRECEDENCE['and']
+            need = _CONDITION_PRECEDENCE['and']
             sides = [self._condition(node.left, ctx, need=need), self._condition(node.right, ctx, need=need)]
             return self.format.joined(sides, self._op('and')), need
 
         if isinstance(node, Or):
-            need = _WHERE_PRECEDENCE['or']
+            need = _CONDITION_PRECEDENCE['or']
             sides = [self._condition(node.left, ctx, need=need), self._condition(node.right, ctx, need=need)]
             return self.format.joined(sides, self._op('or')), need
 
@@ -811,7 +811,7 @@ class Walk:
         return [*arms, (self._expression(last.value, ctx), self.format.prose('otherwise'))]
 
     def _arm_condition(self, when: Mask, ctx: _Context) -> str:
-        return f'{self.format.prose("if ")} {self._condition(when.root, ctx, need=_WHERE_PRECEDENCE["and"])}'
+        return f'{self.format.prose("if ")} {self._condition(when.root, ctx, need=_CONDITION_PRECEDENCE["and"])}'
 
     def _variable(self, name: str) -> Line:
         entry = self.program.variables[name]
@@ -950,7 +950,7 @@ class Walk:
         mask = gate.where
         if mask is None or gate.missing == 'neutral':
             return symbol
-        where = self._condition(mask.root, ctx, need=_WHERE_PRECEDENCE['and'])
+        where = self._condition(mask.root, ctx, need=_CONDITION_PRECEDENCE['and'])
         return self.format.cases(
             [(symbol, f'{self.format.prose("if ")} {where}'), ('1', self.format.prose('otherwise'))]
         )

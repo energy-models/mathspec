@@ -1462,14 +1462,14 @@ TypedCondition = (
     | JoinedCondition
 )
 
-#: The boolean connectives. With [`ConditionReference`][], they are the only where nodes
-#: that carry other where nodes, so a walk over a condition recurses only here.
+#: The boolean connectives. With [`ConditionReference`][], they are the only condition nodes
+#: that carry other condition nodes, so a walk over a condition recurses only here.
 #: The grammar builds these classes directly over unresolved leaves, so a tree
 #: before resolution shares them, and resolution then replaces those leaves.
 Connective = Not | And | Or
 
 #: Every resolved condition node. The parser's ``Unresolved*`` nodes are not members: they live with the
-#: grammar in [`mathspec._where_parser`][], and resolution rewrites them away
+#: grammar in [`mathspec._condition_parser`][], and resolution rewrites them away
 #: before anything here is asked.
 Condition = BooleanLiteral | TypedCondition | Connective | ConditionReference
 
