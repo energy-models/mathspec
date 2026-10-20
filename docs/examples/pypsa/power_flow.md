@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Power flow
 
-This file states Kirchhoff's voltage law around each cycle. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads the sum `Cycle_angle_sum` under `given:` and adds nothing to it. The lines and the transformers add their terms to it.
+This file states Kirchhoff's voltage law around each cycle. It is one of the [fragments](index.md) that merge into `examples/pypsa.yaml`. It reads the sum `Cycle_angle_sum` under `given:` and adds nothing to it. The lines and the transformers add their terms to it.
 
 <!-- gallery:begin -->
 ```yaml

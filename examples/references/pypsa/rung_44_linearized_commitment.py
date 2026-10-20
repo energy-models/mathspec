@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import spine
 
-PATCH = 'variants/pypsa_linearized_uc.yaml'
+SPEC = 'pypsa_linearized_uc.yaml'
 OPTIMIZE = {'linearized_unit_commitment': True}
 
 #: a start costs more than a stop, so PyPSA does not tighten these units and the rung isolates the rows it adds

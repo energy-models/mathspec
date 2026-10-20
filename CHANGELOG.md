@@ -14,6 +14,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 - docs: the compose guide says how to add or remove a term on a merged spec ([#901](https://github.com/energy-models/mathspec/pull/901))
 - fix(composition): a fragment returned by `override` merges as the file it came from does ([#900](https://github.com/energy-models/mathspec/pull/900))
+- docs(pypsa): the PyPSA spec is written as fragments, with each committable class, the relaxed commitment and the risk preference as layers that a model takes or leaves out ([#902](https://github.com/energy-models/mathspec/pull/902))
 - docs: the changelog is listed under Reference rather than About ([#895](https://github.com/energy-models/mathspec/pull/895))
 - docs(pypsa): an extendable unit has a capacity to choose exactly where its active flag is set, as in PyPSA ([#886](https://github.com/energy-models/mathspec/pull/886))
 - refactor(api)!: a module outside spec, program and errors has a name that starts with an underscore ([#878](https://github.com/energy-models/mathspec/pull/878))

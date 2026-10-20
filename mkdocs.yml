@@ -97,27 +97,39 @@ nav:
           - Every construct, as math: reference/notation.md
           - PyPSA in one file: examples/pypsa.md
           - PyPSA, the relaxed commitment: examples/pypsa_linearized_uc.md
-          - PyPSA in 24 files:
+          - PyPSA in fragments:
               - examples/pypsa/index.md
-              - Settings: examples/pypsa/settings.md
-              - The network: examples/pypsa/network.md
+              - The surface: examples/pypsa/surface.md
               - Power flow: examples/pypsa/power_flow.md
-              - The cost: examples/pypsa/cost.md
+              - The risk preference: examples/pypsa/risk.md
+              - No risk preference: examples/pypsa/risk_neutral.md
               - Carriers: examples/pypsa/carrier.md
               - Global constraints: examples/pypsa/global_constraints.md
               - Security: examples/pypsa/security.md
-              - Generators: examples/pypsa/generator.md
-              - Generators, the commitment: examples/pypsa/generator_commitment.md
-              - Generators, the ramping: examples/pypsa/generator_ramping.md
-              - Generators, the maintenance: examples/pypsa/generator_maintenance.md
-              - Links: examples/pypsa/link.md
-              - Links, the commitment: examples/pypsa/link_commitment.md
-              - Links, the ramping: examples/pypsa/link_ramping.md
-              - Links, the maintenance: examples/pypsa/link_maintenance.md
-              - Processes: examples/pypsa/process.md
-              - Processes, the commitment: examples/pypsa/process_commitment.md
-              - Processes, the ramping: examples/pypsa/process_ramping.md
-              - Processes, the maintenance: examples/pypsa/process_maintenance.md
+              - Generators:
+                  - examples/pypsa/generator/class.md
+                  - The commitment: examples/pypsa/generator/commitment.md
+                  - No commitment: examples/pypsa/generator/commitment_none.md
+                  - The integer status: examples/pypsa/generator/status_integer.md
+                  - The relaxed status: examples/pypsa/generator/status_relaxed.md
+                  - The ramping: examples/pypsa/generator/ramping.md
+                  - The maintenance: examples/pypsa/generator/maintenance.md
+              - Links:
+                  - examples/pypsa/link/class.md
+                  - The commitment: examples/pypsa/link/commitment.md
+                  - No commitment: examples/pypsa/link/commitment_none.md
+                  - The integer status: examples/pypsa/link/status_integer.md
+                  - The relaxed status: examples/pypsa/link/status_relaxed.md
+                  - The ramping: examples/pypsa/link/ramping.md
+                  - The maintenance: examples/pypsa/link/maintenance.md
+              - Processes:
+                  - examples/pypsa/process/class.md
+                  - The commitment: examples/pypsa/process/commitment.md
+                  - No commitment: examples/pypsa/process/commitment_none.md
+                  - The integer status: examples/pypsa/process/status_integer.md
+                  - The relaxed status: examples/pypsa/process/status_relaxed.md
+                  - The ramping: examples/pypsa/process/ramping.md
+                  - The maintenance: examples/pypsa/process/maintenance.md
               - Storage units: examples/pypsa/storage_unit.md
               - Stores: examples/pypsa/store.md
               - Lines: examples/pypsa/line.md

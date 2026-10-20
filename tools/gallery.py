@@ -44,6 +44,13 @@ PYPSA = ROOT / 'examples' / 'pypsa'
 #: PyPSA split prints in the one file's table, cut the same way.
 LIBRARY_SYMBOLS = ROOT / 'examples' / 'symbols' / 'library.yaml'
 PYPSA_SYMBOLS = ROOT / 'examples' / 'symbols' / 'pypsa.yaml'
+
+
+def fragment_name(path: Path) -> str:
+    """A PyPSA fragment's name: its path under `examples/pypsa/`, such as ``generator/class``."""
+    return path.relative_to(PYPSA).with_suffix('').as_posix()
+
+
 BEGIN, END = '<!-- gallery:begin -->', '<!-- gallery:end -->'
 
 #: Page -> the spec it shows. One spec per page, because a gallery of
@@ -54,7 +61,7 @@ MODELS = {
     'library/surface.md': LIBRARY / 'surface.yaml',
     'library/generator.md': LIBRARY / 'generator.yaml',
     'library/load.md': LIBRARY / 'load.yaml',
-    **{f'pypsa/{path.stem}.md': path for path in sorted(PYPSA.glob('*.yaml'))},
+    **{f'pypsa/{fragment_name(path)}.md': path for path in sorted(PYPSA.rglob('*.yaml'))},
 }
 
 #: The index of the PyPSA split: its two tables are read off the fragments.
@@ -78,13 +85,14 @@ DECLARED = {
     'pypsa.md': ROOT / 'examples' / 'pypsa.yaml',
 }
 
-#: Page -> the base and the patch laid over it, shown one entry of the
-#: patch at a time — its YAML, then the line it prints in the patched spec.
-#: The rest of the patched spec is the base's page.
-PATCHED = {
+#: Page -> a composed variant of the PyPSA spec, and the fragments it takes in
+#: place of the default set's, shown one entry of those fragments at a time —
+#: its YAML, then the line it prints in the variant. The rest of the variant is
+#: the default set's page.
+VARIANTS = {
     'pypsa_linearized_uc.md': (
-        ROOT / 'examples' / 'pypsa.yaml',
-        ROOT / 'examples' / 'variants' / 'pypsa_linearized_uc.yaml',
+        ROOT / 'examples' / 'pypsa_linearized_uc.yaml',
+        [PYPSA / kind / 'status_relaxed.yaml' for kind in ('generator', 'link', 'process')],
     ),
 }
 
@@ -134,10 +142,11 @@ def split_index_block() -> str:
     """The PyPSA split's two tables: each sum with the fragment that reads it and the terms, and each fragment.
 
     Both are read off the fragments, so the index cannot name a term or a
-    reader the files no longer have. The reader is the fragment that reads
-    the sum with its description and adds nothing to it.
+    reader the files no longer have. The reader is the fragment that defines
+    the sum, or else the one that reads it with its description and adds
+    nothing to it.
     """
-    return split_index({path.stem: to_spec(path) for path in sorted(PYPSA.glob('*.yaml'))})
+    return split_index({fragment_name(path): to_spec(path) for path in sorted(PYPSA.rglob('*.yaml'))})
 
 
 def split_index(specs: Mapping[str, Spec]) -> str:
@@ -157,6 +166,10 @@ def split_index(specs: Mapping[str, Spec]) -> str:
         for hub, entry in spec.given.expressions.items():
             if entry.description and hub not in adds:
                 readers[hub] = (name, tuple(entry.dims))
+    for name, spec in specs.items():
+        for hub, expression in spec.expressions.items():
+            if hub in terms and expression.adds_to is None and hub not in readers:
+                readers[hub] = (name, tuple(expression.dims or ()))
     if unread := sorted(set(terms) - set(readers)):
         spelled = ', '.join(f'{hub!r}' for hub in unread)
         msg = (
@@ -230,7 +243,7 @@ def probe_block() -> str:
 def entry(text: str, section: str, name: str | None = None) -> str:
     """One entry as written: ``section:`` itself, or ``name:`` under it."""
     lines = text.splitlines()
-    i = lines.index(f'{section}:')
+    i = next(k for k, line in enumerate(lines) if line == f'{section}:' or line.startswith(f'{section}: {{'))
     if name is not None:
         i = next(k for k in range(i + 1, len(lines)) if lines[k].startswith(f'  {name}:'))
     deeper = '    ' if name is not None else '  '
@@ -302,11 +315,11 @@ def declared_block(path: Path) -> str:
     return '\n\n'.join(parts)
 
 
-def patched_block(base: Path, patch: Path) -> str:
-    """The patch's description, then every entry it writes as YAML beside the line it prints once laid over *base*."""
-    text = without_header(patch)
-    model = override(base, [patch])
-    written = yaml.safe_load(text)
+def variant_block(composed: Path, fragments: list[Path]) -> str:
+    """The variant's description, then every entry its own fragments write, as YAML beside the line it prints."""
+    model = to_spec(composed)
+    texts = [without_header(fragment) for fragment in fragments]
+    written = [yaml.safe_load(text) for text in texts]
     headings = {
         'variables': {name: _stands_for(name, variable.description) for name, variable in model.variables.items()},
         'constraints': {
@@ -316,14 +329,15 @@ def patched_block(base: Path, patch: Path) -> str:
     }
     parts = [model.description]
     for section, heading_of in headings.items():
-        for name in written.get(section, {}):
-            line = typeset_line(model, name, 'markdown', symbols=sidecar_for(base), inline_expressions=False)
-            parts.append(
-                f'### `{heading_of[name]}`\n\n'
-                f'`{name}`\n\n'
-                f'```yaml\n{entry(text, section, name)}\n```\n\n'
-                f'```math\n{line}\n```'
-            )
+        for text, entries in zip(texts, written, strict=True):
+            for name in entries.get(section, {}):
+                line = typeset_line(model, name, 'markdown', symbols=PYPSA_SYMBOLS, inline_expressions=False)
+                parts.append(
+                    f'### `{heading_of[name]}`\n\n'
+                    f'`{name}`\n\n'
+                    f'```yaml\n{entry(text, section, name)}\n```\n\n'
+                    f'```math\n{line}\n```'
+                )
     return '\n\n'.join(parts)
 
 
@@ -418,28 +432,28 @@ def block(page: str) -> str:
         return probe_block()
     if page in DECLARED:
         return declared_block(DECLARED[page])
-    if page in PATCHED:
-        return patched_block(*PATCHED[page])
+    if page in VARIANTS:
+        return variant_block(*VARIANTS[page])
     if page in COMPOSED:
         return composed_block(*COMPOSED[page])
     if page == SPLIT_INDEX:
         return split_index_block()
     if MODELS[page].parent == LIBRARY:
         return fragment_block(MODELS[page], LIBRARY_SYMBOLS)
-    if MODELS[page].parent == PYPSA:
+    if PYPSA in MODELS[page].parents:
         return fragment_block(MODELS[page], PYPSA_SYMBOLS)
     return model_block(MODELS[page])
 
 
 def rendered(page: str, text: str) -> str:
     text = splice(text, BEGIN, END, block(page))
-    if page in DECLARED or page in PATCHED:
+    if page in DECLARED or page in VARIANTS:
         text = with_references(text)
     return text
 
 
 def pages() -> list[str]:
-    return [*MODELS, *COMPOSED, *DECLARED, *PATCHED, 'operators.md', SPLIT_INDEX]
+    return [*MODELS, *COMPOSED, *DECLARED, *VARIANTS, 'operators.md', SPLIT_INDEX]
 
 
 def main(argv: list[str] | None = None) -> int:

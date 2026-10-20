@@ -6,16 +6,18 @@ SPDX-License-Identifier: CC-BY-4.0
 # PyPSA, the relaxed commitment
 
 This page states the model that `n.optimize(linearized_unit_commitment=True)`
-builds, as a patch over [PyPSA in one file](pypsa.md). The patch is
-`examples/variants/pypsa_linearized_uc.yaml`. Lay it over the base file:
+builds. It is the default set of [PyPSA in fragments](pypsa/index.md), with
+each committable class taking `status_relaxed.yaml` in place of
+`status_integer.yaml`. `tools/pypsa_compose.py` writes the merge to
+`examples/pypsa_linearized_uc.yaml`:
 
 ```python
 import mathspec as ms
 
-spec = ms.override('examples/pypsa.yaml', ['examples/variants/pypsa_linearized_uc.yaml'])
+spec = ms.to_spec('examples/pypsa_linearized_uc.yaml')
 ```
 
-The patch changes only what the keyword changes:
+The relaxed status changes only what the keyword changes:
 
 - The status, start and stop of a committable generator, link and process are
   shares in [0, 1], not integers (`variables.py:81-90`, `:132-141`,
@@ -27,7 +29,7 @@ The patch changes only what the keyword changes:
   (`optimize.py:783-784`).
 
 Every other row is a row of the integer run, with its scenarios, periods and
-`active` masks. Rungs 12, 44, 47 and 67 solve the patched spec. A **rung** is
+`active` masks. Rungs 12, 44, 47 and 67 solve this spec. A **rung** is
 one step of the PyPSA ladder, which is one `n.optimize()` keyword stated in
 full. Each network is the shared spine, `spine.py`, plus the additions of the
 rung script.
@@ -55,13 +57,13 @@ rung script.
 #
 # SPDX-License-Identifier: MIT
 
-"""Rung 12: linearized unit commitment — the status a share in [0, 1], stated by the patch `variants/pypsa_linearized_uc.yaml`."""
+"""Rung 12: linearized unit commitment — the status a share in [0, 1], stated by `pypsa_linearized_uc.yaml`."""
 
 from __future__ import annotations
 
 import spine
 
-PATCH = 'variants/pypsa_linearized_uc.yaml'
+SPEC = 'pypsa_linearized_uc.yaml'
 OPTIMIZE = {'linearized_unit_commitment': True}
 
 
@@ -117,7 +119,7 @@ def build():
 `n.optimize(linearized_unit_commitment=True)` builds the same commitment rows as
 the integer run, except the four tightening rows: the keyword only relaxes the
 status, start and stop to shares in [0, 1] (`variables.py:81-88`) and adds the
-tightening rows (`constraints.py:621`). So the patch leaves each of these rows
+tightening rows (`constraints.py:621`). So the relaxed status leaves each of these rows
 to [PyPSA in one file](pypsa.md), and this rung checks them under the keyword:
 
 - A unit still serving the down time it brought in stays off
@@ -165,7 +167,7 @@ from __future__ import annotations
 
 import spine
 
-PATCH = 'variants/pypsa_linearized_uc.yaml'
+SPEC = 'pypsa_linearized_uc.yaml'
 OPTIMIZE = {'linearized_unit_commitment': True}
 
 #: a start costs more than a stop, so PyPSA does not tighten these units and the rung isolates the rows it adds
@@ -217,8 +219,8 @@ def build():
 
 ## Rung 47 — ramps and signs, as the integer file states them
 
-This rung checks five rows under the keyword, each on fixed builds. The patch
-writes the first row, and [PyPSA in one file](pypsa.md) states the other four:
+This rung checks five rows under the keyword, each on fixed builds. The relaxed
+status writes the first row, and [PyPSA in one file](pypsa.md) states the other four:
 
 - The four tightening rows read each ramp limit filled to the full build where
   it is missing (`constraints.py:317-322`). They read `Generator_ramp_up_rate`
@@ -277,7 +279,7 @@ import math
 
 import spine
 
-PATCH = 'variants/pypsa_linearized_uc.yaml'
+SPEC = 'pypsa_linearized_uc.yaml'
 OPTIMIZE = {'linearized_unit_commitment': True}
 
 
@@ -377,7 +379,7 @@ from __future__ import annotations
 
 import spine
 
-PATCH = 'variants/pypsa_linearized_uc.yaml'
+SPEC = 'pypsa_linearized_uc.yaml'
 OPTIMIZE = {'linearized_unit_commitment': True}
 
 
@@ -448,7 +450,7 @@ def build():
 ## The file
 
 <!-- gallery:begin -->
-`n.optimize(linearized_unit_commitment=True)`, as a patch over `examples/pypsa.yaml`. The status, its starts and its stops of a committable generator, link and process are shares in [0, 1] rather than integers, and four rows PyPSA adds only under the keyword tighten the relaxation of a unit with a fixed build whose start and stop cost the same in every snapshot and every scenario (`constraints.py:599-699`). A modular committable unit is refused, as PyPSA refuses it. Every other row is the integer run's.
+`n.optimize(linearized_unit_commitment=True)`. The status, its starts and its stops of a committable generator, link and process are shares in [0, 1] rather than integers, and four rows PyPSA adds only under the keyword tighten the relaxation of a unit with a fixed build whose start and stop cost the same in every snapshot and every scenario (`constraints.py:599-699`). A modular committable unit is refused, as PyPSA refuses it. Every other row is the integer run's.
 
 ### `Generator-status`
 
@@ -460,8 +462,10 @@ Generator_status:
     `Generator-status` — how much of a committable unit is on, a share in [0, 1]
     rather than an integer: the relaxation the keyword solves
     (`variables.py:86-87`)
-  domain: null
+  dims: [scenario, snapshot, generator]
+  where: Generator_committed
   bounds:
+    lower: 0
     upper: 1
 ```
 
@@ -476,8 +480,10 @@ Generator_status:
 ```yaml
 Generator_start_up:
   description: "`Generator-start_up` — how much of a committable unit turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)"
-  domain: null
+  dims: [scenario, snapshot, generator]
+  where: Generator_committed
   bounds:
+    lower: 0
     upper: 1
 ```
 
@@ -492,8 +498,10 @@ Generator_start_up:
 ```yaml
 Generator_shut_down:
   description: "`Generator-shut_down` — how much of a committable unit turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)"
-  domain: null
+  dims: [scenario, snapshot, generator]
+  where: Generator_committed
   bounds:
+    lower: 0
     upper: 1
 ```
 
@@ -511,8 +519,10 @@ Link_status:
     `Link-status` — how much of a committable link is on, a share in [0, 1]
     rather than an integer: the relaxation the keyword solves
     (`variables.py:86-87`)
-  domain: null
+  dims: [scenario, snapshot, link]
+  where: Link_committed
   bounds:
+    lower: 0
     upper: 1
 ```
 
@@ -527,8 +537,10 @@ Link_status:
 ```yaml
 Link_start_up:
   description: "`Link-start_up` — how much of a committable link turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)"
-  domain: null
+  dims: [scenario, snapshot, link]
+  where: Link_committed
   bounds:
+    lower: 0
     upper: 1
 ```
 
@@ -543,8 +555,10 @@ Link_start_up:
 ```yaml
 Link_shut_down:
   description: "`Link-shut_down` — how much of a committable link turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)"
-  domain: null
+  dims: [scenario, snapshot, link]
+  where: Link_committed
   bounds:
+    lower: 0
     upper: 1
 ```
 
@@ -562,8 +576,10 @@ Process_status:
     `Process-status` — how much of a committable process is on, a share in [0, 1]
     rather than an integer: the relaxation the keyword solves
     (`variables.py:86-87`)
-  domain: null
+  dims: [scenario, snapshot, process]
+  where: Process_committed
   bounds:
+    lower: 0
     upper: 1
 ```
 
@@ -578,8 +594,10 @@ Process_status:
 ```yaml
 Process_start_up:
   description: "`Process-start_up` — how much of a committable process turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)"
-  domain: null
+  dims: [scenario, snapshot, process]
+  where: Process_committed
   bounds:
+    lower: 0
     upper: 1
 ```
 
@@ -594,8 +612,10 @@ Process_start_up:
 ```yaml
 Process_shut_down:
   description: "`Process-shut_down` — how much of a committable process turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)"
-  domain: null
+  dims: [scenario, snapshot, process]
+  where: Process_committed
   bounds:
+    lower: 0
     upper: 1
 ```
 
