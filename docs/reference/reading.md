@@ -138,7 +138,7 @@ it. A `ParameterDefined` on a `bool` parameter reads the value. Under
 
 Import the node classes from `mathspec.program` to test a node with
 `isinstance` and to read its fields. `children()` walks an expression node's
-operands, and `where_children()` walks a condition's. `walk()` yields every
+operands, and `condition_children()` walks a condition's. `walk()` yields every
 node under an expression, parents first, and `walk_regions()` yields each node
 with the `cases:` regions it stands inside, outermost first.
 
@@ -149,7 +149,7 @@ a walk reads through it.
 
 A `ConditionReference` stands where a `conditions:` entry is read. Its `body` is the
 condition of the entry, the root of `program.conditions[name].condition`, and it is true
-where the body is true. `where_children()` steps into the body, so `.atoms`,
+where the body is true. `condition_children()` steps into the body, so `.atoms`,
 `.names_read` and `.dims` read through it, and an engine that builds rows needs
 nothing from `program.conditions`.
 

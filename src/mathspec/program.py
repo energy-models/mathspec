@@ -116,12 +116,12 @@ __all__ = [
     'assumption_message',
     'carries_variable',
     'children',
+    'condition_children',
     'is_quadratic',
     'parameters_of',
     'variables_of',
     'walk',
     'walk_regions',
-    'where_children',
 ]
 
 
@@ -1435,7 +1435,7 @@ class ConditionReference:
     """A use of a ``conditions:`` entry, standing where its name was written, with the entry's condition under it.
 
     Its truth is its body's: a consumer steps through it, as
-    [`where_children`][] does. It is kept as a node rather than written in so
+    [`condition_children`][] does. It is kept as a node rather than written in so
     the typesetter can print the symbol where the name stood and define it
     once, as [`ExpressionReference`][] does for an expression.
     """
@@ -1474,19 +1474,19 @@ Connective = Not | And | Or
 Condition = BooleanLiteral | TypedCondition | Connective | ConditionReference
 
 
-def where_children(where: Condition) -> tuple[Condition, ...]:
-    """The conditions under *where* — a connective's operands, a named condition's body, and nothing under a leaf.
+def condition_children(condition: Condition) -> tuple[Condition, ...]:
+    """The conditions under *condition* — a connective's operands, a named condition's body, and nothing under a leaf.
 
     What every walk over a condition recurses through, as [`children`][] is
     for an expression. A leaf has nothing under it whether or not it is
     resolved, so the grammar measures its own output with this too.
     """
-    if isinstance(where, Not):
-        return (where.operand,)
-    if isinstance(where, (And, Or)):
-        return (where.left, where.right)
-    if isinstance(where, ConditionReference):
-        return (where.body,)
+    if isinstance(condition, Not):
+        return (condition.operand,)
+    if isinstance(condition, (And, Or)):
+        return (condition.left, condition.right)
+    if isinstance(condition, ConditionReference):
+        return (condition.body,)
     return ()
 
 
@@ -1501,7 +1501,7 @@ def _atoms(where: Condition) -> Iterator[TypedCondition]:
     if isinstance(where, TypedCondition):
         yield where
     elif isinstance(where, BooleanLiteral | Connective | ConditionReference):
-        for child in where_children(where):
+        for child in condition_children(where):
             yield from _atoms(child)
     else:
         msg = f'{type(where).__name__} reached a condition walk unresolved.'

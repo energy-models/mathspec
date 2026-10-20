@@ -41,7 +41,7 @@ from mathspec.program import (
     Connective,
     Not,
     Or,
-    where_children,
+    condition_children,
 )
 
 if TYPE_CHECKING:
@@ -271,7 +271,7 @@ def nested(node: ParsedWhere) -> tuple[ParsedWhere, ...]:
     if isinstance(node, ArithmeticNode):
         return children(node)
     if isinstance(node, Connective):
-        return where_children(node)
+        return condition_children(node)
     return ()
 
 
