@@ -876,6 +876,16 @@ def test_the_order_a_file_writes_dimensions_in_reaches_no_value_of_the_program(p
     assert reversed_order.expand().program == spec.expand().program, 'nor of the program its expansion lowers to'
 
 
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_the_order_a_file_writes_a_list_in_reaches_no_value_of_the_spec(path):
+    """A spec held each `dims:` list and each side of a relation as its file wrote them, so two files that state
+    one spec loaded to two specs, and wrote back two texts."""
+    spec = to_spec(path)
+    backwards = to_spec(dims_reversed(spec.to_dict()))
+    assert backwards == spec, 'every dims: list and each side of a relation is sorted as the spec loads'
+    assert backwards.to_yaml() == spec.to_yaml(), 'so the spec writes back one text'
+
+
 def _dims_tuples(root: object) -> Iterator[tuple[str, tuple[str, ...]]]:
     """Every ``dims`` and ``frame`` a program holds, at any depth, under the name of the class that holds it.
 

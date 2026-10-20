@@ -60,17 +60,17 @@ parameters:
     dtype: float
     description: cost of one unit of output
   Load_p_set:
-    dims: [snapshot, load]
+    dims: [load, snapshot]
     dtype: float
     description: '`Load-p_set` — what a load takes in a snapshot'
 variables:
   Port_p:
-    dims: [snapshot, port]
+    dims: [port, snapshot]
     domain: continuous
     missing: absent
     description: what a port puts into its bus in a snapshot, negative for a withdrawal
   Generator_p:
-    dims: [snapshot, generator]
+    dims: [generator, snapshot]
     bounds: {lower: 0.0, upper: Generator_p_nom}
     domain: continuous
     missing: absent
@@ -84,16 +84,16 @@ expressions:
 objective: {sense: minimize, expression: total_cost}
 constraints:
   Bus_nodal_balance:
-    dims: [snapshot, bus]
+    dims: [bus, snapshot]
     expression: sum(Port_p, over=port, by=Port_bus[bus]) == 0
     description: '`Bus-nodal_balance` — what the ports on a bus put in nets to nothing'
   Generator_injection:
-    dims: [snapshot, generator]
+    dims: [generator, snapshot]
     expression: at(Port_p, by=Generator_port[port]) == Generator_p
     description: 'what a generator produces is what its port injects. No PyPSA row stands for this: PyPSA
       writes the generator into the balance instead'
   Load_withdrawal:
-    dims: [snapshot, load]
+    dims: [load, snapshot]
     expression: at(Port_p, by=Load_port[port]) == -Load_p_set
     description: 'what a load takes is what its port withdraws. No PyPSA row stands for this: PyPSA writes
       the load into the balance instead'

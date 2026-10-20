@@ -10,8 +10,11 @@ that builds models, a renderer or a checker.
 
 ## `Spec` and `Program`
 
-A `Spec` holds the file as written: its `macros:`, its descriptions, and a
-`piecewise:` entry as one entry. A `Program` holds what the file means:
+A `Spec` holds the file as written: its `macros:`, its descriptions, its
+entries in the order the file lists them, and a `piecewise:` entry as one
+entry. It sorts by name what no order reaches: each `dims:` list, and each side
+of a relation, the key's columns before the values'. A `Program` holds what the
+file means:
 every macro expanded, every name typed, every operator resolved to a node, and
 every dimension and degree rule already checked. A curve stays one curve there
 until [`spec.expand()`](#formulations-written-out) writes it out. The

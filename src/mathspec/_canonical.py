@@ -188,7 +188,7 @@ def canonical_text(text: str) -> str:
 
 
 def _canonical_entry(entry: object) -> object:
-    """One entry, with every expression under it normalised, every ``dims`` sorted, and everything else untouched."""
+    """One entry, with every expression under it normalised and everything else untouched."""
     if isinstance(entry, dict):
         return {key: _canonical_field(key, value) for key, value in entry.items()}
     if isinstance(entry, list):
@@ -199,15 +199,6 @@ def _canonical_entry(entry: object) -> object:
 def _canonical_links(links: list[list[object]]) -> list[list[object]]:
     """A piecewise entry's links, whose expression is the first position of the list the file wrote."""
     return [[canonical_text(cast('str', link[0])), *link[1:]] for link in links]
-
-
-def _sorted_side(written: object) -> object:
-    """One side of a relation, its columns sorted by role, as the program holds them."""
-    if isinstance(written, list):
-        return sorted(cast('list[str]', written))
-    if isinstance(written, dict):
-        return dict(sorted(cast('dict[str, str]', written).items()))
-    return written
 
 
 def _sorted_entries(section: dict[str, object], *, bare_is_expression: bool = False) -> dict[str, object]:
@@ -223,11 +214,9 @@ def _sorted_entries(section: dict[str, object], *, bare_is_expression: bool = Fa
 
 
 def _canonical_field(key: str, value: object) -> object:
-    """One field of an entry in the normal form, an expression or a ``dims`` list being the two it rewrites."""
+    """One field of an entry in the normal form, an expression being the one it rewrites."""
     if key in _EXPRESSION_KEYS and isinstance(value, str):
         return canonical_text(value)
-    if key == 'dims' and isinstance(value, list):
-        return sorted(cast('list[str]', value))
     return _canonical_entry(value)
 
 
@@ -235,9 +224,9 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
     """The spec as plain data, in the form two files that state the same spec share.
 
     Entries are sorted by name, the ones under each kind of ``given:``
-    too, every ``dims`` list and each side of a relation is sorted by name, and every expression is printed from its
-    parsed tree, so what is left
-    of a difference is a difference in the spec. A ``where`` string, the order of the regions under ``cases:`` and
+    too, and every expression is printed from its parsed tree, so what is
+    left of a difference is a difference in the spec. A ``dims:`` list and
+    each side of a relation arrive sorted, as the spec holds them. A ``where`` string, the order of the regions under ``cases:`` and
     the order of a piecewise entry's links are all left as written.
 
     Args:
@@ -261,11 +250,6 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
     if isinstance(piecewise, dict):
         for entry in piecewise.values():
             entry['links'] = _canonical_links(entry['links'])
-    relations = built.get('relations')
-    if isinstance(relations, dict):
-        for entry in relations.values():
-            if isinstance(entry, dict):
-                entry.update({side: _sorted_side(entry[side]) for side in ('key', 'values') if side in entry})
     return built
 
 

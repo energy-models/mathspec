@@ -200,8 +200,8 @@ def test_the_emitted_frame_is_sorted_by_name_whatever_order_the_file_declares(or
     same way for the same names within one process — so a run that reads the
     set rather than sorting it fails one of the two orderings."""
     spec = spec_of(TWO_DIM, dimensions={d: TWO_DIM['dimensions'][d] for d in order})
-    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == ['generator', 'snapshot', 'bp'], (
-        'the frame sorted by name, then the breakpoint dimension'
+    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == ['bp', 'generator', 'snapshot'], (
+        'the frame and the breakpoint dimension, sorted by name'
     )
 
 

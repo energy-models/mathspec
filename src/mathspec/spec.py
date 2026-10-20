@@ -18,6 +18,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Annotated, ClassVar, Literal, Self, cast, get_args, override
 
 from pydantic import (
+    AfterValidator,
     BaseModel,
     BeforeValidator,
     ConfigDict,
@@ -83,6 +84,11 @@ __all__ = [
     'Spec',
     'VariableSpec',
 ]
+
+
+#: A ``dims:`` list, sorted by name as it loads. Its order reaches nothing a
+#: consumer reads, so the spec holds the one order every file states it in.
+Dims = Annotated[list[str], AfterValidator(sorted)]
 
 
 class _StrictSpec(BaseModel):
@@ -239,6 +245,16 @@ class RelationSpec(_StrictSpec):
     missing: RelationMissing = 'refused'
     description: str | None = None
 
+    @field_validator('key', 'values')
+    @classmethod
+    def _sorted_by_role(cls, v: str | list[str] | dict[str, str] | None) -> str | list[str] | dict[str, str] | None:
+        """One side's columns sorted by role as it loads, since their order reaches nothing a consumer reads."""
+        if isinstance(v, list):
+            return sorted(v)
+        if isinstance(v, dict):
+            return dict(sorted(v.items()))
+        return v
+
     @field_validator('missing', mode='before')
     @classmethod
     def _refused_or_absent(cls, v: object) -> object:
@@ -321,7 +337,7 @@ class ParameterSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'a parameter entry'
 
-    dims: list[str]
+    dims: Dims
     dtype: ParameterDtype = 'float'
     missing: Annotated[MissingReading | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
@@ -417,7 +433,7 @@ class VariableSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'a variable entry'
 
-    dims: list[str]
+    dims: Dims
     where: str | None = None
     bounds: BoundsSpec = BoundsSpec()
     domain: VariableDomain = 'continuous'
@@ -475,7 +491,7 @@ class GivenParameterSpec(_GivenEntrySpec):
 
     _label: ClassVar[str] = 'a given parameter entry'
 
-    dims: list[str]
+    dims: Dims
     dtype: ParameterDtype = 'float'
     description: str | None = None
 
@@ -489,7 +505,7 @@ class GivenVariableSpec(_GivenEntrySpec):
 
     _label: ClassVar[str] = 'a given variable entry'
 
-    dims: list[str]
+    dims: Dims
     domain: VariableDomain = 'continuous'
     description: str | None = None
 
@@ -504,7 +520,7 @@ class GivenConstraintSpec(_GivenEntrySpec):
 
     _label: ClassVar[str] = 'a given constraint entry'
 
-    dims: list[str]
+    dims: Dims
     description: str | None = None
 
 
@@ -525,7 +541,7 @@ class GivenExpressionSpec(_GivenEntrySpec):
 
     _label: ClassVar[str] = 'a given expression entry'
 
-    dims: list[str]
+    dims: Dims
     description: str | None = None
 
 
@@ -539,7 +555,7 @@ class GivenConditionSpec(_GivenEntrySpec):
 
     _label: ClassVar[str] = 'a given condition entry'
 
-    dims: list[str]
+    dims: Dims
     description: str | None = None
 
 
@@ -569,7 +585,7 @@ class ConstraintSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'a constraint entry'
 
-    dims: list[str]
+    dims: Dims
     where: str | None = None
     expression: str
     description: str | None = None
@@ -675,7 +691,7 @@ class ExpressionSpec(_StrictSpec):
     expression: Expression | None = None
     #: The dimensions the quantity ranges over. ``cases:`` needs it, and a plain
     #: entry that leaves it out takes the dims of its body.
-    dims: list[str] | None = None
+    dims: Dims | None = None
     #: The regions, keyed by the name labelling the row each prints; every ``when`` is proved apart from the others.
     cases: Annotated[dict[str, ExpressionCaseSpec], Field(min_length=1)] = {}
     #: The value wherever no case's ``when`` holds, printed as the last row.

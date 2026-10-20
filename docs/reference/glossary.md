@@ -13,7 +13,8 @@ Unlike constructs like `parameter` or `macro` (defined in their respective [lang
 **Spec**
 : Short for specification. A spec is the optimisation problem that a file
 states: its dimensions, the data it expects, its decisions and its rules, but
-no data. In Python it is a `Spec`, the file as written and checked, which
+no data. In Python it is a `Spec`, the file as written and checked, its lists
+of dimensions sorted, which
 `to_spec` returns
 ([reading a spec and its program](reading.md#spec-and-program)).
 

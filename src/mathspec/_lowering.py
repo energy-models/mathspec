@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec._dimensions import check_spec, sorted_dims
+from mathspec._dimensions import check_spec
 from mathspec._expansion import expand, parse_template
 from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec._resolution import (
@@ -147,7 +147,7 @@ def lower(spec: Spec) -> Program:
         else:
             lower_bound, upper_bound = _bound(vdef.bounds.lower, ns), _bound(vdef.bounds.upper, ns)
         variables[vname] = Variable(
-            sorted_dims(vdef.dims),
+            tuple(vdef.dims),
             where=mask_of(where),
             lower=lower_bound,
             upper=upper_bound,
@@ -163,7 +163,7 @@ def lower(spec: Spec) -> Program:
         if (sides := resolve_constraint_text(cdef.expression, ns, context, errors)) is not None:
             lhs, sense, rhs = sides
             constraints[cname] = Constraint(
-                sorted_dims(cdef.dims), lhs, sense, rhs, mask_of(where), description=cdef.description
+                tuple(cdef.dims), lhs, sense, rhs, mask_of(where), description=cdef.description
             )
 
     objective = None
@@ -215,7 +215,7 @@ def lower(spec: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: Parameter(sorted_dims(pdef.dims), pdef.dtype, pdef.missing, pdef.description)
+            name: Parameter(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description)
             for name, pdef in spec.parameters.items()
         },
         variables=variables,
@@ -245,13 +245,13 @@ def lower(spec: Spec) -> Program:
         conditions=conditions,
         given=GivenTargets(
             parameters={
-                name: Parameter(sorted_dims(g.dims), g.dtype, None, g.description)
+                name: Parameter(tuple(g.dims), g.dtype, None, g.description)
                 for name, g in spec.given.parameters.items()
             },
-            variables={name: Given(sorted_dims(g.dims), g.description) for name, g in spec.given.variables.items()},
-            constraints={name: Given(sorted_dims(g.dims), g.description) for name, g in spec.given.constraints.items()},
-            expressions={name: Given(sorted_dims(g.dims), g.description) for name, g in spec.given.expressions.items()},
-            conditions={name: Given(sorted_dims(g.dims), g.description) for name, g in spec.given.conditions.items()},
+            variables={name: Given(tuple(g.dims), g.description) for name, g in spec.given.variables.items()},
+            constraints={name: Given(tuple(g.dims), g.description) for name, g in spec.given.constraints.items()},
+            expressions={name: Given(tuple(g.dims), g.description) for name, g in spec.given.expressions.items()},
+            conditions={name: Given(tuple(g.dims), g.description) for name, g in spec.given.conditions.items()},
         ),
         description=spec.description,
     )

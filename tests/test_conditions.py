@@ -266,7 +266,7 @@ def test_a_reader_that_states_a_frame_wider_than_the_named_condition_s_is_refuse
     reader = varied(RAMPING, **{'constraints.ramp_up.where': 'stands'})
     with pytest.raises(LanguageError) as raised:
         merge([definer, reader])
-    assert "reads the given condition 'stands' as {'dims': ['period', 'generator']}" in str(raised.value), (
+    assert "reads the given condition 'stands' as {'dims': ['generator', 'period']}" in str(raised.value), (
         'the refusal names the frame the reader states'
     )
     assert "introduces it over ['generator']" in str(raised.value), "and the frame the definer's condition reads"

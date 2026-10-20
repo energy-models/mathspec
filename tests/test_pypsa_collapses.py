@@ -62,27 +62,27 @@ def test_a_variable_gains_scenario_only_when_it_is_second_stage():
     wrong = {
         name: _dims(ALL.variables[name])
         for name, dims in STANDARD['variables'].items()
-        if _dims(ALL.variables[name]) != (dims if name in SCENARIO_FREE_VARIABLES else ['scenario', *dims])
+        if _dims(ALL.variables[name]) != sorted(dims if name in SCENARIO_FREE_VARIABLES else ['scenario', *dims])
     }
     assert not wrong, f'these variables carry the wrong frame: {wrong}'
 
 
-def test_a_standard_constraint_changes_frame_only_by_a_leading_scenario():
+def test_a_standard_constraint_changes_frame_only_by_scenario():
     wrong = {
         name: _dims(ALL.constraints[name])
         for name, dims in STANDARD['constraints'].items()
-        if _dims(ALL.constraints[name]) not in (dims, ['scenario', *dims])
+        if _dims(ALL.constraints[name]) not in (sorted(dims), sorted(['scenario', *dims]))
     }
-    assert not wrong, f'a standard row may gain only a leading scenario; these differ: {wrong}'
+    assert not wrong, f'a standard row may gain only scenario; these differ: {wrong}'
 
 
-def test_a_standard_parameter_changes_frame_only_by_a_leading_scenario_or_period():
+def test_a_standard_parameter_changes_frame_only_by_scenario_or_period():
     wrong = {
         name: _dims(ALL.parameters[name])
         for name, dims in STANDARD['parameters'].items()
-        if _dims(ALL.parameters[name]) not in (dims, ['scenario', *dims], ['period', *dims])
+        if _dims(ALL.parameters[name]) not in (sorted(dims), sorted(['scenario', *dims]), sorted(['period', *dims]))
     }
-    assert not wrong, f'a standard parameter may gain only a leading scenario or period; these differ: {wrong}'
+    assert not wrong, f'a standard parameter may gain only scenario or period; these differ: {wrong}'
 
 
 #: PyPSA refuses a difference across scenarios in these attributes and in what is derived from them

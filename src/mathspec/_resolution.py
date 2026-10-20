@@ -56,7 +56,7 @@ if TYPE_CHECKING:
     from mathspec._condition_parser import ParsedCondition
     from mathspec._expression_parser import ParsedNode, Sense
     from mathspec.program import DeclaredDtype
-    from mathspec.spec import ConditionSpec, ExpressionSpec, RelationSpec, Spec
+    from mathspec.spec import ConditionSpec, ExpressionSpec, Spec
 
 
 #: What a name a file may write turns out to be. Answered by
@@ -125,15 +125,14 @@ class Namespace:
         }
         #: relation name -> its columns and key, as declared.
         self.relations: dict[str, Relation] = {
-            n: Relation(_sorted_columns(lk), tuple(sorted(lk.key_roles)), lk.missing, lk.description)
-            for n, lk in spec.relations.items()
+            n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()
         }
         #: parameter or variable name -> the ``dims`` it is read through. Stamped onto
         #: each leaf a condition names, the way a relation leaf carries ``over``.
         self.leaf_dims: dict[str, tuple[str, ...]] = {
-            **{p: sorted_dims(pd.dims) for p, pd in parameters.items()},
-            **{m: sorted_dims(md.dims) for m, md in spec.given.conditions.items()},
-            **{v: sorted_dims(vd.dims or ()) for v, vd in variables.items()},
+            **{p: tuple(pd.dims) for p, pd in parameters.items()},
+            **{m: tuple(md.dims) for m, md in spec.given.conditions.items()},
+            **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
         }
         #: named expression -> its resolved node, or ``None``, and its refusals;
         #: filled the first time anything reads the name.
@@ -342,15 +341,6 @@ def mask_of(node: Condition | None) -> Mask | None:
     if node is None or (isinstance(node, BooleanLiteral) and node.value):
         return None
     return Mask(node)
-
-
-def _sorted_columns(relation: RelationSpec) -> tuple[tuple[str, str], ...]:
-    """A relation's columns sorted by role, the key's before the values', so the file's order reaches nothing.
-
-    The key stays in front because a relation reads as a map from its key to its values.
-    """
-    key = set(relation.key_roles)
-    return (*sorted(c for c in relation.pairs if c[0] in key), *sorted(c for c in relation.pairs if c[0] not in key))
 
 
 def remainder(masks: Iterable[Mask]) -> Mask:
