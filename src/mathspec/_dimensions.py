@@ -96,7 +96,7 @@ def dims_of(node: Expression, spec: Spec, context: str) -> frozenset[str]:
 
 
 def _named_dims(node: ExpressionReference, spec: Spec, context: str) -> frozenset[str]:
-    """An entry's declared frame where it has one — a narrower arm or body broadcasts along the rest — else its body's."""
+    """The dims an entry declares where it declares them, else those of its expression."""
     declared = spec.expressions[node.name].dims
     if declared is not None:
         return frozenset(declared)
@@ -264,13 +264,16 @@ def check_spec(spec: Spec, program: Program) -> None:
             continue
         frame = frozenset(declared.dims)
         if not isinstance(entry.expression, Cases):
-            _check_body_dims(entry.expression, spec, frame, f"Named expression '{ename}'")
+            indexed = _check_body_dims(entry.expression, spec, frame, f"Named expression '{ename}'")
+            _check_dims_are_indexed(ename, frame, indexed, 'the expression is not')
             continue
+        indexed = frozenset[str]()
         for region, label in zip(entry.expression.regions, [*declared.cases, None], strict=True):
             context = case_context(ename, label)
             if label is not None:
                 _check_where_dims(region.when, frame, context)
-            _check_value_dims(region.value, spec, frame, context)
+            indexed |= _check_value_dims(region.value, spec, frame, context) | region.when.dims
+        _check_dims_are_indexed(ename, frame, indexed, 'no case value and no `when:` is')
 
     for ename, entry in program.expressions.items():
         if entry.adds_to is None:
@@ -308,7 +311,7 @@ def check_spec(spec: Spec, program: Program) -> None:
             )
 
 
-def _check_value_dims(node: Expression, spec: Spec, frame: frozenset[str], context: str) -> None:
+def _check_value_dims(node: Expression, spec: Spec, frame: frozenset[str], context: str) -> frozenset[str]:
     """A region's value may only carry dims the frame does — the ``otherwise:`` included.
 
     A wider one would give the quantity dims its entry does not, which is
@@ -320,15 +323,33 @@ def _check_value_dims(node: Expression, spec: Spec, frame: frozenset[str], conte
             f'{context}: the value carries dims {sorted(got - frame)} outside the dims: '
             f'{sorted(frame)}. Add them to dims:, or take them out of the value.'
         )
+    return got
 
 
-def _check_body_dims(node: Expression, spec: Spec, frame: frozenset[str], context: str) -> None:
-    """A plain entry's body may only carry dims its declared frame does; fewer is constant along the rest."""
+def _check_body_dims(node: Expression, spec: Spec, frame: frozenset[str], context: str) -> frozenset[str]:
+    """A plain entry's expression is indexed only over dims its ``dims:`` gives; the dims it is indexed over come back."""
     got = dims_of(node, spec, context)
     if not got <= frame:
         raise DimensionError(
             f'{context}: the body carries dims {sorted(got - frame)} outside the dims: {sorted(frame)}. '
             f'Add them to dims:, or take them out of the body.'
+        )
+    return got
+
+
+def _check_dims_are_indexed(name: str, declared: frozenset[str], indexed: frozenset[str], subject: str) -> None:
+    """A declared ``dims:`` gives only dims the expression is indexed over, so the entry stands for its expression.
+
+    A dim the expression is not indexed over would make the entry constant
+    along it, and then the entry would not be its expression:
+    ``sum(entry, over=d)`` would load where the expression summed over ``d``
+    is refused.
+    """
+    if extra := sorted(declared - indexed):
+        raise DimensionError(
+            f"Named expression '{name}': dims: gives {extra}, but {subject} indexed over {extra}. A named "
+            f'expression stands for its expression, so dims: gives only the dimensions it is indexed over. Take '
+            f"{extra} out of dims:; an expression that reads '{name}' still repeats it along its own other dims."
         )
 
 
