@@ -3,17 +3,17 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Generators, no commitment
+# Committable classes, no commitment
 
-This file states that a model builds no unit commitment for `Generator`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. It declares the names that [the ramping](ramping.md) and [the maintenance](maintenance.md) read from [the commitment](commitment.md), and masks each of them empty. Its assumption refuses data in which a unit is committable, because such a unit would have no output limits. A model takes this file or the commitment, never both. It reads `Generator_committed` and `Generator_p_nom_extendable`, which other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
+This file states that a model builds no unit commitment for `Generator`, `Link` and `Process`. It is written once and each class takes it under its own names, as [the commitment](commitment.md) says. Each of those is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. The math below prints the generator's. It declares the names that [the ramping](ramping.md) and [the maintenance](maintenance.md) read from [the commitment](commitment.md), and masks each of them empty. Its assumption refuses data in which a unit is committable, because such a unit would have no output limits. A model takes this file or the commitment, never both. It reads `Unit_committed` and `Unit_p_nom_extendable`, which other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
 given:
   parameters:
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
+    Unit_p_nom_extendable: { dims: [unit], dtype: bool }
   masks:
-    Generator_committed: { dims: [snapshot, generator] }
+    Unit_committed: { dims: [snapshot, unit] }
 
 dimensions:
   scenario:
@@ -22,70 +22,70 @@ dimensions:
     description: dispatch periods
     dtype: datetime
     ordered: true
-  generator:
-    description: generating units, each on one bus
+  unit:
+    description: the units of the class this layer is renamed for
 
 parameters:
-  Generator_committable:
+  Unit_committable:
     description: whether a unit is committable; this model builds no unit commitment, so none is
-    dims: [generator]
+    dims: [unit]
     dtype: bool
     missing: neutral
-  Generator_status_initial:
+  Unit_status_initial:
     description: the status a unit carried into the horizon; none here, since no unit is committable
-    dims: [scenario, generator]
+    dims: [scenario, unit]
     dtype: int
     missing: neutral
-  Generator_big_m:
+  Unit_big_m:
     description: the bound a committed extendable unit is released by; none here, since no unit is committable
-    dims: [scenario, generator]
+    dims: [scenario, unit]
     missing: neutral
 
 variables:
-  Generator_status:
+  Unit_status:
     description: how much of a committable unit is on; no column here, since no unit is committable
-    dims: [scenario, snapshot, generator]
-    where: Generator_committed
+    dims: [scenario, snapshot, unit]
+    where: Unit_committed
     domain: integer
     bounds:
       lower: 0
-  Generator_start_up:
+  Unit_start_up:
     description: how much of a committable unit turns on; no column here, since no unit is committable
-    dims: [scenario, snapshot, generator]
-    where: Generator_committed
+    dims: [scenario, snapshot, unit]
+    where: Unit_committed
     domain: integer
     bounds:
       lower: 0
-  Generator_shut_down:
+  Unit_shut_down:
     description: how much of a committable unit turns off; no column here, since no unit is committable
-    dims: [scenario, snapshot, generator]
-    where: Generator_committed
+    dims: [scenario, snapshot, unit]
+    where: Unit_committed
     domain: integer
     bounds:
       lower: 0
 
 expressions:
-  Generator_previous_status:
+  Unit_previous_status:
     description: the status a unit carried into the snapshot; nothing here, since no unit is committable
-    dims: [scenario, snapshot, generator]
-    expression: Generator_status
-  Generator_status_available:
+    dims: [scenario, snapshot, unit]
+    expression: Unit_status
+  Unit_status_available:
     description: how much of a committed unit is on and can run; nothing here, since no unit is committable
-    dims: [scenario, snapshot, generator]
-    expression: Generator_status
+    dims: [scenario, snapshot, unit]
+    expression: Unit_status
 
 masks:
-  Generator_com_ext:
+  Unit_com_ext:
     description: a committable unit with an extendable build; none here, since no unit is committable
-    where: Generator_committed AND Generator_p_nom_extendable
+    where: Unit_committed AND Unit_p_nom_extendable
 
 assumptions:
-  Generator_none_committable:
-    holds: "NOT Generator_committable"
+  Unit_none_committable:
+    holds: "NOT Unit_committable"
     description: >-
-      this model leaves the unit commitment of `Generator` out, so a committable
-      unit would have no output limits. Take `generator/commitment.yaml` in place
-      of `generator/commitment_none.yaml`
+      this model leaves the unit commitment of this class out, so a committable
+      unit would have no output limits. Take `committable/commitment.yaml` in place
+      of `committable/commitment_none.yaml`
 ```
 
 #### Given
@@ -101,7 +101,7 @@ assumptions:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units, each on one bus |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` — the units of the class this layer is renamed for |
 
 #### Parameters
 

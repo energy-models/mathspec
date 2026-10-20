@@ -3,32 +3,32 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Generators, the relaxed status
+# Committable classes, the relaxed status
 
-This file states the status, the starts and the stops of a committable `Generator` as shares in [0, 1], as `n.optimize(linearized_unit_commitment=True)` builds them, with the four rows that tighten the relaxation. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. Its assumption refuses a modular committable unit, as PyPSA does. It reads the ramp rates, so a model that takes it also takes [the ramping](ramping.md). [PyPSA, the relaxed commitment](../../pypsa_linearized_uc.md) is the model it gives. It reads `Generator_active`, `Generator_committable`, `Generator_committed`, `Generator_p`, `Generator_p_max_pu`, `Generator_p_min_pu` and 9 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
+This file states the status, the starts and the stops of a committable `Generator`, `Link` and `Process` as shares in [0, 1], as `n.optimize(linearized_unit_commitment=True)` builds them, with the four rows that tighten the relaxation. It is written once and each class takes it under its own names, as [the commitment](commitment.md) says. Each of those is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. The math below prints the generator's. Its assumption refuses a modular committable unit, as PyPSA does. It reads the ramp rates, so a model that takes it also takes [the ramping](ramping.md). [PyPSA, the relaxed commitment](../../pypsa_linearized_uc.md) is the model it gives. It reads `Unit_active`, `Unit_committable`, `Unit_committed`, `Unit_p`, `Unit_p_max_pu`, `Unit_p_min_pu` and 9 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
 given:
   parameters:
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
-    Generator_committable: { dims: [generator], dtype: bool }
-    Generator_p_max_pu: { dims: [scenario, snapshot, generator] }
-    Generator_p_min_pu: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom: { dims: [scenario, generator] }
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
-    Generator_p_nom_mod: { dims: [generator] }
-    Generator_shut_down_cost: { dims: [scenario, snapshot, generator] }
-    Generator_start_up_cost: { dims: [scenario, snapshot, generator] }
+    Unit_active: { dims: [snapshot, unit], dtype: bool }
+    Unit_committable: { dims: [unit], dtype: bool }
+    Unit_p_max_pu: { dims: [scenario, snapshot, unit] }
+    Unit_p_min_pu: { dims: [scenario, snapshot, unit] }
+    Unit_p_nom: { dims: [scenario, unit] }
+    Unit_p_nom_extendable: { dims: [unit], dtype: bool }
+    Unit_p_nom_mod: { dims: [unit] }
+    Unit_shut_down_cost: { dims: [scenario, snapshot, unit] }
+    Unit_start_up_cost: { dims: [scenario, snapshot, unit] }
   variables:
-    Generator_p: { dims: [scenario, snapshot, generator] }
+    Unit_p: { dims: [scenario, snapshot, unit] }
   expressions:
-    Generator_ramp_down_rate: { dims: [scenario, snapshot, generator] }
-    Generator_ramp_up_rate: { dims: [scenario, snapshot, generator] }
-    Generator_shut_down_rate: { dims: [scenario, generator] }
-    Generator_start_up_rate: { dims: [scenario, generator] }
+    Unit_ramp_down_rate: { dims: [scenario, snapshot, unit] }
+    Unit_ramp_up_rate: { dims: [scenario, snapshot, unit] }
+    Unit_shut_down_rate: { dims: [scenario, unit] }
+    Unit_start_up_rate: { dims: [scenario, unit] }
   masks:
-    Generator_committed: { dims: [snapshot, generator] }
+    Unit_committed: { dims: [snapshot, unit] }
 
 dimensions:
   scenario:
@@ -37,88 +37,88 @@ dimensions:
     description: dispatch periods
     dtype: datetime
     ordered: true
-  generator:
-    description: generating units, each on one bus
+  unit:
+    description: the units of the class this layer is renamed for
 
 variables:
-  Generator_status:
+  Unit_status:
     description: >-
-      `Generator-status` — how much of a committable unit is on, a share in [0, 1]
+      `-status` — how much of a committable unit is on, a share in [0, 1]
       rather than an integer: the relaxation the keyword solves
       (`variables.py:86-87`)
-    dims: [scenario, snapshot, generator]
-    where: Generator_committed
+    dims: [scenario, snapshot, unit]
+    where: Unit_committed
     bounds:
       lower: 0
       upper: 1
-  Generator_start_up:
-    description: "`Generator-start_up` — how much of a committable unit turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)"
-    dims: [scenario, snapshot, generator]
-    where: Generator_committed
+  Unit_start_up:
+    description: "`-start_up` — how much of a committable unit turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)"
+    dims: [scenario, snapshot, unit]
+    where: Unit_committed
     bounds:
       lower: 0
       upper: 1
-  Generator_shut_down:
-    description: "`Generator-shut_down` — how much of a committable unit turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)"
-    dims: [scenario, snapshot, generator]
-    where: Generator_committed
+  Unit_shut_down:
+    description: "`-shut_down` — how much of a committable unit turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)"
+    dims: [scenario, snapshot, unit]
+    where: Unit_committed
     bounds:
       lower: 0
       upper: 1
 
 constraints:
-  Generator_com_p_before:
+  Unit_com_p_before:
     description: >-
-      `Generator-com-p-before` — the output a unit had entering this snapshot fits
+      `-com-p-before` — the output a unit had entering this snapshot fits
       the share of it still on, less the share it is shutting down at the
       shut-down ramp (`constraints.py:635-649`). The translated terms vacate
       the first snapshot, as PyPSA's `sns[1:]` does
-    dims: [scenario, snapshot, generator]
-    where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
+    dims: [scenario, snapshot, unit]
+    where: Unit_committable AND NOT Unit_p_nom_extendable AND count(count(Unit_start_up_cost != Unit_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Unit_active
     expression: >-
-      shift(Generator_p, along=snapshot, offset=1)
-      - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
-      - (Generator_p_max_pu * Generator_p_nom - Generator_shut_down_rate * Generator_p_nom)
-      * (Generator_status - Generator_start_up) <= 0
-  Generator_com_p_current:
+      shift(Unit_p, along=snapshot, offset=1)
+      - Unit_shut_down_rate * Unit_p_nom * shift(Unit_status, along=snapshot, offset=1)
+      - (Unit_p_max_pu * Unit_p_nom - Unit_shut_down_rate * Unit_p_nom)
+      * (Unit_status - Unit_start_up) <= 0
+  Unit_com_p_current:
     description: >-
-      `Generator-com-p-current` — output fits the share on, and the share starting
+      `-com-p-current` — output fits the share on, and the share starting
       up only up to the start-up ramp (`constraints.py:652-665`)
-    dims: [scenario, snapshot, generator]
-    where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND position(snapshot) > 0 AND Generator_active
+    dims: [scenario, snapshot, unit]
+    where: Unit_committable AND NOT Unit_p_nom_extendable AND count(count(Unit_start_up_cost != Unit_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND position(snapshot) > 0 AND Unit_active
     expression: >-
-      Generator_p - Generator_p_max_pu * Generator_p_nom * Generator_status
-      + (Generator_p_max_pu * Generator_p_nom - Generator_start_up_rate * Generator_p_nom) * Generator_start_up <= 0
-  Generator_com_partly_start_up:
+      Unit_p - Unit_p_max_pu * Unit_p_nom * Unit_status
+      + (Unit_p_max_pu * Unit_p_nom - Unit_start_up_rate * Unit_p_nom) * Unit_start_up <= 0
+  Unit_com_partly_start_up:
     description: >-
-      `Generator-com-partly-start-up` — raising output while a share is starting up
+      `-com-partly-start-up` — raising output while a share is starting up
       is bounded by the ramp of the share on and the start-up ramp of the
       share coming on (`constraints.py:667-682`)
-    dims: [scenario, snapshot, generator]
-    where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
+    dims: [scenario, snapshot, unit]
+    where: Unit_committable AND NOT Unit_p_nom_extendable AND count(count(Unit_start_up_cost != Unit_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Unit_active
     expression: >-
-      Generator_p - shift(Generator_p, along=snapshot, offset=1)
-      - (Generator_p_min_pu * Generator_p_nom + Generator_ramp_up_rate * Generator_p_nom) * Generator_status
-      + Generator_p_min_pu * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
-      + (Generator_p_min_pu * Generator_p_nom + Generator_ramp_up_rate * Generator_p_nom - Generator_start_up_rate * Generator_p_nom)
-      * Generator_start_up <= 0
-  Generator_com_partly_shut_down:
+      Unit_p - shift(Unit_p, along=snapshot, offset=1)
+      - (Unit_p_min_pu * Unit_p_nom + Unit_ramp_up_rate * Unit_p_nom) * Unit_status
+      + Unit_p_min_pu * Unit_p_nom * shift(Unit_status, along=snapshot, offset=1)
+      + (Unit_p_min_pu * Unit_p_nom + Unit_ramp_up_rate * Unit_p_nom - Unit_start_up_rate * Unit_p_nom)
+      * Unit_start_up <= 0
+  Unit_com_partly_shut_down:
     description: >-
-      `Generator-com-partly-shut-down` — lowering output while a share is shutting
+      `-com-partly-shut-down` — lowering output while a share is shutting
       down is bounded likewise, by the shut-down ramp (`constraints.py:684-699`)
-    dims: [scenario, snapshot, generator]
-    where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
+    dims: [scenario, snapshot, unit]
+    where: Unit_committable AND NOT Unit_p_nom_extendable AND count(count(Unit_start_up_cost != Unit_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Unit_active
     expression: >-
-      shift(Generator_p, along=snapshot, offset=1) - Generator_p
-      - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
-      + (Generator_shut_down_rate * Generator_p_nom - Generator_ramp_down_rate * Generator_p_nom) * Generator_status
-      - (Generator_p_min_pu * Generator_p_nom + Generator_ramp_down_rate * Generator_p_nom - Generator_shut_down_rate * Generator_p_nom)
-      * Generator_start_up <= 0
+      shift(Unit_p, along=snapshot, offset=1) - Unit_p
+      - Unit_shut_down_rate * Unit_p_nom * shift(Unit_status, along=snapshot, offset=1)
+      + (Unit_shut_down_rate * Unit_p_nom - Unit_ramp_down_rate * Unit_p_nom) * Unit_status
+      - (Unit_p_min_pu * Unit_p_nom + Unit_ramp_down_rate * Unit_p_nom - Unit_shut_down_rate * Unit_p_nom)
+      * Unit_start_up <= 0
 
 assumptions:
-  Generator_committable_is_not_modular:
-    holds: "NOT (Generator_p_nom_mod > 0)"
-    where: "Generator_committable AND count(Generator_active, over=snapshot) > 0"
+  Unit_committable_is_not_modular:
+    holds: "NOT (Unit_p_nom_mod > 0)"
+    where: "Unit_committable AND count(Unit_active, over=snapshot) > 0"
     description: >-
       a modular committable unit counts its status in modules, which the
       relaxation cannot share out — PyPSA refuses it under the keyword
@@ -151,15 +151,15 @@ assumptions:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units, each on one bus |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` — the units of the class this layer is renamed for |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`u`$ | `Generator_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-status` — how much of a committable unit is on, a share in \[0, 1\] rather than an integer: the relaxation the keyword solves (`variables.py:86-87`) |
-| $`\mathit{up}`$ | `Generator_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-start_up` — how much of a committable unit turns on this snapshot, a share in \[0, 1\] (`variables.py:137-138`) |
-| $`\mathit{dn}`$ | `Generator_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-shut_down` — how much of a committable unit turns off this snapshot, a share in \[0, 1\] (`variables.py:188-189`) |
+| $`u`$ | `Generator_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `-status` — how much of a committable unit is on, a share in \[0, 1\] rather than an integer: the relaxation the keyword solves (`variables.py:86-87`) |
+| $`\mathit{up}`$ | `Generator_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `-start_up` — how much of a committable unit turns on this snapshot, a share in \[0, 1\] (`variables.py:137-138`) |
+| $`\mathit{dn}`$ | `Generator_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `-shut_down` — how much of a committable unit turns off this snapshot, a share in \[0, 1\] (`variables.py:188-189`) |
 
 #### Notation
 

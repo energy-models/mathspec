@@ -458,15 +458,12 @@ def build():
 
 ```yaml
 Generator_status:
-  description: >-
-    `Generator-status` — how much of a committable unit is on, a share in [0, 1]
-    rather than an integer: the relaxation the keyword solves
-    (`variables.py:86-87`)
   dims: [scenario, snapshot, generator]
   where: Generator_committed
-  bounds:
-    lower: 0
-    upper: 1
+  bounds: {lower: 0.0, upper: 1.0}
+  domain: continuous
+  missing: absent
+  description: '`-status` — how much of a committable unit is on, a share in [0, 1] rather than an integer: the relaxation the keyword solves (`variables.py:86-87`)'
 ```
 
 ```math
@@ -479,12 +476,12 @@ Generator_status:
 
 ```yaml
 Generator_start_up:
-  description: "`Generator-start_up` — how much of a committable unit turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)"
   dims: [scenario, snapshot, generator]
   where: Generator_committed
-  bounds:
-    lower: 0
-    upper: 1
+  bounds: {lower: 0.0, upper: 1.0}
+  domain: continuous
+  missing: absent
+  description: '`-start_up` — how much of a committable unit turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)'
 ```
 
 ```math
@@ -497,12 +494,12 @@ Generator_start_up:
 
 ```yaml
 Generator_shut_down:
-  description: "`Generator-shut_down` — how much of a committable unit turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)"
   dims: [scenario, snapshot, generator]
   where: Generator_committed
-  bounds:
-    lower: 0
-    upper: 1
+  bounds: {lower: 0.0, upper: 1.0}
+  domain: continuous
+  missing: absent
+  description: '`-shut_down` — how much of a committable unit turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)'
 ```
 
 ```math
@@ -515,15 +512,12 @@ Generator_shut_down:
 
 ```yaml
 Link_status:
-  description: >-
-    `Link-status` — how much of a committable link is on, a share in [0, 1]
-    rather than an integer: the relaxation the keyword solves
-    (`variables.py:86-87`)
   dims: [scenario, snapshot, link]
   where: Link_committed
-  bounds:
-    lower: 0
-    upper: 1
+  bounds: {lower: 0.0, upper: 1.0}
+  domain: continuous
+  missing: absent
+  description: '`-status` — how much of a committable unit is on, a share in [0, 1] rather than an integer: the relaxation the keyword solves (`variables.py:86-87`)'
 ```
 
 ```math
@@ -536,12 +530,12 @@ Link_status:
 
 ```yaml
 Link_start_up:
-  description: "`Link-start_up` — how much of a committable link turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)"
   dims: [scenario, snapshot, link]
   where: Link_committed
-  bounds:
-    lower: 0
-    upper: 1
+  bounds: {lower: 0.0, upper: 1.0}
+  domain: continuous
+  missing: absent
+  description: '`-start_up` — how much of a committable unit turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)'
 ```
 
 ```math
@@ -554,12 +548,12 @@ Link_start_up:
 
 ```yaml
 Link_shut_down:
-  description: "`Link-shut_down` — how much of a committable link turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)"
   dims: [scenario, snapshot, link]
   where: Link_committed
-  bounds:
-    lower: 0
-    upper: 1
+  bounds: {lower: 0.0, upper: 1.0}
+  domain: continuous
+  missing: absent
+  description: '`-shut_down` — how much of a committable unit turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)'
 ```
 
 ```math
@@ -572,15 +566,12 @@ Link_shut_down:
 
 ```yaml
 Process_status:
-  description: >-
-    `Process-status` — how much of a committable process is on, a share in [0, 1]
-    rather than an integer: the relaxation the keyword solves
-    (`variables.py:86-87`)
   dims: [scenario, snapshot, process]
   where: Process_committed
-  bounds:
-    lower: 0
-    upper: 1
+  bounds: {lower: 0.0, upper: 1.0}
+  domain: continuous
+  missing: absent
+  description: '`-status` — how much of a committable unit is on, a share in [0, 1] rather than an integer: the relaxation the keyword solves (`variables.py:86-87`)'
 ```
 
 ```math
@@ -593,12 +584,12 @@ Process_status:
 
 ```yaml
 Process_start_up:
-  description: "`Process-start_up` — how much of a committable process turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)"
   dims: [scenario, snapshot, process]
   where: Process_committed
-  bounds:
-    lower: 0
-    upper: 1
+  bounds: {lower: 0.0, upper: 1.0}
+  domain: continuous
+  missing: absent
+  description: '`-start_up` — how much of a committable unit turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)'
 ```
 
 ```math
@@ -611,12 +602,12 @@ Process_start_up:
 
 ```yaml
 Process_shut_down:
-  description: "`Process-shut_down` — how much of a committable process turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)"
   dims: [scenario, snapshot, process]
   where: Process_committed
-  bounds:
-    lower: 0
-    upper: 1
+  bounds: {lower: 0.0, upper: 1.0}
+  domain: continuous
+  missing: absent
+  description: '`-shut_down` — how much of a committable unit turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)'
 ```
 
 ```math
@@ -629,18 +620,12 @@ Process_shut_down:
 
 ```yaml
 Generator_com_p_before:
-  description: >-
-    `Generator-com-p-before` — the output a unit had entering this snapshot fits
-    the share of it still on, less the share it is shutting down at the
-    shut-down ramp (`constraints.py:635-649`). The translated terms vacate
-    the first snapshot, as PyPSA's `sns[1:]` does
   dims: [scenario, snapshot, generator]
   where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
-  expression: >-
-    shift(Generator_p, along=snapshot, offset=1)
-    - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
-    - (Generator_p_max_pu * Generator_p_nom - Generator_shut_down_rate * Generator_p_nom)
-    * (Generator_status - Generator_start_up) <= 0
+  expression: shift(Generator_p, along=snapshot, offset=1) - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1) - (Generator_p_max_pu * Generator_p_nom - Generator_shut_down_rate * Generator_p_nom) * (Generator_status - Generator_start_up) <= 0
+  description: >-
+    `-com-p-before` — the output a unit had entering this snapshot fits the share of it still on, less the share it is shutting down at the shut-down ramp (`constraints.py:635-649`).
+    The translated terms vacate the first snapshot, as PyPSA's `sns[1:]` does
 ```
 
 ```math
@@ -653,14 +638,10 @@ p_{\xi,t - 1,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \mathrm{p}
 
 ```yaml
 Generator_com_p_current:
-  description: >-
-    `Generator-com-p-current` — output fits the share on, and the share starting
-    up only up to the start-up ramp (`constraints.py:652-665`)
   dims: [scenario, snapshot, generator]
   where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND position(snapshot) > 0 AND Generator_active
-  expression: >-
-    Generator_p - Generator_p_max_pu * Generator_p_nom * Generator_status
-    + (Generator_p_max_pu * Generator_p_nom - Generator_start_up_rate * Generator_p_nom) * Generator_start_up <= 0
+  expression: Generator_p - Generator_p_max_pu * Generator_p_nom * Generator_status + (Generator_p_max_pu * Generator_p_nom - Generator_start_up_rate * Generator_p_nom) * Generator_start_up <= 0
+  description: '`-com-p-current` — output fits the share on, and the share starting up only up to the start-up ramp (`constraints.py:652-665`)'
 ```
 
 ```math
@@ -673,18 +654,10 @@ p_{\xi,t,g} - \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\
 
 ```yaml
 Generator_com_partly_start_up:
-  description: >-
-    `Generator-com-partly-start-up` — raising output while a share is starting up
-    is bounded by the ramp of the share on and the start-up ramp of the
-    share coming on (`constraints.py:667-682`)
   dims: [scenario, snapshot, generator]
   where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
-  expression: >-
-    Generator_p - shift(Generator_p, along=snapshot, offset=1)
-    - (Generator_p_min_pu * Generator_p_nom + Generator_ramp_up_rate * Generator_p_nom) * Generator_status
-    + Generator_p_min_pu * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
-    + (Generator_p_min_pu * Generator_p_nom + Generator_ramp_up_rate * Generator_p_nom - Generator_start_up_rate * Generator_p_nom)
-    * Generator_start_up <= 0
+  expression: Generator_p - shift(Generator_p, along=snapshot, offset=1) - (Generator_p_min_pu * Generator_p_nom + Generator_ramp_up_rate * Generator_p_nom) * Generator_status + Generator_p_min_pu * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1) + (Generator_p_min_pu * Generator_p_nom + Generator_ramp_up_rate * Generator_p_nom - Generator_start_up_rate * Generator_p_nom) * Generator_start_up <= 0
+  description: '`-com-partly-start-up` — raising output while a share is starting up is bounded by the ramp of the share on and the start-up ramp of the share coming on (`constraints.py:667-682`)'
 ```
 
 ```math
@@ -697,17 +670,10 @@ p_{\xi,t,g} - p_{\xi,t - 1,g} - \left( \underline{\mathrm{p}}_{\xi,t,g} \cdot \m
 
 ```yaml
 Generator_com_partly_shut_down:
-  description: >-
-    `Generator-com-partly-shut-down` — lowering output while a share is shutting
-    down is bounded likewise, by the shut-down ramp (`constraints.py:684-699`)
   dims: [scenario, snapshot, generator]
   where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
-  expression: >-
-    shift(Generator_p, along=snapshot, offset=1) - Generator_p
-    - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
-    + (Generator_shut_down_rate * Generator_p_nom - Generator_ramp_down_rate * Generator_p_nom) * Generator_status
-    - (Generator_p_min_pu * Generator_p_nom + Generator_ramp_down_rate * Generator_p_nom - Generator_shut_down_rate * Generator_p_nom)
-    * Generator_start_up <= 0
+  expression: shift(Generator_p, along=snapshot, offset=1) - Generator_p - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1) + (Generator_shut_down_rate * Generator_p_nom - Generator_ramp_down_rate * Generator_p_nom) * Generator_status - (Generator_p_min_pu * Generator_p_nom + Generator_ramp_down_rate * Generator_p_nom - Generator_shut_down_rate * Generator_p_nom) * Generator_start_up <= 0
+  description: '`-com-partly-shut-down` — lowering output while a share is shutting down is bounded likewise, by the shut-down ramp (`constraints.py:684-699`)'
 ```
 
 ```math
@@ -720,18 +686,12 @@ p_{\xi,t - 1,g} - p_{\xi,t,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \c
 
 ```yaml
 Link_com_p_before:
-  description: >-
-    `Link-com-p-before` — the output a link had entering this snapshot fits
-    the share of it still on, less the share it is shutting down at the
-    shut-down ramp (`constraints.py:635-649`). The translated terms vacate
-    the first snapshot, as PyPSA's `sns[1:]` does
   dims: [scenario, snapshot, link]
   where: Link_committable AND NOT Link_p_nom_extendable AND count(count(Link_start_up_cost != Link_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Link_active
-  expression: >-
-    shift(Link_p, along=snapshot, offset=1)
-    - Link_shut_down_rate * Link_p_nom * shift(Link_status, along=snapshot, offset=1)
-    - (Link_p_max_pu * Link_p_nom - Link_shut_down_rate * Link_p_nom)
-    * (Link_status - Link_start_up) <= 0
+  expression: shift(Link_p, along=snapshot, offset=1) - Link_shut_down_rate * Link_p_nom * shift(Link_status, along=snapshot, offset=1) - (Link_p_max_pu * Link_p_nom - Link_shut_down_rate * Link_p_nom) * (Link_status - Link_start_up) <= 0
+  description: >-
+    `-com-p-before` — the output a unit had entering this snapshot fits the share of it still on, less the share it is shutting down at the shut-down ramp (`constraints.py:635-649`).
+    The translated terms vacate the first snapshot, as PyPSA's `sns[1:]` does
 ```
 
 ```math
@@ -744,14 +704,10 @@ f_{\xi,t - 1,l} - \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot \mathrm{
 
 ```yaml
 Link_com_p_current:
-  description: >-
-    `Link-com-p-current` — output fits the share on, and the share starting
-    up only up to the start-up ramp (`constraints.py:652-665`)
   dims: [scenario, snapshot, link]
   where: Link_committable AND NOT Link_p_nom_extendable AND count(count(Link_start_up_cost != Link_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND position(snapshot) > 0 AND Link_active
-  expression: >-
-    Link_p - Link_p_max_pu * Link_p_nom * Link_status
-    + (Link_p_max_pu * Link_p_nom - Link_start_up_rate * Link_p_nom) * Link_start_up <= 0
+  expression: Link_p - Link_p_max_pu * Link_p_nom * Link_status + (Link_p_max_pu * Link_p_nom - Link_start_up_rate * Link_p_nom) * Link_start_up <= 0
+  description: '`-com-p-current` — output fits the share on, and the share starting up only up to the start-up ramp (`constraints.py:652-665`)'
 ```
 
 ```math
@@ -764,18 +720,10 @@ f_{\xi,t,l} - \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\
 
 ```yaml
 Link_com_partly_start_up:
-  description: >-
-    `Link-com-partly-start-up` — raising output while a share is starting up
-    is bounded by the ramp of the share on and the start-up ramp of the
-    share coming on (`constraints.py:667-682`)
   dims: [scenario, snapshot, link]
   where: Link_committable AND NOT Link_p_nom_extendable AND count(count(Link_start_up_cost != Link_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Link_active
-  expression: >-
-    Link_p - shift(Link_p, along=snapshot, offset=1)
-    - (Link_p_min_pu * Link_p_nom + Link_ramp_up_rate * Link_p_nom) * Link_status
-    + Link_p_min_pu * Link_p_nom * shift(Link_status, along=snapshot, offset=1)
-    + (Link_p_min_pu * Link_p_nom + Link_ramp_up_rate * Link_p_nom - Link_start_up_rate * Link_p_nom)
-    * Link_start_up <= 0
+  expression: Link_p - shift(Link_p, along=snapshot, offset=1) - (Link_p_min_pu * Link_p_nom + Link_ramp_up_rate * Link_p_nom) * Link_status + Link_p_min_pu * Link_p_nom * shift(Link_status, along=snapshot, offset=1) + (Link_p_min_pu * Link_p_nom + Link_ramp_up_rate * Link_p_nom - Link_start_up_rate * Link_p_nom) * Link_start_up <= 0
+  description: '`-com-partly-start-up` — raising output while a share is starting up is bounded by the ramp of the share on and the start-up ramp of the share coming on (`constraints.py:667-682`)'
 ```
 
 ```math
@@ -788,17 +736,10 @@ f_{\xi,t,l} - f_{\xi,t - 1,l} - \left( \underline{\mathrm{f}}_{\xi,t,l} \cdot \m
 
 ```yaml
 Link_com_partly_shut_down:
-  description: >-
-    `Link-com-partly-shut-down` — lowering output while a share is shutting
-    down is bounded likewise, by the shut-down ramp (`constraints.py:684-699`)
   dims: [scenario, snapshot, link]
   where: Link_committable AND NOT Link_p_nom_extendable AND count(count(Link_start_up_cost != Link_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Link_active
-  expression: >-
-    shift(Link_p, along=snapshot, offset=1) - Link_p
-    - Link_shut_down_rate * Link_p_nom * shift(Link_status, along=snapshot, offset=1)
-    + (Link_shut_down_rate * Link_p_nom - Link_ramp_down_rate * Link_p_nom) * Link_status
-    - (Link_p_min_pu * Link_p_nom + Link_ramp_down_rate * Link_p_nom - Link_shut_down_rate * Link_p_nom)
-    * Link_start_up <= 0
+  expression: shift(Link_p, along=snapshot, offset=1) - Link_p - Link_shut_down_rate * Link_p_nom * shift(Link_status, along=snapshot, offset=1) + (Link_shut_down_rate * Link_p_nom - Link_ramp_down_rate * Link_p_nom) * Link_status - (Link_p_min_pu * Link_p_nom + Link_ramp_down_rate * Link_p_nom - Link_shut_down_rate * Link_p_nom) * Link_start_up <= 0
+  description: '`-com-partly-shut-down` — lowering output while a share is shutting down is bounded likewise, by the shut-down ramp (`constraints.py:684-699`)'
 ```
 
 ```math
@@ -811,18 +752,12 @@ f_{\xi,t - 1,l} - f_{\xi,t,l} - \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} 
 
 ```yaml
 Process_com_p_before:
-  description: >-
-    `Process-com-p-before` — the output a process had entering this snapshot fits
-    the share of it still on, less the share it is shutting down at the
-    shut-down ramp (`constraints.py:635-649`). The translated terms vacate
-    the first snapshot, as PyPSA's `sns[1:]` does
   dims: [scenario, snapshot, process]
   where: Process_committable AND NOT Process_p_nom_extendable AND count(count(Process_start_up_cost != Process_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Process_active
-  expression: >-
-    shift(Process_p, along=snapshot, offset=1)
-    - Process_shut_down_rate * Process_p_nom * shift(Process_status, along=snapshot, offset=1)
-    - (Process_p_max_pu * Process_p_nom - Process_shut_down_rate * Process_p_nom)
-    * (Process_status - Process_start_up) <= 0
+  expression: shift(Process_p, along=snapshot, offset=1) - Process_shut_down_rate * Process_p_nom * shift(Process_status, along=snapshot, offset=1) - (Process_p_max_pu * Process_p_nom - Process_shut_down_rate * Process_p_nom) * (Process_status - Process_start_up) <= 0
+  description: >-
+    `-com-p-before` — the output a unit had entering this snapshot fits the share of it still on, less the share it is shutting down at the shut-down ramp (`constraints.py:635-649`).
+    The translated terms vacate the first snapshot, as PyPSA's `sns[1:]` does
 ```
 
 ```math
@@ -835,14 +770,10 @@ z_{\xi,t - 1,j} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \mathrm{
 
 ```yaml
 Process_com_p_current:
-  description: >-
-    `Process-com-p-current` — output fits the share on, and the share starting
-    up only up to the start-up ramp (`constraints.py:652-665`)
   dims: [scenario, snapshot, process]
   where: Process_committable AND NOT Process_p_nom_extendable AND count(count(Process_start_up_cost != Process_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND position(snapshot) > 0 AND Process_active
-  expression: >-
-    Process_p - Process_p_max_pu * Process_p_nom * Process_status
-    + (Process_p_max_pu * Process_p_nom - Process_start_up_rate * Process_p_nom) * Process_start_up <= 0
+  expression: Process_p - Process_p_max_pu * Process_p_nom * Process_status + (Process_p_max_pu * Process_p_nom - Process_start_up_rate * Process_p_nom) * Process_start_up <= 0
+  description: '`-com-p-current` — output fits the share on, and the share starting up only up to the start-up ramp (`constraints.py:652-665`)'
 ```
 
 ```math
@@ -855,18 +786,10 @@ z_{\xi,t,j} - \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\
 
 ```yaml
 Process_com_partly_start_up:
-  description: >-
-    `Process-com-partly-start-up` — raising output while a share is starting up
-    is bounded by the ramp of the share on and the start-up ramp of the
-    share coming on (`constraints.py:667-682`)
   dims: [scenario, snapshot, process]
   where: Process_committable AND NOT Process_p_nom_extendable AND count(count(Process_start_up_cost != Process_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Process_active
-  expression: >-
-    Process_p - shift(Process_p, along=snapshot, offset=1)
-    - (Process_p_min_pu * Process_p_nom + Process_ramp_up_rate * Process_p_nom) * Process_status
-    + Process_p_min_pu * Process_p_nom * shift(Process_status, along=snapshot, offset=1)
-    + (Process_p_min_pu * Process_p_nom + Process_ramp_up_rate * Process_p_nom - Process_start_up_rate * Process_p_nom)
-    * Process_start_up <= 0
+  expression: Process_p - shift(Process_p, along=snapshot, offset=1) - (Process_p_min_pu * Process_p_nom + Process_ramp_up_rate * Process_p_nom) * Process_status + Process_p_min_pu * Process_p_nom * shift(Process_status, along=snapshot, offset=1) + (Process_p_min_pu * Process_p_nom + Process_ramp_up_rate * Process_p_nom - Process_start_up_rate * Process_p_nom) * Process_start_up <= 0
+  description: '`-com-partly-start-up` — raising output while a share is starting up is bounded by the ramp of the share on and the start-up ramp of the share coming on (`constraints.py:667-682`)'
 ```
 
 ```math
@@ -879,17 +802,10 @@ z_{\xi,t,j} - z_{\xi,t - 1,j} - \left( \underline{\mathrm{z}}_{\xi,t,j} \cdot \m
 
 ```yaml
 Process_com_partly_shut_down:
-  description: >-
-    `Process-com-partly-shut-down` — lowering output while a share is shutting
-    down is bounded likewise, by the shut-down ramp (`constraints.py:684-699`)
   dims: [scenario, snapshot, process]
   where: Process_committable AND NOT Process_p_nom_extendable AND count(count(Process_start_up_cost != Process_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Process_active
-  expression: >-
-    shift(Process_p, along=snapshot, offset=1) - Process_p
-    - Process_shut_down_rate * Process_p_nom * shift(Process_status, along=snapshot, offset=1)
-    + (Process_shut_down_rate * Process_p_nom - Process_ramp_down_rate * Process_p_nom) * Process_status
-    - (Process_p_min_pu * Process_p_nom + Process_ramp_down_rate * Process_p_nom - Process_shut_down_rate * Process_p_nom)
-    * Process_start_up <= 0
+  expression: shift(Process_p, along=snapshot, offset=1) - Process_p - Process_shut_down_rate * Process_p_nom * shift(Process_status, along=snapshot, offset=1) + (Process_shut_down_rate * Process_p_nom - Process_ramp_down_rate * Process_p_nom) * Process_status - (Process_p_min_pu * Process_p_nom + Process_ramp_down_rate * Process_p_nom - Process_shut_down_rate * Process_p_nom) * Process_start_up <= 0
+  description: '`-com-partly-shut-down` — lowering output while a share is shutting down is bounded likewise, by the shut-down ramp (`constraints.py:684-699`)'
 ```
 
 ```math
@@ -902,12 +818,9 @@ z_{\xi,t - 1,j} - z_{\xi,t,j} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} 
 
 ```yaml
 Generator_committable_is_not_modular:
-  holds: "NOT (Generator_p_nom_mod > 0)"
-  where: "Generator_committable AND count(Generator_active, over=snapshot) > 0"
-  description: >-
-    a modular committable unit counts its status in modules, which the
-    relaxation cannot share out — PyPSA refuses it under the keyword
-    (`optimize.py:783-784`, `consistency.py:1540-1581`)
+  holds: NOT (Generator_p_nom_mod > 0)
+  where: Generator_committable AND count(Generator_active, over=snapshot) > 0
+  description: a modular committable unit counts its status in modules, which the relaxation cannot share out — PyPSA refuses it under the keyword (`optimize.py:783-784`, `consistency.py:1540-1581`)
 ```
 
 ```math
@@ -920,12 +833,9 @@ Generator_committable_is_not_modular:
 
 ```yaml
 Link_committable_is_not_modular:
-  holds: "NOT (Link_p_nom_mod > 0)"
-  where: "Link_committable AND count(Link_active, over=snapshot) > 0"
-  description: >-
-    a modular committable unit counts its status in modules, which the
-    relaxation cannot share out — PyPSA refuses it under the keyword
-    (`optimize.py:783-784`, `consistency.py:1540-1581`)
+  holds: NOT (Link_p_nom_mod > 0)
+  where: Link_committable AND count(Link_active, over=snapshot) > 0
+  description: a modular committable unit counts its status in modules, which the relaxation cannot share out — PyPSA refuses it under the keyword (`optimize.py:783-784`, `consistency.py:1540-1581`)
 ```
 
 ```math
@@ -938,12 +848,9 @@ Link_committable_is_not_modular:
 
 ```yaml
 Process_committable_is_not_modular:
-  holds: "NOT (Process_p_nom_mod > 0)"
-  where: "Process_committable AND count(Process_active, over=snapshot) > 0"
-  description: >-
-    a modular committable unit counts its status in modules, which the
-    relaxation cannot share out — PyPSA refuses it under the keyword
-    (`optimize.py:783-784`, `consistency.py:1540-1581`)
+  holds: NOT (Process_p_nom_mod > 0)
+  where: Process_committable AND count(Process_active, over=snapshot) > 0
+  description: a modular committable unit counts its status in modules, which the relaxation cannot share out — PyPSA refuses it under the keyword (`optimize.py:783-784`, `consistency.py:1540-1581`)
 ```
 
 ```math

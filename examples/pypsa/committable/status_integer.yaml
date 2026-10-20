@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+given:
+  masks:
+    Unit_committed: { dims: [snapshot, unit] }
+
+dimensions:
+  scenario:
+    description: the futures dispatch is chosen in, each with a weight
+  snapshot:
+    description: dispatch periods
+    dtype: datetime
+    ordered: true
+  unit:
+    description: the units of the class this layer is renamed for
+
+variables:
+  Unit_status:
+    description: >-
+      `-status` — how much of a committable unit is on: an integer
+      the rows below cap at one, or at the module count where the build is
+      modular
+    dims: [scenario, snapshot, unit]
+    where: Unit_committed
+    domain: integer
+    bounds:
+      lower: 0
+  Unit_start_up:
+    description: "`-start_up` — how much of a committable unit turns on this snapshot, capped as the status is"
+    dims: [scenario, snapshot, unit]
+    where: Unit_committed
+    domain: integer
+    bounds:
+      lower: 0
+  Unit_shut_down:
+    description: "`-shut_down` — how much of a committable unit turns off this snapshot, capped as the status is"
+    dims: [scenario, snapshot, unit]
+    where: Unit_committed
+    domain: integer
+    bounds:
+      lower: 0

@@ -5551,17 +5551,17 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the bound a committed extendable generator's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the output a solve wants, it caps that output; data prep |
-| $`\mathrm{ru}`$ | `Generator_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — most a generator may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{rd}`$ | `Generator_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — most a generator may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the bound a committed extendable unit's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the output a solve wants, it caps that output; data prep |
+| $`\mathrm{ru}`$ | `Generator_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — most a unit may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{rd}`$ | `Generator_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — most a unit may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
 | $`\mathrm{ru}^{\mathrm{up}}`$ | `Generator_ramp_limit_start_up` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — most output in the snapshot a unit starts, per unit of nominal power; no value means no limit |
 | $`\mathrm{rd}^{\mathrm{dn}}`$ | `Generator_ramp_limit_shut_down` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — most output in the snapshot before a unit stops, per unit of nominal power; no value means no limit |
 | $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot |
-| $`\mathrm{mnt}`$ | `Generator_maintainable` over $`\mathcal{G}`$ — whether a generator must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
+| $`\mathrm{mnt}`$ | `Generator_maintainable` over $`\mathcal{G}`$ — whether a unit must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
 | $`\gamma`$ | `Generator_maintenance_pu` over $`\Xi \times \mathcal{G}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{\mathrm{mnt}}`$ | `Generator_maintenance_events` over $`\Xi \times \mathcal{G}`$ — how many maintenance events the horizon holds |
-| $`\tau^{\mathrm{mnt}}`$ | `Generator_maintenance_duration` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the generator is not maintainable. No row reads it: data prep turns it into `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the assumptions hold it to the horizon |
-| $`\mathrm{blk}`$ | `Generator_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the generator does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
+| $`\tau^{\mathrm{mnt}}`$ | `Generator_maintenance_duration` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the unit is not maintainable. No row reads it: data prep turns it into `Unit_maintenance_cover` and `Unit_maintenance_start_blocked`, and the assumptions hold it to the horizon |
+| $`\mathrm{blk}`$ | `Generator_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the unit does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 | $`\mathrm{f}^{\mathrm{nom}}`$ | `Link_p_nom` over $`\Xi \times \mathcal{L}`$ — nominal power |
 | $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$ — whether the nominal power is a decision |
 | $`\underline{\mathrm{f}}`$ | `Link_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — least flow, per unit of nominal power — negative for a link that carries both ways |
@@ -5586,26 +5586,26 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{len}^{f}`$ | `Link_volume_weight` over $`\Xi \times \mathcal{G} \times \mathcal{L}`$, `neutral` where the data has no row — the link's length in each scenario where its carrier is in the row's set (`global_constraints.py:847-848`) — data prep; a link outside it, or one that does not stand in the row's `investment_period`, has no row |
 | $`\mathrm{cc}^{f}`$ | `Link_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{L}`$, `neutral` where the data has no row — the link's capital cost where its carrier is in the row's set, times the objective weights of the periods it stands in where the row names no `investment_period` under `multi_investment_periods` — data prep; a link outside the set, or one that does not stand in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Link_capital_cost` without `fom_cost` (`components.py:1151-1169`, `global_constraints.py:870-879`) |
 | $`\mathrm{m}^{f}`$ | `Link_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{L}`$, `neutral` where the data has no row — one where the link is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
-| $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$ — whether flow is gated by an on/off status decision |
-| $`\mathrm{UT}^{f}`$ | `Link_min_up_time` over $`\Xi \times \mathcal{L}`$ — least snapshots a link stays on once started |
-| $`\mathrm{DT}^{f}`$ | `Link_min_down_time` over $`\Xi \times \mathcal{L}`$ — least snapshots a link stays off once stopped |
-| $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\Xi \times \mathcal{L}`$ — one where the link was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
-| $`\mathrm{hold}^{f}`$ | `Link_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true while the up time a link brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
-| $`\mathrm{rest}^{f}`$ | `Link_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true while the down time a link brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
+| $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$ — whether output is gated by an on/off status decision |
+| $`\mathrm{UT}^{f}`$ | `Link_min_up_time` over $`\Xi \times \mathcal{L}`$ — least snapshots a unit stays on once started |
+| $`\mathrm{DT}^{f}`$ | `Link_min_down_time` over $`\Xi \times \mathcal{L}`$ — least snapshots a unit stays off once stopped |
+| $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\Xi \times \mathcal{L}`$ — one where the unit was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
+| $`\mathrm{hold}^{f}`$ | `Link_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true while the up time a unit brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
+| $`\mathrm{rest}^{f}`$ | `Link_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true while the down time a unit brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
 | $`\mathrm{c}^{f,\mathrm{up}}`$ | `Link_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{f,\mathrm{dn}}`$ | `Link_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{f,\mathrm{on}}`$ | `Link_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the bound a committed extendable link's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the flow a solve wants, it caps that flow; data prep |
-| $`\mathrm{ru}^{f}`$ | `Link_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — most a link may raise its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{rd}^{f}`$ | `Link_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — most a link may lower its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{ru}^{f,\mathrm{up}}`$ | `Link_ramp_limit_start_up` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most flow in the snapshot a link starts, per unit of nominal power; no value means no limit |
-| $`\mathrm{rd}^{f,\mathrm{dn}}`$ | `Link_ramp_limit_shut_down` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most flow in the snapshot before a link stops, per unit of nominal power; no value means no limit |
-| $`\mathrm{f}^{0}`$ | `Link_p_init` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the flow a link brought into the horizon — PyPSA's `p_init`, read only where the link came in running; no value means it is unknown, so the link carries no ramp row at the first snapshot |
-| $`\mathrm{mnt}^{f}`$ | `Link_maintainable` over $`\mathcal{L}`$ — whether a link must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
+| $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the bound a committed extendable unit's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the output a solve wants, it caps that output; data prep |
+| $`\mathrm{ru}^{f}`$ | `Link_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — most a unit may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{rd}^{f}`$ | `Link_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — most a unit may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{ru}^{f,\mathrm{up}}`$ | `Link_ramp_limit_start_up` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most output in the snapshot a unit starts, per unit of nominal power; no value means no limit |
+| $`\mathrm{rd}^{f,\mathrm{dn}}`$ | `Link_ramp_limit_shut_down` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most output in the snapshot before a unit stops, per unit of nominal power; no value means no limit |
+| $`\mathrm{f}^{0}`$ | `Link_p_init` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot |
+| $`\mathrm{mnt}^{f}`$ | `Link_maintainable` over $`\mathcal{L}`$ — whether a unit must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
 | $`\gamma^{f}`$ | `Link_maintenance_pu` over $`\Xi \times \mathcal{L}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{f,\mathrm{mnt}}`$ | `Link_maintenance_events` over $`\Xi \times \mathcal{L}`$ — how many maintenance events the horizon holds |
-| $`\tau^{f,\mathrm{mnt}}`$ | `Link_maintenance_duration` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the link is not maintainable. No row reads it: data prep turns it into `Link_maintenance_cover` and `Link_maintenance_start_blocked`, and the assumptions hold it to the horizon |
-| $`\mathrm{blk}^{f}`$ | `Link_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the link does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
+| $`\tau^{f,\mathrm{mnt}}`$ | `Link_maintenance_duration` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the unit is not maintainable. No row reads it: data prep turns it into `Unit_maintenance_cover` and `Unit_maintenance_start_blocked`, and the assumptions hold it to the horizon |
+| $`\mathrm{blk}^{f}`$ | `Link_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the unit does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 | $`\mathrm{z}^{\mathrm{nom}}`$ | `Process_p_nom` over $`\Xi \times \mathcal{J}`$ — nominal internal power |
 | $`\mathrm{ext}^{z}`$ | `Process_p_nom_extendable` over $`\mathcal{J}`$ — whether the nominal internal power is a decision |
 | $`\underline{\mathrm{z}}`$ | `Process_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — least internal power, per unit of nominal power — negative for a process that runs both ways |
@@ -5628,26 +5628,26 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathrm{W}^{z}`$ | `Process_capital_weight` over $`\mathcal{J}`$ — the sum of period weights a process stands in — PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{new}^{z}`$ | `Process_first_active` over $`\mathcal{Y} \times \mathcal{J}`$ — one in the first period a process stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\mathrm{m}^{z}`$ | `Process_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{J}`$, `neutral` where the data has no row — one where the process is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
-| $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$ — whether internal power is gated by an on/off status decision |
-| $`\mathrm{UT}^{z}`$ | `Process_min_up_time` over $`\Xi \times \mathcal{J}`$ — least snapshots a process stays on once started |
-| $`\mathrm{DT}^{z}`$ | `Process_min_down_time` over $`\Xi \times \mathcal{J}`$ — least snapshots a process stays off once stopped |
-| $`\mathrm{u}^{z,0}`$ | `Process_status_initial` over $`\Xi \times \mathcal{J}`$ — one where the process was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
-| $`\mathrm{hold}^{z}`$ | `Process_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true while the up time a process brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
-| $`\mathrm{rest}^{z}`$ | `Process_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true while the down time a process brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
+| $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$ — whether output is gated by an on/off status decision |
+| $`\mathrm{UT}^{z}`$ | `Process_min_up_time` over $`\Xi \times \mathcal{J}`$ — least snapshots a unit stays on once started |
+| $`\mathrm{DT}^{z}`$ | `Process_min_down_time` over $`\Xi \times \mathcal{J}`$ — least snapshots a unit stays off once stopped |
+| $`\mathrm{u}^{z,0}`$ | `Process_status_initial` over $`\Xi \times \mathcal{J}`$ — one where the unit was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
+| $`\mathrm{hold}^{z}`$ | `Process_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true while the up time a unit brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
+| $`\mathrm{rest}^{z}`$ | `Process_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true while the down time a unit brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
 | $`\mathrm{c}^{z,\mathrm{up}}`$ | `Process_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{z,\mathrm{dn}}`$ | `Process_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{z,\mathrm{on}}`$ | `Process_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the bound a committed extendable process's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the internal power a solve wants, it caps that internal power; data prep |
-| $`\mathrm{ru}^{z}`$ | `Process_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — most a process may raise its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{rd}^{z}`$ | `Process_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — most a process may lower its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{ru}^{z,\mathrm{up}}`$ | `Process_ramp_limit_start_up` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — most internal power in the snapshot a process starts, per unit of nominal power; no value means no limit |
-| $`\mathrm{rd}^{z,\mathrm{dn}}`$ | `Process_ramp_limit_shut_down` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — most internal power in the snapshot before a process stops, per unit of nominal power; no value means no limit |
-| $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the internal power a process brought into the horizon — PyPSA's `p_init`, read only where the process came in running; no value means it is unknown, so the process carries no ramp row at the first snapshot |
-| $`\mathrm{mnt}^{z}`$ | `Process_maintainable` over $`\mathcal{J}`$ — whether a process must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
+| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the bound a committed extendable unit's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the output a solve wants, it caps that output; data prep |
+| $`\mathrm{ru}^{z}`$ | `Process_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — most a unit may raise its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{rd}^{z}`$ | `Process_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — most a unit may lower its output between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{ru}^{z,\mathrm{up}}`$ | `Process_ramp_limit_start_up` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — most output in the snapshot a unit starts, per unit of nominal power; no value means no limit |
+| $`\mathrm{rd}^{z,\mathrm{dn}}`$ | `Process_ramp_limit_shut_down` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — most output in the snapshot before a unit stops, per unit of nominal power; no value means no limit |
+| $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot |
+| $`\mathrm{mnt}^{z}`$ | `Process_maintainable` over $`\mathcal{J}`$ — whether a unit must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
 | $`\gamma^{z}`$ | `Process_maintenance_pu` over $`\Xi \times \mathcal{J}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{z,\mathrm{mnt}}`$ | `Process_maintenance_events` over $`\Xi \times \mathcal{J}`$ — how many maintenance events the horizon holds |
-| $`\tau^{z,\mathrm{mnt}}`$ | `Process_maintenance_duration` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the process is not maintainable. No row reads it: data prep turns it into `Process_maintenance_cover` and `Process_maintenance_start_blocked`, and the assumptions hold it to the horizon |
-| $`\mathrm{blk}^{z}`$ | `Process_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the process does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
+| $`\tau^{z,\mathrm{mnt}}`$ | `Process_maintenance_duration` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the unit is not maintainable. No row reads it: data prep turns it into `Unit_maintenance_cover` and `Unit_maintenance_start_blocked`, and the assumptions hold it to the horizon |
+| $`\mathrm{blk}^{z}`$ | `Process_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the unit does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 | $`\mathrm{on}^{h}`$ | `StorageUnit_active` over $`\mathcal{T} \times \mathcal{S}`$ — whether a storage unit stands in a snapshot's period — PyPSA's `active`, data prep |
 | $`\mathrm{act}^{h}`$ | `StorageUnit_active_asset` over $`\mathcal{S}`$ — whether a storage unit is one of PyPSA's `active_assets` — its `active` flag alone, without build year and lifetime, so a unit that stands in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:51`) |
 | $`\mathrm{W}^{h}`$ | `StorageUnit_capital_weight` over $`\mathcal{S}`$ — the sum of period weights a storage unit stands in — PyPSA's `active * period_weighting`, summed, data prep |
@@ -5768,17 +5768,17 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{T} \times \mathcal{G}`$ — a committable generator that stands in the snapshot's period — every unit-commitment row's set |
-| $`\mathrm{on}^{\mathrm{com,ext}}`$ | `Generator_com_ext` over $`\mathcal{T} \times \mathcal{G}`$ — a committable generator with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
-| $`\mathrm{prev}`$ | `Generator_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the generator comes in off or carries an initial output |
-| $`\mathrm{on}^{\mathrm{mnt,ext}}`$ | `Generator_maint_ext` over $`\mathcal{T} \times \mathcal{G}`$ — a maintainable generator with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
+| $`\mathrm{on}^{\mathrm{com,ext}}`$ | `Generator_com_ext` over $`\mathcal{T} \times \mathcal{G}`$ — a committable unit with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
+| $`\mathrm{prev}`$ | `Generator_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the unit comes in off or carries an initial output |
+| $`\mathrm{on}^{\mathrm{mnt,ext}}`$ | `Generator_maint_ext` over $`\mathcal{T} \times \mathcal{G}`$ — a maintainable unit with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
 | $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{T} \times \mathcal{L}`$ — a committable link that stands in the snapshot's period — every unit-commitment row's set |
-| $`\mathrm{on}^{f,\mathrm{com,ext}}`$ | `Link_com_ext` over $`\mathcal{T} \times \mathcal{L}`$ — a committable link with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
-| $`\mathrm{prev}^{f}`$ | `Link_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the link comes in off or carries an initial output |
-| $`\mathrm{on}^{f,\mathrm{mnt,ext}}`$ | `Link_maint_ext` over $`\mathcal{T} \times \mathcal{L}`$ — a maintainable link with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
+| $`\mathrm{on}^{f,\mathrm{com,ext}}`$ | `Link_com_ext` over $`\mathcal{T} \times \mathcal{L}`$ — a committable unit with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
+| $`\mathrm{prev}^{f}`$ | `Link_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the unit comes in off or carries an initial output |
+| $`\mathrm{on}^{f,\mathrm{mnt,ext}}`$ | `Link_maint_ext` over $`\mathcal{T} \times \mathcal{L}`$ — a maintainable unit with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
 | $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process that stands in the snapshot's period — every unit-commitment row's set |
-| $`\mathrm{on}^{z,\mathrm{com,ext}}`$ | `Process_com_ext` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
-| $`\mathrm{prev}^{z}`$ | `Process_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the process comes in off or carries an initial output |
-| $`\mathrm{on}^{z,\mathrm{mnt,ext}}`$ | `Process_maint_ext` over $`\mathcal{T} \times \mathcal{J}`$ — a maintainable process with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
+| $`\mathrm{on}^{z,\mathrm{com,ext}}`$ | `Process_com_ext` over $`\mathcal{T} \times \mathcal{J}`$ — a committable unit with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
+| $`\mathrm{prev}^{z}`$ | `Process_ramps_from_previous` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the unit comes in off or carries an initial output |
+| $`\mathrm{on}^{z,\mathrm{mnt,ext}}`$ | `Process_maint_ext` over $`\mathcal{T} \times \mathcal{J}`$ — a maintainable unit with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
 | $`\mathrm{on}^{h,\mathrm{fix}}`$ | `StorageUnit_fix` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with a fixed build that stands in the snapshot's period — PyPSA's `fix` rows |
 | $`\mathrm{on}^{h,\mathrm{ext}}`$ | `StorageUnit_ext` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with an extendable build that stands in the snapshot's period — PyPSA's `ext` rows |
 | $`\mathrm{on}^{s,\mathrm{lossy}}`$ | `Line_lossy` over $`\mathcal{T} \times \mathcal{K}`$ — a line that stands in the snapshot's period, where the run models transmission losses |
@@ -5794,33 +5794,33 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`p`$ | `Generator_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-p` — output of a generator in a snapshot |
 | $`N`$ | `Generator_n_mod` over $`\mathcal{G}`$ — `Generator-n_mod` — how many modules of an extendable modular build; none for a unit that is not active |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ — `Generator-p_nom` — nominal power where it is a decision, for a generator that is active; the parameter of the same PyPSA name carries the fixed regime |
-| $`u`$ | `Generator_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-status` — how much of a committable unit is on: an integer the rows below cap at one, or at the module count where the build is modular |
-| $`\mathit{up}`$ | `Generator_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-start_up` — how much of a committable unit turns on this snapshot, capped as the status is |
-| $`\mathit{dn}`$ | `Generator_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-shut_down` — how much of a committable unit turns off this snapshot, capped as the status is |
-| $`\mu`$ | `Generator_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance` — whether a maintainable generator is in maintenance: continuous, and one exactly where an event covers the snapshot |
-| $`\mu^{\mathrm{up}}`$ | `Generator_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_start` — whether a maintenance event starts in this snapshot |
-| $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
-| $`\mu^{u}`$ | `Generator_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
+| $`u`$ | `Generator_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `-status` — how much of a committable unit is on: an integer the rows below cap at one, or at the module count where the build is modular |
+| $`\mathit{up}`$ | `Generator_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `-start_up` — how much of a committable unit turns on this snapshot, capped as the status is |
+| $`\mathit{dn}`$ | `Generator_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `-shut_down` — how much of a committable unit turns off this snapshot, capped as the status is |
+| $`\mu`$ | `Generator_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `-maintenance` — whether a maintainable unit is in maintenance: continuous, and one exactly where an event covers the snapshot |
+| $`\mu^{\mathrm{up}}`$ | `Generator_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `-maintenance_start` — whether a maintenance event starts in this snapshot |
+| $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
+| $`\mu^{u}`$ | `Generator_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
 | $`f`$ | `Link_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `Link-p` — PyPSA's `p0`, the flow measured at the `Link_bus0` end: a positive value withdraws there and injects at every bus the link's output ports deliver to |
 | $`N^{f}`$ | `Link_n_mod` over $`\mathcal{L}`$ — `Link-n_mod` — how many modules of an extendable modular build; none for a unit that is not active |
 | $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ — `Link-p_nom` — nominal power where it is a decision, for a link that is active; the parameter of the same PyPSA name carries the fixed regime |
-| $`u^{f}`$ | `Link_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `Link-status` — how much of a committable link is on: an integer the rows below cap at one, or at the module count where the build is modular |
-| $`\mathit{up}^{f}`$ | `Link_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `Link-start_up` — how much of a committable link turns on this snapshot, capped as the status is |
-| $`\mathit{dn}^{f}`$ | `Link_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `Link-shut_down` — how much of a committable link turns off this snapshot, capped as the status is |
-| $`\mu^{f}`$ | `Link_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `Link-maintenance` — whether a maintainable link is in maintenance: continuous, and one exactly where an event covers the snapshot |
-| $`\mu^{f,\mathrm{up}}`$ | `Link_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `Link-maintenance_start` — whether a maintenance event starts in this snapshot |
-| $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `Link-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
-| $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `Link-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
+| $`u^{f}`$ | `Link_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `-status` — how much of a committable unit is on: an integer the rows below cap at one, or at the module count where the build is modular |
+| $`\mathit{up}^{f}`$ | `Link_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `-start_up` — how much of a committable unit turns on this snapshot, capped as the status is |
+| $`\mathit{dn}^{f}`$ | `Link_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `-shut_down` — how much of a committable unit turns off this snapshot, capped as the status is |
+| $`\mu^{f}`$ | `Link_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `-maintenance` — whether a maintainable unit is in maintenance: continuous, and one exactly where an event covers the snapshot |
+| $`\mu^{f,\mathrm{up}}`$ | `Link_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `-maintenance_start` — whether a maintenance event starts in this snapshot |
+| $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
+| $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
 | $`z`$ | `Process_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-p` — PyPSA's internal power `p`: a positive value drives every port at its own rate, withdrawing where the rate is negative and injecting where it is positive |
 | $`N^{z}`$ | `Process_n_mod` over $`\mathcal{J}`$ — `Process-n_mod` — how many modules of an extendable modular build; none for a unit that is not active |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ — `Process-p_nom` — nominal internal power where it is a decision, for a process that is active; the parameter of the same PyPSA name carries the fixed regime |
-| $`u^{z}`$ | `Process_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-status` — how much of a committable process is on: an integer the rows below cap at one, or at the module count where the build is modular |
-| $`\mathit{up}^{z}`$ | `Process_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-start_up` — how much of a committable process turns on this snapshot, capped as the status is |
-| $`\mathit{dn}^{z}`$ | `Process_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-shut_down` — how much of a committable process turns off this snapshot, capped as the status is |
-| $`\mu^{z}`$ | `Process_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance` — whether a maintainable process is in maintenance: continuous, and one exactly where an event covers the snapshot |
-| $`\mu^{z,\mathrm{up}}`$ | `Process_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_start` — whether a maintenance event starts in this snapshot |
-| $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
-| $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
+| $`u^{z}`$ | `Process_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `-status` — how much of a committable unit is on: an integer the rows below cap at one, or at the module count where the build is modular |
+| $`\mathit{up}^{z}`$ | `Process_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `-start_up` — how much of a committable unit turns on this snapshot, capped as the status is |
+| $`\mathit{dn}^{z}`$ | `Process_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `-shut_down` — how much of a committable unit turns off this snapshot, capped as the status is |
+| $`\mu^{z}`$ | `Process_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `-maintenance` — whether a maintainable unit is in maintenance: continuous, and one exactly where an event covers the snapshot |
+| $`\mu^{z,\mathrm{up}}`$ | `Process_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `-maintenance_start` — whether a maintenance event starts in this snapshot |
+| $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
+| $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
 | $`h^{+}`$ | `StorageUnit_p_dispatch` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — `StorageUnit-p_dispatch` — power delivered to the bus |
 | $`h^{-}`$ | `StorageUnit_p_store` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — `StorageUnit-p_store` — power drawn from the bus into charge |
 | $`\mathit{soc}`$ | `StorageUnit_state_of_charge` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — `StorageUnit-state_of_charge` — energy held at the end of a snapshot |
@@ -5861,16 +5861,16 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathit{Generator\_additions}`$ | `Generator_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Generator\_injection}`$ | `Generator_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 | $`u^{\mathrm{av}}`$ | `Generator_status_available` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how much of a committed unit is on and can run — its status, less what maintenance takes out of it, where a maintenance file adds that |
-| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
-| $`\overleftarrow{u}^{\circ}`$ | `Generator_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the state a generator carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
+| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a unit carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
+| $`\overleftarrow{u}^{\circ}`$ | `Generator_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the state a unit carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Generator\_commitment\_opex}`$ | `Generator_commitment_opex` over $`\Xi`$ |
-| $`\overleftarrow{p}`$ | `Generator_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the output a generator carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
+| $`\overleftarrow{p}`$ | `Generator_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the output a unit carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
 | $`\widetilde{\mathrm{ru}}`$ | `Generator_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the ramp limit a unit's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row |
 | $`\widetilde{\mathrm{rd}}`$ | `Generator_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the ramp limit a unit's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row |
 | $`\widetilde{\mathrm{ru}}^{\mathrm{up}}`$ | `Generator_start_up_rate` over $`\Xi \times \mathcal{G}`$ — the start-up ramp a unit's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none |
 | $`\widetilde{\mathrm{rd}}^{\mathrm{dn}}`$ | `Generator_shut_down_rate` over $`\Xi \times \mathcal{G}`$ — the shut-down ramp a unit's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none |
-| $`\Delta^{+}`$ | `Generator_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how far a generator may raise output between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
-| $`\Delta^{-}`$ | `Generator_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how far a generator may lower output between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
+| $`\Delta^{+}`$ | `Generator_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how far a unit may raise output between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
+| $`\Delta^{-}`$ | `Generator_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how far a unit may lower output between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 | $`\mathrm{p}^{\mathrm{out}}`$ | `Generator_maintenance_outage` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the build maintenance takes out of a unit — the chosen share where the build is extendable, the given build while it is under maintenance otherwise |
 | $`u^{\mathrm{out}}`$ | `Generator_maintenance_status_outage` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`\mathrm{f}^{\mathrm{av}}`$ | `Link_p_nom_available` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the build a unit's output limits are taken against in a snapshot — the effective build, less what maintenance takes out of it, where a maintenance file adds that |
@@ -5885,16 +5885,16 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathit{Link\_additions}`$ | `Link_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Link\_injection}`$ | `Link_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 | $`u^{f,\mathrm{av}}`$ | `Link_status_available` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how much of a committed unit is on and can run — its status, less what maintenance takes out of it, where a maintenance file adds that |
-| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the commitment state a link carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
-| $`\overleftarrow{u}^{\circ f}`$ | `Link_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the state a link carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
+| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the commitment state a unit carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
+| $`\overleftarrow{u}^{\circ f}`$ | `Link_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the state a unit carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Link\_commitment\_opex}`$ | `Link_commitment_opex` over $`\Xi`$ |
-| $`\overleftarrow{f}`$ | `Link_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the flow a link carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
-| $`\widetilde{\mathrm{ru}}^{f}`$ | `Link_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the ramp limit a link's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row |
-| $`\widetilde{\mathrm{rd}}^{f}`$ | `Link_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the ramp limit a link's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row |
-| $`\widetilde{\mathrm{ru}}^{f,\mathrm{up}}`$ | `Link_start_up_rate` over $`\Xi \times \mathcal{L}`$ — the start-up ramp a link's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none |
-| $`\widetilde{\mathrm{rd}}^{f,\mathrm{dn}}`$ | `Link_shut_down_rate` over $`\Xi \times \mathcal{L}`$ — the shut-down ramp a link's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none |
-| $`\Delta^{f,+}`$ | `Link_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how far a link may raise flow between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
-| $`\Delta^{f,-}`$ | `Link_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how far a link may lower flow between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
+| $`\overleftarrow{f}`$ | `Link_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the output a unit carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
+| $`\widetilde{\mathrm{ru}}^{f}`$ | `Link_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the ramp limit a unit's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row |
+| $`\widetilde{\mathrm{rd}}^{f}`$ | `Link_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the ramp limit a unit's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row |
+| $`\widetilde{\mathrm{ru}}^{f,\mathrm{up}}`$ | `Link_start_up_rate` over $`\Xi \times \mathcal{L}`$ — the start-up ramp a unit's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none |
+| $`\widetilde{\mathrm{rd}}^{f,\mathrm{dn}}`$ | `Link_shut_down_rate` over $`\Xi \times \mathcal{L}`$ — the shut-down ramp a unit's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none |
+| $`\Delta^{f,+}`$ | `Link_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how far a unit may raise output between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
+| $`\Delta^{f,-}`$ | `Link_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how far a unit may lower output between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 | $`\mathrm{f}^{\mathrm{out}}`$ | `Link_maintenance_outage` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the build maintenance takes out of a unit — the chosen share where the build is extendable, the given build while it is under maintenance otherwise |
 | $`u^{f,\mathrm{out}}`$ | `Link_maintenance_status_outage` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
 | $`\mathrm{z}^{\mathrm{av}}`$ | `Process_p_nom_available` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the build a unit's output limits are taken against in a snapshot — the effective build, less what maintenance takes out of it, where a maintenance file adds that |
@@ -5907,16 +5907,16 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 | $`\mathit{Process\_additions}`$ | `Process_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Process\_injection}`$ | `Process_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 | $`u^{z,\mathrm{av}}`$ | `Process_status_available` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — how much of a committed unit is on and can run — its status, less what maintenance takes out of it, where a maintenance file adds that |
-| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the commitment state a process carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
-| $`\overleftarrow{u}^{\circ z}`$ | `Process_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the state a process carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
+| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the commitment state a unit carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
+| $`\overleftarrow{u}^{\circ z}`$ | `Process_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the state a unit carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Process\_commitment\_opex}`$ | `Process_commitment_opex` over $`\Xi`$ |
-| $`\overleftarrow{z}`$ | `Process_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the internal power a process carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
-| $`\widetilde{\mathrm{ru}}^{z}`$ | `Process_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the ramp limit a process's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row |
-| $`\widetilde{\mathrm{rd}}^{z}`$ | `Process_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the ramp limit a process's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row |
-| $`\widetilde{\mathrm{ru}}^{z,\mathrm{up}}`$ | `Process_start_up_rate` over $`\Xi \times \mathcal{J}`$ — the start-up ramp a process's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none |
-| $`\widetilde{\mathrm{rd}}^{z,\mathrm{dn}}`$ | `Process_shut_down_rate` over $`\Xi \times \mathcal{J}`$ — the shut-down ramp a process's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none |
-| $`\Delta^{z,+}`$ | `Process_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — how far a process may raise internal power between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
-| $`\Delta^{z,-}`$ | `Process_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — how far a process may lower internal power between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
+| $`\overleftarrow{z}`$ | `Process_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the output a unit carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
+| $`\widetilde{\mathrm{ru}}^{z}`$ | `Process_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the ramp limit a unit's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row |
+| $`\widetilde{\mathrm{rd}}^{z}`$ | `Process_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the ramp limit a unit's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row |
+| $`\widetilde{\mathrm{ru}}^{z,\mathrm{up}}`$ | `Process_start_up_rate` over $`\Xi \times \mathcal{J}`$ — the start-up ramp a unit's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none |
+| $`\widetilde{\mathrm{rd}}^{z,\mathrm{dn}}`$ | `Process_shut_down_rate` over $`\Xi \times \mathcal{J}`$ — the shut-down ramp a unit's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none |
+| $`\Delta^{z,+}`$ | `Process_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — how far a unit may raise output between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
+| $`\Delta^{z,-}`$ | `Process_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — how far a unit may lower output between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 | $`\mathrm{z}^{\mathrm{out}}`$ | `Process_maintenance_outage` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the build maintenance takes out of a unit — the chosen share where the build is extendable, the given build while it is under maintenance otherwise |
 | $`u^{z,\mathrm{out}}`$ | `Process_maintenance_status_outage` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
 | $`\overleftarrow{\mathit{soc}}`$ | `StorageUnit_charge_carried_in` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — the charge a unit opens a snapshot with — at the first snapshot it stands in, its last such snapshot's less standing loss where it is cyclic and the given initial charge, which no standing loss has touched yet, where it is not; the previous snapshot's less standing loss otherwise. A unit built in a later period opens in that period, and a cyclic one that retires closes on its own last snapshot. Per period, the same holds with each investment period as the horizon |
@@ -5991,7 +5991,7 @@ Generator_committed:
 ```yaml
 Generator_com_ext:
   where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
-  description: a committable generator with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build
+  description: a committable unit with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build
 ```
 
 ```math
@@ -6003,7 +6003,7 @@ Generator_com_ext:
 ```yaml
 Generator_ramps_from_previous:
   where: position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Generator_status_initial == 0 OR Generator_p_init))
-  description: a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the generator comes in off or carries an initial output
+  description: a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the unit comes in off or carries an initial output
 ```
 
 ```math
@@ -6015,7 +6015,7 @@ Generator_ramps_from_previous:
 ```yaml
 Generator_maint_ext:
   where: Generator_maintainable AND Generator_p_nom_extendable AND NOT (Generator_committable AND Generator_p_nom_mod > 0) AND Generator_active
-  description: a maintainable generator with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build
+  description: a maintainable unit with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build
 ```
 
 ```math
@@ -6039,7 +6039,7 @@ Link_committed:
 ```yaml
 Link_com_ext:
   where: Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0) AND Link_active
-  description: a committable link with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build
+  description: a committable unit with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build
 ```
 
 ```math
@@ -6051,7 +6051,7 @@ Link_com_ext:
 ```yaml
 Link_ramps_from_previous:
   where: position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Link_status_initial == 0 OR Link_p_init))
-  description: a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the link comes in off or carries an initial output
+  description: a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the unit comes in off or carries an initial output
 ```
 
 ```math
@@ -6063,7 +6063,7 @@ Link_ramps_from_previous:
 ```yaml
 Link_maint_ext:
   where: Link_maintainable AND Link_p_nom_extendable AND NOT (Link_committable AND Link_p_nom_mod > 0) AND Link_active
-  description: a maintainable link with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build
+  description: a maintainable unit with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build
 ```
 
 ```math
@@ -6087,7 +6087,7 @@ Process_committed:
 ```yaml
 Process_com_ext:
   where: Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0) AND Process_active
-  description: a committable process with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build
+  description: a committable unit with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build
 ```
 
 ```math
@@ -6099,7 +6099,7 @@ Process_com_ext:
 ```yaml
 Process_ramps_from_previous:
   where: position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND (Process_status_initial == 0 OR Process_p_init))
-  description: a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the process comes in off or carries an initial output
+  description: a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the unit comes in off or carries an initial output
 ```
 
 ```math
@@ -6111,7 +6111,7 @@ Process_ramps_from_previous:
 ```yaml
 Process_maint_ext:
   where: Process_maintainable AND Process_p_nom_extendable AND NOT (Process_committable AND Process_p_nom_mod > 0) AND Process_active
-  description: a maintainable process with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build
+  description: a maintainable unit with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build
 ```
 
 ```math
@@ -6689,7 +6689,7 @@ u^{\mathrm{av}}_{\xi,t,g} = u_{\xi,t,g} + u^{\mathrm{out}}_{\xi,t,g} \qquad \for
 ```yaml
 Generator_previous_status:
   dims: [scenario, snapshot, generator]
-  description: the commitment state a generator carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise
+  description: the commitment state a unit carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise
   cases:
     opening_late:
       when: position(snapshot) > 0 AND NOT shift(Generator_active, along=snapshot, offset=1)
@@ -6706,7 +6706,7 @@ Generator_previous_status:
 ```yaml
 Generator_status_carried_over:
   dims: [scenario, snapshot, generator]
-  description: the state a generator carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that
+  description: the state a unit carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that
   cases:
     opening:
       when: position(snapshot) == 0
@@ -6733,7 +6733,7 @@ Generator_commitment_opex: sum(sum(((Generator_status * Generator_stand_by_cost)
 ```yaml
 Generator_previous_p:
   dims: [scenario, snapshot, generator]
-  description: the output a generator carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that
+  description: the output a unit carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that
   cases:
     opening:
       when: position(snapshot) == 0
@@ -6810,7 +6810,7 @@ Generator_shut_down_rate:
 ```yaml
 Generator_ramp_up_allowance:
   dims: [scenario, snapshot, generator]
-  description: how far a generator may raise output between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on
+  description: how far a unit may raise output between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on
   cases:
     committed:
       when: Generator_committable
@@ -6827,7 +6827,7 @@ Generator_ramp_up_allowance:
 ```yaml
 Generator_ramp_down_allowance:
   dims: [scenario, snapshot, generator]
-  description: how far a generator may lower output between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off
+  description: how far a unit may lower output between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off
   cases:
     committed:
       when: Generator_committable
@@ -7018,7 +7018,7 @@ u^{f,\mathrm{av}}_{\xi,t,l} = u^{f}_{\xi,t,l} + u^{f,\mathrm{out}}_{\xi,t,l} \qq
 ```yaml
 Link_previous_status:
   dims: [scenario, snapshot, link]
-  description: the commitment state a link carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise
+  description: the commitment state a unit carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise
   cases:
     opening_late:
       when: position(snapshot) > 0 AND NOT shift(Link_active, along=snapshot, offset=1)
@@ -7035,7 +7035,7 @@ Link_previous_status:
 ```yaml
 Link_status_carried_over:
   dims: [scenario, snapshot, link]
-  description: the state a link carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that
+  description: the state a unit carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that
   cases:
     opening:
       when: position(snapshot) == 0
@@ -7062,7 +7062,7 @@ Link_commitment_opex: sum(sum(((Link_status * Link_stand_by_cost) * snapshot_wei
 ```yaml
 Link_previous_p:
   dims: [scenario, snapshot, link]
-  description: the flow a link carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that
+  description: the output a unit carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that
   cases:
     opening:
       when: position(snapshot) == 0
@@ -7079,7 +7079,7 @@ Link_previous_p:
 ```yaml
 Link_ramp_up_rate:
   dims: [scenario, snapshot, link]
-  description: the ramp limit a link's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row
+  description: the ramp limit a unit's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row
   cases:
     given: {when: Link_ramp_limit_up, expression: Link_ramp_limit_up}
   otherwise: '1'
@@ -7094,7 +7094,7 @@ Link_ramp_up_rate:
 ```yaml
 Link_ramp_down_rate:
   dims: [scenario, snapshot, link]
-  description: the ramp limit a link's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row
+  description: the ramp limit a unit's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row
   cases:
     given: {when: Link_ramp_limit_down, expression: Link_ramp_limit_down}
   otherwise: '1'
@@ -7109,7 +7109,7 @@ Link_ramp_down_rate:
 ```yaml
 Link_start_up_rate:
   dims: [scenario, link]
-  description: the start-up ramp a link's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none
+  description: the start-up ramp a unit's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none
   cases:
     given: {when: Link_ramp_limit_start_up, expression: Link_ramp_limit_start_up}
   otherwise: '1'
@@ -7124,7 +7124,7 @@ Link_start_up_rate:
 ```yaml
 Link_shut_down_rate:
   dims: [scenario, link]
-  description: the shut-down ramp a link's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none
+  description: the shut-down ramp a unit's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none
   cases:
     given: {when: Link_ramp_limit_shut_down, expression: Link_ramp_limit_shut_down}
   otherwise: '1'
@@ -7139,7 +7139,7 @@ Link_shut_down_rate:
 ```yaml
 Link_ramp_up_allowance:
   dims: [scenario, snapshot, link]
-  description: how far a link may raise flow between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on
+  description: how far a unit may raise output between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on
   cases:
     committed:
       when: Link_committable
@@ -7156,7 +7156,7 @@ Link_ramp_up_allowance:
 ```yaml
 Link_ramp_down_allowance:
   dims: [scenario, snapshot, link]
-  description: how far a link may lower flow between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off
+  description: how far a unit may lower output between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off
   cases:
     committed:
       when: Link_committable
@@ -7327,7 +7327,7 @@ u^{z,\mathrm{av}}_{\xi,t,j} = u^{z}_{\xi,t,j} + u^{z,\mathrm{out}}_{\xi,t,j} \qq
 ```yaml
 Process_previous_status:
   dims: [scenario, snapshot, process]
-  description: the commitment state a process carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise
+  description: the commitment state a unit carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise
   cases:
     opening_late:
       when: position(snapshot) > 0 AND NOT shift(Process_active, along=snapshot, offset=1)
@@ -7344,7 +7344,7 @@ Process_previous_status:
 ```yaml
 Process_status_carried_over:
   dims: [scenario, snapshot, process]
-  description: the state a process carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that
+  description: the state a unit carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that
   cases:
     opening:
       when: position(snapshot) == 0
@@ -7371,7 +7371,7 @@ Process_commitment_opex: sum(sum(((Process_status * Process_stand_by_cost) * sna
 ```yaml
 Process_previous_p:
   dims: [scenario, snapshot, process]
-  description: the internal power a process carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that
+  description: the output a unit carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that
   cases:
     opening:
       when: position(snapshot) == 0
@@ -7388,7 +7388,7 @@ Process_previous_p:
 ```yaml
 Process_ramp_up_rate:
   dims: [scenario, snapshot, process]
-  description: the ramp limit a process's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row
+  description: the ramp limit a unit's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row
   cases:
     given: {when: Process_ramp_limit_up, expression: Process_ramp_limit_up}
   otherwise: '1'
@@ -7403,7 +7403,7 @@ Process_ramp_up_rate:
 ```yaml
 Process_ramp_down_rate:
   dims: [scenario, snapshot, process]
-  description: the ramp limit a process's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row
+  description: the ramp limit a unit's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row
   cases:
     given: {when: Process_ramp_limit_down, expression: Process_ramp_limit_down}
   otherwise: '1'
@@ -7418,7 +7418,7 @@ Process_ramp_down_rate:
 ```yaml
 Process_start_up_rate:
   dims: [scenario, process]
-  description: the start-up ramp a process's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none
+  description: the start-up ramp a unit's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none
   cases:
     given: {when: Process_ramp_limit_start_up, expression: Process_ramp_limit_start_up}
   otherwise: '1'
@@ -7433,7 +7433,7 @@ Process_start_up_rate:
 ```yaml
 Process_shut_down_rate:
   dims: [scenario, process]
-  description: the shut-down ramp a process's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none
+  description: the shut-down ramp a unit's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none
   cases:
     given: {when: Process_ramp_limit_shut_down, expression: Process_ramp_limit_shut_down}
   otherwise: '1'
@@ -7448,7 +7448,7 @@ Process_shut_down_rate:
 ```yaml
 Process_ramp_up_allowance:
   dims: [scenario, snapshot, process]
-  description: how far a process may raise internal power between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on
+  description: how far a unit may raise output between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on
   cases:
     committed:
       when: Process_committable
@@ -7465,7 +7465,7 @@ Process_ramp_up_allowance:
 ```yaml
 Process_ramp_down_allowance:
   dims: [scenario, snapshot, process]
-  description: how far a process may lower internal power between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off
+  description: how far a unit may lower output between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off
   cases:
     committed:
       when: Process_committable
@@ -8723,7 +8723,7 @@ Generator_com_p_lower:
   dims: [scenario, snapshot, generator]
   where: Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
   expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * Generator_status_available
-  description: '`Generator-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing'
+  description: '`-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing'
 ```
 
 ```math
@@ -8739,7 +8739,7 @@ Generator_com_p_upper:
   dims: [scenario, snapshot, generator]
   where: Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
   expression: Generator_p <= Generator_p_max_pu * Generator_p_nom * Generator_status_available
-  description: '`Generator-com-p-upper` — a committed unit outputs at most what is available; off, at most nothing'
+  description: '`-com-p-upper` — a committed unit outputs at most what is available; off, at most nothing'
 ```
 
 ```math
@@ -8755,7 +8755,7 @@ Generator_com_transition_start_up:
   dims: [scenario, snapshot, generator]
   where: Generator_committed
   expression: Generator_start_up >= Generator_status - Generator_previous_status
-  description: '`Generator-com-transition-start-up` — turning on is a start, counted against the state the unit carried into the snapshot'
+  description: '`-com-transition-start-up` — turning on is a start, counted against the state the unit carried into the snapshot'
 ```
 
 ```math
@@ -8771,7 +8771,7 @@ Generator_com_transition_shut_down:
   dims: [scenario, snapshot, generator]
   where: Generator_committed
   expression: Generator_shut_down >= Generator_previous_status - Generator_status
-  description: '`Generator-com-transition-shut-down` — turning off is a stop, counted against the state the unit carried into the snapshot'
+  description: '`-com-transition-shut-down` — turning off is a stop, counted against the state the unit carried into the snapshot'
 ```
 
 ```math
@@ -8788,7 +8788,7 @@ Generator_com_up_time:
   where: Generator_committed AND Generator_min_up_time > 0 AND position(snapshot) > 0
   expression: sum_back(Generator_start_up, along=snapshot, window=Generator_min_up_time) <= Generator_status
   description: >-
-    `Generator-com-up-time` — a unit started within its own minimum up time is still on.
+    `-com-up-time` — a unit started within its own minimum up time is still on.
     The first snapshot's share of the window is the brought-in up time's, which the must-stay-up mask carries
 ```
 
@@ -8806,7 +8806,7 @@ Generator_com_down_time:
   where: Generator_committed AND Generator_min_down_time > 0 AND position(snapshot) > 0
   expression: sum_back(Generator_shut_down, along=snapshot, window=Generator_min_down_time) <= 1 - Generator_status
   description: >-
-    `Generator-com-down-time` — a unit stopped within its own minimum down time is still off.
+    `-com-down-time` — a unit stopped within its own minimum down time is still off.
     The first snapshot's share of the window is the brought-in down time's, which the must-stay-down mask carries
 ```
 
@@ -8823,7 +8823,7 @@ Generator_com_status_must_stay_up:
   dims: [scenario, snapshot, generator]
   where: Generator_committed AND Generator_must_stay_up
   expression: Generator_status == 1
-  description: '`Generator-com-status-min_up_time_must_stay_up` — a unit still serving the up time it brought in stays on'
+  description: '`-com-status-min_up_time_must_stay_up` — a unit still serving the up time it brought in stays on'
 ```
 
 ```math
@@ -8839,7 +8839,7 @@ Generator_com_status_must_stay_down:
   dims: [scenario, snapshot, generator]
   where: Generator_committed AND Generator_must_stay_down
   expression: Generator_status == 0
-  description: '`Generator-com-status-min_down_time_must_stay_up` — a unit still serving the down time it brought in stays off; PyPSA names the row `_must_stay_up`'
+  description: '`-com-status-min_down_time_must_stay_up` — a unit still serving the down time it brought in stays off; PyPSA names the row `_must_stay_up`'
 ```
 
 ```math
@@ -8855,7 +8855,7 @@ Generator_com_ext_p_upper_cap:
   dims: [scenario, snapshot, generator]
   where: Generator_com_ext
   expression: Generator_p <= Generator_p_max_pu * Generator_p_nom_available
-  description: '`Generator-com-ext-p-upper-cap` — a committed extendable unit outputs at most what is available of the chosen build, whatever its status'
+  description: '`-com-ext-p-upper-cap` — a committed extendable unit outputs at most what is available of the chosen build, whatever its status'
 ```
 
 ```math
@@ -8871,7 +8871,7 @@ Generator_com_ext_p_upper_big_m:
   dims: [scenario, snapshot, generator]
   where: Generator_com_ext
   expression: Generator_p <= Generator_big_m * Generator_status
-  description: '`Generator-com-ext-p-upper-bigM` — off, a unit outputs nothing; on, the big M is no bound'
+  description: '`-com-ext-p-upper-bigM` — off, a unit outputs nothing; on, the big M is no bound'
 ```
 
 ```math
@@ -8887,7 +8887,7 @@ Generator_com_ext_p_lower:
   dims: [scenario, snapshot, generator]
   where: Generator_com_ext
   expression: Generator_p >= Generator_p_min_pu * Generator_p_nom_available + Generator_big_m * Generator_status - Generator_big_m
-  description: '`Generator-com-ext-p-lower` — a committed extendable unit outputs at least its minimum of the chosen build; off, the big M releases the row'
+  description: '`-com-ext-p-lower` — a committed extendable unit outputs at least its minimum of the chosen build; off, the big M releases the row'
 ```
 
 ```math
@@ -8903,7 +8903,7 @@ Generator_com_ext_p_lower_nonneg:
   dims: [scenario, snapshot, generator]
   where: Generator_com_ext AND Generator_p_min_pu_nonneg
   expression: Generator_p >= 0
-  description: '`Generator-com-ext-p-lower-nonneg` — where no minimum-per-unit is negative, output is also plainly non-negative, a row the big-M lower cannot assert while the unit is off'
+  description: '`-com-ext-p-lower-nonneg` — where no minimum-per-unit is negative, output is also plainly non-negative, a row the big-M lower cannot assert while the unit is off'
 ```
 
 ```math
@@ -8919,7 +8919,7 @@ Generator_com_mod_p_lower:
   dims: [scenario, snapshot, generator]
   where: Generator_committed AND Generator_p_nom_mod > 0
   expression: Generator_p >= Generator_p_min_pu * Generator_p_nom_mod * Generator_status_available
-  description: '`Generator-com-mod-p-lower` — a committed modular unit outputs at least its minimum of one module, whether the build is fixed or a decision'
+  description: '`-com-mod-p-lower` — a committed modular unit outputs at least its minimum of one module, whether the build is fixed or a decision'
 ```
 
 ```math
@@ -8935,7 +8935,7 @@ Generator_com_mod_p_upper:
   dims: [scenario, snapshot, generator]
   where: Generator_committed AND Generator_p_nom_mod > 0
   expression: Generator_p <= Generator_p_max_pu * Generator_p_nom_mod * Generator_status_available
-  description: '`Generator-com-mod-p-upper` — a committed modular unit outputs at most one module''s share, whether the build is fixed or a decision'
+  description: '`-com-mod-p-upper` — a committed modular unit outputs at most one module''s share, whether the build is fixed or a decision'
 ```
 
 ```math
@@ -8951,7 +8951,7 @@ Generator_status_p_fixed_upper:
   dims: [scenario, snapshot, generator]
   where: Generator_committed AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0)
   expression: Generator_status <= Generator_modules_installed
-  description: '`Generator-status-p-fixed-upper` — a status is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
+  description: '`-status-p-fixed-upper` — a status is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
 ```
 
 ```math
@@ -8967,7 +8967,7 @@ Generator_start_up_p_fixed_upper:
   dims: [scenario, snapshot, generator]
   where: Generator_committed AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0)
   expression: Generator_start_up <= Generator_modules_installed
-  description: '`Generator-start_up-p-fixed-upper` — a start is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
+  description: '`-start_up-p-fixed-upper` — a start is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
 ```
 
 ```math
@@ -8983,7 +8983,7 @@ Generator_shut_down_p_fixed_upper:
   dims: [scenario, snapshot, generator]
   where: Generator_committed AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0)
   expression: Generator_shut_down <= Generator_modules_installed
-  description: '`Generator-shut_down-p-fixed-upper` — a stop is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
+  description: '`-shut_down-p-fixed-upper` — a stop is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
 ```
 
 ```math
@@ -8999,7 +8999,7 @@ Generator_status_p_nom_variable_upper:
   dims: [scenario, snapshot, generator]
   where: Generator_committed AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0
   expression: Generator_status <= Generator_n_mod
-  description: '`Generator-status-p_nom-variable-upper` — a modular unit is on only where a module is built'
+  description: '`-status-p_nom-variable-upper` — a modular unit is on only where a module is built'
 ```
 
 ```math
@@ -9015,7 +9015,7 @@ Generator_start_up_p_nom_variable_upper:
   dims: [scenario, snapshot, generator]
   where: Generator_committed AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0
   expression: Generator_start_up <= Generator_n_mod
-  description: '`Generator-start_up-p_nom-variable-upper` — a modular unit starts only where a module is built'
+  description: '`-start_up-p_nom-variable-upper` — a modular unit starts only where a module is built'
 ```
 
 ```math
@@ -9031,7 +9031,7 @@ Generator_shut_down_p_nom_variable_upper:
   dims: [scenario, snapshot, generator]
   where: Generator_committed AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0
   expression: Generator_shut_down <= Generator_n_mod
-  description: '`Generator-shut_down-p_nom-variable-upper` — a modular unit stops only where a module is built'
+  description: '`-shut_down-p_nom-variable-upper` — a modular unit stops only where a module is built'
 ```
 
 ```math
@@ -9047,7 +9047,7 @@ Generator_p_ramp_limit_up_run_big_m:
   dims: [scenario, snapshot, generator]
   where: Generator_com_ext AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up) AND Generator_ramps_from_previous
   expression: Generator_p - Generator_previous_p <= Generator_ramp_up_rate * Generator_p_nom_ext + Generator_big_m - Generator_big_m * Generator_previous_status
-  description: '`Generator-p-ramp_limit_up-run-bigM` — a committed extendable unit raises output no faster than its limit of the chosen build; the big M releases the row in the snapshot it turns on'
+  description: '`-p-ramp_limit_up-run-bigM` — a committed extendable unit raises output no faster than its limit of the chosen build; the big M releases the row in the snapshot it turns on'
 ```
 
 ```math
@@ -9063,7 +9063,7 @@ Generator_p_ramp_limit_up_start_big_m:
   dims: [scenario, snapshot, generator]
   where: Generator_com_ext AND (Generator_ramp_limit_up OR Generator_ramp_limit_start_up) AND Generator_ramps_from_previous
   expression: Generator_p - Generator_previous_p <= Generator_start_up_rate * Generator_p_nom_ext + Generator_big_m - Generator_big_m * Generator_start_up
-  description: '`Generator-p-ramp_limit_up-start-bigM` — in the snapshot it turns on, a committed extendable unit ramps no further than its start-up ramp of the chosen build; the big M releases the row everywhere else'
+  description: '`-p-ramp_limit_up-start-bigM` — in the snapshot it turns on, a committed extendable unit ramps no further than its start-up ramp of the chosen build; the big M releases the row everywhere else'
 ```
 
 ```math
@@ -9079,7 +9079,7 @@ Generator_p_ramp_limit_down_run_big_m:
   dims: [scenario, snapshot, generator]
   where: Generator_com_ext AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down) AND Generator_ramps_from_previous
   expression: Generator_previous_p - Generator_p <= Generator_ramp_down_rate * Generator_p_nom_ext + Generator_big_m - Generator_big_m * Generator_status
-  description: '`Generator-p-ramp_limit_down-run-bigM` — a committed extendable unit lowers output no faster than its limit of the chosen build; the big M releases the row in the snapshot it turns off'
+  description: '`-p-ramp_limit_down-run-bigM` — a committed extendable unit lowers output no faster than its limit of the chosen build; the big M releases the row in the snapshot it turns off'
 ```
 
 ```math
@@ -9095,7 +9095,7 @@ Generator_p_ramp_limit_down_shut_big_m:
   dims: [scenario, snapshot, generator]
   where: Generator_com_ext AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down) AND Generator_ramps_from_previous
   expression: Generator_previous_p - Generator_p <= Generator_shut_down_rate * Generator_p_nom_ext + Generator_big_m - Generator_big_m * Generator_shut_down
-  description: '`Generator-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off, a committed extendable unit ramps no further than its shut-down ramp of the chosen build; the big M releases the row everywhere else'
+  description: '`-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off, a committed extendable unit ramps no further than its shut-down ramp of the chosen build; the big M releases the row everywhere else'
 ```
 
 ```math
@@ -9112,7 +9112,7 @@ Generator_p_ramp_limit_up:
   where: (Generator_ramp_limit_up OR Generator_ramp_limit_start_up) AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)) AND Generator_ramps_from_previous AND Generator_active
   expression: Generator_p - Generator_previous_p <= Generator_ramp_up_allowance
   description: >-
-    `Generator-p-ramp_limit_up` — a generator raises output no faster than its ramp limit of the build, and a committed one no further than its start-up ramp in the snapshot it turns on.
+    `-p-ramp_limit_up` — a unit raises output no faster than its ramp limit of the build, and a committed one no further than its start-up ramp in the snapshot it turns on.
     A unit that came into the horizon running carries a row at the first snapshot only where its `p_init` gives the output it brought in, and no unit carries one at the start of a later investment period — nor does any unit a big M releases instead
 ```
 
@@ -9130,7 +9130,7 @@ Generator_p_ramp_limit_down:
   where: (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down) AND NOT (Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)) AND Generator_ramps_from_previous AND Generator_active
   expression: Generator_previous_p - Generator_p <= Generator_ramp_down_allowance
   description: >-
-    `Generator-p-ramp_limit_down` — a generator lowers output no faster than its ramp limit of the build, and a committed one no further than its shut-down ramp in the snapshot it turns off.
+    `-p-ramp_limit_down` — a unit lowers output no faster than its ramp limit of the build, and a committed one no further than its shut-down ramp in the snapshot it turns off.
     A unit that came into the horizon running carries a row at the first snapshot only where its `p_init` gives the output it brought in, and no unit carries one at the start of a later investment period — nor does any unit a big M releases instead
 ```
 
@@ -9147,7 +9147,7 @@ Generator_maint_event_count:
   dims: [scenario, generator]
   where: Generator_maintainable
   expression: sum(Generator_maintenance_start, over=snapshot) == Generator_maintenance_events
-  description: '`Generator-maint-event-count` — a maintainable generator holds its number of maintenance events over the horizon'
+  description: '`-maint-event-count` — a maintainable unit holds its number of maintenance events over the horizon'
 ```
 
 ```math
@@ -9163,7 +9163,7 @@ Generator_maint_window:
   dims: [scenario, snapshot, generator]
   where: Generator_maintainable AND Generator_active
   expression: Generator_maintenance == sum(Generator_maintenance_start, over=start, by=Generator_maintenance_cover[covered])
-  description: '`Generator-maint-window` — a generator is in maintenance exactly where an event it started covers the snapshot; two events do not overlap, since the maintenance status is at most one'
+  description: '`-maint-window` — a unit is in maintenance exactly where an event it started covers the snapshot; two events do not overlap, since the maintenance status is at most one'
 ```
 
 ```math
@@ -9179,7 +9179,7 @@ Generator_maint_start_horizon:
   dims: [scenario, snapshot, generator]
   where: Generator_maintainable AND Generator_active AND Generator_maintenance_start_blocked
   expression: Generator_maintenance_start == 0
-  description: '`Generator-maint-start-horizon` — no event starts where it could not run its whole duration'
+  description: '`-maint-start-horizon` — no event starts where it could not run its whole duration'
 ```
 
 ```math
@@ -9195,7 +9195,7 @@ Generator_maintcap_upper:
   dims: [scenario, snapshot, generator]
   where: Generator_maint_ext
   expression: Generator_maintenance_capacity <= Generator_p_nom_ext - Generator_p_nom_min * (1 - Generator_maintenance)
-  description: '`Generator-maintcap_upper` — the build taken off is at most the chosen build in maintenance, and at most the build less its floor out of it'
+  description: '`-maintcap_upper` — the build taken off is at most the chosen build in maintenance, and at most the build less its floor out of it'
 ```
 
 ```math
@@ -9211,7 +9211,7 @@ Generator_maintcap_upper_nommax:
   dims: [scenario, snapshot, generator]
   where: Generator_maint_ext
   expression: Generator_maintenance_capacity <= Generator_p_nom_max * Generator_maintenance
-  description: '`Generator-maintcap_upper_nommax` — out of maintenance, no build is taken off'
+  description: '`-maintcap_upper_nommax` — out of maintenance, no build is taken off'
 ```
 
 ```math
@@ -9227,7 +9227,7 @@ Generator_maintcap_lower_nommax:
   dims: [scenario, snapshot, generator]
   where: Generator_maint_ext
   expression: Generator_maintenance_capacity >= Generator_p_nom_ext - Generator_p_nom_max * (1 - Generator_maintenance)
-  description: '`Generator-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off'
+  description: '`-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off'
 ```
 
 ```math
@@ -9243,7 +9243,7 @@ Generator_maintcap_lower_nommin:
   dims: [scenario, snapshot, generator]
   where: Generator_maint_ext AND Generator_p_nom_min > 0
   expression: Generator_maintenance_capacity >= Generator_p_nom_min * Generator_maintenance
-  description: '`Generator-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off'
+  description: '`-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off'
 ```
 
 ```math
@@ -9259,7 +9259,7 @@ Generator_maint_status_le_status:
   dims: [scenario, snapshot, generator]
   where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
   expression: Generator_maintenance_status <= Generator_status
-  description: '`Generator-maint-status-le-status` — the status in maintenance is at most the status'
+  description: '`-maint-status-le-status` — the status in maintenance is at most the status'
 ```
 
 ```math
@@ -9275,7 +9275,7 @@ Generator_maint_status_le_maint:
   dims: [scenario, snapshot, generator]
   where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
   expression: Generator_maintenance_status <= Generator_maintenance
-  description: '`Generator-maint-status-le-maint` — out of maintenance, the status in maintenance is zero'
+  description: '`-maint-status-le-maint` — out of maintenance, the status in maintenance is zero'
 ```
 
 ```math
@@ -9291,7 +9291,7 @@ Generator_maint_status_lb:
   dims: [scenario, snapshot, generator]
   where: Generator_maintainable AND Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
   expression: Generator_maintenance_status >= Generator_status + Generator_maintenance - 1
-  description: '`Generator-maint-status-lb` — on and in maintenance, the status in maintenance is one'
+  description: '`-maint-status-lb` — on and in maintenance, the status in maintenance is one'
 ```
 
 ```math
@@ -9307,7 +9307,7 @@ Generator_maint_modstatus_le_status:
   dims: [scenario, snapshot, generator]
   where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
   expression: Generator_maintenance_status <= Generator_status
-  description: '`Generator-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on'
+  description: '`-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on'
 ```
 
 ```math
@@ -9323,7 +9323,7 @@ Generator_maint_modstatus_le_maint:
   dims: [scenario, snapshot, generator]
   where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
   expression: Generator_maintenance_status <= Generator_p_nom_max / Generator_p_nom_mod * Generator_maintenance
-  description: '`Generator-maint-modstatus-le-maint` — out of maintenance, no module is on in maintenance; in it, at most the modules the build cap holds'
+  description: '`-maint-modstatus-le-maint` — out of maintenance, no module is on in maintenance; in it, at most the modules the build cap holds'
 ```
 
 ```math
@@ -9339,7 +9339,7 @@ Generator_maint_modstatus_lb:
   dims: [scenario, snapshot, generator]
   where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
   expression: Generator_maintenance_status >= Generator_status - Generator_p_nom_max / Generator_p_nom_mod * (1 - Generator_maintenance)
-  description: '`Generator-maint-modstatus-lb` — in maintenance, every module on is on in maintenance'
+  description: '`-maint-modstatus-lb` — in maintenance, every module on is on in maintenance'
 ```
 
 ```math
@@ -9499,7 +9499,7 @@ Link_com_p_lower:
   dims: [scenario, snapshot, link]
   where: Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
   expression: Link_p >= Link_p_min_pu * Link_p_nom * Link_status_available
-  description: '`Link-com-p-lower` — a committed link flows at least its minimum; off, at least nothing'
+  description: '`-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing'
 ```
 
 ```math
@@ -9515,7 +9515,7 @@ Link_com_p_upper:
   dims: [scenario, snapshot, link]
   where: Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
   expression: Link_p <= Link_p_max_pu * Link_p_nom * Link_status_available
-  description: '`Link-com-p-upper` — a committed link flows at most what is available; off, at most nothing'
+  description: '`-com-p-upper` — a committed unit outputs at most what is available; off, at most nothing'
 ```
 
 ```math
@@ -9531,7 +9531,7 @@ Link_com_transition_start_up:
   dims: [scenario, snapshot, link]
   where: Link_committed
   expression: Link_start_up >= Link_status - Link_previous_status
-  description: '`Link-com-transition-start-up` — turning on is a start, counted against the state the link carried into the snapshot'
+  description: '`-com-transition-start-up` — turning on is a start, counted against the state the unit carried into the snapshot'
 ```
 
 ```math
@@ -9547,7 +9547,7 @@ Link_com_transition_shut_down:
   dims: [scenario, snapshot, link]
   where: Link_committed
   expression: Link_shut_down >= Link_previous_status - Link_status
-  description: '`Link-com-transition-shut-down` — turning off is a stop, counted against the state the link carried into the snapshot'
+  description: '`-com-transition-shut-down` — turning off is a stop, counted against the state the unit carried into the snapshot'
 ```
 
 ```math
@@ -9564,7 +9564,7 @@ Link_com_up_time:
   where: Link_committed AND Link_min_up_time > 0 AND position(snapshot) > 0
   expression: sum_back(Link_start_up, along=snapshot, window=Link_min_up_time) <= Link_status
   description: >-
-    `Link-com-up-time` — a link started within its own minimum up time is still on.
+    `-com-up-time` — a unit started within its own minimum up time is still on.
     The first snapshot's share of the window is the brought-in up time's, which the must-stay-up mask carries
 ```
 
@@ -9582,7 +9582,7 @@ Link_com_down_time:
   where: Link_committed AND Link_min_down_time > 0 AND position(snapshot) > 0
   expression: sum_back(Link_shut_down, along=snapshot, window=Link_min_down_time) <= 1 - Link_status
   description: >-
-    `Link-com-down-time` — a link stopped within its own minimum down time is still off.
+    `-com-down-time` — a unit stopped within its own minimum down time is still off.
     The first snapshot's share of the window is the brought-in down time's, which the must-stay-down mask carries
 ```
 
@@ -9599,7 +9599,7 @@ Link_com_status_must_stay_up:
   dims: [scenario, snapshot, link]
   where: Link_committed AND Link_must_stay_up
   expression: Link_status == 1
-  description: '`Link-com-status-min_up_time_must_stay_up` — a link still serving the up time it brought in stays on'
+  description: '`-com-status-min_up_time_must_stay_up` — a unit still serving the up time it brought in stays on'
 ```
 
 ```math
@@ -9615,7 +9615,7 @@ Link_com_status_must_stay_down:
   dims: [scenario, snapshot, link]
   where: Link_committed AND Link_must_stay_down
   expression: Link_status == 0
-  description: '`Link-com-status-min_down_time_must_stay_up` — a link still serving the down time it brought in stays off; PyPSA names the row `_must_stay_up`'
+  description: '`-com-status-min_down_time_must_stay_up` — a unit still serving the down time it brought in stays off; PyPSA names the row `_must_stay_up`'
 ```
 
 ```math
@@ -9631,7 +9631,7 @@ Link_com_ext_p_upper_cap:
   dims: [scenario, snapshot, link]
   where: Link_com_ext
   expression: Link_p <= Link_p_max_pu * Link_p_nom_available
-  description: '`Link-com-ext-p-upper-cap` — a committed extendable link flows at most what is available of the chosen build, whatever its status'
+  description: '`-com-ext-p-upper-cap` — a committed extendable unit outputs at most what is available of the chosen build, whatever its status'
 ```
 
 ```math
@@ -9647,7 +9647,7 @@ Link_com_ext_p_upper_big_m:
   dims: [scenario, snapshot, link]
   where: Link_com_ext
   expression: Link_p <= Link_big_m * Link_status
-  description: '`Link-com-ext-p-upper-bigM` — off, a link flows nothing; on, the big M is no bound'
+  description: '`-com-ext-p-upper-bigM` — off, a unit outputs nothing; on, the big M is no bound'
 ```
 
 ```math
@@ -9663,7 +9663,7 @@ Link_com_ext_p_lower:
   dims: [scenario, snapshot, link]
   where: Link_com_ext
   expression: Link_p >= Link_p_min_pu * Link_p_nom_available + Link_big_m * Link_status - Link_big_m
-  description: '`Link-com-ext-p-lower` — a committed extendable link flows at least its minimum of the chosen build; off, the big M releases the row'
+  description: '`-com-ext-p-lower` — a committed extendable unit outputs at least its minimum of the chosen build; off, the big M releases the row'
 ```
 
 ```math
@@ -9679,7 +9679,7 @@ Link_com_ext_p_lower_nonneg:
   dims: [scenario, snapshot, link]
   where: Link_com_ext AND Link_p_min_pu_nonneg
   expression: Link_p >= 0
-  description: '`Link-com-ext-p-lower-nonneg` — where no minimum-per-unit is negative, flow is also plainly non-negative, a row the big-M lower cannot assert while the link is off'
+  description: '`-com-ext-p-lower-nonneg` — where no minimum-per-unit is negative, output is also plainly non-negative, a row the big-M lower cannot assert while the unit is off'
 ```
 
 ```math
@@ -9695,7 +9695,7 @@ Link_com_mod_p_lower:
   dims: [scenario, snapshot, link]
   where: Link_committed AND Link_p_nom_mod > 0
   expression: Link_p >= Link_p_min_pu * Link_p_nom_mod * Link_status_available
-  description: '`Link-com-mod-p-lower` — a committed modular link flows at least its minimum of one module, whether the build is fixed or a decision'
+  description: '`-com-mod-p-lower` — a committed modular unit outputs at least its minimum of one module, whether the build is fixed or a decision'
 ```
 
 ```math
@@ -9711,7 +9711,7 @@ Link_com_mod_p_upper:
   dims: [scenario, snapshot, link]
   where: Link_committed AND Link_p_nom_mod > 0
   expression: Link_p <= Link_p_max_pu * Link_p_nom_mod * Link_status_available
-  description: '`Link-com-mod-p-upper` — a committed modular link flows at most one module''s share, whether the build is fixed or a decision'
+  description: '`-com-mod-p-upper` — a committed modular unit outputs at most one module''s share, whether the build is fixed or a decision'
 ```
 
 ```math
@@ -9727,7 +9727,7 @@ Link_status_p_fixed_upper:
   dims: [scenario, snapshot, link]
   where: Link_committed AND NOT (Link_p_nom_extendable AND Link_p_nom_mod > 0)
   expression: Link_status <= Link_modules_installed
-  description: '`Link-status-p-fixed-upper` — a status is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
+  description: '`-status-p-fixed-upper` — a status is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
 ```
 
 ```math
@@ -9743,7 +9743,7 @@ Link_start_up_p_fixed_upper:
   dims: [scenario, snapshot, link]
   where: Link_committed AND NOT (Link_p_nom_extendable AND Link_p_nom_mod > 0)
   expression: Link_start_up <= Link_modules_installed
-  description: '`Link-start_up-p-fixed-upper` — a start is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
+  description: '`-start_up-p-fixed-upper` — a start is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
 ```
 
 ```math
@@ -9759,7 +9759,7 @@ Link_shut_down_p_fixed_upper:
   dims: [scenario, snapshot, link]
   where: Link_committed AND NOT (Link_p_nom_extendable AND Link_p_nom_mod > 0)
   expression: Link_shut_down <= Link_modules_installed
-  description: '`Link-shut_down-p-fixed-upper` — a stop is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
+  description: '`-shut_down-p-fixed-upper` — a stop is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
 ```
 
 ```math
@@ -9775,7 +9775,7 @@ Link_status_p_nom_variable_upper:
   dims: [scenario, snapshot, link]
   where: Link_committed AND Link_p_nom_extendable AND Link_p_nom_mod > 0
   expression: Link_status <= Link_n_mod
-  description: '`Link-status-p_nom-variable-upper` — a modular link is on only where a module is built'
+  description: '`-status-p_nom-variable-upper` — a modular unit is on only where a module is built'
 ```
 
 ```math
@@ -9791,7 +9791,7 @@ Link_start_up_p_nom_variable_upper:
   dims: [scenario, snapshot, link]
   where: Link_committed AND Link_p_nom_extendable AND Link_p_nom_mod > 0
   expression: Link_start_up <= Link_n_mod
-  description: '`Link-start_up-p_nom-variable-upper` — a modular link starts only where a module is built'
+  description: '`-start_up-p_nom-variable-upper` — a modular unit starts only where a module is built'
 ```
 
 ```math
@@ -9807,7 +9807,7 @@ Link_shut_down_p_nom_variable_upper:
   dims: [scenario, snapshot, link]
   where: Link_committed AND Link_p_nom_extendable AND Link_p_nom_mod > 0
   expression: Link_shut_down <= Link_n_mod
-  description: '`Link-shut_down-p_nom-variable-upper` — a modular link stops only where a module is built'
+  description: '`-shut_down-p_nom-variable-upper` — a modular unit stops only where a module is built'
 ```
 
 ```math
@@ -9823,7 +9823,7 @@ Link_p_ramp_limit_up_run_big_m:
   dims: [scenario, snapshot, link]
   where: Link_com_ext AND (Link_ramp_limit_up OR Link_ramp_limit_start_up) AND Link_ramps_from_previous
   expression: Link_p - Link_previous_p <= Link_ramp_up_rate * Link_p_nom_ext + Link_big_m - Link_big_m * Link_previous_status
-  description: '`Link-p-ramp_limit_up-run-bigM` — a committed extendable link raises flow no faster than its limit of the chosen build; the big M releases the row in the snapshot it turns on'
+  description: '`-p-ramp_limit_up-run-bigM` — a committed extendable unit raises output no faster than its limit of the chosen build; the big M releases the row in the snapshot it turns on'
 ```
 
 ```math
@@ -9839,7 +9839,7 @@ Link_p_ramp_limit_up_start_big_m:
   dims: [scenario, snapshot, link]
   where: Link_com_ext AND (Link_ramp_limit_up OR Link_ramp_limit_start_up) AND Link_ramps_from_previous
   expression: Link_p - Link_previous_p <= Link_start_up_rate * Link_p_nom_ext + Link_big_m - Link_big_m * Link_start_up
-  description: '`Link-p-ramp_limit_up-start-bigM` — in the snapshot it turns on, a committed extendable link ramps no further than its start-up ramp of the chosen build; the big M releases the row everywhere else'
+  description: '`-p-ramp_limit_up-start-bigM` — in the snapshot it turns on, a committed extendable unit ramps no further than its start-up ramp of the chosen build; the big M releases the row everywhere else'
 ```
 
 ```math
@@ -9855,7 +9855,7 @@ Link_p_ramp_limit_down_run_big_m:
   dims: [scenario, snapshot, link]
   where: Link_com_ext AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down) AND Link_ramps_from_previous
   expression: Link_previous_p - Link_p <= Link_ramp_down_rate * Link_p_nom_ext + Link_big_m - Link_big_m * Link_status
-  description: '`Link-p-ramp_limit_down-run-bigM` — a committed extendable link lowers flow no faster than its limit of the chosen build; the big M releases the row in the snapshot it turns off'
+  description: '`-p-ramp_limit_down-run-bigM` — a committed extendable unit lowers output no faster than its limit of the chosen build; the big M releases the row in the snapshot it turns off'
 ```
 
 ```math
@@ -9871,7 +9871,7 @@ Link_p_ramp_limit_down_shut_big_m:
   dims: [scenario, snapshot, link]
   where: Link_com_ext AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down) AND Link_ramps_from_previous
   expression: Link_previous_p - Link_p <= Link_shut_down_rate * Link_p_nom_ext + Link_big_m - Link_big_m * Link_shut_down
-  description: '`Link-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off, a committed extendable link ramps no further than its shut-down ramp of the chosen build; the big M releases the row everywhere else'
+  description: '`-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off, a committed extendable unit ramps no further than its shut-down ramp of the chosen build; the big M releases the row everywhere else'
 ```
 
 ```math
@@ -9888,8 +9888,8 @@ Link_p_ramp_limit_up:
   where: (Link_ramp_limit_up OR Link_ramp_limit_start_up) AND NOT (Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)) AND Link_ramps_from_previous AND Link_active
   expression: Link_p - Link_previous_p <= Link_ramp_up_allowance
   description: >-
-    `Link-p-ramp_limit_up` — a link raises flow no faster than its ramp limit of the build, and a committed one no further than its start-up ramp in the snapshot it turns on.
-    A link that came into the horizon running carries a row at the first snapshot only where its `p_init` gives the flow it brought in, and no link carries one at the start of a later investment period — nor does any link a big M releases instead
+    `-p-ramp_limit_up` — a unit raises output no faster than its ramp limit of the build, and a committed one no further than its start-up ramp in the snapshot it turns on.
+    A unit that came into the horizon running carries a row at the first snapshot only where its `p_init` gives the output it brought in, and no unit carries one at the start of a later investment period — nor does any unit a big M releases instead
 ```
 
 ```math
@@ -9906,8 +9906,8 @@ Link_p_ramp_limit_down:
   where: (Link_ramp_limit_down OR Link_ramp_limit_shut_down) AND NOT (Link_committable AND Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)) AND Link_ramps_from_previous AND Link_active
   expression: Link_previous_p - Link_p <= Link_ramp_down_allowance
   description: >-
-    `Link-p-ramp_limit_down` — a link lowers flow no faster than its ramp limit of the build, and a committed one no further than its shut-down ramp in the snapshot it turns off.
-    A link that came into the horizon running carries a row at the first snapshot only where its `p_init` gives the flow it brought in, and no link carries one at the start of a later investment period — nor does any link a big M releases instead
+    `-p-ramp_limit_down` — a unit lowers output no faster than its ramp limit of the build, and a committed one no further than its shut-down ramp in the snapshot it turns off.
+    A unit that came into the horizon running carries a row at the first snapshot only where its `p_init` gives the output it brought in, and no unit carries one at the start of a later investment period — nor does any unit a big M releases instead
 ```
 
 ```math
@@ -9923,7 +9923,7 @@ Link_maint_event_count:
   dims: [scenario, link]
   where: Link_maintainable
   expression: sum(Link_maintenance_start, over=snapshot) == Link_maintenance_events
-  description: '`Link-maint-event-count` — a maintainable link holds its number of maintenance events over the horizon'
+  description: '`-maint-event-count` — a maintainable unit holds its number of maintenance events over the horizon'
 ```
 
 ```math
@@ -9939,7 +9939,7 @@ Link_maint_window:
   dims: [scenario, snapshot, link]
   where: Link_maintainable AND Link_active
   expression: Link_maintenance == sum(Link_maintenance_start, over=start, by=Link_maintenance_cover[covered])
-  description: '`Link-maint-window` — a link is in maintenance exactly where an event it started covers the snapshot; two events do not overlap, since the maintenance status is at most one'
+  description: '`-maint-window` — a unit is in maintenance exactly where an event it started covers the snapshot; two events do not overlap, since the maintenance status is at most one'
 ```
 
 ```math
@@ -9955,7 +9955,7 @@ Link_maint_start_horizon:
   dims: [scenario, snapshot, link]
   where: Link_maintainable AND Link_active AND Link_maintenance_start_blocked
   expression: Link_maintenance_start == 0
-  description: '`Link-maint-start-horizon` — no event starts where it could not run its whole duration'
+  description: '`-maint-start-horizon` — no event starts where it could not run its whole duration'
 ```
 
 ```math
@@ -9971,7 +9971,7 @@ Link_maintcap_upper:
   dims: [scenario, snapshot, link]
   where: Link_maint_ext
   expression: Link_maintenance_capacity <= Link_p_nom_ext - Link_p_nom_min * (1 - Link_maintenance)
-  description: '`Link-maintcap_upper` — the build taken off is at most the chosen build in maintenance, and at most the build less its floor out of it'
+  description: '`-maintcap_upper` — the build taken off is at most the chosen build in maintenance, and at most the build less its floor out of it'
 ```
 
 ```math
@@ -9987,7 +9987,7 @@ Link_maintcap_upper_nommax:
   dims: [scenario, snapshot, link]
   where: Link_maint_ext
   expression: Link_maintenance_capacity <= Link_p_nom_max * Link_maintenance
-  description: '`Link-maintcap_upper_nommax` — out of maintenance, no build is taken off'
+  description: '`-maintcap_upper_nommax` — out of maintenance, no build is taken off'
 ```
 
 ```math
@@ -10003,7 +10003,7 @@ Link_maintcap_lower_nommax:
   dims: [scenario, snapshot, link]
   where: Link_maint_ext
   expression: Link_maintenance_capacity >= Link_p_nom_ext - Link_p_nom_max * (1 - Link_maintenance)
-  description: '`Link-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off'
+  description: '`-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off'
 ```
 
 ```math
@@ -10019,7 +10019,7 @@ Link_maintcap_lower_nommin:
   dims: [scenario, snapshot, link]
   where: Link_maint_ext AND Link_p_nom_min > 0
   expression: Link_maintenance_capacity >= Link_p_nom_min * Link_maintenance
-  description: '`Link-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off'
+  description: '`-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off'
 ```
 
 ```math
@@ -10035,7 +10035,7 @@ Link_maint_status_le_status:
   dims: [scenario, snapshot, link]
   where: Link_maintainable AND Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
   expression: Link_maintenance_status <= Link_status
-  description: '`Link-maint-status-le-status` — the status in maintenance is at most the status'
+  description: '`-maint-status-le-status` — the status in maintenance is at most the status'
 ```
 
 ```math
@@ -10051,7 +10051,7 @@ Link_maint_status_le_maint:
   dims: [scenario, snapshot, link]
   where: Link_maintainable AND Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
   expression: Link_maintenance_status <= Link_maintenance
-  description: '`Link-maint-status-le-maint` — out of maintenance, the status in maintenance is zero'
+  description: '`-maint-status-le-maint` — out of maintenance, the status in maintenance is zero'
 ```
 
 ```math
@@ -10067,7 +10067,7 @@ Link_maint_status_lb:
   dims: [scenario, snapshot, link]
   where: Link_maintainable AND Link_committed AND NOT Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0)
   expression: Link_maintenance_status >= Link_status + Link_maintenance - 1
-  description: '`Link-maint-status-lb` — on and in maintenance, the status in maintenance is one'
+  description: '`-maint-status-lb` — on and in maintenance, the status in maintenance is one'
 ```
 
 ```math
@@ -10083,7 +10083,7 @@ Link_maint_modstatus_le_status:
   dims: [scenario, snapshot, link]
   where: Link_maintainable AND Link_committed AND Link_p_nom_mod > 0
   expression: Link_maintenance_status <= Link_status
-  description: '`Link-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on'
+  description: '`-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on'
 ```
 
 ```math
@@ -10099,7 +10099,7 @@ Link_maint_modstatus_le_maint:
   dims: [scenario, snapshot, link]
   where: Link_maintainable AND Link_committed AND Link_p_nom_mod > 0
   expression: Link_maintenance_status <= Link_p_nom_max / Link_p_nom_mod * Link_maintenance
-  description: '`Link-maint-modstatus-le-maint` — out of maintenance, no module is on in maintenance; in it, at most the modules the build cap holds'
+  description: '`-maint-modstatus-le-maint` — out of maintenance, no module is on in maintenance; in it, at most the modules the build cap holds'
 ```
 
 ```math
@@ -10115,7 +10115,7 @@ Link_maint_modstatus_lb:
   dims: [scenario, snapshot, link]
   where: Link_maintainable AND Link_committed AND Link_p_nom_mod > 0
   expression: Link_maintenance_status >= Link_status - Link_p_nom_max / Link_p_nom_mod * (1 - Link_maintenance)
-  description: '`Link-maint-modstatus-lb` — in maintenance, every module on is on in maintenance'
+  description: '`-maint-modstatus-lb` — in maintenance, every module on is on in maintenance'
 ```
 
 ```math
@@ -10275,7 +10275,7 @@ Process_com_p_lower:
   dims: [scenario, snapshot, process]
   where: Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
   expression: Process_p >= Process_p_min_pu * Process_p_nom * Process_status_available
-  description: '`Process-com-p-lower` — a committed process runs at least its minimum; off, at least nothing'
+  description: '`-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing'
 ```
 
 ```math
@@ -10291,7 +10291,7 @@ Process_com_p_upper:
   dims: [scenario, snapshot, process]
   where: Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
   expression: Process_p <= Process_p_max_pu * Process_p_nom * Process_status_available
-  description: '`Process-com-p-upper` — a committed process runs at most what is available; off, at most nothing'
+  description: '`-com-p-upper` — a committed unit outputs at most what is available; off, at most nothing'
 ```
 
 ```math
@@ -10307,7 +10307,7 @@ Process_com_transition_start_up:
   dims: [scenario, snapshot, process]
   where: Process_committed
   expression: Process_start_up >= Process_status - Process_previous_status
-  description: '`Process-com-transition-start-up` — turning on is a start, counted against the state the process carried into the snapshot'
+  description: '`-com-transition-start-up` — turning on is a start, counted against the state the unit carried into the snapshot'
 ```
 
 ```math
@@ -10323,7 +10323,7 @@ Process_com_transition_shut_down:
   dims: [scenario, snapshot, process]
   where: Process_committed
   expression: Process_shut_down >= Process_previous_status - Process_status
-  description: '`Process-com-transition-shut-down` — turning off is a stop, counted against the state the process carried into the snapshot'
+  description: '`-com-transition-shut-down` — turning off is a stop, counted against the state the unit carried into the snapshot'
 ```
 
 ```math
@@ -10340,7 +10340,7 @@ Process_com_up_time:
   where: Process_committed AND Process_min_up_time > 0 AND position(snapshot) > 0
   expression: sum_back(Process_start_up, along=snapshot, window=Process_min_up_time) <= Process_status
   description: >-
-    `Process-com-up-time` — a process started within its own minimum up time is still on.
+    `-com-up-time` — a unit started within its own minimum up time is still on.
     The first snapshot's share of the window is the brought-in up time's, which the must-stay-up mask carries
 ```
 
@@ -10358,7 +10358,7 @@ Process_com_down_time:
   where: Process_committed AND Process_min_down_time > 0 AND position(snapshot) > 0
   expression: sum_back(Process_shut_down, along=snapshot, window=Process_min_down_time) <= 1 - Process_status
   description: >-
-    `Process-com-down-time` — a process stopped within its own minimum down time is still off.
+    `-com-down-time` — a unit stopped within its own minimum down time is still off.
     The first snapshot's share of the window is the brought-in down time's, which the must-stay-down mask carries
 ```
 
@@ -10375,7 +10375,7 @@ Process_com_status_must_stay_up:
   dims: [scenario, snapshot, process]
   where: Process_committed AND Process_must_stay_up
   expression: Process_status == 1
-  description: '`Process-com-status-min_up_time_must_stay_up` — a process still serving the up time it brought in stays on'
+  description: '`-com-status-min_up_time_must_stay_up` — a unit still serving the up time it brought in stays on'
 ```
 
 ```math
@@ -10391,7 +10391,7 @@ Process_com_status_must_stay_down:
   dims: [scenario, snapshot, process]
   where: Process_committed AND Process_must_stay_down
   expression: Process_status == 0
-  description: '`Process-com-status-min_down_time_must_stay_up` — a process still serving the down time it brought in stays off; PyPSA names the row `_must_stay_up`'
+  description: '`-com-status-min_down_time_must_stay_up` — a unit still serving the down time it brought in stays off; PyPSA names the row `_must_stay_up`'
 ```
 
 ```math
@@ -10407,7 +10407,7 @@ Process_com_ext_p_upper_cap:
   dims: [scenario, snapshot, process]
   where: Process_com_ext
   expression: Process_p <= Process_p_max_pu * Process_p_nom_available
-  description: '`Process-com-ext-p-upper-cap` — a committed extendable process runs at most what is available of the chosen build, whatever its status'
+  description: '`-com-ext-p-upper-cap` — a committed extendable unit outputs at most what is available of the chosen build, whatever its status'
 ```
 
 ```math
@@ -10423,7 +10423,7 @@ Process_com_ext_p_upper_big_m:
   dims: [scenario, snapshot, process]
   where: Process_com_ext
   expression: Process_p <= Process_big_m * Process_status
-  description: '`Process-com-ext-p-upper-bigM` — off, a process does not run; on, the big M is no bound'
+  description: '`-com-ext-p-upper-bigM` — off, a unit outputs nothing; on, the big M is no bound'
 ```
 
 ```math
@@ -10439,7 +10439,7 @@ Process_com_ext_p_lower:
   dims: [scenario, snapshot, process]
   where: Process_com_ext
   expression: Process_p >= Process_p_min_pu * Process_p_nom_available + Process_big_m * Process_status - Process_big_m
-  description: '`Process-com-ext-p-lower` — a committed extendable process runs at least its minimum of the chosen build; off, the big M releases the row'
+  description: '`-com-ext-p-lower` — a committed extendable unit outputs at least its minimum of the chosen build; off, the big M releases the row'
 ```
 
 ```math
@@ -10455,7 +10455,7 @@ Process_com_ext_p_lower_nonneg:
   dims: [scenario, snapshot, process]
   where: Process_com_ext AND Process_p_min_pu_nonneg
   expression: Process_p >= 0
-  description: '`Process-com-ext-p-lower-nonneg` — where no minimum-per-unit is negative, internal power is also plainly non-negative, a row the big-M lower cannot assert while the process is off'
+  description: '`-com-ext-p-lower-nonneg` — where no minimum-per-unit is negative, output is also plainly non-negative, a row the big-M lower cannot assert while the unit is off'
 ```
 
 ```math
@@ -10471,7 +10471,7 @@ Process_com_mod_p_lower:
   dims: [scenario, snapshot, process]
   where: Process_committed AND Process_p_nom_mod > 0
   expression: Process_p >= Process_p_min_pu * Process_p_nom_mod * Process_status_available
-  description: '`Process-com-mod-p-lower` — a committed modular process runs at least its minimum of one module, whether the build is fixed or a decision'
+  description: '`-com-mod-p-lower` — a committed modular unit outputs at least its minimum of one module, whether the build is fixed or a decision'
 ```
 
 ```math
@@ -10487,7 +10487,7 @@ Process_com_mod_p_upper:
   dims: [scenario, snapshot, process]
   where: Process_committed AND Process_p_nom_mod > 0
   expression: Process_p <= Process_p_max_pu * Process_p_nom_mod * Process_status_available
-  description: '`Process-com-mod-p-upper` — a committed modular process runs at most one module''s share, whether the build is fixed or a decision'
+  description: '`-com-mod-p-upper` — a committed modular unit outputs at most one module''s share, whether the build is fixed or a decision'
 ```
 
 ```math
@@ -10503,7 +10503,7 @@ Process_status_p_fixed_upper:
   dims: [scenario, snapshot, process]
   where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
   expression: Process_status <= Process_modules_installed
-  description: '`Process-status-p-fixed-upper` — a status is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
+  description: '`-status-p-fixed-upper` — a status is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
 ```
 
 ```math
@@ -10519,7 +10519,7 @@ Process_start_up_p_fixed_upper:
   dims: [scenario, snapshot, process]
   where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
   expression: Process_start_up <= Process_modules_installed
-  description: '`Process-start_up-p-fixed-upper` — a start is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
+  description: '`-start_up-p-fixed-upper` — a start is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
 ```
 
 ```math
@@ -10535,7 +10535,7 @@ Process_shut_down_p_fixed_upper:
   dims: [scenario, snapshot, process]
   where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
   expression: Process_shut_down <= Process_modules_installed
-  description: '`Process-shut_down-p-fixed-upper` — a stop is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
+  description: '`-shut_down-p-fixed-upper` — a stop is at most the modules in place, an explicit row as PyPSA writes it: one where the build is not modular, and the fixed build''s whole count of modules where it is'
 ```
 
 ```math
@@ -10551,7 +10551,7 @@ Process_status_p_nom_variable_upper:
   dims: [scenario, snapshot, process]
   where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
   expression: Process_status <= Process_n_mod
-  description: '`Process-status-p_nom-variable-upper` — a modular process is on only where a module is built'
+  description: '`-status-p_nom-variable-upper` — a modular unit is on only where a module is built'
 ```
 
 ```math
@@ -10567,7 +10567,7 @@ Process_start_up_p_nom_variable_upper:
   dims: [scenario, snapshot, process]
   where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
   expression: Process_start_up <= Process_n_mod
-  description: '`Process-start_up-p_nom-variable-upper` — a modular process starts only where a module is built'
+  description: '`-start_up-p_nom-variable-upper` — a modular unit starts only where a module is built'
 ```
 
 ```math
@@ -10583,7 +10583,7 @@ Process_shut_down_p_nom_variable_upper:
   dims: [scenario, snapshot, process]
   where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
   expression: Process_shut_down <= Process_n_mod
-  description: '`Process-shut_down-p_nom-variable-upper` — a modular process stops only where a module is built'
+  description: '`-shut_down-p_nom-variable-upper` — a modular unit stops only where a module is built'
 ```
 
 ```math
@@ -10599,7 +10599,7 @@ Process_p_ramp_limit_up_run_big_m:
   dims: [scenario, snapshot, process]
   where: Process_com_ext AND (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND Process_ramps_from_previous
   expression: Process_p - Process_previous_p <= Process_ramp_up_rate * Process_p_nom_ext + Process_big_m - Process_big_m * Process_previous_status
-  description: '`Process-p-ramp_limit_up-run-bigM` — a committed extendable process raises internal power no faster than its limit of the chosen build; the big M releases the row in the snapshot it turns on'
+  description: '`-p-ramp_limit_up-run-bigM` — a committed extendable unit raises output no faster than its limit of the chosen build; the big M releases the row in the snapshot it turns on'
 ```
 
 ```math
@@ -10615,7 +10615,7 @@ Process_p_ramp_limit_up_start_big_m:
   dims: [scenario, snapshot, process]
   where: Process_com_ext AND (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND Process_ramps_from_previous
   expression: Process_p - Process_previous_p <= Process_start_up_rate * Process_p_nom_ext + Process_big_m - Process_big_m * Process_start_up
-  description: '`Process-p-ramp_limit_up-start-bigM` — in the snapshot it turns on, a committed extendable process ramps no further than its start-up ramp of the chosen build; the big M releases the row everywhere else'
+  description: '`-p-ramp_limit_up-start-bigM` — in the snapshot it turns on, a committed extendable unit ramps no further than its start-up ramp of the chosen build; the big M releases the row everywhere else'
 ```
 
 ```math
@@ -10631,7 +10631,7 @@ Process_p_ramp_limit_down_run_big_m:
   dims: [scenario, snapshot, process]
   where: Process_com_ext AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down) AND Process_ramps_from_previous
   expression: Process_previous_p - Process_p <= Process_ramp_down_rate * Process_p_nom_ext + Process_big_m - Process_big_m * Process_status
-  description: '`Process-p-ramp_limit_down-run-bigM` — a committed extendable process lowers internal power no faster than its limit of the chosen build; the big M releases the row in the snapshot it turns off'
+  description: '`-p-ramp_limit_down-run-bigM` — a committed extendable unit lowers output no faster than its limit of the chosen build; the big M releases the row in the snapshot it turns off'
 ```
 
 ```math
@@ -10647,7 +10647,7 @@ Process_p_ramp_limit_down_shut_big_m:
   dims: [scenario, snapshot, process]
   where: Process_com_ext AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down) AND Process_ramps_from_previous
   expression: Process_previous_p - Process_p <= Process_shut_down_rate * Process_p_nom_ext + Process_big_m - Process_big_m * Process_shut_down
-  description: '`Process-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off, a committed extendable process ramps no further than its shut-down ramp of the chosen build; the big M releases the row everywhere else'
+  description: '`-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off, a committed extendable unit ramps no further than its shut-down ramp of the chosen build; the big M releases the row everywhere else'
 ```
 
 ```math
@@ -10664,8 +10664,8 @@ Process_p_ramp_limit_up:
   where: (Process_ramp_limit_up OR Process_ramp_limit_start_up) AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)) AND Process_ramps_from_previous AND Process_active
   expression: Process_p - Process_previous_p <= Process_ramp_up_allowance
   description: >-
-    `Process-p-ramp_limit_up` — a process raises internal power no faster than its ramp limit of the build, and a committed one no further than its start-up ramp in the snapshot it turns on.
-    A process that came into the horizon running carries a row at the first snapshot only where its `p_init` gives the internal power it brought in, and no process carries one at the start of a later investment period — nor does any process a big M releases instead
+    `-p-ramp_limit_up` — a unit raises output no faster than its ramp limit of the build, and a committed one no further than its start-up ramp in the snapshot it turns on.
+    A unit that came into the horizon running carries a row at the first snapshot only where its `p_init` gives the output it brought in, and no unit carries one at the start of a later investment period — nor does any unit a big M releases instead
 ```
 
 ```math
@@ -10682,8 +10682,8 @@ Process_p_ramp_limit_down:
   where: (Process_ramp_limit_down OR Process_ramp_limit_shut_down) AND NOT (Process_committable AND Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)) AND Process_ramps_from_previous AND Process_active
   expression: Process_previous_p - Process_p <= Process_ramp_down_allowance
   description: >-
-    `Process-p-ramp_limit_down` — a process lowers internal power no faster than its ramp limit of the build, and a committed one no further than its shut-down ramp in the snapshot it turns off.
-    A process that came into the horizon running carries a row at the first snapshot only where its `p_init` gives the internal power it brought in, and no process carries one at the start of a later investment period — nor does any process a big M releases instead
+    `-p-ramp_limit_down` — a unit lowers output no faster than its ramp limit of the build, and a committed one no further than its shut-down ramp in the snapshot it turns off.
+    A unit that came into the horizon running carries a row at the first snapshot only where its `p_init` gives the output it brought in, and no unit carries one at the start of a later investment period — nor does any unit a big M releases instead
 ```
 
 ```math
@@ -10699,7 +10699,7 @@ Process_maint_event_count:
   dims: [scenario, process]
   where: Process_maintainable
   expression: sum(Process_maintenance_start, over=snapshot) == Process_maintenance_events
-  description: '`Process-maint-event-count` — a maintainable process holds its number of maintenance events over the horizon'
+  description: '`-maint-event-count` — a maintainable unit holds its number of maintenance events over the horizon'
 ```
 
 ```math
@@ -10715,7 +10715,7 @@ Process_maint_window:
   dims: [scenario, snapshot, process]
   where: Process_maintainable AND Process_active
   expression: Process_maintenance == sum(Process_maintenance_start, over=start, by=Process_maintenance_cover[covered])
-  description: '`Process-maint-window` — a process is in maintenance exactly where an event it started covers the snapshot; two events do not overlap, since the maintenance status is at most one'
+  description: '`-maint-window` — a unit is in maintenance exactly where an event it started covers the snapshot; two events do not overlap, since the maintenance status is at most one'
 ```
 
 ```math
@@ -10731,7 +10731,7 @@ Process_maint_start_horizon:
   dims: [scenario, snapshot, process]
   where: Process_maintainable AND Process_active AND Process_maintenance_start_blocked
   expression: Process_maintenance_start == 0
-  description: '`Process-maint-start-horizon` — no event starts where it could not run its whole duration'
+  description: '`-maint-start-horizon` — no event starts where it could not run its whole duration'
 ```
 
 ```math
@@ -10747,7 +10747,7 @@ Process_maintcap_upper:
   dims: [scenario, snapshot, process]
   where: Process_maint_ext
   expression: Process_maintenance_capacity <= Process_p_nom_ext - Process_p_nom_min * (1 - Process_maintenance)
-  description: '`Process-maintcap_upper` — the build taken off is at most the chosen build in maintenance, and at most the build less its floor out of it'
+  description: '`-maintcap_upper` — the build taken off is at most the chosen build in maintenance, and at most the build less its floor out of it'
 ```
 
 ```math
@@ -10763,7 +10763,7 @@ Process_maintcap_upper_nommax:
   dims: [scenario, snapshot, process]
   where: Process_maint_ext
   expression: Process_maintenance_capacity <= Process_p_nom_max * Process_maintenance
-  description: '`Process-maintcap_upper_nommax` — out of maintenance, no build is taken off'
+  description: '`-maintcap_upper_nommax` — out of maintenance, no build is taken off'
 ```
 
 ```math
@@ -10779,7 +10779,7 @@ Process_maintcap_lower_nommax:
   dims: [scenario, snapshot, process]
   where: Process_maint_ext
   expression: Process_maintenance_capacity >= Process_p_nom_ext - Process_p_nom_max * (1 - Process_maintenance)
-  description: '`Process-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off'
+  description: '`-maintcap_lower_nommax` — in maintenance, the whole chosen build is taken off'
 ```
 
 ```math
@@ -10795,7 +10795,7 @@ Process_maintcap_lower_nommin:
   dims: [scenario, snapshot, process]
   where: Process_maint_ext AND Process_p_nom_min > 0
   expression: Process_maintenance_capacity >= Process_p_nom_min * Process_maintenance
-  description: '`Process-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off'
+  description: '`-maintcap_lower_nommin` — in maintenance, at least the floor of the build is taken off'
 ```
 
 ```math
@@ -10811,7 +10811,7 @@ Process_maint_status_le_status:
   dims: [scenario, snapshot, process]
   where: Process_maintainable AND Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
   expression: Process_maintenance_status <= Process_status
-  description: '`Process-maint-status-le-status` — the status in maintenance is at most the status'
+  description: '`-maint-status-le-status` — the status in maintenance is at most the status'
 ```
 
 ```math
@@ -10827,7 +10827,7 @@ Process_maint_status_le_maint:
   dims: [scenario, snapshot, process]
   where: Process_maintainable AND Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
   expression: Process_maintenance_status <= Process_maintenance
-  description: '`Process-maint-status-le-maint` — out of maintenance, the status in maintenance is zero'
+  description: '`-maint-status-le-maint` — out of maintenance, the status in maintenance is zero'
 ```
 
 ```math
@@ -10843,7 +10843,7 @@ Process_maint_status_lb:
   dims: [scenario, snapshot, process]
   where: Process_maintainable AND Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
   expression: Process_maintenance_status >= Process_status + Process_maintenance - 1
-  description: '`Process-maint-status-lb` — on and in maintenance, the status in maintenance is one'
+  description: '`-maint-status-lb` — on and in maintenance, the status in maintenance is one'
 ```
 
 ```math
@@ -10859,7 +10859,7 @@ Process_maint_modstatus_le_status:
   dims: [scenario, snapshot, process]
   where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
   expression: Process_maintenance_status <= Process_status
-  description: '`Process-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on'
+  description: '`-maint-modstatus-le-status` — the modules on in maintenance are at most the modules on'
 ```
 
 ```math
@@ -10875,7 +10875,7 @@ Process_maint_modstatus_le_maint:
   dims: [scenario, snapshot, process]
   where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
   expression: Process_maintenance_status <= Process_p_nom_max / Process_p_nom_mod * Process_maintenance
-  description: '`Process-maint-modstatus-le-maint` — out of maintenance, no module is on in maintenance; in it, at most the modules the build cap holds'
+  description: '`-maint-modstatus-le-maint` — out of maintenance, no module is on in maintenance; in it, at most the modules the build cap holds'
 ```
 
 ```math
@@ -10891,7 +10891,7 @@ Process_maint_modstatus_lb:
   dims: [scenario, snapshot, process]
   where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
   expression: Process_maintenance_status >= Process_status - Process_p_nom_max / Process_p_nom_mod * (1 - Process_maintenance)
-  description: '`Process-maint-modstatus-lb` — in maintenance, every module on is on in maintenance'
+  description: '`-maint-modstatus-lb` — in maintenance, every module on is on in maintenance'
 ```
 
 ```math
@@ -11944,7 +11944,7 @@ Generator_came_in_running_unless_committable:
 Generator_maintenance_events_positive:
   holds: Generator_maintenance_events > 0
   where: Generator_maintainable
-  description: a maintainable generator with no event schedules no maintenance — PyPSA refuses it (`consistency.py:1493`)
+  description: a maintainable unit with no event schedules no maintenance — PyPSA refuses it (`consistency.py:1493`)
 ```
 
 ```math
@@ -11983,7 +11983,7 @@ Generator_maintenance_duration_fits_the_horizon:
 Generator_maintenance_events_fit_the_horizon:
   holds: Generator_maintenance_duration * Generator_maintenance_events <= sum(snapshot_weightings_generators, over=snapshot)
   where: Generator_maintainable
-  description: the events together longer than the horizon, in generator weightings, cannot all be scheduled — PyPSA refuses it (`consistency.py:1516`)
+  description: the events together longer than the horizon, in unit weightings, cannot all be scheduled — PyPSA refuses it (`consistency.py:1516`)
 ```
 
 ```math
@@ -12056,9 +12056,9 @@ Link_came_in_running_unless_committable:
   holds: Link_status_initial == 1
   where: NOT Link_committable AND (Link_ramp_limit_up OR Link_ramp_limit_down OR Link_ramp_limit_start_up OR Link_ramp_limit_shut_down)
   description: >-
-    PyPSA reads `up_time_before` of a link that is not committable in its ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp alone builds (`constraints.py:1018-1019`).
-    Where it is zero, PyPSA builds a row at the first snapshot with nothing carried in, and caps the link there at zero, or at its start-up ramp where another link of the component is committable with a fixed build (`constraints.py:1063-1066`, `1082-1084`).
-    PyPSA documents the attribute as read only for a committable link and does not check it.
+    PyPSA reads `up_time_before` of a unit that is not committable in its ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp alone builds (`constraints.py:1018-1019`).
+    Where it is zero, PyPSA builds a row at the first snapshot with nothing carried in, and caps the unit there at zero, or at its start-up ramp where another unit of the component is committable with a fixed build (`constraints.py:1063-1066`, `1082-1084`).
+    PyPSA documents the attribute as read only for a committable unit and does not check it.
     PyPSA has not decided which row is intended (PyPSA/PyPSA#1943).
     The spec does not state that row, so it refuses the data
 ```
@@ -12073,7 +12073,7 @@ Link_came_in_running_unless_committable:
 Link_maintenance_events_positive:
   holds: Link_maintenance_events > 0
   where: Link_maintainable
-  description: a maintainable link with no event schedules no maintenance — PyPSA refuses it (`consistency.py:1493`)
+  description: a maintainable unit with no event schedules no maintenance — PyPSA refuses it (`consistency.py:1493`)
 ```
 
 ```math
@@ -12112,7 +12112,7 @@ Link_maintenance_duration_fits_the_horizon:
 Link_maintenance_events_fit_the_horizon:
   holds: Link_maintenance_duration * Link_maintenance_events <= sum(snapshot_weightings_generators, over=snapshot)
   where: Link_maintainable
-  description: the events together longer than the horizon, in generator weightings, cannot all be scheduled — PyPSA refuses it (`consistency.py:1516`)
+  description: the events together longer than the horizon, in unit weightings, cannot all be scheduled — PyPSA refuses it (`consistency.py:1516`)
 ```
 
 ```math
@@ -12182,9 +12182,9 @@ Process_came_in_running_unless_committable:
   holds: Process_status_initial == 1
   where: NOT Process_committable AND (Process_ramp_limit_up OR Process_ramp_limit_down OR Process_ramp_limit_start_up OR Process_ramp_limit_shut_down)
   description: >-
-    PyPSA reads `up_time_before` of a process that is not committable in its ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp alone builds (`constraints.py:1018-1019`).
-    Where it is zero, PyPSA builds a row at the first snapshot with nothing carried in, and caps the process there at zero, or at its start-up ramp where another process of the component is committable with a fixed build (`constraints.py:1063-1066`, `1082-1084`).
-    PyPSA documents the attribute as read only for a committable process and does not check it.
+    PyPSA reads `up_time_before` of a unit that is not committable in its ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp alone builds (`constraints.py:1018-1019`).
+    Where it is zero, PyPSA builds a row at the first snapshot with nothing carried in, and caps the unit there at zero, or at its start-up ramp where another unit of the component is committable with a fixed build (`constraints.py:1063-1066`, `1082-1084`).
+    PyPSA documents the attribute as read only for a committable unit and does not check it.
     PyPSA has not decided which row is intended (PyPSA/PyPSA#1943).
     The spec does not state that row, so it refuses the data
 ```
@@ -12199,7 +12199,7 @@ Process_came_in_running_unless_committable:
 Process_maintenance_events_positive:
   holds: Process_maintenance_events > 0
   where: Process_maintainable
-  description: a maintainable process with no event schedules no maintenance — PyPSA refuses it (`consistency.py:1493`)
+  description: a maintainable unit with no event schedules no maintenance — PyPSA refuses it (`consistency.py:1493`)
 ```
 
 ```math
@@ -12238,7 +12238,7 @@ Process_maintenance_duration_fits_the_horizon:
 Process_maintenance_events_fit_the_horizon:
   holds: Process_maintenance_duration * Process_maintenance_events <= sum(snapshot_weightings_generators, over=snapshot)
   where: Process_maintainable
-  description: the events together longer than the horizon, in generator weightings, cannot all be scheduled — PyPSA refuses it (`consistency.py:1516`)
+  description: the events together longer than the horizon, in unit weightings, cannot all be scheduled — PyPSA refuses it (`consistency.py:1516`)
 ```
 
 ```math
