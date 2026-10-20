@@ -754,3 +754,41 @@ def test_a_patch_creates_a_given_entry_of_every_kind(kind, entry):
     laid = override(GIVEN_BASE, [{'given': {kind: {'r': entry}}}])
     assert getattr(laid.given, kind)['r'].dims == ['g']
     assert sorted(laid.given.variables) == ['p'], 'the kinds the patch did not name are still there'
+
+
+def _bidder(name: str) -> dict[str, object]:
+    """A fragment that reads `price` under `given:`, as a fragment that leaves its dtype unstated."""
+    return {
+        'dimensions': {'snapshot': {'dtype': 'int'}},
+        'given': {'parameters': {'price': {'dims': ['snapshot']}}},
+        'variables': {name: {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
+        'expressions': {f'{name}_value': f'sum({name} * price)'},
+    }
+
+
+@pytest.mark.parametrize(
+    'again',
+    [
+        pytest.param(lambda fragment: to_spec(to_spec(fragment).to_dict()), id='written-out-and-read-back'),
+        pytest.param(lambda fragment: override(fragment, []), id='an-empty-override'),
+    ],
+)
+@pytest.mark.parametrize(
+    'fragments',
+    [
+        pytest.param([_bidder('buy'), _bidder('sell')], id='two-readers'),
+        pytest.param(
+            [varied(SURFACE, **{'variables.flow.domain': 'binary'}), SUPPLY], id='a-reader-and-its-introducer'
+        ),
+    ],
+)
+def test_a_fragment_written_out_and_read_back_merges_as_it_did(again, fragments):
+    """`to_dict` wrote a given entry's defaults, a parameter's `dtype` and a variable's `domain`, which the file left out.
+
+    So a fragment that went through `to_dict`, as every `override` result
+    does, read the name as saying more than its file wrote. `merge` then
+    refused two readers as saying different things, and refused a reader
+    against an introducer that it fits.
+    """
+    reloaded = [fragments[0], again(fragments[1]), *fragments[2:]]
+    assert canonical_yaml(merge(reloaded)) == canonical_yaml(merge(fragments))
