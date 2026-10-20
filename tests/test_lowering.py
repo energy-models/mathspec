@@ -143,7 +143,7 @@ def test_program_structure(dispatch_program):
     assert cname == 'power_balance'
     assert c.dims == ('snapshot',), 'the frame is the dims, in the order the file wrote it'
     assert c.lhs == Sum(
-        VariableReference('dispatch', dims=('snapshot', 'generator')), (Axis('generator'),), dims=('snapshot',)
+        VariableReference('dispatch', dims=('generator', 'snapshot')), (Axis('generator'),), dims=('snapshot',)
     )
     assert c.sense == '==', "the comparison crosses as the file's own operator, untranslated"
     assert c.rhs == ParameterReference('load', dims=('snapshot',))
@@ -151,9 +151,9 @@ def test_program_structure(dispatch_program):
     assert dispatch_program.objective.sense == 'minimize', "the program carries the language's spelling, untranslated"
     assert dispatch_program.objective.expression == Sum(
         Multiply(
-            VariableReference('dispatch', dims=('snapshot', 'generator')),
+            VariableReference('dispatch', dims=('generator', 'snapshot')),
             ParameterReference('cost', dims=('generator',)),
-            dims=('snapshot', 'generator'),
+            dims=('generator', 'snapshot'),
         ),
         (Axis('generator'), Axis('snapshot')),
         dims=(),
@@ -752,7 +752,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     zonal = program.constraints['zonal'].lhs
     columns = JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('zone', 'snapshot'))
     assert zonal == Sum(
-        Join(VariableReference('p', dims=('snapshot', 'generator')), columns, dims=('snapshot', 'zone')),
+        Join(VariableReference('p', dims=('generator', 'snapshot')), columns, dims=('snapshot', 'zone')),
         (Axis('generator', Column('zone_of', 'generator')),),
         dims=('snapshot', 'zone'),
     ), (
@@ -771,7 +771,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     )
     assert program.constraints['history'].lhs == Sum(
         Join(
-            VariableReference('p', dims=('snapshot', 'generator')),
+            VariableReference('p', dims=('generator', 'snapshot')),
             JoinColumns('zone_of', declared, ('snapshot', 'generator'), ('zone', 'generator')),
             dims=('generator', 'zone'),
         ),
@@ -782,7 +782,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     assert priced == Join(
         ParameterReference('price', dims=('snapshot', 'zone')),
         JoinColumns('zone_of', declared, ('zone', 'snapshot'), ('generator', 'snapshot')),
-        dims=('snapshot', 'generator'),
+        dims=('generator', 'snapshot'),
     ), 'and an at is the bare join, on the value column, grouped by the key columns'
     assert isinstance(priced, Join)
     assert (priced.columns.dropped_dims, priced.columns.added_dims, priced.columns.kept) == (

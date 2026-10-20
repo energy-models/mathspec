@@ -123,6 +123,11 @@ def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand
     return joined(columns, inner)
 
 
+def sorted_dims(*dims: Iterable[str]) -> tuple[str, ...]:
+    """Every dim in *dims*, once, sorted by name: what a node states as ``dims``."""
+    return tuple(sorted(set().union(*dims)))
+
+
 def joined(columns: JoinColumns, inner: Iterable[str]) -> frozenset[str]:
     """The dims a join on *columns* leaves of *inner*: the dims joined on go, and the dims grouped by arrive."""
     return (frozenset(inner) - set(columns.joined_dims)) | set(columns.grouped_dims)

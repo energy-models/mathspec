@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec._dimensions import check_spec
+from mathspec._dimensions import check_spec, sorted_dims
 from mathspec._expansion import expand, parse_template
 from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec._resolution import (
@@ -348,7 +348,7 @@ def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterRefe
     if value is None:
         return None
     if isinstance(value, str):
-        return ParameterReference(value, dims=ns.in_declaration_order(ns.leaf_dims[value]))
+        return ParameterReference(value, dims=sorted_dims(ns.leaf_dims[value]))
     return Constant(value, dims=())
 
 

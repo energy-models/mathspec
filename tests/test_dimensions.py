@@ -808,7 +808,7 @@ def _expressions(root: object) -> Iterator[Expression]:
 
 
 @pytest.mark.parametrize('path', EVERY_SPEC, ids=lambda path: str(path.relative_to(Path(__file__).parent.parent)))
-def test_every_expression_node_states_its_dims_in_declaration_order(path):
+def test_every_expression_node_states_its_dims_sorted_by_name(path):
     """A consumer read a node's dims by deriving them again, as the loader did to check them and then threw away."""
     spec = spec_of(path)
     for loaded in (spec, spec.expand()):
@@ -816,9 +816,9 @@ def test_every_expression_node_states_its_dims_in_declaration_order(path):
         assert nodes, f'{path.name} lowers to no expression node'
         for node in nodes:
             derived = _derived(node, loaded)
-            assert node.dims == tuple(d for d in loaded.dimensions if d in derived), (
-                f'{type(node).__name__} in {path.name} states {node.dims}, and the rules give {sorted(derived)} in '
-                f'the order dimensions: declares'
+            assert node.dims == tuple(sorted(derived)), (
+                f'{type(node).__name__} in {path.name} states {node.dims}, and the rules give {sorted(derived)}, '
+                f'sorted by name'
             )
 
 
