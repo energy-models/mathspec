@@ -376,9 +376,11 @@ added like any other.
 - A merged spec takes further terms: a merge defines every sum it has
   terms for, and a later merge adds to that body. So the first merge that holds
   the terms of a sum also holds a file that reads it.
-- Where no file defines the sum, the terms are its body. The sum runs over
-  the frame its readers state, every reader writes the dims in the same
-  order, and the sum takes the first description a reader wrote.
+- Where no file defines the sum, the terms are its body. Every reader writes
+  the dims in the same order. The sum is indexed over each of those dims over
+  which a term is indexed, and it takes the first description a reader wrote.
+  A reader's row over a dimension over which no term is indexed is refused, as
+  it is over a definition.
 - Where no file defines the sum, some file reads it for more than adding to it.
   That file reads the sum and adds nothing, or uses it in its math. Terms that
   only their own files read are refused, and the message names the nearest name,

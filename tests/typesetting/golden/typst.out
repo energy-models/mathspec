@@ -93,7 +93,7 @@ $ upright("p") & upright("p")^(upright("min"))_(g) <= p_(t,g) & <= upright("p")^
 #set math.equation(numbering: "(1)")
 $ upright("spend_cap") & upright("spend")^(upright("cap"))_(g) & = upright("cost")_(g) dot 2 & forall g in cal(G) \
   upright("spend") & italic("spend")_(t) & = sum_(g in cal(G)) p_(t,g) dot upright("cost")_(g) & forall t in cal(T) \
-  upright("rating") & upright("rating")_(g,t) & = upright("eta")_(g) dot upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
+  upright("rating") & upright("rating")_(g,t) & = upright("eta")_(g) dot upright("p")^(upright("max"))_(g) dot (sum_(b in cal(B)) upright("load")_(t,b)) & forall g in cal(G), t in cal(T) \
   upright("lcoe") & italic("lcoe") & = frac(sum_(t in cal(T), g in cal(G)) p_(t,g) dot upright("cost")_(g), sum_(t in cal(T), g in cal(G)) p_(t,g)) \
   upright("net") & italic("net")_(t) & = -italic("spill")_(t) + italic("slack")_(t) & forall t in cal(T) \
   upright("marginal_price") & italic("marginal_price")_(t,b) & = lambda_(upright("balance"),t,b) & forall t in cal(T), b in cal(B) \

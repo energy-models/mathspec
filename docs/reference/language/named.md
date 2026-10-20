@@ -30,18 +30,21 @@ expressions:
 ```
 
 An entry is a bare string, or a mapping with a `description:` and a `dims:`.
-The `dims:` are the **frame**, the dimensions the quantity is read over. When
-`dims:` is left out, the body decides the frame. When `dims:` is declared, the
-loader refuses a body that carries a dimension the frame does not name. The
-body may carry fewer dimensions, and then the quantity is constant along the
-rest, so a constraint over the whole frame reads it at every coordinate.
+The `dims:` are the dimensions over which the quantity is indexed. When
+`dims:` is left out, the expression itself decides them. When `dims:` is
+declared, it sets the order of the indices, and it names the dimensions over
+which the expression is indexed. The loader refuses an expression that is
+indexed over a dimension not given in `dims:`, and a `dims:` that gives a
+dimension over which the expression is not indexed. An expression that reads
+the entry repeats its value along each of its own dimensions that the entry is
+not indexed over.
 
 ```yaml
 expressions:
-  cap:
-    dims: [snapshot, generator]
-    expression: p_max
-    description: the nominal capacity, the same in every snapshot
+  headroom:
+    dims: [generator, snapshot]
+    expression: p_max - p
+    description: the capacity a generator leaves unused in a snapshot
 ```
 
 [`adds_to:`](parameters-variables-constraints.md#terms) adds this expression as a term to the sum
@@ -88,11 +91,11 @@ $$\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{co
 
 A named expression carries **exactly one** of `expression:` and `cases:`.
 
-| Key         |                                                                              |
-| ----------- | ---------------------------------------------------------------------------- |
-| `dims`      | required with `cases:`. The **frame**: the dimensions every case ranges over |
-| `cases`     | a map of named cases, each with a `when:` mask and an `expression:`          |
-| `otherwise` | required. The value at every coordinate the cases leave                      |
+| Key         |                                                                         |
+| ----------- | ----------------------------------------------------------------------- |
+| `dims`      | required with `cases:`. The dimensions over which every case is indexed |
+| `cases`     | a map of named cases, each with a `when:` mask and an `expression:`     |
+| `otherwise` | required. The value at every coordinate the cases leave                 |
 
 ### The rules that keep the cases apart
 
@@ -119,8 +122,10 @@ A named expression carries **exactly one** of `expression:` and `cases:`.
   `cases:` with one case may compare expressions, because its `otherwise:` claims
   only what the case leaves.
 
-- Each `when:` and each value sits inside the frame, and a narrower case
-  broadcasts as a parameter with fewer dimensions does.
+- Each `when:` and each value is indexed only over dimensions given in
+  `dims:`. A value indexed over fewer of them is repeated along the others,
+  the same as a parameter with fewer dimensions. Each dimension in `dims:` is
+  one over which a value or a `when:` is indexed.
 
 A claimed coordinate can still have no value: the `otherwise:` above has none at
 the first snapshot, where a case claims every unit. To give such a coordinate a
@@ -240,11 +245,11 @@ An entry with no `description:` may be the bare condition.
 - The bare name stands for its condition in a `where:`, a `when:` and a
   `holds:`, under `NOT`, and inside `count`, `shift` and `at`. It selects the
   same rows as the condition written out.
-- The condition gives the frame, so the entry declares no `dims:`. It runs
-  over the dimensions its condition reads, in the order `dimensions:` declares
-  them, and the symbol prints with those indices. A use over more dimensions
-  reads the condition as constant along the rest, and `shift` reads it back only
-  along a dimension of its frame.
+- A named condition declares no `dims:`. It is indexed over the dimensions its
+  condition reads, in the order `dimensions:` declares them, and the symbol
+  prints with those indices. A use over more dimensions repeats the condition
+  along the others, and `shift` reads it back only along a dimension over which
+  the condition is indexed.
 - A named condition may read another named condition, and a named expression
   that reads only data.
   The loader refuses a cycle, and the message names its chain:
