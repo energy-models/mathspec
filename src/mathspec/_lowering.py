@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec._dimensions import check_spec
+from mathspec._dimensions import check_spec, sorted_dims
 from mathspec._expansion import expand, parse_template
 from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec._resolution import (
@@ -342,14 +342,14 @@ def _loop(target: str, entry: ExpressionReference, sums: Mapping[str, list[Expre
 def _frame_of(name: str, entry: ExpressionReference, spec: Spec) -> tuple[str, ...]:
     """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's in file order."""
     declared = spec.expressions[name].dims
-    return entry.dims if declared is None else tuple(declared)
+    return tuple(d for d in spec.dimensions if d in entry.dims) if declared is None else tuple(declared)
 
 
 def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterReference | None:
     if value is None:
         return None
     if isinstance(value, str):
-        return ParameterReference(value, dims=ns.in_declaration_order(ns.leaf_dims[value]))
+        return ParameterReference(value, dims=sorted_dims(ns.leaf_dims[value]))
     return Constant(value, dims=())
 
 

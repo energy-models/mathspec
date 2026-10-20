@@ -147,19 +147,18 @@ entry's expression, the same object that `program.expressions[name].expression`
 holds, and its value is the body's value. `children()` steps into the body, so
 a walk reads through it.
 
-Every expression node has `dims`: the dimensions over which it is indexed, in
-the order `dimensions:` declares them. A sum has the dimensions its operand has,
+Every expression node has `dims`: the dimensions over which it is indexed,
+sorted by name. A sum has the dimensions its operand has,
 less the ones it sums over. A `Join` under a sum through a relation has the
 dimensions of that sum. A `Join` also opens one `Axis` for each column it
 drops, but an axis is not a dimension and is not in `dims`. An
 `ExpressionReference` has the dimensions of its body.
 
-A node's `dims` are always in the order `dimensions:` declares, also where a
-named expression declares its `dims:` in another order. The entry keeps the
-order of its `dims:`. With `dimensions:` in the order `snapshot`, `generator`,
-an entry that declares `dims: [generator, snapshot]` has
-`program.expressions[name].dims == ('generator', 'snapshot')`, and each
-`ExpressionReference` to it has `dims == ('snapshot', 'generator')`.
+A node's `dims` are always sorted by name. The order of `dimensions:` and the
+order of an entry's `dims:` do not change them. The entry keeps the order of
+its `dims:`. An entry that declares `dims: [snapshot, generator]` has
+`program.expressions[name].dims == ('snapshot', 'generator')`, and each
+`ExpressionReference` to it has `dims == ('generator', 'snapshot')`.
 
 A `MaskReference` stands where a `masks:` entry is read. Its `body` is the
 predicate of the entry, the root of `program.masks[name].where`, and it is true
