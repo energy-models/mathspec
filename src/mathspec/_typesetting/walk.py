@@ -23,8 +23,8 @@ from mathspec.program import (
     And,
     BooleanLiteral,
     Cases,
+    ComparisonOperator,
     Condition,
-    ConditionOperator,
     Constant,
     CountComparison,
     DimensionComparison,
@@ -90,7 +90,7 @@ AlignedComparison = (
     | RelationPairComparison
 )
 
-_CONDITIONS: dict[ConditionOperator, OperatorName] = {
+_COMPARISONS: dict[ComparisonOperator, OperatorName] = {
     '==': 'equal',
     '!=': 'ne',
     '<=': 'le',
@@ -612,7 +612,7 @@ class Walk:
             left, right = self.format.cardinality(counted), self._number(node.value)
         else:
             assert_never(node)
-        return left, f'{self._op(_CONDITIONS[node.op])} {right}'
+        return left, f'{self._op(_COMPARISONS[node.op])} {right}'
 
     def _literal(self, value: float | str | datetime.date) -> str:
         return self._number(value) if isinstance(value, int | float) else self.format.quoted(str(value))
@@ -698,7 +698,7 @@ class Walk:
         return Line(
             label=name,
             left=self._expression(constraint.lhs, ctx),
-            right=f'{self._op(_CONDITIONS[constraint.sense])} {self._expression(constraint.rhs, ctx)}',
+            right=f'{self._op(_COMPARISONS[constraint.sense])} {self._expression(constraint.rhs, ctx)}',
             condition=self._quantifier(list(constraint.dims), condition),
         )
 
@@ -896,7 +896,7 @@ class Walk:
         else:
             pinned = links[1 - bounded]
             left = self._expression(links[bounded], ctx)
-            sign = self._op(_CONDITIONS[entry.links[bounded].sign])
+            sign = self._op(_COMPARISONS[entry.links[bounded].sign])
             right = f'{sign} {self.format.apply(locus, self._expression(pinned, ctx))}'
         return Line(label=name, left=left, right=right, condition=self._quantifier(frame, ''))
 

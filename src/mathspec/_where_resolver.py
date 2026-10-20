@@ -41,8 +41,8 @@ from mathspec.program import (
     Add,
     And,
     BooleanLiteral,
+    ComparisonOperator,
     Condition,
-    ConditionOperator,
     Constant,
     CountComparison,
     DimensionComparison,
@@ -527,7 +527,7 @@ class WhereResolver:
                 )
         return node
 
-    def _relation_column(self, name: str, column: str | None, spelling: str, op: ConditionOperator) -> str | None:
+    def _relation_column(self, name: str, column: str | None, spelling: str, op: ComparisonOperator) -> str | None:
         """The value column a where-comparison on relation *name* reads, or the refusal.
 
         A comparison reads one value per coordinate, so the relation is keyed
@@ -629,7 +629,7 @@ class _Plain(NamedTuple):
     """
 
     name: str
-    op: ConditionOperator
+    op: ComparisonOperator
     value: float | str
     quoted: bool
 

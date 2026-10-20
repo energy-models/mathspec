@@ -49,7 +49,7 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
 
-    from mathspec.program import Condition, ConditionOperator, DeclaredDtype, Expression
+    from mathspec.program import ComparisonOperator, Condition, DeclaredDtype, Expression
 
 #: The most cells one pair of masks may multiply out to. Split a larger pair into several expressions.
 CELL_BUDGET = 8192
@@ -206,7 +206,7 @@ class _Grid:
 
 
 #: A comparator against its mirror, for a test written with its sides swapped.
-_FLIPPED: Mapping[ConditionOperator, ConditionOperator] = {
+_FLIPPED: Mapping[ComparisonOperator, ComparisonOperator] = {
     '<': '>',
     '>': '<',
     '<=': '>=',
@@ -552,7 +552,7 @@ def _read(node: TypedCondition, value: Cell, grid: _Grid) -> Cell:
     return value
 
 
-def _compare(value: Cell, op: ConditionOperator, literal: _Literal) -> bool:
+def _compare(value: Cell, op: ComparisonOperator, literal: _Literal) -> bool:
     """One atom's truth in one cell. Both sides are already this cell's frame.
 
     Raises:
@@ -577,7 +577,7 @@ def _compare(value: Cell, op: ConditionOperator, literal: _Literal) -> bool:
     raise AssertionError(msg)
 
 
-def _ordered[T: (float, str, datetime.date)](left: T, op: ConditionOperator, right: T) -> bool:
+def _ordered[T: (float, str, datetime.date)](left: T, op: ComparisonOperator, right: T) -> bool:
     """One comparison between two values of one kind — the kinds a literal comes in."""
     match op:
         case '==':

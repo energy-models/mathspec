@@ -36,8 +36,8 @@ from mathspec._sealed import Sealed
 from mathspec.program import (
     And,
     BooleanLiteral,
+    ComparisonOperator,
     Condition,
-    ConditionOperator,
     Connective,
     Not,
     Or,
@@ -95,7 +95,7 @@ class UnresolvedCountNode:
     """
 
     call: UnresolvedConditionCallNode
-    op: ConditionOperator
+    op: ComparisonOperator
     value: ArithmeticNode
 
 
@@ -110,7 +110,7 @@ class UnresolvedComparisonNode:
     """
 
     left: ArithmeticNode | ColumnNode
-    op: ConditionOperator
+    op: ComparisonOperator
     right: ArithmeticNode | ColumnNode | KeywordNode
 
 
@@ -154,7 +154,7 @@ def _build_where_grammar() -> pp.ParserElement:
         # pyrefly: ignore[implicit-any-lambda]
         lambda t: KeywordNode(t[0])
     )
-    comparator = pp.one_of(list(get_args(ConditionOperator)))
+    comparator = pp.one_of(list(get_args(ComparisonOperator)))
 
     kwarg = (name + pp.Suppress('=') + (quoted | COLUMNS | ARITHMETIC)).set_parse_action(lambda t: (t[0], t[1]))
 

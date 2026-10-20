@@ -52,7 +52,7 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from mathspec._expression_parser import ComparisonOperator, ParsedNode
+    from mathspec._expression_parser import ParsedNode, Sense
     from mathspec._where_parser import ParsedWhere
     from mathspec.program import DeclaredDtype
     from mathspec.spec import ExpressionSpec, MaskSpec, Spec
@@ -428,7 +428,7 @@ def resolve_expression_text(
 
 def resolve_constraint_text(
     text: str, ns: Namespace, context: str, errors: list[str]
-) -> tuple[Expression, ComparisonOperator, Expression] | None:
+) -> tuple[Expression, Sense, Expression] | None:
     """Parse, expand, resolve and degree-check one constraint string: exactly one comparison, a variable on a side (#1171).
 
     Returns:
