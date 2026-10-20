@@ -835,9 +835,9 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
     field written at its default is no change. A dimension's ``ordered`` folds
     by [`_ordered`][], so a patch may add the claim; writing it false over a
     base that makes it is the one narrowing [`_same`][] cannot see. A
-    relation's ``missing:`` is laid over as a field and left out of the
-    comparison, being a claim about the data. A description is prose rather
-    than the space, so the patch's is laid over the base's.
+    relation's ``missing:`` and a description are laid over as fields and
+    left out of the comparison: the one is a claim about the data, the other
+    prose. ``null`` on either puts back the default.
     """
     out = dict(declared)
     singular = _singular(section)
@@ -850,9 +850,10 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
         if key not in out:
             out[key] = entry
             continue
-        if section == 'relations' and 'missing' in _mapping(entry):
-            out[key] = _reread(out[key], _mapping(entry))
-            entry = _without(entry, 'missing')
+        laid = {'description', 'missing'} if section == 'relations' else {'description'}
+        if written := {f: v for f, v in _mapping(entry).items() if f in laid}:
+            out[key] = _reread(out[key], written)
+            entry = {f: v for f, v in _mapping(entry).items() if f not in laid}
             if not entry:
                 continue
         if getattr(_read(Spec, section, out[key]), 'ordered', False) and _mapping(entry).get('ordered') is False:
@@ -866,20 +867,18 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
             raise LanguageError(
                 f"patch '{name}' declares the {singular} '{key}' as {entry!r}, where its base "
                 f'declares {out[key]!r}. A patch adjusts the math, not the coordinate space the math is '
-                f'already written over: each field but `{claim}` has to read as the base reads it, and a '
+                f'already written over: each field but `{claim}` and `description` has to read as the base reads it, and a '
                 f'field the patch leaves out reads as its default. Restate the {singular} as its base '
                 f'declares it, leave it out, or give the patch {_a(singular)} of its own under a name of its own.'
             )
         out[key] = _ordered(section, out[key], entry)
-        if said := _mapping(entry).get('description'):
-            out[key] = {**_mapping(out[key]), 'description': said}
     return out
 
 
-def _reread(declared: object, patch: dict[str, object]) -> dict[str, object]:
-    """*declared* reading a missing key as *patch* says, where ``null`` puts back the default."""
-    kept = _mapping(_without(declared, 'missing'))
-    return kept if patch['missing'] is None else {**kept, 'missing': patch['missing']}
+def _reread(declared: object, written: dict[str, object]) -> dict[str, object]:
+    """*declared* with each field of *written* as the patch writes it, where ``null`` puts back the default."""
+    kept = {f: v for f, v in _mapping(declared).items() if f not in written}
+    return {**kept, **{f: v for f, v in written.items() if v is not None}}
 
 
 def _owned(

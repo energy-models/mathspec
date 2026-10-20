@@ -366,7 +366,7 @@ Given variable 'Generator_p' collides with the variable of the same name. Rename
 | `null` under a section's name       | it is refused                                                              |
 | a dimension or a relation           | it is added, or restated as the base declares it                           |
 | `ordered:` on a restated dimension  | `true` makes the dimension ordered; `false` over an ordered one is refused |
-| `description:` on a restated entry  | the patch's description replaces the base's                                |
+| `description:` on a restated entry  | the patch's description replaces the base's; `null` removes it             |
 | `missing:` on a relation            | it changes whether every key combination needs a row, as on a parameter    |
 | an entry under one kind of `given:` | it is edited, added or removed like any entry, and the other kinds stay    |
 | `version`, `description`            | the patch's value replaces the base's                                      |
@@ -397,7 +397,7 @@ same as one left out. Changing one under the expressions already written
 over it is refused, and so is removing one:
 
 ```text
-patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch adjusts the math, not the coordinate space the math is already written over: each field but `ordered` has to read as the base reads it, and a field the patch leaves out reads as its default. Restate the dimension as its base declares it, leave it out, or give the patch a dimension of its own under a name of its own.
+patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch adjusts the math, not the coordinate space the math is already written over: each field but `ordered` and `description` has to read as the base reads it, and a field the patch leaves out reads as its default. Restate the dimension as its base declares it, leave it out, or give the patch a dimension of its own under a name of its own.
 ```
 
 `ordered` says that the members of a dimension have an order, and it does not

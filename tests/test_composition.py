@@ -580,12 +580,36 @@ def test_a_patch_restates_a_dimension_as_the_schema_reads_it(dimension, restated
             'a port and its bus',
             id='a-relation',
         ),
+        pytest.param(
+            DISPATCH_MODEL,
+            {'dimensions': {'snapshot': {'description': 'a period'}}},
+            lambda spec: spec.dimensions['snapshot'].description,
+            'a period',
+            id='the-description-alone',
+        ),
+        pytest.param(
+            varied(DISPATCH_MODEL, **{'dimensions.generator.description': 'what produces'}),
+            {'dimensions': {'generator': {'description': None}}},
+            lambda spec: spec.dimensions['generator'].description,
+            None,
+            id='null-removes-a-dimension-description',
+        ),
+        pytest.param(
+            varied(SURFACE, **{'relations.port_bus.description': 'where a port connects'}),
+            {'relations': {'port_bus': {'description': None}}},
+            lambda spec: spec.relations['port_bus'].description,
+            None,
+            id='null-removes-a-relation-description',
+        ),
     ],
 )
 def test_a_patch_that_restates_a_shared_entry_gives_it_its_own_description(base, patch, read, description):
     """A restatement with other prose was refused as a change of the space, and then accepted with its prose dropped.
 
-    Prose is not part of the space, and a patch lays over its base, so the patch's description wins.
+    A patch that wrote only a description was compared as a restatement of the whole entry, so it was refused
+    over a dimension whose other fields are not the defaults. A `null` description kept the base's.
+    Prose is not part of the space, and a patch lays over its base, so the patch's description wins, and
+    `null` removes it, as `null` on a field does elsewhere in a patch.
     """
     assert read(override(base, [patch])) == description, "the patch's description, not the base's"
 
