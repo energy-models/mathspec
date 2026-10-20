@@ -18,21 +18,21 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from mathspec import override, to_spec
+from mathspec import to_spec
 from mathspec._exclusivity import Special, Subject, _evaluate, _Grid, _subject_of
 from tools import gallery
-from tools.gallery import DECLARED, PATCHED, RECORDED, REFERENCES, _names_for, _stands_for
+from tools.gallery import DECLARED, RECORDED, REFERENCES, VARIANTS, _names_for, _stands_for
 
 if TYPE_CHECKING:
     from mathspec.program import Mask
 
 RUNGS = sorted(path.stem for path in REFERENCES.glob('rung_*.py'))
 SCRIPT = REFERENCES / 'reference.py'
-PAGE_TEXTS = [(gallery.PAGES / page).read_text() for page in [*DECLARED, *PATCHED]]
+PAGE_TEXTS = [(gallery.PAGES / page).read_text() for page in [*DECLARED, *VARIANTS]]
 
 SPECS = {
     **{page: to_spec(path) for page, path in DECLARED.items()},
-    **{page: override(base, [patch]) for page, (base, patch) in PATCHED.items()},
+    **{page: to_spec(composed) for page, (composed, _) in VARIANTS.items()},
 }
 MODELS = list(SPECS.values())
 BASE = SPECS['pypsa.md']
@@ -138,9 +138,9 @@ def _stated(name: str, row: str) -> bool:
     return re.fullmatch(re.sub(r'\\\{[a-z]\\\}', '.+', re.escape(name)), row) is not None
 
 
-@pytest.mark.parametrize('page', sorted(PATCHED))
-def test_a_patch_keeps_the_pypsa_name_of_what_it_changes(page: str):
-    """A patch rewrites entries of the base; a rewritten name keeps its PyPSA name and its dtype, or it has drifted."""
+@pytest.mark.parametrize('page', sorted(VARIANTS))
+def test_a_variant_keeps_the_pypsa_name_of_what_it_changes(page: str):
+    """A variant restates entries of the default set; a restated name keeps its PyPSA name and its dtype, or it has drifted."""
     own = SPECS[page]
     drifted = []
     for section in ('parameters', 'relations', 'variables', 'constraints'):

@@ -15,6 +15,9 @@ given:
     period_weight_objective: { dims: [period] }
     Generator_active: { dims: [snapshot, generator], dtype: bool }
   variables:
+    Generator_status: { dims: [scenario, snapshot, generator] }
+    Generator_start_up: { dims: [scenario, snapshot, generator] }
+    Generator_shut_down: { dims: [scenario, snapshot, generator] }
     Generator_p: { dims: [scenario, snapshot, generator] }
     Generator_n_mod: { dims: [generator], domain: integer }
     Generator_p_nom_ext: { dims: [generator] }
@@ -96,32 +99,6 @@ parameters:
       output; data prep
     dims: [scenario, generator]
     missing: neutral
-
-variables:
-  Generator_status:
-    description: >-
-      `Generator-status` — how much of a committable unit is on: an integer
-      the rows below cap at one, or at the module count where the build is
-      modular
-    dims: [scenario, snapshot, generator]
-    where: Generator_committed
-    domain: integer
-    bounds:
-      lower: 0
-  Generator_start_up:
-    description: "`Generator-start_up` — how much of a committable unit turns on this snapshot, capped as the status is"
-    dims: [scenario, snapshot, generator]
-    where: Generator_committed
-    domain: integer
-    bounds:
-      lower: 0
-  Generator_shut_down:
-    description: "`Generator-shut_down` — how much of a committable unit turns off this snapshot, capped as the status is"
-    dims: [scenario, snapshot, generator]
-    where: Generator_committed
-    domain: integer
-    bounds:
-      lower: 0
 
 expressions:
   Generator_status_available:

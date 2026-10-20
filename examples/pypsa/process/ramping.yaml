@@ -12,9 +12,9 @@ given:
     Process_active: { dims: [snapshot, process], dtype: bool }
   variables:
     Process_p: { dims: [scenario, snapshot, process] }
-    Process_status: { dims: [scenario, snapshot, process], domain: integer }
-    Process_start_up: { dims: [scenario, snapshot, process], domain: integer }
-    Process_shut_down: { dims: [scenario, snapshot, process], domain: integer }
+    Process_status: { dims: [scenario, snapshot, process] }
+    Process_start_up: { dims: [scenario, snapshot, process] }
+    Process_shut_down: { dims: [scenario, snapshot, process] }
     Process_p_nom_ext: { dims: [process] }
   expressions:
     Process_p_nom_effective: { dims: [scenario, process] }

@@ -14,8 +14,8 @@ file, and leaving it out leaves a whole model.
 
 `Generator`, `Link` and `Process` are each a folder of layers. The class reads
 its commitment flag under `given:`, and exactly one of `commitment.yaml` and
-`commitment_none.yaml` declares it, so a class is whole exactly when it takes
-one of them.
+`commitment_none.yaml` declares it. The commitment reads its status the same
+way, from `status_integer.yaml` or `status_relaxed.yaml`.
 """
 
 from __future__ import annotations
@@ -37,7 +37,8 @@ FOLDER = Path(__file__).resolve().parent.parent / 'examples' / 'pypsa'
 PATHS = {fragment_name(path): path for path in sorted(FOLDER.rglob('*.yaml'))}
 DEFAULT_PATHS = dict(zip(DEFAULT, paths(DEFAULT), strict=True))
 CLASSES = ('generator', 'link', 'process')
-LAYERS = ('commitment', 'commitment_none', 'ramping', 'maintenance')
+LAYERS = ('commitment', 'commitment_none', 'status_integer', 'status_relaxed', 'ramping', 'maintenance')
+OUTSIDE_THE_DEFAULT = ('commitment_none', 'status_relaxed')
 
 
 #: The fragment that reads each sum without adding to it, with its description.
@@ -49,8 +50,9 @@ def test_a_fragment_loads_on_its_own(name):
     assert to_spec(PATHS[name]).program
 
 
-def test_the_default_set_is_every_fragment_but_the_empty_commitments():
-    assert sorted({*DEFAULT, *(f'{kind}/commitment_none' for kind in CLASSES)}) == sorted(PATHS), (
+def test_the_default_set_is_every_fragment_but_the_alternatives():
+    alternatives = {f'{kind}/{layer}' for kind in CLASSES for layer in OUTSIDE_THE_DEFAULT}
+    assert sorted({*DEFAULT, *alternatives}) == sorted(PATHS), (
         'a fragment the composed file leaves out, or a name no file has'
     )
     assert not merge(paths(DEFAULT)).program.given, 'every name a fragment reads, another fragment declares'
@@ -139,24 +141,37 @@ def test_every_fragment_and_the_composition_print(fmt):
     assert typeset(merge(paths(DEFAULT)), fmt)
 
 
+def _whole(layers: tuple[str, ...]) -> bool:
+    """Whether a class with *layers* is a whole model.
+
+    It takes one commitment file. The commitment takes one status file, and
+    the relaxed status reads the ramp rates. No commitment declares the status
+    itself, so it takes no status file.
+    """
+    taken = set(layers)
+    if ('commitment' in taken) == ('commitment_none' in taken):
+        return False
+    status = taken & {'status_integer', 'status_relaxed'}
+    if 'commitment_none' in taken:
+        return not status
+    return len(status) == 1 and ('status_relaxed' not in taken or 'ramping' in taken)
+
+
 @pytest.mark.parametrize('kind', CLASSES)
 @pytest.mark.parametrize(
     'layers',
     [combo for k in range(len(LAYERS) + 1) for combo in itertools.combinations(LAYERS, k)],
     ids=lambda layers: '+'.join(layers) or 'alone',
 )
-def test_a_class_is_whole_exactly_when_it_takes_one_commitment(kind, layers):
-    """Neither commitment file leaves the flag unread, both declare it twice; ramping and maintenance stack on either."""
+def test_a_class_is_whole_exactly_when_its_slots_are_filled_once(kind, layers):
+    """A slot no file fills leaves a name unread, a slot two files fill declares it twice."""
     others = [path for name, path in DEFAULT_PATHS.items() if not name.startswith(f'{kind}/')]
     files = [*others, *(FOLDER / kind / f'{layer}.yaml' for layer in ('class', *layers))]
     try:
         whole = not merge(files).program.given
     except LanguageError:
         whole = False
-    one = ('commitment' in layers) != ('commitment_none' in layers)
-    assert whole == one, (
-        f'{kind} with {layers or "no layer"}: whole is {whole}, and it takes {"one" if one else "not one"} commitment'
-    )
+    assert whole == _whole(layers), f'{kind} with {layers or "no layer"}: whole is {whole}'
 
 
 def _signature(spec, name):
@@ -173,15 +188,22 @@ def _signature(spec, name):
 
 @pytest.mark.parametrize('kind', CLASSES)
 def test_no_commitment_declares_what_the_commitment_declares_alike(kind):
-    """Ramping and maintenance read these names from whichever file is in, so the two must agree name for name."""
-    empty, full = (to_spec(FOLDER / kind / f'{name}.yaml') for name in ('commitment_none', 'commitment'))
+    """Ramping and maintenance read these names from whichever file is in, so the two must agree name for name.
+
+    The integer status is the commitment's: the relaxed one differs from it on purpose.
+    """
+    empty, commitment, status = (
+        to_spec(FOLDER / kind / f'{name}.yaml') for name in ('commitment_none', 'commitment', 'status_integer')
+    )
     names = [*empty.parameters, *empty.variables, *empty.expressions, *empty.masks]
     assert len(names) == 9, (
         'the interface is the flag, the status data, the status and its moves, two expressions and a mask'
     )
-    differ = {
-        n: (_signature(empty, n), _signature(full, n)) for n in names if _signature(empty, n) != _signature(full, n)
-    }
+
+    def full(name):
+        return _signature(status if name in status.variables else commitment, name)
+
+    differ = {n: (_signature(empty, n), full(n)) for n in names if _signature(empty, n) != full(n)}
     assert not differ, f'{kind}: no commitment and the commitment declare these differently: {differ}'
 
 

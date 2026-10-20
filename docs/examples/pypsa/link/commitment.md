@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Links, the commitment
 
-This file states the unit commitment of PyPSA's `Link`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml`. It declares `Link_committable`, and a model takes this file or [no commitment](commitment_none.md), never both. Its output limits read `Link_status_available`, which [the maintenance](maintenance.md) adds to. It adds a term to the sum `scenario_opex`. It reads `Link_active`, `Link_committed`, `Link_modules_installed`, `Link_n_mod`, `Link_p`, `Link_p_max_pu` and 9 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
+This file states the unit commitment of PyPSA's `Link`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. It declares `Link_committable`, and a model takes this file or [no commitment](commitment_none.md), never both. It reads its status from [the integer status](status_integer.md) or [the relaxed status](status_relaxed.md), and its output limits read `Link_status_available`, which [the maintenance](maintenance.md) adds to. It adds a term to the sum `scenario_opex`. It reads `Link_active`, `Link_committed`, `Link_modules_installed`, `Link_n_mod`, `Link_p`, `Link_p_max_pu` and 12 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -22,6 +22,9 @@ given:
     period_weight_objective: { dims: [period] }
     Link_active: { dims: [snapshot, link], dtype: bool }
   variables:
+    Link_status: { dims: [scenario, snapshot, link] }
+    Link_start_up: { dims: [scenario, snapshot, link] }
+    Link_shut_down: { dims: [scenario, snapshot, link] }
     Link_p: { dims: [scenario, snapshot, link] }
     Link_n_mod: { dims: [link], domain: integer }
     Link_p_nom_ext: { dims: [link] }
@@ -103,32 +106,6 @@ parameters:
       flow; data prep
     dims: [scenario, link]
     missing: neutral
-
-variables:
-  Link_status:
-    description: >-
-      `Link-status` — how much of a committable link is on: an integer
-      the rows below cap at one, or at the module count where the build is
-      modular
-    dims: [scenario, snapshot, link]
-    where: Link_committed
-    domain: integer
-    bounds:
-      lower: 0
-  Link_start_up:
-    description: "`Link-start_up` — how much of a committable link turns on this snapshot, capped as the status is"
-    dims: [scenario, snapshot, link]
-    where: Link_committed
-    domain: integer
-    bounds:
-      lower: 0
-  Link_shut_down:
-    description: "`Link-shut_down` — how much of a committable link turns off this snapshot, capped as the status is"
-    dims: [scenario, snapshot, link]
-    where: Link_committed
-    domain: integer
-    bounds:
-      lower: 0
 
 expressions:
   Link_status_available:
@@ -322,6 +299,9 @@ constraints:
 | $`\mathrm{nonneg}^{f}`$ | `Link_p_min_pu_nonneg` over $`\mathcal{L}`$, data another file declares |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
 | $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{T} \times \mathcal{L}`$, data another file declares |
+| $`u^{f}`$ | `Link_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
+| $`\mathit{up}^{f}`$ | `Link_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
+| $`\mathit{dn}^{f}`$ | `Link_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
 | $`f`$ | `Link_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
 | $`N^{f}`$ | `Link_n_mod` over $`\mathcal{L}`$ |
 | $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ |
@@ -359,14 +339,6 @@ constraints:
 |---|---|
 | $`\mathrm{on}^{f,\mathrm{com,ext}}`$ | `Link_com_ext` over $`\mathcal{T} \times \mathcal{L}`$ — a committable link with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
 
-#### Variables
-
-| Symbol | Meaning |
-|---|---|
-| $`u^{f}`$ | `Link_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `Link-status` — how much of a committable link is on: an integer the rows below cap at one, or at the module count where the build is modular |
-| $`\mathit{up}^{f}`$ | `Link_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `Link-start_up` — how much of a committable link turns on this snapshot, capped as the status is |
-| $`\mathit{dn}^{f}`$ | `Link_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `Link-shut_down` — how much of a committable link turns off this snapshot, capped as the status is |
-
 #### Definitions
 
 | Symbol | Meaning |
@@ -388,26 +360,6 @@ constraints:
 
 ```math
 \mathrm{on}^{f,\mathrm{com,ext}}_{t,l} \iff \mathrm{com}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
-```
-
-#### Variable domains
-
-**`Link_status`**
-
-```math
-u^{f}_{\xi,t,l} \ge 0, u^{f}_{\xi,t,l} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l}
-```
-
-**`Link_start_up`**
-
-```math
-\mathit{up}^{f}_{\xi,t,l} \ge 0, \mathit{up}^{f}_{\xi,t,l} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l}
-```
-
-**`Link_shut_down`**
-
-```math
-\mathit{dn}^{f}_{\xi,t,l} \ge 0, \mathit{dn}^{f}_{\xi,t,l} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{t,l}
 ```
 
 #### Definitions

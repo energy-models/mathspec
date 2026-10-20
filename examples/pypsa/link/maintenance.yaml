@@ -13,7 +13,7 @@ given:
     Link_p_nom_min: { dims: [scenario, link] }
     Link_p_nom_max: { dims: [scenario, link] }
   variables:
-    Link_status: { dims: [scenario, snapshot, link], domain: integer }
+    Link_status: { dims: [scenario, snapshot, link] }
     Link_p_nom_ext: { dims: [link] }
   expressions:
     Link_p_nom_available: { dims: [scenario, snapshot, link] }

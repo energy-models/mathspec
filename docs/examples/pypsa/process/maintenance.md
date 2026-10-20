@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Processes, the maintenance
 
-This file states the maintenance of PyPSA's `Process`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml`. It takes what is under maintenance out of the build, which [the class](class.md) defines as `Process_p_nom_available`, and out of the status, which [the commitment](commitment.md) or [no commitment](commitment_none.md) defines as `Process_status_available`. It adds a term to each of these sums: `Process_p_nom_available` and `Process_status_available`. It reads `Process_active`, `Process_committable`, `Process_committed`, `Process_p_nom`, `Process_p_nom_ext`, `Process_p_nom_extendable` and 5 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
+This file states the maintenance of PyPSA's `Process`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. It takes what is under maintenance out of the build, which [the class](class.md) defines as `Process_p_nom_available`, and out of the status, which [the commitment](commitment.md) or [no commitment](commitment_none.md) defines as `Process_status_available`. It adds a term to each of these sums: `Process_p_nom_available` and `Process_status_available`. It reads `Process_active`, `Process_committable`, `Process_committed`, `Process_p_nom`, `Process_p_nom_ext`, `Process_p_nom_extendable` and 5 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -20,7 +20,7 @@ given:
     Process_active: { dims: [snapshot, process], dtype: bool }
     snapshot_weightings_generators: { dims: [snapshot] }
   variables:
-    Process_status: { dims: [scenario, snapshot, process], domain: integer }
+    Process_status: { dims: [scenario, snapshot, process] }
     Process_p_nom_ext: { dims: [process] }
   expressions:
     Process_p_nom_available: { dims: [scenario, snapshot, process] }

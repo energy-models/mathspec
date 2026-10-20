@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Links, the ramping
 
-This file states the ramp limits of PyPSA's `Link`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml`. It reads the status from [the commitment](commitment.md) or from [no commitment](commitment_none.md). It reads `Link_active`, `Link_big_m`, `Link_com_ext`, `Link_committable`, `Link_p`, `Link_p_nom_committed` and 9 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
+This file states the ramp limits of PyPSA's `Link`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. It reads the status from [the commitment](commitment.md) or from [no commitment](commitment_none.md). It reads `Link_active`, `Link_big_m`, `Link_com_ext`, `Link_committable`, `Link_p`, `Link_p_nom_committed` and 9 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -19,9 +19,9 @@ given:
     Link_active: { dims: [snapshot, link], dtype: bool }
   variables:
     Link_p: { dims: [scenario, snapshot, link] }
-    Link_status: { dims: [scenario, snapshot, link], domain: integer }
-    Link_start_up: { dims: [scenario, snapshot, link], domain: integer }
-    Link_shut_down: { dims: [scenario, snapshot, link], domain: integer }
+    Link_status: { dims: [scenario, snapshot, link] }
+    Link_start_up: { dims: [scenario, snapshot, link] }
+    Link_shut_down: { dims: [scenario, snapshot, link] }
     Link_p_nom_ext: { dims: [link] }
   expressions:
     Link_p_nom_effective: { dims: [scenario, link] }

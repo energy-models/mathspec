@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generators, the ramping
 
-This file states the ramp limits of PyPSA's `Generator`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml`. It reads the status from [the commitment](commitment.md) or from [no commitment](commitment_none.md). It reads `Generator_active`, `Generator_big_m`, `Generator_com_ext`, `Generator_committable`, `Generator_p`, `Generator_p_nom_committed` and 9 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
+This file states the ramp limits of PyPSA's `Generator`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. It reads the status from [the commitment](commitment.md) or from [no commitment](commitment_none.md). It reads `Generator_active`, `Generator_big_m`, `Generator_com_ext`, `Generator_committable`, `Generator_p`, `Generator_p_nom_committed` and 9 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -19,9 +19,9 @@ given:
     Generator_active: { dims: [snapshot, generator], dtype: bool }
   variables:
     Generator_p: { dims: [scenario, snapshot, generator] }
-    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_start_up: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_shut_down: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_status: { dims: [scenario, snapshot, generator] }
+    Generator_start_up: { dims: [scenario, snapshot, generator] }
+    Generator_shut_down: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_ext: { dims: [generator] }
   expressions:
     Generator_previous_status: { dims: [scenario, snapshot, generator] }

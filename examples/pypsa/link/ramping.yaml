@@ -12,9 +12,9 @@ given:
     Link_active: { dims: [snapshot, link], dtype: bool }
   variables:
     Link_p: { dims: [scenario, snapshot, link] }
-    Link_status: { dims: [scenario, snapshot, link], domain: integer }
-    Link_start_up: { dims: [scenario, snapshot, link], domain: integer }
-    Link_shut_down: { dims: [scenario, snapshot, link], domain: integer }
+    Link_status: { dims: [scenario, snapshot, link] }
+    Link_start_up: { dims: [scenario, snapshot, link] }
+    Link_shut_down: { dims: [scenario, snapshot, link] }
     Link_p_nom_ext: { dims: [link] }
   expressions:
     Link_p_nom_effective: { dims: [scenario, link] }

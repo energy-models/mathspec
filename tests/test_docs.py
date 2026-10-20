@@ -39,6 +39,7 @@ GENERATED: list[tuple[str, Path, Callable[[str], str], str]] = [
     ('home:readme', home_math.README, home_math.rendered_readme, 'home_math'),
     ('expansion', expansion_math.PAGE, expansion_math.rendered_page, 'expansion_math'),
     ('pypsa', pypsa_compose.COMPOSED, pypsa_compose.composed, 'pypsa_compose'),
+    ('pypsa:relaxed', pypsa_compose.RELAXED_COMPOSED, pypsa_compose.relaxed, 'pypsa_compose'),
 ]
 
 

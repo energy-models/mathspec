@@ -15,6 +15,9 @@ given:
     period_weight_objective: { dims: [period] }
     Link_active: { dims: [snapshot, link], dtype: bool }
   variables:
+    Link_status: { dims: [scenario, snapshot, link] }
+    Link_start_up: { dims: [scenario, snapshot, link] }
+    Link_shut_down: { dims: [scenario, snapshot, link] }
     Link_p: { dims: [scenario, snapshot, link] }
     Link_n_mod: { dims: [link], domain: integer }
     Link_p_nom_ext: { dims: [link] }
@@ -96,32 +99,6 @@ parameters:
       flow; data prep
     dims: [scenario, link]
     missing: neutral
-
-variables:
-  Link_status:
-    description: >-
-      `Link-status` — how much of a committable link is on: an integer
-      the rows below cap at one, or at the module count where the build is
-      modular
-    dims: [scenario, snapshot, link]
-    where: Link_committed
-    domain: integer
-    bounds:
-      lower: 0
-  Link_start_up:
-    description: "`Link-start_up` — how much of a committable link turns on this snapshot, capped as the status is"
-    dims: [scenario, snapshot, link]
-    where: Link_committed
-    domain: integer
-    bounds:
-      lower: 0
-  Link_shut_down:
-    description: "`Link-shut_down` — how much of a committable link turns off this snapshot, capped as the status is"
-    dims: [scenario, snapshot, link]
-    where: Link_committed
-    domain: integer
-    bounds:
-      lower: 0
 
 expressions:
   Link_status_available:

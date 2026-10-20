@@ -70,24 +70,30 @@ The fragments are of four kinds:
 | [carrier](carrier.md) | 2 | 0 | 1 | 1 |  |
 | [cost](cost.md) | 1 | 3 | 2 | 4 | `total_cost` |
 | [generator/class](generator/class.md) | 24 | 3 | 11 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [generator/commitment](generator/commitment.md) | 10 | 3 | 20 | 15 | `scenario_opex` |
+| [generator/commitment](generator/commitment.md) | 10 | 0 | 20 | 18 | `scenario_opex` |
 | [generator/commitment_none](generator/commitment_none.md) | 3 | 3 | 0 | 1 |  |
 | [generator/maintenance](generator/maintenance.md) | 5 | 4 | 13 | 12 | `Generator_p_nom_available`, `Generator_status_available` |
 | [generator/ramping](generator/ramping.md) | 5 | 0 | 6 | 14 |  |
+| [generator/status_integer](generator/status_integer.md) | 0 | 3 | 0 | 0 |  |
+| [generator/status_relaxed](generator/status_relaxed.md) | 0 | 3 | 4 | 14 |  |
 | [global_constraints](global_constraints.md) | 3 | 0 | 15 | 6 |  |
 | [line](line.md) | 22 | 4 | 14 | 9 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
 | [link/class](link/class.md) | 24 | 3 | 9 | 13 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [link/commitment](link/commitment.md) | 10 | 3 | 20 | 15 | `scenario_opex` |
+| [link/commitment](link/commitment.md) | 10 | 0 | 20 | 18 | `scenario_opex` |
 | [link/commitment_none](link/commitment_none.md) | 3 | 3 | 0 | 1 |  |
 | [link/maintenance](link/maintenance.md) | 5 | 4 | 13 | 12 | `Link_p_nom_available`, `Link_status_available` |
 | [link/ramping](link/ramping.md) | 5 | 0 | 6 | 14 |  |
+| [link/status_integer](link/status_integer.md) | 0 | 3 | 0 | 0 |  |
+| [link/status_relaxed](link/status_relaxed.md) | 0 | 3 | 4 | 14 |  |
 | [load](load.md) | 3 | 0 | 0 | 1 | `Bus_injection` |
 | [power_flow](power_flow.md) | 0 | 0 | 1 | 1 |  |
 | [process/class](process/class.md) | 22 | 3 | 9 | 11 | `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [process/commitment](process/commitment.md) | 10 | 3 | 20 | 15 | `scenario_opex` |
+| [process/commitment](process/commitment.md) | 10 | 0 | 20 | 18 | `scenario_opex` |
 | [process/commitment_none](process/commitment_none.md) | 3 | 3 | 0 | 1 |  |
 | [process/maintenance](process/maintenance.md) | 5 | 4 | 13 | 12 | `Process_p_nom_available`, `Process_status_available` |
 | [process/ramping](process/ramping.md) | 5 | 0 | 6 | 14 |  |
+| [process/status_integer](process/status_integer.md) | 0 | 3 | 0 | 0 |  |
+| [process/status_relaxed](process/status_relaxed.md) | 0 | 3 | 4 | 14 |  |
 | [security](security.md) | 2 | 0 | 8 | 10 |  |
 | [storage_unit](storage_unit.md) | 36 | 6 | 21 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
 | [store](store.md) | 29 | 4 | 11 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
@@ -108,22 +114,30 @@ or a transformer is in.
 ## Choosing the layers of a class
 
 A committable class takes its class file, then one of two files for its
-commitment, then any of its ramping and its maintenance:
+commitment, then any of its ramping and its maintenance. The commitment also
+takes one of two files for its status:
 
 | Layer | What it adds | Without it |
 | --- | --- | --- |
-| `commitment.yaml` | the status, its starts and stops, and the rows of a committed unit | take `commitment_none.yaml` |
+| `commitment.yaml` | the rows of a committed unit, which read the status | take `commitment_none.yaml` |
 | `commitment_none.yaml` | the names the ramping and the maintenance read, each masked empty | take `commitment.yaml` |
+| `status_integer.yaml` | the status, its starts and stops as integers | take `status_relaxed.yaml` |
+| `status_relaxed.yaml` | the status as a share in [0, 1], the rows that tighten it, and its refusal of a modular unit; it reads the ramp rates | take `status_integer.yaml` |
 | `ramping.yaml` | the ramp limits | no unit is held to a ramp limit |
 | `maintenance.yaml` | the maintenance events, and what they take out of the build and the status | no unit is maintained |
+
+`examples/pypsa.yaml` takes every layer with the integer status, and
+`examples/pypsa_linearized_uc.yaml` takes the relaxed status in its place.
 
 The class reads `Generator_committable` under `given:`, and only the two
 commitment files declare it. A class with neither file leaves the name under
 `given:`, and an engine refuses the spec. A class with both is refused by
-`merge`, because two files declare the name. `commitment_none.yaml` declares
-an assumption that no unit is committable, so data that holds a committable
-unit is refused when it is attached, rather than leaving that unit without
-output limits.
+`merge`, because two files declare the name. The commitment reads the status
+the same way, from one of the two status files. `commitment_none.yaml`
+declares the status itself, so it takes no status file.
+`commitment_none.yaml` also declares an assumption that no unit is
+committable, so data that holds a committable unit is refused when it is
+attached, rather than leaving that unit without output limits.
 
 The maintenance adds to two sums that the lower layers define:
 `Generator_p_nom_available` in the class, the build the output limits are

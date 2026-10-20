@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Processes, the ramping
 
-This file states the ramp limits of PyPSA's `Process`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml`. It reads the status from [the commitment](commitment.md) or from [no commitment](commitment_none.md). It reads `Process_active`, `Process_big_m`, `Process_com_ext`, `Process_committable`, `Process_p`, `Process_p_nom_committed` and 9 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
+This file states the ramp limits of PyPSA's `Process`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. It reads the status from [the commitment](commitment.md) or from [no commitment](commitment_none.md). It reads `Process_active`, `Process_big_m`, `Process_com_ext`, `Process_committable`, `Process_p`, `Process_p_nom_committed` and 9 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -19,9 +19,9 @@ given:
     Process_active: { dims: [snapshot, process], dtype: bool }
   variables:
     Process_p: { dims: [scenario, snapshot, process] }
-    Process_status: { dims: [scenario, snapshot, process], domain: integer }
-    Process_start_up: { dims: [scenario, snapshot, process], domain: integer }
-    Process_shut_down: { dims: [scenario, snapshot, process], domain: integer }
+    Process_status: { dims: [scenario, snapshot, process] }
+    Process_start_up: { dims: [scenario, snapshot, process] }
+    Process_shut_down: { dims: [scenario, snapshot, process] }
     Process_p_nom_ext: { dims: [process] }
   expressions:
     Process_p_nom_effective: { dims: [scenario, process] }

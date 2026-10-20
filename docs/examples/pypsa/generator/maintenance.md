@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generators, the maintenance
 
-This file states the maintenance of PyPSA's `Generator`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml`. It takes what is under maintenance out of the build, which [the class](class.md) defines as `Generator_p_nom_available`, and out of the status, which [the commitment](commitment.md) or [no commitment](commitment_none.md) defines as `Generator_status_available`. It adds a term to each of these sums: `Generator_p_nom_available` and `Generator_status_available`. It reads `Generator_active`, `Generator_committable`, `Generator_committed`, `Generator_p_nom`, `Generator_p_nom_ext`, `Generator_p_nom_extendable` and 5 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
+This file states the maintenance of PyPSA's `Generator`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. It takes what is under maintenance out of the build, which [the class](class.md) defines as `Generator_p_nom_available`, and out of the status, which [the commitment](commitment.md) or [no commitment](commitment_none.md) defines as `Generator_status_available`. It adds a term to each of these sums: `Generator_p_nom_available` and `Generator_status_available`. It reads `Generator_active`, `Generator_committable`, `Generator_committed`, `Generator_p_nom`, `Generator_p_nom_ext`, `Generator_p_nom_extendable` and 5 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -20,7 +20,7 @@ given:
     Generator_p_nom_min: { dims: [scenario, generator] }
     Generator_p_nom_max: { dims: [scenario, generator] }
   variables:
-    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_status: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_ext: { dims: [generator] }
   expressions:
     Generator_p_nom_available: { dims: [scenario, snapshot, generator] }

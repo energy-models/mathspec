@@ -27,10 +27,11 @@ docs/examples/library/composed.md
 docs/examples/pypsa/*.md
 docs/examples/pypsa/*/*.md
 
-# `tools/pypsa_compose.py` writes this file from the fragments under
+# `tools/pypsa_compose.py` writes these files from the fragments under
 # `examples/pypsa/`, in the layout `Spec.to_yaml` gives, and prettier would
 # fold it back into another.
 examples/pypsa.yaml
+examples/pypsa_linearized_uc.yaml
 
 # The PyPSA reference scripts write this file; prettier would reformat what
 # they stamp, and the two would fight over it exactly as above.

@@ -109,18 +109,24 @@ nav:
                   - examples/pypsa/generator/class.md
                   - The commitment: examples/pypsa/generator/commitment.md
                   - No commitment: examples/pypsa/generator/commitment_none.md
+                  - The integer status: examples/pypsa/generator/status_integer.md
+                  - The relaxed status: examples/pypsa/generator/status_relaxed.md
                   - The ramping: examples/pypsa/generator/ramping.md
                   - The maintenance: examples/pypsa/generator/maintenance.md
               - Links:
                   - examples/pypsa/link/class.md
                   - The commitment: examples/pypsa/link/commitment.md
                   - No commitment: examples/pypsa/link/commitment_none.md
+                  - The integer status: examples/pypsa/link/status_integer.md
+                  - The relaxed status: examples/pypsa/link/status_relaxed.md
                   - The ramping: examples/pypsa/link/ramping.md
                   - The maintenance: examples/pypsa/link/maintenance.md
               - Processes:
                   - examples/pypsa/process/class.md
                   - The commitment: examples/pypsa/process/commitment.md
                   - No commitment: examples/pypsa/process/commitment_none.md
+                  - The integer status: examples/pypsa/process/status_integer.md
+                  - The relaxed status: examples/pypsa/process/status_relaxed.md
                   - The ramping: examples/pypsa/process/ramping.md
                   - The maintenance: examples/pypsa/process/maintenance.md
               - Storage units: examples/pypsa/storage_unit.md

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Processes, the commitment
 
-This file states the unit commitment of PyPSA's `Process`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml`. It declares `Process_committable`, and a model takes this file or [no commitment](commitment_none.md), never both. Its output limits read `Process_status_available`, which [the maintenance](maintenance.md) adds to. It adds a term to the sum `scenario_opex`. It reads `Process_active`, `Process_committed`, `Process_modules_installed`, `Process_n_mod`, `Process_p`, `Process_p_max_pu` and 9 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
+This file states the unit commitment of PyPSA's `Process`. It is one of the [fragments](../index.md) that merge into `examples/pypsa.yaml` and its variants. It declares `Process_committable`, and a model takes this file or [no commitment](commitment_none.md), never both. It reads its status from [the integer status](status_integer.md) or [the relaxed status](status_relaxed.md), and its output limits read `Process_status_available`, which [the maintenance](maintenance.md) adds to. It adds a term to the sum `scenario_opex`. It reads `Process_active`, `Process_committed`, `Process_modules_installed`, `Process_n_mod`, `Process_p`, `Process_p_max_pu` and 12 more names that other fragments declare, and lists them under [`given`](../../../reference/language/parameters-variables-constraints.md#given).
 
 <!-- gallery:begin -->
 ```yaml
@@ -22,6 +22,9 @@ given:
     period_weight_objective: { dims: [period] }
     Process_active: { dims: [snapshot, process], dtype: bool }
   variables:
+    Process_status: { dims: [scenario, snapshot, process] }
+    Process_start_up: { dims: [scenario, snapshot, process] }
+    Process_shut_down: { dims: [scenario, snapshot, process] }
     Process_p: { dims: [scenario, snapshot, process] }
     Process_n_mod: { dims: [process], domain: integer }
     Process_p_nom_ext: { dims: [process] }
@@ -103,32 +106,6 @@ parameters:
       internal power; data prep
     dims: [scenario, process]
     missing: neutral
-
-variables:
-  Process_status:
-    description: >-
-      `Process-status` — how much of a committable process is on: an integer
-      the rows below cap at one, or at the module count where the build is
-      modular
-    dims: [scenario, snapshot, process]
-    where: Process_committed
-    domain: integer
-    bounds:
-      lower: 0
-  Process_start_up:
-    description: "`Process-start_up` — how much of a committable process turns on this snapshot, capped as the status is"
-    dims: [scenario, snapshot, process]
-    where: Process_committed
-    domain: integer
-    bounds:
-      lower: 0
-  Process_shut_down:
-    description: "`Process-shut_down` — how much of a committable process turns off this snapshot, capped as the status is"
-    dims: [scenario, snapshot, process]
-    where: Process_committed
-    domain: integer
-    bounds:
-      lower: 0
 
 expressions:
   Process_status_available:
@@ -322,6 +299,9 @@ constraints:
 | $`\mathrm{nonneg}^{z}`$ | `Process_p_min_pu_nonneg` over $`\mathcal{J}`$, data another file declares |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
 | $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{T} \times \mathcal{J}`$, data another file declares |
+| $`u^{z}`$ | `Process_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
+| $`\mathit{up}^{z}`$ | `Process_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
+| $`\mathit{dn}^{z}`$ | `Process_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
 | $`z`$ | `Process_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
 | $`N^{z}`$ | `Process_n_mod` over $`\mathcal{J}`$ |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ |
@@ -359,14 +339,6 @@ constraints:
 |---|---|
 | $`\mathrm{on}^{z,\mathrm{com,ext}}`$ | `Process_com_ext` over $`\mathcal{T} \times \mathcal{J}`$ — a committable process with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
 
-#### Variables
-
-| Symbol | Meaning |
-|---|---|
-| $`u^{z}`$ | `Process_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-status` — how much of a committable process is on: an integer the rows below cap at one, or at the module count where the build is modular |
-| $`\mathit{up}^{z}`$ | `Process_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-start_up` — how much of a committable process turns on this snapshot, capped as the status is |
-| $`\mathit{dn}^{z}`$ | `Process_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-shut_down` — how much of a committable process turns off this snapshot, capped as the status is |
-
 #### Definitions
 
 | Symbol | Meaning |
@@ -388,26 +360,6 @@ constraints:
 
 ```math
 \mathrm{on}^{z,\mathrm{com,ext}}_{t,j} \iff \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
-```
-
-#### Variable domains
-
-**`Process_status`**
-
-```math
-u^{z}_{\xi,t,j} \ge 0, u^{z}_{\xi,t,j} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j}
-```
-
-**`Process_start_up`**
-
-```math
-\mathit{up}^{z}_{\xi,t,j} \ge 0, \mathit{up}^{z}_{\xi,t,j} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j}
-```
-
-**`Process_shut_down`**
-
-```math
-\mathit{dn}^{z}_{\xi,t,j} \ge 0, \mathit{dn}^{z}_{\xi,t,j} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{t,j}
 ```
 
 #### Definitions

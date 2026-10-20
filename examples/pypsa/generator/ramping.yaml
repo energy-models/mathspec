@@ -12,9 +12,9 @@ given:
     Generator_active: { dims: [snapshot, generator], dtype: bool }
   variables:
     Generator_p: { dims: [scenario, snapshot, generator] }
-    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_start_up: { dims: [scenario, snapshot, generator], domain: integer }
-    Generator_shut_down: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_status: { dims: [scenario, snapshot, generator] }
+    Generator_start_up: { dims: [scenario, snapshot, generator] }
+    Generator_shut_down: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_ext: { dims: [generator] }
   expressions:
     Generator_previous_status: { dims: [scenario, snapshot, generator] }

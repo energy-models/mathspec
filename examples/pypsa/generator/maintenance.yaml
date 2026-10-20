@@ -13,7 +13,7 @@ given:
     Generator_p_nom_min: { dims: [scenario, generator] }
     Generator_p_nom_max: { dims: [scenario, generator] }
   variables:
-    Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
+    Generator_status: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_ext: { dims: [generator] }
   expressions:
     Generator_p_nom_available: { dims: [scenario, snapshot, generator] }
