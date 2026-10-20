@@ -355,10 +355,8 @@ grammar, the order of the regions under `cases:`, the order of an entry's
 `dims`, and the order of a piecewise entry's links. A difference in any of them
 is a difference in the text.
 
-Sorting `variables:` changes the order a
-[`piecewise:`](language/piecewise.md) expansion meets them in, so a constraint
-the expansion emits can carry its dims in another order. The frame is still
-the same set of dimensions.
+The normal form sorts `dimensions:`. This changes no dims of the program,
+because a frame the loader derives is sorted by name.
 
 The normal form states the same spec, but it does not load to a `Spec` equal
 to the original, because a reprinted expression is a different string. Writing

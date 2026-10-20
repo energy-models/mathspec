@@ -420,7 +420,7 @@ class ConditionResolver:
                 f'side stands for, or remove the comparison.'
             )
             return node
-        return ExpressionComparison(left, node.op, right, tuple(d for d in ns.spec.dimensions if d in dims))
+        return ExpressionComparison(left, node.op, right, tuple(sorted(dims)))
 
     def _position(
         self, call: FunctionCallNode, node: UnresolvedComparisonNode

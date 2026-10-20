@@ -435,10 +435,9 @@ def test_the_form_declares_the_same_spec(path):
     there, under its own name, on its own frame. What the form is allowed to
     change is the text of an expression and the order two entries sit in.
 
-    A frame is compared as the set it is. Sorting `variables:` changes the
-    order a `piecewise:` expansion meets them in, so a constraint the expansion
-    emits can carry the same dims in another order — the same frame, laid out
-    differently by a consumer that reads that order.
+    A frame is compared in its order. The form sorts `dimensions:`, and a
+    frame the loader derives is sorted by name, so that sort changes no
+    frame.
     """
     original, rewritten = (
         ms.to_spec(source).expand('piecewise').program for source in (path, ms.to_spec(path).to_yaml(canonical=True))
@@ -458,11 +457,11 @@ def test_the_form_declares_the_same_spec(path):
         assert sorted(getattr(original, group)) == sorted(getattr(rewritten, group)), (
             f'{group}: the form declares a different set of names'
         )
-    assert [(name, frozenset(entry.dims), entry.sense) for name, entry in sorted(rewritten.constraints.items())] == [
-        (name, frozenset(entry.dims), entry.sense) for name, entry in sorted(original.constraints.items())
+    assert [(name, entry.dims, entry.sense) for name, entry in sorted(rewritten.constraints.items())] == [
+        (name, entry.dims, entry.sense) for name, entry in sorted(original.constraints.items())
     ], 'every constraint keeps its frame and its sense'
-    assert [(name, frozenset(entry.dims), entry.domain) for name, entry in sorted(rewritten.variables.items())] == [
-        (name, frozenset(entry.dims), entry.domain) for name, entry in sorted(original.variables.items())
+    assert [(name, entry.dims, entry.domain) for name, entry in sorted(rewritten.variables.items())] == [
+        (name, entry.dims, entry.domain) for name, entry in sorted(original.variables.items())
     ], 'and every variable its frame and its domain'
     assert (rewritten.objective is None) == (original.objective is None), 'an objective is kept, or its absence is'
     if original.objective is not None and rewritten.objective is not None:

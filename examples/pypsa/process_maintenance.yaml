@@ -15,7 +15,7 @@ given:
     Process_status: { dims: [scenario, snapshot, process], domain: integer }
     Process_p_nom_ext: { dims: [process] }
   conditions:
-    Process_committed: { dims: [snapshot, process] }
+    Process_committed: { dims: [process, snapshot] }
 
 dimensions:
   scenario:

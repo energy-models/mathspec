@@ -21,7 +21,7 @@ given:
     Generator_p_nom_effective: { dims: [scenario, generator] }
     Generator_p_nom_committed: { dims: [scenario, generator] }
   conditions:
-    Generator_com_ext: { dims: [snapshot, generator] }
+    Generator_com_ext: { dims: [generator, snapshot] }
 
 dimensions:
   scenario:

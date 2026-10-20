@@ -146,7 +146,7 @@ feasibility problem:
     **`generation`**
 
     ```math
-    \mathit{generation}_{t,b} = \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} \mathit{dispatch}_{t,g} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+    \mathit{generation}_{b,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} \mathit{dispatch}_{t,g} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
     ```
 
     **`generation_cost`**
@@ -233,7 +233,7 @@ print(ms.to_markdown(spec, legend=False))
     **`generation`**
 
     ```math
-    \mathit{generation}_{t,b} = \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} \mathit{dispatch}_{t,g} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+    \mathit{generation}_{b,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} \mathit{dispatch}_{t,g} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
     ```
 
     **`generation_cost`**
@@ -245,13 +245,13 @@ print(ms.to_markdown(spec, legend=False))
     **`consumption`**
 
     ```math
-    \mathrm{consumption}_{t,b} = -\mathrm{demand}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+    \mathrm{consumption}_{b,t} = -\mathrm{demand}_{t,b} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
     ```
 
     **`injection`**
 
     ```math
-    \mathit{injection}_{t,b} = \mathit{generation}_{t,b} + \mathrm{consumption}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+    \mathit{injection}_{t,b} = \mathit{generation}_{b,t} + \mathrm{consumption}_{b,t} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
     ```
 
     **`total_cost`**

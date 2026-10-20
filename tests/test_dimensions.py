@@ -36,7 +36,7 @@ from mathspec.program import (
     WindowSum,
     children,
 )
-from tests.fixtures import DISPATCH_MODEL, SPECS, expression_of, spec_of, varied, where_of
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, expression_of, spec_of, varied, where_of
 
 #: Every class an expression node is an instance of.
 EXPRESSION_NODES = get_args(Expression)
@@ -862,3 +862,15 @@ def test_every_fault_resolution_meets_is_listed_under_the_class_of_what_is_wrong
         _spec(**patch)
     missing = [text for text in listed if text not in str(raised.value)]
     assert not missing, f'every fault is listed, not the first: {missing} are absent'
+
+
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_the_order_of_dimensions_reaches_no_value_of_the_program(path):
+    """The dims of a named condition, of a named expression that declares none, of a piecewise curve and of a
+    comparison of two expressions in a condition were in the order `dimensions:` declares. Two files that
+    differ only in that order loaded to different programs."""
+    spec = to_spec(path)
+    data = spec.to_dict()
+    reversed_order = to_spec({**data, 'dimensions': dict(reversed(cast('dict', data['dimensions']).items()))})
+    assert reversed_order.program == spec.program, 'the order of dimensions: changes no value of the program'
+    assert reversed_order.expand().program == spec.expand().program, 'nor of the program its expansion lowers to'

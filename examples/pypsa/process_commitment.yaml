@@ -24,7 +24,7 @@ given:
   expressions:
     scenario_opex: { dims: [scenario] }
   conditions:
-    Process_committed: { dims: [snapshot, process] }
+    Process_committed: { dims: [process, snapshot] }
 
 dimensions:
   scenario:

@@ -31,7 +31,7 @@ expressions:
 
 An entry is a bare string, or a mapping with a `description:` and a `dims:`.
 The `dims:` are the dimensions over which the quantity is indexed. When
-`dims:` is left out, the expression itself decides them. When `dims:` is
+`dims:` is left out, the expression itself decides them, sorted by name. When `dims:` is
 declared, it sets the order of the indices, and it names the dimensions over
 which the expression is indexed. The loader refuses an expression that is
 indexed over a dimension not given in `dims:`, and a `dims:` that gives a
@@ -246,8 +246,7 @@ An entry with no `description:` may be the bare condition.
   `holds:`, under `NOT`, and inside `count`, `shift` and `at`. It selects the
   same rows as the condition written out.
 - A named condition declares no `dims:`. It is indexed over the dimensions its
-  condition reads, in the order `dimensions:` declares them, and the symbol
-  prints with those indices. A use over more dimensions repeats the condition
+  condition reads, sorted by name, and the symbol prints with those indices. A use over more dimensions repeats the condition
   along the others, and `shift` reads it back only along a dimension over which
   the condition is indexed.
 - A named condition may read another named condition, and a named expression

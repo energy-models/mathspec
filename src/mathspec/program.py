@@ -856,8 +856,8 @@ class NamedCondition:
     """
 
     condition: Mask
-    #: The frame the condition is read over: the dims its condition carries, in the
-    #: order ``dimensions:`` declares them.
+    #: The frame the condition is read over: the dims its condition carries,
+    #: sorted by name.
     dims: tuple[str, ...]
     description: str | None = None
 
@@ -893,7 +893,7 @@ class Piecewise:
             to 1.
         points: The parameter saying how far each curve runs, or ``None``.
         frame: The dimensions the entry builds one curve per coordinate of,
-            in file order.
+            sorted by name.
         description: What the file wrote under ``description:``, or ``None``.
     """
 

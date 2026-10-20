@@ -149,8 +149,8 @@ def test_a_special_ordered_set_prints_the_line_the_document_prints_for_it():
     spec = to_spec(EXAMPLES / 'sos.yaml').expand('piecewise')
     line = typeset_line(spec, 'cost_curve', 'latex')
     assert line == (
-        r'\left( \mathit{cost\_curve\_lam}_{t,g,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 '
-        r'\qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}'
+        r'\left( \mathit{cost\_curve\_lam}_{g,t,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 '
+        r'\qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}'
     )
 
 
