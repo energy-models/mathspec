@@ -450,7 +450,22 @@ class VariableSpec(_StrictSpec):
         return self
 
 
-class GivenParameterSpec(_StrictSpec):
+class _GivenEntrySpec(_StrictSpec):
+    """Base for a ``given:`` entry, which writes the fields its file wrote and no more.
+
+    A reading may say less than the entry it reads, so a field left out is no
+    claim, where the same field at its default is one. Writing the default out
+    would make ``to_spec(spec.to_dict())`` read the name as saying more than
+    the file did, and [`merge`][mathspec.merge] would compare that instead.
+    """
+
+    @model_serializer(mode='wrap')
+    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        written = cast('dict[str, object]', handler(self))
+        return {key: value for key, value in written.items() if key in self.model_fields_set}
+
+
+class GivenParameterSpec(_GivenEntrySpec):
     """Data this file reads and another file declares.
 
     It says the frame and the dtype of a [`ParameterSpec`][], which are what
@@ -465,7 +480,7 @@ class GivenParameterSpec(_StrictSpec):
     description: str | None = None
 
 
-class GivenVariableSpec(_StrictSpec):
+class GivenVariableSpec(_GivenEntrySpec):
     """A column this file reads and another file introduces.
 
     The frame and the domain are all this file states. The file that introduces
@@ -479,7 +494,7 @@ class GivenVariableSpec(_StrictSpec):
     description: str | None = None
 
 
-class GivenConstraintSpec(_StrictSpec):
+class GivenConstraintSpec(_GivenEntrySpec):
     """A row family this file reads the dual of and another model builds.
 
     The frame says how many duals there are and what indexes them, which is
@@ -493,7 +508,7 @@ class GivenConstraintSpec(_StrictSpec):
     description: str | None = None
 
 
-class GivenExpressionSpec(_StrictSpec):
+class GivenExpressionSpec(_GivenEntrySpec):
     """A named expression this file reads and another file defines.
 
     The frame is all this file states. This file reads the name as a quantity
@@ -514,7 +529,7 @@ class GivenExpressionSpec(_StrictSpec):
     description: str | None = None
 
 
-class GivenMaskSpec(_StrictSpec):
+class GivenMaskSpec(_GivenEntrySpec):
     """A mask this file reads and another file defines.
 
     The frame is all this file states, and it names the dims the definer's
