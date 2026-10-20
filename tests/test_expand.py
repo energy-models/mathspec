@@ -121,7 +121,7 @@ def test_loading_writes_no_curve_out_and_each_ask_writes_them_out_once(monkeypat
 def test_an_expansion_declares_exactly_the_parameters_the_file_declared():
     """A masked ``lp`` curve emitted three ``bool`` parameters the file never declared, filled by a
     derivation the expanded model carried in private state, so the expansion asked for data the
-    model it came from did not and ``to_yaml`` refused it. Every one of them is a predicate a
+    model it came from did not and ``to_yaml`` refused it. Every one of them is a condition a
     ``where:`` writes, so the expansion emits none."""
     spec = spec_of(MASKED)
     expanded = spec.expand()

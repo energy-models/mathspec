@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 # Named expressions, masks and macros
 
 An `expressions:` entry names a quantity once, for the math to read or for a
-solve to report. A `masks:` entry names a `where` predicate once, for every
+solve to report. A `masks:` entry names a `where` condition once, for every
 `where:` that reads it. A `macros:` entry is a template that takes arguments,
 which the loader substitutes into an expression before anything reads it.
 
@@ -188,7 +188,7 @@ A row that `c`'s `where:` deletes has no dual.
 
 ## `masks`
 
-A mask names a [`where` predicate](expressions.md#where-strings) once, and a
+A mask names a [`where` condition](expressions.md#where-strings) once, and a
 `where:`, a `when:` or a `holds:` reads it by that name:
 
 ```yaml
@@ -217,7 +217,7 @@ constraints:
 ```
 
 The typeset document prints the symbol of the mask where a file reads it, upright
-as data is. The predicate prints once, under _Masks_, with ⟺ where a named
+as data is. The condition prints once, under _Masks_, with ⟺ where a named
 expression prints =:
 
 ```math
@@ -230,16 +230,16 @@ p_{e,g} - p_{e - 1,g} \le 0.5 \cdot \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall
 
 | Field         |                                                 |                |
 | ------------- | ----------------------------------------------- | -------------- |
-| `where`       | required. The predicate, in the `where` grammar |                |
+| `where`       | required. The condition, in the `where` grammar |                |
 | `description` | free text                                       | default `null` |
 
 An entry with no `description:` may be the bare `where` string.
 
-- A bare mask name stands for its predicate in a `where:`, a `when:` and a
+- A bare mask name stands for its condition in a `where:`, a `when:` and a
   `holds:`, under `NOT`, and inside `count`, `shift` and `at`. It selects the
-  same rows as the predicate written out.
-- The predicate gives the frame, so a mask declares no `dims:`. A mask runs
-  over the dimensions its predicate reads, in the order `dimensions:` declares
+  same rows as the condition written out.
+- The condition gives the frame, so a mask declares no `dims:`. A mask runs
+  over the dimensions its condition reads, in the order `dimensions:` declares
   them, and the symbol prints with those indices. A use over more dimensions
   reads the mask as constant along the rest, and `shift` reads it back only
   along a dimension of its frame.
@@ -257,7 +257,7 @@ An entry with no `description:` may be the bare `where` string.
   Named expression 'e': 'stands' is a mask, which is true or false where it is read, and not a number. Write it bare in the where — stands, or NOT stands — rather than comparing it or computing with it.
   ```
 
-- A predicate that folds to `True` or `False` is refused, because it names
+- A condition that folds to `True` or `False` is refused, because it names
   every row or none.
 - The `where:` of a variable may not ask, through a mask, whether that variable
   exists. The loader refuses this the same as the bare name of the variable.

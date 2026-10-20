@@ -29,7 +29,7 @@ from mathspec.program import (
     ExpressionReference,
     Join,
     JoinColumns,
-    JoinedPredicate,
+    JoinedCondition,
     Mask,
     Multiply,
     Negate,
@@ -43,7 +43,7 @@ from mathspec.program import (
     RelationPairComparison,
     Sum,
     Translate,
-    TranslatedPredicate,
+    TranslatedCondition,
     VariableDefined,
     VariableReference,
     WindowSum,
@@ -128,7 +128,7 @@ def _sum_dims(node: Sum, spec: Spec, context: str) -> frozenset[str]:
 
 
 def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand: str) -> frozenset[str]:
-    """The dims *inner* has once *columns* joins it, an expression's or a predicate's alike.
+    """The dims *inner* has once *columns* joins it, an expression's or a condition's alike.
 
     The dims joined on go and the dims grouped by arrive. A column both
     joined on and grouped by keeps its dim. The call a refusal quotes is
@@ -337,7 +337,7 @@ def _check_where_dims(
     frame: frozenset[str],
     context: str,
 ) -> None:
-    """A predicate may only test dims the frame carries; reducing an outside dim to fit would fail open.
+    """A condition may only test dims the frame carries; reducing an outside dim to fit would fail open.
 
     The refusal names the leaf that left the frame, reading its dims as
     [`dims`][mathspec.program.Mask.dims] does.
@@ -361,10 +361,10 @@ def _check_where_dims(
                 leaf = 'a where-comparison of expressions'
             case CountComparison():
                 leaf = f"a where-count over '{atom.over}'"
-            case TranslatedPredicate():
-                leaf = f"a where-predicate translated along '{atom.along}'"
-            case JoinedPredicate():
-                leaf = f"a where-predicate read through '{atom.columns.name}'"
+            case TranslatedCondition():
+                leaf = f"a where-condition translated along '{atom.along}'"
+            case JoinedCondition():
+                leaf = f"a where-condition read through '{atom.columns.name}'"
             case _:
                 assert_never(atom)
         raise DimensionError(

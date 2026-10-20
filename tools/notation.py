@@ -163,8 +163,8 @@ FAMILIES: dict[str, dict[str, str]] = {
         'covered': 'Reduction in a scalar condition',
         'counted': 'Count over a dimension',
         'counted_here': 'Count along a dimension of the frame',
-        'run_start': 'Predicate at the previous coordinate',
-        'zoned': 'Predicate through a relation',
+        'run_start': 'Condition at the previous coordinate',
+        'zoned': 'Condition through a relation',
     },
 }
 

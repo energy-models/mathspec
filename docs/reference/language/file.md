@@ -14,7 +14,7 @@ A spec file is a YAML mapping with **thirteen section keys**, plus
 | `dimensions`  | the dimensions ([dimensions](dimensions.md))                                                      |
 | `relations`   | named relations between dimensions ([relations](relations.md))                                    |
 | `parameters`  | the data the spec expects ([parameters](parameters-variables-constraints.md#parameters))          |
-| `masks`       | named `where` predicates, read by name wherever a `where` string is ([masks](named.md#masks))     |
+| `masks`       | named `where` conditions, read by name wherever a `where` string is ([masks](named.md#masks))     |
 | `variables`   | what the solver decides                                                                           |
 | `expressions` | named quantities, reusable in the math and readable after a solve ([named expressions](named.md)) |
 | `objective`   | what is minimised or maximised                                                                    |

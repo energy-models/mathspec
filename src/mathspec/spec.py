@@ -533,8 +533,8 @@ class GivenMaskSpec(_GivenEntrySpec):
     """A mask this file reads and another file defines.
 
     The frame is all this file states, and it names the dims the definer's
-    predicate reads. A where reads the name as data over that frame, true or false at each coordinate, since a mask reads nothing
-    a solve decides: the predicate is the definer's.
+    condition reads. A where reads the name as data over that frame, true or false at each coordinate, since a mask reads nothing
+    a solve decides: the condition is the definer's.
     """
 
     _label: ClassVar[str] = 'a given mask entry'
@@ -737,7 +737,7 @@ class ExpressionSpec(_StrictSpec):
 
 
 class MaskSpec(_StrictSpec):
-    """A named predicate: one where string, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.
+    """A named condition: one where string, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.
 
     Written in YAML as a bare where string, or as a mapping once it carries a
     ``description:``, and serialised back to whichever form it was written in::
@@ -748,15 +748,15 @@ class MaskSpec(_StrictSpec):
             where: build_year <= period_year AND period_year < build_year + lifetime
             description: the generator stands in this period
 
-    A bare mask name in a where string stands for its predicate, inside
+    A bare mask name in a where string stands for its condition, inside
     ``count``, ``shift`` and ``at`` too. The mask's frame is the dims its
-    predicate reads, so it declares none. A mask is a predicate, so it is
+    condition reads, so it declares none. A mask is a condition, so it is
     never a value in an expression.
     """
 
     _label: ClassVar[str] = 'a mask entry'
 
-    #: The predicate, in the where grammar.
+    #: The condition, in the where grammar.
     where: str
     description: str | None = None
 
@@ -779,7 +779,7 @@ class MaskSpec(_StrictSpec):
 
 
 class AssumptionSpec(_StrictSpec):
-    """What the spec assumes of its data: a predicate every coordinate it is checked at has to satisfy.
+    """What the spec assumes of its data: a condition every coordinate it is checked at has to satisfy.
 
     Written in YAML as a bare where string, or as a mapping once it carries a
     ``where:`` or a ``description:``, and serialised back to whichever form it
@@ -798,7 +798,7 @@ class AssumptionSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'an assumption entry'
 
-    #: The predicate, in the where grammar. It holds at every coordinate of
+    #: The condition, in the where grammar. It holds at every coordinate of
     #: its own dims that ``where`` admits.
     holds: str
     #: Which coordinates it is checked at, in the same grammar; absent means every one.

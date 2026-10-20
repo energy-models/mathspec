@@ -38,11 +38,11 @@ from mathspec.errors import LanguageError, SchemaError, case_context, prefixed
 from mathspec.program import (
     BooleanLiteral,
     Cases,
+    Condition,
     Expression,
     ExpressionReference,
     Mask,
     MaskReference,
-    Predicate,
     Region,
     Relation,
     VariableDefined,
@@ -308,7 +308,7 @@ class Namespace:
 # ---------------------------------------------------------------------------
 
 
-def mask_of(node: Predicate | None) -> Mask | None:
+def mask_of(node: Condition | None) -> Mask | None:
     """The mask an entry carries for a resolved where: ``None`` where there is none, or where every row passes."""
     if node is None or (isinstance(node, BooleanLiteral) and node.value):
         return None
@@ -358,13 +358,13 @@ def resolve_expression(
 
 
 def resolve_where(
-    node: Predicate | UnresolvedWhereNode,
+    node: Condition | UnresolvedWhereNode,
     ns: Namespace,
     context: str,
     errors: list[str],
     self_variable: str | None = None,
-) -> Predicate | None:
-    """Rewrite a parsed where AST into typed predicates, folded as [`Mask`][] folds.
+) -> Condition | None:
+    """Rewrite a parsed where AST into typed conditions, folded as [`Mask`][] folds.
 
     Returns:
         The typed tree — a mask admitting every row or none comes back as the
@@ -373,7 +373,7 @@ def resolve_where(
     """
     before = len(errors)
     resolved = WhereResolver(ns, context, errors, self_variable).where(node)
-    return None if len(errors) > before else Mask(cast('Predicate', resolved)).root
+    return None if len(errors) > before else Mask(cast('Condition', resolved)).root
 
 
 def resolve_where_text(
@@ -382,7 +382,7 @@ def resolve_where_text(
     context: str,
     errors: list[str],
     self_variable: str | None = None,
-) -> Predicate | None:
+) -> Condition | None:
     """Parse and resolve one where string as [`resolve_where`][] does, a parse failure appended to *errors*.
 
     Returns:
@@ -496,7 +496,7 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
 
     found = len(errors)
     regions: list[Region] = []
-    masks: dict[str, Predicate] = {}
+    masks: dict[str, Condition] = {}
     for case_name, case in entry.cases.items():
         arm_context = case_context(name, case_name)
         when = resolve_where_text(case.when, ns, arm_context, errors)
@@ -521,7 +521,7 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
 def _mask(name: str, entry: MaskSpec, ns: Namespace, errors: list[str]) -> MaskReference | None:
     """One ``masks:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
 
-    A predicate the connectives decide is refused, since a name for every row
+    A condition the connectives decide is refused, since a name for every row
     or for none narrows nothing a where could not say plainly.
     """
     context = f"Mask '{name}'"
@@ -530,20 +530,20 @@ def _mask(name: str, entry: MaskSpec, ns: Namespace, errors: list[str]) -> MaskR
         return None
     if isinstance(body, BooleanLiteral):
         errors.append(
-            f'{context}: the predicate {entry.where!r} folds to {str(body.value).lower()}, so the mask '
+            f'{context}: the condition {entry.where!r} folds to {str(body.value).lower()}, so the mask '
             f'{"admits every row" if body.value else "admits no row"} and names nothing a where needs. '
-            f'Delete it, or write the predicate over the data.'
+            f'Delete it, or write the condition over the data.'
         )
         return None
     return MaskReference(name, body)
 
 
-def self_existence(where: Predicate, variable: str, context: str) -> str | None:
+def self_existence(where: Condition, variable: str, context: str) -> str | None:
     """The refusal for a variable whose own where asks, through a mask, whether it exists — or ``None``.
 
-    The where resolver refuses the bare name; a mask's predicate is resolved
+    The where resolver refuses the bare name; a mask's condition is resolved
     under its own name, so the check runs again on the tree with every mask's
-    predicate in it.
+    condition in it.
     """
     if not any(isinstance(atom, VariableDefined) and atom.name == variable for atom in Mask(where).atoms):
         return None

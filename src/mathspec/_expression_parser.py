@@ -333,7 +333,7 @@ def _make_power(tokens: pp.ParseResults) -> ArithmeticNode:
     return items[0] if len(items) == 1 else BinaryOperatorNode('**', items[0], items[2])
 
 
-#: The arithmetic half on its own, for the where grammar to put a predicate's
+#: The arithmetic half on its own, for the where grammar to put a condition's
 #: comparator over: one grammar for what a side may say, wherever it stands.
 #: The column selection is shared too, so a kwarg reads one the same way in
 #: both grammars.

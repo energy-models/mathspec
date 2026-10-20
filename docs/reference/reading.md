@@ -104,8 +104,8 @@ sorted(rows.piecewise)  # []
 `program.assumptions` maps a name to an `Assumption`: each entry the file
 declared, and each one a curve's method derives
 ([what a curve assumes](language/assumptions.md#what-a-curve-assumes)). An
-`Assumption` carries a `predicate`, the `where` it is checked under, and the
-`description` that a refusal ends with. The `predicate` and the `where` are
+`Assumption` carries a `condition`, the `where` it is checked under, and the
+`description` that a refusal ends with. The `condition` and the `where` are
 both masks. `assumption_message` returns the message for an assumption the data
 does not meet:
 
@@ -138,7 +138,7 @@ it. A `ParameterDefined` on a `bool` parameter reads the value. Under
 
 Import the node classes from `mathspec.program` to test a node with
 `isinstance` and to read its fields. `children()` walks an expression node's
-operands, and `where_children()` walks a predicate's. `walk()` yields every
+operands, and `where_children()` walks a condition's. `walk()` yields every
 node under an expression, parents first, and `walk_regions()` yields each node
 with the `cases:` regions it stands inside, outermost first.
 
@@ -148,12 +148,12 @@ holds, and its value is the body's value. `children()` steps into the body, so
 a walk reads through it.
 
 A `MaskReference` stands where a `masks:` entry is read. Its `body` is the
-predicate of the entry, the root of `program.masks[name].where`, and it is true
+condition of the entry, the root of `program.masks[name].where`, and it is true
 where the body is true. `where_children()` steps into the body, so `.atoms`,
 `.names_read` and `.dims` read through it, and an engine that builds rows needs
 nothing from `program.masks`.
 
-Every `where` arrives as a `Mask`, whose `.root` is the resolved predicate.
+Every `where` arrives as a `Mask`, whose `.root` is the resolved condition.
 The mask also answers four questions:
 
 - `.conjuncts` flattens the `AND` spine, and stops at an `OR` or a `NOT`.
@@ -170,17 +170,17 @@ A name compared against a literal does not arrive this way. `p_max > 5` is a
 `ParameterComparison` and `1 * p_max > 5` is an `ExpressionComparison`, though
 both mask the same coordinates.
 
-Three predicates read another predicate rather than an entry. A
+Three conditions read another condition rather than an entry. A
 `CountComparison` carries the mask it counts and the dimension it counts away.
-A `TranslatedPredicate` carries the mask it reads at a neighbouring
-coordinate. A `JoinedPredicate` carries the mask it reads through a
+A `TranslatedCondition` carries the mask it reads at a neighbouring
+coordinate. A `JoinedCondition` carries the mask it reads through a
 relation, and the `JoinColumns` it joins on and groups by. Each holds that
-mask as a `Mask`, where a connective holds a bare predicate, so the walk
+mask as a `Mask`, where a connective holds a bare condition, so the walk
 recurses through a connective and stops at these. `.names_read` and `.dims` see
-through all three, and the relation a `JoinedPredicate` reads is in its
+through all three, and the relation a `JoinedCondition` reads is in its
 `.names_read`.
 
-`Mask(predicate)` answers the same four questions of any resolved predicate,
+`Mask(condition)` answers the same four questions of any resolved condition,
 and `~`, `&` and `|` combine masks into a mask. A mask simplifies as it is
 built, so a boolean literal is either the root of the mask or does not appear in
 it. A `Region`'s `when` is a `Mask` too.
@@ -336,7 +336,7 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 - A constant is never folded into another. `2 * 3` stays `2 * 3`, so a
   reviewer sees a changed coefficient in the diff.
 
-Four things are left as the file wrote them: a predicate in the `where`
+Four things are left as the file wrote them: a condition in the `where`
 grammar, the order of the regions under `cases:`, the order of an entry's
 `dims`, and the order of a piecewise entry's links. A difference in any of them
 is a difference in the text.

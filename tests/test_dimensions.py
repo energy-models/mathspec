@@ -564,12 +564,12 @@ class TestTheEdgeRulesAreDecidedAtLoad:
 
 
 # ---------------------------------------------------------------------------
-# what a predicate reads
+# what a condition reads
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
-    ('predicate', 'expected'),
+    ('condition', 'expected'),
     [
         pytest.param('p_max > 0', {'generator'}, id='a-parameter-through-its-own-dims'),
         pytest.param('snapshot == 0', {'snapshot'}, id='a-dimension-through-itself'),
@@ -596,23 +596,23 @@ class TestTheEdgeRulesAreDecidedAtLoad:
         pytest.param('False', set(), id='a-literal-reads-nothing'),
     ],
 )
-def test_a_predicate_is_read_at_the_coordinates_its_leaves_are_read_at(namespace, predicate, expected):
-    """The dim rule for the predicate side."""
-    where = where_of(predicate, namespace, 'test')
+def test_a_condition_is_read_at_the_coordinates_its_leaves_are_read_at(namespace, condition, expected):
+    """The dim rule for the condition side."""
+    where = where_of(condition, namespace, 'test')
 
-    assert where is not None, 'a predicate the connectives cannot settle survives the fold'
+    assert where is not None, 'a condition the connectives cannot settle survives the fold'
     assert where.dims == expected
 
 
-def test_a_predicate_that_admits_every_row_has_no_leaves_left_to_read(namespace):
+def test_a_condition_that_admits_every_row_has_no_leaves_left_to_read(namespace):
     """`where_of` folds an always-true mask to `None`, so there is no node to ask."""
-    assert where_of('True', namespace, 'test') is None, 'folded away, not a predicate over nothing'
+    assert where_of('True', namespace, 'test') is None, 'folded away, not a condition over nothing'
 
 
 def test_the_frame_check_and_the_reading_walk_the_same_leaves(namespace):
     """One rule, two readers — the check reports per leaf and so cannot take the union.
 
-    A predicate outside the frame is refused by the *name* of the leaf that
+    A condition outside the frame is refused by the *name* of the leaf that
     left it, and that leaf is one `Mask.dims` counted: a check passing a mask
     the builder then reads wider would be the divergence this shares a walk to
     prevent.
@@ -626,7 +626,7 @@ def test_the_frame_check_and_the_reading_walk_the_same_leaves(namespace):
 
 
 @pytest.mark.parametrize(
-    ('predicate', 'expected'),
+    ('condition', 'expected'),
     [
         pytest.param('p_max > 0', {'p_max'}, id='a-parameter-comparison-names-the-parameter'),
         pytest.param('cost', {'cost'}, id='a-parameter-bare-names-the-parameter'),
@@ -641,11 +641,11 @@ def test_the_frame_check_and_the_reading_walk_the_same_leaves(namespace):
         pytest.param('False', set(), id='a-literal-names-nothing'),
     ],
 )
-def test_a_predicate_names_the_entries_its_leaves_test(namespace, predicate, expected):
+def test_a_condition_names_the_entries_its_leaves_test(namespace, condition, expected):
     """A dimension names no entry — it is a coordinate — so `names_read` drops it where `dims` keeps it."""
-    where = where_of(predicate, namespace, 'test')
+    where = where_of(condition, namespace, 'test')
 
-    assert where is not None, 'a predicate the connectives cannot settle survives the fold'
+    assert where is not None, 'a condition the connectives cannot settle survives the fold'
     assert where.names_read == expected
 
 
@@ -653,7 +653,7 @@ def test_names_read_takes_both_sides_of_a_relation_pair():
     """The one leaf that names two entries — two maps compared on the dimension they share.
 
     BASE has one relation per dimension, so the pair is built directly rather than
-    resolved from a predicate string.
+    resolved from a condition string.
     """
     where = RelationPairComparison('from_bus', 'bus', 'to_bus', 'bus', '!=', ('line',))
 
