@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""`examples/pypsa/` is `examples/pypsa.yaml` cut into topic fragments, and `merge` gives the same model back.
+"""`examples/pypsa/` holds the PyPSA spec as fragments, and `examples/pypsa.yaml` is their merge.
 
 Each fragment reads what another topic declares under `given:`. A sum every
 component adds to (the bus balance, the operating cost, the global
@@ -18,24 +18,21 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-import yaml
 
 from mathspec import merge, to_spec, typeset
-from mathspec._canonical import canonical_yaml
 from mathspec._typesetting import FORMATS
 from mathspec.errors import LanguageError
 from tests.fixtures import BALANCE
 from tests.test_terms import DEMAND, FLEET
 from tools.gallery import split_index
-from tools.pypsa_split import SOURCE, Model, _term_entry, fragments, home
+from tools.pypsa_compose import DEFAULT, paths
 
 FOLDER = Path(__file__).resolve().parent.parent / 'examples' / 'pypsa'
 PATHS = {path.stem: path for path in sorted(FOLDER.glob('*.yaml'))}
 
 
-@pytest.fixture(scope='module')
-def model() -> Model:
-    return Model()
+#: The fragment that reads each sum without adding to it, with its description.
+READER = {'Cycle_angle_sum': 'power_flow'}
 
 
 @pytest.mark.parametrize('name', sorted(PATHS))
@@ -43,25 +40,19 @@ def test_a_fragment_loads_on_its_own(name):
     assert to_spec(PATHS[name]).program
 
 
-def test_the_fragments_merge_to_the_one_file(model):
-    merged = merge(list(PATHS.values()), description=model.data['description'])
-    assert canonical_yaml(merged) == canonical_yaml(to_spec(SOURCE))
-    assert not merged.program.given, 'every name a fragment reads, another fragment declares'
+def test_the_default_set_is_every_fragment():
+    assert sorted(DEFAULT) == sorted(PATHS), 'a fragment the composed file leaves out, or a name no file has'
+    assert not merge(paths(DEFAULT)).program.given, 'every name a fragment reads, another fragment declares'
 
 
-def test_each_sum_is_its_terms_by_name_and_each_term_stays(model):
-    merged = merge(list(PATHS.values()))
+def test_each_sum_is_its_terms_by_name_and_each_term_stays():
+    merged = merge(paths(DEFAULT))
     assert merged.expressions['Bus_injection'].expression == (
-        'Generator_injection + Line_injection + Link_injection + Load_injection + Process_injection'
-        ' + StorageUnit_injection + Store_injection + Transformer_injection'
-    ), 'the terms in the order the files are given in'
-    assert set(model.terms) <= set(merged.expressions), 'every term is a named expression of the composed spec'
-
-
-def test_the_fragments_are_what_the_splitter_writes(model):
-    written = fragments(model)
-    assert sorted(written) == sorted(PATHS), 'one file per topic, and no stale one'
-    assert all(PATHS[name].read_text() == text for name, text in written.items())
+        'Generator_injection + Link_injection + Process_injection + StorageUnit_injection + Store_injection'
+        ' + Line_injection + Transformer_injection + Load_injection'
+    ), 'the terms in the order the default set lists the files'
+    terms = {name for path in PATHS.values() for name, entry in to_spec(path).expressions.items() if entry.adds_to}
+    assert terms <= set(merged.expressions), 'every term is a named expression of the composed spec'
 
 
 #: What a model may leave out, as the fragments it drops. Security reads the
@@ -92,18 +83,20 @@ def test_leaving_a_topic_out_leaves_a_whole_model(dropped):
     assert not merge(list(kept.values())).program.given, f'nothing that stays reads what {dropped} declares'
 
 
-def test_every_sum_is_read_with_its_description_in_one_fragment_that_adds_nothing(model):
+def test_every_sum_is_read_with_its_description_in_one_fragment_that_adds_nothing():
+    specs = {stem: to_spec(path) for stem, path in PATHS.items()}
+    sums = {entry.adds_to for spec in specs.values() for entry in spec.expressions.values() if entry.adds_to}
     described = {
         name: sorted(
             stem
-            for stem, path in PATHS.items()
-            if (g := (spec := to_spec(path)).given.expressions.get(name))
+            for stem, spec in specs.items()
+            if (g := spec.given.expressions.get(name))
             and g.description
             and all(e.adds_to != name for e in spec.expressions.values())
         )
-        for name in model.sums
+        for name in sums
     }
-    assert described == {name: [home(name)] for name in model.sums}, (
+    assert described == {name: [READER.get(name, 'surface')] for name in sums}, (
         'the surface carries the description of every sum, and power flow that of the cycle sum'
     )
 
@@ -126,26 +119,6 @@ def test_leaving_out_the_reader_of_a_sum_no_model_goes_without_is_refused(droppe
 def test_every_fragment_and_the_composition_print(fmt):
     assert all(typeset(path, fmt) for path in PATHS.values()), f'a fragment rendered nothing in {fmt}'
     assert typeset(merge(list(PATHS.values())), fmt)
-
-
-@pytest.mark.parametrize(
-    'source',
-    [
-        pytest.param('  Name: a + b', id='one-line'),
-        pytest.param('  Name: >-\n      a\n      + b', id='folded'),
-        pytest.param('  Name:\n    expression: a + b', id='mapping'),
-        pytest.param('  Name: {expression: a + b}', id='flow-mapping'),
-        pytest.param('  Name: a\n    + b', id='one-line-continued'),
-    ],
-)
-def test_a_term_entry_carries_its_body_in_every_source_form(source):
-    """A body the head line does not hold whole was dropped or nested.
-
-    A folded body follows a `>-` on the head line, and a plain body may run on
-    to the next line; the splitter kept only the head line. A flow mapping was
-    nested under `expression:`.
-    """
-    assert yaml.safe_load(_term_entry(source, 'hub')) == {'Name': {'expression': 'a + b', 'adds_to': 'hub'}}
 
 
 def test_the_split_index_names_a_hub_once_per_fragment_and_needs_a_described_reader():

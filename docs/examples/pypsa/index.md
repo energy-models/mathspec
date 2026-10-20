@@ -5,12 +5,11 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # PyPSA in 14 files
 
-You can read the PyPSA spec here one component at a time.
-[PyPSA in one file](../pypsa.md) states it as `examples/pypsa.yaml`, one spec
-of about four thousand lines. The same spec is split into 14 **fragments**,
-one file per topic under `examples/pypsa/`. `merge` joins the 14 files back
-into the one file, and the two have the same
-[canonical form](../../howto/compare.md).
+You can read the PyPSA spec here one component at a time. The spec is written
+as 14 **fragments**, one file per topic under `examples/pypsa/`. `merge`
+joins them into one spec, and `tools/pypsa_compose.py` writes that spec out as
+`examples/pypsa.yaml`, which [PyPSA in one file](../pypsa.md) indexes. Edit
+the fragments; a check fails when the written file no longer matches them.
 
 Each fragment loads and prints on its own, and
 [`advice`](../../reference/api.md#advice) runs on each fragment alone. A
@@ -22,10 +21,6 @@ component names its share of such a sum as an expression of its own, a
 names the sum. The surface reads each sum and adds nothing to it, so the terms
 always have a reader. To add a component, you add one file, and the surface
 does not change.
-
-`tools/pypsa_split.py` writes the 14 files from the one file, and a check
-compares them to it, so the two always agree. The split is a proof of concept,
-and which of the two is the source is not decided yet.
 
 ## What each file says
 

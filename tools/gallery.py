@@ -230,7 +230,7 @@ def probe_block() -> str:
 def entry(text: str, section: str, name: str | None = None) -> str:
     """One entry as written: ``section:`` itself, or ``name:`` under it."""
     lines = text.splitlines()
-    i = lines.index(f'{section}:')
+    i = next(k for k, line in enumerate(lines) if line == f'{section}:' or line.startswith(f'{section}: {{'))
     if name is not None:
         i = next(k for k in range(i + 1, len(lines)) if lines[k].startswith(f'  {name}:'))
     deeper = '    ' if name is not None else '  '
