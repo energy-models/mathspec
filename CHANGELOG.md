@@ -12,7 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- docs(pypsa): a PyPSA schedule, weight or limit that the data leaves out is absent rather than zero, and a committable extendable unit is assumed to have its big-M ([#PR](https://github.com/energy-models/mathspec/pull/PR))
+- docs(pypsa): a PyPSA schedule, weight or limit that the data leaves out is absent rather than zero, and a committable extendable unit is assumed to have its big-M ([#912](https://github.com/energy-models/mathspec/pull/912))
 - feat(language)!: a missing row reads as the value the file names, and `missing: neutral` is gone ([#894](https://github.com/energy-models/mathspec/pull/894))
 - docs: the changelog is listed under Reference rather than About ([#895](https://github.com/energy-models/mathspec/pull/895))
 - docs(pypsa): an extendable unit has a capacity to choose exactly where its active flag is set, as in PyPSA ([#886](https://github.com/energy-models/mathspec/pull/886))
