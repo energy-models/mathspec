@@ -772,3 +772,22 @@ def test_every_dims_of_the_program_is_sorted_by_name(path):
         assert found, f'{path.name} holds no dims'
         unsorted = [(holder, dims) for holder, dims in found if list(dims) != sorted(dims)]
         assert not unsorted, f'{path.name}: these dims are not sorted by name: {unsorted[:3]}'
+
+
+@pytest.mark.parametrize(
+    'condition',
+    [
+        pytest.param('zone_of', id='the-bare-relation'),
+        pytest.param("zone_of[zone] == 'north'", id='a-column-against-a-label'),
+        pytest.param('zone_of[zone] == home_of[zone]', id='a-column-against-another-relation'),
+    ],
+)
+def test_a_condition_on_a_relation_states_its_key_dims_sorted_by_name(condition):
+    """A condition on a relation stated the dims in the order the relation lists its key."""
+    keyed_backwards = {'key': ['snapshot', 'generator'], 'values': 'zone'}
+    spec = _spec(**{'relations.zone_of': keyed_backwards, 'relations.home_of': keyed_backwards})
+    where = to_spec(varied(spec.to_dict(), **{'variables.p.where': condition})).program.variables['p'].where
+    assert where is not None
+    assert [dims for _, dims in _dims_tuples(where)] == [('generator', 'snapshot')], (
+        'the condition states the relation key dims, sorted by name'
+    )
