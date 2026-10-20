@@ -12,7 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(language): a dimension may list the labels it allows, and a condition that names another label fails at load ([#TBD](https://github.com/energy-models/mathspec/pull/TBD))
+- feat(language): a dimension may list the labels it allows, and a condition that names another label fails at load ([#915](https://github.com/energy-models/mathspec/pull/915))
 - fix(language): a case-when whose cases test different columns of one relation is refused when one row can meet both ([#934](https://github.com/energy-models/mathspec/pull/934))
 - fix(language)!: a condition that uses `<`, `<=`, `>` or `>=` on a `str` or `bool` value is refused at load ([#931](https://github.com/energy-models/mathspec/pull/931))
 - feat(program): each expression node states the dimensions it is read over ([#899](https://github.com/energy-models/mathspec/pull/899))
