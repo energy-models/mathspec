@@ -14,7 +14,7 @@ given:
   variables:
     Link_status: { dims: [scenario, snapshot, link], domain: integer }
     Link_p_nom_ext: { dims: [link] }
-  masks:
+  conditions:
     Link_committed: { dims: [snapshot, link] }
 
 dimensions:
@@ -107,13 +107,13 @@ variables:
     bounds:
       lower: 0
 
-masks:
+conditions:
   Link_maint_ext:
     description: >-
       a maintainable link with an extendable build, unless it is committable
       and modular, that stands in the snapshot's period — the maintenance rows
       against the chosen build
-    where: >-
+    condition: >-
       Link_maintainable
       AND Link_p_nom_extendable
       AND NOT (Link_committable AND Link_p_nom_mod > 0)

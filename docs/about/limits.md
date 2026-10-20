@@ -18,7 +18,7 @@ New constructs can be added, although the overhead to do so varies by kind.
   Adding one costs nothing: it uses only operators that exist, so no engine has
   to change ([macros](../reference/language/named.md#macros)).
 - **A primitive** is an operator built into the language: `sum`, `sum_back`,
-  `at`, `shift`, and the `where` comparisons. Adding one is the most work:
+  `at`, `shift`, and the comparisons in a condition. Adding one is the most work:
   every engine that builds models has to implement it, and the typesetter has
   to print it in LaTeX, Typst and Markdown.
 - **A formulation** is an entry that expands into ordinary variables and

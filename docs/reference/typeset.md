@@ -46,10 +46,10 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
 `-o FILE` writes to a file instead of stdout.
 
 - The spec's `description:` opens the document.
-- The legend lists Given, Sets, Parameters, Masks, Variables, Definitions and
+- The legend lists Given, Sets, Parameters, Conditions, Variables, Definitions and
   Notation. Notation has a row for each translation or position symbol that
   the equations print, with the spec spelling that it stands for. The math
-  follows under Masks, Variable domains, Definitions, Objective,
+  follows under Conditions, Variable domains, Definitions, Objective,
   Subject to and Assumptions. Under Subject to, the constraints come first,
   then the special ordered sets, then the curves. Each part keeps the order of
   the file's sections.
@@ -67,8 +67,9 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
   cased expression, a [reported entry](language/named.md#reported-expressions)
   and a [term](language/parameters-variables-constraints.md#terms) keep their definition line
   under either `inline_expressions` setting.
-- A [mask](language/named.md#masks) prints its upright symbol where a file
-  reads it, and its condition once, under a **Masks** heading, with ⟺. It
+- A [named condition](language/named.md#conditions) prints its upright symbol
+  where a file reads it, and its condition once, under a **Conditions**
+  heading, with ⟺. It
   prints as its symbol under either `inline_expressions` setting.
 - Wherever the math moves an index, which every `shift` does, the document
   prints a line saying what that notation means.
@@ -93,7 +94,7 @@ dimension, parameter and variable.
 ## Printing one entry on its own
 
 `typeset_line` returns the line that the document prints for one named
-expression, mask, constraint, special ordered set, curve, assumption or
+expression, named condition, constraint, special ordered set, curve, assumption or
 variable. The line has its quantifier, but no document, label, number or math
 delimiters:
 

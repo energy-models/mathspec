@@ -141,7 +141,7 @@ SECTIONS = [
     'dimensions',
     'relations',
     'parameters',
-    'masks',
+    'conditions',
     'variables',
     'expressions',
     'objective',

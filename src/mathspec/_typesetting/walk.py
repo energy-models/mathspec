@@ -25,6 +25,7 @@ from mathspec.program import (
     Cases,
     ComparisonOperator,
     Condition,
+    ConditionReference,
     Constant,
     CountComparison,
     DimensionComparison,
@@ -38,7 +39,6 @@ from mathspec.program import (
     JoinColumns,
     JoinedCondition,
     Mask,
-    MaskReference,
     Multiply,
     Negate,
     Not,
@@ -520,7 +520,7 @@ class Walk:
         additive = isinstance(node, Negate | Add)
         return self._expression(node, ctx, need=2 if additive else 0)
 
-    # -- where strings -----------------------------------------------------
+    # -- conditions --------------------------------------------------------
 
     def _condition(self, node: Condition, ctx: _Context, *, need: int = 0) -> str:
         text, precedence = self._where(node, ctx)
@@ -532,12 +532,12 @@ class Walk:
             assert not node.value, 'an always-true mask is folded away or refused before anything prints it'
             return self._op('false'), _ATOM
 
-        if isinstance(node, MaskReference):
-            return ctx.indexed(self.symbols.name[node.name], list(self.program.masks[node.name].dims)), _ATOM
+        if isinstance(node, ConditionReference):
+            return ctx.indexed(self.symbols.name[node.name], list(self.program.conditions[node.name].dims)), _ATOM
 
         if isinstance(node, ParameterDefined):
             indexed = ctx.indexed(self.symbols.name[node.name], list(node.dims))
-            if node.name in self.program.given.masks or self._parameters[node.name].dtype == 'bool':
+            if node.name in self.program.given.conditions or self._parameters[node.name].dtype == 'bool':
                 return indexed, _ATOM
             return f'{indexed} {self.format.prose(" is defined")}', comparison
 
@@ -657,7 +657,7 @@ class Walk:
     def equations(self) -> list[tuple[str, list[Line]]]:
         """Every titled section of equations."""
         return [
-            ('Masks', [self.mask(name) for name in self.program.masks]),
+            ('Conditions', [self.condition(name) for name in self.program.conditions]),
             ('Variable domains', [self._variable(name) for name in self.program.variables]),
             ('Definitions', self._definitions()),
             ('Objective', self._objective()),
@@ -747,24 +747,24 @@ class Walk:
             condition=self._quantifier(frame, ''),
         )
 
-    def mask(self, name: str) -> Line:
-        """The line defining one mask, ``symbol ⟺ condition`` over its frame.
+    def condition(self, name: str) -> Line:
+        """The line defining one named condition, ``symbol ⟺ condition`` over its frame.
 
-        A mask is a condition rather than a value, so it is defined with ⟺
+        A named condition is true or false rather than a value, so it is defined with ⟺
         where an expression is defined with =; every use prints the symbol.
         """
-        entry = self.program.masks[name]
+        entry = self.program.conditions[name]
         frame = list(entry.dims)
         ctx = self._context(frame)
         return Line(
             label=name,
             left=ctx.indexed(self.symbols.name[name], frame),
-            right=f'{self._op("iff")} {self._condition(entry.where.root, ctx)}',
+            right=f'{self._op("iff")} {self._condition(entry.condition.root, ctx)}',
             condition=self._quantifier(frame, ''),
         )
 
     def line(self, name: str) -> Line:
-        """The one line *name* prints as: a named expression, a mask, a constraint, a set, a curve, an assumption, or a variable's domain.
+        """The one line *name* prints as: a named expression, a named condition, a constraint, a set, a curve, an assumption, or a variable's domain.
 
         An assumption is looked up where the document prints it from, so a
         condition a curve's method states is a line a reader can ask for
@@ -778,7 +778,7 @@ class Walk:
         program = self.program
         kinds = {
             'named expression': (program.expressions, self.definition),
-            'mask': (program.masks, self.mask),
+            'condition': (program.conditions, self.condition),
             'constraint': (program.constraints, self._constraint),
             'special ordered set': (program.sos, self._sos),
             'curve': (program.piecewise, self._piecewise),
@@ -789,7 +789,7 @@ class Walk:
         if not found:
             everything = {n for group, _ in kinds.values() for n in group}
             msg = (
-                f"'{name}' is not a named expression, mask, constraint, special ordered set, curve, assumption "
+                f"'{name}' is not a named expression, condition, constraint, special ordered set, curve, assumption "
                 f'or variable. {did_you_mean(name, everything)}'
             )
             raise SchemaError(msg)
@@ -864,7 +864,7 @@ class Walk:
     def _assumption(self, name: str) -> Line:
         """One assumption: the condition over the frame both its masks name, under its ``where``."""
         assumption = self.program.assumptions[name]
-        holds, where = assumption.condition, assumption.where
+        holds, where = assumption.holds, assumption.where
         frame = self._sorted(holds.dims | (where.dims if where is not None else frozenset()))
         ctx = self._context(frame)
         if isinstance(holds.root, AlignedComparison):

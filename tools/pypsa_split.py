@@ -18,9 +18,9 @@ what another topic declares under `given:`; each term names the hub it adds to
 with `adds_to:`, and the fragment reads that hub under `given:`. One fragment
 reads each hub without adding to it, with its description, so the terms always
 have a reader, and a new component is one new fragment. The reader of
-`total_cost` also sets the objective. A mask goes to the topic its name
-names, as any entry does, and a fragment that reads another topic's
-mask reads it under `given: masks:`.
+`total_cost` also sets the objective. A named condition goes to the topic its
+name names, as any entry does, and a fragment that reads another topic's
+named condition reads it under `given: conditions:`.
 
 `merge` then writes each hub as the file does, so `check` is one comparison:
 the merged fragments and the one file have one canonical form.
@@ -48,7 +48,16 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 SOURCE = Path('examples/pypsa.yaml')
-SECTIONS = ('dimensions', 'relations', 'parameters', 'variables', 'expressions', 'masks', 'constraints', 'assumptions')
+SECTIONS = (
+    'dimensions',
+    'relations',
+    'parameters',
+    'variables',
+    'expressions',
+    'conditions',
+    'constraints',
+    'assumptions',
+)
 FRAME = ('dimensions', 'relations')
 IDENT = re.compile(r'[A-Za-z_][A-Za-z0-9_]*')
 HEADER = '# SPDX-FileCopyrightText: mathspec Contributors\n#\n# SPDX-License-Identifier: MIT\n'
@@ -222,11 +231,11 @@ class Model:
         return list(self.entries)
 
     def frames(self) -> dict[str, tuple[str, ...]]:
-        """The frame of every named expression and mask, read off the one file."""
+        """The frame of every named expression and named condition, read off the one file."""
         program = to_spec(self.data).program
         return {
             **{name: e.dims for name, e in program.expressions.items()},
-            **{name: m.dims for name, m in program.masks.items()},
+            **{name: m.dims for name, m in program.conditions.items()},
         }
 
     def home(self, name: str) -> str:
@@ -260,7 +269,7 @@ def fragments(model: Model) -> dict[str, str]:
         given = {model.key(n) for n in read if model.key(n)[0] not in FRAME and model.key(n) not in mine}
         stated = {
             **{n: model.data[s][n]['dims'] for s, n in given if s in ('parameters', 'variables')},
-            **{n: list(frames[n]) for s, n in given if s in ('expressions', 'masks')},
+            **{n: list(frames[n]) for s, n in given if s in ('expressions', 'conditions')},
         }
         frame_reads = read | set().union(*(model.names_in(dims) for dims in stated.values()))
         frame = {model.key(n) for n in frame_reads if model.key(n)[0] in FRAME}
@@ -324,7 +333,7 @@ def _fragment(
 
 #: The kinds a fragment reads under `given:`, and the fields of the source
 #: entry each restates beside the frame.
-GIVEN_KINDS = {'parameters': ('dtype',), 'variables': ('domain',), 'expressions': (), 'masks': ()}
+GIVEN_KINDS = {'parameters': ('dtype',), 'variables': ('domain',), 'expressions': (), 'conditions': ()}
 
 
 def _term_entry(source: str, hub: str) -> str:

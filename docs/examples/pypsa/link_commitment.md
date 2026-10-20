@@ -30,7 +30,7 @@ given:
     Link_p_nom_ext: { dims: [link] }
   expressions:
     scenario_opex: { dims: [scenario] }
-  masks:
+  conditions:
     Link_committed: { dims: [snapshot, link] }
 
 dimensions:
@@ -158,13 +158,13 @@ expressions:
       + sum(sum(Link_shut_down * Link_shut_down_cost, over=link), over=snapshot)
     adds_to: scenario_opex
 
-masks:
+conditions:
   Link_com_ext:
     description: >-
       a committable link with an extendable, non-modular build that stands in
       the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed
       against the chosen build
-    where: >-
+    condition: >-
       Link_committable
       AND Link_p_nom_extendable
       AND NOT (Link_p_nom_mod > 0)
@@ -325,7 +325,7 @@ constraints:
 | $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
 | $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Link_commitment_opex` to |
-| $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{T} \times \mathcal{L}`$, a mask another file defines |
+| $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{T} \times \mathcal{L}`$, a condition another file defines |
 
 #### Sets
 
@@ -351,7 +351,7 @@ constraints:
 | $`\mathrm{c}^{f,\mathrm{on}}`$ | `Link_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one snapshot spent on |
 | $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the bound a committed extendable link's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the flow a solve wants, it caps that flow; data prep |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -379,7 +379,7 @@ constraints:
 |---|---|
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 
-#### Masks
+#### Conditions
 
 **`Link_com_ext`**
 

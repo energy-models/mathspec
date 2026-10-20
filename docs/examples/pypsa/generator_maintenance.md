@@ -21,7 +21,7 @@ given:
   variables:
     Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
     Generator_p_nom_ext: { dims: [generator] }
-  masks:
+  conditions:
     Generator_committed: { dims: [snapshot, generator] }
 
 dimensions:
@@ -117,13 +117,13 @@ variables:
     bounds:
       lower: 0
 
-masks:
+conditions:
   Generator_maint_ext:
     description: >-
       a maintainable generator with an extendable build, unless it is
       committable and modular, that stands in the snapshot's period — the
       maintenance rows against the chosen build
-    where: >-
+    condition: >-
       Generator_maintainable
       AND Generator_p_nom_extendable
       AND NOT (Generator_committable AND Generator_p_nom_mod > 0)
@@ -260,7 +260,7 @@ assumptions:
 | $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\Xi \times \mathcal{G}`$, data another file declares |
 | $`u`$ | `Generator_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ |
-| $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{T} \times \mathcal{G}`$, a mask another file defines |
+| $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{T} \times \mathcal{G}`$, a condition another file defines |
 
 #### Sets
 
@@ -280,7 +280,7 @@ assumptions:
 | $`\tau^{\mathrm{mnt}}`$ | `Generator_maintenance_duration` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the generator is not maintainable. No row reads it: data prep turns it into `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`, and the assumptions hold it to the horizon |
 | $`\mathrm{blk}`$ | `Generator_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the generator does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -295,7 +295,7 @@ assumptions:
 | $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
 | $`\mu^{u}`$ | `Generator_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the mask leaves it out — `Generator-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
 
-#### Masks
+#### Conditions
 
 **`Generator_maint_ext`**
 

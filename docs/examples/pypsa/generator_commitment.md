@@ -30,7 +30,7 @@ given:
     Generator_p_nom_ext: { dims: [generator] }
   expressions:
     scenario_opex: { dims: [scenario] }
-  masks:
+  conditions:
     Generator_committed: { dims: [snapshot, generator] }
 
 dimensions:
@@ -158,13 +158,13 @@ expressions:
       + sum(sum(Generator_shut_down * Generator_shut_down_cost, over=generator), over=snapshot)
     adds_to: scenario_opex
 
-masks:
+conditions:
   Generator_com_ext:
     description: >-
       a committable generator with an extendable, non-modular build that
       stands in the snapshot's period — PyPSA's `com-ext` rows, whose status
       is relaxed against the chosen build
-    where: >-
+    condition: >-
       Generator_committable
       AND Generator_p_nom_extendable
       AND NOT (Generator_p_nom_mod > 0)
@@ -325,7 +325,7 @@ constraints:
 | $`\mu^{u}`$ | `Generator_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Generator_commitment_opex` to |
-| $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{T} \times \mathcal{G}`$, a mask another file defines |
+| $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{T} \times \mathcal{G}`$, a condition another file defines |
 
 #### Sets
 
@@ -351,7 +351,7 @@ constraints:
 | $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
 | $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the bound a committed extendable generator's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the output a solve wants, it caps that output; data prep |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -379,7 +379,7 @@ constraints:
 |---|---|
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 
-#### Masks
+#### Conditions
 
 **`Generator_com_ext`**
 

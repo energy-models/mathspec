@@ -111,13 +111,13 @@ def notice(program: Program) -> Noticed:
         expressions(entry.expression)
     for curve in program.piecewise.values():
         expressions(*(link.expression for link in curve.links))
-    for mask in program.masks.values():
-        masks(mask.where)
+    for named in program.conditions.values():
+        masks(named.condition)
     for entry in (*program.constraints.values(), *program.variables.values()):
         if entry.where is not None:
             masks(entry.where)
     for assumption in program.assumptions.values():
-        masks(assumption.condition)
+        masks(assumption.holds)
         if assumption.where is not None:
             masks(assumption.where)
     return Noticed(frozenset(policies), grouped, frozenset(positions), frozenset(numeric))
@@ -142,7 +142,7 @@ class Legend:
         return self.format.operators[name]
 
     def glossaries(self, noticed: Noticed, defined: Iterable[str]) -> list[tuple[str, list[LegendItem]]]:
-        """The given entries, sets, parameters, masks, variables and definitions, each with its symbol, its dims and its description, then the notation.
+        """The given entries, sets, parameters, conditions, variables and definitions, each with its symbol, its dims and its description, then the notation.
 
         *defined* names the expressions that print under their own symbol, so
         a legend row stands exactly where a symbol does.
@@ -209,10 +209,10 @@ class Legend:
             *(
                 self._item(
                     self.symbols.name[g],
-                    f'{fmt.mono(g)}{self._over(list(entry.dims))}, a mask another file defines',
+                    f'{fmt.mono(g)}{self._over(list(entry.dims))}, a condition another file defines',
                     entry.description,
                 )
-                for g, entry in program.given.masks.items()
+                for g, entry in program.given.conditions.items()
             ),
         ]
         shown = set(defined)
@@ -221,15 +221,15 @@ class Legend:
             for e, entry in program.expressions.items()
             if e in shown
         ]
-        masks = [
+        conditions = [
             self._item(self.symbols.name[m], f'{fmt.mono(m)}{self._over(list(entry.dims))}', entry.description)
-            for m, entry in program.masks.items()
+            for m, entry in program.conditions.items()
         ]
         groups = (
             ('Given', given),
             ('Sets', sets),
             ('Parameters', parameters),
-            ('Masks', masks),
+            ('Conditions', conditions),
             ('Variables', variables),
             ('Definitions', definitions),
             ('Notation', self._notation(noticed)),

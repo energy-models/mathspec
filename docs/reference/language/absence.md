@@ -22,7 +22,7 @@ variables:
 With `capacity = {wind: 10, gas: 5, old: 0}`, the model has `dispatch[wind]` and
 `dispatch[gas]`, but no `dispatch[old]`.
 
-The [`where` grammar](expressions.md#where-strings) says what a `where:` may
+The [condition grammar](expressions.md#conditions) says what a `where:` may
 hold.
 
 ## What creates absence
@@ -40,12 +40,12 @@ have, because a null or NaN value is [refused](parameters-variables-constraints.
 the data is attached. The parameter's [`missing:`](parameters-variables-constraints.md#a-missing-row)
 key says what a missing row is:
 
-| `missing:`            | A missing row                                                                               |
-| --------------------- | ------------------------------------------------------------------------------------------- |
-| `refused`, by default | is refused when the data is attached                                                        |
-| `absent`              | is absence, by the rules on this page                                                       |
-| `neutral`             | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a `where` |
-| a value               | reads as that value                                                                         |
+| `missing:`            | A missing row                                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| `refused`, by default | is refused when the data is attached                                                          |
+| `absent`              | is absence, by the rules on this page                                                         |
+| `neutral`             | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a condition |
+| a value               | reads as that value                                                                           |
 
 Three positions have no neutral value, so a missing `neutral` row there is
 refused when the data is attached: a divisor, a `bounds:` entry, and the whole

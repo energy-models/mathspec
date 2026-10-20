@@ -354,17 +354,17 @@ expressions:
       sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), over=storage_unit, by=StorageUnit_bus[bus])
     adds_to: Bus_injection
 
-masks:
+conditions:
   StorageUnit_fix:
     description: >-
       a storage unit with a fixed build that stands in the snapshot's period —
       PyPSA's `fix` rows
-    where: NOT StorageUnit_p_nom_extendable AND StorageUnit_active
+    condition: NOT StorageUnit_p_nom_extendable AND StorageUnit_active
   StorageUnit_ext:
     description: >-
       a storage unit with an extendable build that stands in the snapshot's
       period — PyPSA's `ext` rows
-    where: StorageUnit_p_nom_extendable AND StorageUnit_active
+    condition: StorageUnit_p_nom_extendable AND StorageUnit_active
 
 constraints:
   StorageUnit_fix_p_dispatch_lower:
@@ -609,7 +609,7 @@ assumptions:
 | $`\mathrm{b}^{h}`$ | `StorageUnit_operational_limit_weight` over $`\Xi \times \mathcal{G} \times \mathcal{S}`$, `neutral` where the data has no row — one where the storage unit is in the row's set — data prep; one outside it has no row |
 | $`\mathrm{m}^{h}`$ | `StorageUnit_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{S}`$, `neutral` where the data has no row — one where the storage unit is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -652,7 +652,7 @@ assumptions:
 | $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ | `position(within=relation[...])` — the position of $`t`$ inside its group |
 | $`\lvert \mathcal{T} \rvert`$ | the size of $`\mathcal{T}`$; $`\lvert \mathcal{T} \rvert - 1`$ is the last position |
 
-#### Masks
+#### Conditions
 
 **`StorageUnit_fix`**
 

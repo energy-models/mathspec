@@ -243,7 +243,7 @@ def with_children(node: ArithmeticNode, recurse: Callable[[ArithmeticNode], Arit
 # ---------------------------------------------------------------------------
 
 
-#: A bracketed list of names as a kwarg value, in an expression and in a where
+#: A bracketed list of names as a kwarg value, in an expression and in a condition
 #: string alike.
 NAME_LIST = (pp.Suppress('[') + pp.DelimitedList(pp.Regex(NAME)) + pp.Suppress(']')).set_parse_action(
     lambda t: NameListNode(tuple(str(x) for x in t))
@@ -332,7 +332,7 @@ def _make_power(tokens: pp.ParseResults) -> ArithmeticNode:
     return items[0] if len(items) == 1 else BinaryOperatorNode('**', items[0], items[2])
 
 
-#: The arithmetic half on its own, for the where grammar to put a condition's
+#: The arithmetic half on its own, for the condition grammar to put a condition's
 #: comparator over: one grammar for what a side may say, wherever it stands.
 #: The column selection is shared too, so a kwarg reads one the same way in
 #: both grammars.

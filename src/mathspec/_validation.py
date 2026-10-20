@@ -42,7 +42,7 @@ def to_spec(spec: str | Path | Mapping[str, object] | Spec) -> Spec:
 
     Everything decidable without data is decided here: schema shape, every
     rule one entry is held to against the others, every expression and
-    where string, and every macro template.
+    condition, and every macro template.
 
     Args:
         spec: A YAML path — a [`Path`][], or a ``str`` with no
@@ -108,8 +108,8 @@ def _flat_namespace(spec: Spec) -> list[tuple[str, Iterable[str]]]:
         ('given variable', spec.given.variables),
         ('named expression', spec.expressions),
         ('given expression', spec.given.expressions),
-        ('mask', spec.masks),
-        ('given mask', spec.given.masks),
+        ('condition', spec.conditions),
+        ('given condition', spec.given.conditions),
         ('macro', spec.macros),
     ]
 
@@ -149,7 +149,7 @@ def _frame_dimensions(spec: Spec) -> Iterator[str]:
         *(('Given variable', name, g.dims) for name, g in spec.given.variables.items()),
         *(('Given expression', name, g.dims) for name, g in spec.given.expressions.items()),
         *(('Given constraint', name, g.dims) for name, g in spec.given.constraints.items()),
-        *(('Given mask', name, g.dims) for name, g in spec.given.masks.items()),
+        *(('Given condition', name, g.dims) for name, g in spec.given.conditions.items()),
         *(('Constraint', name, c.dims) for name, c in spec.constraints.items()),
         *(('Named expression', name, e.dims or []) for name, e in spec.expressions.items()),
     ]

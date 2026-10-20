@@ -30,7 +30,7 @@ given:
     Process_p_nom_ext: { dims: [process] }
   expressions:
     scenario_opex: { dims: [scenario] }
-  masks:
+  conditions:
     Process_committed: { dims: [snapshot, process] }
 
 dimensions:
@@ -158,13 +158,13 @@ expressions:
       + sum(sum(Process_shut_down * Process_shut_down_cost, over=process), over=snapshot)
     adds_to: scenario_opex
 
-masks:
+conditions:
   Process_com_ext:
     description: >-
       a committable process with an extendable, non-modular build that stands
       in the snapshot's period — PyPSA's `com-ext` rows, whose status is
       relaxed against the chosen build
-    where: >-
+    condition: >-
       Process_committable
       AND Process_p_nom_extendable
       AND NOT (Process_p_nom_mod > 0)
@@ -325,7 +325,7 @@ constraints:
 | $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Process_commitment_opex` to |
-| $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{T} \times \mathcal{J}`$, a mask another file defines |
+| $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{T} \times \mathcal{J}`$, a condition another file defines |
 
 #### Sets
 
@@ -351,7 +351,7 @@ constraints:
 | $`\mathrm{c}^{z,\mathrm{on}}`$ | `Process_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one snapshot spent on |
 | $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the bound a committed extendable process's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the internal power a solve wants, it caps that internal power; data prep |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -379,7 +379,7 @@ constraints:
 |---|---|
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 
-#### Masks
+#### Conditions
 
 **`Process_com_ext`**
 

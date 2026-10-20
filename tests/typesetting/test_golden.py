@@ -139,7 +139,7 @@ def _rendered_trees() -> Iterator[object]:
         if (mask := program.variables[name].where) is not None:
             yield mask.root
     for assumption in program.assumptions.values():
-        yield assumption.condition.root
+        yield assumption.holds.root
         if assumption.where is not None:
             yield assumption.where.root
     for name in spec.expressions:

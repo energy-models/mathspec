@@ -260,12 +260,12 @@ expressions:
       sum(Process_output_arrival, over=process_output, by=Process_output_bus[bus])
     adds_to: Bus_injection
 
-masks:
+conditions:
   Process_committed:
     description: >-
       a committable process that stands in the snapshot's period — every
       unit-commitment row's set
-    where: Process_committable AND Process_active
+    condition: Process_committable AND Process_active
 
 constraints:
   Process_fix_p_lower:
@@ -389,7 +389,7 @@ assumptions:
 | $`\mathrm{new}^{z}`$ | `Process_first_active` over $`\mathcal{Y} \times \mathcal{J}`$ — one in the first period a process stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\mathrm{m}^{z}`$ | `Process_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{J}`$, `neutral` where the data has no row — one where the process is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -424,7 +424,7 @@ assumptions:
 | $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
 | $`t \ominus^{\mathrm{relation}(t)} k`$ | `within=relation[...]` — $`t-k`$ inside the group of $`t`$ |
 
-#### Masks
+#### Conditions
 
 **`Process_committed`**
 

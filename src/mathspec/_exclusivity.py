@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Literal, assert_never
 from mathspec.program import (
     And,
     BooleanLiteral,
+    ConditionReference,
     Constant,
     CountComparison,
     DimensionComparison,
@@ -31,7 +32,6 @@ from mathspec.program import (
     ExpressionComparison,
     JoinedCondition,
     Mask,
-    MaskReference,
     Negate,
     Not,
     Or,
@@ -139,7 +139,7 @@ class Special(Enum):
 #: What one subject's value is, in one cell.
 Cell = float | str | bool | int | datetime.date | Special
 
-#: What a where comparison is written against: a number, a label, or a date.
+#: What a comparison in a condition is written against: a number, a label, or a date.
 #: ``position()`` counts in integers, which are numbers here.
 _Literal = float | str | datetime.date
 
@@ -499,7 +499,7 @@ def _evaluate(node: Condition, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             return _evaluate(left, cell, grid) and _evaluate(right, cell, grid)
         case Or(left=left, right=right):
             return _evaluate(left, cell, grid) or _evaluate(right, cell, grid)
-        case MaskReference(body=body):
+        case ConditionReference(body=body):
             return _evaluate(body, cell, grid)
         case _:
             assert_never(node)

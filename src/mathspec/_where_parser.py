@@ -2,9 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The where-string grammar and the ``Unresolved*`` nodes it emits, package-private.
+"""The condition grammar and the ``Unresolved*`` nodes it emits, package-private.
 
-A where string is a boolean algebra over comparisons, and a comparison's
+A condition is a boolean algebra over comparisons, and a comparison's
 sides are the expression grammar's own arithmetic. What a side *is* — a
 parameter, a dimension, a relation column, a ``position()`` — only the spec
 knows, so the grammar hands both sides over bare and
@@ -41,7 +41,7 @@ from mathspec.program import (
     Connective,
     Not,
     Or,
-    where_children,
+    condition_children,
 )
 
 if TYPE_CHECKING:
@@ -118,7 +118,7 @@ class UnresolvedComparisonNode:
 #: looked up in the spec.
 UnresolvedWhereNode = NameNode | UnresolvedComparisonNode | UnresolvedConditionCallNode | UnresolvedCountNode
 
-#: Every node a parsed where string is built of: the connectives and literals,
+#: Every node a parsed condition is built of: the connectives and literals,
 #: the unresolved leaves, and the arithmetic and the two side nodes under a
 #: comparison. The depth check walks these.
 ParsedWhere = Condition | UnresolvedWhereNode | ArithmeticNode | ColumnNode | KeywordNode
@@ -136,7 +136,7 @@ def _condition_call(tokens: pp.ParseResults) -> UnresolvedConditionCallNode:
 
 
 def _build_where_grammar() -> pp.ParserElement:
-    """Build the pyparsing grammar for where strings.
+    """Build the pyparsing grammar for conditions.
 
     Both quote characters are accepted because YAML already owns one of them.
     ``NOT`` binds tightest, then ``AND``, then ``OR``. A comparison is tried
@@ -236,11 +236,11 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     """
     rest = text[loc:].lstrip()
     if rest.startswith('&'):
-        return "'&' is not a where operator. Write AND."
+        return "'&' is not a condition operator. Write AND."
     if rest.startswith('|'):
-        return "'|' is not a where operator. Write OR."
+        return "'|' is not a condition operator. Write OR."
     if rest.startswith(('~', '!')) and not rest.startswith('!='):
-        return f"'{rest[0]}' is not a where operator. Write NOT before the condition."
+        return f"'{rest[0]}' is not a condition operator. Write NOT before the condition."
     if rest.startswith('=') and not rest.startswith('=='):
         return "'=' is not a comparison. Write ==."
     if (listed := re.match(rf'\[\s*({NAME}(?:\s*,\s*{NAME})+)\s*\]', rest)) and (
@@ -252,7 +252,7 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     return None
 
 
-#: The rewrite for a where string that nests too deep. The file can carry part
+#: The rewrite for a condition that nests too deep. The file can carry part
 #: of a long chain of conditions as data, so this rewrite comes first.
 _DEEP_REWRITE = (
     'Declare a parameter or relation carrying part of the test and name that here, or split the '
@@ -261,7 +261,7 @@ _DEEP_REWRITE = (
 
 
 def nested(node: ParsedWhere) -> tuple[ParsedWhere, ...]:
-    """What a where string nests through: a connective's operands, a comparison's sides, and a call's condition."""
+    """What a condition nests through: a connective's operands, a comparison's sides, and a call's condition."""
     if isinstance(node, UnresolvedCountNode):
         return (node.call, node.value)
     if isinstance(node, UnresolvedConditionCallNode):
@@ -271,20 +271,20 @@ def nested(node: ParsedWhere) -> tuple[ParsedWhere, ...]:
     if isinstance(node, ArithmeticNode):
         return children(node)
     if isinstance(node, Connective):
-        return where_children(node)
+        return condition_children(node)
     return ()
 
 
 @lru_cache(maxsize=4096)
 def parse_where(text: str) -> Condition | UnresolvedWhereNode:
-    """Parse a where string into an AST, its leaves still unresolved.
+    """Parse a condition into an AST, its leaves still unresolved.
 
     The connectives and literals are the resolved vocabulary's own; the leaves
     naming entries are a bare [`NameNode`][] or an ``Unresolved*``
     node, which only [`resolve_where`][mathspec._resolution.resolve_where] takes.
 
     Raises:
-        SchemaError: If *text* is not a where string of the language. A
+        SchemaError: If *text* is not a condition of the language. A
             predictable mistake — ``&``/``|``/``~``/``!`` for a connective, a
             lone ``=`` — is named with its rewrite beside the grammar's own
             complaint. A side nesting past what an expression may is refused
@@ -292,5 +292,5 @@ def parse_where(text: str) -> Condition | UnresolvedWhereNode:
     """
     return cast(
         'Condition | UnresolvedWhereNode',
-        parse_text(_WHERE_GRAMMAR, text, 'where string', _named_rewrite, nested, _DEEP_REWRITE),
+        parse_text(_WHERE_GRAMMAR, text, 'condition', _named_rewrite, nested, _DEEP_REWRITE),
     )

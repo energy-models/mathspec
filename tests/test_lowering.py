@@ -59,10 +59,10 @@ from mathspec.program import (
     WindowSum,
     assumption_message,
     children,
+    condition_children,
     parameters_of,
     walk,
     walk_regions,
-    where_children,
 )
 from mathspec.spec import Spec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, expanded, expression_of, spec_of, varied, where_of
@@ -313,14 +313,14 @@ FLAG = ParameterDefined('flag', ('generator',))
         pytest.param(BooleanLiteral(False), (), id='a-literal-carries-nothing'),
     ],
 )
-def test_where_children_is_the_one_walk_under_a_condition(where, under):
-    """`where_children` is to a mask what `children` is to an expression.
+def test_condition_children_is_the_one_walk_under_a_condition(where, under):
+    """`condition_children` is to a condition what `children` is to an expression.
 
     The where tree was dispatched by hand at every walk — the grammar's depth
     measure, `Mask.atoms`, each consumer's own — with no shared answer to
     what sits under a node (#401). This is that answer, in file order.
     """
-    assert where_children(where) == under, (
+    assert condition_children(where) == under, (
         'a connective carries its operands, left before right; a leaf carries nothing'
     )
 
@@ -505,7 +505,7 @@ def test_assumptions_carry_the_file_s_entries_and_the_curves_behind_them():
 
 
 def test_an_assumption_lowers_both_of_its_masks():
-    """The condition and the ``where`` are rebuilt on program expressions, as every other mask is."""
+    """The ``holds`` and the ``where`` are rebuilt on program expressions, as every other mask is."""
     program = to_spec(varied(SHAPES_MODEL, assumptions={'sound': {'holds': 'c <= 0.5 * k', 'where': 'flag'}})).program
     assumption = program.assumptions['sound']
 

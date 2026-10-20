@@ -27,7 +27,7 @@ given:
     Link_p_nom_effective: { dims: [scenario, link] }
     Link_previous_status: { dims: [scenario, snapshot, link] }
     Link_p_nom_committed: { dims: [scenario, link] }
-  masks:
+  conditions:
     Link_com_ext: { dims: [snapshot, link] }
 
 dimensions:
@@ -146,13 +146,13 @@ expressions:
           * (Link_previous_status - Link_status)
     otherwise: Link_ramp_down_rate * Link_p_nom_effective
 
-masks:
+conditions:
   Link_ramps_from_previous:
     description: >-
       a snapshot whose ramp reads a previous output — any snapshot but its
       period's first, and the horizon's first where the link comes in off or
       carries an initial output
-    where: >-
+    condition: >-
       position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
       (Link_status_initial == 0 OR Link_p_init))
 
@@ -267,7 +267,7 @@ assumptions:
 | $`\widetilde{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_effective` over $`\Xi \times \mathcal{L}`$, an expression another file defines |
 | $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, an expression another file defines |
 | $`\widehat{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_committed` over $`\Xi \times \mathcal{L}`$, an expression another file defines |
-| $`\mathrm{on}^{f,\mathrm{com,ext}}`$ | `Link_com_ext` over $`\mathcal{T} \times \mathcal{L}`$, a mask another file defines |
+| $`\mathrm{on}^{f,\mathrm{com,ext}}`$ | `Link_com_ext` over $`\mathcal{T} \times \mathcal{L}`$, a condition another file defines |
 
 #### Sets
 
@@ -288,7 +288,7 @@ assumptions:
 | $`\mathrm{rd}^{f,\mathrm{dn}}`$ | `Link_ramp_limit_shut_down` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most flow in the snapshot before a link stops, per unit of nominal power; no value means no limit |
 | $`\mathrm{f}^{0}`$ | `Link_p_init` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the flow a link brought into the horizon — PyPSA's `p_init`, read only where the link came in running; no value means it is unknown, so the link carries no ramp row at the first snapshot |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -313,7 +313,7 @@ assumptions:
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 | $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ | `position(within=relation[...])` — the position of $`t`$ inside its group |
 
-#### Masks
+#### Conditions
 
 **`Link_ramps_from_previous`**
 

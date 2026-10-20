@@ -83,13 +83,13 @@ def test_every_piecewise_method_has_a_model_on_the_notation_page():
     )
 
 
-def test_a_mask_and_a_constraint_of_one_name_are_refused_rather_than_merged_into_one_line():
+def test_a_named_condition_and_a_constraint_of_one_name_are_refused_rather_than_merged_into_one_line():
     """`notation.equations` keyed every line by its label, so a constraint sharing a mask's name replaced the mask's line (#848)."""
     spec = to_spec(EXAMPLES / 'sos.yaml')
     shared = to_spec(
         {
             **spec.to_dict(),
-            'masks': {'busy': {'where': 'load > 0'}},
+            'conditions': {'busy': {'condition': 'load > 0'}},
             'constraints': {'busy': {'dims': ['snapshot'], 'expression': 'sum(dispatch, over=generator) >= load'}},
         }
     )

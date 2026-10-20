@@ -45,8 +45,8 @@ A null or NaN value is **refused** when the data is attached, so a coordinate
 with no value has no row. `inf` and `-inf` are values.
 
 Only `float` and `int` are values. A `str` parameter is a label and a `bool`
-parameter is a mask, and each selects rows in a
-[`where`](expressions.md#where-strings). Writing either as a coefficient, a
+parameter is a condition, and each selects rows in a
+[`where:`](expressions.md#conditions). Writing either as a coefficient, a
 term or a divisor is a load error, so declare a `0` or `1` that you multiply by
 as `dtype: int`.
 
@@ -72,14 +72,14 @@ parameters:
 | --------------------- | ----------------------------------------------------------------------------------------------------- |
 | `refused`, by default | is refused when the data is attached, and the refusal names the coordinate                            |
 | `absent`              | is [absence](absence.md): it takes the row of a term that reads it, and is one summand fewer in a sum |
-| `neutral`             | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a `where`           |
+| `neutral`             | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a condition         |
 | a value               | reads as that value, wherever a value is read                                                         |
 
 A consumer does not build the model from data with a refused row, and each
 consumer decides how it reports this: it may raise at the first gap, or list
 every missing coordinate.
 
-A bare numeric name in a `where` asks whether the data has a row, whatever the
+A bare numeric name in a condition asks whether the data has a row, whatever the
 `missing:`, so `where: p_nom_max` selects the rows the data gives. Under
 `refused` every coordinate has a row, so a bare `float` name asks only "is it
 finite?", and a bare `int` or `str` name is a load error. A comparison reads the
@@ -148,7 +148,7 @@ and a pinned variable is still a variable.
 
 `given:` holds what this file reads and does not build: data under
 `parameters:`, columns under `variables:`, named expressions under
-`expressions:`, masks under `masks:`, and row families under `constraints:`. It
+`expressions:`, named conditions under `conditions:`, and row families under `constraints:`. It
 takes those five keys and no other, and a file with a `given:` section loads and
 prints on its own.
 
@@ -290,9 +290,9 @@ constraints:
 
 There is no body, but a [term](#terms) of this file may add to the name. This
 file reads the name as it reads a given variable: a quantity over its `dims`,
-of degree one. A `where` does not read it, because a mask is built before any
+of degree one. A condition does not read it, because a condition is read before any
 variable exists, so read a condition that another file defines as a
-[given mask](#given-masks) instead. A name declared under both `expressions:` and
+[given condition](#given-conditions) instead. A name declared under both `expressions:` and
 `given: expressions:` is refused. The typeset legend lists a given expression
 under _Given_.
 
@@ -398,16 +398,16 @@ added like any other.
   fragment '#2' adds 't' to 'injection', and 't' reads 'injection' back through 'x' of '#1', so the sum would define itself. Write 't' from something else, or define 'x' without 'injection'.
   ```
 
-### `given: masks`
+### `given: conditions`
 
-A given mask is a [mask](named.md#masks) this file reads and another file
-defines.
+A given condition is a [named condition](named.md#conditions) this file reads
+and another file defines.
 
 ```yaml
 given:
   variables:
     p: { dims: [period, generator] }
-  masks:
+  conditions:
     stands:
       dims: [period, generator]
       description: the generator stands in this period
@@ -428,14 +428,15 @@ constraints:
 | `dims`        | required. The dimensions the definer's condition reads |                |
 | `description` | free text                                              | default `null` |
 
-There is no condition, because the file that defines the mask owns it. A
-`where` reads the name as data over its `dims`, true or false at each
-coordinate. A `where` may read a given mask but not a given expression, because
-a mask reads nothing that a solve decides. The name is refused in arithmetic,
-the same as a mask. The typeset legend lists a given mask under _Given_.
+There is no condition here, because the file that defines it owns it. A
+condition in this file reads the name as data over its `dims`, true or false at
+each coordinate. A condition may read a given condition but not a given
+expression, because a condition reads nothing that a solve decides. The name is
+refused in arithmetic, the same as a named condition. The typeset legend lists
+a given condition under _Given_.
 
-[`merge`](../../howto/compose.md#a-library-of-components) folds a given mask
-into the mask that another fragment defines. The `dims` name exactly the
+[`merge`](../../howto/compose.md#a-library-of-components) folds a given
+condition into the condition that another fragment defines. The `dims` name exactly the
 dimensions that the condition of the defining file reads, and a `given:` entry
 that names a different set is refused, with both sets of dimensions in the
 message.

@@ -188,8 +188,8 @@ class ExpressionResolver:
         """
         if node.name in self.formals:
             return None
-        if node.name in self.ns.masks or node.name in self.ns.given_masks:
-            self.errors.append(mask_compared(node.name, self.context))
+        if node.name in self.ns.conditions or node.name in self.ns.given_conditions:
+            self.errors.append(condition_compared(node.name, self.context))
             return None
         if node.name in self.ns.bodies:
             try:
@@ -215,7 +215,7 @@ class ExpressionResolver:
             case 'relation':
                 self.errors.append(
                     f"{self.context}: '{node.name}' is a relation, and a relation is not a value. Use its "
-                    f'columns as sum(x, over=<column>, by={node.name}[<column>]) or in a where, or declare a '
+                    f'columns as sum(x, over=<column>, by={node.name}[<column>]) or in a condition, or declare a '
                     f'parameter to carry numbers.'
                 )
                 return None
@@ -713,12 +713,12 @@ def not_a_number(name: str, dtype: str, context: str) -> str:
     """Why a ``str`` or ``bool`` parameter is refused where a value belongs; the rewrite is the dtype's own."""
     if dtype == 'str':
         instead = (
-            f'Compare it in a where '
+            f'Compare it in a condition '
             f'("{name} == \'some_label\'"), and carry the numbers it picks out in a '
             f'parameter of its own.'
         )
     else:
-        instead = f'Name it in a where ("{name}", "NOT {name}"), or declare it dtype: int to multiply by 0 and 1.'
+        instead = f'Name it in a condition ("{name}", "NOT {name}"), or declare it dtype: int to multiply by 0 and 1.'
     return f"{context}: '{name}' is declared dtype: {dtype}, and an expression reads only float and int. {instead}"
 
 
@@ -770,11 +770,11 @@ def _vacates(offset: int | str) -> bool:
     return offset != 0
 
 
-def mask_compared(name: str, context: str) -> str:
-    """The refusal for a mask written where a number goes: a side of a comparison, or arithmetic."""
+def condition_compared(name: str, context: str) -> str:
+    """The refusal for a named condition written where a number goes: a side of a comparison, or arithmetic."""
     return (
-        f"{context}: '{name}' is a mask, which is true or false where it is read, and not a number. "
-        f'Write it bare in the where — {name}, or NOT {name} — rather than comparing it or computing with it.'
+        f"{context}: '{name}' is a named condition, which is true or false where it is read, and not a number. "
+        f'Write it bare — {name}, or NOT {name} — rather than comparing it or computing with it.'
     )
 
 

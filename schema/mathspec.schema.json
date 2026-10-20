@@ -4,7 +4,7 @@
       "anyOf": [
         {
           "additionalProperties": false,
-          "description": "What the spec assumes of its data: a condition every coordinate it is checked at has to satisfy.\n\nWritten in YAML as a bare where string, or as a mapping once it carries a\n``where:`` or a ``description:``, and serialised back to whichever form it\nwas written in::\n\n    assumptions:\n      efficiency_is_a_fraction: \"efficiency > 0 AND efficiency <= 1\"\n      bounds_do_not_cross:\n        holds: \"p_min <= p_max\"\n        where: \"p_min\"\n        description: a unit with no minimum is unconstrained below\n\nThe language decides nothing about the numbers, so the consumer attaching\nthe data checks it, and refuses the data where it does not hold.",
+          "description": "What the spec assumes of its data: a condition every coordinate it is checked at has to satisfy.\n\nWritten in YAML as a bare string, or as a mapping once it carries a\n``where:`` or a ``description:``, and serialised back to whichever form it\nwas written in::\n\n    assumptions:\n      efficiency_is_a_fraction: \"efficiency > 0 AND efficiency <= 1\"\n      bounds_do_not_cross:\n        holds: \"p_min <= p_max\"\n        where: \"p_min\"\n        description: a unit with no minimum is unconstrained below\n\nThe language decides nothing about the numbers, so the consumer attaching\nthe data checks it, and refuses the data where it does not hold.",
           "properties": {
             "description": {
               "anyOf": [
@@ -83,6 +83,40 @@
       },
       "title": "BoundsSpec",
       "type": "object"
+    },
+    "ConditionSpec": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "description": "A named condition: one condition, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.\n\nWritten in YAML as a bare string, or as a mapping once it carries a\n``description:``, and serialised back to whichever form it was written in::\n\n    conditions:\n      committable: \"Generator_committable AND Generator_active\"\n      stands:\n        condition: build_year <= period_year AND period_year < build_year + lifetime\n        description: the generator stands in this period\n\nIts bare name in another condition stands for it, inside ``count``,\n``shift`` and ``at`` too. Its frame is the dims its condition reads, so\nit declares none. It is true or false, so it is never a value in an\nexpression.",
+          "properties": {
+            "condition": {
+              "title": "Condition",
+              "type": "string"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Description"
+            }
+          },
+          "required": [
+            "condition"
+          ],
+          "title": "ConditionSpec",
+          "type": "object"
+        },
+        {
+          "type": "string"
+        }
+      ]
     },
     "ConstraintSpec": {
       "additionalProperties": false,
@@ -287,6 +321,36 @@
         }
       ]
     },
+    "GivenConditionSpec": {
+      "additionalProperties": false,
+      "description": "A named condition this file reads and another file defines.\n\nThe frame is all this file states, and it names the dims the definer's\ncondition reads. A condition reads the name as data over that frame, true or false at each coordinate, since a condition reads nothing\na solve decides: the condition is the definer's.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dims",
+          "type": "array"
+        }
+      },
+      "required": [
+        "dims"
+      ],
+      "title": "GivenConditionSpec",
+      "type": "object"
+    },
     "GivenConstraintSpec": {
       "additionalProperties": false,
       "description": "A row family this file reads the dual of and another model builds.\n\nThe frame says how many duals there are and what indexes them, which is\nwhat ``dual()`` needs. There is no ``expression:``, because nothing here\nbuilds a row.",
@@ -347,39 +411,9 @@
       "title": "GivenExpressionSpec",
       "type": "object"
     },
-    "GivenMaskSpec": {
-      "additionalProperties": false,
-      "description": "A mask this file reads and another file defines.\n\nThe frame is all this file states, and it names the dims the definer's\ncondition reads. A where reads the name as data over that frame, true or false at each coordinate, since a mask reads nothing\na solve decides: the condition is the definer's.",
-      "properties": {
-        "description": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Description"
-        },
-        "dims": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Dims",
-          "type": "array"
-        }
-      },
-      "required": [
-        "dims"
-      ],
-      "title": "GivenMaskSpec",
-      "type": "object"
-    },
     "GivenParameterSpec": {
       "additionalProperties": false,
-      "description": "Data this file reads and another file declares.\n\nIt says the frame and the dtype of a [`ParameterSpec`][], which are what\nthis file reads: a where compares against the dtype, and the dim rules read\nthe frame. What a missing row means is the declaring file's ``missing:``.",
+      "description": "Data this file reads and another file declares.\n\nIt says the frame and the dtype of a [`ParameterSpec`][], which are what\nthis file reads: a condition compares against the dtype, and the dim rules read\nthe frame. What a missing row means is the declaring file's ``missing:``.",
       "properties": {
         "description": {
           "anyOf": [
@@ -422,6 +456,14 @@
       "additionalProperties": false,
       "description": "What this file reads and does not build, by kind. Closed at the five kinds.",
       "properties": {
+        "conditions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GivenConditionSpec"
+          },
+          "default": {},
+          "title": "Conditions",
+          "type": "object"
+        },
         "constraints": {
           "additionalProperties": {
             "$ref": "#/$defs/GivenConstraintSpec"
@@ -436,14 +478,6 @@
           },
           "default": {},
           "title": "Expressions",
-          "type": "object"
-        },
-        "masks": {
-          "additionalProperties": {
-            "$ref": "#/$defs/GivenMaskSpec"
-          },
-          "default": {},
-          "title": "Masks",
           "type": "object"
         },
         "parameters": {
@@ -548,40 +582,6 @@
       ],
       "title": "MacroSpec",
       "type": "object"
-    },
-    "MaskSpec": {
-      "anyOf": [
-        {
-          "additionalProperties": false,
-          "description": "A named condition: one where string, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.\n\nWritten in YAML as a bare where string, or as a mapping once it carries a\n``description:``, and serialised back to whichever form it was written in::\n\n    masks:\n      committable: \"Generator_committable AND Generator_active\"\n      stands:\n        where: build_year <= period_year AND period_year < build_year + lifetime\n        description: the generator stands in this period\n\nA bare mask name in a where string stands for its condition, inside\n``count``, ``shift`` and ``at`` too. The mask's frame is the dims its\ncondition reads, so it declares none. A mask is a condition, so it is\nnever a value in an expression.",
-          "properties": {
-            "description": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null,
-              "title": "Description"
-            },
-            "where": {
-              "title": "Where",
-              "type": "string"
-            }
-          },
-          "required": [
-            "where"
-          ],
-          "title": "MaskSpec",
-          "type": "object"
-        },
-        {
-          "type": "string"
-        }
-      ]
     },
     "ObjectiveSpec": {
       "additionalProperties": false,
@@ -995,6 +995,14 @@
       "title": "Assumptions",
       "type": "object"
     },
+    "conditions": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ConditionSpec"
+      },
+      "default": {},
+      "title": "Conditions",
+      "type": "object"
+    },
     "constraints": {
       "additionalProperties": {
         "$ref": "#/$defs/ConstraintSpec"
@@ -1034,9 +1042,9 @@
     "given": {
       "$ref": "#/$defs/GivenSpec",
       "default": {
+        "conditions": {},
         "constraints": {},
         "expressions": {},
-        "masks": {},
         "parameters": {},
         "variables": {}
       }
@@ -1047,14 +1055,6 @@
       },
       "default": {},
       "title": "Macros",
-      "type": "object"
-    },
-    "masks": {
-      "additionalProperties": {
-        "$ref": "#/$defs/MaskSpec"
-      },
-      "default": {},
-      "title": "Masks",
       "type": "object"
     },
     "objective": {

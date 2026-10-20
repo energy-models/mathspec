@@ -36,13 +36,13 @@ does not come after another generator, so a file that steps from one generator
 to the next would read the row order of a data table. Five constructs read the
 order, and each needs its dimension declared `ordered: true`:
 
-| Construct                                                                          | Reads                            |
-| ---------------------------------------------------------------------------------- | -------------------------------- |
-| [`shift(x, along=d, offset=n)`](operators.md#shift), in an expression or a `where` | the member `n` positions back    |
-| [`sum_back(x, along=d, window=n)`](operators.md#sum_back)                          | the last `n` members             |
-| [`position(d)`](expressions.md#position)                                           | where a member sits along `d`    |
-| [`piecewise:`](piecewise.md) with `over: d`                                        | which breakpoints are neighbours |
-| [`sos:`](piecewise.md#sos) with `type: 2` and `along: d`                           | which members are consecutive    |
+| Construct                                                                            | Reads                            |
+| ------------------------------------------------------------------------------------ | -------------------------------- |
+| [`shift(x, along=d, offset=n)`](operators.md#shift), in an expression or a condition | the member `n` positions back    |
+| [`sum_back(x, along=d, window=n)`](operators.md#sum_back)                            | the last `n` members             |
+| [`position(d)`](expressions.md#position)                                             | where a member sits along `d`    |
+| [`piecewise:`](piecewise.md) with `over: d`                                          | which breakpoints are neighbours |
+| [`sos:`](piecewise.md#sos) with `type: 2` and `along: d`                             | which members are consecutive    |
 
 The loader refuses any of them along a dimension that is not ordered:
 

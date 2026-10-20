@@ -324,7 +324,7 @@ def test_a_relation_column_is_named_in_brackets():
     assert parse_where('ends[bus0] != ends[bus1]') == UnresolvedComparisonNode(
         ColumnNode('ends', 'bus0'), '!=', ColumnNode('ends', 'bus1')
     )
-    with pytest.raises(SchemaError, match='Cannot parse the where string'):
+    with pytest.raises(SchemaError, match='Cannot parse the condition'):
         parse_where('ends[bus0] + 1 > 0')
     with pytest.raises(SchemaError, match=r'Compare each column on its own: ends\[bus0\] == … AND ends\[bus1\] == …'):
         parse_where("ends[bus0, bus1] == 'x'")

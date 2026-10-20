@@ -589,7 +589,7 @@ def test_a_file_supplied_mask_is_what_the_contiguity_condition_reads():
     ).program
 
     contiguous = program.assumptions['cost_curve_contiguous']
-    assert contiguous.condition.names_read == frozenset({'reach'}), (
+    assert contiguous.holds.names_read == frozenset({'reach'}), (
         "the mask is still one the data has to make contiguous, and the condition reads the file's own name"
     )
 
@@ -637,7 +637,7 @@ def test_an_entry_assumes_of_its_data_what_the_method_implies():
     assert all(isinstance(a, Assumption) for a in program.assumptions.values()), (
         'a method states its conditions in the same language the file does, so a consumer has one kind to read'
     )
-    assert program.assumptions['cost_curve_increasing'].condition.names_read == frozenset({'bp_x'}), (
+    assert program.assumptions['cost_curve_increasing'].holds.names_read == frozenset({'bp_x'}), (
         'the x-axis is what increases, and the condition reads it and nothing else'
     )
 

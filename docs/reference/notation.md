@@ -98,7 +98,7 @@ parameters:
 | $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{G} \times \mathcal{A}`$ |
 | $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{G} \times \mathcal{A}`$ |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -798,28 +798,28 @@ expressions:
 \mathit{marginal\_price}_{t,b} = \lambda_{\mathrm{balance},t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
 ```
 
-### Named masks
+### Named conditions
 
-#### Named mask
+#### Named condition
 
 a named condition with its words: a use prints the symbol over the dims its condition reads, the condition prints once
 
 ```yaml
-masks:
+conditions:
   dispatchable:
-    where: "p_max > 0 AND NOT is_flexible"
+    condition: "p_max > 0 AND NOT is_flexible"
 ```
 
 ```math
 \mathrm{dispatchable}_{g} \iff \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} \qquad \forall\, g \in \mathcal{G}
 ```
 
-#### Mask that reads a mask
+#### Condition that reads a condition
 
 the one-line form, reading another mask and a data-only entry
 
 ```yaml
-masks:
+conditions:
   priced_dispatch: "dispatchable AND spend_cap > 0"
 ```
 
@@ -827,7 +827,7 @@ masks:
 \mathrm{priced\_dispatch}_{g} \iff \mathrm{dispatchable}_{g} \wedge \mathrm{spend}^{\mathrm{cap}}_{g} > 0 \qquad \forall\, g \in \mathcal{G}
 ```
 
-#### Mask in a condition
+#### Named condition in a condition
 
 a mask as the where, beside a condition of the constraint's own
 

@@ -261,12 +261,12 @@ expressions:
       + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot_period[period]), over=transformer)
     adds_to: Cycle_angle_sum
 
-masks:
+conditions:
   Transformer_lossy:
     description: >-
       a transformer that stands in the snapshot's period, where the run models
       transmission losses
-    where: transmission_losses AND Transformer_active
+    condition: transmission_losses AND Transformer_active
 
 constraints:
   Transformer_fix_s_lower:
@@ -419,7 +419,7 @@ constraints:
 | $`\mathrm{a}^{\sigma}`$ | `Transformer_loss_slope` over $`\Xi \times \mathcal{T} \times \mathcal{M} \times \mathcal{S}`$ — the slope of a cut to a transformer's loss curve — a tangent's `2 * r_pu_eff * p_k`, a secant's `r_pu_eff * (p_k + p_k+1)`, as a line's, over the transformer's own `r_pu_eff` and rating, data prep |
 | $`\mathrm{b}^{\sigma}`$ | `Transformer_loss_offset` over $`\Xi \times \mathcal{T} \times \mathcal{M} \times \mathcal{S}`$ — where that cut meets the loss axis — a tangent's `loss_k - slope_k * p_k`, a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -444,7 +444,7 @@ constraints:
 | $`\mathit{Transformer\_injection}`$ | `Transformer_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 | $`\mathit{Transformer\_angle\_sum}`$ | `Transformer_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ |
 
-#### Masks
+#### Conditions
 
 **`Transformer_lossy`**
 
