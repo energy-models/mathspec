@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(spec): a spec writes back the fields its file wrote, and the canonical form writes no default ([#918](https://github.com/energy-models/mathspec/pull/918))
 - feat(spec): a loaded spec holds each `dims:` list and each side of a relation sorted by name ([#916](https://github.com/energy-models/mathspec/pull/916))
 - feat(language): every entry is indexed by its dimensions sorted by name, whatever order the file writes them in ([#914](https://github.com/energy-models/mathspec/pull/914))
 - feat(program): each expression node states the dimensions it is read over ([#899](https://github.com/energy-models/mathspec/pull/899))
