@@ -110,9 +110,10 @@ from mathspec.program import variables_of
 from mathspec.spec import GivenSpec, Spec
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
 
     from mathspec.program import Program
+    from mathspec.spec import DimensionSpec
 
 SHARED_SECTIONS = ('dimensions', 'relations')
 
@@ -179,7 +180,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
             merged[section] = agreed
     asked = {name: spec.given.model_dump(exclude_unset=True) for name, spec in loaded.items()}
     readings = {
-        kind: _agreed(asked, kind, label, 'read it over the same dims', claims=_reading_claims)
+        kind: _agreed(asked, kind, label, 'read it over the same dims', owner=GivenSpec)
         for kind, label in GIVEN_KINDS.items()
     }
     for section in OWNED_SECTIONS:
@@ -255,15 +256,23 @@ def _said(read: Mapping[str, dict[str, object]], section: str, key: str) -> obje
     )
 
 
-def _claims(entry: object) -> object:
-    """*entry* without its prose, which is what the entry says rather than a remark about it."""
-    return {key: value for key, value in entry.items() if key != 'description'} if isinstance(entry, dict) else entry
+def _read(owner: type[BaseModel], section: str, entry: object) -> BaseModel:
+    """*entry* as the schema reads it, so a field written at its default and one left out read the same."""
+    try:
+        return _entry_class(owner, section).model_validate(entry)
+    except ValidationError as e:
+        raise schema_error(e) from None
 
 
-def _reading_claims(entry: object) -> object:
-    """What a reading claims: its fields but the prose, with the frame as a set, since two files read one name over one frame however they list it."""
-    claims = _mapping(_claims(entry))
-    return {**claims, 'dims': frozenset(cast('list[str]', claims.get('dims', [])))}
+def _claim(owner: type[BaseModel], section: str, entry: object, *unclaimed: str) -> BaseModel:
+    """What *entry* says, to compare by value: its prose and every *unclaimed* field at their defaults.
+
+    Prose is a remark about the entry rather than what it says. A ``dims:``
+    list needs no sorting here, because the spec sorts it as it loads.
+    """
+    model = _read(owner, section, entry)
+    fields = type(model).model_fields
+    return model.model_copy(update={f: fields[f].get_default() for f in ('description', *unclaimed) if f in fields})
 
 
 def _agreed(
@@ -272,22 +281,23 @@ def _agreed(
     label: str,
     repair: str,
     *,
-    claims: Callable[[object], object] = _claims,
+    owner: type[BaseModel] = Spec,
 ) -> dict[str, object]:
     """One section every fragment may declare, peers that say the same thing folded together.
 
     Equality of the claims rather than "the same or less": between peers
     neither entry is the one being restated, so a field only one of them
-    writes is a difference nothing settles. *claims* says what an entry claims;
-    a reading's frame is a set. Prose is not a claim, so the first description
-    given is carried. A dimension's ``ordered`` folds by [`_joined`][].
+    sets to something other than its default is a difference nothing settles.
+    *owner* is the schema class the section belongs to, which reads each
+    entry. Prose is not a claim, so the first description given is carried.
+    A dimension's ``ordered`` folds by [`_joined`][].
     """
     merged: dict[str, object] = {}
     for name, sections in read.items():
         for key, entry in _mapping(sections.get(section)).items():
             if key not in merged:
                 merged[key] = entry
-            elif (joined := _joined(section, merged[key], entry, claims)) is None:
+            elif (joined := _joined(section, merged[key], entry, owner)) is None:
                 raise LanguageError(
                     f"fragments '{_author_of(read, section, key)}' and '{name}' say different things about "
                     f'the {label} {key!r}: {merged[key]!r} against {entry!r}. Make the two identical, '
@@ -301,29 +311,25 @@ def _agreed(
     return merged
 
 
-def _joined(section: str, kept: object, entry: object, claims: Callable[[object], object] = _claims) -> object | None:
+def _joined(section: str, kept: object, entry: object, owner: type[BaseModel] = Spec, *unclaimed: str) -> object | None:
     """*kept* and *entry* as the one entry both say, or ``None`` where they say different things.
 
     A dimension's ``ordered`` is a claim about the space, not the space: it
     lets a construct read the order the data gives, and the coordinates are
     the same either way. So one entry that makes the claim joins one
     that does not, and the two are one ordered dimension. Every other field
-    is the space itself, and has to be equal under *claims*.
+    is the space itself, and has to say the same as [`_claim`][] reads it,
+    each *unclaimed* field aside.
     """
-    if section != 'dimensions':
-        return kept if claims(kept) == claims(entry) else None
-    if claims(_without(kept, 'ordered')) != claims(_without(entry, 'ordered')):
+    if _claim(owner, section, kept, 'ordered', *unclaimed) != _claim(owner, section, entry, 'ordered', *unclaimed):
         return None
-    ordered = bool(_mapping(kept).get('ordered') or _mapping(entry).get('ordered'))
+    if section != 'dimensions':
+        return kept
+    ordered = (
+        cast('DimensionSpec', _read(owner, section, kept)).ordered
+        or cast('DimensionSpec', _read(owner, section, entry)).ordered
+    )
     return {**_mapping(kept), 'ordered': True} if ordered else kept
-
-
-def _declared(section: str, entry: object) -> dict[str, object]:
-    """*entry* as the schema reads it, so a field written at its default says what leaving it out says."""
-    try:
-        return _entry_class(Spec, section).model_validate(entry).model_dump()
-    except ValidationError as e:
-        raise schema_error(e) from None
 
 
 def _claimed(read: Mapping[str, dict[str, object]], section: str) -> dict[str, object]:
@@ -597,8 +603,9 @@ def _fits(
     else:
         frame = set(cast('list[str]', _mapping(introduced)['dims']))
         fits = frame == stated
-    fields = {f: v for f, v in _mapping(_claims(reading)).items() if f != 'dims'}
-    if fits and all(_mapping(introduced).get(f) == v for f, v in fields.items()):
+    said, owned = _read(GivenSpec, kind, reading), _read(Spec, kind, introduced)
+    claimed = said.model_fields_set - {'dims', 'description'}
+    if fits and all(getattr(said, f) == getattr(owned, f) for f in claimed):
         return
     how = f'over {sorted(frame)}' if kind in ('expressions', 'conditions') else f'as {introduced!r}'
     author = _author_of(read, kind, key)
@@ -853,14 +860,13 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
             entry = _without(entry, 'missing')
             if not entry:
                 continue
-        base, laid = _declared(section, out[key]), _declared(section, entry)
-        if base.get('ordered') and _mapping(entry).get('ordered') is False:
+        if getattr(_read(Spec, section, out[key]), 'ordered', False) and _mapping(entry).get('ordered') is False:
             raise LanguageError(
                 f"patch '{name}' says the {singular} '{key}' is not ordered, where its base declares it "
                 f'ordered. A patch can add `ordered: true` but cannot remove it, because a construct in the base '
                 f'may step along it. Leave `ordered` out of the patch.'
             )
-        if (joined := _joined(section, base, laid, lambda written: _without(written, 'missing'))) is None:
+        if (joined := _joined(section, out[key], entry, Spec, 'missing')) is None:
             claim = 'ordered' if section == 'dimensions' else 'missing'
             raise LanguageError(
                 f"patch '{name}' declares the {singular} '{key}' as {entry!r}, where its base "

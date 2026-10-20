@@ -920,10 +920,7 @@
       "properties": {
         "bounds": {
           "$ref": "#/$defs/BoundsSpec",
-          "default": {
-            "lower": null,
-            "upper": null
-          }
+          "default": {}
         },
         "description": {
           "anyOf": [
@@ -1041,13 +1038,7 @@
     },
     "given": {
       "$ref": "#/$defs/GivenSpec",
-      "default": {
-        "conditions": {},
-        "constraints": {},
-        "expressions": {},
-        "parameters": {},
-        "variables": {}
-      }
+      "default": {}
     },
     "macros": {
       "additionalProperties": {

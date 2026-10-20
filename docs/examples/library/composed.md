@@ -53,27 +53,20 @@ relations:
 parameters:
   Generator_p_nom:
     dims: [generator]
-    dtype: float
     description: nominal power
   Generator_marginal_cost:
     dims: [generator]
-    dtype: float
     description: cost of one unit of output
   Load_p_set:
     dims: [load, snapshot]
-    dtype: float
     description: '`Load-p_set` — what a load takes in a snapshot'
 variables:
   Port_p:
     dims: [port, snapshot]
-    domain: continuous
-    missing: absent
     description: what a port puts into its bus in a snapshot, negative for a withdrawal
   Generator_p:
     dims: [generator, snapshot]
     bounds: {lower: 0.0, upper: Generator_p_nom}
-    domain: continuous
-    missing: absent
     description: '`Generator-p` — what a generator produces in a snapshot'
 expressions:
   Generator_cost: sum(Generator_p * Generator_marginal_cost)

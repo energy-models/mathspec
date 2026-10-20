@@ -237,7 +237,7 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
         Loading it gives the same spec back, and not a `Spec` equal to *spec*:
         an expression reprinted in the normal form is a different string.
     """
-    data = spec.to_dict()
+    data = spec.model_dump(exclude_defaults=True)
     built: dict[str, object] = {}
     for section, value in data.items():
         if section == 'given' and isinstance(value, dict):

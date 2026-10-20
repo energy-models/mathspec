@@ -104,6 +104,15 @@ class _StrictSpec(BaseModel):
     #: What this entry or section is called in a YAML file, for the error message.
     _label: ClassVar[str]
 
+    @model_serializer(mode='wrap')
+    def _set_fields(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        """The fields the input set, a default it wrote out included, so a spec writes back what its file wrote.
+
+        The canonical form dumps with ``exclude_defaults``, which leaves a
+        default out whether the input set it or not.
+        """
+        return _as_set(self, cast('dict[str, object]', handler(self)))
+
     @model_validator(mode='before')
     @classmethod
     def _reject_unknown_keys(cls, data: object) -> object:
@@ -156,11 +165,9 @@ _MISSING_SCHEMA: dict[str, object] = {
 _READINGS = ', '.join(get_args(MissingReading))
 
 
-def _without_refused(written: dict[str, object]) -> dict[str, object]:
-    """*written* with ``missing: refused`` left out, so the default written out and left out write one text."""
-    if written.get('missing') == 'refused':
-        written.pop('missing')
-    return written
+def _as_set(model: BaseModel, written: dict[str, object]) -> dict[str, object]:
+    """*written* cut to the fields *model*'s input set."""
+    return {key: value for key, value in written.items() if key in model.model_fields_set}
 
 
 def _as_yaml(v: object) -> str:
@@ -271,11 +278,6 @@ class RelationSpec(_StrictSpec):
             raise ValueError(msg)
         return v
 
-    @model_serializer(mode='wrap')
-    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``missing`` is written where it is not ``refused``: refused is what leaving it out says."""
-        return _without_refused(cast('dict[str, object]', handler(self)))
-
     @property
     def pairs(self) -> tuple[tuple[str, str], ...]:
         """``(role, dimension)`` per column, the key's columns first.
@@ -323,14 +325,6 @@ class DimensionSpec(_StrictSpec):
     ordered: bool = False
     description: str | None = None
 
-    @model_serializer(mode='wrap')
-    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``ordered`` is written where it is true: false is what leaving it out says."""
-        written = cast('dict[str, object]', handler(self))
-        if not self.ordered:
-            written.pop('ordered', None)
-        return written
-
 
 class ParameterSpec(_StrictSpec):
     """A declared parameter with dims and dtype, and what a missing row of its data means."""
@@ -359,11 +353,6 @@ class ParameterSpec(_StrictSpec):
             msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _READINGS + '.'
             raise ValueError(msg)
         return v
-
-    @model_serializer(mode='wrap')
-    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``missing`` is written where it is not ``refused``: refused is what leaving it out says."""
-        return _without_refused(cast('dict[str, object]', handler(self)))
 
     @model_validator(mode='after')
     def _a_value_fits_the_dtype(self) -> ParameterSpec:
@@ -474,11 +463,6 @@ class _GivenEntrySpec(_StrictSpec):
     would make ``to_spec(spec.to_dict())`` read the name as saying more than
     the file did, and [`merge`][mathspec.merge] would compare that instead.
     """
-
-    @model_serializer(mode='wrap')
-    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        written = cast('dict[str, object]', handler(self))
-        return {key: value for key, value in written.items() if key in self.model_fields_set}
 
 
 class GivenParameterSpec(_GivenEntrySpec):
@@ -1027,13 +1011,17 @@ SUPPORTED_VERSIONS: tuple[int, ...] = (0,)
 
 
 def _without_absence(value: object) -> object:
-    """*value* with every absent entry stripped, recursively — see [`Spec._drop_absence`][]."""
+    """*value* with every absent entry stripped, recursively — see [`Spec._drop_absence`][].
+
+    A mapping that stripping emptied goes, and one written empty stays: an
+    entry that sets no field, such as ``generator: {}``, still declares it.
+    """
     if not isinstance(value, dict):
         return value
     kept = {}
     for key, before in value.items():
         after = _without_absence(before)
-        if not _is_absent(after) and after != {}:
+        if not _is_absent(after) and (after != {} or before == {}):
             kept[key] = after
     return kept
 
@@ -1153,9 +1141,13 @@ class Spec(_StrictSpec):
 
         An empty list stays, being a value rather than an absence (``dims:
         []`` is a scalar). On the serializer so that ``model_dump``,
-        [`to_dict`][] and [`to_yaml`][] agree.
+        [`to_dict`][] and [`to_yaml`][] agree. ``version`` is written whether
+        the file wrote it or not, so a written file states the language it is
+        read in.
         """
-        return cast('dict[str, object]', _without_absence(handler(self)))
+        written = _as_set(self, cast('dict[str, object]', handler(self)))
+        sections = cast('dict[str, object]', _without_absence(written))
+        return {'version': self.version, **{key: value for key, value in sections.items() if value != {}}}
 
     def to_dict(self) -> dict[str, object]:
         """The spec as plain data. ``to_spec(m.to_dict())`` reproduces it."""
@@ -1164,9 +1156,13 @@ class Spec(_StrictSpec):
     def to_yaml(self, *, canonical: bool = False) -> str:
         """The file a reviewer reads — including for a spec that never had one.
 
+        The fields the file wrote, and no others: a default it writes out is
+        written back, and one it leaves out is not. ``version`` is always
+        written. Sections and the keys of an entry come in the schema's order.
+
         Args:
             canonical: Write the normal form instead: entries sorted by
-                name, every expression printed from its parsed tree, one term
+                name, no field at its default, every expression printed from its parsed tree, one term
                 of a sum per line. Two files that state the same spec write
                 the same text, so what a diff shows is a difference in the
                 spec. The normal form loads to the same spec and not to an
