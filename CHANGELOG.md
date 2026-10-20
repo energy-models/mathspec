@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- refactor(api)!: the docs, the error messages and the program classes call a true-or-false `where` expression a condition rather than a predicate ([#904](https://github.com/energy-models/mathspec/pull/904))
 - docs: the compose guide says how to add or remove a term on a merged spec ([#901](https://github.com/energy-models/mathspec/pull/901))
 - fix(composition): a fragment returned by `override` merges as the file it came from does ([#900](https://github.com/energy-models/mathspec/pull/900))
 - docs: the changelog is listed under Reference rather than About ([#895](https://github.com/energy-models/mathspec/pull/895))
