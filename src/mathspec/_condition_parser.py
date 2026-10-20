@@ -77,7 +77,7 @@ class UnresolvedConditionCallNode:
     """
 
     name: str
-    operand: Condition | UnresolvedWhereNode
+    operand: Condition | UnresolvedConditionNode
     kwargs: Mapping[str, ArithmeticNode] = field(default_factory=dict, hash=False)
 
     def __post_init__(self) -> None:
@@ -101,7 +101,7 @@ class UnresolvedCountNode:
 
 @dataclass(frozen=True)
 class UnresolvedComparisonNode:
-    """``side <op> side`` before the sides are read; ``_where_resolver.py`` decides what each is.
+    """``side <op> side`` before the sides are read; ``_condition_resolver.py`` decides what each is.
 
     A side is the expression grammar's arithmetic, so a name, a number and a
     ``position(...)`` call all arrive as the nodes an expression would carry
@@ -114,14 +114,14 @@ class UnresolvedComparisonNode:
     right: ArithmeticNode | ColumnNode | KeywordNode
 
 
-#: The where nodes that resolution replaces: their leaves are names not yet
+#: The condition nodes that resolution replaces: their leaves are names not yet
 #: looked up in the spec.
-UnresolvedWhereNode = NameNode | UnresolvedComparisonNode | UnresolvedConditionCallNode | UnresolvedCountNode
+UnresolvedConditionNode = NameNode | UnresolvedComparisonNode | UnresolvedConditionCallNode | UnresolvedCountNode
 
 #: Every node a parsed condition is built of: the connectives and literals,
 #: the unresolved leaves, and the arithmetic and the two side nodes under a
 #: comparison. The depth check walks these.
-ParsedWhere = Condition | UnresolvedWhereNode | ArithmeticNode | ColumnNode | KeywordNode
+ParsedCondition = Condition | UnresolvedConditionNode | ArithmeticNode | ColumnNode | KeywordNode
 
 
 # ---------------------------------------------------------------------------
@@ -135,14 +135,14 @@ def _condition_call(tokens: pp.ParseResults) -> UnresolvedConditionCallNode:
     return UnresolvedConditionCallNode(name, operand, keywords(name, pairs))
 
 
-def _build_where_grammar() -> pp.ParserElement:
+def _build_condition_grammar() -> pp.ParserElement:
     """Build the pyparsing grammar for conditions.
 
     Both quote characters are accepted because YAML already owns one of them.
     ``NOT`` binds tightest, then ``AND``, then ``OR``. A comparison is tried
     before a bare name, since its left side begins with one.
     """
-    where_expr = pp.Forward()
+    condition = pp.Forward()
 
     true_lit = pp.CaselessKeyword('True').set_parse_action(lambda: BooleanLiteral(True))
     false_lit = pp.CaselessKeyword('False').set_parse_action(lambda: BooleanLiteral(False))
@@ -168,7 +168,7 @@ def _build_where_grammar() -> pp.ParserElement:
         and the name is free.
         """
         return (
-            head + pp.Suppress('(') + where_expr + pp.ZeroOrMore(pp.Suppress(',') + kwarg) + pp.Suppress(')')
+            head + pp.Suppress('(') + condition + pp.ZeroOrMore(pp.Suppress(',') + kwarg) + pp.Suppress(')')
         ).set_parse_action(_condition_call)
 
     count_call = _call(pp.CaselessKeyword('count'))
@@ -192,7 +192,7 @@ def _build_where_grammar() -> pp.ParserElement:
         | comparison
         | condition_call
         | existence
-        | (pp.Suppress('(') + where_expr + pp.Suppress(')'))
+        | (pp.Suppress('(') + condition + pp.Suppress(')'))
     )
 
     NOT = pp.CaselessKeyword('NOT').suppress()
@@ -207,15 +207,15 @@ def _build_where_grammar() -> pp.ParserElement:
     or_expr = and_expr + pp.ZeroOrMore(OR + and_expr)
     or_expr.set_parse_action(_folder(Or))
 
-    where_expr <<= or_expr
-    return where_expr
+    condition <<= or_expr
+    return condition
 
 
-def _folder(node_type: type[And] | type[Or]) -> Callable[[pp.ParseResults], Condition | UnresolvedWhereNode]:
+def _folder(node_type: type[And] | type[Or]) -> Callable[[pp.ParseResults], Condition | UnresolvedConditionNode]:
     """A parse action left-folding a flat operator chain into *node_type*."""
 
-    def fold(tokens: pp.ParseResults) -> Condition | UnresolvedWhereNode:
-        items: list[Condition | UnresolvedWhereNode] = list(tokens)
+    def fold(tokens: pp.ParseResults) -> Condition | UnresolvedConditionNode:
+        items: list[Condition | UnresolvedConditionNode] = list(tokens)
         result = items[0]
         for item in items[1:]:
             result = node_type(cast('Condition', result), cast('Condition', item))
@@ -224,7 +224,7 @@ def _folder(node_type: type[And] | type[Or]) -> Callable[[pp.ParseResults], Cond
     return fold
 
 
-_WHERE_GRAMMAR = _build_where_grammar()
+_CONDITION_GRAMMAR = _build_condition_grammar()
 
 
 def _named_rewrite(text: str, loc: int) -> str | None:
@@ -260,7 +260,7 @@ _DEEP_REWRITE = (
 )
 
 
-def nested(node: ParsedWhere) -> tuple[ParsedWhere, ...]:
+def nested(node: ParsedCondition) -> tuple[ParsedCondition, ...]:
     """What a condition nests through: a connective's operands, a comparison's sides, and a call's condition."""
     if isinstance(node, UnresolvedCountNode):
         return (node.call, node.value)
@@ -276,12 +276,12 @@ def nested(node: ParsedWhere) -> tuple[ParsedWhere, ...]:
 
 
 @lru_cache(maxsize=4096)
-def parse_where(text: str) -> Condition | UnresolvedWhereNode:
+def parse_condition(text: str) -> Condition | UnresolvedConditionNode:
     """Parse a condition into an AST, its leaves still unresolved.
 
     The connectives and literals are the resolved vocabulary's own; the leaves
     naming entries are a bare [`NameNode`][] or an ``Unresolved*``
-    node, which only [`resolve_where`][mathspec._resolution.resolve_where] takes.
+    node, which only [`resolve_condition`][mathspec._resolution.resolve_condition] takes.
 
     Raises:
         SchemaError: If *text* is not a condition of the language. A
@@ -291,6 +291,6 @@ def parse_where(text: str) -> Condition | UnresolvedWhereNode:
             as an expression is.
     """
     return cast(
-        'Condition | UnresolvedWhereNode',
-        parse_text(_WHERE_GRAMMAR, text, 'condition', _named_rewrite, nested, _DEEP_REWRITE),
+        'Condition | UnresolvedConditionNode',
+        parse_text(_CONDITION_GRAMMAR, text, 'condition', _named_rewrite, nested, _DEEP_REWRITE),
     )

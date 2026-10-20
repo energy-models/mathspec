@@ -2287,7 +2287,7 @@ def test_each_entry_is_resolved_once_however_many_readers(monkeypatch):
 
         return record
 
-    doors = (resolution.resolve_expression, resolution.resolve_constraint_text, resolution.resolve_where_text)
+    doors = (resolution.resolve_expression, resolution.resolve_constraint_text, resolution.resolve_condition_text)
     for module in (lowering, resolution):
         for door in doors:
             monkeypatch.setattr(module, door.__name__, recorded(door))
@@ -2315,6 +2315,13 @@ def test_each_entry_is_resolved_once_however_many_readers(monkeypatch):
     to_markdown(spec)
 
     assert sorted(seen) == [
+        ('resolve_condition_text', "Assumption 'curve_complete'"),
+        ('resolve_condition_text', "Assumption 'curve_complete', where"),
+        ('resolve_condition_text', "Constraint 'balance'"),
+        ('resolve_condition_text', "Constraint 'spare'"),
+        ('resolve_condition_text', "Named expression 'headroom', case 'opening'"),
+        ('resolve_condition_text', "Variable 'op_cost'"),
+        ('resolve_condition_text', "Variable 'p'"),
         ('resolve_constraint_text', "Constraint 'balance'"),
         ('resolve_constraint_text', "Constraint 'spare'"),
         ('resolve_expression', "Named expression 'headroom', case 'opening'"),
@@ -2322,14 +2329,7 @@ def test_each_entry_is_resolved_once_however_many_readers(monkeypatch):
         ('resolve_expression', 'The objective'),
         ('resolve_expression', "piecewise 'curve' link 0"),
         ('resolve_expression', "piecewise 'curve' link 1"),
-        ('resolve_where_text', "Assumption 'curve_complete'"),
-        ('resolve_where_text', "Assumption 'curve_complete', where"),
-        ('resolve_where_text', "Constraint 'balance'"),
-        ('resolve_where_text', "Constraint 'spare'"),
-        ('resolve_where_text', "Named expression 'headroom', case 'opening'"),
-        ('resolve_where_text', "Variable 'op_cost'"),
-        ('resolve_where_text', "Variable 'p'"),
-    ], 'every expression and where position once, under the context validation reads it in, and nothing after'
+    ], 'every expression and condition position once, under the context validation reads it in, and nothing after'
 
 
 @pytest.mark.parametrize(

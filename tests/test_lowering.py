@@ -16,9 +16,9 @@ from typing import get_args
 import pytest
 
 from mathspec import to_spec
+from mathspec._condition_parser import parse_condition
 from mathspec._exclusivity import overlapping
 from mathspec._resolution import Namespace
-from mathspec._where_parser import parse_where
 from mathspec.errors import LanguageError
 from mathspec.program import (
     Add,
@@ -238,7 +238,7 @@ def test_an_unknown_where_name_is_an_error_at_lowering_too(dispatch_spec):
 def test_a_lowered_mask_cannot_be_rewritten_in_place(dispatch_program):
     """A consumer handed a program could invert the mask another one reads.
 
-    The where nodes were plain dataclasses while every entry embedding
+    The condition nodes were plain dataclasses while every entry embedding
     them was frozen, so `variable.where.root.op = '!='` rewrote `capacity > 0` into
     `capacity != 0` on the shared object — two consumers disagreeing about one
     file, which is the failure a program exists to prevent. It also left
@@ -376,7 +376,7 @@ def test_a_held_leaf_walk_is_taken_after_the_fold_absorbed_a_branch():
 def test_a_mask_over_an_unresolved_tree_is_refused_at_construction():
     """A tree whose leaves are unresolved is refused where it is wrapped, not where it is read."""
     with pytest.raises(AssertionError, match='reached a condition walk unresolved'):
-        Mask(parse_where('a AND b'))
+        Mask(parse_condition('a AND b'))
 
 
 def test_an_unwritten_where_lowers_to_none_not_an_empty_mask():

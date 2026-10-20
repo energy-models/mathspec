@@ -18,6 +18,13 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple, assert_never, cast
 
 import mathspec._degree as degree
+from mathspec._condition_parser import (
+    ColumnNode,
+    UnresolvedComparisonNode,
+    UnresolvedConditionCallNode,
+    UnresolvedConditionNode,
+    UnresolvedCountNode,
+)
 from mathspec._dimensions import dims_of, join_dims
 from mathspec._expansion import expand
 from mathspec._expression_parser import (
@@ -29,13 +36,6 @@ from mathspec._expression_parser import (
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver, condition_compared
-from mathspec._where_parser import (
-    ColumnNode,
-    UnresolvedComparisonNode,
-    UnresolvedConditionCallNode,
-    UnresolvedCountNode,
-    UnresolvedWhereNode,
-)
 from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
 from mathspec.program import (
     Add,
@@ -80,14 +80,14 @@ if TYPE_CHECKING:
 #: Why a mask may not read a given expression. The namespace stores a given
 #: expression with the variables, because it is read as a column, so this
 #: refusal names it separately.
-GIVEN_IN_A_MASK = (
+GIVEN_IN_A_CONDITION = (
     'A given expression may hold a variable, and a condition is read before variables exist — it may test '
     'parameters and dimension coordinates only.'
 )
 
 
 @dataclass(frozen=True)
-class WhereResolver:
+class ConditionResolver:
     """One resolution walk over a condition, and the things every step of it reads.
 
     A node that cannot be typed comes back unresolved with its refusal
@@ -107,12 +107,12 @@ class WhereResolver:
     def _expressions(self) -> ExpressionResolver:
         return ExpressionResolver(self.ns, self.context, self.errors)
 
-    def where(self, node: Condition | UnresolvedWhereNode) -> Condition | UnresolvedWhereNode:
+    def build(self, node: Condition | UnresolvedConditionNode) -> Condition | UnresolvedConditionNode:
         """One condition node typed, or returned unresolved with its refusal appended."""
         if isinstance(node, BooleanLiteral | TypedCondition | ConditionReference):
             return node
         if isinstance(node, NameNode):
-            return self._where_name(node)
+            return self._bare_name(node)
         if isinstance(node, UnresolvedComparisonNode):
             return self._comparison(node)
         if isinstance(node, UnresolvedConditionCallNode):
@@ -132,11 +132,11 @@ class WhereResolver:
         """Every named condition this file declares or is given."""
         return self.ns.conditions | self.ns.given_conditions
 
-    def _child(self, node: Condition | UnresolvedWhereNode) -> Condition:
+    def _child(self, node: Condition | UnresolvedConditionNode) -> Condition:
         """A connective's child, typed as resolved: an unresolved one survives only with its refusal appended."""
-        return cast('Condition', self.where(node))
+        return cast('Condition', self.build(node))
 
-    def _where_name(self, node: NameNode) -> Condition | UnresolvedWhereNode:
+    def _bare_name(self, node: NameNode) -> Condition | UnresolvedConditionNode:
         """A bare name: a named condition's body, a parameter's or relation's definedness, or a variable's existence."""
         ns, context = self.ns, self.context
         if node.name in ns.conditions:
@@ -192,7 +192,7 @@ class WhereResolver:
                     return VariableDefined(node.name, ns.leaf_dims[node.name])
         return node
 
-    def _condition_call(self, node: UnresolvedConditionCallNode) -> Condition | UnresolvedWhereNode:
+    def _condition_call(self, node: UnresolvedConditionCallNode) -> Condition | UnresolvedConditionNode:
         """``shift(<condition>, along=, offset=)`` or ``at(<condition>, by=relation[column])`` — the two operators that read a condition and answer one.
 
         ``count`` answers a number, so it stands on a comparison's side and
@@ -248,7 +248,7 @@ class WhereResolver:
             return node
         return TranslatedCondition(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
 
-    def _joined(self, node: UnresolvedConditionCallNode, mask: Mask) -> Condition | UnresolvedWhereNode:
+    def _joined(self, node: UnresolvedConditionCallNode, mask: Mask) -> Condition | UnresolvedConditionNode:
         """``at(<condition>, by=relation[column])`` — the condition read through a relation, as ``at`` reads an array.
 
         The columns are read by the rules an expression's ``at`` is, so the one
@@ -270,7 +270,7 @@ class WhereResolver:
             return node
         return JoinedCondition(mask, by, tuple(sorted(dims)))
 
-    def _count(self, node: UnresolvedCountNode) -> Condition | UnresolvedWhereNode:
+    def _count(self, node: UnresolvedCountNode) -> Condition | UnresolvedConditionNode:
         """``count(<condition>, over=<dim>) <op> <integer>`` — how many coordinates the condition admits.
 
         The reduction leaves every dim but ``over``, so the count is one
@@ -313,7 +313,7 @@ class WhereResolver:
         dims = tuple(sorted(mask.dims - {over.name}))
         return CountComparison(mask, over.name, node.op, value.value, dims)
 
-    def _comparison(self, node: UnresolvedComparisonNode) -> Condition | UnresolvedWhereNode:
+    def _comparison(self, node: UnresolvedComparisonNode) -> Condition | UnresolvedConditionNode:
         """``side <op> side``, read for what each side is.
 
         A ``position()`` call on the left is the position form. A name against
@@ -393,7 +393,7 @@ class WhereResolver:
             if given := sorted(variables_of(side) & set(ns.spec.given.expressions)):
                 self.errors.append(
                     f'{context}: a condition compares expressions, and one side reads the given expression '
-                    f'{given[0]!r}. {GIVEN_IN_A_MASK}'
+                    f'{given[0]!r}. {GIVEN_IN_A_CONDITION}'
                 )
             elif carries_variable(side):
                 self.errors.append(
@@ -461,7 +461,7 @@ class WhereResolver:
             return node
         return DimensionPosition(dimension, node.op, position, partition)
 
-    def _plain_comparison(self, node: UnresolvedComparisonNode, plain: _Plain) -> Condition | UnresolvedWhereNode:
+    def _plain_comparison(self, node: UnresolvedComparisonNode, plain: _Plain) -> Condition | UnresolvedConditionNode:
         """``name <op> literal``, or the one structural form ``relation <op> relation``."""
         ns, context = self.ns, self.context
         value = plain.value
@@ -519,7 +519,9 @@ class WhereResolver:
                 shape = ns.relations[left_name]
                 return RelationComparison(left_name, column, plain.op, value, tuple(shape.dim(k) for k in shape.key))
             case 'variable' if left_name in ns.spec.given.expressions:
-                self.errors.append(f"{context}: where references the given expression '{left_name}'. {GIVEN_IN_A_MASK}")
+                self.errors.append(
+                    f"{context}: where references the given expression '{left_name}'. {GIVEN_IN_A_CONDITION}"
+                )
             case 'variable':
                 self.errors.append(
                     f"{context}: where references variable '{left_name}'. Test only parameters "
@@ -728,7 +730,7 @@ def _declared_rhs_error(context: str, node: _Plain, value: str, kind: str, *, gi
     """
     comparison = f"'{node.name} {node.op} {value}'"
     if given:
-        return f'{context}: {comparison} compares against the given expression {value!r}. {GIVEN_IN_A_MASK}'
+        return f'{context}: {comparison} compares against the given expression {value!r}. {GIVEN_IN_A_CONDITION}'
     if kind == 'variable':
         return (
             f'{context}: {comparison} compares against variable {value!r}. '

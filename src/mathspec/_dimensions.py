@@ -246,7 +246,7 @@ def check_spec(spec: Spec, program: Program) -> None:
     for vname, vdef in spec.variables.items():
         frame = frozenset(vdef.dims)
         context = f"Variable '{vname}'"
-        _check_where_dims(program.variables[vname].where, frame, context)
+        _check_condition_dims(program.variables[vname].where, frame, context)
         for side in ('lower', 'upper'):
             bound = getattr(vdef.bounds, side)
             if isinstance(bound, str):
@@ -269,7 +269,7 @@ def check_spec(spec: Spec, program: Program) -> None:
         for region, label in zip(entry.expression.regions, [*declared.cases, None], strict=True):
             context = case_context(ename, label)
             if label is not None:
-                _check_where_dims(region.when, frame, context)
+                _check_condition_dims(region.when, frame, context)
             _check_value_dims(region.value, spec, frame, context)
 
     for ename, entry in program.expressions.items():
@@ -285,7 +285,7 @@ def check_spec(spec: Spec, program: Program) -> None:
     for cname, constraint in program.constraints.items():
         frame = frozenset(constraint.dims)
         context = f"Constraint '{cname}'"
-        _check_where_dims(constraint.where, frame, context)
+        _check_condition_dims(constraint.where, frame, context)
         got = dims_of(constraint.lhs, spec, context) | dims_of(constraint.rhs, spec, context)
         if got != frame:
             stray, missing = sorted(got - frame), sorted(frame - got)
@@ -332,7 +332,7 @@ def _check_body_dims(node: Expression, spec: Spec, frame: frozenset[str], contex
         )
 
 
-def _check_where_dims(
+def _check_condition_dims(
     mask: Mask | None,
     frame: frozenset[str],
     context: str,

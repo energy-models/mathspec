@@ -17,10 +17,10 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 
+from mathspec._condition_parser import parse_condition
 from mathspec._exclusivity import CELL_BUDGET, Special, Subject, _evaluate, _Grid, overlapping
-from mathspec._resolution import Namespace, resolve_where
+from mathspec._resolution import Namespace, resolve_condition
 from mathspec._validation import to_spec
-from mathspec._where_parser import parse_where
 from mathspec.program import And, Mask, Not, Or
 from tests.fixtures import varied
 
@@ -70,7 +70,7 @@ def refusals(spec: Spec, cases: dict[str, str]) -> list[str]:
 def _mask(text: str, namespace: Namespace, name: str) -> Condition:
     """Resolved but not folded, which is the shape a case's `when` reaches the prover in."""
     errors: list[str] = []
-    mask = resolve_where(parse_where(text), namespace, f"case '{name}'", errors)
+    mask = resolve_condition(parse_condition(text), namespace, f"case '{name}'", errors)
     assert not errors, errors
     assert mask is not None
     return mask

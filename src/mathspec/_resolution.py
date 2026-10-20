@@ -10,7 +10,7 @@ rules, the degree rules, the typesetter, lowering — reads one vocabulary. This
 module holds the [`Namespace`][] a resolution reads names from and the doors
 lowering calls, one per kind of text; the walks are
 [`ExpressionResolver`][] for arithmetic and
-[`WhereResolver`][] for a condition. The rules
+[`ConditionResolver`][] for a condition. The rules
 live in the language reference.
 """
 
@@ -19,6 +19,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, cast
 
 import mathspec._degree as degree
+from mathspec._condition_parser import (
+    UnresolvedConditionNode,
+    nested,
+    parse_condition,
+)
+from mathspec._condition_resolver import ConditionResolver
 from mathspec._exclusivity import overlapping
 from mathspec._expansion import expand, parse_and_expand
 from mathspec._expression_parser import (
@@ -28,12 +34,6 @@ from mathspec._expression_parser import (
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver
-from mathspec._where_parser import (
-    UnresolvedWhereNode,
-    nested,
-    parse_where,
-)
-from mathspec._where_resolver import WhereResolver
 from mathspec.errors import LanguageError, SchemaError, case_context, prefixed
 from mathspec.program import (
     BooleanLiteral,
@@ -52,8 +52,8 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from mathspec._condition_parser import ParsedCondition
     from mathspec._expression_parser import ParsedNode, Sense
-    from mathspec._where_parser import ParsedWhere
     from mathspec.program import DeclaredDtype
     from mathspec.spec import ConditionSpec, ExpressionSpec, Spec
 
@@ -235,7 +235,7 @@ class Namespace:
                     continue
         for case in (entry.cases or {}).values():
             try:
-                pending: list[ParsedWhere] = [parse_where(case.when)]
+                pending: list[ParsedCondition] = [parse_condition(case.when)]
             except ValueError:
                 continue
             while pending:
@@ -357,8 +357,8 @@ def resolve_expression(
     return None if len(errors) > before else resolved
 
 
-def resolve_where(
-    node: Condition | UnresolvedWhereNode,
+def resolve_condition(
+    node: Condition | UnresolvedConditionNode,
     ns: Namespace,
     context: str,
     errors: list[str],
@@ -372,18 +372,18 @@ def resolve_where(
         problems appended to *errors*.
     """
     before = len(errors)
-    resolved = WhereResolver(ns, context, errors, self_variable).where(node)
+    resolved = ConditionResolver(ns, context, errors, self_variable).build(node)
     return None if len(errors) > before else Mask(cast('Condition', resolved)).root
 
 
-def resolve_where_text(
+def resolve_condition_text(
     text: str | None,
     ns: Namespace,
     context: str,
     errors: list[str],
     self_variable: str | None = None,
 ) -> Condition | None:
-    """Parse and resolve one condition as [`resolve_where`][] does, a parse failure appended to *errors*.
+    """Parse and resolve one condition as [`resolve_condition`][] does, a parse failure appended to *errors*.
 
     Returns:
         ``None`` where there is no mask to read, and where reading it failed.
@@ -391,11 +391,11 @@ def resolve_where_text(
     if text is None:
         return None
     try:
-        node = parse_where(text)
+        node = parse_condition(text)
     except ValueError as e:
         errors.append(f'{context}: {e}')
         return None
-    return resolve_where(node, ns, context, errors, self_variable)
+    return resolve_condition(node, ns, context, errors, self_variable)
 
 
 def resolve_expression_text(
@@ -499,7 +499,7 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
     masks: dict[str, Condition] = {}
     for case_name, case in entry.cases.items():
         arm_context = case_context(name, case_name)
-        when = resolve_where_text(case.when, ns, arm_context, errors)
+        when = resolve_condition_text(case.when, ns, arm_context, errors)
         if isinstance(when, BooleanLiteral):
             errors.append(_constant_arm(arm_context, value=when.value))
         elif when is not None:
@@ -525,7 +525,7 @@ def _named_condition(name: str, entry: ConditionSpec, ns: Namespace, errors: lis
     or for none narrows nothing a `where:` could not say plainly.
     """
     context = f"Condition '{name}'"
-    body = resolve_where_text(entry.condition, ns, context, errors)
+    body = resolve_condition_text(entry.condition, ns, context, errors)
     if body is None:
         return None
     if isinstance(body, BooleanLiteral):
@@ -541,7 +541,7 @@ def _named_condition(name: str, entry: ConditionSpec, ns: Namespace, errors: lis
 def self_existence(where: Condition, variable: str, context: str) -> str | None:
     """The refusal for a variable whose own ``where:`` asks, through a named condition, whether it exists — or ``None``.
 
-    The where resolver refuses the bare name; a named condition is resolved
+    The condition resolver refuses the bare name; a named condition is resolved
     under its own name, so the check runs again on the tree with every named
     condition in it.
     """
