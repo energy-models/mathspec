@@ -121,7 +121,7 @@ An outer product is allowed. The dimensions an entry ranges over are its
 
 - A constraint requires `dims(lhs) ∪ dims(rhs)` to **equal** its `dims`.
 - An objective must carry **no dimensions**, so write the sums that reduce it.
-- A `where` predicate and a bound parameter must not **exceed** the frame they
+- A `where` condition and a bound parameter must not **exceed** the frame they
   sit in.
 
 Each of these is a load error.
@@ -154,7 +154,7 @@ QUOTED     ::= "'" chars "'" | '"' chars '"'
 | `name` (bare)                             | variable                   | The variable exists at this coordinate                                                                                                                                                                                                                                                               |
 | `name` (bare)                             | relation                   | A row exists, read at the relation's key. A `missing: absent` relation is [partial](relations.md#the-data-contract), and this selects the labels that do map                                                                                                                                         |
 | `name` (bare)                             | dimension                  | A load error. It would be true everywhere                                                                                                                                                                                                                                                            |
-| `name` (bare)                             | mask                       | The mask's predicate ([masks](named.md#masks)). A given mask is true or false at each coordinate, as a `bool` parameter is                                                                                                                                                                           |
+| `name` (bare)                             | mask                       | The mask's condition ([masks](named.md#masks)). A given mask is true or false at each coordinate, as a `bool` parameter is                                                                                                                                                                           |
 | `name OP value`                           | parameter                  | Element-wise. A missing row with no `missing:` value compares false                                                                                                                                                                                                                                  |
 | `name OP value`                           | dimension                  | A filter on the frame's own coordinate column                                                                                                                                                                                                                                                        |
 | `name OP value`, `name[col] OP value`     | relation                   | A filter on a value column, read at the relation's key. Name the column where the key determines several. A comparison reads one column                                                                                                                                                              |
@@ -162,9 +162,9 @@ QUOTED     ::= "'" chars "'" | '"' chars '"'
 | `expression OP expression`                | arithmetic over parameters | Coordinate by coordinate, over every dimension either side carries ([arithmetic in a comparison](#arithmetic-in-a-comparison)). A side with no value at a coordinate compares false                                                                                                                  |
 | `position(name) OP i`                     | dimension                  | Where the row sits along the dimension's own order. `0` is first, and a negative number counts from the end                                                                                                                                                                                          |
 | `position(name, within=relation[c])`      | dimension                  | The same, counted within each group the relation makes                                                                                                                                                                                                                                               |
-| `count(where_expr, over=name) OP i`       | a predicate                | How many coordinates along the dimension the predicate admits ([counting what a predicate admits](#counting-what-a-predicate-admits))                                                                                                                                                                |
-| `shift(where_expr, along=name, offset=i)` | a predicate                | The predicate read `i` coordinates back, and false where that vacates                                                                                                                                                                                                                                |
-| `at(where_expr, by=relation[c])`          | a predicate                | The predicate read through the relation ([reading a predicate through a relation](#reading-a-predicate-through-a-relation)), and false where the relation has no row                                                                                                                                 |
+| `count(where_expr, over=name) OP i`       | a condition                | How many coordinates along the dimension the condition admits ([counting what a condition admits](#counting-what-a-condition-admits))                                                                                                                                                                |
+| `shift(where_expr, along=name, offset=i)` | a condition                | The condition read `i` coordinates back, and false where that vacates                                                                                                                                                                                                                                |
+| `at(where_expr, by=relation[c])`          | a condition                | The condition read through the relation ([reading a condition through a relation](#reading-a-condition-through-a-relation)), and false where the relation has no row                                                                                                                                 |
 | `AND` `OR` `NOT`                          | —                          | Case-insensitive. `NOT` binds tighter than `AND`, and `AND` tighter than `OR`                                                                                                                                                                                                                        |
 | `True` / `False`                          | —                          | `True` is the same as no `where`; `False` gives an entry with no rows                                                                                                                                                                                                                                |
 
@@ -174,10 +174,10 @@ At a missing row, a comparison and a bare `bool` name read the value that the
 [`missing:`](parameters-variables-constraints.md#a-missing-row) of the parameter names. A bare
 numeric name asks whether the data has a row, whatever the `missing:`.
 
-### Counting what a predicate admits
+### Counting what a condition admits
 
 `count(<where_expr>, over=<dimension>)` is how many coordinates along that
-dimension the predicate is true at:
+dimension the condition is true at:
 
 ```yaml
 dimensions:
@@ -203,16 +203,16 @@ objective:
 $$\lvert \{ b \in \mathcal{B} \thinspace : \thinspace \mathrm{points}_{g,b} \} \rvert \ge 2 \qquad \forall\thinspace g \in \mathcal{G}$$
 
 The dimension counted over is **removed**, as a `sum(over=)` removes it: one
-count per generator above. Counting along a dimension the predicate does not
+count per generator above. Counting along a dimension the condition does not
 read is a load error.
 
 The right-hand side is a whole number. A fraction, a parameter, and a
 comparison a count can never fail or never meet (`>= 0`, `< 0`, or any
 negative number) are load errors.
 
-### Reading a predicate at the previous coordinate
+### Reading a condition at the previous coordinate
 
-`shift(<where_expr>, along=<dimension>, offset=<integer>)` reads the predicate
+`shift(<where_expr>, along=<dimension>, offset=<integer>)` reads the condition
 `offset` coordinates back. It is **false** where the translation vacates, and
 it takes no `edge=`. With `count`, it names the start of a run:
 
@@ -226,11 +226,11 @@ A negative `offset` reads forwards. This form accepts neither `within=` nor
 `edge='wrap'`. For a grouped or cyclic translation, compare the arithmetic
 `shift`.
 
-### Reading a predicate through a relation
+### Reading a condition through a relation
 
-`at(<where_expr>, by=<relation>[<column>])` reads a predicate over
+`at(<where_expr>, by=<relation>[<column>])` reads a condition over
 coarse coordinates at fine ones, as [`at`](operators.md#at) reads an array. It
-is true where the relation has a row and the predicate holds at the coordinate
+is true where the relation has a row and the condition holds at the coordinate
 that row maps to, and **false** where the relation has no row.
 
 ```yaml
@@ -258,7 +258,7 @@ The read removes the column it reads, `converter`, and adds the key, `flow`,
 so the mask above is over `flow` alone. The rules are those of
 [`at`](relations.md#lookups) in an expression. `by=` names a value column, or
 several as `relation[a, …]`. The read groups by the key of the relation, and
-the predicate carries every dimension that the read joins on.
+the condition carries every dimension that the read joins on.
 
 ### The right-hand side of a comparison
 

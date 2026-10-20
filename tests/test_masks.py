@@ -2,10 +2,10 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""A mask is a named predicate: written once under ``masks:``, read by name wherever a where string is (#803).
+"""A mask is a named condition: written once under ``masks:``, read by name wherever a where string is (#803).
 
-A use stands as a `MaskReference` with the predicate under it, so every question
-asked of a mask is asked of the predicate, and the typesetter still prints the
+A use stands as a `MaskReference` with the condition under it, so every question
+asked of a mask is asked of the condition, and the typesetter still prints the
 name. Another file reads a mask under ``given: masks:`` as the boolean data it
 is to that file, and `merge` folds the reading into the definition.
 """
@@ -57,13 +57,13 @@ RAMPING: dict[str, Any] = {
 }
 
 
-def test_a_mask_stands_where_its_name_is_written_with_its_predicate_under_it():
+def test_a_mask_stands_where_its_name_is_written_with_its_condition_under_it():
     program = to_spec(CORE).program
     where = program.constraints['cap'].where
     assert where is not None and isinstance(where.root, MaskReference), 'the use keeps the name the file wrote'
-    assert where.root.body == program.masks['stands'].where.root, 'and carries the predicate the entry declares'
+    assert where.root.body == program.masks['stands'].where.root, 'and carries the condition the entry declares'
     assert program.masks['stands'].dims == ('period', 'generator')
-    assert where.names_read == {'build_year', 'lifetime', 'period_year'}, 'a mask reads what its predicate reads'
+    assert where.names_read == {'build_year', 'lifetime', 'period_year'}, 'a mask reads what its condition reads'
     assert where.dims == {'period', 'generator'}
 
 
@@ -105,11 +105,11 @@ def test_the_one_line_form_writes_back_as_written():
 
 
 def test_a_mask_declares_no_frame():
-    """A declared frame wider than the predicate printed a use over an index no quantifier binds.
+    """A declared frame wider than the condition printed a use over an index no quantifier binds.
 
     ``young`` over ``[period, generator]`` read only ``lifetime``. A use over
     ``[generator]`` loaded, and every format printed ``young`` with a period
-    index under a quantifier over generators alone. The predicate gives a mask
+    index under a quantifier over generators alone. The condition gives a mask
     its frame, so the closed schema now refuses ``dims:`` on a mask.
     """
     young = {
@@ -121,7 +121,7 @@ def test_a_mask_declares_no_frame():
 
 
 def test_a_variable_that_asks_through_a_mask_whether_it_exists_is_refused():
-    """The where resolver refused the bare name only: a mask's predicate is read under the mask's own name."""
+    """The where resolver refused the bare name only: a mask's condition is read under the mask's own name."""
     with pytest.raises(LanguageError, match=r"variable 'p' asks whether it exists in its own where, through a mask"):
         to_spec(varied(CORE, **{'masks.live': 'p', 'variables.p.where': 'live'}))
 
@@ -164,7 +164,7 @@ def test_a_mask_may_ask_whether_another_variable_exists():
         pytest.param(
             {'masks': {'a': 'c > 0'}, 'variables.r.where': 'a'},
             "outside the declared dims ['h']",
-            id='a-use-over-a-frame-the-predicate-leaves',
+            id='a-use-over-a-frame-the-condition-leaves',
         ),
     ],
 )
@@ -174,8 +174,8 @@ def test_what_a_mask_may_not_be_is_refused_at_load(patch, says):
     assert says in str(raised.value), 'the refusal names the mask and what to write instead'
 
 
-def test_cases_split_by_a_mask_are_proved_apart_through_its_predicate():
-    """The overlap check evaluates a when on a grid of the data it reads, and a mask's data is its predicate's."""
+def test_cases_split_by_a_mask_are_proved_apart_through_its_condition():
+    """The overlap check evaluates a when on a grid of the data it reads, and a mask's data is its condition's."""
     case = {
         'dims': ['g'],
         'cases': {'on': {'when': 'a', 'expression': 1}, 'off': {'when': 'flag', 'expression': 2}},
@@ -249,9 +249,9 @@ def test_a_reading_the_definer_does_not_answer_is_refused(reader, says):
 
 
 def test_a_reader_that_states_a_frame_wider_than_the_mask_s_is_refused():
-    """A reader stated a superset of the predicate's dims, and the merge took it.
+    """A reader stated a superset of the condition's dims, and the merge took it.
 
-    A mask's frame is the dims its predicate reads, which no file chooses, so
+    A mask's frame is the dims its condition reads, which no file chooses, so
     a wider reading only defers the failure to the composed load.
     """
     definer = varied(CORE, **{'masks.stands': 'lifetime > 0'})
@@ -261,7 +261,7 @@ def test_a_reader_that_states_a_frame_wider_than_the_mask_s_is_refused():
     assert "reads the given mask 'stands' as {'dims': ['period', 'generator']}" in str(raised.value), (
         'the refusal names the frame the reader states'
     )
-    assert "introduces it over ['generator']" in str(raised.value), "and the frame the definer's predicate reads"
+    assert "introduces it over ['generator']" in str(raised.value), "and the frame the definer's condition reads"
 
 
 def test_two_fragments_that_define_one_mask_collide():
@@ -270,7 +270,7 @@ def test_two_fragments_that_define_one_mask_collide():
         merge([CORE, {**other, 'masks': {'stands': 'NOT retired'}}])
 
 
-def test_a_patch_rewrites_a_mask_s_predicate():
+def test_a_patch_rewrites_a_mask_s_condition():
     laid = override(CORE, [{'masks': {'stands': {'where': 'lifetime > 0'}}}])
     assert laid.masks['stands'].where == 'lifetime > 0'
     assert laid.masks['stands'].description == 'the unit stands in this period', 'a patch says only what it changes'
@@ -282,12 +282,12 @@ def test_a_patch_rewrites_a_mask_s_predicate():
 
 
 @pytest.mark.parametrize('fmt', sorted(FORMATS))
-def test_a_mask_prints_its_symbol_where_it_is_read_and_its_predicate_once(fmt):
+def test_a_mask_prints_its_symbol_where_it_is_read_and_its_condition_once(fmt):
     printed = typeset(CORE, fmt)
     defined = typeset_line(CORE, 'stands', fmt)
-    assert printed.count(FORMATS[fmt].operators['iff']) == 1, 'the predicate prints once, as the definition'
+    assert printed.count(FORMATS[fmt].operators['iff']) == 1, 'the condition prints once, as the definition'
     assert defined.split()[0].replace('\\_', '_').count('stands') == 1, 'the definition opens with the symbol'
-    assert FORMATS[fmt].operators['iff'] in defined, 'a predicate is defined with iff, not equated'
+    assert FORMATS[fmt].operators['iff'] in defined, 'a condition is defined with iff, not equated'
     assert 'the unit stands in this period' in printed, 'the legend carries its words'
 
 
@@ -304,7 +304,7 @@ def test_the_fixtures_are_never_mutated():
     assert before == (CORE, RAMPING)
 
 
-def test_a_mask_with_no_declared_frame_takes_the_dims_its_predicate_reads():
+def test_a_mask_with_no_declared_frame_takes_the_dims_its_condition_reads():
     spec = to_spec(varied(SMALL_MODEL, **{'masks.a': 'c > 0 AND flag'}))
     assert spec.program.masks['a'].dims == ('g',)
-    assert spec.program.masks['a'].where == Mask(spec.program.masks['a'].where.root), 'the predicate is folded'
+    assert spec.program.masks['a'].where == Mask(spec.program.masks['a'].where.root), 'the condition is folded'

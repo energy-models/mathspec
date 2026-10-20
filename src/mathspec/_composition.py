@@ -51,7 +51,7 @@ What that means for each section:
 * **A given entry is folded** into the entry that introduces the
   name, once the reader is checked to say the same as the introducer or less.
   A given expression's body may carry no dimension its reader does not
-  state. A given mask states exactly the dims its definer's predicate reads.
+  state. A given mask states exactly the dims its definer's condition reads.
   A name read as one kind and introduced as another is refused. A
   reader's description fills an entry its owner left undescribed.
   Two fragments that both read a name have to read it over one frame, as a
@@ -604,7 +604,7 @@ def _fits(
 
     A reading states the frame its introducer declares, and every other field
     it writes is the introducer's. A mask declares no frame, so its reader
-    states the dims the predicate reads. A given expression is the one kind
+    states the dims the condition reads. A given expression is the one kind
     whose frame may be wider than the composed body: a body over fewer
     dimensions broadcasts, and the composed load refuses a row it would repeat.
     """

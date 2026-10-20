@@ -25,7 +25,7 @@ from mathspec.program import And, Mask, Not, Or
 from tests.fixtures import varied
 
 if TYPE_CHECKING:
-    from mathspec.program import Predicate
+    from mathspec.program import Condition
     from mathspec.spec import Spec
 
 #: A storage model carrying one atom of every kind a `when` can be built from.
@@ -67,7 +67,7 @@ def refusals(spec: Spec, cases: dict[str, str]) -> list[str]:
     )
 
 
-def _mask(text: str, namespace: Namespace, name: str) -> Predicate:
+def _mask(text: str, namespace: Namespace, name: str) -> Condition:
     """Resolved but not folded, which is the shape a case's `when` reaches the prover in."""
     errors: list[str] = []
     mask = resolve_where(parse_where(text), namespace, f"case '{name}'", errors)

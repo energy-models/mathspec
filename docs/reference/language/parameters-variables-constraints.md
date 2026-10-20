@@ -291,7 +291,7 @@ constraints:
 There is no body, but a [term](#terms) of this file may add to the name. This
 file reads the name as it reads a given variable: a quantity over its `dims`,
 of degree one. A `where` does not read it, because a mask is built before any
-variable exists, so read a predicate that another file defines as a
+variable exists, so read a condition that another file defines as a
 [given mask](#given-masks) instead. A name declared under both `expressions:` and
 `given: expressions:` is refused. The typeset legend lists a given expression
 under _Given_.
@@ -425,10 +425,10 @@ constraints:
 
 | Field         |                                                        |                |
 | ------------- | ------------------------------------------------------ | -------------- |
-| `dims`        | required. The dimensions the definer's predicate reads |                |
+| `dims`        | required. The dimensions the definer's condition reads |                |
 | `description` | free text                                              | default `null` |
 
-There is no predicate, because the file that defines the mask owns it. A
+There is no condition, because the file that defines the mask owns it. A
 `where` reads the name as data over its `dims`, true or false at each
 coordinate. A `where` may read a given mask but not a given expression, because
 a mask reads nothing that a solve decides. The name is refused in arithmetic,
@@ -436,7 +436,7 @@ the same as a mask. The typeset legend lists a given mask under _Given_.
 
 [`merge`](../../howto/compose.md#a-library-of-components) folds a given mask
 into the mask that another fragment defines. The `dims` name exactly the
-dimensions that the predicate of the defining file reads, and a `given:` entry
+dimensions that the condition of the defining file reads, and a `given:` entry
 that names a different set is refused, with both sets of dimensions in the
 message.
 

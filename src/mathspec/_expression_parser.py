@@ -23,9 +23,8 @@ from mathspec.errors import SchemaError
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
-#: The three comparison operators an expression may use. A constraint reads
-#: its sense from this operator.
-ComparisonOperator = Literal['<=', '>=', '==']
+#: The three comparison operators a constraint may use: its sense.
+Sense = Literal['<=', '>=', '==']
 
 #: The sign a unary operator applies to its operand.
 UnaryOperator = Literal['+', '-']
@@ -164,7 +163,7 @@ ArithmeticNode = (
 
 @dataclass(frozen=True)
 class ComparisonNode:
-    op: ComparisonOperator
+    op: Sense
     left: ArithmeticNode
     right: ArithmeticNode
 
@@ -291,7 +290,7 @@ def _build_grammar() -> tuple[pp.ParserElement, pp.ParserElement, pp.ParserEleme
 
     arith <<= add_sub
 
-    comparator = pp.one_of(list(get_args(ComparisonOperator)))
+    comparator = pp.one_of(list(get_args(Sense)))
     expression = (arith + pp.Optional(comparator + arith)).set_parse_action(
         lambda t: ComparisonNode(t[1], t[0], t[2]) if len(t) == 3 else t[0]
     )
@@ -333,7 +332,7 @@ def _make_power(tokens: pp.ParseResults) -> ArithmeticNode:
     return items[0] if len(items) == 1 else BinaryOperatorNode('**', items[0], items[2])
 
 
-#: The arithmetic half on its own, for the where grammar to put a predicate's
+#: The arithmetic half on its own, for the where grammar to put a condition's
 #: comparator over: one grammar for what a side may say, wherever it stands.
 #: The column selection is shared too, so a kwarg reads one the same way in
 #: both grammars.
@@ -409,7 +408,7 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     A two-character token is tested before its one-character prefix.
     """
     rest = text[loc:].lstrip()
-    if rest.startswith(get_args(ComparisonOperator)):
+    if rest.startswith(get_args(Sense)):
         return f"'{rest[:2]}' follows a complete comparison. Split the chain into two constraints."
     if rest.startswith('!='):
         return "'!=' is not a constraint sense. Write <=, >= or ==, or move the != test to where:."

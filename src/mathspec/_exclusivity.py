@@ -29,7 +29,7 @@ from mathspec.program import (
     DimensionComparison,
     DimensionPosition,
     ExpressionComparison,
-    JoinedPredicate,
+    JoinedCondition,
     Mask,
     MaskReference,
     Negate,
@@ -41,15 +41,15 @@ from mathspec.program import (
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
-    TranslatedPredicate,
-    TypedPredicate,
+    TranslatedCondition,
+    TypedCondition,
     VariableDefined,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
 
-    from mathspec.program import DeclaredDtype, Expression, Predicate, PredicateOperator
+    from mathspec.program import ComparisonOperator, Condition, DeclaredDtype, Expression
 
 #: The most cells one pair of masks may multiply out to. Split a larger pair into several expressions.
 CELL_BUDGET = 8192
@@ -64,7 +64,7 @@ class Undecidable(Exception):  # noqa: N818
 
 
 def overlapping(
-    cases: Mapping[str, Predicate],
+    cases: Mapping[str, Condition],
     dtypes: Mapping[str, DeclaredDtype],
     defaults: Mapping[str, bool | float],
 ) -> Iterator[str]:
@@ -98,8 +98,8 @@ def overlapping(
 
 
 def _witness(
-    first: Predicate,
-    second: Predicate,
+    first: Condition,
+    second: Condition,
     dtypes: Mapping[str, DeclaredDtype],
     defaults: Mapping[str, bool | float],
 ) -> str | None:
@@ -206,7 +206,7 @@ class _Grid:
 
 
 #: A comparator against its mirror, for a test written with its sides swapped.
-_FLIPPED: Mapping[PredicateOperator, PredicateOperator] = {
+_FLIPPED: Mapping[ComparisonOperator, ComparisonOperator] = {
     '<': '>',
     '>': '<',
     '<=': '>=',
@@ -249,7 +249,7 @@ def _signed_literal(node: Expression) -> float | None:
 
 
 def _observe(
-    node: TypedPredicate, subject: Subject, values: set[_Literal], dtypes: Mapping[str, DeclaredDtype]
+    node: TypedCondition, subject: Subject, values: set[_Literal], dtypes: Mapping[str, DeclaredDtype]
 ) -> None:
     """Record what *node* says about its subject: a position, or a literal.
 
@@ -260,19 +260,19 @@ def _observe(
         raise Undecidable(_expression_rewrite(node))
     if isinstance(node, CountComparison):
         msg = (
-            'it counts the coordinates a predicate admits, which only the data decides. Test a parameter '
+            'it counts the coordinates a condition admits, which only the data decides. Test a parameter '
             'against a literal, or precompute the count as a parameter and test that'
         )
         raise Undecidable(msg)
-    if isinstance(node, TranslatedPredicate):
+    if isinstance(node, TranslatedCondition):
         msg = (
-            'it reads a predicate at a neighbouring coordinate, which only the data decides. '
+            'it reads a condition at a neighbouring coordinate, which only the data decides. '
             'Test this row, or precompute the neighbour as a boolean parameter and test that'
         )
         raise Undecidable(msg)
-    if isinstance(node, JoinedPredicate):
+    if isinstance(node, JoinedCondition):
         msg = (
-            f"it reads a predicate through '{node.columns.name}', which only the data decides. "
+            f"it reads a condition through '{node.columns.name}', which only the data decides. "
             'Test this row, or precompute the read as a boolean parameter and test that'
         )
         raise Undecidable(msg)
@@ -296,7 +296,7 @@ def _observe(
         values.add(node.value)
 
 
-def _subject_of(node: TypedPredicate) -> Subject:
+def _subject_of(node: TypedCondition) -> Subject:
     match node:
         case ParameterDefined(name=name) | ParameterComparison(name=name):
             return Subject('param', name)
@@ -315,11 +315,11 @@ def _subject_of(node: TypedPredicate) -> Subject:
         case ExpressionComparison():
             return Subject('expression', 'a comparison of expressions')
         case CountComparison():
-            return Subject('expression', 'a count of the coordinates a predicate admits')
-        case TranslatedPredicate():
-            return Subject('expression', 'a predicate read at a neighbouring coordinate')
-        case JoinedPredicate():
-            return Subject('expression', 'a predicate read through a relation')
+            return Subject('expression', 'a count of the coordinates a condition admits')
+        case TranslatedCondition():
+            return Subject('expression', 'a condition read at a neighbouring coordinate')
+        case JoinedCondition():
+            return Subject('expression', 'a condition read through a relation')
         case _:
             assert_never(node)
 
@@ -486,9 +486,9 @@ def _shown(subject: Subject, value: Cell) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _evaluate(node: Predicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
+def _evaluate(node: Condition, cell: dict[Subject, Cell], grid: _Grid) -> bool:
     """Is *node* true in this cell?"""
-    if isinstance(node, TypedPredicate):
+    if isinstance(node, TypedCondition):
         return _atom(node, cell, grid)
     match node:
         case BooleanLiteral(value=value):
@@ -505,7 +505,7 @@ def _evaluate(node: Predicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             assert_never(node)
 
 
-def _atom(node: TypedPredicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
+def _atom(node: TypedCondition, cell: dict[Subject, Cell], grid: _Grid) -> bool:
     subject = grid.subjects[id(node)]
     value = _read(node, cell[subject], grid)
     match node:
@@ -520,9 +520,9 @@ def _atom(node: TypedPredicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
         case ExpressionComparison():
             msg = 'a comparison of expressions is refused as undecidable before any cell is read'
             raise AssertionError(msg)
-        case CountComparison() | TranslatedPredicate() | JoinedPredicate():
+        case CountComparison() | TranslatedCondition() | JoinedCondition():
             msg = (
-                'a predicate read as a count, at a neighbour or through a relation is refused as undecidable '
+                'a condition read as a count, at a neighbour or through a relation is refused as undecidable '
                 'before any cell is read'
             )
             raise AssertionError(msg)
@@ -538,7 +538,7 @@ def _atom(node: TypedPredicate, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             assert_never(node)
 
 
-def _read(node: TypedPredicate, value: Cell, grid: _Grid) -> Cell:
+def _read(node: TypedCondition, value: Cell, grid: _Grid) -> Cell:
     """What *node* reads in a cell where its parameter has no row: in a comparison, the value ``missing:`` names.
 
     A bare name keeps the null. A numeric one asks whether the data has a row.
@@ -552,7 +552,7 @@ def _read(node: TypedPredicate, value: Cell, grid: _Grid) -> Cell:
     return value
 
 
-def _compare(value: Cell, op: PredicateOperator, literal: _Literal) -> bool:
+def _compare(value: Cell, op: ComparisonOperator, literal: _Literal) -> bool:
     """One atom's truth in one cell. Both sides are already this cell's frame.
 
     Raises:
@@ -577,7 +577,7 @@ def _compare(value: Cell, op: PredicateOperator, literal: _Literal) -> bool:
     raise AssertionError(msg)
 
 
-def _ordered[T: (float, str, datetime.date)](left: T, op: PredicateOperator, right: T) -> bool:
+def _ordered[T: (float, str, datetime.date)](left: T, op: ComparisonOperator, right: T) -> bool:
     """One comparison between two values of one kind — the kinds a literal comes in."""
     match op:
         case '==':

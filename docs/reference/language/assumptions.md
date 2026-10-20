@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 # Assumptions
 
 `assumptions:` states what the spec expects of the data attached to it. The
-language types each predicate and prints it in the
+language types each condition and prints it in the
 [typeset document](../typeset.md), but the tool that attaches the data, such
 as an engine, runs the check.
 
@@ -36,24 +36,24 @@ $$\mathrm{p}^{\mathrm{min}}_{g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall
 ## The entry
 
 Write an entry as one `where` string, or as a mapping when it carries more than
-the predicate.
+the condition.
 
 | Field         |                                                                               |                |
 | ------------- | ----------------------------------------------------------------------------- | -------------- |
-| `holds`       | required. The predicate, in the [where grammar](expressions.md#where-strings) |                |
+| `holds`       | required. The condition, in the [where grammar](expressions.md#where-strings) |                |
 | `where`       | which coordinates it is checked at, in the same grammar                       | default `null` |
 | `description` | why the rule is there. A refusal quotes it                                    | default `null` |
 
 `bounds_do_not_cross: "p_min <= p_max"` above is the short form of
 `bounds_do_not_cross: { holds: "p_min <= p_max" }`.
 
-An entry has no `dims:`. Its predicate must hold at every coordinate of the
-dimensions that `holds` and `where` name together, and a predicate narrower
+An entry has no `dims:`. Its condition must hold at every coordinate of the
+dimensions that `holds` and `where` name together, and a condition narrower
 than that broadcasts, as it does in any `where`.
 
-## What a predicate may say
+## What a condition may say
 
-A predicate may use everything the
+A condition may use everything the
 [where grammar](expressions.md#where-strings) accepts, including arithmetic on
 either side:
 
@@ -92,15 +92,15 @@ that the rows where the parameter has no value are not checked.
 
 ## What the loader refuses
 
-The loader refuses a predicate that the connectives already decide:
+The loader refuses a condition that the connectives already decide:
 
-> `Assumption 'sound'`: the predicate `'c > 0 OR true'` folds to true, so it
+> `Assumption 'sound'`: the condition `'c > 0 OR true'` folds to true, so it
 > assumes nothing of the data. Delete it, or name a parameter it constrains.
 
 A `where:` the connectives decide is refused the same way: one that folds to
 true narrows nothing, and one that folds to false checks the entry on no row.
 
-The loader refuses a variable in a predicate:
+The loader refuses a variable in a condition:
 
 > `Assumption 'sound'`: variable `'p'` appears in `'holds:'`, and an
 > assumption checks only data. Name a parameter, or state the rule as a

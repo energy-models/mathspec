@@ -394,7 +394,7 @@ def test_a_side_is_any_arithmetic_to_the_grammar(text):
     assert isinstance(parse_where(text), UnresolvedComparisonNode)
 
 
-def test_a_bracketed_predicate_is_still_a_predicate():
+def test_a_bracketed_condition_is_still_a_condition():
     """`(a > 0) AND b` groups a comparison; only `(a + b) <= c` brackets arithmetic."""
     assert isinstance(parse_where('(a > 0) AND b'), And)
 
@@ -411,8 +411,8 @@ def test_a_where_side_is_held_to_the_depth_an_expression_is():
         pytest.param('p_max > 0 && committable', r'Write AND', id='doubled-ampersand'),
         pytest.param('p_max > 0 | committable', r'Write OR', id='pipe'),
         pytest.param('p_max > 0 || committable', r'Write OR', id='doubled-pipe'),
-        pytest.param('~committable', r'Write NOT before the predicate', id='tilde'),
-        pytest.param('!committable', r'Write NOT before the predicate', id='bang'),
+        pytest.param('~committable', r'Write NOT before the condition', id='tilde'),
+        pytest.param('!committable', r'Write NOT before the condition', id='bang'),
         pytest.param('status = 0', r'is not a comparison. Write ==', id='a-lone-equals'),
     ],
 )
@@ -423,7 +423,7 @@ def test_a_where_parse_failure_names_the_rewrite(text, rewrite):
 
 
 def test_a_legal_where_operator_is_never_diagnosed():
-    """`!=`, `<` and `>` are predicates here, unlike on the expression side, so no diagnosis may fire on them."""
+    """`!=`, `<` and `>` are conditions here, unlike on the expression side, so no diagnosis may fire on them."""
     assert parse_where('status != 0') == UnresolvedComparisonNode(NameNode('status'), '!=', NumberNode(0.0))
     assert parse_where('p_max < 5') == UnresolvedComparisonNode(NameNode('p_max'), '<', NumberNode(5.0))
 
@@ -464,7 +464,7 @@ def test_a_parse_failure_is_raised_every_time_it_is_asked_for():
             id='parentheses-nested-past-the-parser',
         ),
         pytest.param(
-            ' AND '.join(['p'] * 400), parse_where, r'carrying part of the test', id='a-long-chain-of-predicates'
+            ' AND '.join(['p'] * 400), parse_where, r'carrying part of the test', id='a-long-chain-of-conditions'
         ),
     ],
 )

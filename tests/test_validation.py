@@ -823,8 +823,8 @@ class TestAWhereSideIsReadInResolution:
         assert '> 2' in printed and 'otherwise' in printed, f'{fmt} prints the comparison and its otherwise'
 
 
-class TestAPredicateIsAnOperand:
-    """``count``, ``shift`` and ``at`` over a predicate — the three calls that read one rather than arithmetic.
+class TestAConditionIsAnOperand:
+    """``count``, ``shift`` and ``at`` over a condition — the three calls that read one rather than arithmetic.
 
     Everything else in the language takes arithmetic, so the grammar reads
     these shapes itself and resolution decides what each name is.
@@ -847,7 +847,7 @@ class TestAPredicateIsAnOperand:
     )
     def test_a_shape_the_language_admits(self, where):
         mask = where_of(where, Namespace(_spec()), 'probe')
-        assert mask is not None, 'the predicate decides some rows, so it is a mask rather than nothing'
+        assert mask is not None, 'the condition decides some rows, so it is a mask rather than nothing'
 
     @pytest.mark.parametrize(
         ('where', 'dims', 'reads'),
@@ -904,7 +904,7 @@ class TestAPredicateIsAnOperand:
         [
             pytest.param(
                 'count(flag, by=lk) >= 2',
-                ("count(<predicate>) needs 'over='",),
+                ("count(<condition>) needs 'over='",),
                 id='a-count-with-no-over',
             ),
             pytest.param(
@@ -919,8 +919,8 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'count(flag, over=g)',
-                ('count() answers a number', 'count(<predicate>, over=<dimension>) <op> <integer>'),
-                id='a-count-standing-as-a-predicate',
+                ('count() answers a number', 'count(<condition>, over=<dimension>) <op> <integer>'),
+                id='a-count-standing-as-a-condition',
             ),
             pytest.param(
                 '2 <= count(flag, over=g)',
@@ -934,13 +934,13 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'count(flag, over=c) >= 2',
-                ('count(<predicate>, over=) is not a declared dimension',),
+                ('count(<condition>, over=) is not a declared dimension',),
                 id='a-count-over-a-parameter',
             ),
             pytest.param(
                 'count(flag, over=h) >= 2',
-                ('counts along a dimension the predicate does not read', "Count along one of 'g'"),
-                id='a-count-over-a-dim-the-predicate-lacks',
+                ('counts along a dimension the condition does not read', "Count along one of 'g'"),
+                id='a-count-over-a-dim-the-condition-lacks',
             ),
             pytest.param(
                 'count(flag, over=g) >= 2.5',
@@ -970,7 +970,7 @@ class TestAPredicateIsAnOperand:
             pytest.param(
                 'shift(flag, along=g, offset=1, edge=0)',
                 ("does not take 'edge='", "It takes only 'along=' and 'offset='"),
-                id='a-translated-predicate-with-an-edge',
+                id='a-translated-condition-with-an-edge',
             ),
             pytest.param(
                 'shift(flag, along=g, offset=1, offset=2)',
@@ -979,22 +979,22 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'shift(flag, along=g)',
-                ("shift(<predicate>) needs 'offset='",),
+                ("shift(<condition>) needs 'offset='",),
                 id='a-translation-with-no-offset',
             ),
             pytest.param(
                 'shift(flag, along=h, offset=1)',
-                ('steps along a dimension the predicate does not read',),
-                id='a-translation-along-a-dim-the-predicate-lacks',
+                ('steps along a dimension the condition does not read',),
+                id='a-translation-along-a-dim-the-condition-lacks',
             ),
             pytest.param(
                 'shift(flag, along=g, offset=0.5)',
-                ('shift(<predicate>, offset=) is not a literal whole number',),
+                ('shift(<condition>, offset=) is not a literal whole number',),
                 id='a-translation-by-a-fraction',
             ),
             pytest.param(
                 'shift(flag, along=g, offset=k)',
-                ('shift(<predicate>, offset=) is not a literal whole number',),
+                ('shift(<condition>, offset=) is not a literal whole number',),
                 id='a-translation-by-a-parameter',
             ),
             pytest.param(
@@ -1009,8 +1009,8 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'at(flag, by=lk[h])',
-                ("at(by=lk[h]) joins on ['h'], which the predicate does not carry",),
-                id='a-read-through-a-dim-the-predicate-lacks',
+                ("at(by=lk[h]) joins on ['h'], which the condition does not carry",),
+                id='a-read-through-a-dim-the-condition-lacks',
             ),
             pytest.param(
                 'at(flag, by=lk[g])',
@@ -1024,7 +1024,7 @@ class TestAPredicateIsAnOperand:
             ),
             pytest.param(
                 'sum_back(flag, along=g, window=2)',
-                ("'sum_back()' does not read a predicate", 'only shift(), at() and count() do'),
+                ("'sum_back()' does not read a condition", 'only shift(), at() and count() do'),
                 id='an-operator-that-reads-arithmetic',
             ),
         ],
@@ -1068,7 +1068,7 @@ class TestAPredicateIsAnOperand:
             },
             constraints={'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
         )
-        assert 'it counts the coordinates a predicate admits, which only the data decides' in message
+        assert 'it counts the coordinates a condition admits, which only the data decides' in message
 
     def test_a_read_through_a_relation_is_undecidable_in_a_case_when(self):
         """Which rows a relation maps onto a coordinate is the data's to say, so two cases split by one are not proved apart."""
@@ -1085,12 +1085,12 @@ class TestAPredicateIsAnOperand:
             },
             constraints={'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
         )
-        assert "it reads a predicate through 'lk', which only the data decides" in message
+        assert "it reads a condition through 'lk', which only the data decides" in message
 
     def test_a_read_landing_outside_the_frame_names_the_relation(self):
         """The read adds the dims it lands on, so a mask over the coarse side cannot carry the fine one."""
         message = _refusal(constraints={'cap': {'dims': ['h'], 'where': 'at(r, by=lk[h])', 'expression': 'r <= 1'}})
-        assert "a where-predicate read through 'lk' reads dims ['g'] outside the declared dims ['h']" in message
+        assert "a where-condition read through 'lk' reads dims ['g'] outside the declared dims ['h']" in message
 
     def test_a_read_given_an_edge_is_not_told_about_translations(self):
         """The edge sentence explains a shift; under a read it would explain an operator the file did not write."""
@@ -1110,7 +1110,7 @@ class TestAPredicateIsAnOperand:
         mask = where_of('count(q, over=h) >= 2', Namespace(_spec()), 'probe')
         assert mask is not None
         assert sorted(mask.dims) == ['g'], "'q' is read over g and h, and h is counted away"
-        assert mask.names_read == frozenset({'q'}), 'a consumer attaches what the counted predicate reads'
+        assert mask.names_read == frozenset({'q'}), 'a consumer attaches what the counted condition reads'
 
 
 class TestRulesDecidedWithoutData:
@@ -1652,8 +1652,8 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'variables.p.where': 'shift(flag, along=c, offset=1)'},
-                ('shift(<predicate>, along=) is not a declared dimension', 'Name a declared dimension'),
-                id='where-a-shifted-predicate-along-a-parameter',
+                ('shift(<condition>, along=) is not a declared dimension', 'Name a declared dimension'),
+                id='where-a-shifted-condition-along-a-parameter',
             ),
             pytest.param(
                 {'macros.half': {'args': ['x'], 'template': 'x / 2'}, 'variables.p.where': 'c > half(k, k)'},
@@ -1755,7 +1755,7 @@ class TestAssumptions:
     """What an ``assumptions:`` entry may state, and what the load refuses.
 
     Everything here is about the data, so nothing in it is decided at load but
-    the shape of the predicate: the entry is refused where the connectives
+    the shape of the condition: the entry is refused where the connectives
     already settle it, and where it names a variable, which is what the solver
     decides rather than what the caller attaches.
     """
@@ -1766,17 +1766,17 @@ class TestAssumptions:
             pytest.param(
                 'c > 0 OR true',
                 ('folds to true', 'assumes nothing of the data'),
-                id='a-predicate-that-is-always-true',
+                id='a-condition-that-is-always-true',
             ),
             pytest.param(
                 'false AND c > 0',
                 ('folds to false', 'holds on no data at all'),
-                id='a-predicate-that-is-always-false',
+                id='a-condition-that-is-always-false',
             ),
             pytest.param(
                 'p',
                 ("variable 'p' appears in 'holds:'",),
-                id='a-variable-in-the-predicate',
+                id='a-variable-in-the-condition',
             ),
             pytest.param(
                 {'holds': 'c > 0', 'where': 'p'},
@@ -2211,7 +2211,7 @@ class TestAnEntryIsNamed:
             {'constraints.balance.expression': ' + '.join(['p'] * 400) + ' >= load'}, 'chain', id='a-constraint'
         ),
         pytest.param({'objective.expression': ' + '.join(['sum(p)'] * 400)}, 'chain', id='the-objective'),
-        pytest.param({'variables.p.where': ' AND '.join(['p_max > 0'] * 400)}, 'predicate', id='a-where-string'),
+        pytest.param({'variables.p.where': ' AND '.join(['p_max > 0'] * 400)}, 'condition', id='a-where-string'),
     ],
 )
 def test_an_expression_too_deep_to_walk_fails_as_a_language_error(patch, nests):
@@ -2576,7 +2576,7 @@ _READS_ORDER = [
         't',
         id='position',
     ),
-    pytest.param({'masks.first': 'position(t) == 0'}, 't', id='a-mask-predicate'),
+    pytest.param({'masks.first': 'position(t) == 0'}, 't', id='a-mask-condition'),
     pytest.param(
         {
             'masks.lit': 'on',
@@ -2608,12 +2608,12 @@ def test_the_same_construct_along_an_ordered_dimension_loads(patch, dimension):
     to_spec(varied(ordered, **patch))
 
 
-def test_a_where_shift_along_a_dimension_its_predicate_lacks_is_refused_for_that_first():
+def test_a_where_shift_along_a_dimension_its_condition_lacks_is_refused_for_that_first():
     """The order refusal came first, so a file that declared ``bp`` ordered met a second refusal after it."""
     where = {'constraints.c': {'dims': ['t'], 'where': 'shift(on, along=bp, offset=1)', 'expression': 'x <= 0'}}
     message = _refusal(UNORDERED, **where)
-    assert 'steps along a dimension the predicate does not read' in message
-    assert 'not declared ordered' not in message, 'the predicate cannot be read along bp, ordered or not'
+    assert 'steps along a dimension the condition does not read' in message
+    assert 'not declared ordered' not in message, 'the condition cannot be read along bp, ordered or not'
 
 
 def test_a_type_1_set_reads_no_order():

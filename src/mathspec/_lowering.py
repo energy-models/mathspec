@@ -358,7 +358,7 @@ def _bound(value: float | str | None) -> Constant | ParameterReference | None:
 def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:
     """One ``assumptions:`` entry typed, or ``None`` once anything in it failed.
 
-    A predicate the connectives decide is refused: one that folds to true
+    A condition the connectives decide is refused: one that folds to true
     assumes nothing, and one that folds to false refuses every dataset. A
     variable is refused too, since an assumption is about the data and a
     variable is what the solver decides from it.
@@ -388,15 +388,15 @@ def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[st
 
 
 def _decided_assumption(context: str, text: str, *, value: bool) -> str:
-    """The refusal for a predicate the connectives already decided, whose data is never read."""
+    """The refusal for a condition the connectives already decided, whose data is never read."""
     if value:
         return (
-            f'{context}: the predicate {text!r} folds to true, so it assumes nothing of the data. '
+            f'{context}: the condition {text!r} folds to true, so it assumes nothing of the data. '
             f'Delete it, or name a parameter it constrains.'
         )
     return (
-        f'{context}: the predicate {text!r} folds to false, so it holds on no data at all. '
-        f'Delete it, or write the predicate the data can satisfy.'
+        f'{context}: the condition {text!r} folds to false, so it holds on no data at all. '
+        f'Delete it, or write the condition the data can satisfy.'
     )
 
 

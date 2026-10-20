@@ -161,7 +161,7 @@ expressions:
     otherwise: 0
 
 masks:
-  dispatchable: # a named predicate with its words: a use prints the symbol over the dims its predicate reads, the predicate prints once
+  dispatchable: # a named condition with its words: a use prints the symbol over the dims its condition reads, the condition prints once
     where: "p_max > 0 AND NOT is_flexible"
     description: a unit that dispatches and cannot be turned down
   priced_dispatch: "dispatchable AND spend_cap > 0" # the one-line form, reading another mask and a data-only entry
@@ -314,7 +314,7 @@ constraints:
     dims: []
     where: "sum(p_max, over=generator) >= budget"
     expression: sum(p) <= budget
-  counted: # a count of the coordinates a predicate admits, which reduces one dim away
+  counted: # a count of the coordinates a condition admits, which reduces one dim away
     dims: [bus]
     where: "count(tech_cap > 0, over=technology) >= 2"
     expression: theta <= budget
@@ -322,11 +322,11 @@ constraints:
     dims: [bus, technology]
     where: "count(tech_cap > 0, over=technology) >= 2"
     expression: theta <= tech_cap
-  run_start: # a predicate read one coordinate back, which is false where the translation vacates
+  run_start: # a condition read one coordinate back, which is false where the translation vacates
     dims: [snapshot, bus]
     where: "load AND NOT shift(load, along=snapshot, offset=1)"
     expression: slack <= load
-  zoned: # a predicate read through a relation: a bus is held only where its zone has a cap at all
+  zoned: # a condition read through a relation: a bus is held only where its zone has a cap at all
     dims: [bus]
     where: "at(zone_cap, by=zone_of[zone])"
     expression: theta <= budget

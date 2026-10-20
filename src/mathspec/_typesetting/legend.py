@@ -20,9 +20,9 @@ from mathspec.program import (
     DimensionComparison,
     DimensionPosition,
     ExpressionComparison,
-    JoinedPredicate,
+    JoinedCondition,
     Translate,
-    TranslatedPredicate,
+    TranslatedCondition,
     WindowSum,
     walk_regions,
 )
@@ -102,8 +102,8 @@ def notice(program: Program) -> Noticed:
             elif isinstance(atom, ExpressionComparison):
                 expressions(atom.left, atom.right)
             elif isinstance(atom, CountComparison):
-                masks(atom.predicate)
-            elif isinstance(atom, TranslatedPredicate | JoinedPredicate):
+                masks(atom.condition)
+            elif isinstance(atom, TranslatedCondition | JoinedCondition):
                 masks(atom.operand)
 
     expressions(*program.roots)
@@ -117,7 +117,7 @@ def notice(program: Program) -> Noticed:
         if entry.where is not None:
             masks(entry.where)
     for assumption in program.assumptions.values():
-        masks(assumption.predicate)
+        masks(assumption.condition)
         if assumption.where is not None:
             masks(assumption.where)
     return Noticed(frozenset(policies), grouped, frozenset(positions), frozenset(numeric))

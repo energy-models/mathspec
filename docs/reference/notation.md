@@ -802,7 +802,7 @@ expressions:
 
 #### Named mask
 
-a named predicate with its words: a use prints the symbol over the dims its predicate reads, the predicate prints once
+a named condition with its words: a use prints the symbol over the dims its condition reads, the condition prints once
 
 ```yaml
 masks:
@@ -1594,7 +1594,7 @@ constraints:
 
 #### Count over a dimension
 
-a count of the coordinates a predicate admits, which reduces one dim away
+a count of the coordinates a condition admits, which reduces one dim away
 
 ```yaml
 constraints:
@@ -1624,9 +1624,9 @@ constraints:
 \theta_{b} \le \mathrm{tech\_cap}_{b,e} \qquad \forall\, b \in \mathcal{B},\ e \in \mathcal{E} \,:\, \lvert \{ e' \in \mathcal{E} \,:\, \mathrm{tech\_cap}_{b,e'} > 0 \} \rvert \ge 2
 ```
 
-#### Predicate at the previous coordinate
+#### Condition at the previous coordinate
 
-a predicate read one coordinate back, which is false where the translation vacates
+a condition read one coordinate back, which is false where the translation vacates
 
 ```yaml
 constraints:
@@ -1640,9 +1640,9 @@ constraints:
 \mathit{slack}_{t} \le \mathrm{load}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{load}_{t,b} \text{ is defined} \wedge \neg \left( \mathrm{load}_{t - 1,b} \text{ is defined} \right)
 ```
 
-#### Predicate through a relation
+#### Condition through a relation
 
-a predicate read through a relation: a bus is held only where its zone has a cap at all
+a condition read through a relation: a bus is held only where its zone has a cap at all
 
 ```yaml
 constraints:

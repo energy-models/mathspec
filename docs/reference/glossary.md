@@ -77,9 +77,9 @@ The data of an expression, a mask and a bound parameter must fit inside their de
 
 ## Masks and absence
 
-**Mask** · **predicate**
-: A predicate is a true-or-false expression in the
-[where grammar](language/expressions.md#where-strings). A mask is a predicate
+**Mask** · **condition**
+: A condition is a true-or-false expression in the
+[where grammar](language/expressions.md#where-strings). A mask is a condition
 on an entry, and the coordinates it admits.
 
 **Absence**

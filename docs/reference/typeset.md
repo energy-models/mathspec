@@ -68,7 +68,7 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
   and a [term](language/parameters-variables-constraints.md#terms) keep their definition line
   under either `inline_expressions` setting.
 - A [mask](language/named.md#masks) prints its upright symbol where a file
-  reads it, and its predicate once, under a **Masks** heading, with ⟺. It
+  reads it, and its condition once, under a **Masks** heading, with ⟺. It
   prints as its symbol under either `inline_expressions` setting.
 - Wherever the math moves an index, which every `shift` does, the document
   prints a line saying what that notation means.
