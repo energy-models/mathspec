@@ -23,42 +23,24 @@ given:
     Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  bus:
-    description: network nodes
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  bus: {}
   line:
     description: passive branches, each between two buses, their flow set by impedance
-  cycle:
-    description: >-
-      independent cycles of the passive network graph — the cycle basis, data
-      prep. Each period has its own basis, of the branches that stand in it;
-      a label is a position in that period's basis, so one label names a
-      different cycle in another period
+  cycle: {}
   segment:
     description: >-
       the cuts a passive branch's loss curve is held above — PyPSA's tangents,
       as many as its `segments` count, or its secants, as many as its tolerance
       loop places; none in a lossless run
     dtype: int
-  global_constraint:
-    description: PyPSA's `GlobalConstraint` rows, one label per declared limit
-  period:
-    description: investment periods — PyPSA's `investment_periods`
-    dtype: int
-    ordered: true
-  carrier:
-    description: energy carriers, what a growth limit is set per
+  global_constraint: {}
+  period: { dtype: int, ordered: true }
+  carrier: {}
 
 relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+  snapshot_period: { key: snapshot, values: period }
   Line_carrier:
     description: the carrier a line carries
     key: line
@@ -369,15 +351,15 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N}`$ — network nodes |
+| $`\Xi`$ | index $`\xi`$ — `scenario` |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N}`$ |
 | $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I},\ \mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N}`$ — passive branches, each between two buses, their flow set by impedance |
-| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep. Each period has its own basis, of the branches that stand in it; a label is a position in that period's basis, so one label names a different cycle in another period |
+| $`\mathcal{C}`$ | index $`c`$ — `cycle` |
 | $`\mathcal{E}`$ | index $`e`$ — `segment` — the cuts a passive branch's loss curve is held above — PyPSA's tangents, as many as its `segments` count, or its secants, as many as its tolerance loop places; none in a lossless run |
-| $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
-| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
+| $`\mathcal{G}`$ | index $`g`$ — `global_constraint` |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ |
+| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I}`$ |
 
 #### Parameters
 

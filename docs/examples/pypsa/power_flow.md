@@ -18,12 +18,8 @@ given:
         its cycle weight, and every transformer phase shift
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
   cycle:
     description: >-
       independent cycles of the passive network graph — the cycle basis, data
@@ -57,8 +53,8 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
+| $`\Xi`$ | index $`\xi`$ — `scenario` |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` |
 | $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep. Each period has its own basis, of the branches that stand in it; a label is a position in that period's basis, so one label names a different cycle in another period |
 
 #### Subject to

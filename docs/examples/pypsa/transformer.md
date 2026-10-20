@@ -19,38 +19,17 @@ given:
     Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  bus:
-    description: network nodes
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  bus: {}
   transformer:
     description: passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised
-  cycle:
-    description: >-
-      independent cycles of the passive network graph — the cycle basis, data
-      prep. Each period has its own basis, of the branches that stand in it;
-      a label is a position in that period's basis, so one label names a
-      different cycle in another period
-  segment:
-    description: >-
-      the cuts a passive branch's loss curve is held above — PyPSA's tangents,
-      as many as its `segments` count, or its secants, as many as its tolerance
-      loop places; none in a lossless run
-    dtype: int
-  period:
-    description: investment periods — PyPSA's `investment_periods`
-    dtype: int
-    ordered: true
+  cycle: {}
+  segment: { dtype: int }
+  period: { dtype: int, ordered: true }
 
 relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+  snapshot_period: { key: snapshot, values: period }
   Transformer_bus0:
     description: the bus a transformer's flow is measured at
     key: transformer
@@ -382,13 +361,13 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Transformer\_bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{Transformer\_bus1}: \mathcal{M} \to \mathcal{N}`$ — network nodes |
+| $`\Xi`$ | index $`\xi`$ — `scenario` |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Transformer\_bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{Transformer\_bus1}: \mathcal{M} \to \mathcal{N}`$ |
 | $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{Transformer\_bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{Transformer\_bus1}: \mathcal{M} \to \mathcal{N}`$ — passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised |
-| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep. Each period has its own basis, of the branches that stand in it; a label is a position in that period's basis, so one label names a different cycle in another period |
-| $`\mathcal{S}`$ | index $`s`$ — `segment` — the cuts a passive branch's loss curve is held above — PyPSA's tangents, as many as its `segments` count, or its secants, as many as its tolerance loop places; none in a lossless run |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
+| $`\mathcal{C}`$ | index $`c`$ — `cycle` |
+| $`\mathcal{S}`$ | index $`s`$ — `segment` |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ |
 
 #### Parameters
 

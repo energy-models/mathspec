@@ -14,14 +14,9 @@ given:
     Bus_injection: { dims: [scenario, snapshot, bus] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  bus:
-    description: network nodes
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  bus: {}
   load:
     description: demands, each on one bus
 
@@ -74,9 +69,9 @@ expressions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Load\_bus}: \mathcal{D} \to \mathcal{N}`$ — network nodes |
+| $`\Xi`$ | index $`\xi`$ — `scenario` |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Load\_bus}: \mathcal{D} \to \mathcal{N}`$ |
 | $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{Load\_bus}: \mathcal{D} \to \mathcal{N}`$ — demands, each on one bus |
 
 #### Parameters

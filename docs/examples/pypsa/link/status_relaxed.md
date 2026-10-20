@@ -31,14 +31,9 @@ given:
     Link_committed: { dims: [snapshot, link] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  link:
-    description: controllable connections, each from one bus to the buses it delivers to
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  link: {}
 
 variables:
   Link_status:
@@ -149,9 +144,9 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{L}`$ | index $`l`$ — `link` — controllable connections, each from one bus to the buses it delivers to |
+| $`\Xi`$ | index $`\xi`$ — `scenario` |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` |
+| $`\mathcal{L}`$ | index $`l`$ — `link` |
 
 #### Variables
 

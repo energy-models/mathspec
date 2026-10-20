@@ -31,14 +31,9 @@ given:
     Process_committed: { dims: [snapshot, process] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  process:
-    description: generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  process: {}
 
 variables:
   Process_status:
@@ -149,9 +144,9 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{J}`$ | index $`j`$ — `process` — generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate |
+| $`\Xi`$ | index $`\xi`$ — `scenario` |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` |
+| $`\mathcal{J}`$ | index $`j`$ — `process` |
 
 #### Variables
 

@@ -28,30 +28,17 @@ given:
     Bus_injection: { dims: [scenario, snapshot, bus] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  bus:
-    description: network nodes
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  bus: {}
   store:
     description: pure energy stores, each on one bus
-  global_constraint:
-    description: PyPSA's `GlobalConstraint` rows, one label per declared limit
-  period:
-    description: investment periods — PyPSA's `investment_periods`
-    dtype: int
-    ordered: true
-  carrier:
-    description: energy carriers, what a growth limit is set per
+  global_constraint: {}
+  period: { dtype: int, ordered: true }
+  carrier: {}
 
 relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+  snapshot_period: { key: snapshot, values: period }
   Store_carrier:
     description: the carrier a store holds
     key: store
@@ -443,13 +430,13 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Store\_bus}: \mathcal{V} \to \mathcal{N}`$ — network nodes |
+| $`\Xi`$ | index $`\xi`$ — `scenario` |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Store\_bus}: \mathcal{V} \to \mathcal{N}`$ |
 | $`\mathcal{V}`$ | index $`v`$ — `store` with $`\mathrm{Store\_carrier}: \mathcal{V} \to \mathcal{I},\ \mathrm{Store\_bus}: \mathcal{V} \to \mathcal{N}`$ — pure energy stores, each on one bus |
-| $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
-| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Store\_carrier}: \mathcal{V} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
+| $`\mathcal{G}`$ | index $`g`$ — `global_constraint` |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ |
+| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Store\_carrier}: \mathcal{V} \to \mathcal{I}`$ |
 
 #### Parameters
 

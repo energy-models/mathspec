@@ -21,30 +21,17 @@ given:
     Bus_injection: { dims: [scenario, snapshot, bus] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  bus:
-    description: network nodes
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  bus: {}
   store:
     description: pure energy stores, each on one bus
-  global_constraint:
-    description: PyPSA's `GlobalConstraint` rows, one label per declared limit
-  period:
-    description: investment periods — PyPSA's `investment_periods`
-    dtype: int
-    ordered: true
-  carrier:
-    description: energy carriers, what a growth limit is set per
+  global_constraint: {}
+  period: { dtype: int, ordered: true }
+  carrier: {}
 
 relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+  snapshot_period: { key: snapshot, values: period }
   Store_carrier:
     description: the carrier a store holds
     key: store

@@ -35,24 +35,13 @@ given:
     Link_committed: { dims: [snapshot, link] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  link:
-    description: controllable connections, each from one bus to the buses it delivers to
-  period:
-    description: investment periods — PyPSA's `investment_periods`
-    dtype: int
-    ordered: true
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  link: {}
+  period: { dtype: int, ordered: true }
 
 relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+  snapshot_period: { key: snapshot, values: period }
 
 parameters:
   Link_committable:
@@ -313,10 +302,10 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
-| $`\mathcal{L}`$ | index $`l`$ — `link` — controllable connections, each from one bus to the buses it delivers to |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
+| $`\Xi`$ | index $`\xi`$ — `scenario` |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ |
+| $`\mathcal{L}`$ | index $`l`$ — `link` |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ |
 
 #### Parameters
 

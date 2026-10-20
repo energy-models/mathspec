@@ -25,14 +25,9 @@ given:
     Bus_injection: { dims: [scenario, snapshot, bus] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  bus:
-    description: network nodes
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  bus: {}
   process:
     description: generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate
   process_output:
@@ -40,20 +35,12 @@ dimensions:
       a process's ports, one label per port a process declares — PyPSA's
       `bus0`, `bus1`, … each carry a signed `rate`, so a process of any number
       of ports is one term in the balance, data prep
-  global_constraint:
-    description: PyPSA's `GlobalConstraint` rows, one label per declared limit
-  period:
-    description: investment periods — PyPSA's `investment_periods`
-    dtype: int
-    ordered: true
-  carrier:
-    description: energy carriers, what a growth limit is set per
+  global_constraint: {}
+  period: { dtype: int, ordered: true }
+  carrier: {}
 
 relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+  snapshot_period: { key: snapshot, values: period }
   Process_carrier:
     description: the carrier a process converts from
     key: process
@@ -353,14 +340,14 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N}`$ — network nodes |
+| $`\Xi`$ | index $`\xi`$ — `scenario` |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N}`$ |
 | $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J}`$ — generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate |
 | $`\mathcal{R}`$ | index $`r`$ — `process_output` with $`\mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J},\ \mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N}`$ — a process's ports, one label per port a process declares — PyPSA's `bus0`, `bus1`, … each carry a signed `rate`, so a process of any number of ports is one term in the balance, data prep |
-| $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
-| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
+| $`\mathcal{G}`$ | index $`g`$ — `global_constraint` |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ |
+| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I}`$ |
 
 #### Parameters
 

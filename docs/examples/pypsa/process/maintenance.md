@@ -29,14 +29,9 @@ given:
     Process_committed: { dims: [snapshot, process] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  process:
-    description: generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  process: {}
 
 relations:
   Process_maintenance_cover:
@@ -288,9 +283,9 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — dispatch periods |
-| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate |
+| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row |
+| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row |
 
 #### Parameters
 

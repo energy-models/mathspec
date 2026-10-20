@@ -16,42 +16,24 @@ given:
     Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  bus:
-    description: network nodes
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  bus: {}
   line:
     description: passive branches, each between two buses, their flow set by impedance
-  cycle:
-    description: >-
-      independent cycles of the passive network graph — the cycle basis, data
-      prep. Each period has its own basis, of the branches that stand in it;
-      a label is a position in that period's basis, so one label names a
-      different cycle in another period
+  cycle: {}
   segment:
     description: >-
       the cuts a passive branch's loss curve is held above — PyPSA's tangents,
       as many as its `segments` count, or its secants, as many as its tolerance
       loop places; none in a lossless run
     dtype: int
-  global_constraint:
-    description: PyPSA's `GlobalConstraint` rows, one label per declared limit
-  period:
-    description: investment periods — PyPSA's `investment_periods`
-    dtype: int
-    ordered: true
-  carrier:
-    description: energy carriers, what a growth limit is set per
+  global_constraint: {}
+  period: { dtype: int, ordered: true }
+  carrier: {}
 
 relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+  snapshot_period: { key: snapshot, values: period }
   Line_carrier:
     description: the carrier a line carries
     key: line

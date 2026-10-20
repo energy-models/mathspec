@@ -18,8 +18,7 @@ given:
     total_cost: { dims: [] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
+  scenario: {}
 
 parameters:
   CVaR_alpha:
@@ -77,7 +76,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
+| $`\Xi`$ | index $`\xi`$ — `scenario` |
 
 #### Parameters
 

@@ -29,14 +29,9 @@ given:
     Link_committed: { dims: [snapshot, link] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  link:
-    description: controllable connections, each from one bus to the buses it delivers to
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  link: {}
 
 relations:
   Link_maintenance_cover:
@@ -285,9 +280,9 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — dispatch periods |
-| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — controllable connections, each from one bus to the buses it delivers to |
+| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row |
+| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row |
 
 #### Parameters
 

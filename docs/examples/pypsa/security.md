@@ -25,31 +25,19 @@ given:
     Transformer_s_monitored: { dims: [scenario, snapshot, transformer] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  line:
-    description: passive branches, each between two buses, their flow set by impedance
-  transformer:
-    description: passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  line: {}
+  transformer: {}
   outage:
     description: >-
       the passive branches a security-constrained run takes out one at a time
       — PyPSA's `branch_outages`, each a line or a transformer; none on a
       plain run
-  period:
-    description: investment periods — PyPSA's `investment_periods`
-    dtype: int
-    ordered: true
+  period: { dtype: int, ordered: true }
 
 relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+  snapshot_period: { key: snapshot, values: period }
   Outage_line:
     description: the line an outage takes out; an outage of a transformer has no row
     key: outage
@@ -211,12 +199,12 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
-| $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K}`$, `Outage_line` is `absent` where the data has no row — passive branches, each between two buses, their flow set by impedance |
-| $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$, `Outage_transformer` is `absent` where the data has no row — passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised |
+| $`\Xi`$ | index $`\xi`$ — `scenario` |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ |
+| $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K}`$, `Outage_line` is `absent` where the data has no row |
+| $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$, `Outage_transformer` is `absent` where the data has no row |
 | $`\mathcal{K}^{\mathrm{out}}`$ | index $`\kappa`$ — `outage` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K},\ \mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$, `Outage_line` is `absent` where the data has no row, `Outage_transformer` is `absent` where the data has no row — the passive branches a security-constrained run takes out one at a time — PyPSA's `branch_outages`, each a line or a transformer; none on a plain run |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ |
 
 #### Parameters
 

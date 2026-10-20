@@ -28,24 +28,13 @@ given:
     Process_committed: { dims: [snapshot, process] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  snapshot:
-    description: dispatch periods
-    dtype: datetime
-    ordered: true
-  process:
-    description: generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate
-  period:
-    description: investment periods — PyPSA's `investment_periods`
-    dtype: int
-    ordered: true
+  scenario: {}
+  snapshot: { dtype: datetime, ordered: true }
+  process: {}
+  period: { dtype: int, ordered: true }
 
 relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+  snapshot_period: { key: snapshot, values: period }
 
 parameters:
   Process_committable:

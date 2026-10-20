@@ -14,12 +14,8 @@ given:
     Carrier_additions: { dims: [period, carrier] }
 
 dimensions:
-  period:
-    description: investment periods — PyPSA's `investment_periods`
-    dtype: int
-    ordered: true
-  carrier:
-    description: energy carriers, what a growth limit is set per
+  period: { dtype: int, ordered: true }
+  carrier: {}
 
 parameters:
   Carrier_max_growth:
@@ -73,8 +69,8 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{Y}`$ | index $`y`$ — `period` — investment periods — PyPSA's `investment_periods` |
-| $`\mathcal{I}`$ | index $`i`$ — `carrier` — energy carriers, what a growth limit is set per |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` |
+| $`\mathcal{I}`$ | index $`i`$ — `carrier` |
 
 #### Parameters
 

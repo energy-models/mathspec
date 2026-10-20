@@ -13,10 +13,8 @@ given:
     tech_capacity_expansion: { dims: [global_constraint] }
 
 dimensions:
-  scenario:
-    description: the futures dispatch is chosen in, each with a weight
-  global_constraint:
-    description: PyPSA's `GlobalConstraint` rows, one label per declared limit
+  scenario: {}
+  global_constraint: {}
 
 parameters:
   GlobalConstraint_type:
