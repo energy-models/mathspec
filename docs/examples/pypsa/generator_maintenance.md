@@ -266,9 +266,9 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — dispatch periods |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — generating units, each on one bus |
+| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{G} \times \Xi \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{G} \times \Xi \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — dispatch periods |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{G} \times \Xi \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — generating units, each on one bus |
 
 #### Parameters
 
@@ -340,7 +340,7 @@ assumptions:
 **`Generator_maint_window`**
 
 ```math
-\mu_{g,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ g,\ t',\ t \right) \in \mathrm{Generator\_maintenance\_cover}} \mu^{\mathrm{up}}_{g,\xi,t'} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{g,t}
+\mu_{g,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( t,\ g,\ \xi,\ t' \right) \in \mathrm{Generator\_maintenance\_cover}} \mu^{\mathrm{up}}_{g,\xi,t'} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{g,t}
 ```
 
 **`Generator_maint_start_horizon`**

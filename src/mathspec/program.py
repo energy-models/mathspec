@@ -32,7 +32,7 @@ from mathspec.errors import did_you_mean
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
 
 
 #: The public names of ``mathspec.program``, sorted.
@@ -504,8 +504,8 @@ def children(expression: Expression) -> tuple[Expression, ...]:
 class Relation:
     """One declared relation: a table over its ``columns``, single-valued per ``key``.
 
-    ``columns`` maps each role to its dimension in the order the table
-    carries them, the key's roles first; ``key`` is the roles a row is
+    ``columns`` maps each role to its dimension, the key's roles first and
+    each side sorted by role; ``key`` is the roles a row is
     identified by, and [`values`][] the rest — every role is a key role for
     a bare relation, which is one with no value columns. Every value is
     checked when the data is attached to be a label of its column's dimension, and the table to
@@ -527,7 +527,8 @@ class Relation:
 
     @property
     def dims(self) -> tuple[str, ...]:
-        return tuple(dim for _, dim in self.columns)
+        """Every dimension a column is over, once, sorted by name."""
+        return tuple(sorted({dim for _, dim in self.columns}))
 
     @property
     def values(self) -> tuple[str, ...]:
@@ -542,6 +543,11 @@ class Relation:
     def dim(self, role: str) -> str:
         return self._dim_of[role]
 
+    def in_order(self, roles: Iterable[str]) -> tuple[str, ...]:
+        """*roles* as [`columns`][] orders them: the key's first, each side sorted by role."""
+        given = tuple(roles)
+        return (*sorted(r for r in given if r in self.key), *sorted(r for r in given if r not in self.key))
+
 
 @dataclass(frozen=True)
 class JoinColumns:
@@ -553,10 +559,12 @@ class JoinColumns:
     ``relation``. ``relation`` maps every role to its dimension and names the
     key. ``joined`` is
     every column the join matches the operand on: the columns that leave the
-    frame, then every key column the call does not name. ``grouped`` is every
-    column of the relation the result keeps: the columns that arrive, then the
-    same unnamed key columns. A column in neither is not read, so a relation
-    may gain a value column without changing what a call means.
+    frame, and every key column the call does not name. ``grouped`` is every
+    column of the relation the result keeps: the columns that arrive, and the
+    same unnamed key columns. Both are in the order of the relation's
+    ``columns``: the key's first, each side sorted by role. A column in neither
+    is not read, so a relation may gain a value column without changing what a
+    call means.
 
     A column both joined on and grouped by stays in the frame. One joined on
     and not grouped by is [`dropped`][], and one grouped by and not joined

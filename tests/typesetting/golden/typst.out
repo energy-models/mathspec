@@ -5,8 +5,8 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 == Sets
 / $cal(T)$: index $t$ --- `snapshot` (`int` coordinates) with $upright("season_of"): cal(T) arrow.r cal(S), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("rep_of"): cal(T) arrow.r cal(T)$
-/ $cal(G)$: index $g$ --- `generator` with $upright("gen_bus"): cal(G) arrow.r cal(B), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("connection") subset.eq cal(G) times cal(B), upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$, `connection` is `absent` where the data has no row
-/ $cal(B)$: index $b$ --- `bus` with $upright("gen_bus"): cal(G) arrow.r cal(B), upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("connection") subset.eq cal(G) times cal(B), upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row
+/ $cal(G)$: index $g$ --- `generator` with $upright("gen_bus"): cal(G) arrow.r cal(B), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("connection") subset.eq cal(B) times cal(G), upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$, `connection` is `absent` where the data has no row
+/ $cal(B)$: index $b$ --- `bus` with $upright("gen_bus"): cal(G) arrow.r cal(B), upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("connection") subset.eq cal(B) times cal(G), upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row
 / $cal(Z)$: index $z$ --- `zone` with $upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z)$, `area_of` is `absent` where the data has no row
 / $cal(S)$: index $s$ --- `season` with $upright("season_of"): cal(T) arrow.r cal(S)$
 / $cal(E)$: index $e$ --- `technology` with $upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$
@@ -126,8 +126,8 @@ $ upright("budgeted") & italic("spend")_(t) & <= upright("budget") & forall t in
   upright("grouped_once") & sum_(g in cal(G) colon upright("gen_bt.bus")(g) = b and upright("gen_bt.technology")(g) = e) p_(g,t) & <= upright("tech_cap")_(b,e) & forall b in cal(B), t in cal(T), e in cal(E) \
   upright("looked_up_once") & italic("units")_(g) & <= upright("tech_cap")_(upright("gen_bt.bus")(g),upright("gen_bt.technology")(g)) & forall g in cal(G) \
   upright("within_bus") & italic("units")_(g) & <= italic("units")_(g minus.square_(0)^(upright("gen_bt.bus")(g)) 1) & forall g in cal(G) colon upright("pos")_((upright("gen_bt.bus")(g), upright("gen_bt.technology")(g)))(g) = 0 \
-  upright("relational") & sum_(g in cal(G) colon (g, b) in upright("connection")) p_(g,t) & <= upright("load")_(b,t) & forall b in cal(B), t in cal(T) \
-  upright("connected") & p_(g,t) & <= upright("load")_(b,t) & forall b in cal(B), g in cal(G), t in cal(T) colon (g, b) in upright("connection") \
+  upright("relational") & sum_(g in cal(G) colon (b, g) in upright("connection")) p_(g,t) & <= upright("load")_(b,t) & forall b in cal(B), t in cal(T) \
+  upright("connected") & p_(g,t) & <= upright("load")_(b,t) & forall b in cal(B), g in cal(G), t in cal(T) colon (b, g) in upright("connection") \
   upright("representative") & sum_(t' in cal(T) colon upright("rep_of")(t') = t) italic("spill")_(t') & <= italic("spill")_(upright("rep_of")(t)) & forall t in cal(T) \
   upright("zonal") & sum_(g in cal(G) colon upright("gen_zone")(g, t) = z) p_(g,t) & <= upright("zone_cap")_(z) & forall t in cal(T), z in cal(Z) \
   upright("zonal_history") & sum_(t in cal(T) colon upright("gen_zone")(g, t) = z) p_(g,t) & <= upright("zone_cap")_(z) & forall g in cal(G), z in cal(Z) \

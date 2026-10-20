@@ -5476,13 +5476,13 @@ A plain `n.optimize()`, and its multi-period and stochastic classes, in one file
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T},\ \mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T},\ \mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row, `Link_maintenance_cover` is `absent` where the data has no row, `Process_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y},\ \mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T},\ \mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T},\ \mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row, `Link_maintenance_cover` is `absent` where the data has no row, `Process_maintenance_cover` is `absent` where the data has no row — dispatch periods |
+| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{G} \times \Xi \times \mathcal{T},\ \mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T},\ \mathrm{Process\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{J} \times \Xi \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row, `Link_maintenance_cover` is `absent` where the data has no row, `Process_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y},\ \mathrm{Generator\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{G} \times \Xi \times \mathcal{T},\ \mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T},\ \mathrm{Process\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{J} \times \Xi \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row, `Link_maintenance_cover` is `absent` where the data has no row, `Process_maintenance_cover` is `absent` where the data has no row — dispatch periods |
 | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Generator\_bus}: \mathcal{G} \to \mathcal{N},\ \mathrm{Link\_bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{Link\_output\_bus}: \mathcal{O} \to \mathcal{N},\ \mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N},\ \mathrm{Load\_bus}: \mathcal{D} \to \mathcal{N},\ \mathrm{StorageUnit\_bus}: \mathcal{S} \to \mathcal{N},\ \mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N},\ \mathrm{Store\_bus}: \mathcal{V} \to \mathcal{N},\ \mathrm{Transformer\_bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{Transformer\_bus1}: \mathcal{M} \to \mathcal{N}`$ — network nodes |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_carrier}: \mathcal{G} \to \mathcal{I},\ \mathrm{Generator\_bus}: \mathcal{G} \to \mathcal{N},\ \mathrm{Generator\_maintenance\_cover} \subseteq \Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — generating units, each on one bus |
-| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_carrier}: \mathcal{L} \to \mathcal{I},\ \mathrm{Link\_bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{Link\_output\_link}: \mathcal{O} \to \mathcal{L},\ \mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — controllable connections, each from one bus to the buses it delivers to |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_carrier}: \mathcal{G} \to \mathcal{I},\ \mathrm{Generator\_bus}: \mathcal{G} \to \mathcal{N},\ \mathrm{Generator\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{G} \times \Xi \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — generating units, each on one bus |
+| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_carrier}: \mathcal{L} \to \mathcal{I},\ \mathrm{Link\_bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{Link\_output\_link}: \mathcal{O} \to \mathcal{L},\ \mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — controllable connections, each from one bus to the buses it delivers to |
 | $`\mathcal{O}`$ | index $`o`$ — `link_output` with $`\mathrm{Link\_output\_link}: \mathcal{O} \to \mathcal{L},\ \mathrm{Link\_output\_bus}: \mathcal{O} \to \mathcal{N}`$ — a link's output ports, one label per port a link declares — PyPSA's `bus1`, `bus2`, … columns read long, so a link of any number of output ports is one term in the balance, data prep |
-| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J},\ \mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate |
+| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J},\ \mathrm{Process\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{J} \times \Xi \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate |
 | $`\mathcal{R}`$ | index $`r`$ — `process_output` with $`\mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J},\ \mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N}`$ — a process's ports, one label per port a process declares — PyPSA's `bus0`, `bus1`, … each carry a signed `rate`, so a process of any number of ports is one term in the balance, data prep |
 | $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{Load\_bus}: \mathcal{D} \to \mathcal{N}`$ — demands, each on one bus |
 | $`\mathcal{S}`$ | index $`s`$ — `storage_unit` with $`\mathrm{StorageUnit\_carrier}: \mathcal{S} \to \mathcal{I},\ \mathrm{StorageUnit\_bus}: \mathcal{S} \to \mathcal{N}`$ — storage units, dispatch and store behind one bus connection |
@@ -9220,7 +9220,7 @@ Generator_maint_window:
 ```
 
 ```math
-\mu_{g,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ g,\ t',\ t \right) \in \mathrm{Generator\_maintenance\_cover}} \mu^{\mathrm{up}}_{g,\xi,t'} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{g,t}
+\mu_{g,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( t,\ g,\ \xi,\ t' \right) \in \mathrm{Generator\_maintenance\_cover}} \mu^{\mathrm{up}}_{g,\xi,t'} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}_{g,t}
 ```
 
 ### `Generator-maint-start-horizon`
@@ -9890,7 +9890,7 @@ Link_maint_window:
 ```
 
 ```math
-\mu^{f}_{l,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ l,\ t',\ t \right) \in \mathrm{Link\_maintenance\_cover}} \mu^{f,\mathrm{up}}_{l,\xi,t'} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t}
+\mu^{f}_{l,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( t,\ l,\ \xi,\ t' \right) \in \mathrm{Link\_maintenance\_cover}} \mu^{f,\mathrm{up}}_{l,\xi,t'} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t}
 ```
 
 ### `Link-maint-start-horizon`
@@ -10566,7 +10566,7 @@ Process_maint_window:
 ```
 
 ```math
-\mu^{z}_{j,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ j,\ t',\ t \right) \in \mathrm{Process\_maintenance\_cover}} \mu^{z,\mathrm{up}}_{j,\xi,t'} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t}
+\mu^{z}_{j,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( t,\ j,\ \xi,\ t' \right) \in \mathrm{Process\_maintenance\_cover}} \mu^{z,\mathrm{up}}_{j,\xi,t'} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t}
 ```
 
 ### `Process-maint-start-horizon`

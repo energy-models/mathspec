@@ -91,15 +91,33 @@ def varied(base: dict[str, Any], **patch: Any) -> dict[str, Any]:
 
 
 def dims_reversed(data: Any) -> Any:
-    """*data* with every ``dims:`` list in it reversed, at any depth, and nothing else changed."""
+    """*data* with every ``dims:`` list reversed, at any depth, and each relation's ``key`` and ``values``."""
     if isinstance(data, dict):
         return {
-            key: value[::-1] if key == 'dims' and isinstance(value, list) else dims_reversed(value)
+            key: value[::-1]
+            if key == 'dims' and isinstance(value, list)
+            else {name: _columns_reversed(entry) for name, entry in value.items()}
+            if key == 'relations' and isinstance(value, dict)
+            else dims_reversed(value)
             for key, value in data.items()
         }
     if isinstance(data, list):
         return [dims_reversed(item) for item in data]
     return data
+
+
+def _columns_reversed(relation: Any) -> Any:
+    """A relation entry with its ``key`` and ``values`` columns in reverse order."""
+    if not isinstance(relation, dict):
+        return relation
+    return {
+        key: value[::-1]
+        if key in ('key', 'values') and isinstance(value, list)
+        else dict(reversed(value.items()))
+        if key in ('key', 'values') and isinstance(value, dict)
+        else value
+        for key, value in relation.items()
+    }
 
 
 def section(markdown: str, title: str) -> str:

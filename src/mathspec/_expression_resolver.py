@@ -670,7 +670,7 @@ class ExpressionResolver:
                 )
                 return None
         kept = tuple(r for r in shape.key if r not in from_roles and r not in into_roles)
-        return JoinColumns(name, shape, (*from_roles, *kept), (*into_roles, *kept))
+        return JoinColumns(name, shape, shape.in_order((*from_roles, *kept)), shape.in_order((*into_roles, *kept)))
 
     def partition(self, columns: ColumnsNode, operator: str, along_dim: str) -> Partition | None:
         """How a partition (``shift``, ``sum_back``, ``position``) steps along the relation *columns* names.

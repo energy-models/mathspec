@@ -70,8 +70,8 @@ parameters:
 | Symbol | Meaning |
 |---|---|
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T}`$ |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `connection` is `absent` where the data has no row |
-| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{B} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `connection` is `absent` where the data has no row |
+| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{B} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
 | $`\mathcal{Z}`$ | index $`z`$ — `zone` with $`\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$ |
@@ -476,7 +476,7 @@ constraints:
 ```
 
 ```math
-\sum_{g \in \mathcal{G} \,:\, \left( g,\ b \right) \in \mathrm{connection}} p_{g,t} \le \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+\sum_{g \in \mathcal{G} \,:\, \left( b,\ g \right) \in \mathrm{connection}} p_{g,t} \le \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
 ```
 
 #### Bare relation as a condition
@@ -492,7 +492,7 @@ constraints:
 ```
 
 ```math
-p_{g,t} \le \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \left( g,\ b \right) \in \mathrm{connection}
+p_{g,t} \le \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \left( b,\ g \right) \in \mathrm{connection}
 ```
 
 #### Map into its own dimension

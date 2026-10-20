@@ -750,7 +750,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     declared = Relation(columns, ('generator', 'snapshot'))
     assert program.relations == {'zone_of': declared}, 'the relation sits once in the program, under its name'
     zonal = program.constraints['zonal'].lhs
-    columns = JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('zone', 'snapshot'))
+    columns = JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('snapshot', 'zone'))
     assert zonal == Sum(
         Join(VariableReference('p', dims=('generator', 'snapshot')), columns, dims=('snapshot', 'zone')),
         (Axis('generator', Column('zone_of', 'generator')),),
@@ -772,7 +772,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     assert program.constraints['history'].lhs == Sum(
         Join(
             VariableReference('p', dims=('generator', 'snapshot')),
-            JoinColumns('zone_of', declared, ('snapshot', 'generator'), ('zone', 'generator')),
+            JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('generator', 'zone')),
             dims=('generator', 'zone'),
         ),
         (Axis('snapshot', Column('zone_of', 'snapshot')),),
@@ -781,7 +781,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     priced = program.constraints['priced'].rhs
     assert priced == Join(
         ParameterReference('price', dims=('snapshot', 'zone')),
-        JoinColumns('zone_of', declared, ('zone', 'snapshot'), ('generator', 'snapshot')),
+        JoinColumns('zone_of', declared, ('snapshot', 'zone'), ('generator', 'snapshot')),
         dims=('generator', 'snapshot'),
     ), 'and an at is the bare join, on the value column, grouped by the key columns'
     assert isinstance(priced, Join)
@@ -889,7 +889,7 @@ def test_a_relation_is_declared_as_the_file_declares_it():
     assert program.relations == {
         'season_of': Relation((('g', 'g'), ('season', 'season')), ('g',)),
         'at_bus': Relation((('g', 'g'), ('bus', 'bus')), ('g',)),
-    }, 'every relation under its own name, in file order'
+    }, 'every relation under its own name, its key column first'
     assert program.relations['season_of'].values == ('season',), 'and each says what its key determines'
     assert program.dimensions['g'] == Dimension(dtype='str'), 'a dimension carries its dtype and no relation'
 

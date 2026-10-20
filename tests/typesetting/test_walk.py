@@ -716,7 +716,7 @@ def test_a_value_column_the_call_consumes_is_a_condition_like_a_produced_one():
     assert (
         r'\sum_{g \in \mathcal{G},\ b \in \mathcal{B} \,:\, '
         r'\mathrm{gen\_bt.bus}(g) = b \wedge \mathrm{gen\_bt.technology}(g) = e}'
-    ) in row, 'both columns the call touches are read, in the order the table declares them'
+    ) in row, 'both columns the call touches are read, the key column first'
 
 
 # ---------------------------------------------------------------------------

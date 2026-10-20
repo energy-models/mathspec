@@ -263,9 +263,9 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — dispatch periods |
-| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_maintenance\_cover} \subseteq \Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — controllable connections, each from one bus to the buses it delivers to |
+| $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — dispatch periods |
+| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — controllable connections, each from one bus to the buses it delivers to |
 
 #### Parameters
 
@@ -337,7 +337,7 @@ assumptions:
 **`Link_maint_window`**
 
 ```math
-\mu^{f}_{l,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( \xi,\ l,\ t',\ t \right) \in \mathrm{Link\_maintenance\_cover}} \mu^{f,\mathrm{up}}_{l,\xi,t'} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t}
+\mu^{f}_{l,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( t,\ l,\ \xi,\ t' \right) \in \mathrm{Link\_maintenance\_cover}} \mu^{f,\mathrm{up}}_{l,\xi,t'} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t}
 ```
 
 **`Link_maint_start_horizon`**

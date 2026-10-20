@@ -29,6 +29,7 @@ from mathspec.program import (
     Join,
     Mask,
     ParameterReference,
+    Relation,
     RelationPairComparison,
     Sum,
     Translate,
@@ -878,7 +879,7 @@ def test_the_order_a_file_writes_dimensions_in_reaches_no_value_of_the_program(p
 def _dims_tuples(root: object) -> Iterator[tuple[str, tuple[str, ...]]]:
     """Every ``dims`` and ``frame`` a program holds, at any depth, under the name of the class that holds it.
 
-    `Mask.dims` is a property rather than a field, so the walk asks each mask for it.
+    `Mask.dims` and `Relation.dims` are properties rather than fields, so the walk asks for them.
     """
     seen: set[int] = set()
     stack = [root]
@@ -887,8 +888,8 @@ def _dims_tuples(root: object) -> Iterator[tuple[str, tuple[str, ...]]]:
         if id(item) in seen or isinstance(item, str | int | float | bool | None):
             continue
         seen.add(id(item))
-        if isinstance(item, Mask):
-            yield 'Mask', item.dims
+        if isinstance(item, Mask | Relation):
+            yield type(item).__name__, item.dims
         if isinstance(item, Mapping):
             stack.extend(item.values())
         elif isinstance(item, tuple | list | frozenset):

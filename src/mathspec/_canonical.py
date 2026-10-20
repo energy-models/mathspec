@@ -201,6 +201,15 @@ def _canonical_links(links: list[list[object]]) -> list[list[object]]:
     return [[canonical_text(cast('str', link[0])), *link[1:]] for link in links]
 
 
+def _sorted_side(written: object) -> object:
+    """One side of a relation, its columns sorted by role, as the program holds them."""
+    if isinstance(written, list):
+        return sorted(cast('list[str]', written))
+    if isinstance(written, dict):
+        return dict(sorted(cast('dict[str, str]', written).items()))
+    return written
+
+
 def _sorted_entries(section: dict[str, object], *, bare_is_expression: bool = False) -> dict[str, object]:
     """One section's entries sorted by name, each with its expressions in the normal form.
 
@@ -226,7 +235,8 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
     """The spec as plain data, in the form two files that state the same spec share.
 
     Entries are sorted by name, the ones under each kind of ``given:``
-    too, every ``dims`` list is sorted by name, and every expression is printed from its parsed tree, so what is left
+    too, every ``dims`` list and each side of a relation is sorted by name, and every expression is printed from its
+    parsed tree, so what is left
     of a difference is a difference in the spec. A ``where`` string, the order of the regions under ``cases:`` and
     the order of a piecewise entry's links are all left as written.
 
@@ -251,6 +261,11 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
     if isinstance(piecewise, dict):
         for entry in piecewise.values():
             entry['links'] = _canonical_links(entry['links'])
+    relations = built.get('relations')
+    if isinstance(relations, dict):
+        for entry in relations.values():
+            if isinstance(entry, dict):
+                entry.update({side: _sorted_side(entry[side]) for side in ('key', 'values') if side in entry})
     return built
 
 
