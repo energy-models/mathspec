@@ -104,8 +104,8 @@ sorted(rows.piecewise)  # []
 `program.assumptions` maps a name to an `Assumption`: each entry the file
 declared, and each one a curve's method derives
 ([what a curve assumes](language/assumptions.md#what-a-curve-assumes)). An
-`Assumption` carries a `condition`, the `where` it is checked under, and the
-`description` that a refusal ends with. The `condition` and the `where` are
+`Assumption` carries `holds`, the condition it checks, the `where` it is checked under, and the
+`description` that a refusal ends with. The `holds` and the `where` are
 both `Mask` objects. `assumption_message` returns the message for an assumption the data
 does not meet:
 

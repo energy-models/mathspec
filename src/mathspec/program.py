@@ -653,14 +653,14 @@ class Dimension:
 class Assumption:
     """A condition the file states of its data, under the name it wrote in ``assumptions:``.
 
-    ``condition`` is true at every coordinate of its frame — the product of
+    ``holds`` is true at every coordinate of its frame — the product of
     every dim the two masks name — that ``where`` admits, a missing row
     reading as false as it does in any mask. Nothing here is decidable at
     load: both sides are the data's, which is why the consumer attaching it
     checks.
     """
 
-    condition: Mask
+    holds: Mask
     where: Mask | None = None
     #: What the file wrote under ``description:``, or the sentence a
     #: ``piecewise:`` method implies. The refusal trails it: the names alone
@@ -677,7 +677,7 @@ def assumption_message(name: str, assumption: Assumption) -> str:
     sentence: the names say which columns are wrong, and the description says
     why the rule is there.
     """
-    read = ', '.join(f"'{n}'" for n in sorted(assumption.condition.names_read))
+    read = ', '.join(f"'{n}'" for n in sorted(assumption.holds.names_read))
     sentence = f"assumption '{name}' does not hold for the data attached to {read}"
     return f'{sentence}: {assumption.description}' if assumption.description else sentence
 

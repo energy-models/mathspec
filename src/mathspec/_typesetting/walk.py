@@ -864,7 +864,7 @@ class Walk:
     def _assumption(self, name: str) -> Line:
         """One assumption: the condition over the frame both its masks name, under its ``where``."""
         assumption = self.program.assumptions[name]
-        holds, where = assumption.condition, assumption.where
+        holds, where = assumption.holds, assumption.where
         frame = self._sorted(holds.dims | (where.dims if where is not None else frozenset()))
         ctx = self._context(frame)
         if isinstance(holds.root, AlignedComparison):
