@@ -282,7 +282,7 @@ expressions:
       + sum(Link_output_arrival, over=link_output, by=Link_output_bus[bus])
     adds_to: Bus_injection
 
-masks:
+conditions:
   Link_committed:
     description: >-
       a committable link that stands in the snapshot's period — every

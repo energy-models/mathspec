@@ -20,7 +20,7 @@ given:
     Generator_previous_status: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_effective: { dims: [scenario, generator] }
     Generator_p_nom_committed: { dims: [scenario, generator] }
-  masks:
+  conditions:
     Generator_com_ext: { dims: [snapshot, generator] }
 
 dimensions:
@@ -139,7 +139,7 @@ expressions:
           * (Generator_previous_status - Generator_status)
     otherwise: Generator_ramp_down_rate * Generator_p_nom_effective
 
-masks:
+conditions:
   Generator_ramps_from_previous:
     description: >-
       a snapshot whose ramp reads a previous output — any snapshot but its

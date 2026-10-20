@@ -27,7 +27,7 @@ given:
     Generator_previous_status: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_effective: { dims: [scenario, generator] }
     Generator_p_nom_committed: { dims: [scenario, generator] }
-  masks:
+  conditions:
     Generator_com_ext: { dims: [snapshot, generator] }
 
 dimensions:
@@ -146,7 +146,7 @@ expressions:
           * (Generator_previous_status - Generator_status)
     otherwise: Generator_ramp_down_rate * Generator_p_nom_effective
 
-masks:
+conditions:
   Generator_ramps_from_previous:
     description: >-
       a snapshot whose ramp reads a previous output — any snapshot but its
@@ -279,7 +279,7 @@ assumptions:
 | $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, an expression another file defines |
 | $`\widetilde{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_effective` over $`\Xi \times \mathcal{G}`$, an expression another file defines |
 | $`\widehat{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_committed` over $`\Xi \times \mathcal{G}`$, an expression another file defines |
-| $`\mathrm{on}^{\mathrm{com,ext}}`$ | `Generator_com_ext` over $`\mathcal{T} \times \mathcal{G}`$, a mask another file defines |
+| $`\mathrm{on}^{\mathrm{com,ext}}`$ | `Generator_com_ext` over $`\mathcal{T} \times \mathcal{G}`$, a condition another file defines |
 
 #### Sets
 
@@ -300,7 +300,7 @@ assumptions:
 | $`\mathrm{rd}^{\mathrm{dn}}`$ | `Generator_ramp_limit_shut_down` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — most output in the snapshot before a unit stops, per unit of nominal power; no value means no limit |
 | $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the output a unit brought into the horizon — PyPSA's `p_init`, read only where the unit came in running; no value means it is unknown, so the unit carries no ramp row at the first snapshot |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -325,7 +325,7 @@ assumptions:
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 | $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ | `position(within=relation[...])` — the position of $`t`$ inside its group |
 
-#### Masks
+#### Conditions
 
 **`Generator_ramps_from_previous`**
 

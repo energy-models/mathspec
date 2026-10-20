@@ -253,7 +253,7 @@ expressions:
     expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period[period]), over=line)
     adds_to: Cycle_angle_sum
 
-masks:
+conditions:
   Line_lossy:
     description: >-
       a line that stands in the snapshot's period, where the run models

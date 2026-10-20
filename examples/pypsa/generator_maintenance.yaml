@@ -14,7 +14,7 @@ given:
   variables:
     Generator_status: { dims: [scenario, snapshot, generator], domain: integer }
     Generator_p_nom_ext: { dims: [generator] }
-  masks:
+  conditions:
     Generator_committed: { dims: [snapshot, generator] }
 
 dimensions:
@@ -110,7 +110,7 @@ variables:
     bounds:
       lower: 0
 
-masks:
+conditions:
   Generator_maint_ext:
     description: >-
       a maintainable generator with an extendable build, unless it is

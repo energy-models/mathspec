@@ -14,7 +14,7 @@ given:
   variables:
     Process_status: { dims: [scenario, snapshot, process], domain: integer }
     Process_p_nom_ext: { dims: [process] }
-  masks:
+  conditions:
     Process_committed: { dims: [snapshot, process] }
 
 dimensions:
@@ -110,7 +110,7 @@ variables:
     bounds:
       lower: 0
 
-masks:
+conditions:
   Process_maint_ext:
     description: >-
       a maintainable process with an extendable build, unless it is

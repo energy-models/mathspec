@@ -51,7 +51,7 @@ What that means for each section:
 * **A given entry is folded** into the entry that introduces the
   name, once the reader is checked to say the same as the introducer or less.
   A given expression's body may carry no dimension its reader does not
-  state. A given mask states exactly the dims its definer's condition reads.
+  state. A given condition states exactly the dims its definer's condition reads.
   A name read as one kind and introduced as another is refused. A
   reader's description fills an entry its owner left undescribed.
   Two fragments that both read a name have to read it over one frame, as a
@@ -127,7 +127,7 @@ GIVEN_KINDS = {
     'variables': 'given variable',
     'constraints': 'given constraint',
     'expressions': 'given expression',
-    'masks': 'given mask',
+    'conditions': 'given condition',
 }
 
 #: What a fragment, a base or a patch may be given as.
@@ -598,7 +598,7 @@ def _fits(
     """Refuse a reading that says more than the entry it folds into.
 
     A reading states the frame its introducer declares, and every other field
-    it writes is the introducer's. A mask declares no frame, so its reader
+    it writes is the introducer's. A named condition declares no frame, so its reader
     states the dims the condition reads. A given expression is the one kind
     whose frame may be wider than the composed body: a body over fewer
     dimensions broadcasts, and the composed load refuses a row it would repeat.
@@ -607,8 +607,10 @@ def _fits(
     if kind == 'expressions':
         frame = set(_definer_frame(loaded, key))
         fits = frame <= stated
-    elif kind == 'masks':
-        frame = set(next(spec.program.masks[key].dims for spec in loaded.values() if key in spec.program.masks))
+    elif kind == 'conditions':
+        frame = set(
+            next(spec.program.conditions[key].dims for spec in loaded.values() if key in spec.program.conditions)
+        )
         fits = frame == stated
     else:
         frame = set(cast('list[str]', _mapping(introduced)['dims']))
@@ -616,7 +618,7 @@ def _fits(
     fields = {f: v for f, v in _mapping(_claims(reading)).items() if f != 'dims'}
     if fits and all(_mapping(introduced).get(f) == v for f, v in fields.items()):
         return
-    how = f'over {sorted(frame)}' if kind in ('expressions', 'masks') else f'as {introduced!r}'
+    how = f'over {sorted(frame)}' if kind in ('expressions', 'conditions') else f'as {introduced!r}'
     author = _author_of(read, kind, key)
     raise LanguageError(
         f"fragment '{_reader_of(read, kind, key)}' reads the {GIVEN_KINDS[kind]} {key!r} as {reading!r}, where "
@@ -638,7 +640,7 @@ def _definer_frame(loaded: Mapping[str, Spec], key: str) -> frozenset[str]:
     return frozenset(frame)
 
 
-READ_KINDS = ('parameters', 'variables', 'expressions', 'masks')
+READ_KINDS = ('parameters', 'variables', 'expressions', 'conditions')
 
 
 def _same_kind(read: Mapping[str, dict[str, object]], merged: Mapping[str, object], kind: str, key: str) -> None:

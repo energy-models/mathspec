@@ -76,7 +76,7 @@ class TestValidateExpressions:
             ),
             pytest.param(
                 {'constraints': {'cap': {'dims': ['g'], 'where': 'c >', 'expression': 'p <= c'}}},
-                ('Cannot parse the where string',),
+                ('Cannot parse the condition',),
                 id='a-malformed-where-string',
             ),
             pytest.param(
@@ -175,7 +175,7 @@ class TestValidateExpressions:
             ),
             pytest.param(
                 {'constraints': {'cap': {'dims': ['g'], 'where': 'bad > 0', 'expression': 'p <= c'}}},
-                'a where compares expressions, and one side names a variable',
+                'a condition compares expressions, and one side names a variable',
                 id='where',
             ),
         ],
@@ -733,7 +733,7 @@ class TestAWhereSideIsReadInResolution:
             ),
             pytest.param(
                 {'parameters.d': {'dims': ['h']}, 'variables.p.where': 'c > d * 2'},
-                ("a where-comparison of expressions reads dims ['h'] outside the declared dims ['g']",),
+                ("a comparison of expressions reads dims ['h'] outside the declared dims ['g']",),
                 id='a-side-outside-the-frame',
             ),
             pytest.param(
@@ -1090,7 +1090,7 @@ class TestAConditionIsAnOperand:
     def test_a_read_landing_outside_the_frame_names_the_relation(self):
         """The read adds the dims it lands on, so a mask over the coarse side cannot carry the fine one."""
         message = _refusal(constraints={'cap': {'dims': ['h'], 'where': 'at(r, by=lk[h])', 'expression': 'r <= 1'}})
-        assert "a where-condition read through 'lk' reads dims ['g'] outside the declared dims ['h']" in message
+        assert "a condition read through 'lk' reads dims ['g'] outside the declared dims ['h']" in message
 
     def test_a_read_given_an_edge_is_not_told_about_translations(self):
         """The edge sentence explains a shift; under a read it would explain an operator the file did not write."""
@@ -1151,7 +1151,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'constraints': {'cap': {'dims': ['g'], 'where': 'c >', 'expression': 'p <= c'}}},
-                ('Cannot parse the where string',),
+                ('Cannot parse the condition',),
                 id='a-malformed-where-string',
             ),
             pytest.param(
@@ -1620,7 +1620,7 @@ class TestRulesDecidedWithoutData:
                 id='where-a-bare-str-parameter-under-refused',
             ),
             pytest.param(
-                {'parameters.n': {'dims': ['g'], 'dtype': 'int'}, 'masks.held': 'NOT n'},
+                {'parameters.n': {'dims': ['g'], 'dtype': 'int'}, 'conditions.held': 'NOT n'},
                 ("'n' is declared dtype: int and missing: refused",),
                 id='a-mask-reading-a-bare-int-parameter-under-refused',
             ),
@@ -2576,10 +2576,10 @@ _READS_ORDER = [
         't',
         id='position',
     ),
-    pytest.param({'masks.first': 'position(t) == 0'}, 't', id='a-mask-condition'),
+    pytest.param({'conditions.first': 'position(t) == 0'}, 't', id='a-mask-condition'),
     pytest.param(
         {
-            'masks.lit': 'on',
+            'conditions.lit': 'on',
             'constraints.c': {'dims': ['t'], 'where': 'shift(lit, along=t, offset=1)', 'expression': 'x <= 0'},
         },
         't',

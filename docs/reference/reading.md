@@ -106,7 +106,7 @@ declared, and each one a curve's method derives
 ([what a curve assumes](language/assumptions.md#what-a-curve-assumes)). An
 `Assumption` carries a `condition`, the `where` it is checked under, and the
 `description` that a refusal ends with. The `condition` and the `where` are
-both masks. `assumption_message` returns the message for an assumption the data
+both `Mask` objects. `assumption_message` returns the message for an assumption the data
 does not meet:
 
 ```python
@@ -147,11 +147,11 @@ entry's expression, the same object that `program.expressions[name].expression`
 holds, and its value is the body's value. `children()` steps into the body, so
 a walk reads through it.
 
-A `MaskReference` stands where a `masks:` entry is read. Its `body` is the
-condition of the entry, the root of `program.masks[name].where`, and it is true
+A `ConditionReference` stands where a `conditions:` entry is read. Its `body` is the
+condition of the entry, the root of `program.conditions[name].where`, and it is true
 where the body is true. `where_children()` steps into the body, so `.atoms`,
 `.names_read` and `.dims` read through it, and an engine that builds rows needs
-nothing from `program.masks`.
+nothing from `program.conditions`.
 
 Every `where` arrives as a `Mask`, whose `.root` is the resolved condition.
 The mask also answers four questions:
@@ -188,14 +188,14 @@ it. A `Region`'s `when` is a `Mask` too.
 ## What a program does not build
 
 `program.given.parameters`, `program.given.variables`,
-`program.given.expressions`, `program.given.masks` and
+`program.given.expressions`, `program.given.conditions` and
 `program.given.constraints` name what the spec reads and does not build
 ([given](language/parameters-variables-constraints.md#given)). Every other group tells a tool what
 to build, but these five name what to look up in the host model, which is the
 model that this spec is layered onto. An expression reads a given expression as
 a `VariableReference` of that name, over the frame under `program.given.expressions`. A
-`where` reads a given mask as a `ParameterDefined` of that name, which is
-boolean data over the frame under `program.given.masks`.
+condition reads a given condition as a `ParameterDefined` of that name, which is
+boolean data over the frame under `program.given.conditions`.
 An entry of `program.expressions` whose `adds_to` names a given expression is
 a term this file adds to it. The name is still one that the program reads and
 does not build.
@@ -321,7 +321,7 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 
 - The sections come in one order, whatever order the file wrote them in:
   `version`, `description`, `given`, `dimensions`, `relations`, `parameters`,
-  `masks`, `variables`, `expressions`, `objective`, `constraints`, `sos`,
+  `conditions`, `variables`, `expressions`, `objective`, `constraints`, `sos`,
   `piecewise`, `assumptions`, `macros`. The keys of an entry also come in one
   order.
 - Entries are sorted by name within each section.

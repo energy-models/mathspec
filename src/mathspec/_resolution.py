@@ -10,7 +10,7 @@ rules, the degree rules, the typesetter, lowering — reads one vocabulary. This
 module holds the [`Namespace`][] a resolution reads names from and the doors
 lowering calls, one per kind of text; the walks are
 [`ExpressionResolver`][] for arithmetic and
-[`WhereResolver`][] for a where string. The rules
+[`WhereResolver`][] for a condition. The rules
 live in the language reference.
 """
 
@@ -39,10 +39,10 @@ from mathspec.program import (
     BooleanLiteral,
     Cases,
     Condition,
+    ConditionReference,
     Expression,
     ExpressionReference,
     Mask,
-    MaskReference,
     Region,
     Relation,
     VariableDefined,
@@ -55,7 +55,7 @@ if TYPE_CHECKING:
     from mathspec._expression_parser import ComparisonOperator, ParsedNode
     from mathspec._where_parser import ParsedWhere
     from mathspec.program import DeclaredDtype
-    from mathspec.spec import ExpressionSpec, MaskSpec, Spec
+    from mathspec.spec import ConditionSpec, ExpressionSpec, Spec
 
 
 #: What a name a file may write turns out to be. Answered by
@@ -71,17 +71,17 @@ class Namespace:
     """
 
     __slots__ = (
+        '_conditions',
         '_loading',
-        '_masks',
         '_named',
         'bodies',
+        'conditions',
         'constraints',
         'defaults',
         'dimensions',
         'dtypes',
-        'given_masks',
+        'given_conditions',
         'leaf_dims',
-        'masks',
         'parameters',
         'relations',
         'spec',
@@ -97,26 +97,26 @@ class Namespace:
         parameters = {**spec.parameters, **spec.given.parameters}
         self.variables = frozenset(variables)
         self.bodies = frozenset(spec.expressions)
-        #: The declared masks, read by name wherever a where string is.
-        self.masks = frozenset(spec.masks)
-        #: The masks this file reads under ``given:``. A where reads each as
+        #: The declared named conditions, read by name in any condition.
+        self.conditions = frozenset(spec.conditions)
+        #: The named conditions this file reads under ``given:``. A condition reads each as
         #: the boolean data it is to this file, so each is a parameter here too.
-        self.given_masks = frozenset(spec.given.masks)
-        self.parameters = frozenset(parameters) | self.given_masks
+        self.given_conditions = frozenset(spec.given.conditions)
+        self.parameters = frozenset(parameters) | self.given_conditions
         self.dimensions = frozenset(spec.dimensions)
         #: The declared constraint names, off the flat namespace: a bare name
         #: never reaches them, so a spec may name a constraint after a variable.
         #: Consulted only in ``dual()``'s argument position.
         self.constraints = frozenset({**spec.constraints, **spec.given.constraints})
         #: name -> declared dtype, for dimensions, parameters and relations alike;
-        #: what a where comparison checks its literal against.
+        #: what a comparison in a condition checks its literal against.
         self.dtypes: dict[str, DeclaredDtype] = {
             **{p: pd.dtype for p, pd in parameters.items()},
-            **{m: cast('DeclaredDtype', 'bool') for m in spec.given.masks},
+            **{m: cast('DeclaredDtype', 'bool') for m in spec.given.conditions},
             **{d: dd.dtype for d, dd in spec.dimensions.items()},
         }
         #: parameter name -> the value its ``missing:`` reads a missing row as,
-        #: for the parameters that name one; what a where comparison reads there.
+        #: for the parameters that name one; what a comparison in a condition reads there.
         self.defaults: dict[str, bool | float] = {
             p: pd.missing for p, pd in spec.parameters.items() if not isinstance(pd.missing, str)
         }
@@ -125,22 +125,22 @@ class Namespace:
             n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()
         }
         #: parameter or variable name -> the ``dims`` it is read through. Stamped onto
-        #: each leaf a where names, the way a relation leaf carries ``over``.
+        #: each leaf a condition names, the way a relation leaf carries ``over``.
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: tuple(pd.dims) for p, pd in parameters.items()},
-            **{m: tuple(md.dims) for m, md in spec.given.masks.items()},
+            **{m: tuple(md.dims) for m, md in spec.given.conditions.items()},
             **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
         }
         #: named expression -> its resolved node, or ``None``, and its refusals;
         #: filled the first time anything reads the name.
         self._named: dict[str, tuple[ExpressionReference | None, tuple[str, ...]]] = {}
-        #: The named expressions and masks waiting to be resolved, the first one
+        #: The named expressions and named conditions waiting to be resolved, the first one
         #: asked for at the bottom. Each sits above the entries it reads, so the
         #: list is a cycle's chain.
         self._loading: list[str] = []
         #: mask -> its resolved node, or ``None``, and its refusals; filled
         #: the first time anything reads the name.
-        self._masks: dict[str, tuple[MaskReference | None, tuple[str, ...]]] = {}
+        self._conditions: dict[str, tuple[ConditionReference | None, tuple[str, ...]]] = {}
 
     def named(self, name: str, context: str) -> ExpressionReference:
         """The ``expressions:`` entry *name* as the node that stands where its name is written.
@@ -166,8 +166,8 @@ class Namespace:
         chain = ' -> '.join([*self._loading[self._loading.index(name) :], *through, name])
         return f'{context}: circular {noun} reference: {chain}. Remove one reference.'
 
-    def mask(self, name: str, context: str) -> MaskReference:
-        """The ``masks:`` entry *name* as the node that stands where its name is written.
+    def condition(self, name: str, context: str) -> ConditionReference:
+        """The ``conditions:`` entry *name* as the node that stands where its name is written.
 
         Resolved under the entry's own context the first time it is asked
         for, and read from then on, so a fault in it is reported once.
@@ -175,23 +175,23 @@ class Namespace:
         Raises:
             SchemaError: The entry reads itself, or does not load.
         """
-        if (refusal := self.cycle(name, context, noun='mask')) is not None:
+        if (refusal := self.cycle(name, context, noun='condition')) is not None:
             raise SchemaError(refusal)
-        node, _ = self.mask_entry(name)
+        node, _ = self.condition_entry(name)
         if node is None:
-            msg = f"{context}: mask '{name}' does not load. Its refusal is listed with it."
+            msg = f"{context}: condition '{name}' does not load. Its refusal is listed with it."
             raise SchemaError(msg)
         return node
 
-    def mask_entry(self, name: str) -> tuple[MaskReference | None, tuple[str, ...]]:
-        """The ``masks:`` entry *name* resolved, or ``None``, with every refusal it earned."""
-        if name not in self._masks:
+    def condition_entry(self, name: str) -> tuple[ConditionReference | None, tuple[str, ...]]:
+        """The ``conditions:`` entry *name* resolved, or ``None``, with every refusal it earned."""
+        if name not in self._conditions:
             self._loading.append(name)
             errors: list[str] = []
-            node = _mask(name, self.spec.masks[name], self, errors)
+            node = _named_condition(name, self.spec.conditions[name], self, errors)
             self._loading.pop()
-            self._masks[name] = (node, tuple(errors))
-        return self._masks[name]
+            self._conditions[name] = (node, tuple(errors))
+        return self._conditions[name]
 
     def named_entry(self, name: str) -> tuple[ExpressionReference | None, tuple[str, ...]]:
         """The ``expressions:`` entry *name* resolved, or ``None``, with every refusal it earned.
@@ -273,7 +273,7 @@ class Namespace:
             name: The name the file wrote.
             context: The entry it was found in.
             allow_dims: Whether a dimension would have been accepted there. It marks a
-                where string, which reads a relation as readily as a parameter, so the
+                condition, which reads a relation as readily as a parameter, so the
                 listing carries the relations too; an expression, where a relation is not a
                 value, lists the variables instead.
             formals: A macro's formals, listed first when there are any.
@@ -284,7 +284,7 @@ class Namespace:
                 ('Parameters', self.parameters),
                 ('Dimensions', self.dimensions),
                 ('Relations', self.relations),
-                *([('Masks', self.masks)] if self.masks else []),
+                *([('Conditions', self.conditions)] if self.conditions else []),
             ]
             if allow_dims
             else [('Variables', self.variables), ('Parameters', self.parameters)]
@@ -383,7 +383,7 @@ def resolve_where_text(
     errors: list[str],
     self_variable: str | None = None,
 ) -> Condition | None:
-    """Parse and resolve one where string as [`resolve_where`][] does, a parse failure appended to *errors*.
+    """Parse and resolve one condition as [`resolve_where`][] does, a parse failure appended to *errors*.
 
     Returns:
         ``None`` where there is no mask to read, and where reading it failed.
@@ -518,38 +518,38 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
     return ExpressionReference(name, Cases((*regions, left_over)))
 
 
-def _mask(name: str, entry: MaskSpec, ns: Namespace, errors: list[str]) -> MaskReference | None:
-    """One ``masks:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
+def _named_condition(name: str, entry: ConditionSpec, ns: Namespace, errors: list[str]) -> ConditionReference | None:
+    """One ``conditions:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
 
     A condition the connectives decide is refused, since a name for every row
-    or for none narrows nothing a where could not say plainly.
+    or for none narrows nothing a `where:` could not say plainly.
     """
-    context = f"Mask '{name}'"
+    context = f"Condition '{name}'"
     body = resolve_where_text(entry.where, ns, context, errors)
     if body is None:
         return None
     if isinstance(body, BooleanLiteral):
         errors.append(
-            f'{context}: the condition {entry.where!r} folds to {str(body.value).lower()}, so the mask '
-            f'{"admits every row" if body.value else "admits no row"} and names nothing a where needs. '
+            f'{context}: the condition {entry.where!r} folds to {str(body.value).lower()}, so it '
+            f'{"admits every row" if body.value else "admits no row"} and names nothing a `where:` needs. '
             f'Delete it, or write the condition over the data.'
         )
         return None
-    return MaskReference(name, body)
+    return ConditionReference(name, body)
 
 
 def self_existence(where: Condition, variable: str, context: str) -> str | None:
-    """The refusal for a variable whose own where asks, through a mask, whether it exists — or ``None``.
+    """The refusal for a variable whose own ``where:`` asks, through a named condition, whether it exists — or ``None``.
 
-    The where resolver refuses the bare name; a mask's condition is resolved
-    under its own name, so the check runs again on the tree with every mask's
+    The where resolver refuses the bare name; a named condition is resolved
+    under its own name, so the check runs again on the tree with every named
     condition in it.
     """
     if not any(isinstance(atom, VariableDefined) and atom.name == variable for atom in Mask(where).atoms):
         return None
     return (
-        f"{context}: variable '{variable}' asks whether it exists in its own where, through a mask, which "
-        f'nothing can answer — the mask is what decides where it exists. Test a parameter, or another '
+        f"{context}: variable '{variable}' asks whether it exists in its own `where:`, through a named condition, which "
+        f'nothing can answer — its `where:` is what decides where it exists. Test a parameter, or another '
         f'variable declared before it.'
     )
 

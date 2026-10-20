@@ -51,7 +51,7 @@ BEGIN, END = '<!-- notation:begin -->', '<!-- notation:end -->'
 #: and ``parameters`` are absent on purpose: they declare no equation, and what
 #: they print is the legend, which the page shows once rather than a row at a
 #: time.
-SECTIONS = ('objective', 'constraints', 'expressions', 'masks', 'variables', 'piecewise', 'sos', 'assumptions')
+SECTIONS = ('objective', 'constraints', 'expressions', 'conditions', 'variables', 'piecewise', 'sos', 'assumptions')
 
 #: The page's sections in the order of the language reference, and in each the
 #: fixture's entries under the construct they show. The entry name
@@ -114,10 +114,10 @@ FAMILIES: dict[str, dict[str, str]] = {
         'lcoe': 'Reported expression',
         'marginal_price': 'Dual of a constraint',
     },
-    'Named masks': {
-        'dispatchable': 'Named mask',
-        'priced_dispatch': 'Mask that reads a mask',
-        'masked': 'Mask in a condition',
+    'Named conditions': {
+        'dispatchable': 'Named condition',
+        'priced_dispatch': 'Condition that reads a condition',
+        'masked': 'Named condition in a condition',
     },
     'Shifts': {
         'ramp': 'Cyclic and acyclic shift',

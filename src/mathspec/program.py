@@ -48,6 +48,7 @@ __all__ = [
     'Column',
     'Condition',
     'ConditionOperator',
+    'ConditionReference',
     'Connective',
     'Constant',
     'Constraint',
@@ -71,12 +72,11 @@ __all__ = [
     'JoinedCondition',
     'Link',
     'Mask',
-    'MaskReference',
     'Missing',
     'MissingReading',
     'Multiply',
+    'NamedCondition',
     'NamedExpression',
-    'NamedMask',
     'Negate',
     'Not',
     'Objective',
@@ -138,13 +138,13 @@ QuadraticPosition = Literal['objective', 'constraint']
 DimensionDtype = Literal['float', 'int', 'str', 'datetime']
 
 #: The dtype a parameter may declare (the entry rules), and what its bound
-#: column must be. Only a parameter may declare ``bool``, because a mask reads
+#: column must be. Only a parameter may declare ``bool``, because a condition reads
 #: a flag column, and nothing indexes by a dimension of two labels.
 ParameterDtype = Literal['float', 'int', 'bool', 'str']
 
-#: The dtype of a *name* that a where comparison tests: a parameter's or a
+#: The dtype of a *name* that a comparison in a condition tests: a parameter's or a
 #: dimension's, because a relation takes its target's dtype. It is the union of
-#: both, because a mask names all three kinds and reads the dtype the same way.
+#: both, because a condition names all three kinds and reads the dtype the same way.
 DeclaredDtype = ParameterDtype | DimensionDtype
 
 #: The domain a variable may declare.
@@ -737,7 +737,7 @@ class GivenTargets:
     is sealed at construction, like every group of [`Program`][].
     """
 
-    #: Data another file declares, by name, with the dtype a where compares against.
+    #: Data another file declares, by name, with the dtype a condition compares against.
     parameters: Mapping[str, Parameter] = Sealed({})
     #: Columns the host model provides, by name.
     variables: Mapping[str, Given] = Sealed({})
@@ -745,9 +745,9 @@ class GivenTargets:
     constraints: Mapping[str, Given] = Sealed({})
     #: Named expressions the host model defines, by name.
     expressions: Mapping[str, Given] = Sealed({})
-    #: Masks the host model defines, by name. A where reads one as the data it
+    #: Named conditions the host model defines, by name. A condition reads one as the data it
     #: is: a [`ParameterDefined`][] of a boolean over its frame.
-    masks: Mapping[str, Given] = Sealed({})
+    conditions: Mapping[str, Given] = Sealed({})
 
     def __post_init__(self) -> None:
         for f in fields(self):
@@ -755,7 +755,7 @@ class GivenTargets:
 
     def __bool__(self) -> bool:
         """Whether the program reads anything it does not build."""
-        return bool(self.parameters or self.variables or self.constraints or self.expressions or self.masks)
+        return bool(self.parameters or self.variables or self.constraints or self.expressions or self.conditions)
 
 
 @dataclass(frozen=True)
@@ -825,16 +825,16 @@ class NamedExpression:
 
 
 @dataclass(frozen=True)
-class NamedMask:
-    """A named condition — a ``masks:`` entry, read wherever a ``where``, a ``when`` or a ``holds`` names it.
+class NamedCondition:
+    """A named condition — a ``conditions:`` entry, read wherever a ``where``, a ``when`` or a ``holds`` names it.
 
-    It builds nothing of its own: every use stands as a [`MaskReference`][] with
-    this condition under it, so a consumer reading a mask never looks the
+    It builds nothing of its own: every use stands as a [`ConditionReference`][] with
+    this condition under it, so a consumer reading a condition never looks the
     name up here.
     """
 
     where: Mask
-    #: The frame the mask is read over: the dims its condition carries, in the
+    #: The frame the condition is read over: the dims its condition carries, in the
     #: order ``dimensions:`` declares them.
     dims: tuple[str, ...]
     description: str | None = None
@@ -1065,9 +1065,9 @@ class Program:
     #: named expression is outside the language is refused by every verb that
     #: reads the file rather than only by the one that reads the expression.
     expressions: Mapping[str, NamedExpression] = Sealed({})
-    #: Declared ``masks:``. Each use stands as a [`MaskReference`][] where it is
+    #: Declared ``conditions:``. Each use stands as a [`ConditionReference`][] where it is
     #: read, so a consumer building rows needs nothing from this group.
-    masks: Mapping[str, NamedMask] = Sealed({})
+    conditions: Mapping[str, NamedCondition] = Sealed({})
     #: What this program reads and does not build ([`GivenTargets`][]), for a host model to provide.
     given: GivenTargets = GivenTargets()
     #: What the file as a whole is, as its ``description:`` says.
@@ -1431,8 +1431,8 @@ class Or:
 
 
 @dataclass(frozen=True)
-class MaskReference:
-    """A use of a ``masks:`` entry, standing where its name was written, with the entry's condition under it.
+class ConditionReference:
+    """A use of a ``conditions:`` entry, standing where its name was written, with the entry's condition under it.
 
     Its truth is its body's: a consumer steps through it, as
     [`where_children`][] does. It is kept as a node rather than written in so
@@ -1462,7 +1462,7 @@ TypedCondition = (
     | JoinedCondition
 )
 
-#: The boolean connectives. With [`MaskReference`][], they are the only where nodes
+#: The boolean connectives. With [`ConditionReference`][], they are the only where nodes
 #: that carry other where nodes, so a walk over a condition recurses only here.
 #: The grammar builds these classes directly over unresolved leaves, so a tree
 #: before resolution shares them, and resolution then replaces those leaves.
@@ -1471,11 +1471,11 @@ Connective = Not | And | Or
 #: Every resolved condition node. The parser's ``Unresolved*`` nodes are not members: they live with the
 #: grammar in [`mathspec._where_parser`][], and resolution rewrites them away
 #: before anything here is asked.
-Condition = BooleanLiteral | TypedCondition | Connective | MaskReference
+Condition = BooleanLiteral | TypedCondition | Connective | ConditionReference
 
 
 def where_children(where: Condition) -> tuple[Condition, ...]:
-    """The conditions under *where* — a connective's operands, a named mask's body, and nothing under a leaf.
+    """The conditions under *where* — a connective's operands, a named condition's body, and nothing under a leaf.
 
     What every walk over a condition recurses through, as [`children`][] is
     for an expression. A leaf has nothing under it whether or not it is
@@ -1485,7 +1485,7 @@ def where_children(where: Condition) -> tuple[Condition, ...]:
         return (where.operand,)
     if isinstance(where, (And, Or)):
         return (where.left, where.right)
-    if isinstance(where, MaskReference):
+    if isinstance(where, ConditionReference):
         return (where.body,)
     return ()
 
@@ -1500,7 +1500,7 @@ def _atoms(where: Condition) -> Iterator[TypedCondition]:
     """
     if isinstance(where, TypedCondition):
         yield where
-    elif isinstance(where, BooleanLiteral | Connective | MaskReference):
+    elif isinstance(where, BooleanLiteral | Connective | ConditionReference):
         for child in where_children(where):
             yield from _atoms(child)
     else:
@@ -1617,7 +1617,7 @@ def _fold(node: Condition) -> Condition:
     none, ``NOT True`` is ``False`` and ``NOT NOT X`` is ``X``. What survives
     is a condition over data, or the one literal the whole mask reduces to —
     the invariant [`Mask`][] applies at construction, so it holds wherever
-    a mask is built. A [`MaskReference`][] is left whole: its body was folded
+    a mask is built. A [`ConditionReference`][] is left whole: its body was folded
     when the entry was read, and refused there where it folded to a literal.
     """
     if isinstance(node, Not):

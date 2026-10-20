@@ -35,14 +35,14 @@ $$\mathrm{p}^{\mathrm{min}}_{g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall
 
 ## The entry
 
-Write an entry as one `where` string, or as a mapping when it carries more than
+Write an entry as one condition, or as a mapping when it carries more than
 the condition.
 
-| Field         |                                                                               |                |
-| ------------- | ----------------------------------------------------------------------------- | -------------- |
-| `holds`       | required. The condition, in the [where grammar](expressions.md#where-strings) |                |
-| `where`       | which coordinates it is checked at, in the same grammar                       | default `null` |
-| `description` | why the rule is there. A refusal quotes it                                    | default `null` |
+| Field         |                                                                                |                |
+| ------------- | ------------------------------------------------------------------------------ | -------------- |
+| `holds`       | required. The condition, in the [condition grammar](expressions.md#conditions) |                |
+| `where`       | which coordinates it is checked at, in the same grammar                        | default `null` |
+| `description` | why the rule is there. A refusal quotes it                                     | default `null` |
 
 `bounds_do_not_cross: "p_min <= p_max"` above is the short form of
 `bounds_do_not_cross: { holds: "p_min <= p_max" }`.
@@ -54,7 +54,7 @@ than that broadcasts, as it does in any `where`.
 ## What a condition may say
 
 A condition may use everything the
-[where grammar](expressions.md#where-strings) accepts, including arithmetic on
+[condition grammar](expressions.md#conditions) accepts, including arithmetic on
 either side:
 
 ```yaml

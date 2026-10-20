@@ -2681,7 +2681,7 @@ expressions:
       the voltage angle differences around a cycle: every branch flow times
       its cycle weight, and every transformer phase shift
 
-masks:
+conditions:
   Generator_com_ext:
     description: >-
       a committable generator with an extendable, non-modular build that

@@ -23,7 +23,7 @@ given:
     Process_p_nom_ext: { dims: [process] }
   expressions:
     scenario_opex: { dims: [scenario] }
-  masks:
+  conditions:
     Process_committed: { dims: [snapshot, process] }
 
 dimensions:
@@ -151,7 +151,7 @@ expressions:
       + sum(sum(Process_shut_down * Process_shut_down_cost, over=process), over=snapshot)
     adds_to: scenario_opex
 
-masks:
+conditions:
   Process_com_ext:
     description: >-
       a committable process with an extendable, non-modular build that stands

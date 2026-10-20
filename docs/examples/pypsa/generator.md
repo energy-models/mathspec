@@ -237,7 +237,7 @@ expressions:
     expression: sum(Generator_sign * Generator_p, over=generator, by=Generator_bus[bus])
     adds_to: Bus_injection
 
-masks:
+conditions:
   Generator_committed:
     description: >-
       a committable generator that stands in the snapshot's period — every
@@ -375,7 +375,7 @@ assumptions:
 | $`\mathrm{b}`$ | `Generator_operational_limit_weight` over $`\Xi \times \mathcal{L} \times \mathcal{G}`$, `neutral` where the data has no row — one where the generator is in the row's set — data prep; one outside it has no row |
 | $`\mathrm{m}`$ | `Generator_tech_capacity_weight` over $`\mathcal{L} \times \mathcal{G}`$, `neutral` where the data has no row — one where the generator is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -403,7 +403,7 @@ assumptions:
 | $`\mathit{Generator\_additions}`$ | `Generator_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
 | $`\mathit{Generator\_injection}`$ | `Generator_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 
-#### Masks
+#### Conditions
 
 **`Generator_committed`**
 

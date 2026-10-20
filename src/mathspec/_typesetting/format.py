@@ -68,7 +68,7 @@ OperatorName = Literal[
 
 #: Every operator a walk can emit, by the name the walk uses for it, with its
 #: LaTeX spelling first and its Typst spelling second. One row per operator
-#: means no format can be missing one. ``iff`` is the ⟺ that defines a mask,
+#: means no format can be missing one. ``iff`` is the ⟺ that defines a named condition,
 #: because a condition is not a value to equate. ``such_that`` is the colon in
 #: "∀ t ∈ T : condition", ``times`` sits between sets in the legend,
 #: ``maps_to`` is the → in a coordinate map, ``curve`` and ``hull`` are the two

@@ -347,7 +347,7 @@ expressions:
       sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), over=storage_unit, by=StorageUnit_bus[bus])
     adds_to: Bus_injection
 
-masks:
+conditions:
   StorageUnit_fix:
     description: >-
       a storage unit with a fixed build that stands in the snapshot's period —

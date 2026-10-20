@@ -7,7 +7,7 @@
 Every node's dim set is computable before any data is attached, so this pass runs
 at load on the resolved tree. The per-node rules are the "Dim algebra" table in
 ``docs/reference/language/expressions.md``; a constraint's two sides together
-must equal its ``dims``, and a where or a bound may not exceed the frame.
+must equal its ``dims``, and a condition or a bound may not exceed the frame.
 """
 
 from __future__ import annotations
@@ -358,13 +358,13 @@ def _check_where_dims(
             case RelationComparison() | RelationPairComparison() | RelationDefined():
                 leaf = f"where-relation '{atom.name}'"
             case ExpressionComparison():
-                leaf = 'a where-comparison of expressions'
+                leaf = 'a comparison of expressions'
             case CountComparison():
-                leaf = f"a where-count over '{atom.over}'"
+                leaf = f"a count over '{atom.over}'"
             case TranslatedCondition():
-                leaf = f"a where-condition translated along '{atom.along}'"
+                leaf = f"a condition translated along '{atom.along}'"
             case JoinedCondition():
-                leaf = f"a where-condition read through '{atom.columns.name}'"
+                leaf = f"a condition read through '{atom.columns.name}'"
             case _:
                 assert_never(atom)
         raise DimensionError(

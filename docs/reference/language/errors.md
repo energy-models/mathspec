@@ -12,7 +12,7 @@ about a file that loads but looks wrong.
 
 `to_spec` attaches no data. Before it returns a `Spec`, it parses the file,
 resolves every name, checks every dimension rule and every degree, and reads
-every `where` string and every macro template, including the templates that
+every condition and every macro template, including the templates that
 nothing calls. A `piecewise:` entry is checked against every rule its expansion
 would be held to. Everything the language refuses, `to_spec` refuses there.
 

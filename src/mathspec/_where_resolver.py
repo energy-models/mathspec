@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The where walk of name resolution: a parsed where string into the program's typed conditions.
+"""The condition walk of name resolution: a parsed condition into the program's typed conditions.
 
 A bare name, a comparison, a count and a condition read through a relation
 or along a dimension are each typed here against the namespace, and a
@@ -28,7 +28,7 @@ from mathspec._expression_parser import (
     literal_number,
     nodes,
 )
-from mathspec._expression_resolver import ExpressionResolver, mask_compared
+from mathspec._expression_resolver import ExpressionResolver, condition_compared
 from mathspec._where_parser import (
     ColumnNode,
     UnresolvedComparisonNode,
@@ -43,6 +43,7 @@ from mathspec.program import (
     BooleanLiteral,
     Condition,
     ConditionOperator,
+    ConditionReference,
     Constant,
     CountComparison,
     DimensionComparison,
@@ -52,7 +53,6 @@ from mathspec.program import (
     ExpressionComparison,
     JoinedCondition,
     Mask,
-    MaskReference,
     Multiply,
     Negate,
     Not,
@@ -81,14 +81,14 @@ if TYPE_CHECKING:
 #: expression with the variables, because it is read as a column, so this
 #: refusal names it separately.
 GIVEN_IN_A_MASK = (
-    'A given expression may hold a variable, and a where mask is built before variables exist — it may test '
+    'A given expression may hold a variable, and a condition is read before variables exist — it may test '
     'parameters and dimension coordinates only.'
 )
 
 
 @dataclass(frozen=True)
 class WhereResolver:
-    """One resolution walk over a where string, and the things every step of it reads.
+    """One resolution walk over a condition, and the things every step of it reads.
 
     A node that cannot be typed comes back unresolved with its refusal
     appended to ``errors``; every sibling is still read, so a mask with two
@@ -109,7 +109,7 @@ class WhereResolver:
 
     def where(self, node: Condition | UnresolvedWhereNode) -> Condition | UnresolvedWhereNode:
         """One condition node typed, or returned unresolved with its refusal appended."""
-        if isinstance(node, BooleanLiteral | TypedCondition | MaskReference):
+        if isinstance(node, BooleanLiteral | TypedCondition | ConditionReference):
             return node
         if isinstance(node, NameNode):
             return self._where_name(node)
@@ -128,20 +128,20 @@ class WhereResolver:
         assert_never(node)
 
     @property
-    def masks(self) -> frozenset[str]:
-        """Every mask this file names, defined or given."""
-        return self.ns.masks | self.ns.given_masks
+    def conditions(self) -> frozenset[str]:
+        """Every named condition this file declares or is given."""
+        return self.ns.conditions | self.ns.given_conditions
 
     def _child(self, node: Condition | UnresolvedWhereNode) -> Condition:
         """A connective's child, typed as resolved: an unresolved one survives only with its refusal appended."""
         return cast('Condition', self.where(node))
 
     def _where_name(self, node: NameNode) -> Condition | UnresolvedWhereNode:
-        """A bare name: a mask's condition, a parameter's or relation's definedness, or a variable's existence."""
+        """A bare name: a named condition's body, a parameter's or relation's definedness, or a variable's existence."""
         ns, context = self.ns, self.context
-        if node.name in ns.masks:
+        if node.name in ns.conditions:
             try:
-                return ns.mask(node.name, context)
+                return ns.condition(node.name, context)
             except SchemaError as e:
                 self.errors.append(str(e))
                 return node
@@ -206,7 +206,7 @@ class WhereResolver:
         context, found = self.context, len(self.errors)
         if node.name == 'count':
             self.errors.append(
-                f'{context}: count() answers a number, and a where is a condition. Compare it: '
+                f'{context}: count() answers a number, and a condition is true or false. Compare it: '
                 f'count(<condition>, over=<dimension>) <op> <integer>.'
             )
             return node
@@ -325,8 +325,8 @@ class WhereResolver:
         if isinstance(node.left, FunctionCallNode) and node.left.name == 'position':
             return self._position(node.left, node)
         compared = [name for side in (node.left, node.right) if (name := _side_name_or_none(side)) is not None]
-        if masked := [name for name in compared if name in self.masks]:
-            self.errors.append(mask_compared(masked[0], self.context))
+        if named := [name for name in compared if name in self.conditions]:
+            self.errors.append(condition_compared(named[0], self.context))
             return node
         plain = self._plain(node)
         if plain is None:
@@ -387,22 +387,22 @@ class WhereResolver:
                 sides.append(resolved)
         if len(self.errors) > found:
             return node
-        assert len(sides) == 2, 'a side of a where builds or refuses, since a where holds no formal'
+        assert len(sides) == 2, 'a side of a condition builds or refuses, since a condition holds no formal'
         dims: set[str] = set()
         for side in sides:
             if given := sorted(variables_of(side) & set(ns.spec.given.expressions)):
                 self.errors.append(
-                    f'{context}: a where compares expressions, and one side reads the given expression '
+                    f'{context}: a condition compares expressions, and one side reads the given expression '
                     f'{given[0]!r}. {GIVEN_IN_A_MASK}'
                 )
             elif carries_variable(side):
                 self.errors.append(
-                    f'{context}: a where compares expressions, and one side names a variable. Test only '
+                    f'{context}: a condition compares expressions, and one side names a variable. Test only '
                     f'parameters and dimension coordinates.'
                 )
             elif degree.calls_dual(side):
                 self.errors.append(
-                    f'{context}: a where compares expressions, and one side reads a dual. Test only parameters '
+                    f'{context}: a condition compares expressions, and one side reads a dual. Test only parameters '
                     f'and dimension coordinates.'
                 )
             else:
@@ -704,7 +704,7 @@ def _listed(items: list[str]) -> str:
 
 
 def _is_number(side: Expression) -> bool:
-    """Whether *side* is arithmetic over literals alone — a value the language can fold, and a where may not test."""
+    """Whether *side* is arithmetic over literals alone — a value the language can fold, and a condition may not test."""
     return all(isinstance(n, Constant | Negate | Add | Multiply | Divide | Power) for n in walk(side))
 
 

@@ -38,7 +38,7 @@
 \item[{$\mathrm{bp\_run}$}] \texttt{bp\_run} over $\mathcal{G} \times \mathcal{A}$
 \end{description}
 
-\paragraph{Masks}
+\paragraph{Conditions}
 \begin{description}
 \item[{$\mathrm{dispatchable}$}] \texttt{dispatchable} over $\mathcal{G}$ --- a unit that dispatches and cannot be turned down
 \item[{$\mathrm{priced\_dispatch}$}] \texttt{priced\_dispatch} over $\mathcal{G}$
@@ -83,7 +83,7 @@
 \item[{$\lvert \mathcal{T} \rvert$}] the size of $\mathcal{T}$; $\lvert \mathcal{T} \rvert - 1$ is the last position
 \end{description}
 
-\paragraph{Masks}
+\paragraph{Conditions}
 \begin{align}
 \text{dispatchable} && \mathrm{dispatchable}_{g} & \iff \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} && \forall\, g \in \mathcal{G} \\
 \text{priced\_dispatch} && \mathrm{priced\_dispatch}_{g} & \iff \mathrm{dispatchable}_{g} \wedge \mathrm{spend}^{\mathrm{cap}}_{g} > 0 && \forall\, g \in \mathcal{G}
