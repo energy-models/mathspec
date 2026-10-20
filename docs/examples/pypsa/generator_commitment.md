@@ -309,20 +309,20 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$, data another file declares |
-| $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\Xi \times \mathcal{G}`$, data another file declares |
+| $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\mathcal{G} \times \Xi`$, data another file declares |
 | $`\mathrm{ext}`$ | `Generator_p_nom_extendable` over $`\mathcal{G}`$, data another file declares |
-| $`\underline{\mathrm{p}}`$ | `Generator_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, data another file declares |
-| $`\overline{\mathrm{p}}`$ | `Generator_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, data another file declares |
+| $`\underline{\mathrm{p}}`$ | `Generator_p_min_pu` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, data another file declares |
+| $`\overline{\mathrm{p}}`$ | `Generator_p_max_pu` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, data another file declares |
 | $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$, data another file declares |
-| $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\Xi \times \mathcal{G}`$, data another file declares |
+| $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\mathcal{G} \times \Xi`$, data another file declares |
 | $`\mathrm{nonneg}`$ | `Generator_p_min_pu_nonneg` over $`\mathcal{G}`$, data another file declares |
-| $`\gamma`$ | `Generator_maintenance_pu` over $`\Xi \times \mathcal{G}`$, data another file declares |
+| $`\gamma`$ | `Generator_maintenance_pu` over $`\mathcal{G} \times \Xi`$, data another file declares |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
-| $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{T} \times \mathcal{G}`$, data another file declares |
-| $`p`$ | `Generator_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
+| $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{G} \times \mathcal{T}`$, data another file declares |
+| $`p`$ | `Generator_p` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ |
 | $`N`$ | `Generator_n_mod` over $`\mathcal{G}`$ |
-| $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
-| $`\mu^{u}`$ | `Generator_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
+| $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ |
+| $`\mu^{u}`$ | `Generator_maintenance_status` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Generator_commitment_opex` to |
 | $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{G} \times \mathcal{T}`$, a condition another file defines |
@@ -341,15 +341,15 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$ — whether output is gated by an on/off status decision |
-| $`\mathrm{UT}`$ | `Generator_min_up_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays on once started |
-| $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays off once stopped |
-| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$ — one where the unit was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
-| $`\mathrm{hold}`$ | `Generator_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true while the up time a unit brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
-| $`\mathrm{rest}`$ | `Generator_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true while the down time a unit brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
-| $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one start in this snapshot |
-| $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one stop in this snapshot |
-| $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the bound a committed extendable generator's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the output a solve wants, it caps that output; data prep |
+| $`\mathrm{UT}`$ | `Generator_min_up_time` over $`\mathcal{G} \times \Xi`$ — least snapshots a unit stays on once started |
+| $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\mathcal{G} \times \Xi`$ — least snapshots a unit stays off once stopped |
+| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\mathcal{G} \times \Xi`$ — one where the unit was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
+| $`\mathrm{hold}`$ | `Generator_must_stay_up` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — true while the up time a unit brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
+| $`\mathrm{rest}`$ | `Generator_must_stay_down` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — true while the down time a unit brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
+| $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — cost of one start in this snapshot |
+| $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — cost of one stop in this snapshot |
+| $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — cost of one snapshot spent on |
+| $`\mathrm{M}`$ | `Generator_big_m` over $`\mathcal{G} \times \Xi`$, `neutral` where the data has no row — the bound a committed extendable generator's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the output a solve wants, it caps that output; data prep |
 
 #### Conditions
 
@@ -361,16 +361,16 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`u`$ | `Generator_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-status` — how much of a committable unit is on: an integer the rows below cap at one, or at the module count where the build is modular |
-| $`\mathit{up}`$ | `Generator_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-start_up` — how much of a committable unit turns on this snapshot, capped as the status is |
-| $`\mathit{dn}`$ | `Generator_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-shut_down` — how much of a committable unit turns off this snapshot, capped as the status is |
+| $`u`$ | `Generator_status` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — `Generator-status` — how much of a committable unit is on: an integer the rows below cap at one, or at the module count where the build is modular |
+| $`\mathit{up}`$ | `Generator_start_up` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — `Generator-start_up` — how much of a committable unit turns on this snapshot, capped as the status is |
+| $`\mathit{dn}`$ | `Generator_shut_down` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — `Generator-shut_down` — how much of a committable unit turns off this snapshot, capped as the status is |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
-| $`\overleftarrow{u}^{\circ}`$ | `Generator_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the state a generator carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
+| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — the commitment state a generator carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
+| $`\overleftarrow{u}^{\circ}`$ | `Generator_status_carried_over` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — the state a generator carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Generator\_commitment\_opex}`$ | `Generator_commitment_opex` over $`\Xi`$ |
 
 #### Notation
@@ -384,7 +384,7 @@ constraints:
 **`Generator_com_ext`**
 
 ```math
-\mathrm{on}^{\mathrm{com,ext}}_{g,t} \iff \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\mathrm{on}^{\mathrm{com,ext}}_{g,t} \iff \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Variable domains
@@ -392,19 +392,19 @@ constraints:
 **`Generator_status`**
 
 ```math
-u_{\xi,t,g} \ge 0, u_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
+u_{g,\xi,t} \ge 0, u_{g,\xi,t} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
 ```
 
 **`Generator_start_up`**
 
 ```math
-\mathit{up}_{\xi,t,g} \ge 0, \mathit{up}_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
+\mathit{up}_{g,\xi,t} \ge 0, \mathit{up}_{g,\xi,t} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
 ```
 
 **`Generator_shut_down`**
 
 ```math
-\mathit{dn}_{\xi,t,g} \ge 0, \mathit{dn}_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
+\mathit{dn}_{g,\xi,t} \ge 0, \mathit{dn}_{g,\xi,t} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
 ```
 
 #### Definitions
@@ -412,19 +412,19 @@ u_{\xi,t,g} \ge 0, u_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \
 **`Generator_previous_status`**
 
 ```math
-\overleftarrow{u}_{\xi,t,g} = \begin{cases} 0 & \text{if } \mathrm{pos}(t) > 0 \wedge \neg \mathrm{on}_{t - 1,g} \\ \overleftarrow{u}^{\circ}_{\xi,t,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+\overleftarrow{u}_{g,\xi,t} = \begin{cases} 0 & \text{if } \mathrm{pos}(t) > 0 \wedge \neg \mathrm{on}_{g,t - 1} \\ \overleftarrow{u}^{\circ}_{g,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Generator_status_carried_over`**
 
 ```math
-\overleftarrow{u}^{\circ}_{\xi,t,g} = \begin{cases} \mathrm{u}^{0}_{\xi,g} & \text{if } \mathrm{pos}(t) = 0 \\ u_{\xi,t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+\overleftarrow{u}^{\circ}_{g,\xi,t} = \begin{cases} \mathrm{u}^{0}_{g,\xi} & \text{if } \mathrm{pos}(t) = 0 \\ u_{g,\xi,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Generator_commitment_opex`**
 
 ```math
-\mathit{Generator\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} u_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{on}}_{\xi,t,g} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{up}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{up}}_{\xi,t,g} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{dn}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{dn}}_{\xi,t,g} \qquad \forall\, \xi \in \Xi
+\mathit{Generator\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} u_{g,\xi,t} \cdot \mathrm{c}^{\mathrm{on}}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{up}_{g,\xi,t} \cdot \mathrm{c}^{\mathrm{up}}_{g,\xi,t} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{dn}_{g,\xi,t} \cdot \mathrm{c}^{\mathrm{dn}}_{g,\xi,t} \qquad \forall\, \xi \in \Xi
 ```
 
 #### Subject to
@@ -432,120 +432,120 @@ u_{\xi,t,g} \ge 0, u_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \
 **`Generator_com_p_lower`**
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+p_{g,\xi,t} \ge \underline{\mathrm{p}}_{g,\xi,t} \cdot \mathrm{p}^{\mathrm{nom}}_{g,\xi} \cdot \left( u_{g,\xi,t} - \gamma_{g,\xi} \cdot \mu^{u}_{g,\xi,t} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
 ```
 
 **`Generator_com_p_upper`**
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+p_{g,\xi,t} \le \overline{\mathrm{p}}_{g,\xi,t} \cdot \mathrm{p}^{\mathrm{nom}}_{g,\xi} \cdot \left( u_{g,\xi,t} - \gamma_{g,\xi} \cdot \mu^{u}_{g,\xi,t} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
 ```
 
 **`Generator_com_transition_start_up`**
 
 ```math
-\mathit{up}_{\xi,t,g} \ge u_{\xi,t,g} - \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
+\mathit{up}_{g,\xi,t} \ge u_{g,\xi,t} - \overleftarrow{u}_{g,\xi,t} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
 ```
 
 **`Generator_com_transition_shut_down`**
 
 ```math
-\mathit{dn}_{\xi,t,g} \ge \overleftarrow{u}_{\xi,t,g} - u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
+\mathit{dn}_{g,\xi,t} \ge \overleftarrow{u}_{g,\xi,t} - u_{g,\xi,t} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
 ```
 
 **`Generator_com_up_time`**
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}} \mathit{up}_{\xi,t',g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{UT}_{\xi,g} > 0 \wedge \mathrm{pos}(t) > 0
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}} \mathit{up}_{g,\xi,t'} \le u_{g,\xi,t} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{UT}_{g,\xi} > 0 \wedge \mathrm{pos}(t) > 0
 ```
 
 **`Generator_com_down_time`**
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}} \mathit{dn}_{\xi,t',g} \le 1 - u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{DT}_{\xi,g} > 0 \wedge \mathrm{pos}(t) > 0
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}} \mathit{dn}_{g,\xi,t'} \le 1 - u_{g,\xi,t} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{DT}_{g,\xi} > 0 \wedge \mathrm{pos}(t) > 0
 ```
 
 **`Generator_com_status_must_stay_up`**
 
 ```math
-u_{\xi,t,g} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{hold}_{\xi,t,g}
+u_{g,\xi,t} = 1 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{hold}_{g,\xi,t}
 ```
 
 **`Generator_com_status_must_stay_down`**
 
 ```math
-u_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{rest}_{\xi,t,g}
+u_{g,\xi,t} = 0 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{rest}_{g,\xi,t}
 ```
 
 **`Generator_com_ext_p_upper_cap`**
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
+p_{g,\xi,t} \le \overline{\mathrm{p}}_{g,\xi,t} \cdot \left( P_{g} - \gamma_{g,\xi} \cdot \mu^{\mathrm{nom}}_{g,\xi,t} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
 ```
 
 **`Generator_com_ext_p_upper_big_m`**
 
 ```math
-p_{\xi,t,g} \le \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
+p_{g,\xi,t} \le \mathrm{M}_{g,\xi} \cdot u_{g,\xi,t} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
 ```
 
 **`Generator_com_ext_p_lower`**
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) + \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} - \mathrm{M}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
+p_{g,\xi,t} \ge \underline{\mathrm{p}}_{g,\xi,t} \cdot \left( P_{g} - \gamma_{g,\xi} \cdot \mu^{\mathrm{nom}}_{g,\xi,t} \right) + \mathrm{M}_{g,\xi} \cdot u_{g,\xi,t} - \mathrm{M}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
 ```
 
 **`Generator_com_ext_p_lower_nonneg`**
 
 ```math
-p_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t} \wedge \mathrm{nonneg}_{g}
+p_{g,\xi,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t} \wedge \mathrm{nonneg}_{g}
 ```
 
 **`Generator_com_mod_p_lower`**
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+p_{g,\xi,t} \ge \underline{\mathrm{p}}_{g,\xi,t} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{g,\xi,t} - \gamma_{g,\xi} \cdot \mu^{u}_{g,\xi,t} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 **`Generator_com_mod_p_upper`**
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+p_{g,\xi,t} \le \overline{\mathrm{p}}_{g,\xi,t} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{g,\xi,t} - \gamma_{g,\xi} \cdot \mu^{u}_{g,\xi,t} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 **`Generator_status_p_fixed_upper`**
 
 ```math
-u_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+u_{g,\xi,t} \le \mathrm{N}^{\mathrm{fix}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
 ```
 
 **`Generator_start_up_p_fixed_upper`**
 
 ```math
-\mathit{up}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+\mathit{up}_{g,\xi,t} \le \mathrm{N}^{\mathrm{fix}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
 ```
 
 **`Generator_shut_down_p_fixed_upper`**
 
 ```math
-\mathit{dn}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+\mathit{dn}_{g,\xi,t} \le \mathrm{N}^{\mathrm{fix}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
 ```
 
 **`Generator_status_p_nom_variable_upper`**
 
 ```math
-u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+u_{g,\xi,t} \le N_{g} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 **`Generator_start_up_p_nom_variable_upper`**
 
 ```math
-\mathit{up}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+\mathit{up}_{g,\xi,t} \le N_{g} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 **`Generator_shut_down_p_nom_variable_upper`**
 
 ```math
-\mathit{dn}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+\mathit{dn}_{g,\xi,t} \le N_{g} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 <!-- gallery:end -->

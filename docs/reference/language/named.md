@@ -31,9 +31,8 @@ expressions:
 
 An entry is a bare string, or a mapping with a `description:` and a `dims:`.
 The `dims:` are the dimensions over which the quantity is indexed. When
-`dims:` is left out, the expression itself decides them, sorted by name. When `dims:` is
-declared, it sets the order of the indices, and it names the dimensions over
-which the expression is indexed. The loader refuses an expression that is
+`dims:` is left out, the expression itself decides them. When `dims:` is
+declared, it names the dimensions over which the expression is indexed. The loader refuses an expression that is
 indexed over a dimension not given in `dims:`, and a `dims:` that gives a
 dimension over which the expression is not indexed. An expression that reads
 the entry repeats its value along each of its own dimensions that the entry is
@@ -87,7 +86,7 @@ constraints:
 
 Each case prints as one row of the definition, and `otherwise:` as the last:
 
-$$\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \cr \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \cr \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\thinspace t \in \mathcal{T},\enspace g \in \mathcal{G}$$
+$$\mathit{previous\_status}_{g,t} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \cr \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \cr \mathit{status}_{g,t - 1} & \text{otherwise} \end{cases} \qquad \forall\thinspace g \in \mathcal{G},\enspace t \in \mathcal{T}$$
 
 A named expression carries **exactly one** of `expression:` and `cases:`.
 

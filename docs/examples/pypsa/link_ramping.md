@@ -24,9 +24,9 @@ given:
     Link_shut_down: { dims: [scenario, snapshot, link], domain: integer }
     Link_p_nom_ext: { dims: [link] }
   expressions:
-    Link_p_nom_effective: { dims: [scenario, link] }
-    Link_previous_status: { dims: [scenario, snapshot, link] }
-    Link_p_nom_committed: { dims: [scenario, link] }
+    Link_p_nom_effective: { dims: [link, scenario] }
+    Link_previous_status: { dims: [link, scenario, snapshot] }
+    Link_p_nom_committed: { dims: [link, scenario] }
   conditions:
     Link_com_ext: { dims: [link, snapshot] }
 
@@ -255,18 +255,18 @@ assumptions:
 |---|---|
 | $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$, data another file declares |
 | $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$, data another file declares |
-| $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\Xi \times \mathcal{L}`$, data another file declares |
+| $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\mathcal{L} \times \Xi`$, data another file declares |
 | $`\mathrm{f}^{\mathrm{mod}}`$ | `Link_p_nom_mod` over $`\mathcal{L}`$, data another file declares |
-| $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\Xi \times \mathcal{L}`$, data another file declares |
-| $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{T} \times \mathcal{L}`$, data another file declares |
-| $`f`$ | `Link_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
-| $`u^{f}`$ | `Link_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
-| $`\mathit{up}^{f}`$ | `Link_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
-| $`\mathit{dn}^{f}`$ | `Link_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
+| $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\mathcal{L} \times \Xi`$, data another file declares |
+| $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{L} \times \mathcal{T}`$, data another file declares |
+| $`f`$ | `Link_p` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
+| $`u^{f}`$ | `Link_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
+| $`\mathit{up}^{f}`$ | `Link_start_up` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
+| $`\mathit{dn}^{f}`$ | `Link_shut_down` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
 | $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ |
-| $`\widetilde{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_effective` over $`\Xi \times \mathcal{L}`$, an expression another file defines |
-| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, an expression another file defines |
-| $`\widehat{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_committed` over $`\Xi \times \mathcal{L}`$, an expression another file defines |
+| $`\widetilde{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_effective` over $`\mathcal{L} \times \Xi`$, an expression another file defines |
+| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, an expression another file defines |
+| $`\widehat{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_committed` over $`\mathcal{L} \times \Xi`$, an expression another file defines |
 | $`\mathrm{on}^{f,\mathrm{com,ext}}`$ | `Link_com_ext` over $`\mathcal{L} \times \mathcal{T}`$, a condition another file defines |
 
 #### Sets
@@ -282,11 +282,11 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{ru}^{f}`$ | `Link_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — most a link may raise its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{rd}^{f}`$ | `Link_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — most a link may lower its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{ru}^{f,\mathrm{up}}`$ | `Link_ramp_limit_start_up` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most flow in the snapshot a link starts, per unit of nominal power; no value means no limit |
-| $`\mathrm{rd}^{f,\mathrm{dn}}`$ | `Link_ramp_limit_shut_down` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most flow in the snapshot before a link stops, per unit of nominal power; no value means no limit |
-| $`\mathrm{f}^{0}`$ | `Link_p_init` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the flow a link brought into the horizon — PyPSA's `p_init`, read only where the link came in running; no value means it is unknown, so the link carries no ramp row at the first snapshot |
+| $`\mathrm{ru}^{f}`$ | `Link_ramp_limit_up` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, `neutral` where the data has no row — most a link may raise its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{rd}^{f}`$ | `Link_ramp_limit_down` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, `neutral` where the data has no row — most a link may lower its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{ru}^{f,\mathrm{up}}`$ | `Link_ramp_limit_start_up` over $`\mathcal{L} \times \Xi`$, `neutral` where the data has no row — most flow in the snapshot a link starts, per unit of nominal power; no value means no limit |
+| $`\mathrm{rd}^{f,\mathrm{dn}}`$ | `Link_ramp_limit_shut_down` over $`\mathcal{L} \times \Xi`$, `neutral` where the data has no row — most flow in the snapshot before a link stops, per unit of nominal power; no value means no limit |
+| $`\mathrm{f}^{0}`$ | `Link_p_init` over $`\mathcal{L} \times \Xi`$, `neutral` where the data has no row — the flow a link brought into the horizon — PyPSA's `p_init`, read only where the link came in running; no value means it is unknown, so the link carries no ramp row at the first snapshot |
 
 #### Conditions
 
@@ -298,13 +298,13 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{f}`$ | `Link_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the flow a link carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
-| $`\widetilde{\mathrm{ru}}^{f}`$ | `Link_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the ramp limit a link's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row |
-| $`\widetilde{\mathrm{rd}}^{f}`$ | `Link_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the ramp limit a link's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row |
-| $`\widetilde{\mathrm{ru}}^{f,\mathrm{up}}`$ | `Link_start_up_rate` over $`\Xi \times \mathcal{L}`$ — the start-up ramp a link's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none |
-| $`\widetilde{\mathrm{rd}}^{f,\mathrm{dn}}`$ | `Link_shut_down_rate` over $`\Xi \times \mathcal{L}`$ — the shut-down ramp a link's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none |
-| $`\Delta^{f,+}`$ | `Link_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how far a link may raise flow between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
-| $`\Delta^{f,-}`$ | `Link_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how far a link may lower flow between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
+| $`\overleftarrow{f}`$ | `Link_previous_p` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — the flow a link carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
+| $`\widetilde{\mathrm{ru}}^{f}`$ | `Link_ramp_up_rate` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — the ramp limit a link's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row |
+| $`\widetilde{\mathrm{rd}}^{f}`$ | `Link_ramp_down_rate` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — the ramp limit a link's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row |
+| $`\widetilde{\mathrm{ru}}^{f,\mathrm{up}}`$ | `Link_start_up_rate` over $`\mathcal{L} \times \Xi`$ — the start-up ramp a link's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none |
+| $`\widetilde{\mathrm{rd}}^{f,\mathrm{dn}}`$ | `Link_shut_down_rate` over $`\mathcal{L} \times \Xi`$ — the shut-down ramp a link's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none |
+| $`\Delta^{f,+}`$ | `Link_ramp_up_allowance` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — how far a link may raise flow between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
+| $`\Delta^{f,-}`$ | `Link_ramp_down_allowance` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — how far a link may lower flow between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 
 #### Notation
 
@@ -318,7 +318,7 @@ assumptions:
 **`Link_ramps_from_previous`**
 
 ```math
-\mathrm{prev}^{f}_{l,\xi,t} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{f,0}_{\xi,l} = 0 \vee \mathrm{f}^{0}_{\xi,l} \text{ is defined} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathrm{prev}^{f}_{l,\xi,t} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{f,0}_{l,\xi} = 0 \vee \mathrm{f}^{0}_{l,\xi} \text{ is defined} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Definitions
@@ -326,43 +326,43 @@ assumptions:
 **`Link_previous_p`**
 
 ```math
-\overleftarrow{f}_{\xi,t,l} = \begin{cases} \mathrm{u}^{f,0}_{\xi,l} \cdot \mathrm{f}^{0}_{\xi,l} & \text{if } \mathrm{pos}(t) = 0 \\ f_{\xi,t - 1,l} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
+\overleftarrow{f}_{l,\xi,t} = \begin{cases} \mathrm{u}^{f,0}_{l,\xi} \cdot \mathrm{f}^{0}_{l,\xi} & \text{if } \mathrm{pos}(t) = 0 \\ f_{l,\xi,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Link_ramp_up_rate`**
 
 ```math
-\widetilde{\mathrm{ru}}^{f}_{\xi,t,l} = \begin{cases} \mathrm{ru}^{f}_{\xi,t,l} & \text{if } \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
+\widetilde{\mathrm{ru}}^{f}_{l,\xi,t} = \begin{cases} \mathrm{ru}^{f}_{l,\xi,t} & \text{if } \mathrm{ru}^{f}_{l,\xi,t} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Link_ramp_down_rate`**
 
 ```math
-\widetilde{\mathrm{rd}}^{f}_{\xi,t,l} = \begin{cases} \mathrm{rd}^{f}_{\xi,t,l} & \text{if } \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
+\widetilde{\mathrm{rd}}^{f}_{l,\xi,t} = \begin{cases} \mathrm{rd}^{f}_{l,\xi,t} & \text{if } \mathrm{rd}^{f}_{l,\xi,t} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Link_start_up_rate`**
 
 ```math
-\widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{\xi,l} = \begin{cases} \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} & \text{if } \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L}
+\widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{l,\xi} = \begin{cases} \mathrm{ru}^{f,\mathrm{up}}_{l,\xi} & \text{if } \mathrm{ru}^{f,\mathrm{up}}_{l,\xi} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi
 ```
 
 **`Link_shut_down_rate`**
 
 ```math
-\widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} = \begin{cases} \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} & \text{if } \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L}
+\widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{l,\xi} = \begin{cases} \mathrm{rd}^{f,\mathrm{dn}}_{l,\xi} & \text{if } \mathrm{rd}^{f,\mathrm{dn}}_{l,\xi} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi
 ```
 
 **`Link_ramp_up_allowance`**
 
 ```math
-\Delta^{f,+}_{\xi,t,l} = \begin{cases} \widetilde{\mathrm{ru}}^{f}_{\xi,t,l} \cdot \widehat{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \cdot \overleftarrow{u}^{f}_{\xi,t,l} + \widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{\xi,l} \cdot \widehat{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \cdot \left( u^{f}_{\xi,t,l} - \overleftarrow{u}^{f}_{\xi,t,l} \right) & \text{if } \mathrm{com}^{f}_{l} \\ \widetilde{\mathrm{ru}}^{f}_{\xi,t,l} \cdot \widetilde{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
+\Delta^{f,+}_{l,\xi,t} = \begin{cases} \widetilde{\mathrm{ru}}^{f}_{l,\xi,t} \cdot \widehat{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} \cdot \overleftarrow{u}^{f}_{l,\xi,t} + \widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{l,\xi} \cdot \widehat{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} \cdot \left( u^{f}_{l,\xi,t} - \overleftarrow{u}^{f}_{l,\xi,t} \right) & \text{if } \mathrm{com}^{f}_{l} \\ \widetilde{\mathrm{ru}}^{f}_{l,\xi,t} \cdot \widetilde{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Link_ramp_down_allowance`**
 
 ```math
-\Delta^{f,-}_{\xi,t,l} = \begin{cases} \widetilde{\mathrm{rd}}^{f}_{\xi,t,l} \cdot \widehat{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \cdot u^{f}_{\xi,t,l} + \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot \widehat{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} \cdot \left( \overleftarrow{u}^{f}_{\xi,t,l} - u^{f}_{\xi,t,l} \right) & \text{if } \mathrm{com}^{f}_{l} \\ \widetilde{\mathrm{rd}}^{f}_{\xi,t,l} \cdot \widetilde{\mathrm{f}}^{\mathrm{nom}}_{\xi,l} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
+\Delta^{f,-}_{l,\xi,t} = \begin{cases} \widetilde{\mathrm{rd}}^{f}_{l,\xi,t} \cdot \widehat{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} \cdot u^{f}_{l,\xi,t} + \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{l,\xi} \cdot \widehat{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} \cdot \left( \overleftarrow{u}^{f}_{l,\xi,t} - u^{f}_{l,\xi,t} \right) & \text{if } \mathrm{com}^{f}_{l} \\ \widetilde{\mathrm{rd}}^{f}_{l,\xi,t} \cdot \widetilde{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Subject to
@@ -370,37 +370,37 @@ assumptions:
 **`Link_p_ramp_limit_up_run_big_m`**
 
 ```math
-f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \widetilde{\mathrm{ru}}^{f}_{\xi,t,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \overleftarrow{u}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \wedge \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{l,\xi,t}
+f_{l,\xi,t} - \overleftarrow{f}_{l,\xi,t} \le \widetilde{\mathrm{ru}}^{f}_{l,\xi,t} \cdot F_{l} + \mathrm{M}^{f}_{l,\xi} - \mathrm{M}^{f}_{l,\xi} \cdot \overleftarrow{u}^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \wedge \left( \mathrm{ru}^{f}_{l,\xi,t} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{l,\xi} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{l,\xi,t}
 ```
 
 **`Link_p_ramp_limit_up_start_big_m`**
 
 ```math
-f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{\xi,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \mathit{up}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \wedge \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{l,\xi,t}
+f_{l,\xi,t} - \overleftarrow{f}_{l,\xi,t} \le \widetilde{\mathrm{ru}}^{f,\mathrm{up}}_{l,\xi} \cdot F_{l} + \mathrm{M}^{f}_{l,\xi} - \mathrm{M}^{f}_{l,\xi} \cdot \mathit{up}^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \wedge \left( \mathrm{ru}^{f}_{l,\xi,t} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{l,\xi} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{l,\xi,t}
 ```
 
 **`Link_p_ramp_limit_down_run_big_m`**
 
 ```math
-\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \widetilde{\mathrm{rd}}^{f}_{\xi,t,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \wedge \left( \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{l,\xi,t}
+\overleftarrow{f}_{l,\xi,t} - f_{l,\xi,t} \le \widetilde{\mathrm{rd}}^{f}_{l,\xi,t} \cdot F_{l} + \mathrm{M}^{f}_{l,\xi} - \mathrm{M}^{f}_{l,\xi} \cdot u^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \wedge \left( \mathrm{rd}^{f}_{l,\xi,t} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{l,\xi} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{l,\xi,t}
 ```
 
 **`Link_p_ramp_limit_down_shut_big_m`**
 
 ```math
-\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} \cdot F_{l} + \mathrm{M}^{f}_{\xi,l} - \mathrm{M}^{f}_{\xi,l} \cdot \mathit{dn}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \wedge \left( \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{l,\xi,t}
+\overleftarrow{f}_{l,\xi,t} - f_{l,\xi,t} \le \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{l,\xi} \cdot F_{l} + \mathrm{M}^{f}_{l,\xi} - \mathrm{M}^{f}_{l,\xi} \cdot \mathit{dn}^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \wedge \left( \mathrm{rd}^{f}_{l,\xi,t} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{l,\xi} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{l,\xi,t}
 ```
 
 **`Link_p_ramp_limit_up`**
 
 ```math
-f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \Delta^{f,+}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \right) \wedge \mathrm{prev}^{f}_{l,\xi,t} \wedge \mathrm{on}^{f}_{t,l}
+f_{l,\xi,t} - \overleftarrow{f}_{l,\xi,t} \le \Delta^{f,+}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \left( \mathrm{ru}^{f}_{l,\xi,t} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{l,\xi} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \right) \wedge \mathrm{prev}^{f}_{l,\xi,t} \wedge \mathrm{on}^{f}_{l,t}
 ```
 
 **`Link_p_ramp_limit_down`**
 
 ```math
-\overleftarrow{f}_{\xi,t,l} - f_{\xi,t,l} \le \Delta^{f,-}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \left( \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \right) \wedge \mathrm{prev}^{f}_{l,\xi,t} \wedge \mathrm{on}^{f}_{t,l}
+\overleftarrow{f}_{l,\xi,t} - f_{l,\xi,t} \le \Delta^{f,-}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \left( \mathrm{rd}^{f}_{l,\xi,t} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{l,\xi} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \right) \wedge \mathrm{prev}^{f}_{l,\xi,t} \wedge \mathrm{on}^{f}_{l,t}
 ```
 
 #### Assumptions
@@ -408,6 +408,6 @@ f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \Delta^{f,+}_{\xi,t,l} \qquad \for
 **`Link_came_in_running_unless_committable`**
 
 ```math
-\mathrm{u}^{f,0}_{\xi,l} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \neg \mathrm{com}^{f}_{l} \wedge \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right)
+\mathrm{u}^{f,0}_{l,\xi} = 1 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{com}^{f}_{l} \wedge \left( \mathrm{ru}^{f}_{l,\xi,t} \text{ is defined} \vee \mathrm{rd}^{f}_{l,\xi,t} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{l,\xi} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{l,\xi} \text{ is defined} \right)
 ```
 <!-- gallery:end -->

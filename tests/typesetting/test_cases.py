@@ -60,7 +60,7 @@ def test_a_cased_expression_is_the_exception_that_keeps_its_name(name: FormatNam
     and the wrong thing to print: a block three arms tall puts whatever follows
     it beside its middle row."""
     rendered = typeset(CASED, name, legend=False)
-    indexed = fmt.subscript(fmt.upright('headroom'), ['t', 'g'])
+    indexed = fmt.subscript(fmt.upright('headroom'), ['g', 't'])
     assert rendered.count(indexed) == 2, (
         'one use and one definition, no more — counted indexed, because Typst spells a row label and an upright '
         'symbol the same way and only the symbol carries the dims'
@@ -84,7 +84,7 @@ def test_a_declared_definition_prints_whether_or_not_a_row_names_it(name: Format
     """The rule a variable's domain follows: the file declared it, so it prints."""
     unused = varied(CASED, **{'constraints.spare.expression': 'p <= p_max'})
     rendered = typeset(unused, name, legend=False)
-    assert rendered.count(fmt.subscript(fmt.upright('headroom'), ['t', 'g'])) == 1, 'the definition, and no use'
+    assert rendered.count(fmt.subscript(fmt.upright('headroom'), ['g', 't'])) == 1, 'the definition, and no use'
     assert 'Definitions' in rendered
 
 
@@ -111,7 +111,7 @@ def test_a_cased_expression_is_chosen_when_a_value_reaching_it_is(
     value of the quantity like any case's, so a walk reading only the cases
     prints a solved quantity upright."""
     rendered = typeset(varied(CASED, **patch), name, legend=False)
-    italic, upright = (fmt.subscript(face('headroom'), ['t', 'g']) for face in (fmt.italic, fmt.upright))
+    italic, upright = (fmt.subscript(face('headroom'), ['g', 't']) for face in (fmt.italic, fmt.upright))
     assert (italic in rendered) is chosen, 'the quantity is chosen exactly when a value reaching it holds a variable'
     assert (upright in rendered) is not chosen, 'and given otherwise, however its regions are chosen'
 
@@ -121,7 +121,7 @@ def test_a_definition_naming_another_one_prints_both(name: FormatName, fmt: Form
     """The cases are walked too, so the collection runs to a fixpoint."""
     rendered = typeset(_NESTED, name, legend=False)
     assert fmt.italic('headroom') in rendered, 'the inner definition was reached through a case'
-    assert rendered.count(fmt.subscript(fmt.italic('opening_cost'), ['t', 'g'])) == 2, (
+    assert rendered.count(fmt.subscript(fmt.italic('opening_cost'), ['g', 't'])) == 2, (
         'the outer definition and its one use'
     )
 
@@ -141,7 +141,7 @@ def test_a_variable_reached_through_another_cased_expression_still_prints_chosen
 def test_the_table_may_rename_a_named_expression_cased_or_plain():
     """Both print under their own name, so both are the table's to spell."""
     tex = to_latex(CASED, symbols={'notation': 'latex', 'names': {'headroom': r'\bar h'}}, legend=False)
-    assert r'\bar h_{t,g}' in tex
+    assert r'\bar h_{g,t}' in tex
 
     plain = varied(DISPATCH, **{'expressions.supply': 'sum(p, over=generator)'})
     tex = to_latex(plain, symbols={'notation': 'latex', 'names': {'supply': 's'}}, legend=False)

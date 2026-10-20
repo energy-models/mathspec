@@ -19,13 +19,13 @@ given:
     snapshot_weightings_stores: { dims: [snapshot] }
     GlobalConstraint_counts_snapshot: { dims: [scenario, global_constraint, snapshot], dtype: bool }
   expressions:
-    primary_energy: { dims: [scenario, global_constraint] }
-    operational_limit: { dims: [scenario, global_constraint] }
+    primary_energy: { dims: [global_constraint, scenario] }
+    operational_limit: { dims: [global_constraint, scenario] }
     tech_capacity_expansion: { dims: [global_constraint] }
     scenario_opex: { dims: [scenario] }
     total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Carrier_additions: { dims: [carrier, period] }
+    Bus_injection: { dims: [bus, scenario, snapshot] }
 
 dimensions:
   scenario:
@@ -430,14 +430,14 @@ assumptions:
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
 | $`\mathrm{w}^{\mathrm{yr}}`$ | `period_weight_years` over $`\mathcal{Y}`$, data another file declares |
 | $`\mathrm{w}^{\mathrm{sto}}`$ | `snapshot_weightings_stores` over $`\mathcal{T}`$, data another file declares |
-| $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$, data another file declares |
-| $`\mathit{primary\_energy}`$ | `primary_energy` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Store_primary_energy` to |
-| $`\mathit{operational\_limit}`$ | `operational_limit` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Store_operational_limit` to |
+| $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, data another file declares |
+| $`\mathit{primary\_energy}`$ | `primary_energy` over $`\mathcal{G} \times \Xi`$, an expression this file adds `Store_primary_energy` to |
+| $`\mathit{operational\_limit}`$ | `operational_limit` over $`\mathcal{G} \times \Xi`$, an expression this file adds `Store_operational_limit` to |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression this file adds `Store_tech_capacity_expansion` to |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Store_opex` to |
 | $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Store_capex` to |
-| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression this file adds `Store_additions` to |
-| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Store_injection` to |
+| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{I} \times \mathcal{Y}`$, an expression this file adds `Store_additions` to |
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$, an expression this file adds `Store_injection` to |
 
 #### Sets
 
@@ -481,8 +481,8 @@ assumptions:
 | $`\mathrm{c}^{e}`$ | `Store_marginal_cost_storage` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of energy held over one snapshot |
 | $`\mathrm{e}^{\mathrm{set}}`$ | `Store_e_set` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$, `neutral` where the data has no row — a given energy schedule; a store without one has no row here |
 | $`\mathrm{q}^{\mathrm{set}}`$ | `Store_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$, `neutral` where the data has no row — a given schedule of power delivered; a store without one has no row here |
-| $`\mathrm{a}^{e}`$ | `Store_primary_energy_weight` over $`\Xi \times \mathcal{G} \times \mathcal{V}`$, `neutral` where the data has no row — the constrained attribute per unit of energy depleted — data prep; an unweighted store has no row |
-| $`\mathrm{b}^{e}`$ | `Store_operational_limit_weight` over $`\Xi \times \mathcal{G} \times \mathcal{V}`$, `neutral` where the data has no row — one where the store is in the row's set — data prep; one outside it has no row |
+| $`\mathrm{a}^{e}`$ | `Store_primary_energy_weight` over $`\mathcal{G} \times \Xi \times \mathcal{V}`$, `neutral` where the data has no row — the constrained attribute per unit of energy depleted — data prep; an unweighted store has no row |
+| $`\mathrm{b}^{e}`$ | `Store_operational_limit_weight` over $`\mathcal{G} \times \Xi \times \mathcal{V}`$, `neutral` where the data has no row — one where the store is in the row's set — data prep; one outside it has no row |
 | $`\mathrm{m}^{e}`$ | `Store_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{V}`$, `neutral` where the data has no row — one where the store is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
 #### Variables
@@ -499,8 +499,8 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\overleftarrow{e}`$ | `Store_energy_carried_in` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — the energy a store opens a snapshot with — at the first snapshot it stands in, its last such snapshot's less standing loss where it is cyclic and the given initial energy, which no standing loss has touched yet, where it is not; the previous snapshot's less standing loss otherwise. A store built in a later period opens in that period, and a cyclic one that retires closes on its own last snapshot. Per period, the same holds with each investment period as the horizon |
-| $`\mathit{last}^{e}`$ | `Store_last_counted_active` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{V}`$ — one at the last snapshot a row counts where a store stands, and zero elsewhere — a store that retires before the last counted snapshot closes on its last active level, as PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:507-510`) |
-| $`\mathit{w}^{e}`$ | `Store_closing_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{V}`$ — what the energy a store holds at a snapshot counts for in a row as its closing level — the years of the period at the last snapshot of each counted period where the store reopens per period, one at the last counted snapshot it stands in where it does not, and nothing elsewhere |
+| $`\mathit{last}^{e}`$ | `Store_last_counted_active` over $`\mathcal{G} \times \Xi \times \mathcal{T} \times \mathcal{V}`$ — one at the last snapshot a row counts where a store stands, and zero elsewhere — a store that retires before the last counted snapshot closes on its last active level, as PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:507-510`) |
+| $`\mathit{w}^{e}`$ | `Store_closing_weight` over $`\mathcal{G} \times \Xi \times \mathcal{T} \times \mathcal{V}`$ — what the energy a store holds at a snapshot counts for in a row as its closing level — the years of the period at the last snapshot of each counted period where the store reopens per period, one at the last counted snapshot it stands in where it does not, and nothing elsewhere |
 | $`\mathit{Store\_primary\_energy}`$ | `Store_primary_energy` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{Store\_operational\_limit}`$ | `Store_operational_limit` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{Store\_tech\_capacity\_expansion}`$ | `Store_tech_capacity_expansion` over $`\mathcal{G}`$ |
@@ -556,25 +556,25 @@ N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:
 **`Store_last_counted_active`**
 
 ```math
-\mathit{last}^{e}_{\xi,g,t,v} = \begin{cases} 1 & \text{if } \mathrm{in}_{\xi,g,t} \wedge \mathrm{on}^{e}_{t,v} \wedge \neg \left( \mathrm{in}_{\xi,g,t + 1} \wedge \mathrm{on}^{e}_{t + 1,v} \right) \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T},\ v \in \mathcal{V}
+\mathit{last}^{e}_{g,\xi,t,v} = \begin{cases} 1 & \text{if } \mathrm{in}_{g,\xi,t} \wedge \mathrm{on}^{e}_{t,v} \wedge \neg \left( \mathrm{in}_{g,\xi,t + 1} \wedge \mathrm{on}^{e}_{t + 1,v} \right) \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
 ```
 
 **`Store_closing_weight`**
 
 ```math
-\mathit{w}^{e}_{\xi,g,t,v} = \begin{cases} \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{\xi,g,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ \mathit{last}^{e}_{\xi,g,t,v} & \text{if } \neg \mathrm{reset}^{e}_{\xi,v} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T},\ v \in \mathcal{V}
+\mathit{w}^{e}_{g,\xi,t,v} = \begin{cases} \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{g,\xi,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ \mathit{last}^{e}_{g,\xi,t,v} & \text{if } \neg \mathrm{reset}^{e}_{\xi,v} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
 ```
 
 **`Store_primary_energy`**
 
 ```math
-\mathit{Store\_primary\_energy}_{g,\xi} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{\xi,g,t,v} \cdot \mathrm{a}^{e}_{\xi,g,v} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+\mathit{Store\_primary\_energy}_{g,\xi} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{g,\xi,t,v} \cdot \mathrm{a}^{e}_{g,\xi,v} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`Store_operational_limit`**
 
 ```math
-\mathit{Store\_operational\_limit}_{g,\xi} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{\xi,g,t,v} \cdot \mathrm{b}^{e}_{\xi,g,v} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+\mathit{Store\_operational\_limit}_{g,\xi} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{g,\xi,t,v} \cdot \mathrm{b}^{e}_{g,\xi,v} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`Store_tech_capacity_expansion`**
@@ -698,19 +698,19 @@ q_{\xi,t,v} = \mathrm{q}^{\mathrm{set}}_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\
 **`Store_primary_energy_per_period_closes_over_the_horizon`**
 
 ```math
-\lvert \{ t \in \mathcal{T} \,:\, \neg \mathrm{in}_{\xi,g,t} \} \rvert = 0 \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V},\ g \in \mathcal{G} \,:\, \mathrm{a}^{e}_{\xi,g,v} \text{ is defined} \wedge \mathrm{reset}^{e}_{\xi,v}
+\lvert \{ t \in \mathcal{T} \,:\, \neg \mathrm{in}_{g,\xi,t} \} \rvert = 0 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{a}^{e}_{g,\xi,v} \text{ is defined} \wedge \mathrm{reset}^{e}_{\xi,v}
 ```
 
 **`Store_primary_energy_carried_over_has_unit_years`**
 
 ```math
-\mathrm{w}^{\mathrm{yr}}_{y} = 1 \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V},\ g \in \mathcal{G},\ y \in \mathcal{Y} \,:\, \mathrm{a}^{e}_{\xi,g,v} \text{ is defined} \wedge \neg \mathrm{reset}^{e}_{\xi,v}
+\mathrm{w}^{\mathrm{yr}}_{y} = 1 \qquad \forall\, g \in \mathcal{G},\ y \in \mathcal{Y},\ \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{a}^{e}_{g,\xi,v} \text{ is defined} \wedge \neg \mathrm{reset}^{e}_{\xi,v}
 ```
 
 **`Store_operational_limit_carried_over_has_unit_years`**
 
 ```math
-\mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V},\ g \in \mathcal{G} \,:\, \mathrm{b}^{e}_{\xi,g,v} \text{ is defined} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{\xi,g,t}
+\mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} = 1 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{b}^{e}_{g,\xi,v} \text{ is defined} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{g,\xi,t}
 ```
 
 **`Store_marginal_cost_quadratic_without_risk_preference`**

@@ -38,7 +38,7 @@ constraints:
 objective: { sense: minimize, expression: sum(p) }
 ```
 
-$`\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \le \mathrm{budget}`$
+$`\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} \le \mathrm{budget}`$
 
 ### `sum(array, over=dim)`
 
@@ -67,7 +67,7 @@ constraints:
 objective: { sense: minimize, expression: sum(p) }
 ```
 
-$`\sum_{g \in \mathcal{G}} p_{t,g} \le \mathrm{limit}_{t} \qquad \forall\, t \in \mathcal{T}`$
+$`\sum_{g \in \mathcal{G}} p_{g,t} \le \mathrm{limit}_{t} \qquad \forall\, t \in \mathcal{T}`$
 
 ### `sum(array, over=[a, …])`
 
@@ -97,7 +97,7 @@ constraints:
 objective: { sense: minimize, expression: sum(p) }
 ```
 
-$`\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g,c} \le \mathrm{limit}_{c} \qquad \forall\, c \in \mathcal{C}`$
+$`\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{c,g,t} \le \mathrm{limit}_{c} \qquad \forall\, c \in \mathcal{C}`$
 
 ### `sum(array, over=dim, by=relation[c])`
 
@@ -133,7 +133,7 @@ constraints:
 objective: { sense: minimize, expression: sum(p) }
 ```
 
-$`\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{t,g} \le \mathrm{limit}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}`$
+$`\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{g,t} \le \mathrm{limit}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}`$
 
 ### `sum(array, over=dim, by=relation[c]), joining on the rest of the key`
 
@@ -170,7 +170,7 @@ constraints:
 objective: { sense: minimize, expression: sum(p) }
 ```
 
-$`\sum_{g \in \mathcal{G} \,:\, \mathrm{zone\_of}(g,\ e) = z} p_{g,e} \ge \mathrm{demand}_{z,e} \qquad \forall\, z \in \mathcal{Z},\ e \in \mathcal{E}`$
+$`\sum_{g \in \mathcal{G} \,:\, \mathrm{zone\_of}(g,\ e) = z} p_{g,e} \ge \mathrm{demand}_{e,z} \qquad \forall\, e \in \mathcal{E},\ z \in \mathcal{Z}`$
 
 ### `sum(array, over=[dim, …], by=relation[c, …])`
 
@@ -388,7 +388,7 @@ constraints:
 objective: { sense: minimize, expression: sum(order) }
 ```
 
-$`\mathit{order}_{t,m \boxminus_{0} \mathrm{lead}} \ge \mathrm{demand}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}`$
+$`\mathit{order}_{m \boxminus_{0} \mathrm{lead},t} \ge \mathrm{demand}_{m,t} \qquad \forall\, m \in \mathcal{M},\ t \in \mathcal{T}`$
 
 ### `shift(array, along=dim, offset=n, within=relation[c])`
 
@@ -453,7 +453,7 @@ constraints:
 objective: { sense: minimize, expression: sum(on) }
 ```
 
-$`\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < 3} \mathit{started}_{u,h'} \le \mathit{on}_{u,h} \qquad \forall\, u \in \mathcal{U},\ h \in \mathcal{H}`$
+$`\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < 3} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$
 
 ### `sum_back(array, along=dim, window=p)`
 
@@ -487,7 +487,7 @@ constraints:
 objective: { sense: minimize, expression: sum(on) }
 ```
 
-$`\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < \mathrm{min\_up}} \mathit{started}_{u,h'} \le \mathit{on}_{u,h} \qquad \forall\, u \in \mathcal{U},\ h \in \mathcal{H}`$
+$`\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < \mathrm{min\_up}} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$
 
 ### `sum_back(array, along=dim, window=p, edge='wrap')`
 
@@ -521,7 +521,7 @@ constraints:
 objective: { sense: minimize, expression: sum(on) }
 ```
 
-$`\sum_{h' \in \mathcal{H} \,:\, 0 \le h \ominus h' < \mathrm{min\_up}} \mathit{started}_{u,h'} \le \mathit{on}_{u,h} \qquad \forall\, u \in \mathcal{U},\ h \in \mathcal{H}`$
+$`\sum_{h' \in \mathcal{H} \,:\, 0 \le h \ominus h' < \mathrm{min\_up}} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$
 
 ### `sum_back(array, along=dim, window=n, within=relation[c])`
 
@@ -557,7 +557,7 @@ constraints:
 objective: { sense: minimize, expression: sum(on) }
 ```
 
-$`\sum_{h' \in \mathcal{H} \,:\, 0 \le h -^{\mathrm{day\_of}(h)} h' < 3} \mathit{started}_{u,h'} \le \mathit{on}_{u,h} \qquad \forall\, u \in \mathcal{U},\ h \in \mathcal{H}`$
+$`\sum_{h' \in \mathcal{H} \,:\, 0 \le h -^{\mathrm{day\_of}(h)} h' < 3} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$
 
 ### `dual(constraint)`
 

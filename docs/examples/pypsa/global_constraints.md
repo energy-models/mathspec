@@ -13,10 +13,10 @@ given:
   parameters:
     scenario_weight: { dims: [scenario] }
   expressions:
-    primary_energy: { dims: [scenario, global_constraint] }
-    operational_limit: { dims: [scenario, global_constraint] }
-    transmission_volume_expansion: { dims: [scenario, global_constraint] }
-    transmission_expansion_cost: { dims: [scenario, global_constraint] }
+    primary_energy: { dims: [global_constraint, scenario] }
+    operational_limit: { dims: [global_constraint, scenario] }
+    transmission_volume_expansion: { dims: [global_constraint, scenario] }
+    transmission_expansion_cost: { dims: [global_constraint, scenario] }
     tech_capacity_expansion: { dims: [global_constraint] }
 
 dimensions:
@@ -144,10 +144,10 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
-| $`\mathit{primary\_energy}`$ | `primary_energy` over $`\Xi \times \mathcal{G}`$, an expression another file defines |
-| $`\mathit{operational\_limit}`$ | `operational_limit` over $`\Xi \times \mathcal{G}`$, an expression another file defines |
-| $`\mathit{transmission\_volume\_expansion}`$ | `transmission_volume_expansion` over $`\Xi \times \mathcal{G}`$, an expression another file defines |
-| $`\mathit{transmission\_expansion\_cost}`$ | `transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$, an expression another file defines |
+| $`\mathit{primary\_energy}`$ | `primary_energy` over $`\mathcal{G} \times \Xi`$, an expression another file defines |
+| $`\mathit{operational\_limit}`$ | `operational_limit` over $`\mathcal{G} \times \Xi`$, an expression another file defines |
+| $`\mathit{transmission\_volume\_expansion}`$ | `transmission_volume_expansion` over $`\mathcal{G} \times \Xi`$, an expression another file defines |
+| $`\mathit{transmission\_expansion\_cost}`$ | `transmission_expansion_cost` over $`\mathcal{G} \times \Xi`$, an expression another file defines |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression another file defines |
 
 #### Sets
@@ -162,99 +162,99 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{type}`$ | `GlobalConstraint_type` over $`\mathcal{G}`$ — which formula the row takes — `primary_energy`, `operational_limit`, `transmission_volume_expansion_limit`, `transmission_expansion_cost_limit` or `tech_capacity_expansion_limit` |
-| $`\mathrm{sense}`$ | `GlobalConstraint_sense` over $`\Xi \times \mathcal{G}`$ — which way the row binds in each scenario — `<=`, `>=` or `==`; PyPSA reads a row's sense per scenario (`global_constraints.py:551`, `:749`, `:829`) |
-| $`\mathrm{K}`$ | `GlobalConstraint_constant` over $`\Xi \times \mathcal{G}`$ — the constant the total is held against; what a variable cannot carry — an initial charge, times its period's years for each counted period where the storage reopens per period, or a non-extendable build — is folded in here by data prep. PyPSA reads it per scenario (`global_constraints.py:552`, `:750`, `:829`) |
+| $`\mathrm{sense}`$ | `GlobalConstraint_sense` over $`\mathcal{G} \times \Xi`$ — which way the row binds in each scenario — `<=`, `>=` or `==`; PyPSA reads a row's sense per scenario (`global_constraints.py:551`, `:749`, `:829`) |
+| $`\mathrm{K}`$ | `GlobalConstraint_constant` over $`\mathcal{G} \times \Xi`$ — the constant the total is held against; what a variable cannot carry — an initial charge, times its period's years for each counted period where the storage reopens per period, or a non-extendable build — is folded in here by data prep. PyPSA reads it per scenario (`global_constraints.py:552`, `:750`, `:829`) |
 
 #### Subject to
 
 **`GlobalConstraint_primary_energy_ub`**
 
 ```math
-\mathit{primary\_energy}_{\xi,g} \le \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{primary\_energy}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{<=}\text{'}
+\mathit{primary\_energy}_{g,\xi} \le \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{primary\_energy}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{<=}\text{'}
 ```
 
 **`GlobalConstraint_primary_energy_lb`**
 
 ```math
-\mathit{primary\_energy}_{\xi,g} \ge \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{primary\_energy}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{>=}\text{'}
+\mathit{primary\_energy}_{g,\xi} \ge \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{primary\_energy}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{>=}\text{'}
 ```
 
 **`GlobalConstraint_primary_energy_eq`**
 
 ```math
-\mathit{primary\_energy}_{\xi,g} = \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{primary\_energy}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{==}\text{'}
+\mathit{primary\_energy}_{g,\xi} = \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{primary\_energy}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{==}\text{'}
 ```
 
 **`GlobalConstraint_operational_limit_ub`**
 
 ```math
-\mathit{operational\_limit}_{\xi,g} \le \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{operational\_limit}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{<=}\text{'}
+\mathit{operational\_limit}_{g,\xi} \le \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{operational\_limit}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{<=}\text{'}
 ```
 
 **`GlobalConstraint_operational_limit_lb`**
 
 ```math
-\mathit{operational\_limit}_{\xi,g} \ge \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{operational\_limit}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{>=}\text{'}
+\mathit{operational\_limit}_{g,\xi} \ge \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{operational\_limit}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{>=}\text{'}
 ```
 
 **`GlobalConstraint_operational_limit_eq`**
 
 ```math
-\mathit{operational\_limit}_{\xi,g} = \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{operational\_limit}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{==}\text{'}
+\mathit{operational\_limit}_{g,\xi} = \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{operational\_limit}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{==}\text{'}
 ```
 
 **`GlobalConstraint_transmission_volume_expansion_limit_ub`**
 
 ```math
-\mathit{transmission\_volume\_expansion}_{\xi,g} \le \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{transmission\_volume\_expansion\_limit}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{<=}\text{'}
+\mathit{transmission\_volume\_expansion}_{g,\xi} \le \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{transmission\_volume\_expansion\_limit}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{<=}\text{'}
 ```
 
 **`GlobalConstraint_transmission_volume_expansion_limit_lb`**
 
 ```math
-\mathit{transmission\_volume\_expansion}_{\xi,g} \ge \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{transmission\_volume\_expansion\_limit}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{>=}\text{'}
+\mathit{transmission\_volume\_expansion}_{g,\xi} \ge \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{transmission\_volume\_expansion\_limit}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{>=}\text{'}
 ```
 
 **`GlobalConstraint_transmission_volume_expansion_limit_eq`**
 
 ```math
-\mathit{transmission\_volume\_expansion}_{\xi,g} = \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{transmission\_volume\_expansion\_limit}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{==}\text{'}
+\mathit{transmission\_volume\_expansion}_{g,\xi} = \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{transmission\_volume\_expansion\_limit}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{==}\text{'}
 ```
 
 **`GlobalConstraint_transmission_expansion_cost_limit_ub`**
 
 ```math
-\mathit{transmission\_expansion\_cost}_{\xi,g} \le \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{transmission\_expansion\_cost\_limit}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{<=}\text{'}
+\mathit{transmission\_expansion\_cost}_{g,\xi} \le \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{transmission\_expansion\_cost\_limit}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{<=}\text{'}
 ```
 
 **`GlobalConstraint_transmission_expansion_cost_limit_lb`**
 
 ```math
-\mathit{transmission\_expansion\_cost}_{\xi,g} \ge \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{transmission\_expansion\_cost\_limit}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{>=}\text{'}
+\mathit{transmission\_expansion\_cost}_{g,\xi} \ge \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{transmission\_expansion\_cost\_limit}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{>=}\text{'}
 ```
 
 **`GlobalConstraint_transmission_expansion_cost_limit_eq`**
 
 ```math
-\mathit{transmission\_expansion\_cost}_{\xi,g} = \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{transmission\_expansion\_cost\_limit}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{==}\text{'}
+\mathit{transmission\_expansion\_cost}_{g,\xi} = \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{transmission\_expansion\_cost\_limit}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{==}\text{'}
 ```
 
 **`GlobalConstraint_tech_capacity_expansion_limit_ub`**
 
 ```math
-\mathit{tech\_capacity\_expansion}_{g} \le \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{tech\_capacity\_expansion\_limit}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{<=}\text{'}
+\mathit{tech\_capacity\_expansion}_{g} \le \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{tech\_capacity\_expansion\_limit}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{<=}\text{'}
 ```
 
 **`GlobalConstraint_tech_capacity_expansion_limit_lb`**
 
 ```math
-\mathit{tech\_capacity\_expansion}_{g} \ge \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{tech\_capacity\_expansion\_limit}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{>=}\text{'}
+\mathit{tech\_capacity\_expansion}_{g} \ge \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{tech\_capacity\_expansion\_limit}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{>=}\text{'}
 ```
 
 **`GlobalConstraint_tech_capacity_expansion_limit_eq`**
 
 ```math
-\mathit{tech\_capacity\_expansion}_{g} = \mathrm{K}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{tech\_capacity\_expansion\_limit}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{==}\text{'}
+\mathit{tech\_capacity\_expansion}_{g} = \mathrm{K}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{tech\_capacity\_expansion\_limit}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{==}\text{'}
 ```
 
 #### Assumptions

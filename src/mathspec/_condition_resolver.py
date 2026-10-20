@@ -173,7 +173,7 @@ class ConditionResolver:
                 )
             case 'relation':
                 shape = ns.relations[node.name]
-                dims = tuple(shape.dim(k) for k in shape.key)
+                dims = tuple(sorted(shape.dim(k) for k in shape.key))
                 if len(set(dims)) < len(dims):
                     self.errors.append(
                         f"{context}: '{node.name}' has two columns over one dimension ({list(shape.roles)}), so a "
@@ -477,7 +477,7 @@ class ConditionResolver:
                     if (refusal := _relation_pair_error(context, plain, value, ns, left, right)) is not None:
                         self.errors.append(refusal)
                         return node
-                    dims = tuple(ns.relations[left_name].dim(k) for k in ns.relations[left_name].key)
+                    dims = tuple(sorted(ns.relations[left_name].dim(k) for k in ns.relations[left_name].key))
                     return RelationPairComparison(left_name, left, right_name, right, plain.op, dims)
                 given = right_name in ns.spec.given.expressions
                 self.errors.append(_declared_rhs_error(context, plain, value, rhs_kind, given=given))
@@ -517,7 +517,9 @@ class ConditionResolver:
             case 'relation':
                 assert column is not None
                 shape = ns.relations[left_name]
-                return RelationComparison(left_name, column, plain.op, value, tuple(shape.dim(k) for k in shape.key))
+                return RelationComparison(
+                    left_name, column, plain.op, value, tuple(sorted(shape.dim(k) for k in shape.key))
+                )
             case 'variable' if left_name in ns.spec.given.expressions:
                 self.errors.append(
                     f"{context}: where references the given expression '{left_name}'. {GIVEN_IN_A_CONDITION}"

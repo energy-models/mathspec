@@ -137,7 +137,7 @@ def test_a_variable_that_asks_through_a_named_condition_whether_it_exists_is_ref
 def test_a_named_condition_may_ask_whether_another_variable_exists():
     spec = to_spec(varied(CORE, **{'conditions.dispatched': 'p', 'constraints.cap.where': 'dispatched'}))
     where = spec.program.constraints['cap'].where
-    assert where is not None and VariableDefined('p', ('period', 'generator')) in where.atoms
+    assert where is not None and VariableDefined('p', ('generator', 'period')) in where.atoms
 
 
 @pytest.mark.parametrize(
@@ -204,7 +204,7 @@ def test_a_fragment_reads_another_file_s_named_condition_as_boolean_data():
     """#803's ramp read `active == 1` under `given: expressions:`, which a where may not read."""
     program = to_spec(RAMPING).program
     where = program.constraints['ramp_up'].where
-    assert where is not None and ParameterDefined('stands', ('period', 'generator')) in where.atoms, (
+    assert where is not None and ParameterDefined('stands', ('generator', 'period')) in where.atoms, (
         'alone, the reading is data the host provides'
     )
     assert sorted(program.given.conditions) == ['stands']

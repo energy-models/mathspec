@@ -15,14 +15,14 @@ given:
     Generator_maintenance: { dims: [scenario, snapshot, generator] }
     Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
   expressions:
-    GlobalConstraint_energy_weight: { dims: [scenario, global_constraint, snapshot] }
-    primary_energy: { dims: [scenario, global_constraint] }
-    operational_limit: { dims: [scenario, global_constraint] }
+    GlobalConstraint_energy_weight: { dims: [global_constraint, scenario, snapshot] }
+    primary_energy: { dims: [global_constraint, scenario] }
+    operational_limit: { dims: [global_constraint, scenario] }
     tech_capacity_expansion: { dims: [global_constraint] }
     scenario_opex: { dims: [scenario] }
     total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Carrier_additions: { dims: [carrier, period] }
+    Bus_injection: { dims: [bus, scenario, snapshot] }
 
 dimensions:
   scenario:

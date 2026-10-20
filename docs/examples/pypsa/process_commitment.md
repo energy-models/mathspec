@@ -309,20 +309,20 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$, data another file declares |
-| $`\mathrm{z}^{\mathrm{nom}}`$ | `Process_p_nom` over $`\Xi \times \mathcal{J}`$, data another file declares |
+| $`\mathrm{z}^{\mathrm{nom}}`$ | `Process_p_nom` over $`\mathcal{J} \times \Xi`$, data another file declares |
 | $`\mathrm{ext}^{z}`$ | `Process_p_nom_extendable` over $`\mathcal{J}`$, data another file declares |
-| $`\underline{\mathrm{z}}`$ | `Process_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, data another file declares |
-| $`\overline{\mathrm{z}}`$ | `Process_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, data another file declares |
+| $`\underline{\mathrm{z}}`$ | `Process_p_min_pu` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, data another file declares |
+| $`\overline{\mathrm{z}}`$ | `Process_p_max_pu` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, data another file declares |
 | $`\mathrm{z}^{\mathrm{mod}}`$ | `Process_p_nom_mod` over $`\mathcal{J}`$, data another file declares |
-| $`\mathrm{N}^{z,\mathrm{fix}}`$ | `Process_modules_installed` over $`\Xi \times \mathcal{J}`$, data another file declares |
+| $`\mathrm{N}^{z,\mathrm{fix}}`$ | `Process_modules_installed` over $`\mathcal{J} \times \Xi`$, data another file declares |
 | $`\mathrm{nonneg}^{z}`$ | `Process_p_min_pu_nonneg` over $`\mathcal{J}`$, data another file declares |
-| $`\gamma^{z}`$ | `Process_maintenance_pu` over $`\Xi \times \mathcal{J}`$, data another file declares |
+| $`\gamma^{z}`$ | `Process_maintenance_pu` over $`\mathcal{J} \times \Xi`$, data another file declares |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
-| $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{T} \times \mathcal{J}`$, data another file declares |
-| $`z`$ | `Process_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
+| $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{J} \times \mathcal{T}`$, data another file declares |
+| $`z`$ | `Process_p` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
 | $`N^{z}`$ | `Process_n_mod` over $`\mathcal{J}`$ |
-| $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
-| $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
+| $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
+| $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Process_commitment_opex` to |
 | $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{J} \times \mathcal{T}`$, a condition another file defines |
@@ -341,15 +341,15 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$ — whether internal power is gated by an on/off status decision |
-| $`\mathrm{UT}^{z}`$ | `Process_min_up_time` over $`\Xi \times \mathcal{J}`$ — least snapshots a process stays on once started |
-| $`\mathrm{DT}^{z}`$ | `Process_min_down_time` over $`\Xi \times \mathcal{J}`$ — least snapshots a process stays off once stopped |
-| $`\mathrm{u}^{z,0}`$ | `Process_status_initial` over $`\Xi \times \mathcal{J}`$ — one where the process was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
-| $`\mathrm{hold}^{z}`$ | `Process_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true while the up time a process brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
-| $`\mathrm{rest}^{z}`$ | `Process_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true while the down time a process brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
-| $`\mathrm{c}^{z,\mathrm{up}}`$ | `Process_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one start in this snapshot |
-| $`\mathrm{c}^{z,\mathrm{dn}}`$ | `Process_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one stop in this snapshot |
-| $`\mathrm{c}^{z,\mathrm{on}}`$ | `Process_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the bound a committed extendable process's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the internal power a solve wants, it caps that internal power; data prep |
+| $`\mathrm{UT}^{z}`$ | `Process_min_up_time` over $`\mathcal{J} \times \Xi`$ — least snapshots a process stays on once started |
+| $`\mathrm{DT}^{z}`$ | `Process_min_down_time` over $`\mathcal{J} \times \Xi`$ — least snapshots a process stays off once stopped |
+| $`\mathrm{u}^{z,0}`$ | `Process_status_initial` over $`\mathcal{J} \times \Xi`$ — one where the process was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
+| $`\mathrm{hold}^{z}`$ | `Process_must_stay_up` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — true while the up time a process brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
+| $`\mathrm{rest}^{z}`$ | `Process_must_stay_down` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — true while the down time a process brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
+| $`\mathrm{c}^{z,\mathrm{up}}`$ | `Process_start_up_cost` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — cost of one start in this snapshot |
+| $`\mathrm{c}^{z,\mathrm{dn}}`$ | `Process_shut_down_cost` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — cost of one stop in this snapshot |
+| $`\mathrm{c}^{z,\mathrm{on}}`$ | `Process_stand_by_cost` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — cost of one snapshot spent on |
+| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\mathcal{J} \times \Xi`$, `neutral` where the data has no row — the bound a committed extendable process's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the internal power a solve wants, it caps that internal power; data prep |
 
 #### Conditions
 
@@ -361,16 +361,16 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`u^{z}`$ | `Process_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-status` — how much of a committable process is on: an integer the rows below cap at one, or at the module count where the build is modular |
-| $`\mathit{up}^{z}`$ | `Process_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-start_up` — how much of a committable process turns on this snapshot, capped as the status is |
-| $`\mathit{dn}^{z}`$ | `Process_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-shut_down` — how much of a committable process turns off this snapshot, capped as the status is |
+| $`u^{z}`$ | `Process_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-status` — how much of a committable process is on: an integer the rows below cap at one, or at the module count where the build is modular |
+| $`\mathit{up}^{z}`$ | `Process_start_up` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-start_up` — how much of a committable process turns on this snapshot, capped as the status is |
+| $`\mathit{dn}^{z}`$ | `Process_shut_down` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-shut_down` — how much of a committable process turns off this snapshot, capped as the status is |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the commitment state a process carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
-| $`\overleftarrow{u}^{\circ z}`$ | `Process_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the state a process carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
+| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the commitment state a process carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
+| $`\overleftarrow{u}^{\circ z}`$ | `Process_status_carried_over` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the state a process carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Process\_commitment\_opex}`$ | `Process_commitment_opex` over $`\Xi`$ |
 
 #### Notation
@@ -384,7 +384,7 @@ constraints:
 **`Process_com_ext`**
 
 ```math
-\mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \iff \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{t,j} \qquad \forall\, j \in \mathcal{J},\ t \in \mathcal{T}
+\mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \iff \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{j,t} \qquad \forall\, j \in \mathcal{J},\ t \in \mathcal{T}
 ```
 
 #### Variable domains
@@ -392,19 +392,19 @@ constraints:
 **`Process_status`**
 
 ```math
-u^{z}_{\xi,t,j} \ge 0, u^{z}_{\xi,t,j} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t}
+u^{z}_{j,\xi,t} \ge 0, u^{z}_{j,\xi,t} \in \mathbb{Z} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t}
 ```
 
 **`Process_start_up`**
 
 ```math
-\mathit{up}^{z}_{\xi,t,j} \ge 0, \mathit{up}^{z}_{\xi,t,j} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t}
+\mathit{up}^{z}_{j,\xi,t} \ge 0, \mathit{up}^{z}_{j,\xi,t} \in \mathbb{Z} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t}
 ```
 
 **`Process_shut_down`**
 
 ```math
-\mathit{dn}^{z}_{\xi,t,j} \ge 0, \mathit{dn}^{z}_{\xi,t,j} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t}
+\mathit{dn}^{z}_{j,\xi,t} \ge 0, \mathit{dn}^{z}_{j,\xi,t} \in \mathbb{Z} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t}
 ```
 
 #### Definitions
@@ -412,19 +412,19 @@ u^{z}_{\xi,t,j} \ge 0, u^{z}_{\xi,t,j} \in \mathbb{Z} \qquad \forall\, \xi \in \
 **`Process_previous_status`**
 
 ```math
-\overleftarrow{u}^{z}_{\xi,t,j} = \begin{cases} 0 & \text{if } \mathrm{pos}(t) > 0 \wedge \neg \mathrm{on}^{z}_{t - 1,j} \\ \overleftarrow{u}^{\circ z}_{\xi,t,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+\overleftarrow{u}^{z}_{j,\xi,t} = \begin{cases} 0 & \text{if } \mathrm{pos}(t) > 0 \wedge \neg \mathrm{on}^{z}_{j,t - 1} \\ \overleftarrow{u}^{\circ z}_{j,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Process_status_carried_over`**
 
 ```math
-\overleftarrow{u}^{\circ z}_{\xi,t,j} = \begin{cases} \mathrm{u}^{z,0}_{\xi,j} & \text{if } \mathrm{pos}(t) = 0 \\ u^{z}_{\xi,t - 1,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+\overleftarrow{u}^{\circ z}_{j,\xi,t} = \begin{cases} \mathrm{u}^{z,0}_{j,\xi} & \text{if } \mathrm{pos}(t) = 0 \\ u^{z}_{j,\xi,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Process_commitment_opex`**
 
 ```math
-\mathit{Process\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} u^{z}_{\xi,t,j} \cdot \mathrm{c}^{z,\mathrm{on}}_{\xi,t,j} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{up}^{z}_{\xi,t,j} \cdot \mathrm{c}^{z,\mathrm{up}}_{\xi,t,j} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{dn}^{z}_{\xi,t,j} \cdot \mathrm{c}^{z,\mathrm{dn}}_{\xi,t,j} \qquad \forall\, \xi \in \Xi
+\mathit{Process\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} u^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{on}}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{up}^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{up}}_{j,\xi,t} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{dn}^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{dn}}_{j,\xi,t} \qquad \forall\, \xi \in \Xi
 ```
 
 #### Subject to
@@ -432,120 +432,120 @@ u^{z}_{\xi,t,j} \ge 0, u^{z}_{\xi,t,j} \in \mathbb{Z} \qquad \forall\, \xi \in \
 **`Process_com_p_lower`**
 
 ```math
-z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+z_{j,\xi,t} \ge \underline{\mathrm{z}}_{j,\xi,t} \cdot \mathrm{z}^{\mathrm{nom}}_{j,\xi} \cdot \left( u^{z}_{j,\xi,t} - \gamma^{z}_{j,\xi} \cdot \mu^{z,u}_{j,\xi,t} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
 ```
 
 **`Process_com_p_upper`**
 
 ```math
-z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+z_{j,\xi,t} \le \overline{\mathrm{z}}_{j,\xi,t} \cdot \mathrm{z}^{\mathrm{nom}}_{j,\xi} \cdot \left( u^{z}_{j,\xi,t} - \gamma^{z}_{j,\xi} \cdot \mu^{z,u}_{j,\xi,t} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
 ```
 
 **`Process_com_transition_start_up`**
 
 ```math
-\mathit{up}^{z}_{\xi,t,j} \ge u^{z}_{\xi,t,j} - \overleftarrow{u}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t}
+\mathit{up}^{z}_{j,\xi,t} \ge u^{z}_{j,\xi,t} - \overleftarrow{u}^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t}
 ```
 
 **`Process_com_transition_shut_down`**
 
 ```math
-\mathit{dn}^{z}_{\xi,t,j} \ge \overleftarrow{u}^{z}_{\xi,t,j} - u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t}
+\mathit{dn}^{z}_{j,\xi,t} \ge \overleftarrow{u}^{z}_{j,\xi,t} - u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t}
 ```
 
 **`Process_com_up_time`**
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}^{z}} \mathit{up}^{z}_{\xi,t',j} \le u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{UT}^{z}_{\xi,j} > 0 \wedge \mathrm{pos}(t) > 0
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}^{z}} \mathit{up}^{z}_{j,\xi,t'} \le u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{UT}^{z}_{j,\xi} > 0 \wedge \mathrm{pos}(t) > 0
 ```
 
 **`Process_com_down_time`**
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}^{z}} \mathit{dn}^{z}_{\xi,t',j} \le 1 - u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{DT}^{z}_{\xi,j} > 0 \wedge \mathrm{pos}(t) > 0
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}^{z}} \mathit{dn}^{z}_{j,\xi,t'} \le 1 - u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{DT}^{z}_{j,\xi} > 0 \wedge \mathrm{pos}(t) > 0
 ```
 
 **`Process_com_status_must_stay_up`**
 
 ```math
-u^{z}_{\xi,t,j} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{hold}^{z}_{\xi,t,j}
+u^{z}_{j,\xi,t} = 1 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{hold}^{z}_{j,\xi,t}
 ```
 
 **`Process_com_status_must_stay_down`**
 
 ```math
-u^{z}_{\xi,t,j} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{rest}^{z}_{\xi,t,j}
+u^{z}_{j,\xi,t} = 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{rest}^{z}_{j,\xi,t}
 ```
 
 **`Process_com_ext_p_upper_cap`**
 
 ```math
-z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \left( Z_{j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,\mathrm{nom}}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t}
+z_{j,\xi,t} \le \overline{\mathrm{z}}_{j,\xi,t} \cdot \left( Z_{j} - \gamma^{z}_{j,\xi} \cdot \mu^{z,\mathrm{nom}}_{j,\xi,t} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t}
 ```
 
 **`Process_com_ext_p_upper_big_m`**
 
 ```math
-z_{\xi,t,j} \le \mathrm{M}^{z}_{\xi,j} \cdot u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t}
+z_{j,\xi,t} \le \mathrm{M}^{z}_{j,\xi} \cdot u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t}
 ```
 
 **`Process_com_ext_p_lower`**
 
 ```math
-z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \left( Z_{j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,\mathrm{nom}}_{\xi,t,j} \right) + \mathrm{M}^{z}_{\xi,j} \cdot u^{z}_{\xi,t,j} - \mathrm{M}^{z}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t}
+z_{j,\xi,t} \ge \underline{\mathrm{z}}_{j,\xi,t} \cdot \left( Z_{j} - \gamma^{z}_{j,\xi} \cdot \mu^{z,\mathrm{nom}}_{j,\xi,t} \right) + \mathrm{M}^{z}_{j,\xi} \cdot u^{z}_{j,\xi,t} - \mathrm{M}^{z}_{j,\xi} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t}
 ```
 
 **`Process_com_ext_p_lower_nonneg`**
 
 ```math
-z_{\xi,t,j} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \wedge \mathrm{nonneg}^{z}_{j}
+z_{j,\xi,t} \ge 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \wedge \mathrm{nonneg}^{z}_{j}
 ```
 
 **`Process_com_mod_p_lower`**
 
 ```math
-z_{\xi,t,j} \ge \underline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{mod}}_{j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+z_{j,\xi,t} \ge \underline{\mathrm{z}}_{j,\xi,t} \cdot \mathrm{z}^{\mathrm{mod}}_{j} \cdot \left( u^{z}_{j,\xi,t} - \gamma^{z}_{j,\xi} \cdot \mu^{z,u}_{j,\xi,t} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 **`Process_com_mod_p_upper`**
 
 ```math
-z_{\xi,t,j} \le \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{mod}}_{j} \cdot \left( u^{z}_{\xi,t,j} - \gamma^{z}_{\xi,j} \cdot \mu^{z,u}_{\xi,t,j} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+z_{j,\xi,t} \le \overline{\mathrm{z}}_{j,\xi,t} \cdot \mathrm{z}^{\mathrm{mod}}_{j} \cdot \left( u^{z}_{j,\xi,t} - \gamma^{z}_{j,\xi} \cdot \mu^{z,u}_{j,\xi,t} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 **`Process_status_p_fixed_upper`**
 
 ```math
-u^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+u^{z}_{j,\xi,t} \le \mathrm{N}^{z,\mathrm{fix}}_{j,\xi} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
 ```
 
 **`Process_start_up_p_fixed_upper`**
 
 ```math
-\mathit{up}^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+\mathit{up}^{z}_{j,\xi,t} \le \mathrm{N}^{z,\mathrm{fix}}_{j,\xi} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
 ```
 
 **`Process_shut_down_p_fixed_upper`**
 
 ```math
-\mathit{dn}^{z}_{\xi,t,j} \le \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+\mathit{dn}^{z}_{j,\xi,t} \le \mathrm{N}^{z,\mathrm{fix}}_{j,\xi} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
 ```
 
 **`Process_status_p_nom_variable_upper`**
 
 ```math
-u^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+u^{z}_{j,\xi,t} \le N^{z}_{j} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 **`Process_start_up_p_nom_variable_upper`**
 
 ```math
-\mathit{up}^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\mathit{up}^{z}_{j,\xi,t} \le N^{z}_{j} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 **`Process_shut_down_p_nom_variable_upper`**
 
 ```math
-\mathit{dn}^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\mathit{dn}^{z}_{j,\xi,t} \le N^{z}_{j} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 <!-- gallery:end -->

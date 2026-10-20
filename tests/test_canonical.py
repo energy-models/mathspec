@@ -33,7 +33,7 @@ from mathspec._expression_parser import (
     operand,
     parse_expression,
 )
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, raw_of, varied
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, dims_reversed, raw_of, varied
 
 if TYPE_CHECKING:
     from mathspec._expression_parser import ArithmeticNode, ParsedNode
@@ -167,12 +167,12 @@ def _written_backwards(raw: object, depth: int = 3) -> object:
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
 def test_a_file_written_backwards_writes_the_same_text(path):
-    """The section order, the file order in each section and the key
-    order in each entry are spelling. A file that writes all three in
-    reverse is the same spec, so it writes the same text."""
+    """The section order, the file order in each section, the key order in
+    each entry and the order of each `dims:` list are spelling. A file that
+    writes all four in reverse is the same spec, so it writes the same text."""
     raw = raw_of(path)
-    backwards = ms.to_spec(_written_backwards(raw)).to_yaml(canonical=True)
-    assert backwards == ms.to_spec(raw).to_yaml(canonical=True), 'three orders reversed, one text'
+    backwards = ms.to_spec(dims_reversed(_written_backwards(raw))).to_yaml(canonical=True)
+    assert backwards == ms.to_spec(raw).to_yaml(canonical=True), 'four orders reversed, one text'
 
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
@@ -205,11 +205,6 @@ def _piecewise_with_its_links_reversed() -> dict[str, object]:
 @pytest.mark.parametrize(
     ('written', 'reordered'),
     [
-        pytest.param(
-            DISPATCH_MODEL,
-            varied(DISPATCH_MODEL, **{'variables.p.dims': ['generator', 'snapshot']}),
-            id='the-dims-of-an-entry',
-        ),
         pytest.param(
             raw_of(EXAMPLES / 'commitment.yaml'),
             _commitment_with_its_cases_reversed(),

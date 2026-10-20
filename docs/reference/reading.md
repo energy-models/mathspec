@@ -216,7 +216,7 @@ layer = to_spec(
 
 sorted(layer.variables)  # []
 sorted(layer.given.variables)  # ['p']
-layer.given.constraints['balance'].dims  # ('snapshot', 'bus')
+layer.given.constraints['balance'].dims  # ('bus', 'snapshot')
 ```
 
 The host model provides each name: it holds a column or a row family of that
@@ -336,13 +336,12 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 - A constant is never folded into another. `2 * 3` stays `2 * 3`, so a
   reviewer sees a changed coefficient in the diff.
 
-Four things are left as the file wrote them: a condition in the `where`
-grammar, the order of the regions under `cases:`, the order of an entry's
-`dims`, and the order of a piecewise entry's links. A difference in any of them
-is a difference in the text.
+Three things are left as the file wrote them: a condition in the `where`
+grammar, the order of the regions under `cases:`, and the order of a piecewise
+entry's links. A difference in any of them is a difference in the text.
 
-The normal form sorts `dimensions:`. This changes no dims of the program,
-because a frame the loader derives is sorted by name.
+The normal form sorts `dimensions:` and every `dims:` list by name. This
+changes no dims of the program, because the program sorts every dims by name.
 
 The normal form states the same spec, but it does not load to a `Spec` equal
 to the original, because a reprinted expression is a different string. Writing

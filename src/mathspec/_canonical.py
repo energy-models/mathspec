@@ -188,14 +188,9 @@ def canonical_text(text: str) -> str:
 
 
 def _canonical_entry(entry: object) -> object:
-    """One entry, with every expression under it normalised and everything else untouched."""
+    """One entry, with every expression under it normalised, every ``dims`` sorted, and everything else untouched."""
     if isinstance(entry, dict):
-        return {
-            key: canonical_text(value)
-            if key in _EXPRESSION_KEYS and isinstance(value, str)
-            else _canonical_entry(value)
-            for key, value in entry.items()
-        }
+        return {key: _canonical_field(key, value) for key, value in entry.items()}
     if isinstance(entry, list):
         return [_canonical_entry(item) for item in entry]
     return entry
@@ -218,14 +213,22 @@ def _sorted_entries(section: dict[str, object], *, bare_is_expression: bool = Fa
     }
 
 
+def _canonical_field(key: str, value: object) -> object:
+    """One field of an entry in the normal form, an expression or a ``dims`` list being the two it rewrites."""
+    if key in _EXPRESSION_KEYS and isinstance(value, str):
+        return canonical_text(value)
+    if key == 'dims' and isinstance(value, list):
+        return sorted(cast('list[str]', value))
+    return _canonical_entry(value)
+
+
 def canonical_dict(spec: Spec) -> dict[str, object]:
     """The spec as plain data, in the form two files that state the same spec share.
 
     Entries are sorted by name, the ones under each kind of ``given:``
-    too, and every expression is printed from its parsed tree, so what is left of a difference is a difference in the spec.
-    A ``where`` string, the order of the regions under ``cases:``, the order of
-    an entry's ``dims`` and the order of a piecewise entry's links are all
-    left as written.
+    too, every ``dims`` list is sorted by name, and every expression is printed from its parsed tree, so what is left
+    of a difference is a difference in the spec. A ``where`` string, the order of the regions under ``cases:`` and
+    the order of a piecewise entry's links are all left as written.
 
     Args:
         spec: The loaded spec.

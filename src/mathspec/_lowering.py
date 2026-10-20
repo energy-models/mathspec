@@ -146,7 +146,7 @@ def lower(spec: Spec) -> Program:
         else:
             lower_bound, upper_bound = _bound(vdef.bounds.lower), _bound(vdef.bounds.upper)
         variables[vname] = Variable(
-            tuple(vdef.dims),
+            tuple(sorted(vdef.dims)),
             where=mask_of(where),
             lower=lower_bound,
             upper=upper_bound,
@@ -162,7 +162,7 @@ def lower(spec: Spec) -> Program:
         if (sides := resolve_constraint_text(cdef.expression, ns, context, errors)) is not None:
             lhs, sense, rhs = sides
             constraints[cname] = Constraint(
-                tuple(cdef.dims), lhs, sense, rhs, mask_of(where), description=cdef.description
+                tuple(sorted(cdef.dims)), lhs, sense, rhs, mask_of(where), description=cdef.description
             )
 
     objective = None
@@ -214,7 +214,7 @@ def lower(spec: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: Parameter(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description)
+            name: Parameter(tuple(sorted(pdef.dims)), pdef.dtype, pdef.missing, pdef.description)
             for name, pdef in spec.parameters.items()
         },
         variables=variables,
@@ -244,13 +244,17 @@ def lower(spec: Spec) -> Program:
         conditions=conditions,
         given=GivenTargets(
             parameters={
-                name: Parameter(tuple(g.dims), g.dtype, None, g.description)
+                name: Parameter(tuple(sorted(g.dims)), g.dtype, None, g.description)
                 for name, g in spec.given.parameters.items()
             },
-            variables={name: Given(tuple(g.dims), g.description) for name, g in spec.given.variables.items()},
-            constraints={name: Given(tuple(g.dims), g.description) for name, g in spec.given.constraints.items()},
-            expressions={name: Given(tuple(g.dims), g.description) for name, g in spec.given.expressions.items()},
-            conditions={name: Given(tuple(g.dims), g.description) for name, g in spec.given.conditions.items()},
+            variables={name: Given(tuple(sorted(g.dims)), g.description) for name, g in spec.given.variables.items()},
+            constraints={
+                name: Given(tuple(sorted(g.dims)), g.description) for name, g in spec.given.constraints.items()
+            },
+            expressions={
+                name: Given(tuple(sorted(g.dims)), g.description) for name, g in spec.given.expressions.items()
+            },
+            conditions={name: Given(tuple(sorted(g.dims)), g.description) for name, g in spec.given.conditions.items()},
         ),
         description=spec.description,
     )
@@ -338,10 +342,10 @@ def _loop(target: str, entry: ExpressionReference, sums: Mapping[str, list[Expre
 
 
 def _frame_of(name: str, entry: ExpressionReference, spec: Spec) -> tuple[str, ...]:
-    """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's, sorted by name."""
+    """The dims an entry is read over, sorted by name: the ``dims:`` it declares, else its body's."""
     declared = spec.expressions[name].dims
     if declared is not None:
-        return tuple(declared)
+        return tuple(sorted(declared))
     return tuple(sorted(dims_of(entry.body, spec, f"Named expression '{name}'")))
 
 

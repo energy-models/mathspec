@@ -19,13 +19,13 @@ given:
     snapshot_weightings_stores: { dims: [snapshot] }
     GlobalConstraint_counts_snapshot: { dims: [scenario, global_constraint, snapshot], dtype: bool }
   expressions:
-    primary_energy: { dims: [scenario, global_constraint] }
-    operational_limit: { dims: [scenario, global_constraint] }
+    primary_energy: { dims: [global_constraint, scenario] }
+    operational_limit: { dims: [global_constraint, scenario] }
     tech_capacity_expansion: { dims: [global_constraint] }
     scenario_opex: { dims: [scenario] }
     total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Carrier_additions: { dims: [carrier, period] }
+    Bus_injection: { dims: [bus, scenario, snapshot] }
 
 dimensions:
   scenario:
@@ -547,14 +547,14 @@ assumptions:
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
 | $`\mathrm{w}^{\mathrm{yr}}`$ | `period_weight_years` over $`\mathcal{Y}`$, data another file declares |
 | $`\mathrm{w}^{\mathrm{sto}}`$ | `snapshot_weightings_stores` over $`\mathcal{T}`$, data another file declares |
-| $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$, data another file declares |
-| $`\mathit{primary\_energy}`$ | `primary_energy` over $`\Xi \times \mathcal{G}`$, an expression this file adds `StorageUnit_primary_energy` to |
-| $`\mathit{operational\_limit}`$ | `operational_limit` over $`\Xi \times \mathcal{G}`$, an expression this file adds `StorageUnit_operational_limit` to |
+| $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, data another file declares |
+| $`\mathit{primary\_energy}`$ | `primary_energy` over $`\mathcal{G} \times \Xi`$, an expression this file adds `StorageUnit_primary_energy` to |
+| $`\mathit{operational\_limit}`$ | `operational_limit` over $`\mathcal{G} \times \Xi`$, an expression this file adds `StorageUnit_operational_limit` to |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression this file adds `StorageUnit_tech_capacity_expansion` to |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `StorageUnit_opex` to |
 | $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `StorageUnit_capex` to |
-| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression this file adds `StorageUnit_additions` to |
-| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `StorageUnit_injection` to |
+| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{I} \times \mathcal{Y}`$, an expression this file adds `StorageUnit_additions` to |
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$, an expression this file adds `StorageUnit_injection` to |
 
 #### Sets
 
@@ -605,8 +605,8 @@ assumptions:
 | $`\mathrm{h}^{+,\mathrm{set}}`$ | `StorageUnit_p_dispatch_set` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$, `neutral` where the data has no row — a given dispatch schedule; a unit without one has no row here |
 | $`\mathrm{h}^{-,\mathrm{set}}`$ | `StorageUnit_p_store_set` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$, `neutral` where the data has no row — a given charging schedule; a unit without one has no row here |
 | $`\mathrm{soc}^{\mathrm{set}}`$ | `StorageUnit_state_of_charge_set` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$, `neutral` where the data has no row — a given charge schedule; a unit without one has no row here |
-| $`\mathrm{a}^{h}`$ | `StorageUnit_primary_energy_weight` over $`\Xi \times \mathcal{G} \times \mathcal{S}`$, `neutral` where the data has no row — the constrained attribute per unit of charge depleted — data prep; an unweighted unit has no row |
-| $`\mathrm{b}^{h}`$ | `StorageUnit_operational_limit_weight` over $`\Xi \times \mathcal{G} \times \mathcal{S}`$, `neutral` where the data has no row — one where the storage unit is in the row's set — data prep; one outside it has no row |
+| $`\mathrm{a}^{h}`$ | `StorageUnit_primary_energy_weight` over $`\mathcal{G} \times \Xi \times \mathcal{S}`$, `neutral` where the data has no row — the constrained attribute per unit of charge depleted — data prep; an unweighted unit has no row |
+| $`\mathrm{b}^{h}`$ | `StorageUnit_operational_limit_weight` over $`\mathcal{G} \times \Xi \times \mathcal{S}`$, `neutral` where the data has no row — one where the storage unit is in the row's set — data prep; one outside it has no row |
 | $`\mathrm{m}^{h}`$ | `StorageUnit_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{S}`$, `neutral` where the data has no row — one where the storage unit is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
 #### Conditions
@@ -632,8 +632,8 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\overleftarrow{\mathit{soc}}`$ | `StorageUnit_charge_carried_in` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — the charge a unit opens a snapshot with — at the first snapshot it stands in, its last such snapshot's less standing loss where it is cyclic and the given initial charge, which no standing loss has touched yet, where it is not; the previous snapshot's less standing loss otherwise. A unit built in a later period opens in that period, and a cyclic one that retires closes on its own last snapshot. Per period, the same holds with each investment period as the horizon |
-| $`\mathit{last}^{h}`$ | `StorageUnit_last_counted_active` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{S}`$ — one at the last snapshot a row counts where a unit stands, and zero elsewhere — a unit that retires before the last counted snapshot closes on its last active level, as PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:455-458`) |
-| $`\mathit{w}^{h}`$ | `StorageUnit_closing_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{S}`$ — what the charge a unit holds at a snapshot counts for in a row as its closing level — the years of the period at the last snapshot of each counted period where the unit reopens per period, one at the last counted snapshot it stands in where it does not, and nothing elsewhere |
+| $`\mathit{last}^{h}`$ | `StorageUnit_last_counted_active` over $`\mathcal{G} \times \Xi \times \mathcal{T} \times \mathcal{S}`$ — one at the last snapshot a row counts where a unit stands, and zero elsewhere — a unit that retires before the last counted snapshot closes on its last active level, as PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:455-458`) |
+| $`\mathit{w}^{h}`$ | `StorageUnit_closing_weight` over $`\mathcal{G} \times \Xi \times \mathcal{T} \times \mathcal{S}`$ — what the charge a unit holds at a snapshot counts for in a row as its closing level — the years of the period at the last snapshot of each counted period where the unit reopens per period, one at the last counted snapshot it stands in where it does not, and nothing elsewhere |
 | $`\mathit{StorageUnit\_primary\_energy}`$ | `StorageUnit_primary_energy` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{StorageUnit\_operational\_limit}`$ | `StorageUnit_operational_limit` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{StorageUnit\_tech\_capacity\_expansion}`$ | `StorageUnit_tech_capacity_expansion` over $`\mathcal{G}`$ |
@@ -715,25 +715,25 @@ N^{h}_{s} \ge 0, N^{h}_{s} \in \mathbb{Z} \qquad \forall\, s \in \mathcal{S} \,:
 **`StorageUnit_last_counted_active`**
 
 ```math
-\mathit{last}^{h}_{\xi,g,t,s} = \begin{cases} 1 & \text{if } \mathrm{in}_{\xi,g,t} \wedge \mathrm{on}^{h}_{t,s} \wedge \neg \left( \mathrm{in}_{\xi,g,t + 1} \wedge \mathrm{on}^{h}_{t + 1,s} \right) \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T},\ s \in \mathcal{S}
+\mathit{last}^{h}_{g,\xi,t,s} = \begin{cases} 1 & \text{if } \mathrm{in}_{g,\xi,t} \wedge \mathrm{on}^{h}_{t,s} \wedge \neg \left( \mathrm{in}_{g,\xi,t + 1} \wedge \mathrm{on}^{h}_{t + 1,s} \right) \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
 **`StorageUnit_closing_weight`**
 
 ```math
-\mathit{w}^{h}_{\xi,g,t,s} = \begin{cases} \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{\xi,g,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ \mathit{last}^{h}_{\xi,g,t,s} & \text{if } \neg \mathrm{reset}_{\xi,s} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T},\ s \in \mathcal{S}
+\mathit{w}^{h}_{g,\xi,t,s} = \begin{cases} \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{g,\xi,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ \mathit{last}^{h}_{g,\xi,t,s} & \text{if } \neg \mathrm{reset}_{\xi,s} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
 **`StorageUnit_primary_energy`**
 
 ```math
-\mathit{StorageUnit\_primary\_energy}_{g,\xi} = -\left( \sum_{s \in \mathcal{S}} \sum_{t \in \mathcal{T}} \mathit{soc}_{\xi,t,s} \cdot \mathit{w}^{h}_{\xi,g,t,s} \cdot \mathrm{a}^{h}_{\xi,g,s} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+\mathit{StorageUnit\_primary\_energy}_{g,\xi} = -\left( \sum_{s \in \mathcal{S}} \sum_{t \in \mathcal{T}} \mathit{soc}_{\xi,t,s} \cdot \mathit{w}^{h}_{g,\xi,t,s} \cdot \mathrm{a}^{h}_{g,\xi,s} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`StorageUnit_operational_limit`**
 
 ```math
-\mathit{StorageUnit\_operational\_limit}_{g,\xi} = -\left( \sum_{s \in \mathcal{S}} \sum_{t \in \mathcal{T}} \mathit{soc}_{\xi,t,s} \cdot \mathit{w}^{h}_{\xi,g,t,s} \cdot \mathrm{b}^{h}_{\xi,g,s} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+\mathit{StorageUnit\_operational\_limit}_{g,\xi} = -\left( \sum_{s \in \mathcal{S}} \sum_{t \in \mathcal{T}} \mathit{soc}_{\xi,t,s} \cdot \mathit{w}^{h}_{g,\xi,t,s} \cdot \mathrm{b}^{h}_{g,\xi,s} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`StorageUnit_tech_capacity_expansion`**
@@ -917,19 +917,19 @@ h^{-}_{\xi,t,s} = \mathrm{h}^{-,\mathrm{set}}_{\xi,t,s} \qquad \forall\, \xi \in
 **`StorageUnit_primary_energy_per_period_closes_over_the_horizon`**
 
 ```math
-\lvert \{ t \in \mathcal{T} \,:\, \neg \mathrm{in}_{\xi,g,t} \} \rvert = 0 \qquad \forall\, \xi \in \Xi,\ s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \mathrm{a}^{h}_{\xi,g,s} \text{ is defined} \wedge \mathrm{reset}_{\xi,s}
+\lvert \{ t \in \mathcal{T} \,:\, \neg \mathrm{in}_{g,\xi,t} \} \rvert = 0 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{a}^{h}_{g,\xi,s} \text{ is defined} \wedge \mathrm{reset}_{\xi,s}
 ```
 
 **`StorageUnit_primary_energy_carried_over_has_unit_years`**
 
 ```math
-\mathrm{w}^{\mathrm{yr}}_{y} = 1 \qquad \forall\, \xi \in \Xi,\ s \in \mathcal{S},\ g \in \mathcal{G},\ y \in \mathcal{Y} \,:\, \mathrm{a}^{h}_{\xi,g,s} \text{ is defined} \wedge \neg \mathrm{reset}_{\xi,s}
+\mathrm{w}^{\mathrm{yr}}_{y} = 1 \qquad \forall\, g \in \mathcal{G},\ y \in \mathcal{Y},\ \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{a}^{h}_{g,\xi,s} \text{ is defined} \wedge \neg \mathrm{reset}_{\xi,s}
 ```
 
 **`StorageUnit_operational_limit_carried_over_has_unit_years`**
 
 ```math
-\mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \mathrm{b}^{h}_{\xi,g,s} \text{ is defined} \wedge \neg \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{\xi,g,t}
+\mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} = 1 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{b}^{h}_{g,\xi,s} \text{ is defined} \wedge \neg \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{g,\xi,t}
 ```
 
 **`StorageUnit_marginal_cost_quadratic_without_risk_preference`**

@@ -71,7 +71,7 @@ python -m mathspec markdown --no-legend dispatch.yaml
     **`dispatch`**
 
     ```math
-    0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{capacity}_{g} > 0
+    0 \le \mathit{dispatch}_{g,t} \le \mathrm{capacity}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{capacity}_{g} > 0
     ```
 
 ## Constraint and objective
@@ -177,13 +177,13 @@ python -m mathspec markdown dispatch.yaml
     **`dispatch`**
 
     ```math
-    0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{capacity}_{g} > 0
+    0 \le \mathit{dispatch}_{g,t} \le \mathrm{capacity}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{capacity}_{g} > 0
     ```
 
     #### Objective
 
     ```math
-    \min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g}
+    \min \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} \mathit{dispatch}_{g,t} \cdot \mathrm{cost}_{g}
     ```
 
     #### Subject to
@@ -191,7 +191,7 @@ python -m mathspec markdown dispatch.yaml
     **`power_balance`**
 
     ```math
-    \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
+    \sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
     ```
 
 ## Where to next

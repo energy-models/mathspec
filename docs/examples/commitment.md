@@ -122,14 +122,14 @@ Unit commitment with a start-up ramp, the formulation `cases:` exists for. The s
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{T} \times \mathcal{G}`$ — output of a generator in a snapshot |
-| $`\mathit{status}`$ | `status` over $`\mathcal{T} \times \mathcal{G}`$ — whether the unit is running in a snapshot |
+| $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{G} \times \mathcal{T}`$ — output of a generator in a snapshot |
+| $`\mathit{status}`$ | `status` over $`\mathcal{G} \times \mathcal{T}`$ — whether the unit is running in a snapshot |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{previous\_status}`$ | `previous_status` over $`\mathcal{T} \times \mathcal{G}`$ — the commitment state a unit carries into a snapshot |
+| $`\mathit{previous\_status}`$ | `previous_status` over $`\mathcal{G} \times \mathcal{T}`$ — the commitment state a unit carries into a snapshot |
 
 #### Notation
 
@@ -143,13 +143,13 @@ Unit commitment with a start-up ramp, the formulation `cases:` exists for. The s
 **`dispatch`**
 
 ```math
-0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+0 \le \mathit{dispatch}_{g,t} \le \mathrm{capacity}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 **`status`**
 
 ```math
-\mathit{status}_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{status}_{g,t} \in \{0, 1\} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Definitions
@@ -157,13 +157,13 @@ Unit commitment with a start-up ramp, the formulation `cases:` exists for. The s
 **`previous_status`**
 
 ```math
-\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \\ \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \\ \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{previous\_status}_{g,t} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \\ \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \\ \mathit{status}_{g,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Objective
 
 ```math
-\min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g}
+\min \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} \mathit{dispatch}_{g,t} \cdot \mathrm{cost}_{g}
 ```
 
 #### Subject to
@@ -171,25 +171,25 @@ Unit commitment with a start-up ramp, the formulation `cases:` exists for. The s
 **`power_balance`**
 
 ```math
-\sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
+\sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
 **`upper`**
 
 ```math
-\mathit{dispatch}_{t,g} \le \mathit{status}_{t,g} \cdot \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{dispatch}_{g,t} \le \mathit{status}_{g,t} \cdot \mathrm{capacity}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 **`lower`**
 
 ```math
-\mathit{dispatch}_{t,g} \ge \mathit{status}_{t,g} \cdot \mathrm{min\_output}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{dispatch}_{g,t} \ge \mathit{status}_{g,t} \cdot \mathrm{min\_output}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 **`ramp_up`**
 
 ```math
-\mathit{dispatch}_{t,g} - \mathit{dispatch}_{t \boxminus_{0} 1,g} \le \mathrm{ramp\_limit}_{g} \cdot \mathit{previous\_status}_{t,g} + \mathrm{start\_up\_limit}_{g} \cdot \left( 1 - \mathit{previous\_status}_{t,g} \right) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{dispatch}_{g,t} - \mathit{dispatch}_{g,t \boxminus_{0} 1} \le \mathrm{ramp\_limit}_{g} \cdot \mathit{previous\_status}_{g,t} + \mathrm{start\_up\_limit}_{g} \cdot \left( 1 - \mathit{previous\_status}_{g,t} \right) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Assumptions

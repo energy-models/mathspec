@@ -135,7 +135,7 @@ def test_program_structure(dispatch_program):
     assert list(dispatch_program.parameters) == ['capacity', 'load', 'cost'], 'keyed by name, in file order'
     ((vname, v),) = dispatch_program.variables.items()
     assert vname == 'dispatch'
-    assert v.dims == ('snapshot', 'generator'), 'the frame is the dims, in the order the file wrote it'
+    assert v.dims == ('generator', 'snapshot'), 'the frame is the dims, sorted by name'
     assert v.where == Mask(CAPACITY_POSITIVE)
     assert v.upper == ParameterReference('capacity')
 

@@ -18,8 +18,8 @@ given:
     tech_capacity_expansion: { dims: [global_constraint] }
     scenario_opex: { dims: [scenario] }
     total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Carrier_additions: { dims: [carrier, period] }
+    Bus_injection: { dims: [bus, scenario, snapshot] }
 
 dimensions:
   scenario:

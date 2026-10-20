@@ -22,14 +22,14 @@ given:
     Generator_maintenance: { dims: [scenario, snapshot, generator] }
     Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
   expressions:
-    GlobalConstraint_energy_weight: { dims: [scenario, global_constraint, snapshot] }
-    primary_energy: { dims: [scenario, global_constraint] }
-    operational_limit: { dims: [scenario, global_constraint] }
+    GlobalConstraint_energy_weight: { dims: [global_constraint, scenario, snapshot] }
+    primary_energy: { dims: [global_constraint, scenario] }
+    operational_limit: { dims: [global_constraint, scenario] }
     tech_capacity_expansion: { dims: [global_constraint] }
     scenario_opex: { dims: [scenario] }
     total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Carrier_additions: { dims: [carrier, period] }
+    Bus_injection: { dims: [bus, scenario, snapshot] }
 
 dimensions:
   scenario:
@@ -318,21 +318,21 @@ assumptions:
 |---|---|
 | $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$, data another file declares |
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$, data another file declares |
-| $`\gamma`$ | `Generator_maintenance_pu` over $`\Xi \times \mathcal{G}`$, data another file declares |
+| $`\gamma`$ | `Generator_maintenance_pu` over $`\mathcal{G} \times \Xi`$, data another file declares |
 | $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
 | $`\omega`$ | `CVaR_omega` (scalar), data another file declares |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
-| $`\mu`$ | `Generator_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
-| $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
-| $`\mathit{w}^{\mathrm{gc}}`$ | `GlobalConstraint_energy_weight` over $`\Xi \times \mathcal{L} \times \mathcal{T}`$, an expression another file defines |
-| $`\mathit{primary\_energy}`$ | `primary_energy` over $`\Xi \times \mathcal{L}`$, an expression this file adds `Generator_primary_energy` to |
-| $`\mathit{operational\_limit}`$ | `operational_limit` over $`\Xi \times \mathcal{L}`$, an expression this file adds `Generator_operational_limit` to |
+| $`\mu`$ | `Generator_maintenance` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ |
+| $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ |
+| $`\mathit{w}^{\mathrm{gc}}`$ | `GlobalConstraint_energy_weight` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, an expression another file defines |
+| $`\mathit{primary\_energy}`$ | `primary_energy` over $`\mathcal{L} \times \Xi`$, an expression this file adds `Generator_primary_energy` to |
+| $`\mathit{operational\_limit}`$ | `operational_limit` over $`\mathcal{L} \times \Xi`$, an expression this file adds `Generator_operational_limit` to |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{L}`$, an expression this file adds `Generator_tech_capacity_expansion` to |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Generator_opex` to |
 | $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Generator_capex` to |
-| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression this file adds `Generator_additions` to |
-| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Generator_injection` to |
+| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{I} \times \mathcal{Y}`$, an expression this file adds `Generator_additions` to |
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$, an expression this file adds `Generator_injection` to |
 
 #### Sets
 
@@ -350,30 +350,30 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\Xi \times \mathcal{G}`$ — nominal power |
+| $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\mathcal{G} \times \Xi`$ — nominal power |
 | $`\mathrm{ext}`$ | `Generator_p_nom_extendable` over $`\mathcal{G}`$ — whether the nominal power is a decision |
-| $`\underline{\mathrm{p}}`$ | `Generator_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — least output, per unit of nominal power |
-| $`\overline{\mathrm{p}}`$ | `Generator_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — most output, per unit of nominal power — an availability profile |
-| $`\mathrm{c}`$ | `Generator_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one unit of output |
-| $`\mathrm{c}^{(2)}`$ | `Generator_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of the square of one unit of output |
+| $`\underline{\mathrm{p}}`$ | `Generator_p_min_pu` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — least output, per unit of nominal power |
+| $`\overline{\mathrm{p}}`$ | `Generator_p_max_pu` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — most output, per unit of nominal power — an availability profile |
+| $`\mathrm{c}`$ | `Generator_marginal_cost` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — cost of one unit of output |
+| $`\mathrm{c}^{(2)}`$ | `Generator_marginal_cost_quadratic` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — cost of the square of one unit of output |
 | $`\mathrm{sgn}`$ | `Generator_sign` over $`\mathcal{G}`$ — the sign output enters its bus's balance with — PyPSA's `sign`, `1` unless given, `-1` for a unit that draws power. PyPSA refuses one that differs by scenario (`constants.py:43`) |
 | $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of; no value means the build is continuous |
-| $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\Xi \times \mathcal{G}`$ — how many whole modules a committable build has in place: `Generator_p_nom / Generator_p_nom_mod` where a fixed build is modular, one where it is not, data prep. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
+| $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\mathcal{G} \times \Xi`$ — how many whole modules a committable build has in place: `Generator_p_nom / Generator_p_nom_mod` where a fixed build is modular, one where it is not, data prep. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
 | $`\mathrm{nonneg}`$ | `Generator_p_min_pu_nonneg` over $`\mathcal{G}`$ — true where none of the generator's own minimums-per-unit is negative — PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and scenario, data prep |
-| $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{T} \times \mathcal{G}`$ — whether a generator stands in a snapshot's period — PyPSA's `active`, from build year and lifetime, data prep |
+| $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{G} \times \mathcal{T}`$ — whether a generator stands in a snapshot's period — PyPSA's `active`, from build year and lifetime, data prep |
 | $`\mathrm{act}`$ | `Generator_active_asset` over $`\mathcal{G}`$ — whether a generator is one of PyPSA's `active_assets` — its `active` flag alone, without build year and lifetime, so a unit that stands in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:51`) |
 | $`\mathrm{W}`$ | `Generator_capital_weight` over $`\mathcal{G}`$ — the sum of period weights a generator stands in — PyPSA's `active * period_weighting`, summed, data prep |
-| $`\mathrm{new}`$ | `Generator_first_active` over $`\mathcal{Y} \times \mathcal{G}`$ — one in the first period a generator stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
-| $`\mathrm{p}^{\mathrm{set}}`$ | `Generator_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — a given output schedule; a generator without one has no row here |
-| $`\underline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_min` over $`\Xi \times \mathcal{G}`$ — least nominal power an extendable generator may be built at |
-| $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\Xi \times \mathcal{G}`$ — most nominal power an extendable generator may be built at |
-| $`\mathrm{c}^{\mathrm{cap}}`$ | `Generator_capital_cost` over $`\Xi \times \mathcal{G}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
+| $`\mathrm{new}`$ | `Generator_first_active` over $`\mathcal{G} \times \mathcal{Y}`$ — one in the first period a generator stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
+| $`\mathrm{p}^{\mathrm{set}}`$ | `Generator_p_set` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, `neutral` where the data has no row — a given output schedule; a generator without one has no row here |
+| $`\underline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_min` over $`\mathcal{G} \times \Xi`$ — least nominal power an extendable generator may be built at |
+| $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\mathcal{G} \times \Xi`$ — most nominal power an extendable generator may be built at |
+| $`\mathrm{c}^{\mathrm{cap}}`$ | `Generator_capital_cost` over $`\mathcal{G} \times \Xi`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
 | $`\mathrm{p}^{\mathrm{nom,set}}`$ | `Generator_p_nom_set` over $`\mathcal{G}`$, `neutral` where the data has no row — a given nominal power for an extendable generator; one without a value has no row here |
-| $`\underline{\mathrm{E}}`$ | `Generator_e_sum_min` over $`\Xi \times \mathcal{G}`$ — least energy over the horizon; minus infinity where no floor is meant |
-| $`\overline{\mathrm{E}}`$ | `Generator_e_sum_max` over $`\Xi \times \mathcal{G}`$ — most energy over the horizon — a fuel or emission budget in energy terms; infinity where no cap is meant |
-| $`\mathrm{a}`$ | `Generator_primary_energy_weight` over $`\Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — the constrained attribute per unit of energy at the bus — the carrier's `co2_emissions` over the generator's efficiency at the snapshot, data prep; a generator of an unweighted carrier has no row |
-| $`\mathrm{b}`$ | `Generator_operational_limit_weight` over $`\Xi \times \mathcal{L} \times \mathcal{G}`$, `neutral` where the data has no row — one where the generator is in the row's set — data prep; one outside it has no row |
-| $`\mathrm{m}`$ | `Generator_tech_capacity_weight` over $`\mathcal{L} \times \mathcal{G}`$, `neutral` where the data has no row — one where the generator is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
+| $`\underline{\mathrm{E}}`$ | `Generator_e_sum_min` over $`\mathcal{G} \times \Xi`$ — least energy over the horizon; minus infinity where no floor is meant |
+| $`\overline{\mathrm{E}}`$ | `Generator_e_sum_max` over $`\mathcal{G} \times \Xi`$ — most energy over the horizon — a fuel or emission budget in energy terms; infinity where no cap is meant |
+| $`\mathrm{a}`$ | `Generator_primary_energy_weight` over $`\mathcal{G} \times \mathcal{L} \times \Xi \times \mathcal{T}`$, `neutral` where the data has no row — the constrained attribute per unit of energy at the bus — the carrier's `co2_emissions` over the generator's efficiency at the snapshot, data prep; a generator of an unweighted carrier has no row |
+| $`\mathrm{b}`$ | `Generator_operational_limit_weight` over $`\mathcal{G} \times \mathcal{L} \times \Xi`$, `neutral` where the data has no row — one where the generator is in the row's set — data prep; one outside it has no row |
+| $`\mathrm{m}`$ | `Generator_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{L}`$, `neutral` where the data has no row — one where the generator is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
 #### Conditions
 
@@ -385,7 +385,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`p`$ | `Generator_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-p` — output of a generator in a snapshot |
+| $`p`$ | `Generator_p` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — `Generator-p` — output of a generator in a snapshot |
 | $`N`$ | `Generator_n_mod` over $`\mathcal{G}`$ — `Generator-n_mod` — how many modules of an extendable modular build; none for a unit that is not active |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ — `Generator-p_nom` — nominal power where it is a decision, for a generator that is active; the parameter of the same PyPSA name carries the fixed regime |
 
@@ -393,8 +393,8 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\widetilde{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_effective` over $`\Xi \times \mathcal{G}`$ — the build a generator's limits are taken against — the chosen one where it is extendable, the given one otherwise |
-| $`\widehat{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_committed` over $`\Xi \times \mathcal{G}`$ — the build a committed unit's ramp rows are taken against — one module where the build is extendable and modular, the given build otherwise |
+| $`\widetilde{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_effective` over $`\mathcal{G} \times \Xi`$ — the build a generator's limits are taken against — the chosen one where it is extendable, the given one otherwise |
+| $`\widehat{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_committed` over $`\mathcal{G} \times \Xi`$ — the build a committed unit's ramp rows are taken against — one module where the build is extendable and modular, the given build otherwise |
 | $`\mathit{Generator\_primary\_energy}`$ | `Generator_primary_energy` over $`\mathcal{L} \times \Xi`$ |
 | $`\mathit{Generator\_operational\_limit}`$ | `Generator_operational_limit` over $`\mathcal{L} \times \Xi`$ |
 | $`\mathit{Generator\_tech\_capacity\_expansion}`$ | `Generator_tech_capacity_expansion` over $`\mathcal{L}`$ |
@@ -408,7 +408,7 @@ assumptions:
 **`Generator_committed`**
 
 ```math
-\mathrm{on}^{\mathrm{com}}_{g,t} \iff \mathrm{com}_{g} \wedge \mathrm{on}_{t,g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\mathrm{on}^{\mathrm{com}}_{g,t} \iff \mathrm{com}_{g} \wedge \mathrm{on}_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Variable domains
@@ -416,7 +416,7 @@ assumptions:
 **`Generator_p`**
 
 ```math
-p_{\xi,t,g} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}_{t,g}
+p_{g,\xi,t} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}_{g,t}
 ```
 
 **`Generator_n_mod`**
@@ -436,55 +436,55 @@ P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \
 **`Generator_p_nom_effective`**
 
 ```math
-\widetilde{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} = \begin{cases} P_{g} & \text{if } \mathrm{ext}_{g} \\ \mathrm{p}^{\mathrm{nom}}_{\xi,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+\widetilde{\mathrm{p}}^{\mathrm{nom}}_{g,\xi} = \begin{cases} P_{g} & \text{if } \mathrm{ext}_{g} \\ \mathrm{p}^{\mathrm{nom}}_{g,\xi} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`Generator_p_nom_committed`**
 
 ```math
-\widehat{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} = \begin{cases} \mathrm{p}^{\mathrm{mod}}_{g} & \text{if } \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \\ \mathrm{p}^{\mathrm{nom}}_{\xi,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+\widehat{\mathrm{p}}^{\mathrm{nom}}_{g,\xi} = \begin{cases} \mathrm{p}^{\mathrm{mod}}_{g} & \text{if } \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \\ \mathrm{p}^{\mathrm{nom}}_{g,\xi} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`Generator_primary_energy`**
 
 ```math
-\mathit{Generator\_primary\_energy}_{l,\xi} = \sum_{g \in \mathcal{G}} \sum_{t \in \mathcal{T}} p_{\xi,t,g} \cdot \mathit{w}^{\mathrm{gc}}_{\xi,l,t} \cdot \mathrm{a}_{\xi,l,t,g} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi
+\mathit{Generator\_primary\_energy}_{l,\xi} = \sum_{g \in \mathcal{G}} \sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathit{w}^{\mathrm{gc}}_{l,\xi,t} \cdot \mathrm{a}_{g,l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi
 ```
 
 **`Generator_operational_limit`**
 
 ```math
-\mathit{Generator\_operational\_limit}_{l,\xi} = \sum_{g \in \mathcal{G}} \sum_{t \in \mathcal{T}} p_{\xi,t,g} \cdot \mathit{w}^{\mathrm{gc}}_{\xi,l,t} \cdot \mathrm{b}_{\xi,l,g} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi
+\mathit{Generator\_operational\_limit}_{l,\xi} = \sum_{g \in \mathcal{G}} \sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathit{w}^{\mathrm{gc}}_{l,\xi,t} \cdot \mathrm{b}_{g,l,\xi} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi
 ```
 
 **`Generator_tech_capacity_expansion`**
 
 ```math
-\mathit{Generator\_tech\_capacity\_expansion}_{l} = \sum_{g \in \mathcal{G}} P_{g} \cdot \mathrm{m}_{l,g} \qquad \forall\, l \in \mathcal{L}
+\mathit{Generator\_tech\_capacity\_expansion}_{l} = \sum_{g \in \mathcal{G}} P_{g} \cdot \mathrm{m}_{g,l} \qquad \forall\, l \in \mathcal{L}
 ```
 
 **`Generator_opex`**
 
 ```math
-\mathit{Generator\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} p_{\xi,t,g} \cdot \mathrm{c}_{\xi,t,g} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} p_{\xi,t,g} \cdot p_{\xi,t,g} \cdot \mathrm{c}^{(2)}_{\xi,t,g} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Generator\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} p_{g,\xi,t} \cdot \mathrm{c}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} p_{g,\xi,t} \cdot p_{g,\xi,t} \cdot \mathrm{c}^{(2)}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 **`Generator_capex`**
 
 ```math
-\mathit{Generator\_capex} = \sum_{\xi \in \Xi,\ g \in \mathcal{G}} \pi_{\xi} \cdot P_{g} \cdot \mathrm{c}^{\mathrm{cap}}_{\xi,g} \cdot \mathrm{W}_{g}
+\mathit{Generator\_capex} = \sum_{g \in \mathcal{G},\ \xi \in \Xi} \pi_{\xi} \cdot P_{g} \cdot \mathrm{c}^{\mathrm{cap}}_{g,\xi} \cdot \mathrm{W}_{g}
 ```
 
 **`Generator_additions`**
 
 ```math
-\mathit{Generator\_additions}_{i,y} = \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_carrier}(g) = i} P_{g} \cdot \mathrm{new}_{y,g} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
+\mathit{Generator\_additions}_{i,y} = \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_carrier}(g) = i} P_{g} \cdot \mathrm{new}_{g,y} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 **`Generator_injection`**
 
 ```math
-\mathit{Generator\_injection}_{n,\xi,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_bus}(g) = n} \mathrm{sgn}_{g} \cdot p_{\xi,t,g} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Generator\_injection}_{n,\xi,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_bus}(g) = n} \mathrm{sgn}_{g} \cdot p_{g,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Subject to
@@ -492,37 +492,37 @@ P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \
 **`Generator_fix_p_lower`**
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{g,\xi,t} \ge \underline{\mathrm{p}}_{g,\xi,t} \cdot \mathrm{p}^{\mathrm{nom}}_{g,\xi} \cdot \left( 1 - \gamma_{g,\xi} \cdot \mu_{g,\xi,t} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{g,t}
 ```
 
 **`Generator_fix_p_upper`**
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( 1 - \gamma_{\xi,g} \cdot \mu_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{g,\xi,t} \le \overline{\mathrm{p}}_{g,\xi,t} \cdot \mathrm{p}^{\mathrm{nom}}_{g,\xi} \cdot \left( 1 - \gamma_{g,\xi} \cdot \mu_{g,\xi,t} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{g,t}
 ```
 
 **`Generator_ext_p_lower`**
 
 ```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{g,\xi,t} \ge \underline{\mathrm{p}}_{g,\xi,t} \cdot \left( P_{g} - \gamma_{g,\xi} \cdot \mu^{\mathrm{nom}}_{g,\xi,t} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{g,t}
 ```
 
 **`Generator_ext_p_upper`**
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+p_{g,\xi,t} \le \overline{\mathrm{p}}_{g,\xi,t} \cdot \left( P_{g} - \gamma_{g,\xi} \cdot \mu^{\mathrm{nom}}_{g,\xi,t} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}_{g} \wedge \neg \mathrm{com}_{g} \wedge \mathrm{on}_{g,t}
 ```
 
 **`Generator_ext_p_nom_lower`**
 
 ```math
-P_{g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{act}_{g}
+P_{g} \ge \underline{\mathrm{p}}^{\mathrm{nom}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{ext}_{g} \wedge \mathrm{act}_{g}
 ```
 
 **`Generator_ext_p_nom_upper`**
 
 ```math
-P_{g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \overline{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \text{ is defined}
+P_{g} \le \overline{\mathrm{p}}^{\mathrm{nom}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{ext}_{g} \wedge \mathrm{act}_{g} \wedge \overline{\mathrm{p}}^{\mathrm{nom}}_{g,\xi} \text{ is defined}
 ```
 
 **`Generator_p_nom_set`**
@@ -534,13 +534,13 @@ P_{g} = \mathrm{p}^{\mathrm{nom,set}}_{g} \qquad \forall\, g \in \mathcal{G} \,:
 **`Generator_e_sum_min`**
 
 ```math
-\sum_{t \in \mathcal{T}} p_{\xi,t,g} \cdot \mathrm{w}^{\mathrm{gen}}_{t} \ge \underline{\mathrm{E}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \underline{\mathrm{E}}_{\xi,g} \text{ is defined}
+\sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathrm{w}^{\mathrm{gen}}_{t} \ge \underline{\mathrm{E}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \underline{\mathrm{E}}_{g,\xi} \text{ is defined}
 ```
 
 **`Generator_e_sum_max`**
 
 ```math
-\sum_{t \in \mathcal{T}} p_{\xi,t,g} \cdot \mathrm{w}^{\mathrm{gen}}_{t} \le \overline{\mathrm{E}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \overline{\mathrm{E}}_{\xi,g} \text{ is defined}
+\sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathrm{w}^{\mathrm{gen}}_{t} \le \overline{\mathrm{E}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \overline{\mathrm{E}}_{g,\xi} \text{ is defined}
 ```
 
 **`Generator_p_nom_modularity`**
@@ -552,7 +552,7 @@ P_{g} = \mathrm{p}^{\mathrm{mod}}_{g} \cdot N_{g} \qquad \forall\, g \in \mathca
 **`Generator_p_set`**
 
 ```math
-p_{\xi,t,g} = \mathrm{p}^{\mathrm{set}}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{p}^{\mathrm{set}}_{\xi,t,g} \text{ is defined} \wedge \mathrm{on}_{t,g}
+p_{g,\xi,t} = \mathrm{p}^{\mathrm{set}}_{g,\xi,t} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{set}}_{g,\xi,t} \text{ is defined} \wedge \mathrm{on}_{g,t}
 ```
 
 #### Assumptions
@@ -560,6 +560,6 @@ p_{\xi,t,g} = \mathrm{p}^{\mathrm{set}}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\
 **`Generator_marginal_cost_quadratic_without_risk_preference`**
 
 ```math
-\mathrm{c}^{(2)}_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \omega \text{ is defined}
+\mathrm{c}^{(2)}_{g,\xi,t} = 0 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \omega \text{ is defined}
 ```
 <!-- gallery:end -->

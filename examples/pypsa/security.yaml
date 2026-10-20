@@ -14,7 +14,7 @@ given:
     Line_s_nom_ext: { dims: [line] }
     Transformer_s_nom_ext: { dims: [transformer] }
   expressions:
-    Line_s_monitored: { dims: [scenario, snapshot, line] }
+    Line_s_monitored: { dims: [line, scenario, snapshot] }
     Transformer_s_monitored: { dims: [scenario, snapshot, transformer] }
 
 dimensions:

@@ -71,14 +71,14 @@ The coupling surface every component in this library is written against: one flo
 
 | Symbol | Meaning |
 |---|---|
-| $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — what a port puts into its bus in a snapshot, negative for a withdrawal |
+| $`f`$ | `Port_p` over $`\mathcal{J} \times \mathcal{T}`$ — what a port puts into its bus in a snapshot, negative for a withdrawal |
 
 #### Variable domains
 
 **`Port_p`**
 
 ```math
-f_{t,j} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
+f_{j,t} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J},\ t \in \mathcal{T}
 ```
 
 #### Objective
@@ -92,6 +92,6 @@ f_{t,j} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
 **`Bus_nodal_balance`**
 
 ```math
-\sum_{j \in \mathcal{J} \,:\, \mathrm{Port\_bus}(j) = n} f_{t,j} = 0 \qquad \forall\, t \in \mathcal{T},\ n \in \mathcal{N}
+\sum_{j \in \mathcal{J} \,:\, \mathrm{Port\_bus}(j) = n} f_{j,t} = 0 \qquad \forall\, n \in \mathcal{N},\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->

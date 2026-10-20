@@ -21,7 +21,7 @@ given:
     Line_s_nom_ext: { dims: [line] }
     Transformer_s_nom_ext: { dims: [transformer] }
   expressions:
-    Line_s_monitored: { dims: [scenario, snapshot, line] }
+    Line_s_monitored: { dims: [line, scenario, snapshot] }
     Transformer_s_monitored: { dims: [scenario, snapshot, transformer] }
 
 dimensions:
@@ -196,15 +196,15 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{s}^{\mathrm{nom}}`$ | `Line_s_nom` over $`\Xi \times \mathcal{K}`$, data another file declares |
+| $`\mathrm{s}^{\mathrm{nom}}`$ | `Line_s_nom` over $`\mathcal{K} \times \Xi`$, data another file declares |
 | $`\mathrm{ext}^{s}`$ | `Line_s_nom_extendable` over $`\mathcal{K}`$, data another file declares |
-| $`\overline{\mathrm{s}}`$ | `Line_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$, data another file declares |
+| $`\overline{\mathrm{s}}`$ | `Line_s_max_pu` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$, data another file declares |
 | $`\sigma^{\mathrm{nom}}`$ | `Transformer_s_nom` over $`\Xi \times \mathcal{M}`$, data another file declares |
 | $`\mathrm{ext}^{\sigma}`$ | `Transformer_s_nom_extendable` over $`\mathcal{M}`$, data another file declares |
 | $`\overline{\sigma}`$ | `Transformer_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, data another file declares |
 | $`S`$ | `Line_s_nom_ext` over $`\mathcal{K}`$ |
 | $`\Sigma`$ | `Transformer_s_nom_ext` over $`\mathcal{M}`$ |
-| $`\check{s}`$ | `Line_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$, an expression another file defines |
+| $`\check{s}`$ | `Line_s_monitored` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$, an expression another file defines |
 | $`\check{\sigma}`$ | `Transformer_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, an expression another file defines |
 
 #### Sets
@@ -222,21 +222,21 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\beta`$ | `Line_BODF` over $`\mathcal{Y} \times \mathcal{K} \times \mathcal{K}^{\mathrm{out}}`$, `neutral` where the data has no row — the share of an outaged branch's flow a line takes on when that branch goes out — PyPSA's `BODF`, from the PTDF of the sub-network the period's active branches form, data prep; a row only where the line and the outage are active in the period and share a sub-network, -1 at the outaged line itself. The factors are the same in every scenario, because PyPSA takes those of the first scenario (`abstract.py:534`) |
-| $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{K}^{\mathrm{out}}`$, `neutral` where the data has no row — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's; a row only where the transformer and the outage are active in the period and share a sub-network |
+| $`\beta`$ | `Line_BODF` over $`\mathcal{K} \times \mathcal{K}^{\mathrm{out}} \times \mathcal{Y}`$, `neutral` where the data has no row — the share of an outaged branch's flow a line takes on when that branch goes out — PyPSA's `BODF`, from the PTDF of the sub-network the period's active branches form, data prep; a row only where the line and the outage are active in the period and share a sub-network, -1 at the outaged line itself. The factors are the same in every scenario, because PyPSA takes those of the first scenario (`abstract.py:534`) |
+| $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{K}^{\mathrm{out}} \times \mathcal{Y} \times \mathcal{M}`$, `neutral` where the data has no row — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's; a row only where the transformer and the outage are active in the period and share a sub-network |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\hat{s}`$ | `Outage_s` over $`\Xi \times \mathcal{T} \times \mathcal{K}^{\mathrm{out}}`$ — the flow an outage takes off its branch — the outaged line's or transformer's flow before it goes out |
+| $`\hat{s}`$ | `Outage_s` over $`\mathcal{K}^{\mathrm{out}} \times \Xi \times \mathcal{T}`$ — the flow an outage takes off its branch — the outaged line's or transformer's flow before it goes out |
 
 #### Definitions
 
 **`Outage_s`**
 
 ```math
-\hat{s}_{\xi,t,\kappa} = \begin{cases} \check{s}_{\xi,t,\mathrm{Outage\_line}(\kappa)} & \text{if } \mathrm{Outage\_line}(\kappa) \text{ is defined} \\ \check{\sigma}_{\xi,t,\mathrm{Outage\_transformer}(\kappa)} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ \kappa \in \mathcal{K}^{\mathrm{out}}
+\hat{s}_{\kappa,\xi,t} = \begin{cases} \check{s}_{\mathrm{Outage\_line}(\kappa),\xi,t} & \text{if } \mathrm{Outage\_line}(\kappa) \text{ is defined} \\ \check{\sigma}_{\xi,t,\mathrm{Outage\_transformer}(\kappa)} & \text{otherwise} \end{cases} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Subject to
@@ -244,48 +244,48 @@ constraints:
 **`Line_fix_s_lower_security`**
 
 ```math
-\check{s}_{\xi,t,k} + \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \text{ is defined}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined}
 ```
 
 **`Line_fix_s_upper_security`**
 
 ```math
-\check{s}_{\xi,t,k} + \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot \mathrm{s}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \text{ is defined}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined}
 ```
 
 **`Line_ext_s_lower_security`**
 
 ```math
-\check{s}_{\xi,t,k} + \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \ge -\overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \text{ is defined}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\mathrm{s}}_{k,\xi,t} \cdot S_{k} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined}
 ```
 
 **`Line_ext_s_upper_security`**
 
 ```math
-\check{s}_{\xi,t,k} + \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{\mathrm{snapshot\_period}(t),k,\kappa} \text{ is defined}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot S_{k} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined}
 ```
 
 **`Transformer_fix_s_lower_security`**
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \text{ is defined}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined}
 ```
 
 **`Transformer_fix_s_upper_security`**
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \text{ is defined}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined}
 ```
 
 **`Transformer_ext_s_lower_security`**
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \ge -\overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \text{ is defined}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined}
 ```
 
 **`Transformer_ext_s_upper_security`**
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \cdot \hat{s}_{\xi,t,\kappa} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ \kappa \in \mathcal{K}^{\mathrm{out}} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\mathrm{snapshot\_period}(t),m,\kappa} \text{ is defined}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined}
 ```
 <!-- gallery:end -->

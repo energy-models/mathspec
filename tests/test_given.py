@@ -99,7 +99,7 @@ def test_a_program_carries_the_column_it_reads_apart_from_the_ones_it_builds():
     assert sorted(program.given.variables) == ['flow'], (
         'and uses, for each of these, the column the host model provides'
     )
-    assert program.given.variables['flow'].dims == ('snapshot', 'port'), (
+    assert program.given.variables['flow'].dims == ('port', 'snapshot'), (
         'the frame is what a consumer checks against the host'
     )
 
@@ -279,14 +279,14 @@ def test_a_dual_may_name_a_row_family_this_file_does_not_build():
 def test_the_program_carries_the_row_family_a_consumer_binds():
     program = to_spec(LAYER).program
     assert sorted(program.given.constraints) == ['balance']
-    assert program.given.constraints['balance'].dims == ('snapshot', 'bus'), (
+    assert program.given.constraints['balance'].dims == ('bus', 'snapshot'), (
         'the frame is what a consumer checks against the host'
     )
 
 
 def test_the_dual_takes_its_frame_from_the_given_entry():
     """Without the frame the reported expression has no dims, and nothing downstream could shape it."""
-    assert to_markdown(LAYER).count(r'\lambda_{\mathrm{balance},t,b}') == 1
+    assert to_markdown(LAYER).count(r'\lambda_{\mathrm{balance},b,t}') == 1, 'the dual prints once, over its frame'
 
 
 def test_a_given_row_family_prints_under_the_given_heading():
@@ -499,7 +499,7 @@ def test_a_fragment_reads_an_expression_it_does_not_define():
 def test_a_program_carries_the_expression_it_reads_apart_from_the_ones_it_defines():
     program = to_spec(BALANCE).program
     assert not program.expressions
-    assert program.given.expressions['injection'].dims == ('snapshot', 'bus')
+    assert program.given.expressions['injection'].dims == ('bus', 'snapshot'), 'the dims sorted by name'
 
 
 def test_a_given_expression_prints_under_the_given_heading():

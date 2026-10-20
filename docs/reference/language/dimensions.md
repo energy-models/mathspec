@@ -19,6 +19,11 @@ dimensions:
 
 Every dimension named anywhere in the file is declared here.
 
+The order of the entries under `dimensions:`, and the order of a `dims:` list,
+change nothing. An entry is indexed by its dimensions sorted by name, and the
+indices print in that order: a variable `p` with `dims: [snapshot, generator]`
+prints as $`p_{g,t}`$.
+
 | Field         |                                                       |                 |
 | ------------- | ----------------------------------------------------- | --------------- |
 | `dtype`       | `float`, `int`, `str`, `datetime`                     | default `str`   |

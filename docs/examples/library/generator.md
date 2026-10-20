@@ -72,7 +72,7 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 
 | Symbol | Meaning |
 |---|---|
-| $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — the surface introduces this flow, and this file pins it at its own ports |
+| $`f`$ | `Port_p` over $`\mathcal{J} \times \mathcal{T}`$ — the surface introduces this flow, and this file pins it at its own ports |
 | $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Generator_cost` to |
 
 #### Sets
@@ -94,7 +94,7 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 
 | Symbol | Meaning |
 |---|---|
-| $`p`$ | `Generator_p` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-p` — what a generator produces in a snapshot |
+| $`p`$ | `Generator_p` over $`\mathcal{G} \times \mathcal{T}`$ — `Generator-p` — what a generator produces in a snapshot |
 
 #### Definitions
 
@@ -107,7 +107,7 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 **`Generator_p`**
 
 ```math
-0 \le p_{t,g} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+0 \le p_{g,t} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Definitions
@@ -115,7 +115,7 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 **`Generator_cost`**
 
 ```math
-\mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+\mathit{Generator\_cost} = \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} \cdot \mathrm{c}_{g}
 ```
 
 #### Subject to
@@ -123,6 +123,6 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 **`Generator_injection`**
 
 ```math
-f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+f_{\mathrm{Generator\_port}(g),t} = p_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->

@@ -24,9 +24,9 @@ given:
     Process_shut_down: { dims: [scenario, snapshot, process], domain: integer }
     Process_p_nom_ext: { dims: [process] }
   expressions:
-    Process_p_nom_effective: { dims: [scenario, process] }
-    Process_previous_status: { dims: [scenario, snapshot, process] }
-    Process_p_nom_committed: { dims: [scenario, process] }
+    Process_p_nom_effective: { dims: [process, scenario] }
+    Process_previous_status: { dims: [process, scenario, snapshot] }
+    Process_p_nom_committed: { dims: [process, scenario] }
   conditions:
     Process_com_ext: { dims: [process, snapshot] }
 
@@ -261,18 +261,18 @@ assumptions:
 |---|---|
 | $`\mathrm{ext}^{z}`$ | `Process_p_nom_extendable` over $`\mathcal{J}`$, data another file declares |
 | $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$, data another file declares |
-| $`\mathrm{u}^{z,0}`$ | `Process_status_initial` over $`\Xi \times \mathcal{J}`$, data another file declares |
+| $`\mathrm{u}^{z,0}`$ | `Process_status_initial` over $`\mathcal{J} \times \Xi`$, data another file declares |
 | $`\mathrm{z}^{\mathrm{mod}}`$ | `Process_p_nom_mod` over $`\mathcal{J}`$, data another file declares |
-| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$, data another file declares |
-| $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{T} \times \mathcal{J}`$, data another file declares |
-| $`z`$ | `Process_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
-| $`u^{z}`$ | `Process_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
-| $`\mathit{up}^{z}`$ | `Process_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
-| $`\mathit{dn}^{z}`$ | `Process_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
+| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\mathcal{J} \times \Xi`$, data another file declares |
+| $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{J} \times \mathcal{T}`$, data another file declares |
+| $`z`$ | `Process_p` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
+| $`u^{z}`$ | `Process_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
+| $`\mathit{up}^{z}`$ | `Process_start_up` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
+| $`\mathit{dn}^{z}`$ | `Process_shut_down` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ |
-| $`\widetilde{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_effective` over $`\Xi \times \mathcal{J}`$, an expression another file defines |
-| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, an expression another file defines |
-| $`\widehat{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_committed` over $`\Xi \times \mathcal{J}`$, an expression another file defines |
+| $`\widetilde{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_effective` over $`\mathcal{J} \times \Xi`$, an expression another file defines |
+| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, an expression another file defines |
+| $`\widehat{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_committed` over $`\mathcal{J} \times \Xi`$, an expression another file defines |
 | $`\mathrm{on}^{z,\mathrm{com,ext}}`$ | `Process_com_ext` over $`\mathcal{J} \times \mathcal{T}`$, a condition another file defines |
 
 #### Sets
@@ -288,11 +288,11 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{ru}^{z}`$ | `Process_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — most a process may raise its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{rd}^{z}`$ | `Process_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — most a process may lower its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{ru}^{z,\mathrm{up}}`$ | `Process_ramp_limit_start_up` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — most internal power in the snapshot a process starts, per unit of nominal power; no value means no limit |
-| $`\mathrm{rd}^{z,\mathrm{dn}}`$ | `Process_ramp_limit_shut_down` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — most internal power in the snapshot before a process stops, per unit of nominal power; no value means no limit |
-| $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the internal power a process brought into the horizon — PyPSA's `p_init`, read only where the process came in running; no value means it is unknown, so the process carries no ramp row at the first snapshot |
+| $`\mathrm{ru}^{z}`$ | `Process_ramp_limit_up` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, `neutral` where the data has no row — most a process may raise its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{rd}^{z}`$ | `Process_ramp_limit_down` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, `neutral` where the data has no row — most a process may lower its internal power between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
+| $`\mathrm{ru}^{z,\mathrm{up}}`$ | `Process_ramp_limit_start_up` over $`\mathcal{J} \times \Xi`$, `neutral` where the data has no row — most internal power in the snapshot a process starts, per unit of nominal power; no value means no limit |
+| $`\mathrm{rd}^{z,\mathrm{dn}}`$ | `Process_ramp_limit_shut_down` over $`\mathcal{J} \times \Xi`$, `neutral` where the data has no row — most internal power in the snapshot before a process stops, per unit of nominal power; no value means no limit |
+| $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\mathcal{J} \times \Xi`$, `neutral` where the data has no row — the internal power a process brought into the horizon — PyPSA's `p_init`, read only where the process came in running; no value means it is unknown, so the process carries no ramp row at the first snapshot |
 
 #### Conditions
 
@@ -304,13 +304,13 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{z}`$ | `Process_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the internal power a process carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
-| $`\widetilde{\mathrm{ru}}^{z}`$ | `Process_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the ramp limit a process's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row |
-| $`\widetilde{\mathrm{rd}}^{z}`$ | `Process_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the ramp limit a process's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row |
-| $`\widetilde{\mathrm{ru}}^{z,\mathrm{up}}`$ | `Process_start_up_rate` over $`\Xi \times \mathcal{J}`$ — the start-up ramp a process's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none |
-| $`\widetilde{\mathrm{rd}}^{z,\mathrm{dn}}`$ | `Process_shut_down_rate` over $`\Xi \times \mathcal{J}`$ — the shut-down ramp a process's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none |
-| $`\Delta^{z,+}`$ | `Process_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — how far a process may raise internal power between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
-| $`\Delta^{z,-}`$ | `Process_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — how far a process may lower internal power between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
+| $`\overleftarrow{z}`$ | `Process_previous_p` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the internal power a process carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
+| $`\widetilde{\mathrm{ru}}^{z}`$ | `Process_ramp_up_rate` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the ramp limit a process's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row |
+| $`\widetilde{\mathrm{rd}}^{z}`$ | `Process_ramp_down_rate` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the ramp limit a process's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row |
+| $`\widetilde{\mathrm{ru}}^{z,\mathrm{up}}`$ | `Process_start_up_rate` over $`\mathcal{J} \times \Xi`$ — the start-up ramp a process's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none |
+| $`\widetilde{\mathrm{rd}}^{z,\mathrm{dn}}`$ | `Process_shut_down_rate` over $`\mathcal{J} \times \Xi`$ — the shut-down ramp a process's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none |
+| $`\Delta^{z,+}`$ | `Process_ramp_up_allowance` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — how far a process may raise internal power between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
+| $`\Delta^{z,-}`$ | `Process_ramp_down_allowance` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — how far a process may lower internal power between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 
 #### Notation
 
@@ -324,7 +324,7 @@ assumptions:
 **`Process_ramps_from_previous`**
 
 ```math
-\mathrm{prev}^{z}_{j,\xi,t} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{\xi,j} = 0 \vee \mathrm{z}^{0}_{\xi,j} \text{ is defined} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathrm{prev}^{z}_{j,\xi,t} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{j,\xi} = 0 \vee \mathrm{z}^{0}_{j,\xi} \text{ is defined} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Definitions
@@ -332,43 +332,43 @@ assumptions:
 **`Process_previous_p`**
 
 ```math
-\overleftarrow{z}_{\xi,t,j} = \begin{cases} \mathrm{u}^{z,0}_{\xi,j} \cdot \mathrm{z}^{0}_{\xi,j} & \text{if } \mathrm{pos}(t) = 0 \\ z_{\xi,t - 1,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+\overleftarrow{z}_{j,\xi,t} = \begin{cases} \mathrm{u}^{z,0}_{j,\xi} \cdot \mathrm{z}^{0}_{j,\xi} & \text{if } \mathrm{pos}(t) = 0 \\ z_{j,\xi,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Process_ramp_up_rate`**
 
 ```math
-\widetilde{\mathrm{ru}}^{z}_{\xi,t,j} = \begin{cases} \mathrm{ru}^{z}_{\xi,t,j} & \text{if } \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+\widetilde{\mathrm{ru}}^{z}_{j,\xi,t} = \begin{cases} \mathrm{ru}^{z}_{j,\xi,t} & \text{if } \mathrm{ru}^{z}_{j,\xi,t} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Process_ramp_down_rate`**
 
 ```math
-\widetilde{\mathrm{rd}}^{z}_{\xi,t,j} = \begin{cases} \mathrm{rd}^{z}_{\xi,t,j} & \text{if } \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+\widetilde{\mathrm{rd}}^{z}_{j,\xi,t} = \begin{cases} \mathrm{rd}^{z}_{j,\xi,t} & \text{if } \mathrm{rd}^{z}_{j,\xi,t} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Process_start_up_rate`**
 
 ```math
-\widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} = \begin{cases} \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} & \text{if } \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J}
+\widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{j,\xi} = \begin{cases} \mathrm{ru}^{z,\mathrm{up}}_{j,\xi} & \text{if } \mathrm{ru}^{z,\mathrm{up}}_{j,\xi} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi
 ```
 
 **`Process_shut_down_rate`**
 
 ```math
-\widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} = \begin{cases} \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} & \text{if } \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J}
+\widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{j,\xi} = \begin{cases} \mathrm{rd}^{z,\mathrm{dn}}_{j,\xi} & \text{if } \mathrm{rd}^{z,\mathrm{dn}}_{j,\xi} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi
 ```
 
 **`Process_ramp_up_allowance`**
 
 ```math
-\Delta^{z,+}_{\xi,t,j} = \begin{cases} \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \overleftarrow{u}^{z}_{\xi,t,j} + \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \overleftarrow{u}^{z}_{\xi,t,j} \right) & \text{if } \mathrm{com}^{z}_{j} \\ \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot \widetilde{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+\Delta^{z,+}_{j,\xi,t} = \begin{cases} \widetilde{\mathrm{ru}}^{z}_{j,\xi,t} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} \cdot \overleftarrow{u}^{z}_{j,\xi,t} + \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{j,\xi} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} \cdot \left( u^{z}_{j,\xi,t} - \overleftarrow{u}^{z}_{j,\xi,t} \right) & \text{if } \mathrm{com}^{z}_{j} \\ \widetilde{\mathrm{ru}}^{z}_{j,\xi,t} \cdot \widetilde{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Process_ramp_down_allowance`**
 
 ```math
-\Delta^{z,-}_{\xi,t,j} = \begin{cases} \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot u^{z}_{\xi,t,j} + \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \left( \overleftarrow{u}^{z}_{\xi,t,j} - u^{z}_{\xi,t,j} \right) & \text{if } \mathrm{com}^{z}_{j} \\ \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot \widetilde{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+\Delta^{z,-}_{j,\xi,t} = \begin{cases} \widetilde{\mathrm{rd}}^{z}_{j,\xi,t} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} \cdot u^{z}_{j,\xi,t} + \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{j,\xi} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} \cdot \left( \overleftarrow{u}^{z}_{j,\xi,t} - u^{z}_{j,\xi,t} \right) & \text{if } \mathrm{com}^{z}_{j} \\ \widetilde{\mathrm{rd}}^{z}_{j,\xi,t} \cdot \widetilde{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Subject to
@@ -376,37 +376,37 @@ assumptions:
 **`Process_p_ramp_limit_up_run_big_m`**
 
 ```math
-z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \overleftarrow{u}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{j,\xi,t}
+z_{j,\xi,t} - \overleftarrow{z}_{j,\xi,t} \le \widetilde{\mathrm{ru}}^{z}_{j,\xi,t} \cdot Z_{j} + \mathrm{M}^{z}_{j,\xi} - \mathrm{M}^{z}_{j,\xi} \cdot \overleftarrow{u}^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \wedge \left( \mathrm{ru}^{z}_{j,\xi,t} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{j,\xi} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{j,\xi,t}
 ```
 
 **`Process_p_ramp_limit_up_start_big_m`**
 
 ```math
-z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{up}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{j,\xi,t}
+z_{j,\xi,t} - \overleftarrow{z}_{j,\xi,t} \le \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{j,\xi} \cdot Z_{j} + \mathrm{M}^{z}_{j,\xi} - \mathrm{M}^{z}_{j,\xi} \cdot \mathit{up}^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \wedge \left( \mathrm{ru}^{z}_{j,\xi,t} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{j,\xi} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{j,\xi,t}
 ```
 
 **`Process_p_ramp_limit_down_run_big_m`**
 
 ```math
-\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot u^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \wedge \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{j,\xi,t}
+\overleftarrow{z}_{j,\xi,t} - z_{j,\xi,t} \le \widetilde{\mathrm{rd}}^{z}_{j,\xi,t} \cdot Z_{j} + \mathrm{M}^{z}_{j,\xi} - \mathrm{M}^{z}_{j,\xi} \cdot u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \wedge \left( \mathrm{rd}^{z}_{j,\xi,t} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{j,\xi} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{j,\xi,t}
 ```
 
 **`Process_p_ramp_limit_down_shut_big_m`**
 
 ```math
-\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot Z_{j} + \mathrm{M}^{z}_{\xi,j} - \mathrm{M}^{z}_{\xi,j} \cdot \mathit{dn}^{z}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \wedge \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{j,\xi,t}
+\overleftarrow{z}_{j,\xi,t} - z_{j,\xi,t} \le \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{j,\xi} \cdot Z_{j} + \mathrm{M}^{z}_{j,\xi} - \mathrm{M}^{z}_{j,\xi} \cdot \mathit{dn}^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \wedge \left( \mathrm{rd}^{z}_{j,\xi,t} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{j,\xi} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{j,\xi,t}
 ```
 
 **`Process_p_ramp_limit_up`**
 
 ```math
-z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \Delta^{z,+}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \mathrm{prev}^{z}_{j,\xi,t} \wedge \mathrm{on}^{z}_{t,j}
+z_{j,\xi,t} - \overleftarrow{z}_{j,\xi,t} \le \Delta^{z,+}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \left( \mathrm{ru}^{z}_{j,\xi,t} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{j,\xi} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \mathrm{prev}^{z}_{j,\xi,t} \wedge \mathrm{on}^{z}_{j,t}
 ```
 
 **`Process_p_ramp_limit_down`**
 
 ```math
-\overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \Delta^{z,-}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \mathrm{prev}^{z}_{j,\xi,t} \wedge \mathrm{on}^{z}_{t,j}
+\overleftarrow{z}_{j,\xi,t} - z_{j,\xi,t} \le \Delta^{z,-}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \left( \mathrm{rd}^{z}_{j,\xi,t} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{j,\xi} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \mathrm{prev}^{z}_{j,\xi,t} \wedge \mathrm{on}^{z}_{j,t}
 ```
 
 #### Assumptions
@@ -414,6 +414,6 @@ z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \Delta^{z,+}_{\xi,t,j} \qquad \for
 **`Process_came_in_running_unless_committable`**
 
 ```math
-\mathrm{u}^{z,0}_{\xi,j} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \neg \mathrm{com}^{z}_{j} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right)
+\mathrm{u}^{z,0}_{j,\xi} = 1 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{com}^{z}_{j} \wedge \left( \mathrm{ru}^{z}_{j,\xi,t} \text{ is defined} \vee \mathrm{rd}^{z}_{j,\xi,t} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{j,\xi} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{j,\xi} \text{ is defined} \right)
 ```
 <!-- gallery:end -->

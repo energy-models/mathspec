@@ -12,7 +12,7 @@ This file states Kirchhoff's voltage law around each cycle. It is one of the [24
 given:
   expressions:
     Cycle_angle_sum:
-      dims: [scenario, snapshot, cycle]
+      dims: [cycle, scenario, snapshot]
       description: >-
         the voltage angle differences around a cycle: every branch flow times
         its cycle weight, and every transformer phase shift
@@ -51,7 +51,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$, an expression another file defines — the voltage angle differences around a cycle: every branch flow times its cycle weight, and every transformer phase shift |
+| $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\mathcal{C} \times \Xi \times \mathcal{T}`$, an expression another file defines — the voltage angle differences around a cycle: every branch flow times its cycle weight, and every transformer phase shift |
 
 #### Sets
 
@@ -66,6 +66,6 @@ constraints:
 **`Kirchhoff_Voltage_Law`**
 
 ```math
-\mathit{Cycle\_angle\_sum}_{\xi,t,c} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
+\mathit{Cycle\_angle\_sum}_{c,\xi,t} = 0 \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->

@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator, Mapping
+from dataclasses import fields, is_dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import pytest
@@ -16,7 +18,7 @@ from mathspec._resolution import Namespace
 from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
 from mathspec.program import Axis, Column, Join, Mask, RelationPairComparison, Sum
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, expression_of, spec_of, varied, where_of
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, dims_reversed, expression_of, spec_of, varied, where_of
 
 if TYPE_CHECKING:
     from mathspec.spec import Spec
@@ -730,12 +732,43 @@ def test_a_row_over_more_dims_than_the_entry_it_reads_is_refused():
 
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
-def test_the_order_of_dimensions_reaches_no_value_of_the_program(path):
-    """The dims of a named condition, of a named expression that declares none, of a piecewise curve and of a
-    comparison of two expressions in a condition were in the order `dimensions:` declares. Two files that
-    differ only in that order loaded to different programs."""
+def test_the_order_a_file_writes_dimensions_in_reaches_no_value_of_the_program(path):
+    """An entry kept the order its `dims:` wrote, and a frame the loader derived took the order `dimensions:`
+    declares. Two files that differ only in those orders loaded to different programs."""
     spec = to_spec(path)
-    data = spec.to_dict()
+    data = dims_reversed(spec.to_dict())
     reversed_order = to_spec({**data, 'dimensions': dict(reversed(cast('dict', data['dimensions']).items()))})
-    assert reversed_order.program == spec.program, 'the order of dimensions: changes no value of the program'
+    assert reversed_order.program == spec.program, 'the order of dimensions: and of every dims: changes no value'
     assert reversed_order.expand().program == spec.expand().program, 'nor of the program its expansion lowers to'
+
+
+def _dims_tuples(root: object) -> Iterator[tuple[str, tuple[str, ...]]]:
+    """Every ``dims`` and ``frame`` a program holds, at any depth, under the name of the class that holds it."""
+    seen: set[int] = set()
+    stack = [root]
+    while stack:
+        item = stack.pop()
+        if id(item) in seen or isinstance(item, str | int | float | bool | None):
+            continue
+        seen.add(id(item))
+        if isinstance(item, Mapping):
+            stack.extend(item.values())
+        elif isinstance(item, tuple | list | frozenset):
+            stack.extend(item)
+        elif is_dataclass(item) and not isinstance(item, type):
+            for f in fields(item):
+                value = getattr(item, f.name)
+                if f.name in ('dims', 'frame') and isinstance(value, tuple):
+                    yield type(item).__name__, value
+                else:
+                    stack.append(value)
+
+
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_every_dims_of_the_program_is_sorted_by_name(path):
+    spec = to_spec(path)
+    for loaded in (spec, spec.expand()):
+        found = list(_dims_tuples(loaded.program))
+        assert found, f'{path.name} holds no dims'
+        unsorted = [(holder, dims) for holder, dims in found if list(dims) != sorted(dims)]
+        assert not unsorted, f'{path.name}: these dims are not sorted by name: {unsorted[:3]}'

@@ -91,6 +91,18 @@ def varied(base: dict[str, Any], **patch: Any) -> dict[str, Any]:
     return raw
 
 
+def dims_reversed(data: Any) -> Any:
+    """*data* with every ``dims:`` list in it reversed, at any depth, and nothing else changed."""
+    if isinstance(data, dict):
+        return {
+            key: value[::-1] if key == 'dims' and isinstance(value, list) else dims_reversed(value)
+            for key, value in data.items()
+        }
+    if isinstance(data, list):
+        return [dims_reversed(item) for item in data]
+    return data
+
+
 def section(markdown: str, title: str) -> str:
     """The body under ``#### title``, up to the next heading of that level.
 

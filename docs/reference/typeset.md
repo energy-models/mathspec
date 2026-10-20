@@ -100,9 +100,9 @@ delimiters:
 
 ```python
 ms.typeset_line('spec.yaml', 'spend', 'latex')
-# \mathit{spend}_{t} = \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
+# \mathit{spend}_{t} = \sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
 ms.typeset_line('spec.yaml', 'balance', 'latex')
-# \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
+# \sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
 It takes what the other functions take, plus the name, the format and an

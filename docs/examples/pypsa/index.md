@@ -52,14 +52,14 @@ The fragments are of three kinds:
 | --- | --- | --- | --- |
 | `total_cost` | scalar | [settings](settings.md) | [`risk_weighted_opex`](cost.md), [`Generator_capex`](generator.md), [`Line_capex`](line.md), [`Link_capex`](link.md), [`Process_capex`](process.md), [`StorageUnit_capex`](storage_unit.md), [`Store_capex`](store.md), [`Transformer_capex`](transformer.md) |
 | `scenario_opex` | `scenario` | [settings](settings.md) | [`Generator_opex`](generator.md), [`Generator_commitment_opex`](generator_commitment.md), [`Link_opex`](link.md), [`Link_commitment_opex`](link_commitment.md), [`Process_opex`](process.md), [`Process_commitment_opex`](process_commitment.md), [`StorageUnit_opex`](storage_unit.md), [`Store_opex`](store.md) |
-| `Bus_injection` | `scenario, snapshot, bus` | [network](network.md) | [`Generator_injection`](generator.md), [`Line_injection`](line.md), [`Link_injection`](link.md), [`Load_injection`](load.md), [`Process_injection`](process.md), [`StorageUnit_injection`](storage_unit.md), [`Store_injection`](store.md), [`Transformer_injection`](transformer.md) |
+| `Bus_injection` | `bus, scenario, snapshot` | [network](network.md) | [`Generator_injection`](generator.md), [`Line_injection`](line.md), [`Link_injection`](link.md), [`Load_injection`](load.md), [`Process_injection`](process.md), [`StorageUnit_injection`](storage_unit.md), [`Store_injection`](store.md), [`Transformer_injection`](transformer.md) |
 | `tech_capacity_expansion` | `global_constraint` | [settings](settings.md) | [`Generator_tech_capacity_expansion`](generator.md), [`Line_tech_capacity_expansion`](line.md), [`Link_tech_capacity_expansion`](link.md), [`Process_tech_capacity_expansion`](process.md), [`StorageUnit_tech_capacity_expansion`](storage_unit.md), [`Store_tech_capacity_expansion`](store.md) |
-| `Carrier_additions` | `period, carrier` | [settings](settings.md) | [`Generator_additions`](generator.md), [`Line_additions`](line.md), [`Link_additions`](link.md), [`Process_additions`](process.md), [`StorageUnit_additions`](storage_unit.md), [`Store_additions`](store.md) |
-| `primary_energy` | `scenario, global_constraint` | [settings](settings.md) | [`Generator_primary_energy`](generator.md), [`StorageUnit_primary_energy`](storage_unit.md), [`Store_primary_energy`](store.md) |
-| `operational_limit` | `scenario, global_constraint` | [settings](settings.md) | [`Generator_operational_limit`](generator.md), [`StorageUnit_operational_limit`](storage_unit.md), [`Store_operational_limit`](store.md) |
-| `transmission_volume_expansion` | `scenario, global_constraint` | [settings](settings.md) | [`Line_transmission_volume_expansion`](line.md), [`Link_transmission_volume_expansion`](link.md) |
-| `transmission_expansion_cost` | `scenario, global_constraint` | [settings](settings.md) | [`Line_transmission_expansion_cost`](line.md), [`Link_transmission_expansion_cost`](link.md) |
-| `Cycle_angle_sum` | `scenario, snapshot, cycle` | [power_flow](power_flow.md) | [`Line_angle_sum`](line.md), [`Transformer_angle_sum`](transformer.md) |
+| `Carrier_additions` | `carrier, period` | [settings](settings.md) | [`Generator_additions`](generator.md), [`Line_additions`](line.md), [`Link_additions`](link.md), [`Process_additions`](process.md), [`StorageUnit_additions`](storage_unit.md), [`Store_additions`](store.md) |
+| `primary_energy` | `global_constraint, scenario` | [settings](settings.md) | [`Generator_primary_energy`](generator.md), [`StorageUnit_primary_energy`](storage_unit.md), [`Store_primary_energy`](store.md) |
+| `operational_limit` | `global_constraint, scenario` | [settings](settings.md) | [`Generator_operational_limit`](generator.md), [`StorageUnit_operational_limit`](storage_unit.md), [`Store_operational_limit`](store.md) |
+| `transmission_volume_expansion` | `global_constraint, scenario` | [settings](settings.md) | [`Line_transmission_volume_expansion`](line.md), [`Link_transmission_volume_expansion`](link.md) |
+| `transmission_expansion_cost` | `global_constraint, scenario` | [settings](settings.md) | [`Line_transmission_expansion_cost`](line.md), [`Link_transmission_expansion_cost`](link.md) |
+| `Cycle_angle_sum` | `cycle, scenario, snapshot` | [power_flow](power_flow.md) | [`Line_angle_sum`](line.md), [`Transformer_angle_sum`](transformer.md) |
 
 ### The fragments
 
