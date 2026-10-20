@@ -18,7 +18,7 @@ from mathspec._typesetting import to_markdown
 from mathspec._validation import to_spec
 from mathspec.spec import PIECEWISE_METHODS
 from tests.fixtures import EXAMPLES
-from tools import expansion_math, gallery, home_math, notation, spec_math
+from tools import expansion_math, gallery, home_math, notation, pypsa_compose, spec_math
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -38,6 +38,8 @@ GENERATED: list[tuple[str, Path, Callable[[str], str], str]] = [
     ('home:index', home_math.PAGE, home_math.rendered_page, 'home_math'),
     ('home:readme', home_math.README, home_math.rendered_readme, 'home_math'),
     ('expansion', expansion_math.PAGE, expansion_math.rendered_page, 'expansion_math'),
+    ('pypsa', pypsa_compose.COMPOSED, pypsa_compose.composed, 'pypsa_compose'),
+    ('pypsa:relaxed', pypsa_compose.RELAXED_COMPOSED, pypsa_compose.relaxed, 'pypsa_compose'),
 ]
 
 

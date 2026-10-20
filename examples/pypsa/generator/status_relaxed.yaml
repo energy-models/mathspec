@@ -1,0 +1,118 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+given:
+  parameters:
+    Generator_active: { dims: [snapshot, generator], dtype: bool }
+    Generator_committable: { dims: [generator], dtype: bool }
+    Generator_p_max_pu: { dims: [scenario, snapshot, generator] }
+    Generator_p_min_pu: { dims: [scenario, snapshot, generator] }
+    Generator_p_nom: { dims: [scenario, generator] }
+    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
+    Generator_p_nom_mod: { dims: [generator] }
+    Generator_shut_down_cost: { dims: [scenario, snapshot, generator] }
+    Generator_start_up_cost: { dims: [scenario, snapshot, generator] }
+  variables:
+    Generator_p: { dims: [scenario, snapshot, generator] }
+  expressions:
+    Generator_ramp_down_rate: { dims: [scenario, snapshot, generator] }
+    Generator_ramp_up_rate: { dims: [scenario, snapshot, generator] }
+    Generator_shut_down_rate: { dims: [scenario, generator] }
+    Generator_start_up_rate: { dims: [scenario, generator] }
+  masks:
+    Generator_committed: { dims: [snapshot, generator] }
+
+dimensions:
+  scenario:
+    description: the futures dispatch is chosen in, each with a weight
+  snapshot:
+    description: dispatch periods
+    dtype: datetime
+    ordered: true
+  generator:
+    description: generating units, each on one bus
+
+variables:
+  Generator_status:
+    description: >-
+      `Generator-status` — how much of a committable unit is on, a share in [0, 1]
+      rather than an integer: the relaxation the keyword solves
+      (`variables.py:86-87`)
+    dims: [scenario, snapshot, generator]
+    where: Generator_committed
+    bounds:
+      lower: 0
+      upper: 1
+  Generator_start_up:
+    description: "`Generator-start_up` — how much of a committable unit turns on this snapshot, a share in [0, 1] (`variables.py:137-138`)"
+    dims: [scenario, snapshot, generator]
+    where: Generator_committed
+    bounds:
+      lower: 0
+      upper: 1
+  Generator_shut_down:
+    description: "`Generator-shut_down` — how much of a committable unit turns off this snapshot, a share in [0, 1] (`variables.py:188-189`)"
+    dims: [scenario, snapshot, generator]
+    where: Generator_committed
+    bounds:
+      lower: 0
+      upper: 1
+
+constraints:
+  Generator_com_p_before:
+    description: >-
+      `Generator-com-p-before` — the output a unit had entering this snapshot fits
+      the share of it still on, less the share it is shutting down at the
+      shut-down ramp (`constraints.py:635-649`). The translated terms vacate
+      the first snapshot, as PyPSA's `sns[1:]` does
+    dims: [scenario, snapshot, generator]
+    where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
+    expression: >-
+      shift(Generator_p, along=snapshot, offset=1)
+      - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
+      - (Generator_p_max_pu * Generator_p_nom - Generator_shut_down_rate * Generator_p_nom)
+      * (Generator_status - Generator_start_up) <= 0
+  Generator_com_p_current:
+    description: >-
+      `Generator-com-p-current` — output fits the share on, and the share starting
+      up only up to the start-up ramp (`constraints.py:652-665`)
+    dims: [scenario, snapshot, generator]
+    where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND position(snapshot) > 0 AND Generator_active
+    expression: >-
+      Generator_p - Generator_p_max_pu * Generator_p_nom * Generator_status
+      + (Generator_p_max_pu * Generator_p_nom - Generator_start_up_rate * Generator_p_nom) * Generator_start_up <= 0
+  Generator_com_partly_start_up:
+    description: >-
+      `Generator-com-partly-start-up` — raising output while a share is starting up
+      is bounded by the ramp of the share on and the start-up ramp of the
+      share coming on (`constraints.py:667-682`)
+    dims: [scenario, snapshot, generator]
+    where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
+    expression: >-
+      Generator_p - shift(Generator_p, along=snapshot, offset=1)
+      - (Generator_p_min_pu * Generator_p_nom + Generator_ramp_up_rate * Generator_p_nom) * Generator_status
+      + Generator_p_min_pu * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
+      + (Generator_p_min_pu * Generator_p_nom + Generator_ramp_up_rate * Generator_p_nom - Generator_start_up_rate * Generator_p_nom)
+      * Generator_start_up <= 0
+  Generator_com_partly_shut_down:
+    description: >-
+      `Generator-com-partly-shut-down` — lowering output while a share is shutting
+      down is bounded likewise, by the shut-down ramp (`constraints.py:684-699`)
+    dims: [scenario, snapshot, generator]
+    where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
+    expression: >-
+      shift(Generator_p, along=snapshot, offset=1) - Generator_p
+      - Generator_shut_down_rate * Generator_p_nom * shift(Generator_status, along=snapshot, offset=1)
+      + (Generator_shut_down_rate * Generator_p_nom - Generator_ramp_down_rate * Generator_p_nom) * Generator_status
+      - (Generator_p_min_pu * Generator_p_nom + Generator_ramp_down_rate * Generator_p_nom - Generator_shut_down_rate * Generator_p_nom)
+      * Generator_start_up <= 0
+
+assumptions:
+  Generator_committable_is_not_modular:
+    holds: "NOT (Generator_p_nom_mod > 0)"
+    where: "Generator_committable AND count(Generator_active, over=snapshot) > 0"
+    description: >-
+      a modular committable unit counts its status in modules, which the
+      relaxation cannot share out — PyPSA refuses it under the keyword
+      (`optimize.py:783-784`, `consistency.py:1540-1581`)

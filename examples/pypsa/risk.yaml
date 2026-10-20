@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+given:
+  parameters:
+    scenario_weight: { dims: [scenario] }
+  expressions:
+    scenario_opex: { dims: [scenario] }
+    total_cost: { dims: [] }
+
+dimensions:
+  scenario:
+    description: the futures dispatch is chosen in, each with a weight
+
+parameters:
+  CVaR_omega:
+    description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. Data prep writes a row only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one
+    dims: []
+    missing: neutral
+  CVaR_alpha:
+    description: PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega`
+    dims: []
+    missing: neutral
+
+variables:
+  CVaR_a:
+    description: "`CVaR-a` — how far a scenario's operating cost exceeds the tail's start; nothing where it does not"
+    dims: [scenario]
+    where: CVaR_omega
+    missing: neutral
+    bounds:
+      lower: 0
+  CVaR_theta:
+    description: "`CVaR-theta` — where the tail starts, the value at risk"
+    dims: []
+    where: CVaR_omega
+    missing: neutral
+  CVaR:
+    description: "`CVaR` — the tail's average cost, what the objective prices at `omega`"
+    dims: []
+    where: CVaR_omega
+    missing: neutral
+
+expressions:
+  CVaR_tail_premium:
+    description: >-
+      what pricing the share `omega` of operation at the tail adds to its
+      expectation — `omega` times the tail's average less the expectation, so
+      the system cost is `(1 - omega)` of the expectation plus `omega` of the
+      tail
+    expression: CVaR_omega * (CVaR - sum(scenario_weight * scenario_opex, over=scenario))
+    adds_to: total_cost
+
+constraints:
+  CVaR_excess:
+    description: "`CVaR-excess-{s}` — a scenario's operating cost beyond the tail's start is its excess; PyPSA names one row per scenario"
+    dims: [scenario]
+    where: CVaR_omega
+    expression: CVaR_a - scenario_opex + CVaR_theta >= 0
+  CVaR_def:
+    description: "`CVaR-def` — the tail's average is at least where it starts plus the expected excess over the tail's probability"
+    dims: []
+    where: CVaR_omega
+    expression: CVaR_theta + 1 / (1 - CVaR_alpha) * sum(scenario_weight * CVaR_a, over=scenario) <= CVaR

@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+parameters:
+  CVaR_omega:
+    description: >-
+      PyPSA's `risk_preference['omega']` — this model prices operation in
+      expectation only, so no risk preference is set
+    dims: []
+    missing: neutral
+
+assumptions:
+  CVaR_omega_unset:
+    holds: "NOT CVaR_omega"
+    description: >-
+      this model leaves the risk preference out, so a preference in the data
+      would be ignored; take `risk.yaml` in place of `risk_neutral.yaml`
