@@ -926,6 +926,6 @@ def test_a_condition_on_a_relation_states_its_key_dims_sorted_by_name(condition)
     spec = _spec(**{'relations.zone_of': keyed_backwards, 'relations.home_of': keyed_backwards})
     where = to_spec(varied(spec.to_dict(), **{'variables.p.where': condition})).program.variables['p'].where
     assert where is not None
-    assert [dims for _, dims in _dims_tuples(where)] == [('generator', 'snapshot')], (
+    assert [dims for _, dims in _dims_tuples(where.root)] == [('generator', 'snapshot')], (
         'the condition states the relation key dims, sorted by name'
     )
