@@ -19,7 +19,7 @@ import pytest
 from mathspec import advice, merge, override, to_markdown, to_spec, typeset, typeset_line
 from mathspec._canonical import canonical_yaml
 from mathspec._typesetting import FORMATS
-from mathspec.errors import LanguageError
+from mathspec.errors import DimensionError, LanguageError
 from tests.fixtures import BALANCE, BUS_DIMS, BUS_FRAME, INJECTION, section
 
 #: A generator fleet: what it puts in is its term.
@@ -540,6 +540,24 @@ def test_readers_that_order_the_frame_apart_are_refused():
 def test_the_composed_sum_is_read_over_the_readers_frame():
     """The frame the readers state holds the terms to it when the composed spec loads."""
     assert merge([BALANCE, FLEET, DEMAND]).expressions['injection'].dims == BUS_FRAME
+
+
+def test_a_composed_sum_is_indexed_only_over_dims_a_term_is_indexed_over():
+    """A sum built only from terms took every dim its readers state, and repeated along one no term is indexed over.
+
+    With every term over `bus` alone, the balance built the same row once per snapshot, and once a named
+    expression had to be indexed over each dim of its `dims:`, the composed sum was refused for a `dims:` no
+    file wrote. The sum keeps the dims its terms are indexed over, so the balance is refused as it is over a
+    definer indexed over `bus` alone.
+    """
+    fixed = {
+        'dimensions': BUS_DIMS,
+        'variables': {'fixed_injection': {'dims': ['bus']}},
+        'given': {'expressions': {'injection': {'dims': BUS_FRAME}}},
+        'expressions': {'fixed': {'expression': 'fixed_injection', 'adds_to': 'injection'}},
+    }
+    with pytest.raises(DimensionError, match=r"Constraint 'balance': the expression does not carry \['snapshot'\]"):
+        merge([BALANCE, fixed])
 
 
 def test_one_term_alone_is_its_name():
