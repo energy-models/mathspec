@@ -463,6 +463,90 @@ class TestDimensionKwargs:
             assert fragment in message, message
 
 
+_MEMBERS = {'dimensions.h': {'dtype': {'one_of': ['north', 'south']}}}
+
+
+class TestADimensionWithMembers:
+    """A dimension that lists its labels under ``dtype: {one_of: [...]}`` refuses a condition naming another (#519).
+
+    Before, ``carrier == 'gnrtr'`` loaded and compared equal to nothing, so a
+    misspelt label emptied the mask without a word.
+    """
+
+    @pytest.mark.parametrize(
+        'patch',
+        [
+            pytest.param({'variables.r.where': "h == 'west'"}, id='a-dimension-equal-to-a-label'),
+            pytest.param({'variables.r.where': "h != 'west'"}, id='a-dimension-not-equal-to-a-label'),
+            pytest.param({'variables.r.where': 'h == west'}, id='an-unquoted-label'),
+            pytest.param({'variables.p.where': "lk == 'west'"}, id='a-relation-column-over-the-dimension'),
+            pytest.param({'variables.p.where': "lk[h] != 'west'"}, id='a-named-relation-column'),
+            pytest.param({'conditions.west': "h == 'west'"}, id='a-named-condition'),
+            pytest.param({'assumptions.west': {'holds': "lk != 'west'"}}, id='an-assumption'),
+        ],
+    )
+    def test_a_label_that_is_not_a_member_is_refused(self, patch):
+        message = _refusal(**_MEMBERS, **patch)
+        assert "'west' is not a label of 'h', which allows only ['north', 'south']" in message, message
+
+    @pytest.mark.parametrize(
+        'patch',
+        [
+            pytest.param({'variables.r.where': "h == 'north'"}, id='a-dimension'),
+            pytest.param({'variables.p.where': 'lk != south'}, id='a-relation-column'),
+        ],
+    )
+    def test_a_member_is_admitted(self, patch):
+        _spec(**_MEMBERS, **patch)
+
+    @pytest.mark.parametrize(
+        ('dtype', 'refusal'),
+        [
+            pytest.param(
+                {'one_of': []},
+                'one_of: lists no label. List at least one, or write dtype: str.',
+                id='no-member',
+            ),
+            pytest.param(
+                {'one_of': ['north', 'north']},
+                "one_of: lists 'north' twice. List each label once.",
+                id='a-duplicate',
+            ),
+            pytest.param(
+                {'one_of': [2030, 'north']},
+                "one_of: takes only strings, and 2030 is not one. Quote it: '2030'.",
+                id='a-number',
+            ),
+            pytest.param(
+                {'one_off': ['north']},
+                "unknown key 'one_off' in a dimension's dtype. Did you mean 'one_of'?",
+                id='a-misspelt-key',
+            ),
+            pytest.param(
+                'strr',
+                'strr is not a dtype. Write one of float, int, str, datetime, or {one_of: [<label>, ...]}.',
+                id='a-misspelt-name',
+            ),
+        ],
+    )
+    def test_a_mistake_in_the_dtype_is_named_once(self, dtype, refusal):
+        """A dtype is a name or a mapping, and a mistake in one was also reported against the other."""
+        assert _refusal(**{'dimensions.h': {'dtype': dtype}}) == f'dimensions.h.dtype: {refusal}'
+
+    def test_the_program_carries_the_members_and_the_dtype_str(self):
+        dimension = _spec(**_MEMBERS).program.dimensions['h']
+        assert (dimension.dtype, dimension.members) == ('str', ('north', 'south')), (
+            'the members in file order, and str wherever a dtype is read'
+        )
+
+    def test_a_dimension_with_members_keeps_every_str_rule(self):
+        assert 'matches no label' in _refusal(**_MEMBERS, **{'variables.r.where': 'h > 3'})
+
+    def test_the_spec_written_back_out_reads_as_itself(self):
+        spec = _spec(**_MEMBERS)
+        assert to_spec(parse_yaml(spec.to_yaml())) == spec
+
+
 class TestAnUndeclaredKeywordIsRefusedOnce:
     """A keyword an operator does not declare is refused by its signature, once (#441).
 
