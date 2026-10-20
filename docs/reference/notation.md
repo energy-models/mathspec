@@ -669,7 +669,7 @@ p_{t,g} \le \mathrm{startup\_cost}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g 
 
 #### Expression with a declared frame in a constraint
 
-names the expression with a declared frame: the row reads it at every snapshot, though its body has no snapshot
+names the expression with declared dims, read in the row's own order
 
 ```yaml
 constraints:
@@ -698,17 +698,17 @@ expressions:
 
 #### Named expression with a declared frame
 
-a frame wider than the body, in an order of its own: the value is the same at every snapshot
+dims declared in an order of their own, each one the expression is indexed over
 
 ```yaml
 expressions:
   rating:
     dims: [generator, snapshot]
-    expression: eta * p_max
+    expression: eta * p_max * sum(load, over=bus)
 ```
 
 ```math
-\mathrm{rating}_{g,t} = \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\mathrm{rating}_{g,t} = \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \cdot \left( \sum_{b \in \mathcal{B}} \mathrm{load}_{t,b} \right) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Plain expression that is a signed sum
