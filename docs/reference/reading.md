@@ -147,7 +147,7 @@ entry's expression, the same object that `program.expressions[name].expression`
 holds, and its value is the body's value. `children()` steps into the body, so
 a walk reads through it.
 
-Every expression node has `dims`: the dimensions its value is read over, in
+Every expression node has `dims`: the dimensions over which it is indexed, in
 the order `dimensions:` declares them. A sum has the dimensions its operand has,
 less the ones it sums over. A `Join` under a sum through a relation has the
 dimensions of that sum. A `Join` also opens one `Axis` for each column it

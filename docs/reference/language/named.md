@@ -30,12 +30,14 @@ expressions:
 ```
 
 An entry is a bare string, or a mapping with a `description:` and a `dims:`.
-The `dims:` are the **frame**, the dimensions the quantity is read over. When
-`dims:` is left out, the body decides the frame. When `dims:` is declared, it
-sets the order of the indices, and it names the dimensions the body carries.
-The loader refuses a body that carries a dimension the frame does not name, and
-a frame that names a dimension the body does not carry. An expression that
-reads the entry broadcasts it along the rest of its own dimensions.
+The `dims:` are the dimensions over which the quantity is indexed. When
+`dims:` is left out, the expression itself decides them. When `dims:` is
+declared, it sets the order of the indices, and it names the dimensions over
+which the expression is indexed. The loader refuses an expression that is
+indexed over a dimension not given in `dims:`, and a `dims:` that gives a
+dimension over which the expression is not indexed. An expression that reads
+the entry repeats its value along each of its own dimensions that the entry is
+not indexed over.
 
 ```yaml
 expressions:
@@ -89,11 +91,11 @@ $$\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{co
 
 A named expression carries **exactly one** of `expression:` and `cases:`.
 
-| Key         |                                                                              |
-| ----------- | ---------------------------------------------------------------------------- |
-| `dims`      | required with `cases:`. The **frame**: the dimensions every case ranges over |
-| `cases`     | a map of named cases, each with a `when:` mask and an `expression:`          |
-| `otherwise` | required. The value at every coordinate the cases leave                      |
+| Key         |                                                                         |
+| ----------- | ----------------------------------------------------------------------- |
+| `dims`      | required with `cases:`. The dimensions over which every case is indexed |
+| `cases`     | a map of named cases, each with a `when:` mask and an `expression:`     |
+| `otherwise` | required. The value at every coordinate the cases leave                 |
 
 ### The rules that keep the cases apart
 
@@ -120,9 +122,10 @@ A named expression carries **exactly one** of `expression:` and `cases:`.
   `cases:` with one case may compare expressions, because its `otherwise:` claims
   only what the case leaves.
 
-- Each `when:` and each value sits inside the frame, and a narrower case
-  broadcasts as a parameter with fewer dimensions does. Each dimension of the
-  frame is carried by a value or a `when:`.
+- Each `when:` and each value is indexed only over dimensions given in
+  `dims:`. A value indexed over fewer of them is repeated along the others,
+  the same as a parameter with fewer dimensions. Each dimension in `dims:` is
+  one over which a value or a `when:` is indexed.
 
 A claimed coordinate can still have no value: the `otherwise:` above has none at
 the first snapshot, where a case claims every unit. To give such a coordinate a
@@ -240,11 +243,11 @@ An entry with no `description:` may be the bare `where` string.
 - A bare mask name stands for its predicate in a `where:`, a `when:` and a
   `holds:`, under `NOT`, and inside `count`, `shift` and `at`. It selects the
   same rows as the predicate written out.
-- The predicate gives the frame, so a mask declares no `dims:`. A mask runs
-  over the dimensions its predicate reads, in the order `dimensions:` declares
-  them, and the symbol prints with those indices. A use over more dimensions
-  reads the mask as constant along the rest, and `shift` reads it back only
-  along a dimension of its frame.
+- A mask declares no `dims:`. It is indexed over the dimensions its predicate
+  reads, in the order `dimensions:` declares them, and the symbol prints with
+  those indices. A use over more dimensions repeats the mask along the others,
+  and `shift` reads it back only along a dimension over which the mask is
+  indexed.
 - A mask may read another mask, and a named expression that reads only data.
   The loader refuses a cycle, and the message names its chain:
 

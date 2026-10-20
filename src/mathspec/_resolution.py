@@ -167,10 +167,10 @@ class Namespace:
             return DimensionError('\n'.join(errors))
         return SchemaError('\n'.join(errors))
 
-    def framed(self, *frames: Iterable[str]) -> tuple[str, ...]:
-        """The dims *frames* carry together, in the order ``dimensions:`` declares them: what a node states as ``dims``."""
-        carried = set().union(*frames)
-        return tuple(d for d in self.spec.dimensions if d in carried)
+    def in_declaration_order(self, *dims: Iterable[str]) -> tuple[str, ...]:
+        """Every dim in *dims*, once, in the order ``dimensions:`` declares them: what a node states as ``dims``."""
+        given = set().union(*dims)
+        return tuple(d for d in self.spec.dimensions if d in given)
 
     def named(self, name: str, context: str) -> ExpressionReference:
         """The ``expressions:`` entry *name* as the node that stands where its name is written.
@@ -548,7 +548,7 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
         return None
     left_over = Region(remainder(region.when for region in regions), fallback)
     every = (*regions, left_over)
-    cases = Cases(every, dims=ns.framed(*(r.value.dims for r in every), *(r.when.dims for r in every)))
+    cases = Cases(every, dims=ns.in_declaration_order(*(r.value.dims for r in every), *(r.when.dims for r in every)))
     return ExpressionReference(name, cases, dims=cases.dims)
 
 

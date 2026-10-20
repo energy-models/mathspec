@@ -452,9 +452,9 @@ class ExpressionReference:
 #: [`Multiply`][] of two variable-carrying operands. A
 #: [`NamedExpression`][] the math never reads is held to none of them.
 #: No node records which tree it stands in. Every node states ``dims``, the
-#: dimensions its value is read over, in the order ``dimensions:`` declares
-#: them, so a consumer reads a node's frame rather than deriving it. A
-#: [`ExpressionReference`][] states its body's frame.
+#: dimensions over which it is indexed, in the order ``dimensions:`` declares
+#: them, so a consumer reads a node's dims rather than deriving them. An
+#: [`ExpressionReference`][] states its body's dims.
 Expression = (
     Constant
     | ParameterReference

@@ -8,8 +8,8 @@ Every node states its dims, so every rule is decided at load. Resolution holds
 each node to the rule of its operator as it builds the node ([`check_node`][]);
 the rules are the "Dim algebra" table in
 ``docs/reference/language/expressions.md``. [`check_spec`][] holds each entry
-to its own: a constraint's two sides together equal its ``dims``, and a where
-or a bound may not exceed the frame.
+to its own: a constraint's two sides together are indexed over exactly its
+``dims``, and a where or a bound is indexed over no dim the entry is not.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 
 
 def check_node(node: Sum | Join | Translate | WindowSum, spec: Spec, context: str) -> None:
-    """The dim rule *node*'s own operator holds it to, on the frames its operands state.
+    """The dim rule *node*'s own operator holds it to, on the dims its operand states.
 
     Resolution calls it on each node it builds, so a tree is checked once,
     bottom up, and no pass walks it again.
@@ -228,16 +228,16 @@ def check_spec(spec: Spec, program: Program) -> None:
             continue
         frame = frozenset(declared.dims)
         if not isinstance(entry.expression, Cases):
-            carried = _check_body_dims(entry.expression, frame, f"Named expression '{ename}'")
-            _check_frame_is_carried(ename, frame, carried, 'the body does not carry')
+            indexed = _check_body_dims(entry.expression, frame, f"Named expression '{ename}'")
+            _check_dims_are_indexed(ename, frame, indexed, 'the expression is not')
             continue
-        carried = frozenset[str]()
+        indexed = frozenset[str]()
         for region, label in zip(entry.expression.regions, [*declared.cases, None], strict=True):
             context = case_context(ename, label)
             if label is not None:
                 _check_where_dims(region.when, frame, context)
-            carried |= _check_value_dims(region.value, frame, context) | region.when.dims
-        _check_frame_is_carried(ename, frame, carried, 'no case value and no `when:` carries')
+            indexed |= _check_value_dims(region.value, frame, context) | region.when.dims
+        _check_dims_are_indexed(ename, frame, indexed, 'no case value and no `when:` is')
 
     for ename, entry in program.expressions.items():
         if entry.adds_to is None:
@@ -291,7 +291,7 @@ def _check_value_dims(node: Expression, frame: frozenset[str], context: str) -> 
 
 
 def _check_body_dims(node: Expression, frame: frozenset[str], context: str) -> frozenset[str]:
-    """A plain entry's body may only carry dims its declared frame does; the dims it carries come back."""
+    """A plain entry's expression is indexed only over dims its ``dims:`` gives; the dims it is indexed over come back."""
     got = frozenset(node.dims)
     if not got <= frame:
         raise DimensionError(
@@ -301,18 +301,19 @@ def _check_body_dims(node: Expression, frame: frozenset[str], context: str) -> f
     return got
 
 
-def _check_frame_is_carried(name: str, frame: frozenset[str], carried: frozenset[str], carrier: str) -> None:
-    """A declared frame names only dims the body carries, so the entry stands for its body wherever it is read.
+def _check_dims_are_indexed(name: str, declared: frozenset[str], indexed: frozenset[str], subject: str) -> None:
+    """A declared ``dims:`` gives only dims the expression is indexed over, so the entry stands for its expression.
 
-    A dim the body does not carry would make the entry constant along it, and
-    then the entry would not be its body: ``sum(entry, over=d)`` would load
-    where the body summed over ``d`` is refused.
+    A dim the expression is not indexed over would make the entry constant
+    along it, and then the entry would not be its expression:
+    ``sum(entry, over=d)`` would load where the expression summed over ``d``
+    is refused.
     """
-    if extra := sorted(frame - carried):
+    if extra := sorted(declared - indexed):
         raise DimensionError(
-            f"Named expression '{name}': dims: names {extra}, which {carrier}. A named expression stands for "
-            f'its body, so its frame is what the body carries. Take {extra} out of dims:; an expression that '
-            f"reads '{name}' still broadcasts it along the rest of its own dims."
+            f"Named expression '{name}': dims: gives {extra}, but {subject} indexed over {extra}. A named "
+            f'expression stands for its expression, so dims: gives only the dimensions it is indexed over. Take '
+            f"{extra} out of dims:; an expression that reads '{name}' still repeats it along its own other dims."
         )
 
 

@@ -349,7 +349,7 @@ def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterRefe
     if value is None:
         return None
     if isinstance(value, str):
-        return ParameterReference(value, dims=ns.framed(ns.leaf_dims[value]))
+        return ParameterReference(value, dims=ns.in_declaration_order(ns.leaf_dims[value]))
     return Constant(value, dims=())
 
 

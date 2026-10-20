@@ -688,7 +688,7 @@ def test_names_read_takes_both_sides_of_a_relation_pair():
 # a named expression's declared frame
 # ---------------------------------------------------------------------------
 
-#: A quantity over every snapshot and generator, with its frame declared.
+#: A quantity over every snapshot and generator, with its dims declared.
 FRAMED = varied(DISPATCH_MODEL, **{'expressions.limit': {'dims': ['snapshot', 'generator'], 'expression': 'p * p_max'}})
 
 
@@ -708,13 +708,13 @@ def test_a_body_outside_its_declared_frame_is_refused():
 
 
 @pytest.mark.parametrize(
-    ('patch', 'extra', 'carrier'),
+    ('patch', 'extra', 'subject'),
     [
         pytest.param(
             {'expressions.limit': {'dims': ['snapshot', 'generator'], 'expression': 'p_max'}},
             "['snapshot']",
-            'the body does not carry',
-            id='a-plain-body',
+            'the expression is not',
+            id='a-plain-expression',
         ),
         pytest.param(
             {
@@ -726,20 +726,21 @@ def test_a_body_outside_its_declared_frame_is_refused():
                 },
             },
             "['snapshot']",
-            'no case value and no `when:` carries',
+            'no case value and no `when:` is',
             id='cases',
         ),
     ],
 )
-def test_a_declared_frame_wider_than_the_body_is_refused(patch, extra, carrier):
-    """A frame wider than the body loaded, and a reference read the body as constant along the rest.
+def test_a_dims_that_gives_a_dim_the_expression_is_not_indexed_over_is_refused(patch, extra, subject):
+    """Such a `dims:` loaded, and a reference read the expression as constant along the extra dim.
 
-    Substituted where the name stands, the body did not load: `sum(limit, over=snapshot)` loaded where
-    `sum(p_max, over=snapshot)` is refused, and specsolve could not build it. In a constraint the wider frame
+    Substituted where the name stands, the expression did not load: `sum(limit, over=snapshot)` loaded where
+    `sum(p_max, over=snapshot)` is refused, and specsolve could not build it. In a constraint the extra dim
     only built the same row once per snapshot.
     """
     with pytest.raises(
-        DimensionError, match=re.escape(f"Named expression 'limit': dims: names {extra}, which {carrier}")
+        DimensionError,
+        match=re.escape(f"Named expression 'limit': dims: gives {extra}, but {subject} indexed over {extra}"),
     ):
         to_spec(varied(DISPATCH_MODEL, **patch))
 
@@ -752,11 +753,11 @@ def test_a_row_over_more_dims_than_the_entry_it_reads_is_refused():
 
 
 # ---------------------------------------------------------------------------
-# every expression node states its frame
+# every expression node states its dims
 # ---------------------------------------------------------------------------
 
 #: Every spec in the repository, before and after each expansion pair.
-FRAMED_SPECS = [
+EVERY_SPEC = [
     *SPECS,
     *sorted((Path(__file__).parent / 'expand').glob('*/*.yaml')),
     Path(__file__).parent / 'typesetting' / 'golden' / 'model.yaml',
@@ -764,7 +765,7 @@ FRAMED_SPECS = [
 
 
 def _derived(node: Expression, spec: Spec) -> frozenset[str]:
-    """The frame of *node* by the rules of the language reference, derived from the spec without reading ``dims``."""
+    """The dims of *node* by the rules of the language reference, derived from the spec without reading ``dims``."""
     if isinstance(node, Constant):
         return frozenset()
     if isinstance(node, ParameterReference):
@@ -806,9 +807,9 @@ def _expressions(root: object) -> Iterator[Expression]:
             stack.extend(getattr(item, f.name) for f in fields(item))
 
 
-@pytest.mark.parametrize('path', FRAMED_SPECS, ids=lambda path: str(path.relative_to(Path(__file__).parent.parent)))
-def test_every_expression_node_states_its_frame_in_declaration_order(path):
-    """A consumer read a node's frame by deriving it again, as the loader did to check it and then threw away."""
+@pytest.mark.parametrize('path', EVERY_SPEC, ids=lambda path: str(path.relative_to(Path(__file__).parent.parent)))
+def test_every_expression_node_states_its_dims_in_declaration_order(path):
+    """A consumer read a node's dims by deriving them again, as the loader did to check them and then threw away."""
     spec = spec_of(path)
     for loaded in (spec, spec.expand()):
         nodes = list(_expressions(loaded.program))

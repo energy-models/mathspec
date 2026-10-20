@@ -669,7 +669,7 @@ p_{t,g} \le \mathrm{startup\_cost}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g 
 
 #### Expression with a declared frame in a constraint
 
-names the expression with a declared frame, read in the row's own order
+names the expression with declared dims, read in the row's own order
 
 ```yaml
 constraints:
@@ -698,7 +698,7 @@ expressions:
 
 #### Named expression with a declared frame
 
-a declared frame in an order of its own, which the body carries whole
+dims declared in an order of their own, each one the expression is indexed over
 
 ```yaml
 expressions:

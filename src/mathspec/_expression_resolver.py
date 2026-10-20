@@ -164,7 +164,7 @@ class ExpressionResolver:
         left, right = self.arith(node.left), self.arith(node.right)
         if left is None or right is None:
             return None
-        dims = self.ns.framed(left.dims, right.dims)
+        dims = self.ns.in_declaration_order(left.dims, right.dims)
         match node.op:
             case '+':
                 return Add(left, right, dims=dims)
@@ -200,13 +200,13 @@ class ExpressionResolver:
                 return None
         match self.ns.kind(node.name):
             case 'variable':
-                return VariableReference(node.name, dims=self.ns.framed(self.ns.leaf_dims[node.name]))
+                return VariableReference(node.name, dims=self.ns.in_declaration_order(self.ns.leaf_dims[node.name]))
             case 'parameter':
                 dtype = self.ns.dtypes.get(node.name)
                 if dtype is not None and dtype not in NUMERIC_DTYPES:
                     self.errors.append(not_a_number(node.name, dtype, self.context))
                     return None
-                return ParameterReference(node.name, dims=self.ns.framed(self.ns.leaf_dims[node.name]))
+                return ParameterReference(node.name, dims=self.ns.in_declaration_order(self.ns.leaf_dims[node.name]))
             case 'dimension':
                 self.errors.append(
                     f"{self.context}: '{node.name}' is a dimension, and a dimension is "
@@ -309,7 +309,7 @@ class ExpressionResolver:
 
     def _joined(self, operand: Expression, columns: JoinColumns) -> Join | None:
         """A [`Join`][mathspec.program.Join] of *operand* on *columns*, over the dims the join leaves."""
-        return self._checked(Join(operand, columns, dims=self.ns.framed(joined(columns, operand.dims))))
+        return self._checked(Join(operand, columns, dims=self.ns.in_declaration_order(joined(columns, operand.dims))))
 
     def _checked[N: Sum | Join | Translate | WindowSum](self, node: N) -> N | None:
         """*node*, or ``None`` with its refusal appended where it breaks the dim rule of its operator."""
@@ -492,7 +492,7 @@ class ExpressionResolver:
             self.errors.append(self.ns.unknown_constraint(value.name, self.context, formals=self.formals))
             return None
         declared = {**self.ns.spec.constraints, **self.ns.spec.given.constraints}[value.name]
-        return Dual(value.name, dims=self.ns.framed(declared.dims))
+        return Dual(value.name, dims=self.ns.in_declaration_order(declared.dims))
 
     def _over(self, value: ArithmeticNode, operator: str, *, relation: bool) -> tuple[str, ...] | None:
         """``over=``: a dimension or a list of them, and beside ``by=`` the columns of the relation too, each a bare name.

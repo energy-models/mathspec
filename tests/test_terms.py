@@ -542,12 +542,13 @@ def test_the_composed_sum_is_read_over_the_readers_frame():
     assert merge([BALANCE, FLEET, DEMAND]).expressions['injection'].dims == BUS_FRAME
 
 
-def test_a_composed_sum_takes_no_dim_its_terms_do_not_carry():
-    """A sum built only from terms took the readers' frame whole, and broadcast along a dim no term carried.
+def test_a_composed_sum_is_indexed_only_over_dims_a_term_is_indexed_over():
+    """A sum built only from terms took every dim its readers state, and repeated along one no term is indexed over.
 
-    With every term over `bus` alone, the balance built the same row once per snapshot, and once a frame had
-    to be carried, the composed sum was refused for a `dims:` no file wrote. The sum keeps the dims its terms carry, so the
-    balance is refused as it is over a definer that carries only `bus`.
+    With every term over `bus` alone, the balance built the same row once per snapshot, and once a named
+    expression had to be indexed over each dim of its `dims:`, the composed sum was refused for a `dims:` no
+    file wrote. The sum keeps the dims its terms are indexed over, so the balance is refused as it is over a
+    definer indexed over `bus` alone.
     """
     fixed = {
         'dimensions': BUS_DIMS,

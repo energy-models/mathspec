@@ -42,9 +42,9 @@ What that means for each section:
   body followed by every term, in the order the fragments are given in,
   so a composed spec takes more terms in a later merge. A definition
   written as ``cases:`` takes no term. Where no fragment defines the
-  name, the composed spec defines it as its terms, over the dims of the
-  frame the readers state in one order that a term carries. Some fragment
-  then has to read the name for more than adding to it: read it without
+  name, the composed spec defines it as its terms, indexed over each dim
+  the readers state, in their one order, that a term is indexed over. Some
+  fragment then has to read the name for more than adding to it: read it without
   adding to it, or use it in its math. A name only its terms read, or only one fragment reads, is what a
   misspelt ``given:`` entry looks like, so it is refused. A term that
   reads its own sum through another fragment is refused, both named.
@@ -380,9 +380,9 @@ def _summed(
 
     The terms join with a plain ``+``, the loosest operator there is, so a
     sum composed in two merges reads as the one composed in one. Where no
-    fragment defines the name, the terms are the body, over the dims of the
-    readers' frame that a term carries, in the readers' order; the composed
-    load holds every reader to that frame, as it does to a definer's.
+    fragment defines the name, the terms are the body, indexed over each dim
+    the readers state that a term is indexed over, in the readers' order; the
+    composed load holds every reader to those dims, as it does to a definer's.
     """
     summed: dict[str, object] = {}
     defined = _mapping(merged.get('expressions'))
@@ -398,9 +398,9 @@ def _summed(
             summed[key] = {**base, 'expression': ' + '.join([cast('str', base['expression']), *names])}
             continue
         _read_elsewhere(loaded, key, contributors)
-        carried = _definer_frame(loaded, key)
+        indexed = _definer_frame(loaded, key)
         entry: dict[str, object] = {
-            'dims': [d for d in _frame(read, key) if d in carried],
+            'dims': [d for d in _frame(read, key) if d in indexed],
             'expression': ' + '.join(names),
         }
         if said := _mapping(reading).get('description'):
