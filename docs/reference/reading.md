@@ -152,9 +152,14 @@ the order `dimensions:` declares them. A sum has the dimensions its operand has,
 less the ones it sums over. A `Join` under a sum through a relation has the
 dimensions of that sum. A `Join` also opens one `Axis` for each column it
 drops, but an axis is not a dimension and is not in `dims`. An
-`ExpressionReference` has the dimensions of its body. The order of an entry's
-own `dims` can be different: a named expression keeps the order its `dims:`
-declares.
+`ExpressionReference` has the dimensions of its body.
+
+A node's `dims` are always in the order `dimensions:` declares, also where a
+named expression declares its `dims:` in another order. The entry keeps the
+order of its `dims:`. With `dimensions:` in the order `snapshot`, `generator`,
+an entry that declares `dims: [generator, snapshot]` has
+`program.expressions[name].dims == ('generator', 'snapshot')`, and each
+`ExpressionReference` to it has `dims == ('snapshot', 'generator')`.
 
 A `MaskReference` stands where a `masks:` entry is read. Its `body` is the
 predicate of the entry, the root of `program.masks[name].where`, and it is true
