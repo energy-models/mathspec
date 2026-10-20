@@ -80,7 +80,7 @@ def _masked(dtype: str) -> dict[str, object]:
 @pytest.mark.parametrize(
     ('dtype', 'defined'),
     [
-        pytest.param('bool', False, id='a-boolean-is-the-predicate'),
+        pytest.param('bool', False, id='a-boolean-is-the-condition'),
         pytest.param('float', True, id='any-other-dtype-is-definedness'),
     ],
 )
@@ -100,7 +100,7 @@ def test_a_mask_reads_as_definedness_unless_its_parameter_is_boolean(
     text = typeset(_masked(dtype), name, legend=False)
     negated = f'{fmt.operators["not"]} {fmt.subscript(fmt.upright("flag"), ["g"])}'
     assert (fmt.prose(' is defined') in text) is defined, 'a boolean mask filters on truth, any other on presence'
-    assert (negated in text) is not defined, 'the negation sits on the bare predicate only where that is the whole mask'
+    assert (negated in text) is not defined, 'the negation sits on the bare condition only where that is the whole mask'
     assert f'{negated} {fmt.prose(" is defined")}' not in text, (
         'the negation must not scope over prose it cannot bracket'
     )
@@ -786,9 +786,9 @@ def test_a_reduction_under_its_own_dimension_takes_a_fresh_dummy(expression: str
         ),
     ],
 )
-def test_a_predicate_is_bracketed_exactly_where_it_could_read_otherwise(where: str, expected: str, forbidden: str):
+def test_a_condition_is_bracketed_exactly_where_it_could_read_otherwise(where: str, expected: str, forbidden: str):
     tex = _row('p <= q', where=where)
-    assert expected in tex, 'the predicate is bracketed where its scope could read otherwise'
+    assert expected in tex, 'the condition is bracketed where its scope could read otherwise'
     assert forbidden not in tex, 'a bracket a reader needs is missing, or one is there for nothing'
 
 
@@ -864,7 +864,7 @@ def test_a_comparison_of_expressions_prints_as_the_arithmetic_it_is(name: Format
 
 
 @EVERY_FORMAT
-def test_a_count_prints_as_the_size_of_the_set_the_predicate_admits(name: FormatName, fmt: Format):
+def test_a_count_prints_as_the_size_of_the_set_the_condition_admits(name: FormatName, fmt: Format):
     """A count is a cardinality over a set by comprehension, which is how a paper writes one."""
     model = varied(DISPATCH_MODEL, **{'constraints.balance.where': 'count(p_max > 0, over=generator) >= 2'})
     text = typeset(model, name, legend=False)
@@ -877,7 +877,7 @@ def test_a_count_prints_as_the_size_of_the_set_the_predicate_admits(name: Format
 
 
 @EVERY_FORMAT
-def test_a_translated_predicate_prints_at_the_index_it_reads(name: FormatName, fmt: Format):
+def test_a_translated_condition_prints_at_the_index_it_reads(name: FormatName, fmt: Format):
     """The translation shows at the leaf, as it does for arithmetic — it emits no operator of its own."""
     model = varied(
         DISPATCH_MODEL, **{'constraints.balance.where': 'load AND NOT shift(load, along=snapshot, offset=1)'}
@@ -921,7 +921,7 @@ def test_an_assumption_prints_under_its_own_heading(name: FormatName, fmt: Forma
 def test_a_curve_prints_what_its_method_assumes_of_the_breakpoints(name: FormatName, fmt: Format):
     """The conditions a method implies are the data's too, so they print where the written ones do.
 
-    They are predicates rather than prose: the x-axis increases between
+    They are conditions rather than prose: the x-axis increases between
     neighbours, and ``convex`` — exact for a curve that bends once either
     way — counts the bends going each way and asks that one direction has
     none, which is what "convex or concave" says of a whole axis.

@@ -173,7 +173,7 @@ def typeset_line(
     """Render one entry as the bare line the document prints for it.
 
     The line the whole-spec render prints for it — a named expression's
-    or a mask's definition, a constraint, an ``sos:`` set, a ``piecewise:``
+    or a named condition's definition, a constraint, an ``sos:`` set, a ``piecewise:``
     curve, an assumption, or a variable's domain, quantifier included —
     with no document, label, equation number or math delimiters around it, for
     a math context the caller lays out: a docstring, a table cell. A line on
@@ -183,7 +183,7 @@ def typeset_line(
 
     Args:
         spec: Anything [`mathspec.to_spec`][] accepts, or a [`Program`][].
-        name: A named expression, mask, constraint, ``sos:`` entry,
+        name: A named expression, named condition, constraint, ``sos:`` entry,
             ``piecewise:`` entry, assumption or variable the spec declares.
         fmt: What spells the math — a [`FormatName`][].
         symbols: How names print; see [`typeset`][].
@@ -210,7 +210,7 @@ def typeset_line(
         'variable': given.variables,
         'expression': given.expressions,
         'constraint': given.constraints,
-        'mask': given.masks,
+        'condition': given.conditions,
     }
     given_kind = next((kind for kind, group in givens.items() if name in group), None)
     if given_kind is not None:

@@ -104,9 +104,9 @@ sorted(rows.piecewise)  # []
 `program.assumptions` maps a name to an `Assumption`: each entry the file
 declared, and each one a curve's method derives
 ([what a curve assumes](language/assumptions.md#what-a-curve-assumes)). An
-`Assumption` carries a `predicate`, the `where` it is checked under, and the
-`description` that a refusal ends with. The `predicate` and the `where` are
-both masks. `assumption_message` returns the message for an assumption the data
+`Assumption` carries `holds`, the condition it checks, the `where` it is checked under, and the
+`description` that a refusal ends with. The `holds` and the `where` are
+both `Mask` objects. `assumption_message` returns the message for an assumption the data
 does not meet:
 
 ```python
@@ -138,7 +138,7 @@ it. A `ParameterDefined` on a `bool` parameter reads the value. Under
 
 Import the node classes from `mathspec.program` to test a node with
 `isinstance` and to read its fields. `children()` walks an expression node's
-operands, and `where_children()` walks a predicate's. `walk()` yields every
+operands, and `condition_children()` walks a condition's. `walk()` yields every
 node under an expression, parents first, and `walk_regions()` yields each node
 with the `cases:` regions it stands inside, outermost first.
 
@@ -161,13 +161,13 @@ an entry that declares `dims: [generator, snapshot]` has
 `program.expressions[name].dims == ('generator', 'snapshot')`, and each
 `ExpressionReference` to it has `dims == ('snapshot', 'generator')`.
 
-A `MaskReference` stands where a `masks:` entry is read. Its `body` is the
-predicate of the entry, the root of `program.masks[name].where`, and it is true
-where the body is true. `where_children()` steps into the body, so `.atoms`,
+A `ConditionReference` stands where a `conditions:` entry is read. Its `body` is the
+condition of the entry, the root of `program.conditions[name].condition`, and it is true
+where the body is true. `condition_children()` steps into the body, so `.atoms`,
 `.names_read` and `.dims` read through it, and an engine that builds rows needs
-nothing from `program.masks`.
+nothing from `program.conditions`.
 
-Every `where` arrives as a `Mask`, whose `.root` is the resolved predicate.
+Every `where` arrives as a `Mask`, whose `.root` is the resolved condition.
 The mask also answers four questions:
 
 - `.conjuncts` flattens the `AND` spine, and stops at an `OR` or a `NOT`.
@@ -184,17 +184,17 @@ A name compared against a literal does not arrive this way. `p_max > 5` is a
 `ParameterComparison` and `1 * p_max > 5` is an `ExpressionComparison`, though
 both mask the same coordinates.
 
-Three predicates read another predicate rather than an entry. A
+Three conditions read another condition rather than an entry. A
 `CountComparison` carries the mask it counts and the dimension it counts away.
-A `TranslatedPredicate` carries the mask it reads at a neighbouring
-coordinate. A `JoinedPredicate` carries the mask it reads through a
+A `TranslatedCondition` carries the mask it reads at a neighbouring
+coordinate. A `JoinedCondition` carries the mask it reads through a
 relation, and the `JoinColumns` it joins on and groups by. Each holds that
-mask as a `Mask`, where a connective holds a bare predicate, so the walk
+mask as a `Mask`, where a connective holds a bare condition, so the walk
 recurses through a connective and stops at these. `.names_read` and `.dims` see
-through all three, and the relation a `JoinedPredicate` reads is in its
+through all three, and the relation a `JoinedCondition` reads is in its
 `.names_read`.
 
-`Mask(predicate)` answers the same four questions of any resolved predicate,
+`Mask(condition)` answers the same four questions of any resolved condition,
 and `~`, `&` and `|` combine masks into a mask. A mask simplifies as it is
 built, so a boolean literal is either the root of the mask or does not appear in
 it. A `Region`'s `when` is a `Mask` too.
@@ -202,14 +202,14 @@ it. A `Region`'s `when` is a `Mask` too.
 ## What a program does not build
 
 `program.given.parameters`, `program.given.variables`,
-`program.given.expressions`, `program.given.masks` and
+`program.given.expressions`, `program.given.conditions` and
 `program.given.constraints` name what the spec reads and does not build
 ([given](language/parameters-variables-constraints.md#given)). Every other group tells a tool what
 to build, but these five name what to look up in the host model, which is the
 model that this spec is layered onto. An expression reads a given expression as
 a `VariableReference` of that name, over the frame under `program.given.expressions`. A
-`where` reads a given mask as a `ParameterDefined` of that name, which is
-boolean data over the frame under `program.given.masks`.
+condition reads a given condition as a `ParameterDefined` of that name, which is
+boolean data over the frame under `program.given.conditions`.
 An entry of `program.expressions` whose `adds_to` names a given expression is
 a term this file adds to it. The name is still one that the program reads and
 does not build.
@@ -335,7 +335,7 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 
 - The sections come in one order, whatever order the file wrote them in:
   `version`, `description`, `given`, `dimensions`, `relations`, `parameters`,
-  `masks`, `variables`, `expressions`, `objective`, `constraints`, `sos`,
+  `conditions`, `variables`, `expressions`, `objective`, `constraints`, `sos`,
   `piecewise`, `assumptions`, `macros`. The keys of an entry also come in one
   order.
 - Entries are sorted by name within each section.
@@ -350,7 +350,7 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 - A constant is never folded into another. `2 * 3` stays `2 * 3`, so a
   reviewer sees a changed coefficient in the diff.
 
-Four things are left as the file wrote them: a predicate in the `where`
+Four things are left as the file wrote them: a condition in the `where`
 grammar, the order of the regions under `cases:`, the order of an entry's
 `dims`, and the order of a piecewise entry's links. A difference in any of them
 is a difference in the text.

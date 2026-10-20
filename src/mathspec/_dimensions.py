@@ -26,7 +26,7 @@ from mathspec.program import (
     ExpressionComparison,
     Join,
     JoinColumns,
-    JoinedPredicate,
+    JoinedCondition,
     Mask,
     ParameterComparison,
     ParameterDefined,
@@ -36,7 +36,7 @@ from mathspec.program import (
     RelationPairComparison,
     Sum,
     Translate,
-    TranslatedPredicate,
+    TranslatedCondition,
     VariableDefined,
     WindowSum,
 )
@@ -88,7 +88,7 @@ def _check_sum(node: Sum, inner: frozenset[str], context: str) -> None:
 
 
 def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand: str) -> frozenset[str]:
-    """The dims *inner* has once *columns* joins it, an expression's or a predicate's alike.
+    """The dims *inner* has once *columns* joins it, an expression's or a condition's alike.
 
     The dims joined on go and the dims grouped by arrive. A column both
     joined on and grouped by keeps its dim. The call a refusal quotes is
@@ -210,7 +210,7 @@ def check_spec(spec: Spec, program: Program) -> None:
     for vname, vdef in spec.variables.items():
         frame = frozenset(vdef.dims)
         context = f"Variable '{vname}'"
-        _check_where_dims(program.variables[vname].where, frame, context)
+        _check_condition_dims(program.variables[vname].where, frame, context)
         for side in ('lower', 'upper'):
             bound = getattr(vdef.bounds, side)
             if isinstance(bound, str):
@@ -235,7 +235,7 @@ def check_spec(spec: Spec, program: Program) -> None:
         for region, label in zip(entry.expression.regions, [*declared.cases, None], strict=True):
             context = case_context(ename, label)
             if label is not None:
-                _check_where_dims(region.when, frame, context)
+                _check_condition_dims(region.when, frame, context)
             indexed |= _check_value_dims(region.value, frame, context) | region.when.dims
         _check_dims_are_indexed(ename, frame, indexed, 'no case value and no `when:` is')
 
@@ -252,7 +252,7 @@ def check_spec(spec: Spec, program: Program) -> None:
     for cname, constraint in program.constraints.items():
         frame = frozenset(constraint.dims)
         context = f"Constraint '{cname}'"
-        _check_where_dims(constraint.where, frame, context)
+        _check_condition_dims(constraint.where, frame, context)
         got = frozenset((*constraint.lhs.dims, *constraint.rhs.dims))
         if got != frame:
             stray, missing = sorted(got - frame), sorted(frame - got)
@@ -317,12 +317,12 @@ def _check_dims_are_indexed(name: str, declared: frozenset[str], indexed: frozen
         )
 
 
-def _check_where_dims(
+def _check_condition_dims(
     mask: Mask | None,
     frame: frozenset[str],
     context: str,
 ) -> None:
-    """A predicate may only test dims the frame carries; reducing an outside dim to fit would fail open.
+    """A condition may only test dims the frame carries; reducing an outside dim to fit would fail open.
 
     The refusal names the leaf that left the frame, reading its dims as
     [`dims`][mathspec.program.Mask.dims] does.
@@ -343,13 +343,13 @@ def _check_where_dims(
             case RelationComparison() | RelationPairComparison() | RelationDefined():
                 leaf = f"where-relation '{atom.name}'"
             case ExpressionComparison():
-                leaf = 'a where-comparison of expressions'
+                leaf = 'a comparison of expressions'
             case CountComparison():
-                leaf = f"a where-count over '{atom.over}'"
-            case TranslatedPredicate():
-                leaf = f"a where-predicate translated along '{atom.along}'"
-            case JoinedPredicate():
-                leaf = f"a where-predicate read through '{atom.columns.name}'"
+                leaf = f"a count over '{atom.over}'"
+            case TranslatedCondition():
+                leaf = f"a condition translated along '{atom.along}'"
+            case JoinedCondition():
+                leaf = f"a condition read through '{atom.columns.name}'"
             case _:
                 assert_never(atom)
         raise DimensionError(

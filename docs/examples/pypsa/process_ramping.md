@@ -27,7 +27,7 @@ given:
     Process_p_nom_effective: { dims: [scenario, process] }
     Process_previous_status: { dims: [scenario, snapshot, process] }
     Process_p_nom_committed: { dims: [scenario, process] }
-  masks:
+  conditions:
     Process_com_ext: { dims: [snapshot, process] }
 
 dimensions:
@@ -146,13 +146,13 @@ expressions:
           * (Process_previous_status - Process_status)
     otherwise: Process_ramp_down_rate * Process_p_nom_effective
 
-masks:
+conditions:
   Process_ramps_from_previous:
     description: >-
       a snapshot whose ramp reads a previous output — any snapshot but its
       period's first, and the horizon's first where the process comes in off
       or carries an initial output
-    where: >-
+    condition: >-
       position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
       (Process_status_initial == 0 OR Process_p_init))
 
@@ -273,7 +273,7 @@ assumptions:
 | $`\widetilde{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_effective` over $`\Xi \times \mathcal{J}`$, an expression another file defines |
 | $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, an expression another file defines |
 | $`\widehat{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_committed` over $`\Xi \times \mathcal{J}`$, an expression another file defines |
-| $`\mathrm{on}^{z,\mathrm{com,ext}}`$ | `Process_com_ext` over $`\mathcal{T} \times \mathcal{J}`$, a mask another file defines |
+| $`\mathrm{on}^{z,\mathrm{com,ext}}`$ | `Process_com_ext` over $`\mathcal{T} \times \mathcal{J}`$, a condition another file defines |
 
 #### Sets
 
@@ -294,7 +294,7 @@ assumptions:
 | $`\mathrm{rd}^{z,\mathrm{dn}}`$ | `Process_ramp_limit_shut_down` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — most internal power in the snapshot before a process stops, per unit of nominal power; no value means no limit |
 | $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the internal power a process brought into the horizon — PyPSA's `p_init`, read only where the process came in running; no value means it is unknown, so the process carries no ramp row at the first snapshot |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -319,7 +319,7 @@ assumptions:
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 | $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ | `position(within=relation[...])` — the position of $`t`$ inside its group |
 
-#### Masks
+#### Conditions
 
 **`Process_ramps_from_previous`**
 

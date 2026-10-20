@@ -26,7 +26,7 @@ from dataclasses import dataclass, field, fields, replace
 from functools import cached_property
 from typing import TYPE_CHECKING, Literal, assert_never
 
-from mathspec._expression_parser import ComparisonOperator
+from mathspec._expression_parser import Sense
 from mathspec._sealed import Sealed
 from mathspec.errors import did_you_mean
 
@@ -46,6 +46,9 @@ __all__ = [
     'BooleanLiteral',
     'Cases',
     'Column',
+    'ComparisonOperator',
+    'Condition',
+    'ConditionReference',
     'Connective',
     'Constant',
     'Constraint',
@@ -66,15 +69,14 @@ __all__ = [
     'GivenTargets',
     'Join',
     'JoinColumns',
-    'JoinedPredicate',
+    'JoinedCondition',
     'Link',
     'Mask',
-    'MaskReference',
     'Missing',
     'MissingReading',
     'Multiply',
+    'NamedCondition',
     'NamedExpression',
-    'NamedMask',
     'Negate',
     'Not',
     'Objective',
@@ -89,8 +91,6 @@ __all__ = [
     'Piecewise',
     'PiecewiseMethod',
     'Power',
-    'Predicate',
-    'PredicateOperator',
     'Program',
     'QuadraticPosition',
     'Reach',
@@ -105,8 +105,8 @@ __all__ = [
     'SosType',
     'Sum',
     'Translate',
-    'TranslatedPredicate',
-    'TypedPredicate',
+    'TranslatedCondition',
+    'TypedCondition',
     'Variable',
     'VariableDefined',
     'VariableDomain',
@@ -116,16 +116,16 @@ __all__ = [
     'assumption_message',
     'carries_variable',
     'children',
+    'condition_children',
     'is_quadratic',
     'parameters_of',
     'variables_of',
     'walk',
     'walk_regions',
-    'where_children',
 ]
 
 
-ConstraintSense = ComparisonOperator
+ConstraintSense = Sense
 
 #: Where a degree-2 product may stand in the math a solver sees. An objective
 #: and a constraint take ``variable * variable``; a bound and a ``piecewise:``
@@ -138,13 +138,13 @@ QuadraticPosition = Literal['objective', 'constraint']
 DimensionDtype = Literal['float', 'int', 'str', 'datetime']
 
 #: The dtype a parameter may declare (the entry rules), and what its bound
-#: column must be. Only a parameter may declare ``bool``, because a mask reads
+#: column must be. Only a parameter may declare ``bool``, because a condition reads
 #: a flag column, and nothing indexes by a dimension of two labels.
 ParameterDtype = Literal['float', 'int', 'bool', 'str']
 
-#: The dtype of a *name* that a where comparison tests: a parameter's or a
+#: The dtype of a *name* that a comparison in a condition tests: a parameter's or a
 #: dimension's, because a relation takes its target's dtype. It is the union of
-#: both, because a mask names all three kinds and reads the dtype the same way.
+#: both, because a condition names all three kinds and reads the dtype the same way.
 DeclaredDtype = ParameterDtype | DimensionDtype
 
 #: The domain a variable may declare.
@@ -673,16 +673,16 @@ class Dimension:
 
 @dataclass(frozen=True)
 class Assumption:
-    """A predicate the file states of its data, under the name it wrote in ``assumptions:``.
+    """A condition the file states of its data, under the name it wrote in ``assumptions:``.
 
-    ``predicate`` is true at every coordinate of its frame — the product of
+    ``holds`` is true at every coordinate of its frame — the product of
     every dim the two masks name — that ``where`` admits, a missing row
     reading as false as it does in any mask. Nothing here is decidable at
     load: both sides are the data's, which is why the consumer attaching it
     checks.
     """
 
-    predicate: Mask
+    holds: Mask
     where: Mask | None = None
     #: What the file wrote under ``description:``, or the sentence a
     #: ``piecewise:`` method implies. The refusal trails it: the names alone
@@ -699,7 +699,7 @@ def assumption_message(name: str, assumption: Assumption) -> str:
     sentence: the names say which columns are wrong, and the description says
     why the rule is there.
     """
-    read = ', '.join(f"'{n}'" for n in sorted(assumption.predicate.names_read))
+    read = ', '.join(f"'{n}'" for n in sorted(assumption.holds.names_read))
     sentence = f"assumption '{name}' does not hold for the data attached to {read}"
     return f'{sentence}: {assumption.description}' if assumption.description else sentence
 
@@ -759,7 +759,7 @@ class GivenTargets:
     is sealed at construction, like every group of [`Program`][].
     """
 
-    #: Data another file declares, by name, with the dtype a where compares against.
+    #: Data another file declares, by name, with the dtype a condition compares against.
     parameters: Mapping[str, Parameter] = Sealed({})
     #: Columns the host model provides, by name.
     variables: Mapping[str, Given] = Sealed({})
@@ -767,9 +767,9 @@ class GivenTargets:
     constraints: Mapping[str, Given] = Sealed({})
     #: Named expressions the host model defines, by name.
     expressions: Mapping[str, Given] = Sealed({})
-    #: Masks the host model defines, by name. A where reads one as the data it
+    #: Named conditions the host model defines, by name. A condition reads one as the data it
     #: is: a [`ParameterDefined`][] of a boolean over its frame.
-    masks: Mapping[str, Given] = Sealed({})
+    conditions: Mapping[str, Given] = Sealed({})
 
     def __post_init__(self) -> None:
         for f in fields(self):
@@ -777,7 +777,7 @@ class GivenTargets:
 
     def __bool__(self) -> bool:
         """Whether the program reads anything it does not build."""
-        return bool(self.parameters or self.variables or self.constraints or self.expressions or self.masks)
+        return bool(self.parameters or self.variables or self.constraints or self.expressions or self.conditions)
 
 
 @dataclass(frozen=True)
@@ -847,16 +847,16 @@ class NamedExpression:
 
 
 @dataclass(frozen=True)
-class NamedMask:
-    """A named predicate — a ``masks:`` entry, read wherever a ``where``, a ``when`` or a ``holds`` names it.
+class NamedCondition:
+    """A named condition — a ``conditions:`` entry, read wherever a ``where``, a ``when`` or a ``holds`` names it.
 
-    It builds nothing of its own: every use stands as a [`MaskReference`][] with
-    this predicate under it, so a consumer reading a mask never looks the
+    It builds nothing of its own: every use stands as a [`ConditionReference`][] with
+    this condition under it, so a consumer reading a condition never looks the
     name up here.
     """
 
-    where: Mask
-    #: The frame the mask is read over: the dims its predicate carries, in the
+    condition: Mask
+    #: The frame the condition is read over: the dims its condition carries, in the
     #: order ``dimensions:`` declares them.
     dims: tuple[str, ...]
     description: str | None = None
@@ -1087,9 +1087,9 @@ class Program:
     #: named expression is outside the language is refused by every verb that
     #: reads the file rather than only by the one that reads the expression.
     expressions: Mapping[str, NamedExpression] = Sealed({})
-    #: Declared ``masks:``. Each use stands as a [`MaskReference`][] where it is
+    #: Declared ``conditions:``. Each use stands as a [`ConditionReference`][] where it is
     #: read, so a consumer building rows needs nothing from this group.
-    masks: Mapping[str, NamedMask] = Sealed({})
+    conditions: Mapping[str, NamedCondition] = Sealed({})
     #: What this program reads and does not build ([`GivenTargets`][]), for a host model to provide.
     given: GivenTargets = GivenTargets()
     #: What the file as a whole is, as its ``description:`` says.
@@ -1261,7 +1261,7 @@ def variables_of(*expressions: Expression) -> frozenset[str]:
 # ---------------------------------------------------------------------------
 
 
-PredicateOperator = Literal['<=', '>=', '==', '!=', '<', '>']
+ComparisonOperator = Literal['<=', '>=', '==', '!=', '<', '>']
 
 
 @dataclass(frozen=True)
@@ -1295,7 +1295,7 @@ class ParameterComparison:
     """Compare a parameter against a literal, element-wise."""
 
     name: str
-    op: PredicateOperator
+    op: ComparisonOperator
     value: float | str
     dims: tuple[str, ...]
 
@@ -1311,7 +1311,7 @@ class ExpressionComparison:
     """
 
     left: Expression
-    op: PredicateOperator
+    op: ComparisonOperator
     right: Expression
     dims: tuple[str, ...]
 
@@ -1321,7 +1321,7 @@ class DimensionComparison:
     """Compare a dimension's own coordinates against a literal."""
 
     name: str
-    op: PredicateOperator
+    op: ComparisonOperator
     value: float | str | datetime.date
 
 
@@ -1335,7 +1335,7 @@ class DimensionPosition:
     """
 
     name: str
-    op: PredicateOperator
+    op: ComparisonOperator
     position: int
     partition: Partition | None = None
 
@@ -1350,7 +1350,7 @@ class RelationComparison:
 
     name: str
     column: str
-    op: PredicateOperator
+    op: ComparisonOperator
     value: float | str | datetime.date
     dims: tuple[str, ...] = ()
 
@@ -1367,7 +1367,7 @@ class RelationPairComparison:
     column: str
     other: str
     other_column: str
-    op: PredicateOperator
+    op: ComparisonOperator
     dims: tuple[str, ...] = ()
 
 
@@ -1386,30 +1386,30 @@ class RelationDefined:
 
 @dataclass(frozen=True)
 class CountComparison:
-    """How many coordinates *predicate* admits along *over*, against a literal — ``count(points, over=bp) >= 2``.
+    """How many coordinates *condition* admits along *over*, against a literal — ``count(points, over=bp) >= 2``.
 
     The count is one number per coordinate of ``dims``, which is every dim
-    *predicate* reads minus *over*, so a claim about each curve is written
-    without saying "each curve". A predicate a leaf reads arrives as a
-    [`Mask`][], where a connective's operand is a bare [`Predicate`][]:
+    *condition* reads minus *over*, so a claim about each curve is written
+    without saying "each curve". A condition a leaf reads arrives as a
+    [`Mask`][], where a connective's operand is a bare [`Condition`][]:
     a walk recurses through the second and stops at the first.
     """
 
-    predicate: Mask
+    condition: Mask
     over: str
-    op: PredicateOperator
+    op: ComparisonOperator
     value: float
     dims: tuple[str, ...]
 
 
 @dataclass(frozen=True)
-class TranslatedPredicate:
+class TranslatedCondition:
     """*operand* read at a neighbouring coordinate — ``shift(points, along=bp, offset=1)``.
 
     False where the translation vacates, and there is no ``edge=`` to state.
     The arithmetic translation needs one because no number is neutral and
     inventing one changes the answer; false is what a missing row already
-    means in a mask, so the predicate form has the value the language already
+    means in a mask, so the condition form has the value the language already
     gives it.
     """
 
@@ -1420,8 +1420,8 @@ class TranslatedPredicate:
 
 
 @dataclass(frozen=True)
-class JoinedPredicate:
-    """*operand* read through a relation, written ``at(has_curve, by=converter_of[converter])``: a lookup [`Join`][] of a predicate.
+class JoinedCondition:
+    """*operand* read through a relation, written ``at(has_curve, by=converter_of[converter])``: a lookup [`Join`][] of a condition.
 
     True at a coordinate where the relation has a row and *operand* holds at
     the coordinate that row reads. False where the relation has no row, which
@@ -1437,39 +1437,39 @@ class JoinedPredicate:
 
 @dataclass(frozen=True)
 class Not:
-    operand: Predicate
+    operand: Condition
 
 
 @dataclass(frozen=True)
 class And:
-    left: Predicate
-    right: Predicate
+    left: Condition
+    right: Condition
 
 
 @dataclass(frozen=True)
 class Or:
-    left: Predicate
-    right: Predicate
+    left: Condition
+    right: Condition
 
 
 @dataclass(frozen=True)
-class MaskReference:
-    """A use of a ``masks:`` entry, standing where its name was written, with the entry's predicate under it.
+class ConditionReference:
+    """A use of a ``conditions:`` entry, standing where its name was written, with the entry's condition under it.
 
     Its truth is its body's: a consumer steps through it, as
-    [`where_children`][] does. It is kept as a node rather than written in so
+    [`condition_children`][] does. It is kept as a node rather than written in so
     the typesetter can print the symbol where the name stood and define it
     once, as [`ExpressionReference`][] does for an expression.
     """
 
     name: str
-    body: Predicate
+    body: Condition
 
 
-#: Every predicate resolution has typed: it names an entry and the kind is
+#: Every condition resolution has typed: it names an entry and the kind is
 #: settled. Resolution passes these straight through, having nothing left to
 #: decide about them.
-TypedPredicate = (
+TypedCondition = (
     ParameterComparison
     | ExpressionComparison
     | ParameterDefined
@@ -1480,39 +1480,39 @@ TypedPredicate = (
     | RelationPairComparison
     | RelationDefined
     | CountComparison
-    | TranslatedPredicate
-    | JoinedPredicate
+    | TranslatedCondition
+    | JoinedCondition
 )
 
-#: The boolean connectives. With [`MaskReference`][], they are the only where nodes
-#: that carry other where nodes, so a walk over a predicate recurses only here.
+#: The boolean connectives. With [`ConditionReference`][], they are the only condition nodes
+#: that carry other condition nodes, so a walk over a condition recurses only here.
 #: The grammar builds these classes directly over unresolved leaves, so a tree
 #: before resolution shares them, and resolution then replaces those leaves.
 Connective = Not | And | Or
 
-#: Every resolved predicate node. The parser's ``Unresolved*`` nodes are not members: they live with the
-#: grammar in [`mathspec._where_parser`][], and resolution rewrites them away
+#: Every resolved condition node. The parser's ``Unresolved*`` nodes are not members: they live with the
+#: grammar in [`mathspec._condition_parser`][], and resolution rewrites them away
 #: before anything here is asked.
-Predicate = BooleanLiteral | TypedPredicate | Connective | MaskReference
+Condition = BooleanLiteral | TypedCondition | Connective | ConditionReference
 
 
-def where_children(where: Predicate) -> tuple[Predicate, ...]:
-    """The predicates under *where* — a connective's operands, a named mask's body, and nothing under a leaf.
+def condition_children(condition: Condition) -> tuple[Condition, ...]:
+    """The conditions under *condition* — a connective's operands, a named condition's body, and nothing under a leaf.
 
-    What every walk over a predicate recurses through, as [`children`][] is
+    What every walk over a condition recurses through, as [`children`][] is
     for an expression. A leaf has nothing under it whether or not it is
     resolved, so the grammar measures its own output with this too.
     """
-    if isinstance(where, Not):
-        return (where.operand,)
-    if isinstance(where, (And, Or)):
-        return (where.left, where.right)
-    if isinstance(where, MaskReference):
-        return (where.body,)
+    if isinstance(condition, Not):
+        return (condition.operand,)
+    if isinstance(condition, (And, Or)):
+        return (condition.left, condition.right)
+    if isinstance(condition, ConditionReference):
+        return (condition.body,)
     return ()
 
 
-def _atoms(where: Predicate) -> Iterator[TypedPredicate]:
+def _atoms(where: Condition) -> Iterator[TypedCondition]:
     """Every node in *where* that reads an entry, connectives removed.
 
     A boolean literal yields nothing.
@@ -1520,17 +1520,17 @@ def _atoms(where: Predicate) -> Iterator[TypedPredicate]:
     Raises:
         AssertionError: An unresolved node reached the walk.
     """
-    if isinstance(where, TypedPredicate):
+    if isinstance(where, TypedCondition):
         yield where
-    elif isinstance(where, BooleanLiteral | Connective | MaskReference):
-        for child in where_children(where):
+    elif isinstance(where, BooleanLiteral | Connective | ConditionReference):
+        for child in condition_children(where):
             yield from _atoms(child)
     else:
-        msg = f'{type(where).__name__} reached a predicate walk unresolved.'
+        msg = f'{type(where).__name__} reached a condition walk unresolved.'
         raise AssertionError(msg)
 
 
-def _atom_dims(atom: TypedPredicate) -> frozenset[str]:
+def _atom_dims(atom: TypedCondition) -> frozenset[str]:
     """One leaf's dims — the rule [`Mask.dims`][] is the union of.
 
     A parameter or variable leaf carries its own dims off the entry; a
@@ -1538,7 +1538,7 @@ def _atom_dims(atom: TypedPredicate) -> frozenset[str]:
     through the dimensions of the columns it is read at — its key for a
     comparison, every column for a bare existence.
     Separate from the union because the load-time frame check reports per
-    leaf. Closed by ``assert_never``: a predicate node added without a reading
+    leaf. Closed by ``assert_never``: a condition node added without a reading
     is a type error here, at the one place that has to grow a branch, rather
     than a wrong dim set at the first spec to use it.
     """
@@ -1549,11 +1549,11 @@ def _atom_dims(atom: TypedPredicate) -> frozenset[str]:
             | ParameterDefined()
             | VariableDefined()
             | CountComparison()
-            | TranslatedPredicate()
+            | TranslatedCondition()
             | RelationComparison()
             | RelationPairComparison()
             | RelationDefined()
-            | JoinedPredicate()
+            | JoinedCondition()
         ):
             return frozenset(atom.dims)
         case DimensionComparison():
@@ -1564,14 +1564,14 @@ def _atom_dims(atom: TypedPredicate) -> frozenset[str]:
             assert_never(atom)
 
 
-def _atom_names(atom: TypedPredicate) -> frozenset[str]:
+def _atom_names(atom: TypedCondition) -> frozenset[str]:
     """One leaf's entries, its dimension apart — the rule [`Mask.names_read`][] is the union of.
 
     A comparison on a dimension names no entry — a coordinate is not
     data to feed — a relation pair names both maps it compares, and a
     comparison of expressions names every parameter and relation its sides
     read, answered on the program's form of it since only a program mask is
-    asked. ``assert_never``-closed for the reason [`_atom_dims`][] is: a predicate
+    asked. ``assert_never``-closed for the reason [`_atom_dims`][] is: a condition
     node added without a reading is a type error at this one branch rather
     than a name silently dropped at the first spec to use it.
     """
@@ -1583,10 +1583,10 @@ def _atom_names(atom: TypedPredicate) -> frozenset[str]:
         case ExpressionComparison():
             return _names_under(atom.left, atom.right)
         case CountComparison():
-            return atom.predicate.names_read
-        case TranslatedPredicate():
+            return atom.condition.names_read
+        case TranslatedCondition():
             return atom.operand.names_read
-        case JoinedPredicate():
+        case JoinedCondition():
             return atom.operand.names_read | {atom.columns.name}
         case DimensionComparison() | DimensionPosition():
             return frozenset()
@@ -1618,28 +1618,28 @@ def _names_under(*expressions: Expression) -> frozenset[str]:
     return frozenset(names)
 
 
-def _conjuncts(where: Predicate) -> tuple[Predicate, ...]:
+def _conjuncts(where: Condition) -> tuple[Condition, ...]:
     """The flatten rule behind [`Mask.conjuncts`][] — the one home of the split.
 
-    ``a AND b AND c`` gives three, and a predicate that is not an ``AND`` gives
+    ``a AND b AND c`` gives three, and a condition that is not an ``AND`` gives
     itself. The walk stops at the first node that is not an ``AND``: the
     conjuncts of ``a AND (b OR c)`` are ``a`` and ``b OR c``, and of
     ``NOT (a AND b)`` the single ``NOT`` — neither an ``OR`` nor a ``NOT`` is a
-    claim the predicate makes on its own, so neither is split.
+    claim the condition makes on its own, so neither is split.
     """
     if isinstance(where, And):
         return _conjuncts(where.left) + _conjuncts(where.right)
     return (where,)
 
 
-def _fold(node: Predicate) -> Predicate:
+def _fold(node: Condition) -> Condition:
     """*node* with every connective a literal or a double negation decides evaluated away.
 
     ``X AND True`` is ``X``, ``X OR True`` is every row, ``X AND False`` is
     none, ``NOT True`` is ``False`` and ``NOT NOT X`` is ``X``. What survives
-    is a predicate over data, or the one literal the whole mask reduces to —
+    is a condition over data, or the one literal the whole mask reduces to —
     the invariant [`Mask`][] applies at construction, so it holds wherever
-    a mask is built. A [`MaskReference`][] is left whole: its body was folded
+    a mask is built. A [`ConditionReference`][] is left whole: its body was folded
     when the entry was read, and refused there where it folded to a literal.
     """
     if isinstance(node, Not):
@@ -1670,23 +1670,23 @@ def _fold(node: Predicate) -> Predicate:
 class Mask:
     """A resolved ``where`` and the questions the language answers about it.
 
-    ``root`` is the predicate a consumer dispatches on with ``isinstance``;
+    ``root`` is the condition a consumer dispatches on with ``isinstance``;
     every question below is derived from it. Construction folds, so a boolean
     literal stands at the root or nowhere in it, and refuses an unresolved
     tree.
 
     Attributes:
-        root: The resolved predicate the mask restricts rows by, folded.
+        root: The resolved condition the mask restricts rows by, folded.
     """
 
-    root: Predicate
+    root: Condition
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'root', _fold(self.root))
         _ = self.atoms  # the walk is the refusal, and runs after the fold
 
     @cached_property
-    def atoms(self) -> tuple[TypedPredicate, ...]:
+    def atoms(self) -> tuple[TypedCondition, ...]:
         """The mask's leaves, connectives removed — the one walk the other questions read.
 
         Held rather than re-walked: construction takes this walk anyway, to
@@ -1695,8 +1695,8 @@ class Mask:
         return tuple(_atoms(self.root))
 
     @property
-    def conjuncts(self) -> tuple[Predicate, ...]:
-        """The predicates the mask joins with ``AND`` — its ``AND`` spine flattened, stopping at an ``OR`` or a ``NOT``."""
+    def conjuncts(self) -> tuple[Condition, ...]:
+        """The conditions the mask joins with ``AND`` — its ``AND`` spine flattened, stopping at an ``OR`` or a ``NOT``."""
         return _conjuncts(self.root)
 
     @property
@@ -1709,7 +1709,7 @@ class Mask:
         """The dims the mask is read at — the union of what each leaf carries.
 
         Empty for a mask over nothing but literals. Read off the leaves, which
-        resolution stamped with their entries' dims, so a predicate built
+        resolution stamped with their entries' dims, so a condition built
         from resolved pieces answers exactly as an entry's own does.
         """
         return frozenset(dim for atom in self.atoms for dim in _atom_dims(atom))

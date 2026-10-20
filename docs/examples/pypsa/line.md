@@ -260,12 +260,12 @@ expressions:
     expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period[period]), over=line)
     adds_to: Cycle_angle_sum
 
-masks:
+conditions:
   Line_lossy:
     description: >-
       a line that stands in the snapshot's period, where the run models
       transmission losses
-    where: transmission_losses AND Line_active
+    condition: transmission_losses AND Line_active
 
 constraints:
   Line_fix_s_lower:
@@ -406,7 +406,7 @@ constraints:
 | $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$, `neutral` where the data has no row — the line's capital cost where its carrier is in the row's set, times the objective weights of the periods it stands in where the row names no `investment_period` under `multi_investment_periods` — data prep; a line outside the set, or one that does not stand in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Line_capital_cost` without `fom_cost` (`components.py:1151-1169`, `global_constraints.py:870-879`) |
 | $`\mathrm{m}^{l}`$ | `Line_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{K}`$, `neutral` where the data has no row — one where the line is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -434,7 +434,7 @@ constraints:
 | $`\mathit{Line\_injection}`$ | `Line_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
 | $`\mathit{Line\_angle\_sum}`$ | `Line_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ |
 
-#### Masks
+#### Conditions
 
 **`Line_lossy`**
 

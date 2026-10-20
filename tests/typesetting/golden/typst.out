@@ -30,7 +30,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("bp_heat")$: `bp_heat` over $cal(G) times cal(A)$
 / $upright("bp_run")$: `bp_run` over $cal(G) times cal(A)$
 
-== Masks
+== Conditions
 / $upright("dispatchable")$: `dispatchable` over $cal(G)$ --- a unit that dispatches and cannot be turned down
 / $upright("priced_dispatch")$: `priced_dispatch` over $cal(G)$
 
@@ -67,7 +67,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("pos")_(upright("relation")(t))(t)$: `position(within=relation[...])` --- the position of $t$ inside its group
 / $abs(cal(T))$: the size of $cal(T)$; $abs(cal(T)) - 1$ is the last position
 
-== Masks
+== Conditions
 #set math.equation(numbering: "(1)")
 $ upright("dispatchable") & upright("dispatchable")_(g) & arrow.l.r.double.long upright("p")^(upright("max"))_(g) > 0 and not upright("is_flexible")_(g) & forall g in cal(G) \
   upright("priced_dispatch") & upright("priced_dispatch")_(g) & arrow.l.r.double.long upright("dispatchable")_(g) and upright("spend")^(upright("cap"))_(g) > 0 & forall g in cal(G) $

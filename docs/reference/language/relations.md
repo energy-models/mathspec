@@ -120,7 +120,7 @@ once, so one call reads one table.
 | join and group by | rows of the operand match rows of the relation, and each group is added up   | `sum(x, over=d, by=l[c])`                          |
 | join              | each row of the operand matches one row of the relation, and reads its value | `at(x, by=l[c])`                                   |
 | partition         | the dimensions stay, and the rows are grouped                                | `shift`, `sum_back`, `position` with `within=l[c]` |
-| test              | a row's presence keeps or cuts a coordinate                                  | `l`, or `l[c]` in a comparison, in a `where`       |
+| test              | a row's presence keeps or cuts a coordinate                                  | `l`, or `l[c]` in a comparison, in a condition     |
 
 Four rules hold for every use:
 
@@ -207,8 +207,8 @@ coordinate the relation sends nowhere is in no group.
 
 ### Tests
 
-A `where` string uses a relation at the coordinates of its own entry. It
+A condition uses a relation at the coordinates of its own entry. It
 compares a column under `values:`, written `l[c]`, against a label, compares
 two columns of one table, or tests that a row exists
-([where strings](expressions.md#where-strings)). A comparison reads one column,
+([conditions](expressions.md#conditions)). A comparison reads one column,
 so `calendar[month, weekday] == 'x'` is refused.

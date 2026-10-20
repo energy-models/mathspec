@@ -172,7 +172,7 @@ GIVEN = varied(
         pytest.param(
             PLAIN,
             'spent',
-            r"'spent' is not a named expression, mask, constraint, special ordered set, curve, assumption or variable.*spend",
+            r"'spent' is not a named expression, condition, constraint, special ordered set, curve, assumption or variable.*spend",
             id='a-near-miss',
         ),
         pytest.param(PLAIN, 'objective', r"'objective' is not a named expression", id='the-objective-has-no-name'),

@@ -560,11 +560,11 @@ def test_every_named_curvature_is_one_a_method_can_ask_for():
     )
 
 
-def test_a_masked_lp_curve_sits_its_rows_on_predicates_rather_than_on_parameters():
+def test_a_masked_lp_curve_sits_its_rows_on_conditions_rather_than_on_parameters():
     """An ``lp`` entry masked by one of its own values parameters emitted three ``bool``
     parameters — the mask, and the first and last breakpoint of each curve — that the
     caller never supplied and a derivation in private state filled. The ``where``
-    language writes each of them, so the rows carry the predicate and the program
+    language writes each of them, so the rows carry the condition and the program
     declares the file's parameters and no other."""
     program = spec_of(LP_MASKED).expand('piecewise').program
     rows = {name: program.constraints[f'cost_curve_{name}'].where for name in ('chord', 'domain_lo', 'domain_hi')}
@@ -589,7 +589,7 @@ def test_a_file_supplied_mask_is_what_the_contiguity_condition_reads():
     ).program
 
     contiguous = program.assumptions['cost_curve_contiguous']
-    assert contiguous.predicate.names_read == frozenset({'reach'}), (
+    assert contiguous.holds.names_read == frozenset({'reach'}), (
         "the mask is still one the data has to make contiguous, and the condition reads the file's own name"
     )
 
@@ -637,7 +637,7 @@ def test_an_entry_assumes_of_its_data_what_the_method_implies():
     assert all(isinstance(a, Assumption) for a in program.assumptions.values()), (
         'a method states its conditions in the same language the file does, so a consumer has one kind to read'
     )
-    assert program.assumptions['cost_curve_increasing'].predicate.names_read == frozenset({'bp_x'}), (
+    assert program.assumptions['cost_curve_increasing'].holds.names_read == frozenset({'bp_x'}), (
         'the x-axis is what increases, and the condition reads it and nothing else'
     )
 

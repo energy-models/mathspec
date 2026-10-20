@@ -113,8 +113,8 @@ def symbols_for(model: Spec, table_path: Path = LIBRARY_SYMBOLS) -> dict[str, An
         *given.variables,
         *given.expressions,
         *given.constraints,
-        *model.masks,
-        *given.masks,
+        *model.conditions,
+        *given.conditions,
     }
     return {
         'notation': table['notation'],
@@ -268,11 +268,14 @@ def declared_block(path: Path) -> str:
     objective = _section(math, 'Objective').strip().removeprefix('#### Objective').strip()
     equation = equations(_section(math, 'Subject to'))
     definition = equations(_section(math, 'Definitions')) if model.expressions else {}
-    mask = equations(_section(math, 'Masks')) if model.masks else {}
+    defined = equations(_section(math, 'Conditions')) if model.conditions else {}
     domains = _section(math, 'Variable domains').strip()
     assumption = equations(_section(math, 'Assumptions')) if model.assumptions else {}
     parts = [legend.strip()]
-    parts.extend(f'### `{name}`\n\n```yaml\n{entry(text, "masks", name)}\n```\n\n{mask[name]}' for name in model.masks)
+    parts.extend(
+        f'### `{name}`\n\n```yaml\n{entry(text, "conditions", name)}\n```\n\n{defined[name]}'
+        for name in model.conditions
+    )
     parts.append(domains)
     parts.extend(
         f'### `{name}`\n\n```yaml\n{entry(text, "expressions", name)}\n```\n\n{definition[name]}'

@@ -13,6 +13,8 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(program): each expression node states the dimensions it is read over ([#899](https://github.com/energy-models/mathspec/pull/899))
+- refactor(language)!: a file names a condition under `conditions:` rather than `masks:` ([#907](https://github.com/energy-models/mathspec/pull/907))
+- refactor(api)!: the docs, the error messages and the program classes call a true-or-false `where` expression a condition rather than a predicate ([#904](https://github.com/energy-models/mathspec/pull/904))
 - fix(language)!: a named expression whose `dims:` gives a dimension its expression is not indexed over is refused at load ([#898](https://github.com/energy-models/mathspec/pull/898))
 - docs: the compose guide says how to add or remove a term on a merged spec ([#901](https://github.com/energy-models/mathspec/pull/901))
 - fix(composition): a fragment returned by `override` merges as the file it came from does ([#900](https://github.com/energy-models/mathspec/pull/900))

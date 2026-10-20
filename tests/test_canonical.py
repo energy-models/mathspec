@@ -141,7 +141,7 @@ SECTIONS = [
     'dimensions',
     'relations',
     'parameters',
-    'masks',
+    'conditions',
     'variables',
     'expressions',
     'objective',
@@ -223,7 +223,7 @@ def _piecewise_with_its_links_reversed() -> dict[str, object]:
         pytest.param(
             varied(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0 and cost > 0'}),
             varied(DISPATCH_MODEL, **{'variables.p.where': 'cost > 0 and p_max > 0'}),
-            id='the-predicates-of-a-where',
+            id='the-conditions-of-a-where',
         ),
     ],
 )

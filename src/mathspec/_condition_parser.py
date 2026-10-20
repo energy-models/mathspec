@@ -2,9 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The where-string grammar and the ``Unresolved*`` nodes it emits, package-private.
+"""The condition grammar and the ``Unresolved*`` nodes it emits, package-private.
 
-A where string is a boolean algebra over comparisons, and a comparison's
+A condition is a boolean algebra over comparisons, and a comparison's
 sides are the expression grammar's own arithmetic. What a side *is* — a
 parameter, a dimension, a relation column, a ``position()`` — only the spec
 knows, so the grammar hands both sides over bare and
@@ -36,12 +36,12 @@ from mathspec._sealed import Sealed
 from mathspec.program import (
     And,
     BooleanLiteral,
+    ComparisonOperator,
+    Condition,
     Connective,
     Not,
     Or,
-    Predicate,
-    PredicateOperator,
-    where_children,
+    condition_children,
 )
 
 if TYPE_CHECKING:
@@ -66,18 +66,18 @@ class ColumnNode:
 
 
 @dataclass(frozen=True)
-class UnresolvedPredicateCallNode:
-    """``<name>(<predicate>[, <kwarg>…])`` — an operator reading a predicate rather than arithmetic.
+class UnresolvedConditionCallNode:
+    """``<name>(<condition>[, <kwarg>…])`` — an operator reading a condition rather than arithmetic.
 
     The expression grammar cannot carry this shape: its call rule takes
-    arithmetic arguments, and a predicate is not arithmetic. So the where
+    arithmetic arguments, and a condition is not arithmetic. So the where
     grammar reads it, and resolution decides which operator the name is and
     what the kwargs mean. ``kwargs`` is held and hashed as
     [`FunctionCallNode`][mathspec._expression_parser.FunctionCallNode] holds its own.
     """
 
     name: str
-    operand: Predicate | UnresolvedWhereNode
+    operand: Condition | UnresolvedConditionNode
     kwargs: Mapping[str, ArithmeticNode] = field(default_factory=dict, hash=False)
 
     def __post_init__(self) -> None:
@@ -86,22 +86,22 @@ class UnresolvedPredicateCallNode:
 
 @dataclass(frozen=True)
 class UnresolvedCountNode:
-    """``count(<predicate>, over=<dim>) <op> <number>`` — a count against a literal.
+    """``count(<condition>, over=<dim>) <op> <number>`` — a count against a literal.
 
     Its own node rather than an [`UnresolvedComparisonNode`][] with a call
     on the left: every other comparison has arithmetic on both sides, and
-    widening that one to carry a predicate would widen every reader of a side
+    widening that one to carry a condition would widen every reader of a side
     with it.
     """
 
-    call: UnresolvedPredicateCallNode
-    op: PredicateOperator
+    call: UnresolvedConditionCallNode
+    op: ComparisonOperator
     value: ArithmeticNode
 
 
 @dataclass(frozen=True)
 class UnresolvedComparisonNode:
-    """``side <op> side`` before the sides are read; ``_where_resolver.py`` decides what each is.
+    """``side <op> side`` before the sides are read; ``_condition_resolver.py`` decides what each is.
 
     A side is the expression grammar's arithmetic, so a name, a number and a
     ``position(...)`` call all arrive as the nodes an expression would carry
@@ -110,18 +110,18 @@ class UnresolvedComparisonNode:
     """
 
     left: ArithmeticNode | ColumnNode
-    op: PredicateOperator
+    op: ComparisonOperator
     right: ArithmeticNode | ColumnNode | KeywordNode
 
 
-#: The where nodes that resolution replaces: their leaves are names not yet
+#: The condition nodes that resolution replaces: their leaves are names not yet
 #: looked up in the spec.
-UnresolvedWhereNode = NameNode | UnresolvedComparisonNode | UnresolvedPredicateCallNode | UnresolvedCountNode
+UnresolvedConditionNode = NameNode | UnresolvedComparisonNode | UnresolvedConditionCallNode | UnresolvedCountNode
 
-#: Every node a parsed where string is built of: the connectives and literals,
+#: Every node a parsed condition is built of: the connectives and literals,
 #: the unresolved leaves, and the arithmetic and the two side nodes under a
 #: comparison. The depth check walks these.
-ParsedWhere = Predicate | UnresolvedWhereNode | ArithmeticNode | ColumnNode | KeywordNode
+ParsedCondition = Condition | UnresolvedConditionNode | ArithmeticNode | ColumnNode | KeywordNode
 
 
 # ---------------------------------------------------------------------------
@@ -129,20 +129,20 @@ ParsedWhere = Predicate | UnresolvedWhereNode | ArithmeticNode | ColumnNode | Ke
 # ---------------------------------------------------------------------------
 
 
-def _predicate_call(tokens: pp.ParseResults) -> UnresolvedPredicateCallNode:
+def _condition_call(tokens: pp.ParseResults) -> UnresolvedConditionCallNode:
     """The call node, with a keyword given twice refused as the arithmetic grammar refuses it."""
     name, operand, *pairs = tokens
-    return UnresolvedPredicateCallNode(name, operand, keywords(name, pairs))
+    return UnresolvedConditionCallNode(name, operand, keywords(name, pairs))
 
 
-def _build_where_grammar() -> pp.ParserElement:
-    """Build the pyparsing grammar for where strings.
+def _build_condition_grammar() -> pp.ParserElement:
+    """Build the pyparsing grammar for conditions.
 
     Both quote characters are accepted because YAML already owns one of them.
     ``NOT`` binds tightest, then ``AND``, then ``OR``. A comparison is tried
     before a bare name, since its left side begins with one.
     """
-    where_expr = pp.Forward()
+    condition = pp.Forward()
 
     true_lit = pp.CaselessKeyword('True').set_parse_action(lambda: BooleanLiteral(True))
     false_lit = pp.CaselessKeyword('False').set_parse_action(lambda: BooleanLiteral(False))
@@ -154,25 +154,25 @@ def _build_where_grammar() -> pp.ParserElement:
         # pyrefly: ignore[implicit-any-lambda]
         lambda t: KeywordNode(t[0])
     )
-    comparator = pp.one_of(list(get_args(PredicateOperator)))
+    comparator = pp.one_of(list(get_args(ComparisonOperator)))
 
     kwarg = (name + pp.Suppress('=') + (quoted | COLUMNS | ARITHMETIC)).set_parse_action(lambda t: (t[0], t[1]))
 
     def _call(head: pp.ParserElement) -> pp.ParserElement:
-        """``<head>(<predicate>[, <kwarg>…])`` — the one shape whose operand is a predicate.
+        """``<head>(<condition>[, <kwarg>…])`` — the one shape whose operand is a condition.
 
         ``count`` is spelled in the grammar rather than left to resolution, as
         ``position`` is, because only the grammar can decide to read its
-        argument as a predicate. Every other predicate-taking call stands where
+        argument as a condition. Every other condition-taking call stands where
         arithmetic cannot, so the comparison above it has already been tried
         and the name is free.
         """
         return (
-            head + pp.Suppress('(') + where_expr + pp.ZeroOrMore(pp.Suppress(',') + kwarg) + pp.Suppress(')')
-        ).set_parse_action(_predicate_call)
+            head + pp.Suppress('(') + condition + pp.ZeroOrMore(pp.Suppress(',') + kwarg) + pp.Suppress(')')
+        ).set_parse_action(_condition_call)
 
     count_call = _call(pp.CaselessKeyword('count'))
-    predicate_call = _call(name.copy())
+    condition_call = _call(name.copy())
 
     count_comparison = (count_call + comparator + ARITHMETIC).set_parse_action(
         # pyrefly: ignore[implicit-any-lambda]
@@ -190,9 +190,9 @@ def _build_where_grammar() -> pp.ParserElement:
         | false_lit
         | count_comparison
         | comparison
-        | predicate_call
+        | condition_call
         | existence
-        | (pp.Suppress('(') + where_expr + pp.Suppress(')'))
+        | (pp.Suppress('(') + condition + pp.Suppress(')'))
     )
 
     NOT = pp.CaselessKeyword('NOT').suppress()
@@ -207,40 +207,40 @@ def _build_where_grammar() -> pp.ParserElement:
     or_expr = and_expr + pp.ZeroOrMore(OR + and_expr)
     or_expr.set_parse_action(_folder(Or))
 
-    where_expr <<= or_expr
-    return where_expr
+    condition <<= or_expr
+    return condition
 
 
-def _folder(node_type: type[And] | type[Or]) -> Callable[[pp.ParseResults], Predicate | UnresolvedWhereNode]:
+def _folder(node_type: type[And] | type[Or]) -> Callable[[pp.ParseResults], Condition | UnresolvedConditionNode]:
     """A parse action left-folding a flat operator chain into *node_type*."""
 
-    def fold(tokens: pp.ParseResults) -> Predicate | UnresolvedWhereNode:
-        items: list[Predicate | UnresolvedWhereNode] = list(tokens)
+    def fold(tokens: pp.ParseResults) -> Condition | UnresolvedConditionNode:
+        items: list[Condition | UnresolvedConditionNode] = list(tokens)
         result = items[0]
         for item in items[1:]:
-            result = node_type(cast('Predicate', result), cast('Predicate', item))
+            result = node_type(cast('Condition', result), cast('Condition', item))
         return result
 
     return fold
 
 
-_WHERE_GRAMMAR = _build_where_grammar()
+_CONDITION_GRAMMAR = _build_condition_grammar()
 
 
 def _named_rewrite(text: str, loc: int) -> str | None:
     """The rewrite for a connective habit of pandas or C, or a comparison of several columns, or ``None``.
 
-    ``!=``, ``<`` and ``>`` are legal here, so only the tokens no predicate
+    ``!=``, ``<`` and ``>`` are legal here, so only the tokens no condition
     admits are diagnosed. The grammar gives up at the bracket of
     ``relation[a, b]``, since a comparison reads one column.
     """
     rest = text[loc:].lstrip()
     if rest.startswith('&'):
-        return "'&' is not a where operator. Write AND."
+        return "'&' is not a condition operator. Write AND."
     if rest.startswith('|'):
-        return "'|' is not a where operator. Write OR."
+        return "'|' is not a condition operator. Write OR."
     if rest.startswith(('~', '!')) and not rest.startswith('!='):
-        return f"'{rest[0]}' is not a where operator. Write NOT before the predicate."
+        return f"'{rest[0]}' is not a condition operator. Write NOT before the condition."
     if rest.startswith('=') and not rest.startswith('=='):
         return "'=' is not a comparison. Write ==."
     if (listed := re.match(rf'\[\s*({NAME}(?:\s*,\s*{NAME})+)\s*\]', rest)) and (
@@ -252,45 +252,45 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     return None
 
 
-#: The rewrite for a where string that nests too deep. The file can carry part
-#: of a long chain of predicates as data, so this rewrite comes first.
+#: The rewrite for a condition that nests too deep. The file can carry part
+#: of a long chain of conditions as data, so this rewrite comes first.
 _DEEP_REWRITE = (
     'Declare a parameter or relation carrying part of the test and name that here, or split the '
     'entry into two, each masked by one half.'
 )
 
 
-def nested(node: ParsedWhere) -> tuple[ParsedWhere, ...]:
-    """What a where string nests through: a connective's operands, a comparison's sides, and a call's predicate."""
+def nested(node: ParsedCondition) -> tuple[ParsedCondition, ...]:
+    """What a condition nests through: a connective's operands, a comparison's sides, and a call's condition."""
     if isinstance(node, UnresolvedCountNode):
         return (node.call, node.value)
-    if isinstance(node, UnresolvedPredicateCallNode):
+    if isinstance(node, UnresolvedConditionCallNode):
         return (node.operand, *node.kwargs.values())
     if isinstance(node, UnresolvedComparisonNode):
         return (node.left, node.right)
     if isinstance(node, ArithmeticNode):
         return children(node)
     if isinstance(node, Connective):
-        return where_children(node)
+        return condition_children(node)
     return ()
 
 
 @lru_cache(maxsize=4096)
-def parse_where(text: str) -> Predicate | UnresolvedWhereNode:
-    """Parse a where string into an AST, its leaves still unresolved.
+def parse_condition(text: str) -> Condition | UnresolvedConditionNode:
+    """Parse a condition into an AST, its leaves still unresolved.
 
     The connectives and literals are the resolved vocabulary's own; the leaves
     naming entries are a bare [`NameNode`][] or an ``Unresolved*``
-    node, which only [`resolve_where`][mathspec._resolution.resolve_where] takes.
+    node, which only [`resolve_condition`][mathspec._resolution.resolve_condition] takes.
 
     Raises:
-        SchemaError: If *text* is not a where string of the language. A
+        SchemaError: If *text* is not a condition of the language. A
             predictable mistake — ``&``/``|``/``~``/``!`` for a connective, a
             lone ``=`` — is named with its rewrite beside the grammar's own
             complaint. A side nesting past what an expression may is refused
             as an expression is.
     """
     return cast(
-        'Predicate | UnresolvedWhereNode',
-        parse_text(_WHERE_GRAMMAR, text, 'where string', _named_rewrite, nested, _DEEP_REWRITE),
+        'Condition | UnresolvedConditionNode',
+        parse_text(_CONDITION_GRAMMAR, text, 'condition', _named_rewrite, nested, _DEEP_REWRITE),
     )

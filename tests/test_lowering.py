@@ -16,9 +16,9 @@ from typing import get_args
 import pytest
 
 from mathspec import to_spec
+from mathspec._condition_parser import parse_condition
 from mathspec._exclusivity import overlapping
 from mathspec._resolution import Namespace
-from mathspec._where_parser import parse_where
 from mathspec.errors import LanguageError
 from mathspec.program import (
     Add,
@@ -39,7 +39,7 @@ from mathspec.program import (
     Footprint,
     Join,
     JoinColumns,
-    JoinedPredicate,
+    JoinedCondition,
     Mask,
     Multiply,
     Not,
@@ -59,10 +59,10 @@ from mathspec.program import (
     WindowSum,
     assumption_message,
     children,
+    condition_children,
     parameters_of,
     walk,
     walk_regions,
-    where_children,
 )
 from mathspec.spec import Spec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, expanded, expression_of, spec_of, varied, where_of
@@ -218,14 +218,14 @@ def test_a_literal_amount_resolves_to_one_signed_number():
         ),
     ],
 )
-def test_a_where_is_one_resolved_predicate_with_every_literal_folded(dispatch_spec, where, expected):
+def test_a_where_is_one_resolved_condition_with_every_literal_folded(dispatch_spec, where, expected):
     """One mask had two lowerings: `True` was dropped at the root and kept under a connective.
 
     A `BooleanLiteral` is a node a consumer meets at the root or nowhere.
     """
     mask = where_of(where, Namespace(dispatch_spec), 't')
     assert (mask.root if mask is not None else None) == expected, (
-        'the Mask carries exactly the resolved predicate, folded at resolution however the file spelled it'
+        'the Mask carries exactly the resolved condition, folded at resolution however the file spelled it'
     )
 
 
@@ -246,7 +246,7 @@ def test_an_unknown_where_name_is_an_error_at_lowering_too(dispatch_spec):
 def test_a_lowered_mask_cannot_be_rewritten_in_place(dispatch_program):
     """A consumer handed a program could invert the mask another one reads.
 
-    The where nodes were plain dataclasses while every entry embedding
+    The condition nodes were plain dataclasses while every entry embedding
     them was frozen, so `variable.where.root.op = '!='` rewrote `capacity > 0` into
     `capacity != 0` on the shared object — two consumers disagreeing about one
     file, which is the failure a program exists to prevent. It also left
@@ -321,19 +321,19 @@ FLAG = ParameterDefined('flag', ('generator',))
         pytest.param(BooleanLiteral(False), (), id='a-literal-carries-nothing'),
     ],
 )
-def test_where_children_is_the_one_walk_under_a_predicate(where, under):
-    """`where_children` is to a mask what `children` is to an expression.
+def test_condition_children_is_the_one_walk_under_a_condition(where, under):
+    """`condition_children` is to a condition what `children` is to an expression.
 
     The where tree was dispatched by hand at every walk — the grammar's depth
     measure, `Mask.atoms`, each consumer's own — with no shared answer to
     what sits under a node (#401). This is that answer, in file order.
     """
-    assert where_children(where) == under, (
+    assert condition_children(where) == under, (
         'a connective carries its operands, left before right; a leaf carries nothing'
     )
 
 
-def test_a_synthetic_predicate_answers_its_own_dims():
+def test_a_synthetic_condition_answers_its_own_dims():
     """A tree built from resolved pieces answers like an entry's own mask.
 
     A consumer builds region complements and conjunctions — `Not(root)`,
@@ -360,7 +360,7 @@ def test_mask_construction_folds_so_a_literal_stands_at_the_root_or_nowhere():
     assert Mask(Not(BooleanLiteral(True))) == empty, 'NOT over a literal flips at the door'
     assert Mask(Not(Not(x))) == Mask(x), 'a double negation cancels at the door'
 
-    assert ~Mask(x) == Mask(Not(x)), 'a plain predicate negated gains one NOT'
+    assert ~Mask(x) == Mask(Not(x)), 'a plain condition negated gains one NOT'
     assert ~Mask(Not(x)) == Mask(x), '`not (not x)` cancels rather than stacking, so no consumer evaluates it twice'
     assert ~empty == every, 'the empty mask negated admits every row, with no NOT stacked'
     assert ~every == empty, 'and back again'
@@ -383,8 +383,8 @@ def test_a_held_leaf_walk_is_taken_after_the_fold_absorbed_a_branch():
 
 def test_a_mask_over_an_unresolved_tree_is_refused_at_construction():
     """A tree whose leaves are unresolved is refused where it is wrapped, not where it is read."""
-    with pytest.raises(AssertionError, match='reached a predicate walk unresolved'):
-        Mask(parse_where('a AND b'))
+    with pytest.raises(AssertionError, match='reached a condition walk unresolved'):
+        Mask(parse_condition('a AND b'))
 
 
 def test_an_unwritten_where_lowers_to_none_not_an_empty_mask():
@@ -435,7 +435,7 @@ def test_a_comparison_of_expressions_lowers_to_program_expressions_on_both_sides
     )
 
 
-def test_a_predicate_a_leaf_carries_is_lowered_like_any_other_mask():
+def test_a_condition_a_leaf_carries_is_lowered_like_any_other_mask():
     """A comparison of expressions inside a count is rebuilt too, so a program mask is program vocabulary throughout."""
     program = to_spec(
         varied(
@@ -445,16 +445,16 @@ def test_a_predicate_a_leaf_carries_is_lowered_like_any_other_mask():
     ).program
     mask = program.constraints['w'].where
     assert mask is not None and isinstance(mask.root, CountComparison)
-    assert mask.root.predicate.root == ExpressionComparison(
+    assert mask.root.condition.root == ExpressionComparison(
         ParameterReference('c', dims=('g',)),
         '<=',
         Multiply(Constant(0.5, dims=()), ParameterReference('k', dims=()), dims=()),
         ('g',),
-    ), 'the counted predicate is rebuilt, not handed through with the resolved comparison still in it'
-    assert mask.names_read == frozenset({'c', 'k'}), 'what the counted predicate reads is data the consumer attaches'
+    ), 'the counted condition is rebuilt, not handed through with the resolved comparison still in it'
+    assert mask.names_read == frozenset({'c', 'k'}), 'what the counted condition reads is data the consumer attaches'
 
 
-def test_a_translated_predicate_keeps_what_it_reads_in_reach():
+def test_a_translated_condition_keeps_what_it_reads_in_reach():
     """A walk that asks a mask what it names has to see through the translation, or the column is silently dropped."""
     program = to_spec(
         varied(
@@ -474,7 +474,7 @@ def test_a_translated_predicate_keeps_what_it_reads_in_reach():
     assert sorted(mask.dims) == ['g']
 
 
-def test_a_predicate_read_through_a_relation_is_lowered_and_keeps_the_relation_in_reach():
+def test_a_condition_read_through_a_relation_is_lowered_and_keeps_the_relation_in_reach():
     """The comparison under the read is rebuilt, and the relation is data the consumer attaches as well as the operand."""
     program = to_spec(
         varied(
@@ -490,13 +490,13 @@ def test_a_predicate_read_through_a_relation_is_lowered_and_keeps_the_relation_i
         )
     ).program
     mask = program.constraints['w'].where
-    assert mask is not None and isinstance(mask.root, JoinedPredicate)
+    assert mask is not None and isinstance(mask.root, JoinedCondition)
     assert mask.root.operand.root == ExpressionComparison(
         ParameterReference('zcap', dims=('z',)),
         '<=',
         Multiply(Constant(0.5, dims=()), ParameterReference('k', dims=()), dims=()),
         ('z',),
-    ), 'the read predicate is rebuilt, not handed through with the resolved comparison still in it'
+    ), 'the read condition is rebuilt, not handed through with the resolved comparison still in it'
     assert mask.names_read == frozenset({'zcap', 'k', 'lk2'})
     assert sorted(mask.dims) == ['g'], 'z is read at lk2(g), so the mask is over g alone'
 
@@ -522,7 +522,7 @@ def test_assumptions_carry_the_file_s_entries_and_the_curves_behind_them():
 
 
 def test_an_assumption_lowers_both_of_its_masks():
-    """The predicate and the ``where`` are rebuilt on program expressions, as every other mask is."""
+    """The ``holds`` and the ``where`` are rebuilt on program expressions, as every other mask is."""
     program = to_spec(varied(SHAPES_MODEL, assumptions={'sound': {'holds': 'c <= 0.5 * k', 'where': 'flag'}})).program
     assumption = program.assumptions['sound']
 
@@ -583,7 +583,7 @@ def test_a_cased_side_reads_the_data_its_regions_are_decided_by():
 
 
 def test_a_mask_with_no_arithmetic_is_the_same_mask_after_lowering(dispatch_program):
-    """Every other predicate node is already the program's own, so lowering hands it through unchanged."""
+    """Every other condition node is already the program's own, so lowering hands it through unchanged."""
     assert dispatch_program.variables['dispatch'].where == Mask(CAPACITY_POSITIVE)
 
 
@@ -1071,7 +1071,7 @@ def test_a_region_s_when_is_a_mask_with_its_own_dims():
     always_on, boundary, remainder = _cases_in(to_spec(CASED).program).regions
 
     assert all(isinstance(r.when, Mask) for r in (always_on, boundary, remainder)), (
-        'every region, the synthesized remainder included, carries its predicate as a Mask'
+        'every region, the synthesized remainder included, carries its condition as a Mask'
     )
     assert always_on.when.dims == frozenset({'g'}), "`not committable` reads the parameter's dims"
     assert boundary.when.dims == frozenset({'g', 't'}), 'the position comparison adds its dimension'

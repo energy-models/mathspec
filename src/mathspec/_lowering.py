@@ -5,7 +5,7 @@
 """Lower a spec to a [`Program`][] — the pass that decides every expression.
 
 One lowering, on the language side, run when a [`Spec`][]
-loads: it reads every expression and where string into the program's own
+loads: it reads every expression and condition into the program's own
 nodes, checks every rule decidable without data, and packages the
 entries, section for section. The program mirrors the spec it was
 lowered from: a ``piecewise:`` entry the spec still declares is a curve on
@@ -23,10 +23,10 @@ from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, 
 from mathspec._resolution import (
     Namespace,
     mask_of,
+    resolve_condition_text,
     resolve_constraint_text,
     resolve_expression,
     resolve_expression_text,
-    resolve_where_text,
     self_existence,
 )
 from mathspec._validation import emitted_name_errors, reference_errors
@@ -42,8 +42,8 @@ from mathspec.program import (
     GivenTargets,
     Link,
     Mask,
+    NamedCondition,
     NamedExpression,
-    NamedMask,
     Objective,
     Parameter,
     ParameterReference,
@@ -75,7 +75,7 @@ def lower(spec: Spec) -> Program:
       objectives hold none;
     - every referenced name resolves, and every operator is a built-in whose
       dimension arguments name declared dimensions;
-    - where strings parse *and* resolve — an unknown name there is an error,
+    - conditions parse *and* resolve — an unknown name there is an error,
       not a silently-empty mask;
     - macro formals may shadow the spec's names but not a declared dimension, since
       ``over=snapshot`` under a formal ``snapshot`` cannot say which it means;
@@ -129,18 +129,18 @@ def lower(spec: Spec) -> Program:
 
     terms = _terms(entries, spec, ns, errors)
 
-    masks: dict[str, NamedMask] = {}
-    for mname, mdef in spec.masks.items():
-        named_mask, refusals = ns.mask_entry(mname)
+    conditions: dict[str, NamedCondition] = {}
+    for mname, mdef in spec.conditions.items():
+        named, refusals = ns.condition_entry(mname)
         errors.extend(refusals)
-        if named_mask is not None:
-            body = Mask(named_mask.body)
+        if named is not None:
+            body = Mask(named.body)
             frame = tuple(d for d in spec.dimensions if d in body.dims)
-            masks[mname] = NamedMask(body, frame, mdef.description)
+            conditions[mname] = NamedCondition(body, frame, mdef.description)
 
     variables = {}
     for vname, vdef in spec.variables.items():
-        where = resolve_where_text(vdef.where, ns, f"Variable '{vname}'", errors, self_variable=vname)
+        where = resolve_condition_text(vdef.where, ns, f"Variable '{vname}'", errors, self_variable=vname)
         if where is not None and (refusal := self_existence(where, vname, f"Variable '{vname}'")) is not None:
             errors.append(refusal)
         if vdef.domain == 'binary':
@@ -160,7 +160,7 @@ def lower(spec: Spec) -> Program:
     constraints: dict[str, Constraint] = {}
     for cname, cdef in spec.constraints.items():
         context = f"Constraint '{cname}'"
-        where = resolve_where_text(cdef.where, ns, context, errors)
+        where = resolve_condition_text(cdef.where, ns, context, errors)
         if (sides := resolve_constraint_text(cdef.expression, ns, context, errors)) is not None:
             lhs, sense, rhs = sides
             constraints[cname] = Constraint(
@@ -243,7 +243,7 @@ def lower(spec: Spec) -> Program:
             )
             for name, entry in entries.items()
         },
-        masks=masks,
+        conditions=conditions,
         given=GivenTargets(
             parameters={
                 name: Parameter(tuple(g.dims), g.dtype, None, g.description)
@@ -252,7 +252,7 @@ def lower(spec: Spec) -> Program:
             variables={name: Given(tuple(g.dims), g.description) for name, g in spec.given.variables.items()},
             constraints={name: Given(tuple(g.dims), g.description) for name, g in spec.given.constraints.items()},
             expressions={name: Given(tuple(g.dims), g.description) for name, g in spec.given.expressions.items()},
-            masks={name: Given(tuple(g.dims), g.description) for name, g in spec.given.masks.items()},
+            conditions={name: Given(tuple(g.dims), g.description) for name, g in spec.given.conditions.items()},
         ),
         description=spec.description,
     )
@@ -356,19 +356,19 @@ def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterRefe
 def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:
     """One ``assumptions:`` entry typed, or ``None`` once anything in it failed.
 
-    A predicate the connectives decide is refused: one that folds to true
+    A condition the connectives decide is refused: one that folds to true
     assumes nothing, and one that folds to false refuses every dataset. A
     variable is refused too, since an assumption is about the data and a
     variable is what the solver decides from it.
     """
     context = f"Assumption '{name}'"
     found = len(errors)
-    holds = resolve_where_text(entry.holds, ns, context, errors)
-    where = resolve_where_text(entry.where, ns, f'{context}, where', errors)
+    holds = resolve_condition_text(entry.holds, ns, context, errors)
+    where = resolve_condition_text(entry.where, ns, f'{context}, where', errors)
     if isinstance(holds, BooleanLiteral):
         errors.append(_decided_assumption(context, entry.holds, value=holds.value))
     if isinstance(where, BooleanLiteral):
-        assert entry.where is not None, 'a where the file did not write resolves to nothing'
+        assert entry.where is not None, 'a `where:` the file did not write resolves to nothing'
         errors.append(_decided_where(context, entry.where, value=where.value))
     for mask, key in ((holds, 'holds'), (where, 'where')):
         if mask is None or isinstance(mask, BooleanLiteral):
@@ -381,28 +381,28 @@ def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[st
         )
     if len(errors) > found:
         return None
-    assert holds is not None, 'a where string that read to nothing appended an error'
+    assert holds is not None, 'a condition that read to nothing appended an error'
     return Assumption(Mask(holds), mask_of(where), entry.description)
 
 
 def _decided_assumption(context: str, text: str, *, value: bool) -> str:
-    """The refusal for a predicate the connectives already decided, whose data is never read."""
+    """The refusal for a condition the connectives already decided, whose data is never read."""
     if value:
         return (
-            f'{context}: the predicate {text!r} folds to true, so it assumes nothing of the data. '
+            f'{context}: the condition {text!r} folds to true, so it assumes nothing of the data. '
             f'Delete it, or name a parameter it constrains.'
         )
     return (
-        f'{context}: the predicate {text!r} folds to false, so it holds on no data at all. '
-        f'Delete it, or write the predicate the data can satisfy.'
+        f'{context}: the condition {text!r} folds to false, so it holds on no data at all. '
+        f'Delete it, or write the condition the data can satisfy.'
     )
 
 
 def _decided_where(context: str, text: str, *, value: bool) -> str:
     """The refusal for a ``where`` the connectives already decided, which narrows nothing or everything."""
     if value:
-        return f'{context}: the where {text!r} folds to true, so it narrows nothing. Delete the where.'
+        return f'{context}: the `where:` condition {text!r} folds to true, so it narrows nothing. Delete the `where:`.'
     return (
-        f'{context}: the where {text!r} folds to false, so the assumption is checked on no row. '
-        f'Delete the entry, or write the where the data can satisfy.'
+        f'{context}: the `where:` condition {text!r} folds to false, so the assumption is checked on no row. '
+        f'Delete the entry, or write a `where:` condition the data can satisfy.'
     )

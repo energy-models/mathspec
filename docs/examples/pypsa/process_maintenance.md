@@ -21,7 +21,7 @@ given:
   variables:
     Process_status: { dims: [scenario, snapshot, process], domain: integer }
     Process_p_nom_ext: { dims: [process] }
-  masks:
+  conditions:
     Process_committed: { dims: [snapshot, process] }
 
 dimensions:
@@ -117,13 +117,13 @@ variables:
     bounds:
       lower: 0
 
-masks:
+conditions:
   Process_maint_ext:
     description: >-
       a maintainable process with an extendable build, unless it is
       committable and modular, that stands in the snapshot's period — the
       maintenance rows against the chosen build
-    where: >-
+    condition: >-
       Process_maintainable
       AND Process_p_nom_extendable
       AND NOT (Process_committable AND Process_p_nom_mod > 0)
@@ -260,7 +260,7 @@ assumptions:
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
 | $`u^{z}`$ | `Process_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ |
-| $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{T} \times \mathcal{J}`$, a mask another file defines |
+| $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{T} \times \mathcal{J}`$, a condition another file defines |
 
 #### Sets
 
@@ -280,7 +280,7 @@ assumptions:
 | $`\tau^{z,\mathrm{mnt}}`$ | `Process_maintenance_duration` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the process is not maintainable. No row reads it: data prep turns it into `Process_maintenance_cover` and `Process_maintenance_start_blocked`, and the assumptions hold it to the horizon |
 | $`\mathrm{blk}^{z}`$ | `Process_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the process does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -295,7 +295,7 @@ assumptions:
 | $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
 | $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
 
-#### Masks
+#### Conditions
 
 **`Process_maint_ext`**
 
