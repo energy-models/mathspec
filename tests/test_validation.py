@@ -1892,6 +1892,17 @@ class TestTheFrontDoor:
         written = to_spec(DISPATCH_MODEL).to_yaml()
         assert 'relations' not in written and 'macros' not in written, 'a section declaring nothing says nothing'
 
+    def test_an_empty_kind_under_given_is_not_written(self):
+        """`given: {parameters: {}}` was written back, though an empty section says nothing."""
+        written = to_spec(varied(DISPATCH_MODEL, **{'given.parameters': {}})).to_dict()
+        assert 'given' not in written, 'a kind of given entry that declares nothing is not written'
+
+    def test_an_entry_whose_only_field_is_null_still_declares_it(self):
+        """`g: {description: null}` wrote back as nothing, so the written file named a dimension it did not declare."""
+        spec = to_spec({'dimensions': {'g': {'description': None}}, 'parameters': {'p': {'dims': ['g']}}})
+        assert spec.to_dict()['dimensions'] == {'g': {}}, 'the null goes and the entry stays'
+        assert to_spec(spec.to_dict()) == spec
+
     def test_a_spec_writes_the_fields_its_file_wrote_and_its_version(self):
         """A spec wrote back some defaults its file left out, such as `domain: continuous`, and dropped
         others its file wrote, such as `ordered: false`."""

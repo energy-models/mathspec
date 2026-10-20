@@ -563,6 +563,33 @@ def test_a_patch_restates_a_dimension_as_the_schema_reads_it(dimension, restated
     assert laid.dimensions[dimension].ordered is ordered
 
 
+@pytest.mark.parametrize(
+    ('base', 'patch', 'read', 'description'),
+    [
+        pytest.param(
+            varied(DISPATCH_MODEL, **{'dimensions.generator.description': 'what produces'}),
+            {'dimensions': {'generator': {'description': 'a unit'}}},
+            lambda spec: spec.dimensions['generator'].description,
+            'a unit',
+            id='a-dimension',
+        ),
+        pytest.param(
+            varied(SURFACE, **{'relations.port_bus.description': 'where a port connects'}),
+            {'relations': {'port_bus': {'key': 'port', 'values': 'bus', 'description': 'a port and its bus'}}},
+            lambda spec: spec.relations['port_bus'].description,
+            'a port and its bus',
+            id='a-relation',
+        ),
+    ],
+)
+def test_a_patch_that_restates_a_shared_entry_gives_it_its_own_description(base, patch, read, description):
+    """A restatement with other prose was refused as a change of the space, and then accepted with its prose dropped.
+
+    Prose is not part of the space, and a patch lays over its base, so the patch's description wins.
+    """
+    assert read(override(base, [patch])) == description, "the patch's description, not the base's"
+
+
 def test_a_patch_that_withdraws_ordered_is_refused():
     with pytest.raises(LanguageError, match=r"says the dimension 'snapshot' is not ordered") as raised:
         override(DISPATCH_MODEL, [{'dimensions': {'snapshot': {'dtype': 'int', 'ordered': False}}}])

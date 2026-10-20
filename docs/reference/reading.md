@@ -318,7 +318,7 @@ it is read in. It leaves out a `null` and an empty section. It writes
 `dims: []`, because that says the entry is a scalar, and an entry the file wrote
 as `{}`, because that entry still declares its name.
 
-`to_yaml()` writes a short list on one line, such as `dims: [snapshot, generator]`.
+`to_yaml()` writes a short list on one line, such as `dims: [generator, snapshot]`.
 It also writes a short mapping of numbers and names on one line, such as
 `bounds: {lower: 0, upper: p_max}`. An entry with a description or an
 expression keeps one key on each line, even for an expression as short as

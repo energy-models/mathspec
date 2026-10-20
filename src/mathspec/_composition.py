@@ -264,15 +264,17 @@ def _read(owner: type[BaseModel], section: str, entry: object) -> BaseModel:
         raise schema_error(e) from None
 
 
-def _claim(owner: type[BaseModel], section: str, entry: object, *unclaimed: str) -> BaseModel:
-    """What *entry* says, to compare by value: its prose and every *unclaimed* field at their defaults.
+def _same(owner: type[BaseModel], section: str, a: object, b: object, *, aside: frozenset[str] = frozenset()) -> bool:
+    """Whether *a* and *b* say the same, field by field as the schema reads them, prose, ``ordered`` and *aside* apart.
 
-    Prose is a remark about the entry rather than what it says. A ``dims:``
-    list needs no sorting here, because the spec sorts it as it loads.
+    A field left out reads as its default. Prose is a remark about the entry
+    rather than what it says, and a dimension's ``ordered`` folds by
+    [`_ordered`][] instead. A ``dims:`` list needs no sorting here, because
+    the spec sorts it as it loads.
     """
-    model = _read(owner, section, entry)
-    fields = type(model).model_fields
-    return model.model_copy(update={f: fields[f].get_default() for f in ('description', *unclaimed) if f in fields})
+    x, y = _read(owner, section, a), _read(owner, section, b)
+    skip = {'description', 'ordered', *aside}
+    return all(getattr(x, f) == getattr(y, f) for f in type(x).model_fields if f not in skip)
 
 
 def _agreed(
@@ -290,46 +292,38 @@ def _agreed(
     sets to something other than its default is a difference nothing settles.
     *owner* is the schema class the section belongs to, which reads each
     entry. Prose is not a claim, so the first description given is carried.
-    A dimension's ``ordered`` folds by [`_joined`][].
+    A dimension's ``ordered`` folds by [`_ordered`][].
     """
     merged: dict[str, object] = {}
     for name, sections in read.items():
         for key, entry in _mapping(sections.get(section)).items():
             if key not in merged:
                 merged[key] = entry
-            elif (joined := _joined(section, merged[key], entry, owner)) is None:
+            elif not _same(owner, section, merged[key], entry):
                 raise LanguageError(
                     f"fragments '{_author_of(read, section, key)}' and '{name}' say different things about "
                     f'the {label} {key!r}: {merged[key]!r} against {entry!r}. Make the two identical, '
                     f'or {repair}.'
                 )
             else:
-                merged[key] = joined
+                merged[key] = _ordered(section, merged[key], entry)
     for key, entry in merged.items():
         if said := _said(read, section, key):
             merged[key] = {**_mapping(entry), 'description': said}
     return merged
 
 
-def _joined(section: str, kept: object, entry: object, owner: type[BaseModel] = Spec, *unclaimed: str) -> object | None:
-    """*kept* and *entry* as the one entry both say, or ``None`` where they say different things.
+def _ordered(section: str, kept: object, entry: object) -> object:
+    """*kept*, ordered where *entry* says it is.
 
     A dimension's ``ordered`` is a claim about the space, not the space: it
     lets a construct read the order the data gives, and the coordinates are
     the same either way. So one entry that makes the claim joins one
-    that does not, and the two are one ordered dimension. Every other field
-    is the space itself, and has to say the same as [`_claim`][] reads it,
-    each *unclaimed* field aside.
+    that does not, and the two are one ordered dimension.
     """
-    if _claim(owner, section, kept, 'ordered', *unclaimed) != _claim(owner, section, entry, 'ordered', *unclaimed):
-        return None
-    if section != 'dimensions':
-        return kept
-    ordered = (
-        cast('DimensionSpec', _read(owner, section, kept)).ordered
-        or cast('DimensionSpec', _read(owner, section, entry)).ordered
-    )
-    return {**_mapping(kept), 'ordered': True} if ordered else kept
+    if section == 'dimensions' and cast('DimensionSpec', _read(Spec, section, entry)).ordered:
+        return {**_mapping(kept), 'ordered': True}
+    return kept
 
 
 def _claimed(read: Mapping[str, dict[str, object]], section: str) -> dict[str, object]:
@@ -839,10 +833,11 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
     field by field: a patch that names half an entry is as much a second
     reading of the coordinate space as one that names another value, and a
     field written at its default is no change. A dimension's ``ordered`` folds
-    by [`_joined`][], so a patch may add the claim; writing it false over a
-    base that makes it is the one narrowing [`_joined`][] cannot see. A
+    by [`_ordered`][], so a patch may add the claim; writing it false over a
+    base that makes it is the one narrowing [`_same`][] cannot see. A
     relation's ``missing:`` is laid over as a field and left out of the
-    comparison, being a claim about the data.
+    comparison, being a claim about the data. A description is prose rather
+    than the space, so the patch's is laid over the base's.
     """
     out = dict(declared)
     singular = _singular(section)
@@ -866,7 +861,7 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
                 f'ordered. A patch can add `ordered: true` but cannot remove it, because a construct in the base '
                 f'may step along it. Leave `ordered` out of the patch.'
             )
-        if (joined := _joined(section, out[key], entry, Spec, 'missing')) is None:
+        if not _same(Spec, section, out[key], entry, aside=frozenset({'missing'})):
             claim = 'ordered' if section == 'dimensions' else 'missing'
             raise LanguageError(
                 f"patch '{name}' declares the {singular} '{key}' as {entry!r}, where its base "
@@ -875,7 +870,9 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
                 f'field the patch leaves out reads as its default. Restate the {singular} as its base '
                 f'declares it, leave it out, or give the patch {_a(singular)} of its own under a name of its own.'
             )
-        out[key] = joined
+        out[key] = _ordered(section, out[key], entry)
+        if said := _mapping(entry).get('description'):
+            out[key] = {**_mapping(out[key]), 'description': said}
     return out
 
 

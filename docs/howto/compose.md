@@ -254,7 +254,7 @@ constraints:
 ```
 
 ```text
-fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'missing': 'absent'}. Restate the dims as 'generator.yaml' declares them, or leave the field out.
+fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['generator', 'snapshot'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['generator', 'snapshot'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'description': '`Generator-p` — what a generator produces in a snapshot'}. Restate the dims as 'generator.yaml' declares them, or leave the field out.
 ```
 
 Two fragments that both only read an entry must read it the same way,
@@ -366,6 +366,7 @@ Given variable 'Generator_p' collides with the variable of the same name. Rename
 | `null` under a section's name       | it is refused                                                              |
 | a dimension or a relation           | it is added, or restated as the base declares it                           |
 | `ordered:` on a restated dimension  | `true` makes the dimension ordered; `false` over an ordered one is refused |
+| `description:` on a restated entry  | the patch's description replaces the base's                                |
 | `missing:` on a relation            | it changes whether every key combination needs a row, as on a parameter    |
 | an entry under one kind of `given:` | it is edited, added or removed like any entry, and the other kinds stay    |
 | `version`, `description`            | the patch's value replaces the base's                                      |

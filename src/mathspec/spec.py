@@ -166,8 +166,16 @@ _READINGS = ', '.join(get_args(MissingReading))
 
 
 def _as_set(model: BaseModel, written: dict[str, object]) -> dict[str, object]:
-    """*written* cut to the fields *model*'s input set."""
-    return {key: value for key, value in written.items() if key in model.model_fields_set}
+    """*written* cut to the fields *model*'s input set, less a null and an empty mapping, which say nothing.
+
+    An entry is a value inside a field rather than a field, so ``generator:
+    {}`` and ``generator: {description: null}`` both stay as ``{}``.
+    """
+    return {
+        key: value
+        for key, value in written.items()
+        if key in model.model_fields_set and value is not None and value != {}
+    }
 
 
 def _as_yaml(v: object) -> str:
@@ -1146,8 +1154,7 @@ class Spec(_StrictSpec):
         read in.
         """
         written = _as_set(self, cast('dict[str, object]', handler(self)))
-        sections = cast('dict[str, object]', _without_absence(written))
-        return {'version': self.version, **{key: value for key, value in sections.items() if value != {}}}
+        return {'version': self.version, **cast('dict[str, object]', _without_absence(written))}
 
     def to_dict(self) -> dict[str, object]:
         """The spec as plain data. ``to_spec(m.to_dict())`` reproduces it."""
