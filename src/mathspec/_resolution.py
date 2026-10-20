@@ -25,6 +25,7 @@ from mathspec._condition_parser import (
     parse_condition,
 )
 from mathspec._condition_resolver import ConditionResolver
+from mathspec._dimensions import sorted_dims
 from mathspec._exclusivity import overlapping
 from mathspec._expansion import expand, parse_and_expand
 from mathspec._expression_parser import (
@@ -34,7 +35,7 @@ from mathspec._expression_parser import (
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver
-from mathspec.errors import LanguageError, SchemaError, case_context, prefixed
+from mathspec.errors import DimensionError, LanguageError, SchemaError, case_context, prefixed
 from mathspec.program import (
     BooleanLiteral,
     Cases,
@@ -78,8 +79,10 @@ class Namespace:
         'conditions',
         'constraints',
         'defaults',
+        'dimension_refusals',
         'dimensions',
         'dtypes',
+        'follow_ons',
         'given_conditions',
         'leaf_dims',
         'parameters',
@@ -127,9 +130,9 @@ class Namespace:
         #: parameter or variable name -> the ``dims`` it is read through. Stamped onto
         #: each leaf a condition names, the way a relation leaf carries ``over``.
         self.leaf_dims: dict[str, tuple[str, ...]] = {
-            **{p: tuple(sorted(pd.dims)) for p, pd in parameters.items()},
-            **{m: tuple(sorted(md.dims)) for m, md in spec.given.conditions.items()},
-            **{v: tuple(sorted(vd.dims or ())) for v, vd in variables.items()},
+            **{p: sorted_dims(pd.dims) for p, pd in parameters.items()},
+            **{m: sorted_dims(md.dims) for m, md in spec.given.conditions.items()},
+            **{v: sorted_dims(vd.dims or ()) for v, vd in variables.items()},
         }
         #: named expression -> its resolved node, or ``None``, and its refusals;
         #: filled the first time anything reads the name.
@@ -141,6 +144,29 @@ class Namespace:
         #: mask -> its resolved node, or ``None``, and its refusals; filled
         #: the first time anything reads the name.
         self._conditions: dict[str, tuple[ConditionReference | None, tuple[str, ...]]] = {}
+        #: The refusals a dim rule wrote, which [`error`][] reports as a
+        #: ``DimensionError`` when nothing else is wrong.
+        self.dimension_refusals: set[str] = set()
+        #: The refusals that only point at an entry's own, which leave the
+        #: class of the error to that entry's.
+        self.follow_ons: set[str] = set()
+
+    def refused_dims(self, refusal: DimensionError) -> str:
+        """*refusal*'s text, recorded as a dim rule's."""
+        self.dimension_refusals.add(text := str(refusal))
+        return text
+
+    def error(self, errors: list[str]) -> SchemaError | DimensionError:
+        """The one error that lists every refusal in *errors*.
+
+        It is a ``DimensionError`` where every fault is a dim rule's, so the
+        class says what is wrong wherever resolution met it, and a
+        ``SchemaError`` where anything else is.
+        """
+        faults = [e for e in errors if e not in self.follow_ons]
+        if faults and all(e in self.dimension_refusals for e in faults):
+            return DimensionError('\n'.join(errors))
+        return SchemaError('\n'.join(errors))
 
     def named(self, name: str, context: str) -> ExpressionReference:
         """The ``expressions:`` entry *name* as the node that stands where its name is written.
@@ -156,6 +182,7 @@ class Namespace:
         node, _ = self.named_entry(name)
         if node is None:
             msg = f"{context}: named expression '{name}' does not load. Fix the error listed for '{name}' first."
+            self.follow_ons.add(msg)
             raise SchemaError(msg)
         return node
 
@@ -180,6 +207,7 @@ class Namespace:
         node, _ = self.condition_entry(name)
         if node is None:
             msg = f"{context}: condition '{name}' does not load. Its refusal is listed with it."
+            self.follow_ons.add(msg)
             raise SchemaError(msg)
         return node
 
@@ -492,7 +520,7 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
     if not entry.cases:
         assert entry.expression is not None
         body = resolve_expression_text(entry.expression, ns, context, errors, ceiling=None)
-        return None if body is None else ExpressionReference(name, body)
+        return None if body is None else ExpressionReference(name, body, dims=body.dims)
 
     found = len(errors)
     regions: list[Region] = []
@@ -515,7 +543,9 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
     if len(errors) > found:
         return None
     left_over = Region(remainder(region.when for region in regions), fallback)
-    return ExpressionReference(name, Cases((*regions, left_over)))
+    every = (*regions, left_over)
+    cases = Cases(every, dims=sorted_dims(*(r.value.dims for r in every), *(r.when.dims for r in every)))
+    return ExpressionReference(name, cases, dims=cases.dims)
 
 
 def _named_condition(name: str, entry: ConditionSpec, ns: Namespace, errors: list[str]) -> ConditionReference | None:

@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, assert_never, cast
 
-from mathspec._dimensions import dims_of
+from mathspec._dimensions import check_node, joined, sorted_dims
 from mathspec._expression_parser import (
     MAX_DEPTH,
     ArithmeticNode,
@@ -127,14 +127,14 @@ class ExpressionResolver:
         formal bound to one.
         """
         if isinstance(node, NumberNode):
-            return Constant(node.value)
+            return Constant(node.value, dims=())
         if isinstance(node, NameNode):
             return self._name(node)
         if isinstance(node, UnaryOperatorNode):
             operand = self.arith(node.operand)
             if operand is None:
                 return None
-            return Negate(operand) if node.op == '-' else operand
+            return Negate(operand, dims=operand.dims) if node.op == '-' else operand
         if isinstance(node, BinaryOperatorNode):
             return self._binary(node)
         if isinstance(node, FunctionCallNode):
@@ -164,17 +164,18 @@ class ExpressionResolver:
         left, right = self.arith(node.left), self.arith(node.right)
         if left is None or right is None:
             return None
+        dims = sorted_dims(left.dims, right.dims)
         match node.op:
             case '+':
-                return Add(left, right)
+                return Add(left, right, dims=dims)
             case '-':
-                return Add(left, Negate(right))
+                return Add(left, Negate(right, dims=right.dims), dims=dims)
             case '*':
-                return Multiply(left, right)
+                return Multiply(left, right, dims=dims)
             case '/':
-                return Divide(left, right)
+                return Divide(left, right, dims=dims)
             case '**':
-                return Power(left, right)
+                return Power(left, right, dims=dims)
             case _:
                 assert_never(node.op)
 
@@ -199,13 +200,13 @@ class ExpressionResolver:
                 return None
         match self.ns.kind(node.name):
             case 'variable':
-                return VariableReference(node.name)
+                return VariableReference(node.name, dims=sorted_dims(self.ns.leaf_dims[node.name]))
             case 'parameter':
                 dtype = self.ns.dtypes.get(node.name)
                 if dtype is not None and dtype not in NUMERIC_DTYPES:
                     self.errors.append(not_a_number(node.name, dtype, self.context))
                     return None
-                return ParameterReference(node.name)
+                return ParameterReference(node.name, dims=sorted_dims(self.ns.leaf_dims[node.name]))
             case 'dimension':
                 self.errors.append(
                     f"{self.context}: '{node.name}' is a dimension, and a dimension is "
@@ -290,24 +291,39 @@ class ExpressionResolver:
         if columns is None:
             if over is None:
                 return self._bare_sum(operand)
-            return Sum(operand, tuple(Axis(d) for d in over))
+            return self._summed(operand, tuple(Axis(d) for d in over))
         assert over is not None, 'the call shape requires over= beside by='
         grouping = self._grouping(columns, over)
         if grouping is None:
             return None
         join, plain = grouping
-        grouped = Sum(Join(operand, join), join.axes)
-        return Sum(grouped, tuple(Axis(d) for d in plain)) if plain else grouped
+        if (through := self._joined(operand, join)) is None:
+            return None
+        grouped = self._summed(through, join.axes)
+        return self._summed(grouped, tuple(Axis(d) for d in plain)) if plain and grouped is not None else grouped
+
+    def _summed(self, operand: Expression, over: tuple[Axis, ...]) -> Sum | None:
+        """A [`Sum`][mathspec.program.Sum] over *over*, which removes the dims its plain axes name; a join's axes are no dims."""
+        closed = {axis.dimension for axis in over if axis.column is None}
+        return self._checked(Sum(operand, over, dims=tuple(d for d in operand.dims if d not in closed)))
+
+    def _joined(self, operand: Expression, columns: JoinColumns) -> Join | None:
+        """A [`Join`][mathspec.program.Join] of *operand* on *columns*, over the dims the join leaves."""
+        return self._checked(Join(operand, columns, dims=sorted_dims(joined(columns, operand.dims))))
+
+    def _checked[N: Sum | Join | Translate | WindowSum](self, node: N) -> N | None:
+        """*node*, or ``None`` with its refusal appended where it breaks the dim rule of its operator."""
+        try:
+            check_node(node, self.ns.spec, self.context)
+        except DimensionError as e:
+            self.errors.append(self.ns.refused_dims(e))
+            return None
+        return node
 
     def _at(self, operand: Expression, columns: ColumnsNode) -> Expression | None:
         """``at(x, by=relation[column])``: *operand* read at the value of *columns* each row of the relation holds."""
-        try:
-            inner = dims_of(operand, self.ns.spec, self.context)
-        except DimensionError as e:
-            self.errors.append(str(e))
-            return None
-        join = self.lookup(columns, inner)
-        return None if join is None else Join(operand, join)
+        join = self.lookup(columns, frozenset(operand.dims))
+        return None if join is None else self._joined(operand, join)
 
     def _translation(
         self,
@@ -328,7 +344,9 @@ class ExpressionResolver:
             assert offset is not None
             if not self._edge_fits(operand, offset, wrap=wrap, fill=fill):
                 return None
-            return Translate(operand, along, offset, wrap=wrap, fill=fill, partition=partition)
+            return self._checked(
+                Translate(operand, along, offset, wrap=wrap, fill=fill, partition=partition, dims=operand.dims)
+            )
         if fill is not None:
             self.errors.append(
                 f"{self.context}: sum_back(edge=...) takes 'wrap' or nothing. To add a constant, "
@@ -337,22 +355,18 @@ class ExpressionResolver:
             return None
         width = amounts['window']
         assert width is not None
-        return WindowSum(operand, along, width, wrap=wrap, partition=partition)
+        return self._checked(WindowSum(operand, along, width, wrap=wrap, partition=partition, dims=operand.dims))
 
     def _bare_sum(self, operand: Expression) -> Expression | None:
         """``sum(x)`` with no ``over=`` or ``by=`` reduces every dim the operand carries, which it has to carry some of."""
-        try:
-            inner = dims_of(operand, self.ns.spec, self.context)
-        except DimensionError as e:
-            self.errors.append(str(e))
-            return None
+        inner = operand.dims
         if not inner:
             self.errors.append(
                 f'{self.context}: sum() has no over= or by=, and its operand has no dimensions to sum over. '
                 f'Remove the sum.'
             )
             return None
-        return Sum(operand, tuple(Axis(d) for d in sorted(inner)))
+        return self._summed(operand, tuple(Axis(d) for d in sorted(inner)))
 
     def _edge_fits(self, operand: Expression, offset: int | str, *, wrap: bool, fill: float | None) -> bool:
         """What a ``shift``'s ``edge=`` may say, and where saying nothing is an answer.
@@ -477,7 +491,8 @@ class ExpressionResolver:
         if value.name not in self.ns.constraints:
             self.errors.append(self.ns.unknown_constraint(value.name, self.context, formals=self.formals))
             return None
-        return Dual(value.name)
+        declared = {**self.ns.spec.constraints, **self.ns.spec.given.constraints}[value.name]
+        return Dual(value.name, dims=sorted_dims(declared.dims))
 
     def _over(self, value: ArithmeticNode, operator: str, *, relation: bool) -> tuple[str, ...] | None:
         """``over=``: a dimension or a list of them, and beside ``by=`` the columns of the relation too, each a bare name.

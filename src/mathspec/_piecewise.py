@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 import mathspec._sos as sos
-from mathspec._dimensions import dims_of
 from mathspec._resolution import resolve_expression_text
 from mathspec.errors import DimensionError
 from mathspec.program import Piecewise, PiecewiseMethod, Variable, carries_variable
@@ -317,7 +316,7 @@ def curve_frame(spec: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expres
             expression carries.
     """
     context = f"piecewise '{name}'"
-    carried = [(f'link {i} expression', dims_of(node, spec, f'{context} link {i}')) for i, node in enumerate(links)]
+    carried = [(f'link {i} expression', frozenset(node.dims)) for i, node in enumerate(links)]
     if pw.activity is not None:
         carried.append(('activity', frozenset(spec.variables[pw.activity].dims)))
     for what, found in carried:

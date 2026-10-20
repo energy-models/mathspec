@@ -25,7 +25,7 @@ from mathspec._condition_parser import (
     UnresolvedConditionNode,
     UnresolvedCountNode,
 )
-from mathspec._dimensions import dims_of, join_dims
+from mathspec._dimensions import join_dims, sorted_dims
 from mathspec._expansion import expand
 from mathspec._expression_parser import (
     ArithmeticNode,
@@ -246,7 +246,7 @@ class ConditionResolver:
         if self.ns.unordered(along.name):
             self.errors.append(unordered(context, f'shift(<condition>, along={along.name})', along.name))
             return node
-        return TranslatedCondition(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
+        return TranslatedCondition(mask, along.name, int(offset.value), sorted_dims(mask.dims))
 
     def _joined(self, node: UnresolvedConditionCallNode, mask: Mask) -> Condition | UnresolvedConditionNode:
         """``at(<condition>, by=relation[column])`` — the condition read through a relation, as ``at`` reads an array.
@@ -266,9 +266,9 @@ class ConditionResolver:
         try:
             dims = join_dims(by, mask.dims, context, 'the condition')
         except DimensionError as refusal:
-            self.errors.append(str(refusal))
+            self.errors.append(self.ns.refused_dims(refusal))
             return node
-        return JoinedCondition(mask, by, tuple(sorted(dims)))
+        return JoinedCondition(mask, by, sorted_dims(dims))
 
     def _count(self, node: UnresolvedCountNode) -> Condition | UnresolvedConditionNode:
         """``count(<condition>, over=<dim>) <op> <integer>`` — how many coordinates the condition admits.
@@ -310,7 +310,7 @@ class ConditionResolver:
                 f'not read. Count along one of {_listed(sorted(mask.dims))}.'
             )
             return node
-        dims = tuple(sorted(mask.dims - {over.name}))
+        dims = sorted_dims(mask.dims - {over.name})
         return CountComparison(mask, over.name, node.op, value.value, dims)
 
     def _comparison(self, node: UnresolvedComparisonNode) -> Condition | UnresolvedConditionNode:
@@ -408,7 +408,7 @@ class ConditionResolver:
             else:
                 try:
                     degree.check_expression(side, context)
-                    dims |= dims_of(side, ns.spec, context)
+                    dims |= set(side.dims)
                 except LanguageError as e:
                     self.errors.append(str(e))
         if len(self.errors) > found:
@@ -420,7 +420,7 @@ class ConditionResolver:
                 f'side stands for, or remove the comparison.'
             )
             return node
-        return ExpressionComparison(left, node.op, right, tuple(sorted(dims)))
+        return ExpressionComparison(left, node.op, right, sorted_dims(dims))
 
     def _position(
         self, call: FunctionCallNode, node: UnresolvedComparisonNode

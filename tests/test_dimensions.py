@@ -9,16 +9,37 @@ from __future__ import annotations
 import re
 from collections.abc import Iterator, Mapping
 from dataclasses import fields, is_dataclass
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, ClassVar, cast, get_args
 
 import pytest
 
-from mathspec._dimensions import DimensionError, _check_condition_dims, dims_of
+from mathspec._dimensions import DimensionError, _check_condition_dims
 from mathspec._resolution import Namespace
 from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
-from mathspec.program import Axis, Column, Join, Mask, RelationPairComparison, Sum
+from mathspec.program import (
+    Axis,
+    Cases,
+    Column,
+    Constant,
+    Dual,
+    Expression,
+    ExpressionReference,
+    Join,
+    Mask,
+    ParameterReference,
+    RelationPairComparison,
+    Sum,
+    Translate,
+    VariableReference,
+    WindowSum,
+    children,
+)
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, dims_reversed, expression_of, spec_of, varied, where_of
+
+#: Every class an expression node is an instance of.
+EXPRESSION_NODES = get_args(Expression)
 
 if TYPE_CHECKING:
     from mathspec.spec import Spec
@@ -72,7 +93,7 @@ def _spec(**overrides) -> Spec:
 
 def _dims(expr: str) -> frozenset[str]:
     s = _spec()
-    return dims_of(expression_of(expr, Namespace(s), 't'), s, 't')
+    return frozenset(expression_of(expr, Namespace(s), 't').dims)
 
 
 @pytest.fixture
@@ -204,7 +225,7 @@ def test_dim_inference(expr, expected):
 
 def _dims_with(expr: str, **overrides) -> frozenset[str]:
     s = _spec(**overrides)
-    return dims_of(expression_of(expr, Namespace(s), 't'), s, 't')
+    return frozenset(expression_of(expr, Namespace(s), 't').dims)
 
 
 @pytest.mark.parametrize(
@@ -264,7 +285,7 @@ def test_a_join_opens_an_axis_for_the_column_it_drops_and_the_sum_over_it_closes
     node = expression_of('sum(p, over=snapshot, by=rep_of[rep])', Namespace(s), 't')
     assert isinstance(node, Sum) and isinstance(node.operand, Join)
     assert node.over == (Axis('snapshot', Column('rep_of', 'snapshot')),), 'the sum stands over the axis the join opens'
-    assert dims_of(node, s, 't') == {'generator', 'snapshot'}, 'and the sum over it leaves the frame the row keeps'
+    assert set(node.dims) == {'generator', 'snapshot'}, 'and the sum over it leaves the frame the row keeps'
 
 
 def test_a_sum_joins_on_a_key_column_and_a_value_column_together():
@@ -308,15 +329,15 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
         ),
         pytest.param(
             'sum(sum(p, over=bus))',
-            SchemaError,
+            DimensionError,
             r'sum\(over=bus\) but the expression has only the dims',
-            id='a-dim-fault-under-a-bare-sum-is-met-while-the-sum-is-built',
+            id='a-dim-fault-under-a-bare-sum',
         ),
         pytest.param(
             'sum(sum(p, over=bus), over=generator)',
             DimensionError,
             r'sum\(over=bus\) but the expression has only the dims',
-            id='and-the-same-fault-under-a-sum-over-a-named-dim-is-the-dim-rules',
+            id='and-the-same-fault-under-a-sum-over-a-named-dim',
         ),
         pytest.param(
             'sum(load, over=generator, by=gen_bus[bus])',
@@ -387,11 +408,11 @@ def test_a_bare_name_reaches_the_variable_a_dual_the_same_named_constraint():
     ],
 )
 def test_an_ill_dimensioned_expression_is_rejected(expr, error, match):
-    """The class says which pass refused: what resolution needs to build a node is a `SchemaError`, and a rule on a built tree's dims a `DimensionError`.
+    """The class says what is wrong: a dim rule broken is a `DimensionError`, and anything else a `SchemaError`.
 
-    A dim fault under a bare `sum()` is met while the sum is built, since the
-    dims it reduces are the operand's, and the same fault under a sum over a
-    named dim is met by the dim rules.
+    A dim fault under a bare `sum()` was a `SchemaError`, because the bare sum
+    met it while it was built, and the same fault under a sum over a named dim
+    was a `DimensionError`.
     """
     with pytest.raises(error, match=match):
         _dims(expr)
@@ -729,6 +750,118 @@ def test_a_row_over_more_dims_than_the_entry_it_reads_is_refused():
     row = {'constraints.capped': {'dims': ['snapshot', 'generator'], 'expression': 'cap <= 10'}}
     with pytest.raises(DimensionError, match=r"does not carry \['snapshot'\], which its dims: declares"):
         to_spec(varied(DISPATCH_MODEL, **row, **{'expressions.cap': 'sum(p, over=snapshot) - p_max'}))
+
+
+# ---------------------------------------------------------------------------
+# every expression node states its dims
+# ---------------------------------------------------------------------------
+
+#: Every spec in the repository, before and after each expansion pair.
+EVERY_SPEC = [
+    *SPECS,
+    *sorted((Path(__file__).parent / 'expand').glob('*/*.yaml')),
+    Path(__file__).parent / 'typesetting' / 'golden' / 'model.yaml',
+]
+
+
+def _derived(node: Expression, spec: Spec) -> frozenset[str]:
+    """The dims of *node* by the rules of the language reference, derived from the spec without reading ``dims``."""
+    if isinstance(node, Constant):
+        return frozenset()
+    if isinstance(node, ParameterReference):
+        return frozenset({**spec.parameters, **spec.given.parameters}[node.name].dims)
+    if isinstance(node, VariableReference):
+        return frozenset({**spec.variables, **spec.given.variables, **spec.given.expressions}[node.name].dims or ())
+    if isinstance(node, Dual):
+        return frozenset({**spec.constraints, **spec.given.constraints}[node.constraint].dims)
+    if isinstance(node, ExpressionReference):
+        return _derived(node.body, spec)
+    if isinstance(node, Cases):
+        return frozenset().union(*(_derived(r.value, spec) | r.when.dims for r in node.regions))
+    if isinstance(node, Join):
+        joined = _derived(node.operand, spec) - set(node.columns.joined_dims)
+        return joined | set(node.columns.grouped_dims)
+    if isinstance(node, Sum):
+        return _derived(node.operand, spec) - {axis.dimension for axis in node.over if axis.column is None}
+    if isinstance(node, Translate | WindowSum):
+        return _derived(node.operand, spec)
+    return frozenset().union(*(_derived(child, spec) for child in children(node)))
+
+
+def _expressions(root: object) -> Iterator[Expression]:
+    """Every expression node reachable from *root*, a program or any part of one, each once."""
+    seen: set[int] = set()
+    stack = [root]
+    while stack:
+        item = stack.pop()
+        if id(item) in seen or isinstance(item, str | int | float | bool | None):
+            continue
+        seen.add(id(item))
+        if isinstance(item, EXPRESSION_NODES):
+            yield cast('Expression', item)
+        if isinstance(item, Mapping):
+            stack.extend(item.values())
+        elif isinstance(item, tuple | list | frozenset):
+            stack.extend(item)
+        elif is_dataclass(item):
+            stack.extend(getattr(item, f.name) for f in fields(item))
+
+
+@pytest.mark.parametrize('path', EVERY_SPEC, ids=lambda path: str(path.relative_to(Path(__file__).parent.parent)))
+def test_every_expression_node_states_its_dims_sorted_by_name(path):
+    """A consumer read a node's dims by deriving them again, as the loader did to check them and then threw away."""
+    spec = spec_of(path)
+    for loaded in (spec, spec.expand()):
+        nodes = list(_expressions(loaded.program))
+        assert nodes, f'{path.name} lowers to no expression node'
+        for node in nodes:
+            derived = _derived(node, loaded)
+            assert node.dims == tuple(sorted(derived)), (
+                f'{type(node).__name__} in {path.name} states {node.dims}, and the rules give {sorted(derived)}, '
+                f'sorted by name'
+            )
+
+
+#: Two operator faults, each in an entry of its own.
+TWO_DIM_FAULTS = {
+    'constraints.over_bus': {'dims': [], 'expression': 'sum(sum(p, over=bus), over=generator) <= 1'},
+    'constraints.along_bus': {
+        'dims': ['generator'],
+        'expression': "shift(cost, along=snapshot, offset=1, edge='wrap') <= 1",
+    },
+}
+
+
+@pytest.mark.parametrize(
+    ('patch', 'error', 'listed'),
+    [
+        pytest.param(TWO_DIM_FAULTS, DimensionError, ['sum(over=bus)', 'shift(along=snapshot)'], id='two-dim-faults'),
+        pytest.param(
+            {**TWO_DIM_FAULTS, 'constraints.typo': {'dims': [], 'expression': 'sum(nothing) <= 1'}},
+            SchemaError,
+            ['sum(over=bus)', 'shift(along=snapshot)', "'nothing'"],
+            id='and-a-name-nothing-declares',
+        ),
+        pytest.param(
+            {
+                'constraints.read': {
+                    'dims': ['generator'],
+                    'where': 'at(cost > 0, by=gen_bus[bus])',
+                    'expression': 'sum(p, over=snapshot) <= 1',
+                }
+            },
+            DimensionError,
+            ["joins on ['bus'], which the condition does not carry"],
+            id='a-condition-read-through-a-dim-it-lacks',
+        ),
+    ],
+)
+def test_every_fault_resolution_meets_is_listed_under_the_class_of_what_is_wrong(patch, error, listed):
+    """A dim fault met while a node was built was a `SchemaError`, and the same fault met later a `DimensionError`."""
+    with pytest.raises(error) as raised:
+        _spec(**patch)
+    missing = [text for text in listed if text not in str(raised.value)]
+    assert not missing, f'every fault is listed, not the first: {missing} are absent'
 
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))

@@ -22,7 +22,7 @@ one: ``docs/reference/reading.md``.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, fields, replace
+from dataclasses import dataclass, field, fields, replace
 from functools import cached_property
 from typing import TYPE_CHECKING, Literal, assert_never
 
@@ -188,6 +188,7 @@ class Constant:
     """A scalar constant."""
 
     value: float
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -195,6 +196,7 @@ class ParameterReference:
     """A parameter reference — contributes to the constant part."""
 
     name: str
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -202,6 +204,7 @@ class VariableReference:
     """A variable reference — one term per existing variable row."""
 
     name: str
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -217,17 +220,20 @@ class Dual:
     """
 
     constraint: str
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
 class Negate:
     operand: Expression
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
 class Add:
     left: Expression
     right: Expression
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -240,6 +246,7 @@ class Multiply:
 
     left: Expression
     right: Expression
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -253,6 +260,7 @@ class Power:
 
     base: Expression
     exponent: Expression
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -261,6 +269,7 @@ class Divide:
 
     numerator: Expression
     divisor: Expression
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -306,6 +315,7 @@ class Sum:
 
     operand: Expression
     over: tuple[Axis, ...]
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -323,10 +333,15 @@ class Join:
     join opens no axis, and the bare ``Join`` is ``at(x,
     by=relation[a])``: one value per row of the result, fanned out where
     several key tuples share the values joined on.
+
+    An axis is never a dim: a join that opens axes states the ``dims`` of the
+    sum that closes them, and that sum removes only the dims its plain axes
+    name.
     """
 
     operand: Expression
     columns: JoinColumns
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -354,6 +369,7 @@ class Translate:
     wrap: bool
     fill: float | None = None
     partition: Partition | None = None
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -382,6 +398,7 @@ class WindowSum:
     width: int | str
     wrap: bool
     partition: Partition | None = None
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -406,6 +423,7 @@ class Cases:
     """
 
     regions: tuple[Region, ...]
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -421,6 +439,7 @@ class ExpressionReference:
 
     name: str
     body: Expression
+    dims: tuple[str, ...] = field(kw_only=True)
 
 
 #: Every expression node, as one type — what a walk takes. The set is
@@ -432,7 +451,10 @@ class ExpressionReference:
 #: that is ``in_math`` — affine but where a [`QuadraticPosition`][] admits a
 #: [`Multiply`][] of two variable-carrying operands. A
 #: [`NamedExpression`][] the math never reads is held to none of them.
-#: No node records which tree it stands in.
+#: No node records which tree it stands in. Every node states ``dims``, the
+#: dimensions over which it is indexed, sorted by name, so a consumer reads a
+#: node's dims rather than deriving them. An
+#: [`ExpressionReference`][] states its body's dims.
 Expression = (
     Constant
     | ParameterReference

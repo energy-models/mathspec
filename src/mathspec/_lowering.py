@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec._dimensions import check_spec, dims_of
+from mathspec._dimensions import check_spec, sorted_dims
 from mathspec._expansion import expand, parse_template
 from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec._resolution import (
@@ -97,8 +97,9 @@ def lower(spec: Spec) -> Program:
         SchemaError: Listing every problem found, one per line. A name a set
             or curve writes that the file declares is listed once every other
             problem is gone, since it is read off the curve as lowered.
-        DimensionError: The first dim rule an entry breaks, once every
-            name resolves.
+        DimensionError: Listing every dim rule an operator breaks, where
+            nothing else is wrong; else the first rule an entry breaks, once
+            every name resolves.
     """
     errors = reference_errors(spec)
     if errors:
@@ -134,7 +135,7 @@ def lower(spec: Spec) -> Program:
         errors.extend(refusals)
         if named is not None:
             body = Mask(named.body)
-            conditions[mname] = NamedCondition(body, tuple(sorted(body.dims)), mdef.description)
+            conditions[mname] = NamedCondition(body, sorted_dims(body.dims), mdef.description)
 
     variables = {}
     for vname, vdef in spec.variables.items():
@@ -142,11 +143,11 @@ def lower(spec: Spec) -> Program:
         if where is not None and (refusal := self_existence(where, vname, f"Variable '{vname}'")) is not None:
             errors.append(refusal)
         if vdef.domain == 'binary':
-            lower_bound, upper_bound = Constant(0.0), Constant(1.0)
+            lower_bound, upper_bound = Constant(0.0, dims=()), Constant(1.0, dims=())
         else:
-            lower_bound, upper_bound = _bound(vdef.bounds.lower), _bound(vdef.bounds.upper)
+            lower_bound, upper_bound = _bound(vdef.bounds.lower, ns), _bound(vdef.bounds.upper, ns)
         variables[vname] = Variable(
-            tuple(sorted(vdef.dims)),
+            sorted_dims(vdef.dims),
             where=mask_of(where),
             lower=lower_bound,
             upper=upper_bound,
@@ -162,7 +163,7 @@ def lower(spec: Spec) -> Program:
         if (sides := resolve_constraint_text(cdef.expression, ns, context, errors)) is not None:
             lhs, sense, rhs = sides
             constraints[cname] = Constraint(
-                tuple(sorted(cdef.dims)), lhs, sense, rhs, mask_of(where), description=cdef.description
+                sorted_dims(cdef.dims), lhs, sense, rhs, mask_of(where), description=cdef.description
             )
 
     objective = None
@@ -186,7 +187,7 @@ def lower(spec: Spec) -> Program:
         curves[pname] = links
 
     if errors:
-        raise SchemaError('\n'.join(errors))
+        raise ns.error(errors)
 
     roots = [side for c in constraints.values() for side in (c.lhs, c.rhs)]
     if objective is not None:
@@ -214,7 +215,7 @@ def lower(spec: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: Parameter(tuple(sorted(pdef.dims)), pdef.dtype, pdef.missing, pdef.description)
+            name: Parameter(sorted_dims(pdef.dims), pdef.dtype, pdef.missing, pdef.description)
             for name, pdef in spec.parameters.items()
         },
         variables=variables,
@@ -244,17 +245,13 @@ def lower(spec: Spec) -> Program:
         conditions=conditions,
         given=GivenTargets(
             parameters={
-                name: Parameter(tuple(sorted(g.dims)), g.dtype, None, g.description)
+                name: Parameter(sorted_dims(g.dims), g.dtype, None, g.description)
                 for name, g in spec.given.parameters.items()
             },
-            variables={name: Given(tuple(sorted(g.dims)), g.description) for name, g in spec.given.variables.items()},
-            constraints={
-                name: Given(tuple(sorted(g.dims)), g.description) for name, g in spec.given.constraints.items()
-            },
-            expressions={
-                name: Given(tuple(sorted(g.dims)), g.description) for name, g in spec.given.expressions.items()
-            },
-            conditions={name: Given(tuple(sorted(g.dims)), g.description) for name, g in spec.given.conditions.items()},
+            variables={name: Given(sorted_dims(g.dims), g.description) for name, g in spec.given.variables.items()},
+            constraints={name: Given(sorted_dims(g.dims), g.description) for name, g in spec.given.constraints.items()},
+            expressions={name: Given(sorted_dims(g.dims), g.description) for name, g in spec.given.expressions.items()},
+            conditions={name: Given(sorted_dims(g.dims), g.description) for name, g in spec.given.conditions.items()},
         ),
         description=spec.description,
     )
@@ -344,17 +341,15 @@ def _loop(target: str, entry: ExpressionReference, sums: Mapping[str, list[Expre
 def _frame_of(name: str, entry: ExpressionReference, spec: Spec) -> tuple[str, ...]:
     """The dims an entry is read over, sorted by name: the ``dims:`` it declares, else its body's."""
     declared = spec.expressions[name].dims
-    if declared is not None:
-        return tuple(sorted(declared))
-    return tuple(sorted(dims_of(entry.body, spec, f"Named expression '{name}'")))
+    return entry.dims if declared is None else sorted_dims(declared)
 
 
-def _bound(value: float | str | None) -> Constant | ParameterReference | None:
+def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterReference | None:
     if value is None:
         return None
     if isinstance(value, str):
-        return ParameterReference(value)
-    return Constant(value)
+        return ParameterReference(value, dims=sorted_dims(ns.leaf_dims[value]))
+    return Constant(value, dims=())
 
 
 def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:
