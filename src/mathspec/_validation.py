@@ -151,7 +151,7 @@ def _frame_dimensions(spec: Spec) -> Iterator[str]:
         *(('Given constraint', name, g.dims) for name, g in spec.given.constraints.items()),
         *(('Given condition', name, g.dims) for name, g in spec.given.conditions.items()),
         *(('Constraint', name, c.dims) for name, c in spec.constraints.items()),
-        *(('Named expression', name, e.dims or []) for name, e in spec.expressions.items()),
+        *(('Named expression', name, e.dims or ()) for name, e in spec.expressions.items()),
     ]
     for kind, name, dims in frames:
         yield from (undeclared_dimension(kind, name, d) for d in dims if d not in spec.dimensions)
@@ -177,7 +177,7 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
                 f"Relation '{lname}' names dimension '{d}' twice under '{side}:'. Give the two columns roles: "
                 f'{side}: {{{d}0: {d}, {d}1: {d}}}.'
                 for d, count in Counter(dim for _, dim in side_columns(written)).items()
-                if count > 1 and not isinstance(written, dict)
+                if count > 1 and not isinstance(written, Mapping)
             )
         yield from (
             f"Relation '{lname}' names column '{role}' under both 'key:' and 'values:'. Rename the value column: "
@@ -245,7 +245,7 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
         elif entry.along not in spec.variables[entry.variable].dims:
             yield (
                 f"{context}: along '{entry.along}' is not a dim of variable "
-                f"'{entry.variable}' (dims {spec.variables[entry.variable].dims}). Set 'along:' "
+                f"'{entry.variable}' (dims {list(spec.variables[entry.variable].dims)}). Set 'along:' "
                 f'to one of these dims.'
             )
         elif entry.type == 2 and not spec.dimensions[entry.along].ordered:
@@ -308,7 +308,7 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             elif pw.over not in spec.parameters[link.values].dims:
                 yield (
                     f"{context}: link {i} values parameter '{link.values}' has dims "
-                    f"{spec.parameters[link.values].dims}, without '{pw.over}'. Add '{pw.over}' to its dims."
+                    f"{list(spec.parameters[link.values].dims)}, without '{pw.over}'. Add '{pw.over}' to its dims."
                 )
         if (activity := pw.activity) is not None:
             if activity not in spec.variables:
@@ -329,7 +329,7 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             yield f"{context}: points parameter '{points}' is {dtype}. Declare it dtype: bool."
         elif pw.over not in spec.parameters[points].dims:
             yield (
-                f"{context}: points parameter '{points}' has dims {spec.parameters[points].dims}, "
+                f"{context}: points parameter '{points}' has dims {list(spec.parameters[points].dims)}, "
                 f"without '{pw.over}'. Add '{pw.over}' to its dims."
             )
 

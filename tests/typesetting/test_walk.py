@@ -1052,7 +1052,7 @@ def test_a_curve_prints_over_the_frame_its_expansion_builds_one_per_coordinate_o
 
     printed = typeset_line(spec, 'curve', 'latex')
     assert printed.endswith(r'\forall\, g \in \mathcal{G},\ t \in \mathcal{T}')
-    assert emitted == ['generator', 'snapshot'], 'the quantifier above is that frame, in that order'
+    assert emitted == ('generator', 'snapshot'), 'the quantifier above is that frame, in that order'
 
 
 def test_the_expansion_prints_the_rows_the_entry_states():

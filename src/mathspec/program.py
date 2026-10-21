@@ -451,10 +451,11 @@ class ExpressionReference:
 #: that is ``in_math`` — affine but where a [`QuadraticPosition`][] admits a
 #: [`Multiply`][] of two variable-carrying operands. A
 #: [`NamedExpression`][] the math never reads is held to none of them.
-#: No node records which tree it stands in. Every node states ``dims``, the
-#: dimensions over which it is indexed, sorted by name, so a consumer reads a
-#: node's dims rather than deriving them. An
-#: [`ExpressionReference`][] states its body's dims.
+#: No node records which tree it stands in. Lowering states each node's
+#: ``dims``, the dimensions over which it is indexed, sorted by name, so a
+#: consumer reads a node's dims rather than deriving them; a node built by
+#: hand holds the dims it was given. An [`ExpressionReference`][] states its
+#: body's dims.
 Expression = (
     Constant
     | ParameterReference
