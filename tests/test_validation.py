@@ -393,7 +393,7 @@ class TestDimensionKwargs:
         ('dtype', 'where', 'match'),
         [
             ('datetime', 'g > 0', 'compares against 1970-01-01'),
-            ('str', 'g > 3', 'matches no label'),
+            ('str', 'g == 3', 'matches no label'),
             ('int', "g > 'x'", 'matches nothing'),
             ('datetime', "g > 'not-a-date'", 'is not an ISO date'),
         ],
@@ -403,6 +403,38 @@ class TestDimensionKwargs:
         datetime as "after the epoch" and silently drops every earlier coordinate."""
         with pytest.raises(LanguageError, match=match):
             _spec(**{'dimensions.g': {'dtype': dtype}, 'variables.p.where': where})
+
+    @pytest.mark.parametrize(
+        ('patch', 'fragments'),
+        [
+            pytest.param(
+                {'variables.p.where': "g < 'b'"},
+                ["'g' has dtype 'str', which has no order", 'Compare it with == or !=, or use position()'],
+                id='dimension',
+            ),
+            pytest.param(
+                {'variables.p.where': "tag >= 'b'"}, ["'tag' has dtype 'str', which has no order"], id='parameter'
+            ),
+            pytest.param(
+                {'variables.p.where': "lk > 'b'"}, ["'lk' has dtype 'str', which has no order"], id='relation-column'
+            ),
+            pytest.param(
+                {'conditions.late': "g <= 'b'", 'variables.p.where': 'late'},
+                ["'g' has dtype 'str', which has no order"],
+                id='named-condition',
+            ),
+            pytest.param(
+                {'variables.p.where': 'flag > 0'},
+                ["'flag' has dtype 'bool', which has no order", "'flag' or 'not flag'"],
+                id='bool-parameter',
+            ),
+        ],
+    )
+    def test_an_ordering_on_an_unordered_dtype_is_refused(self, patch, fragments):
+        """`<` on a str compared the labels bytewise, so `'b10' < 'b9'` held whatever the dimension's order."""
+        message = _refusal(SMALL_MODEL, **patch)
+        for fragment in fragments:
+            assert fragment in message, message
 
 
 class TestAnUndeclaredKeywordIsRefusedOnce:

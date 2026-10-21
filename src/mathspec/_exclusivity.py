@@ -54,10 +54,6 @@ if TYPE_CHECKING:
 #: The most cells one pair of masks may multiply out to. Split a larger pair into several expressions.
 CELL_BUDGET = 8192
 
-#: The dtypes an ordering is decided against. Everything else compares only
-#: with == and !=, which need no order on the values.
-_ORDERED_DTYPES: tuple[DeclaredDtype, ...] = ('float', 'int', 'datetime')
-
 
 class Undecidable(Exception):  # noqa: N818
     """A pair this procedure will not reason about. Carries the rewrite."""
@@ -286,13 +282,6 @@ def _observe(
             )
             raise Undecidable(msg)
     elif isinstance(node, ParameterComparison | DimensionComparison | RelationComparison):
-        if node.op not in ('==', '!=') and dtypes.get(subject.name) not in _ORDERED_DTYPES:
-            msg = (
-                f'{subject} has dtype {dtypes.get(subject.name)!r} and is ordered with '
-                f'{node.op!r}, which puts no two of its values in order. Compare it with '
-                f'== or !=, or declare it as a number'
-            )
-            raise Undecidable(msg)
         values.add(node.value)
 
 

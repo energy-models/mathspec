@@ -38,6 +38,7 @@ from mathspec._expression_parser import (
 from mathspec._expression_resolver import ExpressionResolver, condition_compared
 from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
 from mathspec.program import (
+    ORDERED_DTYPES,
     Add,
     And,
     BooleanLiteral,
@@ -576,6 +577,18 @@ class ConditionResolver:
         context = self.context
         value = node.value
         text = isinstance(value, str)
+
+        if node.op not in ('==', '!=') and dtype not in ORDERED_DTYPES:
+            rewrite = (
+                f"Test the bare name, '{node.name}' or 'not {node.name}'"
+                if dtype == 'bool'
+                else 'Compare it with == or !=, or use position() on an ordered dimension'
+            )
+            self.errors.append(
+                f"{context}: '{node.name}' has dtype '{dtype}', which has no order, so {node.op} "
+                f'cannot compare its values. {rewrite}.'
+            )
+            return None
 
         if dtype == 'datetime':
             if not text:
