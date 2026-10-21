@@ -343,8 +343,9 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 - Entries are sorted by name within each section.
 - Every expression is printed from its parsed tree, so the spacing and the
   brackets are the printer's rather than the author's.
-- The terms of a sum are sorted, and so are the factors of a product and the
-  keyword arguments of a call. Subtraction, division, exponentiation and a
+- The terms of a sum are sorted, and so are the factors of a product, the
+  keyword arguments of a call, and a list of names or the columns of a
+  relation in a call, such as `over=[generator, snapshot]`. Subtraction, division, exponentiation and a
   call's positional arguments keep the order the file wrote, because moving
   those changes what the spec says.
 - A sum of two or more terms is broken one term to a line, each under its
@@ -356,8 +357,9 @@ Two things are left as the file wrote them: a condition in the `where`
 grammar, and the order of a piecewise entry's links. A difference in either is
 a difference in the text.
 
-The normal form sorts `dimensions:` and every `dims:` list by name. This
-changes no dims of the program, because the program sorts every dims by name.
+The spec holds its entries, every `dims:` list, each side of a relation, the
+regions under `cases:` and the `kwargs` of a macro sorted by name, so the normal
+form writes them in that order too.
 
 The normal form states the same spec, but it does not load to a `Spec` equal
 to the original, because a reprinted expression is a different string. Writing

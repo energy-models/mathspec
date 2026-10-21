@@ -10,8 +10,10 @@ from typing import TYPE_CHECKING, Literal, cast, overload
 
 from mathspec._expression_parser import (
     BinaryOperatorNode,
+    ColumnsNode,
     ComparisonNode,
     FunctionCallNode,
+    NameListNode,
     UnaryOperatorNode,
     operand,
     parse_expression,
@@ -117,8 +119,10 @@ def normalised(node: ParsedNode) -> ParsedNode:
     Sorting is by the text an operand prints as, which is a total order over
     trees: a printed tree parses back to the tree it came from, so two
     operands that print alike are one tree. Addition and multiplication
-    commute and are sorted. Subtraction, division, exponentiation and a call's
-    positional arguments are not, and keep the order the file wrote.
+    commute and are sorted. A list of names and the columns of a relation in a
+    call name a set, and are sorted too. Subtraction, division,
+    exponentiation and a call's positional arguments are not, and keep the
+    order the file wrote.
 
     Each term and factor is flattened *after* it is normalised as well as
     before, because normalising reveals sums and products the written tree
@@ -135,6 +139,10 @@ def normalised(node: ParsedNode) -> ParsedNode:
             tuple(normalised(arg) for arg in node.args),
             {key: normalised(value) for key, value in sorted(node.kwargs.items())},
         )
+    if isinstance(node, NameListNode):
+        return NameListNode(tuple(sorted(node.names)))
+    if isinstance(node, ColumnsNode):
+        return ColumnsNode(node.relation, tuple(sorted(node.columns)))
     if isinstance(node, UnaryOperatorNode):
         sign, inner = _signed('+', node)
         under = normalised(inner)

@@ -289,6 +289,8 @@ macros:
 - The formal arguments are the names under `args` and `kwargs`. Inside a
   template, a formal hides a name the spec declares, but a formal may not
   collide with a declared dimension.
+- A call passes `args` by position and `kwargs` by name. So `to_spec` keeps
+  the order of `args` and sorts `kwargs` by name.
 - The loader checks the number of arguments at each call site. It reports a
   cycle of macros with the chain of names that forms it.
 - `to_spec` checks every template against every rule a call site is held to,

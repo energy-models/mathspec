@@ -622,7 +622,8 @@ class MacroSpec(_StrictSpec):
     _label: ClassVar[str] = 'a macro entry'
 
     args: list[str] = []
-    kwargs: list[str] = []
+    #: Sorted by name as it loads: a call passes each one by name, so their order means nothing.
+    kwargs: Annotated[list[str], AfterValidator(sorted)] = []
     template: str
     description: str | None = None
 

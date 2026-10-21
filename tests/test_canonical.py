@@ -158,7 +158,7 @@ def _written_backwards(raw: object, depth: int = 3) -> object:
 
     Three levels reach the sections, the entries of each section and the
     keys of each entry. They stop above `cases:`, whose regions
-    are a mapping that the form keeps in the file's order.
+    `test_the_order_of_the_regions_under_cases_is_no_difference` reverses.
     """
     if depth == 0 or not isinstance(raw, dict):
         return raw
@@ -207,6 +207,47 @@ def test_the_order_of_the_regions_under_cases_is_no_difference():
     assert reordered.to_yaml(canonical=True) == written.to_yaml(canonical=True), 'one canonical text'
     assert reordered.to_yaml() == written.to_yaml(), 'the spec writes the regions back sorted by name'
     assert ms.to_latex(reordered) == ms.to_latex(written), 'the rows print sorted by name, otherwise last'
+
+
+@pytest.mark.parametrize(
+    ('path', 'key', 'written', 'reordered'),
+    [
+        pytest.param(
+            EXAMPLES / 'operators' / 'sum_list.yaml',
+            'constraints.carrier_total.expression',
+            'sum(p, over=[snapshot, generator]) <= limit',
+            'sum(p, over=[generator, snapshot]) <= limit',
+            id='the-names-in-over',
+        ),
+        pytest.param(
+            EXAMPLES / 'operators' / 'sum_by_column_lists.yaml',
+            'constraints.slot_cap.expression',
+            'sum(p, over=[generator, period], by=slot_of[bus, technology]) <= cap',
+            'sum(p, over=[generator, period], by=slot_of[technology, bus]) <= cap',
+            id='the-columns-of-a-relation',
+        ),
+    ],
+)
+def test_the_order_of_a_list_in_a_call_is_no_difference(path, key, written, reordered):
+    """A list of names and the columns of a relation in a call name a set: a repeat is refused, and the
+    program reads them sorted. The form printed them as written, so two files that state one spec wrote two
+    texts."""
+    raw = raw_of(path)
+    texts = {ms.to_spec(varied(raw, **{key: text})).to_yaml(canonical=True) for text in (written, reordered)}
+    assert len(texts) == 1, 'one canonical text for both orders of the list'
+
+
+def test_the_order_a_macro_lists_its_keywords_in_is_no_difference():
+    """A call passes a keyword formal by name, so the order of `kwargs:` means nothing. A spec held it as
+    the file wrote it, so two files that state one spec were unequal and wrote two texts."""
+    macro = {'args': ['x'], 'template': 'x * z + b'}
+    written, reordered = (
+        ms.to_spec(varied(DISPATCH_MODEL, **{'macros.f': {**macro, 'kwargs': kwargs}}))
+        for kwargs in (['z', 'b'], ['b', 'z'])
+    )
+    assert reordered == written, 'one spec'
+    assert reordered.to_yaml() == written.to_yaml(), 'the spec writes the keywords back sorted by name'
+    assert reordered.to_yaml(canonical=True) == written.to_yaml(canonical=True), 'one canonical text'
 
 
 def _piecewise_with_its_links_reversed() -> dict[str, object]:
