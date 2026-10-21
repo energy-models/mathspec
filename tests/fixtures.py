@@ -12,10 +12,9 @@ from typing import TYPE_CHECKING, Any
 
 from mathspec._expansion import parse_and_expand
 from mathspec._expression_parser import ComparisonNode
-from mathspec._resolution import Namespace, mask_of, resolve_expression, resolve_where_text
+from mathspec._resolution import Namespace, mask_of, resolve_condition_text, resolve_expression
 from mathspec._validation import to_spec
 from mathspec._yaml import parse_yaml, read_yaml
-from mathspec.errors import SchemaError
 from mathspec.spec import Spec
 
 if TYPE_CHECKING:
@@ -131,7 +130,7 @@ def expression_of(text: str, ns: Namespace, context: str) -> Expression:
     assert not isinstance(ast, ComparisonNode), 'a comparison is a constraint, which comparison_of reads'
     resolved = resolve_expression(ast, ns, context, errors)
     if errors:
-        raise SchemaError('\n'.join(errors))
+        raise ns.error(errors)
     assert resolved is not None
     return resolved
 
@@ -143,7 +142,7 @@ def comparison_of(text: str, ns: Namespace, context: str) -> tuple[Expression, s
     assert isinstance(ast, ComparisonNode), 'a value is an expression, which expression_of reads'
     left, right = (resolve_expression(side, ns, context, errors) for side in (ast.left, ast.right))
     if errors:
-        raise SchemaError('\n'.join(errors))
+        raise ns.error(errors)
     assert left is not None and right is not None
     return left, ast.op, right
 
@@ -151,7 +150,7 @@ def comparison_of(text: str, ns: Namespace, context: str) -> tuple[Expression, s
 def where_of(text: str | None, ns: Namespace, context: str, self_variable: str | None = None) -> Mask | None:
     """Parse and resolve one where string into the mask an entry carries, raising every problem at once."""
     errors: list[str] = []
-    resolved = resolve_where_text(text, ns, context, errors, self_variable)
+    resolved = resolve_condition_text(text, ns, context, errors, self_variable)
     if errors:
-        raise SchemaError('\n'.join(errors))
+        raise ns.error(errors)
     return mask_of(resolved)

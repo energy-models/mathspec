@@ -23,8 +23,8 @@ given:
     Generator_p_nom_ext: { dims: [generator] }
   expressions:
     scenario_opex: { dims: [scenario] }
-  masks:
-    Generator_committed: { dims: [snapshot, generator] }
+  conditions:
+    Generator_committed: { dims: [generator, snapshot] }
 
 dimensions:
   scenario:
@@ -151,13 +151,13 @@ expressions:
       + sum(sum(Generator_shut_down * Generator_shut_down_cost, over=generator), over=snapshot)
     adds_to: scenario_opex
 
-masks:
+conditions:
   Generator_com_ext:
     description: >-
       a committable generator with an extendable, non-modular build that
       stands in the snapshot's period — PyPSA's `com-ext` rows, whose status
       is relaxed against the chosen build
-    where: >-
+    condition: >-
       Generator_committable
       AND Generator_p_nom_extendable
       AND NOT (Generator_p_nom_mod > 0)

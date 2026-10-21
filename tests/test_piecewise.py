@@ -167,7 +167,7 @@ def test_a_program_mirrors_the_model_it_was_lowered_from():
     assert [link.values for link in curve.links] == ['bp_x', 'bp_y'] and curve.frame == ('snapshot',), (
         'the curve as the file states it, with its links typed and its frame decided'
     )
-    assert curve.links[0].expression == VariableReference('p'), 'a link is the tree the file wrote'
+    assert curve.links[0].expression == VariableReference('p', dims=('snapshot',)), 'a link is the tree the file wrote'
     assert 'cost_curve_lam' not in program.variables, 'the rows are on the expansion'
     assert not rows.piecewise and {'cost_curve_lam', 'p', 'op_cost'} <= set(rows.variables), (
         'the expansion carries the rows and no curve'
@@ -195,12 +195,14 @@ def test_expansion_is_idempotent():
         pytest.param(['generator', 'snapshot', 'bp'], id='generator-first'),
     ],
 )
-def test_the_emitted_foreach_follows_file_order(order):
+def test_the_emitted_frame_is_sorted_by_name_whatever_order_the_file_declares(order):
     """The frame is a set until something orders it, and a set iterates the
     same way for the same names within one process — so a run that reads the
-    set rather than the entry fails one of the two orderings."""
+    set rather than sorting it fails one of the two orderings."""
     spec = spec_of(TWO_DIM, dimensions={d: TWO_DIM['dimensions'][d] for d in order})
-    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == order
+    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == ['generator', 'snapshot', 'bp'], (
+        'the frame sorted by name, then the breakpoint dimension'
+    )
 
 
 @pytest.mark.parametrize(
@@ -560,11 +562,11 @@ def test_every_named_curvature_is_one_a_method_can_ask_for():
     )
 
 
-def test_a_masked_lp_curve_sits_its_rows_on_predicates_rather_than_on_parameters():
+def test_a_masked_lp_curve_sits_its_rows_on_conditions_rather_than_on_parameters():
     """An ``lp`` entry masked by one of its own values parameters emitted three ``bool``
     parameters — the mask, and the first and last breakpoint of each curve — that the
     caller never supplied and a derivation in private state filled. The ``where``
-    language writes each of them, so the rows carry the predicate and the program
+    language writes each of them, so the rows carry the condition and the program
     declares the file's parameters and no other."""
     program = spec_of(LP_MASKED).expand('piecewise').program
     rows = {name: program.constraints[f'cost_curve_{name}'].where for name in ('chord', 'domain_lo', 'domain_hi')}
@@ -589,7 +591,7 @@ def test_a_file_supplied_mask_is_what_the_contiguity_condition_reads():
     ).program
 
     contiguous = program.assumptions['cost_curve_contiguous']
-    assert contiguous.predicate.names_read == frozenset({'reach'}), (
+    assert contiguous.holds.names_read == frozenset({'reach'}), (
         "the mask is still one the data has to make contiguous, and the condition reads the file's own name"
     )
 
@@ -637,7 +639,7 @@ def test_an_entry_assumes_of_its_data_what_the_method_implies():
     assert all(isinstance(a, Assumption) for a in program.assumptions.values()), (
         'a method states its conditions in the same language the file does, so a consumer has one kind to read'
     )
-    assert program.assumptions['cost_curve_increasing'].predicate.names_read == frozenset({'bp_x'}), (
+    assert program.assumptions['cost_curve_increasing'].holds.names_read == frozenset({'bp_x'}), (
         'the x-axis is what increases, and the condition reads it and nothing else'
     )
 

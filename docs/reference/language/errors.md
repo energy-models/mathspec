@@ -12,7 +12,7 @@ about a file that loads but looks wrong.
 
 `to_spec` attaches no data. Before it returns a `Spec`, it parses the file,
 resolves every name, checks every dimension rule and every degree, and reads
-every `where` string and every macro template, including the templates that
+every condition and every macro template, including the templates that
 nothing calls. A `piecewise:` entry is checked against every rule its expansion
 would be held to. Everything the language refuses, `to_spec` refuses there.
 
@@ -56,6 +56,13 @@ variable with no constraint row.
 | `LanguageError`  | `MathSpecError` | Something in the spec: a construct outside the language, a dimension set that does not compose, or a name that nothing declares |
 | `SchemaError`    | `LanguageError` | Something in the file: an unknown key, a malformed entry, or a bad symbol table                                                 |
 | `DimensionError` | `LanguageError` | Dimensions that disagree, such as a constraint whose expression does not equal its `dims`                                       |
+
+A load reads every expression and `where:` in the file, and then lists each
+fault it found, one to a line. The error is a `DimensionError` when every fault
+breaks a dimension rule, and a `SchemaError` when any fault is of another kind.
+After that, the load checks the rules on whole entries, such as a constraint
+whose expression is not indexed over exactly its `dims:`. That `DimensionError` names the
+first entry that breaks a rule.
 
 You can reproduce each of these errors from the YAML alone.
 

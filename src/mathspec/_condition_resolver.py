@@ -2,9 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The where walk of name resolution: a parsed where string into the program's typed predicates.
+"""The condition walk of name resolution: a parsed condition into the program's typed conditions.
 
-A bare name, a comparison, a count and a predicate read through a relation
+A bare name, a comparison, a count and a condition read through a relation
 or along a dimension are each typed here against the namespace, and a
 comparison of expressions hands its sides to the expression walk.
 [`mathspec._resolution`][] holds the namespace and the doors that call this.
@@ -18,7 +18,14 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple, assert_never, cast
 
 import mathspec._degree as degree
-from mathspec._dimensions import dims_of, join_dims
+from mathspec._condition_parser import (
+    ColumnNode,
+    UnresolvedComparisonNode,
+    UnresolvedConditionCallNode,
+    UnresolvedConditionNode,
+    UnresolvedCountNode,
+)
+from mathspec._dimensions import join_dims
 from mathspec._expansion import expand
 from mathspec._expression_parser import (
     ArithmeticNode,
@@ -28,19 +35,15 @@ from mathspec._expression_parser import (
     literal_number,
     nodes,
 )
-from mathspec._expression_resolver import ExpressionResolver, mask_compared
-from mathspec._where_parser import (
-    ColumnNode,
-    UnresolvedComparisonNode,
-    UnresolvedCountNode,
-    UnresolvedPredicateCallNode,
-    UnresolvedWhereNode,
-)
+from mathspec._expression_resolver import ExpressionResolver, condition_compared
 from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
 from mathspec.program import (
     Add,
     And,
     BooleanLiteral,
+    ComparisonOperator,
+    Condition,
+    ConditionReference,
     Constant,
     CountComparison,
     DimensionComparison,
@@ -48,9 +51,8 @@ from mathspec.program import (
     Divide,
     Expression,
     ExpressionComparison,
-    JoinedPredicate,
+    JoinedCondition,
     Mask,
-    MaskReference,
     Multiply,
     Negate,
     Not,
@@ -58,13 +60,11 @@ from mathspec.program import (
     ParameterComparison,
     ParameterDefined,
     Power,
-    Predicate,
-    PredicateOperator,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
-    TranslatedPredicate,
-    TypedPredicate,
+    TranslatedCondition,
+    TypedCondition,
     VariableDefined,
     carries_variable,
     variables_of,
@@ -80,15 +80,15 @@ if TYPE_CHECKING:
 #: Why a mask may not read a given expression. The namespace stores a given
 #: expression with the variables, because it is read as a column, so this
 #: refusal names it separately.
-GIVEN_IN_A_MASK = (
-    'A given expression may hold a variable, and a where mask is built before variables exist — it may test '
+GIVEN_IN_A_CONDITION = (
+    'A given expression may hold a variable, and a condition is read before variables exist — it may test '
     'parameters and dimension coordinates only.'
 )
 
 
 @dataclass(frozen=True)
-class WhereResolver:
-    """One resolution walk over a where string, and the things every step of it reads.
+class ConditionResolver:
+    """One resolution walk over a condition, and the things every step of it reads.
 
     A node that cannot be typed comes back unresolved with its refusal
     appended to ``errors``; every sibling is still read, so a mask with two
@@ -107,16 +107,16 @@ class WhereResolver:
     def _expressions(self) -> ExpressionResolver:
         return ExpressionResolver(self.ns, self.context, self.errors)
 
-    def where(self, node: Predicate | UnresolvedWhereNode) -> Predicate | UnresolvedWhereNode:
-        """One predicate node typed, or returned unresolved with its refusal appended."""
-        if isinstance(node, BooleanLiteral | TypedPredicate | MaskReference):
+    def build(self, node: Condition | UnresolvedConditionNode) -> Condition | UnresolvedConditionNode:
+        """One condition node typed, or returned unresolved with its refusal appended."""
+        if isinstance(node, BooleanLiteral | TypedCondition | ConditionReference):
             return node
         if isinstance(node, NameNode):
-            return self._where_name(node)
+            return self._bare_name(node)
         if isinstance(node, UnresolvedComparisonNode):
             return self._comparison(node)
-        if isinstance(node, UnresolvedPredicateCallNode):
-            return self._predicate_call(node)
+        if isinstance(node, UnresolvedConditionCallNode):
+            return self._condition_call(node)
         if isinstance(node, UnresolvedCountNode):
             return self._count(node)
         if isinstance(node, Not):
@@ -128,20 +128,20 @@ class WhereResolver:
         assert_never(node)
 
     @property
-    def masks(self) -> frozenset[str]:
-        """Every mask this file names, defined or given."""
-        return self.ns.masks | self.ns.given_masks
+    def conditions(self) -> frozenset[str]:
+        """Every named condition this file declares or is given."""
+        return self.ns.conditions | self.ns.given_conditions
 
-    def _child(self, node: Predicate | UnresolvedWhereNode) -> Predicate:
+    def _child(self, node: Condition | UnresolvedConditionNode) -> Condition:
         """A connective's child, typed as resolved: an unresolved one survives only with its refusal appended."""
-        return cast('Predicate', self.where(node))
+        return cast('Condition', self.build(node))
 
-    def _where_name(self, node: NameNode) -> Predicate | UnresolvedWhereNode:
-        """A bare name: a mask's predicate, a parameter's or relation's definedness, or a variable's existence."""
+    def _bare_name(self, node: NameNode) -> Condition | UnresolvedConditionNode:
+        """A bare name: a named condition's body, a parameter's or relation's definedness, or a variable's existence."""
         ns, context = self.ns, self.context
-        if node.name in ns.masks:
+        if node.name in ns.conditions:
             try:
-                return ns.mask(node.name, context)
+                return ns.condition(node.name, context)
             except SchemaError as e:
                 self.errors.append(str(e))
                 return node
@@ -192,28 +192,28 @@ class WhereResolver:
                     return VariableDefined(node.name, ns.leaf_dims[node.name])
         return node
 
-    def _predicate_call(self, node: UnresolvedPredicateCallNode) -> Predicate | UnresolvedWhereNode:
-        """``shift(<predicate>, along=, offset=)`` or ``at(<predicate>, by=relation[column])`` — the two operators that read a predicate and answer one.
+    def _condition_call(self, node: UnresolvedConditionCallNode) -> Condition | UnresolvedConditionNode:
+        """``shift(<condition>, along=, offset=)`` or ``at(<condition>, by=relation[column])`` — the two operators that read a condition and answer one.
 
         ``count`` answers a number, so it stands on a comparison's side and
-        [`_count`][] reads it there. Anything else naming a predicate is
+        [`_count`][] reads it there. Anything else naming a condition is
         refused here rather than resolved into arithmetic it cannot be.
 
         An operand that failed to resolve is handed straight back: resolution
         collects problems rather than raising, and asking an unresolved
-        predicate for its dims asserts instead of refusing.
+        condition for its dims asserts instead of refusing.
         """
         context, found = self.context, len(self.errors)
         if node.name == 'count':
             self.errors.append(
-                f'{context}: count() answers a number, and a where is a predicate. Compare it: '
-                f'count(<predicate>, over=<dimension>) <op> <integer>.'
+                f'{context}: count() answers a number, and a condition is true or false. Compare it: '
+                f'count(<condition>, over=<dimension>) <op> <integer>.'
             )
             return node
         if node.name not in ('shift', 'at'):
             self.errors.append(
-                f"{context}: '{node.name}()' does not read a predicate, and only shift(), at() and count() do. "
-                f'Compare the predicate, or name a parameter carrying it.'
+                f"{context}: '{node.name}()' does not read a condition, and only shift(), at() and count() do. "
+                f'Compare the condition, or name a parameter carrying it.'
             )
             return node
         operand = self._child(node.operand)
@@ -228,28 +228,28 @@ class WhereResolver:
         offset = literal_number(node.kwargs['offset'])
         if not isinstance(along, NameNode) or self.ns.kind(along.name) != 'dimension':
             self.errors.append(
-                f'{context}: shift(<predicate>, along=) is not a declared dimension. Name a declared dimension.'
+                f'{context}: shift(<condition>, along=) is not a declared dimension. Name a declared dimension.'
             )
             return node
         if offset is None or not offset.value.is_integer():
             self.errors.append(
-                f'{context}: shift(<predicate>, offset=) is not a literal whole number. Write an integer.'
+                f'{context}: shift(<condition>, offset=) is not a literal whole number. Write an integer.'
             )
             return node
         mask = Mask(operand)
         if along.name not in mask.dims:
             self.errors.append(
-                f"{context}: shift(<predicate>, along='{along.name}') steps along a dimension the predicate does "
+                f"{context}: shift(<condition>, along='{along.name}') steps along a dimension the condition does "
                 f'not read. Step along one of {_listed(sorted(mask.dims))}.'
             )
             return node
         if self.ns.unordered(along.name):
-            self.errors.append(unordered(context, f'shift(<predicate>, along={along.name})', along.name))
+            self.errors.append(unordered(context, f'shift(<condition>, along={along.name})', along.name))
             return node
-        return TranslatedPredicate(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
+        return TranslatedCondition(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
 
-    def _joined(self, node: UnresolvedPredicateCallNode, mask: Mask) -> Predicate | UnresolvedWhereNode:
-        """``at(<predicate>, by=relation[column])`` — the predicate read through a relation, as ``at`` reads an array.
+    def _joined(self, node: UnresolvedConditionCallNode, mask: Mask) -> Condition | UnresolvedConditionNode:
+        """``at(<condition>, by=relation[column])`` — the condition read through a relation, as ``at`` reads an array.
 
         The columns are read by the rules an expression's ``at`` is, so the one
         refusal a file meets for a bad read is the same in a ``where:`` and in
@@ -264,14 +264,14 @@ class WhereResolver:
         if by is None:
             return node
         try:
-            dims = join_dims(by, mask.dims, context, 'the predicate')
+            dims = join_dims(by, mask.dims, context, 'the condition')
         except DimensionError as refusal:
-            self.errors.append(str(refusal))
+            self.errors.append(self.ns.refused_dims(refusal))
             return node
-        return JoinedPredicate(mask, by, tuple(sorted(dims)))
+        return JoinedCondition(mask, by, tuple(sorted(dims)))
 
-    def _count(self, node: UnresolvedCountNode) -> Predicate | UnresolvedWhereNode:
-        """``count(<predicate>, over=<dim>) <op> <integer>`` — how many coordinates the predicate admits.
+    def _count(self, node: UnresolvedCountNode) -> Condition | UnresolvedConditionNode:
+        """``count(<condition>, over=<dim>) <op> <integer>`` — how many coordinates the condition admits.
 
         The reduction leaves every dim but ``over``, so the count is one
         number per remaining coordinate and a claim about each group needs no
@@ -287,7 +287,7 @@ class WhereResolver:
         over = node.call.kwargs['over']
         if not isinstance(over, NameNode) or self.ns.kind(over.name) != 'dimension':
             self.errors.append(
-                f'{context}: count(<predicate>, over=) is not a declared dimension. Name a declared dimension.'
+                f'{context}: count(<condition>, over=) is not a declared dimension. Name a declared dimension.'
             )
             return node
         value = literal_number(node.value)
@@ -306,14 +306,14 @@ class WhereResolver:
         mask = Mask(operand)
         if over.name not in mask.dims:
             self.errors.append(
-                f"{context}: count(<predicate>, over='{over.name}') counts along a dimension the predicate does "
+                f"{context}: count(<condition>, over='{over.name}') counts along a dimension the condition does "
                 f'not read. Count along one of {_listed(sorted(mask.dims))}.'
             )
             return node
         dims = tuple(sorted(mask.dims - {over.name}))
         return CountComparison(mask, over.name, node.op, value.value, dims)
 
-    def _comparison(self, node: UnresolvedComparisonNode) -> Predicate | UnresolvedWhereNode:
+    def _comparison(self, node: UnresolvedComparisonNode) -> Condition | UnresolvedConditionNode:
         """``side <op> side``, read for what each side is.
 
         A ``position()`` call on the left is the position form. A name against
@@ -325,8 +325,8 @@ class WhereResolver:
         if isinstance(node.left, FunctionCallNode) and node.left.name == 'position':
             return self._position(node.left, node)
         compared = [name for side in (node.left, node.right) if (name := _side_name_or_none(side)) is not None]
-        if masked := [name for name in compared if name in self.masks]:
-            self.errors.append(mask_compared(masked[0], self.context))
+        if named := [name for name in compared if name in self.conditions]:
+            self.errors.append(condition_compared(named[0], self.context))
             return node
         plain = self._plain(node)
         if plain is None:
@@ -375,7 +375,7 @@ class WhereResolver:
             if any(isinstance(n, FunctionCallNode) and n.name == 'count' for n in nodes(side)):
                 self.errors.append(
                     f'{context}: count() is not alone on the left of its comparison. '
-                    f'Write count(<predicate>, over=<dimension>) <op> <integer>.'
+                    f'Write count(<condition>, over=<dimension>) <op> <integer>.'
                 )
                 continue
             try:
@@ -387,28 +387,28 @@ class WhereResolver:
                 sides.append(resolved)
         if len(self.errors) > found:
             return node
-        assert len(sides) == 2, 'a side of a where builds or refuses, since a where holds no formal'
+        assert len(sides) == 2, 'a side of a condition builds or refuses, since a condition holds no formal'
         dims: set[str] = set()
         for side in sides:
             if given := sorted(variables_of(side) & set(ns.spec.given.expressions)):
                 self.errors.append(
-                    f'{context}: a where compares expressions, and one side reads the given expression '
-                    f'{given[0]!r}. {GIVEN_IN_A_MASK}'
+                    f'{context}: a condition compares expressions, and one side reads the given expression '
+                    f'{given[0]!r}. {GIVEN_IN_A_CONDITION}'
                 )
             elif carries_variable(side):
                 self.errors.append(
-                    f'{context}: a where compares expressions, and one side names a variable. Test only '
+                    f'{context}: a condition compares expressions, and one side names a variable. Test only '
                     f'parameters and dimension coordinates.'
                 )
             elif degree.calls_dual(side):
                 self.errors.append(
-                    f'{context}: a where compares expressions, and one side reads a dual. Test only parameters '
+                    f'{context}: a condition compares expressions, and one side reads a dual. Test only parameters '
                     f'and dimension coordinates.'
                 )
             else:
                 try:
                     degree.check_expression(side, context)
-                    dims |= dims_of(side, ns.spec, context)
+                    dims |= set(side.dims)
                 except LanguageError as e:
                     self.errors.append(str(e))
         if len(self.errors) > found:
@@ -420,7 +420,7 @@ class WhereResolver:
                 f'side stands for, or remove the comparison.'
             )
             return node
-        return ExpressionComparison(left, node.op, right, tuple(d for d in ns.spec.dimensions if d in dims))
+        return ExpressionComparison(left, node.op, right, tuple(sorted(dims)))
 
     def _position(
         self, call: FunctionCallNode, node: UnresolvedComparisonNode
@@ -461,7 +461,7 @@ class WhereResolver:
             return node
         return DimensionPosition(dimension, node.op, position, partition)
 
-    def _plain_comparison(self, node: UnresolvedComparisonNode, plain: _Plain) -> Predicate | UnresolvedWhereNode:
+    def _plain_comparison(self, node: UnresolvedComparisonNode, plain: _Plain) -> Condition | UnresolvedConditionNode:
         """``name <op> literal``, or the one structural form ``relation <op> relation``."""
         ns, context = self.ns, self.context
         value = plain.value
@@ -519,7 +519,9 @@ class WhereResolver:
                 shape = ns.relations[left_name]
                 return RelationComparison(left_name, column, plain.op, value, tuple(shape.dim(k) for k in shape.key))
             case 'variable' if left_name in ns.spec.given.expressions:
-                self.errors.append(f"{context}: where references the given expression '{left_name}'. {GIVEN_IN_A_MASK}")
+                self.errors.append(
+                    f"{context}: where references the given expression '{left_name}'. {GIVEN_IN_A_CONDITION}"
+                )
             case 'variable':
                 self.errors.append(
                     f"{context}: where references variable '{left_name}'. Test only parameters "
@@ -527,7 +529,7 @@ class WhereResolver:
                 )
         return node
 
-    def _relation_column(self, name: str, column: str | None, spelling: str, op: PredicateOperator) -> str | None:
+    def _relation_column(self, name: str, column: str | None, spelling: str, op: ComparisonOperator) -> str | None:
         """The value column a where-comparison on relation *name* reads, or the refusal.
 
         A comparison reads one value per coordinate, so the relation is keyed
@@ -629,7 +631,7 @@ class _Plain(NamedTuple):
     """
 
     name: str
-    op: PredicateOperator
+    op: ComparisonOperator
     value: float | str
     quoted: bool
 
@@ -664,19 +666,19 @@ def _position_shape(call: FunctionCallNode) -> tuple[str, ArithmeticNode | None]
 def _kwargs_error(
     context: str, name: str, kwargs: Mapping[str, ArithmeticNode], required: tuple[str, ...]
 ) -> str | None:
-    """Why *kwargs* is not what *name* takes over a predicate, or ``None`` where it is.
+    """Why *kwargs* is not what *name* takes over a condition, or ``None`` where it is.
 
-    A predicate-reading call takes exactly the keywords named here. The
+    A condition-reading call takes exactly the keywords named here. The
     arithmetic forms of these operators take more — an ``edge=``, a ``within=`` —
-    and each is refused rather than ignored, since a predicate answers the
+    and each is refused rather than ignored, since a condition answers the
     vacated coordinate itself and a grouped form has nobody asking for it yet.
     """
     missing = [key for key in required if key not in kwargs]
     if missing:
-        return f'{context}: {name}(<predicate>) needs {_listed([f"{key}=" for key in missing])}.'
+        return f'{context}: {name}(<condition>) needs {_listed([f"{key}=" for key in missing])}.'
     if extra := sorted(set(kwargs) - set(required)):
         return (
-            f'{context}: {name}(<predicate>) does not take {_listed([f"{key}=" for key in extra])}. '
+            f'{context}: {name}(<condition>) does not take {_listed([f"{key}=" for key in extra])}. '
             f'It takes only {_listed([f"{key}=" for key in required])}.'
         )
     return None
@@ -704,7 +706,7 @@ def _listed(items: list[str]) -> str:
 
 
 def _is_number(side: Expression) -> bool:
-    """Whether *side* is arithmetic over literals alone — a value the language can fold, and a where may not test."""
+    """Whether *side* is arithmetic over literals alone — a value the language can fold, and a condition may not test."""
     return all(isinstance(n, Constant | Negate | Add | Multiply | Divide | Power) for n in walk(side))
 
 
@@ -728,7 +730,7 @@ def _declared_rhs_error(context: str, node: _Plain, value: str, kind: str, *, gi
     """
     comparison = f"'{node.name} {node.op} {value}'"
     if given:
-        return f'{context}: {comparison} compares against the given expression {value!r}. {GIVEN_IN_A_MASK}'
+        return f'{context}: {comparison} compares against the given expression {value!r}. {GIVEN_IN_A_CONDITION}'
     if kind == 'variable':
         return (
             f'{context}: {comparison} compares against variable {value!r}. '

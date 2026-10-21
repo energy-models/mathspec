@@ -3,11 +3,11 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Named expressions, masks and macros
+# Named expressions, conditions and macros
 
 An `expressions:` entry names a quantity once, for the math to read or for a
-solve to report. A `masks:` entry names a `where` predicate once, for every
-`where:` that reads it. A `macros:` entry is a template that takes arguments,
+solve to report. A `conditions:` entry names a condition once, for every
+`where:`, `when:` and `holds:` that reads it. A `macros:` entry is a template that takes arguments,
 which the loader substitutes into an expression before anything reads it.
 
 ## `expressions`
@@ -30,18 +30,21 @@ expressions:
 ```
 
 An entry is a bare string, or a mapping with a `description:` and a `dims:`.
-The `dims:` are the **frame**, the dimensions the quantity is read over. When
-`dims:` is left out, the body decides the frame. When `dims:` is declared, the
-loader refuses a body that carries a dimension the frame does not name. The
-body may carry fewer dimensions, and then the quantity is constant along the
-rest, so a constraint over the whole frame reads it at every coordinate.
+The `dims:` are the dimensions over which the quantity is indexed. When
+`dims:` is left out, the expression itself decides them, sorted by name. When `dims:` is
+declared, it sets the order of the indices, and it names the dimensions over
+which the expression is indexed. The loader refuses an expression that is
+indexed over a dimension not given in `dims:`, and a `dims:` that gives a
+dimension over which the expression is not indexed. An expression that reads
+the entry repeats its value along each of its own dimensions that the entry is
+not indexed over.
 
 ```yaml
 expressions:
-  cap:
-    dims: [snapshot, generator]
-    expression: p_max
-    description: the nominal capacity, the same in every snapshot
+  headroom:
+    dims: [generator, snapshot]
+    expression: p_max - p
+    description: the capacity a generator leaves unused in a snapshot
 ```
 
 [`adds_to:`](parameters-variables-constraints.md#terms) adds this expression as a term to the sum
@@ -88,11 +91,11 @@ $$\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{co
 
 A named expression carries **exactly one** of `expression:` and `cases:`.
 
-| Key         |                                                                              |
-| ----------- | ---------------------------------------------------------------------------- |
-| `dims`      | required with `cases:`. The **frame**: the dimensions every case ranges over |
-| `cases`     | a map of named cases, each with a `when:` mask and an `expression:`          |
-| `otherwise` | required. The value at every coordinate the cases leave                      |
+| Key         |                                                                         |
+| ----------- | ----------------------------------------------------------------------- |
+| `dims`      | required with `cases:`. The dimensions over which every case is indexed |
+| `cases`     | a map of named cases, each with a `when:` mask and an `expression:`     |
+| `otherwise` | required. The value at every coordinate the cases leave                 |
 
 ### The rules that keep the cases apart
 
@@ -119,8 +122,10 @@ A named expression carries **exactly one** of `expression:` and `cases:`.
   `cases:` with one case may compare expressions, because its `otherwise:` claims
   only what the case leaves.
 
-- Each `when:` and each value sits inside the frame, and a narrower case
-  broadcasts as a parameter with fewer dimensions does.
+- Each `when:` and each value is indexed only over dimensions given in
+  `dims:`. A value indexed over fewer of them is repeated along the others,
+  the same as a parameter with fewer dimensions. Each dimension in `dims:` is
+  one over which a value or a `when:` is indexed.
 
 A claimed coordinate can still have no value: the `otherwise:` above has none at
 the first snapshot, where a case claims every unit. To give such a coordinate a
@@ -186,10 +191,12 @@ duals are opposite.
 
 A row that `c`'s `where:` deletes has no dual.
 
-## `masks`
+## `conditions`
 
-A mask names a [`where` predicate](expressions.md#where-strings) once, and a
-`where:`, a `when:` or a `holds:` reads it by that name:
+A `conditions:` entry names a [condition](expressions.md#conditions) once,
+and a `where:`, a `when:` or a `holds:` reads it by that name. Under a
+`where:` the condition masks the entry. Under a `holds:` it is only checked
+against the data:
 
 ```yaml
 dimensions:
@@ -200,9 +207,9 @@ parameters:
   lifetime: { dims: [generator] }
   period_year: { dims: [period] }
   p_nom: { dims: [generator] }
-masks:
+conditions:
   stands:
-    where: build_year <= period_year AND period_year < build_year + lifetime
+    condition: build_year <= period_year AND period_year < build_year + lifetime
     description: the generator stands in this period
 variables:
   p:
@@ -216,9 +223,9 @@ constraints:
     expression: p - shift(p, along=period, offset=1) <= 0.5 * p_nom
 ```
 
-The typeset document prints the symbol of the mask where a file reads it, upright
-as data is. The predicate prints once, under _Masks_, with ⟺ where a named
-expression prints =:
+The typeset document prints the symbol of the condition where a file reads it,
+upright as data is. The condition prints once, under _Conditions_, with ⟺ where
+a named expression prints =:
 
 ```math
 \mathrm{stands}_{e,g} \iff \mathrm{build\_year}_{g} \le \mathrm{period\_year}_{e} \wedge \mathrm{period\_year}_{e} < \mathrm{build\_year}_{g} + \mathrm{lifetime}_{g} \qquad \forall\, e \in \mathcal{E},\ g \in \mathcal{G}
@@ -228,41 +235,42 @@ expression prints =:
 p_{e,g} - p_{e - 1,g} \le 0.5 \cdot \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, e \in \mathcal{E},\ g \in \mathcal{G} \,:\, \mathrm{stands}_{e,g} \wedge \mathrm{stands}_{e - 1,g}
 ```
 
-| Field         |                                                 |                |
-| ------------- | ----------------------------------------------- | -------------- |
-| `where`       | required. The predicate, in the `where` grammar |                |
-| `description` | free text                                       | default `null` |
+| Field         |                                                                                |                |
+| ------------- | ------------------------------------------------------------------------------ | -------------- |
+| `condition`   | required. The condition, in the [condition grammar](expressions.md#conditions) |                |
+| `description` | free text                                                                      | default `null` |
 
-An entry with no `description:` may be the bare `where` string.
+An entry with no `description:` may be the bare condition.
 
-- A bare mask name stands for its predicate in a `where:`, a `when:` and a
+- The bare name stands for its condition in a `where:`, a `when:` and a
   `holds:`, under `NOT`, and inside `count`, `shift` and `at`. It selects the
-  same rows as the predicate written out.
-- The predicate gives the frame, so a mask declares no `dims:`. A mask runs
-  over the dimensions its predicate reads, in the order `dimensions:` declares
-  them, and the symbol prints with those indices. A use over more dimensions
-  reads the mask as constant along the rest, and `shift` reads it back only
-  along a dimension of its frame.
-- A mask may read another mask, and a named expression that reads only data.
+  same rows as the condition written out.
+- A named condition declares no `dims:`. It is indexed over the dimensions its
+  condition reads, sorted by name, and the symbol prints with those indices. A use over more dimensions repeats the condition
+  along the others, and `shift` reads it back only along a dimension over which
+  the condition is indexed.
+- A named condition may read another named condition, and a named expression
+  that reads only data.
   The loader refuses a cycle, and the message names its chain:
 
   ```text
-  Mask 'again': circular mask reference: again -> again. Remove one reference.
+  Condition 'again': circular condition reference: again -> again. Remove one reference.
   ```
 
-- A mask is never a number, so it is refused in arithmetic and in a
+- A named condition is never a number, so it is refused in arithmetic and in a
   comparison:
 
   ```text
-  Named expression 'e': 'stands' is a mask, which is true or false where it is read, and not a number. Write it bare in the where — stands, or NOT stands — rather than comparing it or computing with it.
+  Named expression 'e': 'stands' is a named condition, which is true or false where it is read, and not a number. Write it bare — stands, or NOT stands — rather than comparing it or computing with it.
   ```
 
-- A predicate that folds to `True` or `False` is refused, because it names
+- A condition that folds to `True` or `False` is refused, because it names
   every row or none.
-- The `where:` of a variable may not ask, through a mask, whether that variable
+- The `where:` of a variable may not ask, through a named condition, whether that variable
   exists. The loader refuses this the same as the bare name of the variable.
 
-Another file reads a mask under [`given: masks`](parameters-variables-constraints.md#given-masks).
+Another file reads a named condition under
+[`given: conditions`](parameters-variables-constraints.md#given-conditions).
 
 ## `macros`
 

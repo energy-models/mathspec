@@ -31,7 +31,7 @@ from pydantic import (
     model_validator,
 )
 
-from mathspec._expression_parser import NAME, ComparisonOperator
+from mathspec._expression_parser import NAME, Sense
 from mathspec._operators import BUILTIN_NAMES
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
@@ -58,20 +58,20 @@ __all__ = [
     'BUILTIN_NAMES',
     'AssumptionSpec',
     'BoundsSpec',
+    'ConditionSpec',
     'ConstraintSpec',
     'Curvature',
     'DimensionSpec',
     'ExpressionCaseSpec',
     'ExpressionSpec',
     'Formulation',
+    'GivenConditionSpec',
     'GivenConstraintSpec',
     'GivenExpressionSpec',
-    'GivenMaskSpec',
     'GivenParameterSpec',
     'GivenSpec',
     'GivenVariableSpec',
     'MacroSpec',
-    'MaskSpec',
     'ObjectiveSpec',
     'ParameterSpec',
     'PiecewiseLinkSpec',
@@ -464,11 +464,26 @@ class VariableSpec(_StrictSpec):
         raise ValueError(msg)
 
 
-class GivenParameterSpec(_StrictSpec):
+class _GivenEntrySpec(_StrictSpec):
+    """Base for a ``given:`` entry, which writes the fields its file wrote and no more.
+
+    A reading may say less than the entry it reads, so a field left out is no
+    claim, where the same field at its default is one. Writing the default out
+    would make ``to_spec(spec.to_dict())`` read the name as saying more than
+    the file did, and [`merge`][mathspec.merge] would compare that instead.
+    """
+
+    @model_serializer(mode='wrap')
+    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        written = cast('dict[str, object]', handler(self))
+        return {key: value for key, value in written.items() if key in self.model_fields_set}
+
+
+class GivenParameterSpec(_GivenEntrySpec):
     """Data this file reads and another file declares.
 
     It says the frame and the dtype of a [`ParameterSpec`][], which are what
-    this file reads: a where compares against the dtype, and the dim rules read
+    this file reads: a condition compares against the dtype, and the dim rules read
     the frame. What a missing row means is the declaring file's ``missing:``.
     """
 
@@ -479,7 +494,7 @@ class GivenParameterSpec(_StrictSpec):
     description: str | None = None
 
 
-class GivenVariableSpec(_StrictSpec):
+class GivenVariableSpec(_GivenEntrySpec):
     """A column this file reads and another file introduces.
 
     The frame and the domain are all this file states. The file that introduces
@@ -493,7 +508,7 @@ class GivenVariableSpec(_StrictSpec):
     description: str | None = None
 
 
-class GivenConstraintSpec(_StrictSpec):
+class GivenConstraintSpec(_GivenEntrySpec):
     """A row family this file reads the dual of and another model builds.
 
     The frame says how many duals there are and what indexes them, which is
@@ -507,7 +522,7 @@ class GivenConstraintSpec(_StrictSpec):
     description: str | None = None
 
 
-class GivenExpressionSpec(_StrictSpec):
+class GivenExpressionSpec(_GivenEntrySpec):
     """A named expression this file reads and another file defines.
 
     The frame is all this file states. This file reads the name as a quantity
@@ -528,15 +543,15 @@ class GivenExpressionSpec(_StrictSpec):
     description: str | None = None
 
 
-class GivenMaskSpec(_StrictSpec):
-    """A mask this file reads and another file defines.
+class GivenConditionSpec(_GivenEntrySpec):
+    """A named condition this file reads and another file defines.
 
     The frame is all this file states, and it names the dims the definer's
-    predicate reads. A where reads the name as data over that frame, true or false at each coordinate, since a mask reads nothing
-    a solve decides: the predicate is the definer's.
+    condition reads. A condition reads the name as data over that frame, true or false at each coordinate, since a condition reads nothing
+    a solve decides: the condition is the definer's.
     """
 
-    _label: ClassVar[str] = 'a given mask entry'
+    _label: ClassVar[str] = 'a given condition entry'
 
     dims: list[str]
     description: str | None = None
@@ -555,12 +570,12 @@ class GivenSpec(_StrictSpec):
     constraints: dict[str, GivenConstraintSpec] = {}
     #: Named expressions another file defines ([`GivenExpressionSpec`][]).
     expressions: dict[str, GivenExpressionSpec] = {}
-    #: Masks another file defines ([`GivenMaskSpec`][]).
-    masks: dict[str, GivenMaskSpec] = {}
+    #: Named conditions another file defines ([`GivenConditionSpec`][]).
+    conditions: dict[str, GivenConditionSpec] = {}
 
     def __bool__(self) -> bool:
         """Whether the file reads anything it does not build."""
-        return bool(self.parameters or self.variables or self.constraints or self.expressions or self.masks)
+        return bool(self.parameters or self.variables or self.constraints or self.expressions or self.conditions)
 
 
 class ConstraintSpec(_StrictSpec):
@@ -652,10 +667,12 @@ class ExpressionSpec(_StrictSpec):
             expression: sum(p * rate, over=generator)
             description: CO2 released, the quantity the cap bounds
 
-    ``dims:`` declares the frame the quantity is read over. A plain entry may
-    leave it out, and its body then decides the frame; a body that carries a
-    dimension the frame does not name is refused, and one that carries fewer
-    is constant along the rest. A quantity whose value varies by region is
+    ``dims:`` gives the dimensions over which the quantity is indexed. A plain
+    entry may leave it out, and its expression then decides them. A declared
+    ``dims:`` gives exactly the dimensions over which the expression is
+    indexed: an expression indexed over a dimension ``dims:`` does not give is
+    refused, and so is a ``dims:`` that gives one over which the expression is
+    not indexed. A quantity whose value varies by region is
     written as ``cases:`` over a declared ``dims:``, with an ``otherwise:``
     for the rest — see the language reference.
 
@@ -735,34 +752,34 @@ class ExpressionSpec(_StrictSpec):
         return written
 
 
-class MaskSpec(_StrictSpec):
-    """A named predicate: one where string, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.
+class ConditionSpec(_StrictSpec):
+    """A named condition: one condition, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.
 
-    Written in YAML as a bare where string, or as a mapping once it carries a
+    Written in YAML as a bare string, or as a mapping once it carries a
     ``description:``, and serialised back to whichever form it was written in::
 
-        masks:
+        conditions:
           committable: "Generator_committable AND Generator_active"
           stands:
-            where: build_year <= period_year AND period_year < build_year + lifetime
+            condition: build_year <= period_year AND period_year < build_year + lifetime
             description: the generator stands in this period
 
-    A bare mask name in a where string stands for its predicate, inside
-    ``count``, ``shift`` and ``at`` too. The mask's frame is the dims its
-    predicate reads, so it declares none. A mask is a predicate, so it is
-    never a value in an expression.
+    Its bare name in another condition stands for it, inside ``count``,
+    ``shift`` and ``at`` too. Its frame is the dims its condition reads, so
+    it declares none. It is true or false, so it is never a value in an
+    expression.
     """
 
-    _label: ClassVar[str] = 'a mask entry'
+    _label: ClassVar[str] = 'a condition entry'
 
-    #: The predicate, in the where grammar.
-    where: str
+    #: The condition, in the condition grammar.
+    condition: str
     description: str | None = None
 
     @model_validator(mode='before')
     @classmethod
     def _from_string(cls, data: object) -> object:
-        return {'where': data} if isinstance(data, str) else data
+        return {'condition': data} if isinstance(data, str) else data
 
     @classmethod
     @override
@@ -773,14 +790,14 @@ class MaskSpec(_StrictSpec):
     @model_serializer
     def _as_written(self) -> str | dict[str, object]:
         if self.description is None:
-            return self.where
-        return {'where': self.where, 'description': self.description}
+            return self.condition
+        return {'condition': self.condition, 'description': self.description}
 
 
 class AssumptionSpec(_StrictSpec):
-    """What the spec assumes of its data: a predicate every coordinate it is checked at has to satisfy.
+    """What the spec assumes of its data: a condition every coordinate it is checked at has to satisfy.
 
-    Written in YAML as a bare where string, or as a mapping once it carries a
+    Written in YAML as a bare string, or as a mapping once it carries a
     ``where:`` or a ``description:``, and serialised back to whichever form it
     was written in::
 
@@ -797,7 +814,7 @@ class AssumptionSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'an assumption entry'
 
-    #: The predicate, in the where grammar. It holds at every coordinate of
+    #: The condition, in the condition grammar. It holds at every coordinate of
     #: its own dims that ``where`` admits.
     holds: str
     #: Which coordinates it is checked at, in the same grammar; absent means every one.
@@ -841,7 +858,7 @@ class PiecewiseLinkSpec(_StrictSpec):
 
     expression: str
     values: str
-    sign: ComparisonOperator = '=='
+    sign: Sense = '=='
 
     @model_validator(mode='before')
     @classmethod
@@ -1056,7 +1073,7 @@ class Spec(_StrictSpec):
     dimensions: dict[str, DimensionSpec] = {}
     relations: dict[str, RelationSpec] = {}
     parameters: dict[str, ParameterSpec] = {}
-    masks: dict[str, MaskSpec] = {}
+    conditions: dict[str, ConditionSpec] = {}
     variables: dict[str, VariableSpec] = {}
     expressions: dict[str, ExpressionSpec] = {}
     objective: ObjectiveSpec | None = None
@@ -1224,7 +1241,7 @@ class Spec(_StrictSpec):
 
     @model_validator(mode='after')
     def _lower(self) -> Spec:
-        """Every rule that reads across entries, then every expression and where string.
+        """Every rule that reads across entries, then every expression and condition.
 
         A fault in a curve's link is named against the link the file wrote. The
         rows a curve states are held to the language when [`expand`][]

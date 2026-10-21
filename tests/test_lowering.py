@@ -16,9 +16,9 @@ from typing import get_args
 import pytest
 
 from mathspec import to_spec
+from mathspec._condition_parser import parse_condition
 from mathspec._exclusivity import overlapping
 from mathspec._resolution import Namespace
-from mathspec._where_parser import parse_where
 from mathspec.errors import LanguageError
 from mathspec.program import (
     Add,
@@ -39,7 +39,7 @@ from mathspec.program import (
     Footprint,
     Join,
     JoinColumns,
-    JoinedPredicate,
+    JoinedCondition,
     Mask,
     Multiply,
     Not,
@@ -59,10 +59,10 @@ from mathspec.program import (
     WindowSum,
     assumption_message,
     children,
+    condition_children,
     parameters_of,
     walk,
     walk_regions,
-    where_children,
 )
 from mathspec.spec import Spec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, expanded, expression_of, spec_of, varied, where_of
@@ -88,7 +88,7 @@ LK2 = Relation((('g', 'g'), ('z', 'z')), ('g',))
 LK_JOIN = JoinColumns('lk', LK, ('g',), ('h',))
 AT_BUS = Relation((('g', 'g'), ('bus', 'bus')), ('g',))
 
-#: `fixtures.SMALL_MODEL` plus a second relation and a per-entity
+#: `fixtures.SMALL_MODEL` plus a second relation and an integer
 #: offset. Which node a construct becomes is mostly a claim about the dim it
 #: joins on and the dim it groups by, and stating that needs a third dimension
 #: and two relations over one of them.
@@ -97,7 +97,7 @@ SHAPES_MODEL = varied(
     **{
         'dimensions.z': {'dtype': 'str'},
         'relations.lk2': {'key': 'g', 'values': 'z'},
-        'parameters.lead': {'dims': ['g'], 'dtype': 'int'},
+        'parameters.lead': {'dims': [], 'dtype': 'int'},
     },
 )
 
@@ -137,18 +137,26 @@ def test_program_structure(dispatch_program):
     assert vname == 'dispatch'
     assert v.dims == ('snapshot', 'generator'), 'the frame is the dims, in the order the file wrote it'
     assert v.where == Mask(CAPACITY_POSITIVE)
-    assert v.upper == ParameterReference('capacity')
+    assert v.upper == ParameterReference('capacity', dims=('generator',))
 
     ((cname, c),) = dispatch_program.constraints.items()
     assert cname == 'power_balance'
     assert c.dims == ('snapshot',), 'the frame is the dims, in the order the file wrote it'
-    assert c.lhs == Sum(VariableReference('dispatch'), (Axis('generator'),))
+    assert c.lhs == Sum(
+        VariableReference('dispatch', dims=('generator', 'snapshot')), (Axis('generator'),), dims=('snapshot',)
+    )
     assert c.sense == '==', "the comparison crosses as the file's own operator, untranslated"
-    assert c.rhs == ParameterReference('load')
+    assert c.rhs == ParameterReference('load', dims=('snapshot',))
 
     assert dispatch_program.objective.sense == 'minimize', "the program carries the language's spelling, untranslated"
     assert dispatch_program.objective.expression == Sum(
-        Multiply(VariableReference('dispatch'), ParameterReference('cost')), (Axis('generator'), Axis('snapshot'))
+        Multiply(
+            VariableReference('dispatch', dims=('generator', 'snapshot')),
+            ParameterReference('cost', dims=('generator',)),
+            dims=('generator', 'snapshot'),
+        ),
+        (Axis('generator'), Axis('snapshot')),
+        dims=(),
     ), 'the objective carries the sum the file wrote, over the dims it named none of'
 
 
@@ -210,14 +218,14 @@ def test_a_literal_amount_resolves_to_one_signed_number():
         ),
     ],
 )
-def test_a_where_is_one_resolved_predicate_with_every_literal_folded(dispatch_spec, where, expected):
+def test_a_where_is_one_resolved_condition_with_every_literal_folded(dispatch_spec, where, expected):
     """One mask had two lowerings: `True` was dropped at the root and kept under a connective.
 
     A `BooleanLiteral` is a node a consumer meets at the root or nowhere.
     """
     mask = where_of(where, Namespace(dispatch_spec), 't')
     assert (mask.root if mask is not None else None) == expected, (
-        'the Mask carries exactly the resolved predicate, folded at resolution however the file spelled it'
+        'the Mask carries exactly the resolved condition, folded at resolution however the file spelled it'
     )
 
 
@@ -238,7 +246,7 @@ def test_an_unknown_where_name_is_an_error_at_lowering_too(dispatch_spec):
 def test_a_lowered_mask_cannot_be_rewritten_in_place(dispatch_program):
     """A consumer handed a program could invert the mask another one reads.
 
-    The where nodes were plain dataclasses while every entry embedding
+    The condition nodes were plain dataclasses while every entry embedding
     them was frozen, so `variable.where.root.op = '!='` rewrote `capacity > 0` into
     `capacity != 0` on the shared object — two consumers disagreeing about one
     file, which is the failure a program exists to prevent. It also left
@@ -313,19 +321,19 @@ FLAG = ParameterDefined('flag', ('generator',))
         pytest.param(BooleanLiteral(False), (), id='a-literal-carries-nothing'),
     ],
 )
-def test_where_children_is_the_one_walk_under_a_predicate(where, under):
-    """`where_children` is to a mask what `children` is to an expression.
+def test_condition_children_is_the_one_walk_under_a_condition(where, under):
+    """`condition_children` is to a condition what `children` is to an expression.
 
     The where tree was dispatched by hand at every walk — the grammar's depth
     measure, `Mask.atoms`, each consumer's own — with no shared answer to
     what sits under a node (#401). This is that answer, in file order.
     """
-    assert where_children(where) == under, (
+    assert condition_children(where) == under, (
         'a connective carries its operands, left before right; a leaf carries nothing'
     )
 
 
-def test_a_synthetic_predicate_answers_its_own_dims():
+def test_a_synthetic_condition_answers_its_own_dims():
     """A tree built from resolved pieces answers like an entry's own mask.
 
     A consumer builds region complements and conjunctions — `Not(root)`,
@@ -352,7 +360,7 @@ def test_mask_construction_folds_so_a_literal_stands_at_the_root_or_nowhere():
     assert Mask(Not(BooleanLiteral(True))) == empty, 'NOT over a literal flips at the door'
     assert Mask(Not(Not(x))) == Mask(x), 'a double negation cancels at the door'
 
-    assert ~Mask(x) == Mask(Not(x)), 'a plain predicate negated gains one NOT'
+    assert ~Mask(x) == Mask(Not(x)), 'a plain condition negated gains one NOT'
     assert ~Mask(Not(x)) == Mask(x), '`not (not x)` cancels rather than stacking, so no consumer evaluates it twice'
     assert ~empty == every, 'the empty mask negated admits every row, with no NOT stacked'
     assert ~every == empty, 'and back again'
@@ -375,8 +383,8 @@ def test_a_held_leaf_walk_is_taken_after_the_fold_absorbed_a_branch():
 
 def test_a_mask_over_an_unresolved_tree_is_refused_at_construction():
     """A tree whose leaves are unresolved is refused where it is wrapped, not where it is read."""
-    with pytest.raises(AssertionError, match='reached a predicate walk unresolved'):
-        Mask(parse_where('a AND b'))
+    with pytest.raises(AssertionError, match='reached a condition walk unresolved'):
+        Mask(parse_condition('a AND b'))
 
 
 def test_an_unwritten_where_lowers_to_none_not_an_empty_mask():
@@ -414,7 +422,10 @@ def test_a_comparison_of_expressions_lowers_to_program_expressions_on_both_sides
     where = program.variables['p'].where
     assert where is not None
     assert where.root == ExpressionComparison(
-        ParameterReference('c'), '<=', Multiply(Constant(0.5), ParameterReference('k')), ('g',)
+        ParameterReference('c', dims=('g',)),
+        '<=',
+        Multiply(Constant(0.5, dims=()), ParameterReference('k', dims=()), dims=()),
+        ('g',),
     ), 'the sides are lowered as a constraint side is, and the dims are what either side carries'
     mask = program.constraints['w'].where
     assert mask is not None and isinstance(mask.root, ExpressionComparison)
@@ -424,7 +435,7 @@ def test_a_comparison_of_expressions_lowers_to_program_expressions_on_both_sides
     )
 
 
-def test_a_predicate_a_leaf_carries_is_lowered_like_any_other_mask():
+def test_a_condition_a_leaf_carries_is_lowered_like_any_other_mask():
     """A comparison of expressions inside a count is rebuilt too, so a program mask is program vocabulary throughout."""
     program = to_spec(
         varied(
@@ -434,13 +445,16 @@ def test_a_predicate_a_leaf_carries_is_lowered_like_any_other_mask():
     ).program
     mask = program.constraints['w'].where
     assert mask is not None and isinstance(mask.root, CountComparison)
-    assert mask.root.predicate.root == ExpressionComparison(
-        ParameterReference('c'), '<=', Multiply(Constant(0.5), ParameterReference('k')), ('g',)
-    ), 'the counted predicate is rebuilt, not handed through with the resolved comparison still in it'
-    assert mask.names_read == frozenset({'c', 'k'}), 'what the counted predicate reads is data the consumer attaches'
+    assert mask.root.condition.root == ExpressionComparison(
+        ParameterReference('c', dims=('g',)),
+        '<=',
+        Multiply(Constant(0.5, dims=()), ParameterReference('k', dims=()), dims=()),
+        ('g',),
+    ), 'the counted condition is rebuilt, not handed through with the resolved comparison still in it'
+    assert mask.names_read == frozenset({'c', 'k'}), 'what the counted condition reads is data the consumer attaches'
 
 
-def test_a_translated_predicate_keeps_what_it_reads_in_reach():
+def test_a_translated_condition_keeps_what_it_reads_in_reach():
     """A walk that asks a mask what it names has to see through the translation, or the column is silently dropped."""
     program = to_spec(
         varied(
@@ -460,7 +474,7 @@ def test_a_translated_predicate_keeps_what_it_reads_in_reach():
     assert sorted(mask.dims) == ['g']
 
 
-def test_a_predicate_read_through_a_relation_is_lowered_and_keeps_the_relation_in_reach():
+def test_a_condition_read_through_a_relation_is_lowered_and_keeps_the_relation_in_reach():
     """The comparison under the read is rebuilt, and the relation is data the consumer attaches as well as the operand."""
     program = to_spec(
         varied(
@@ -476,10 +490,13 @@ def test_a_predicate_read_through_a_relation_is_lowered_and_keeps_the_relation_i
         )
     ).program
     mask = program.constraints['w'].where
-    assert mask is not None and isinstance(mask.root, JoinedPredicate)
+    assert mask is not None and isinstance(mask.root, JoinedCondition)
     assert mask.root.operand.root == ExpressionComparison(
-        ParameterReference('zcap'), '<=', Multiply(Constant(0.5), ParameterReference('k')), ('z',)
-    ), 'the read predicate is rebuilt, not handed through with the resolved comparison still in it'
+        ParameterReference('zcap', dims=('z',)),
+        '<=',
+        Multiply(Constant(0.5, dims=()), ParameterReference('k', dims=()), dims=()),
+        ('z',),
+    ), 'the read condition is rebuilt, not handed through with the resolved comparison still in it'
     assert mask.names_read == frozenset({'zcap', 'k', 'lk2'})
     assert sorted(mask.dims) == ['g'], 'z is read at lk2(g), so the mask is over g alone'
 
@@ -505,14 +522,17 @@ def test_assumptions_carry_the_file_s_entries_and_the_curves_behind_them():
 
 
 def test_an_assumption_lowers_both_of_its_masks():
-    """The predicate and the ``where`` are rebuilt on program expressions, as every other mask is."""
+    """The ``holds`` and the ``where`` are rebuilt on program expressions, as every other mask is."""
     program = to_spec(varied(SHAPES_MODEL, assumptions={'sound': {'holds': 'c <= 0.5 * k', 'where': 'flag'}})).program
     assumption = program.assumptions['sound']
 
     assert assumption == Assumption(
         Mask(
             ExpressionComparison(
-                ParameterReference('c'), '<=', Multiply(Constant(0.5), ParameterReference('k')), ('g',)
+                ParameterReference('c', dims=('g',)),
+                '<=',
+                Multiply(Constant(0.5, dims=()), ParameterReference('k', dims=()), dims=()),
+                ('g',),
             )
         ),
         Mask(ParameterDefined('flag', ('g',))),
@@ -563,7 +583,7 @@ def test_a_cased_side_reads_the_data_its_regions_are_decided_by():
 
 
 def test_a_mask_with_no_arithmetic_is_the_same_mask_after_lowering(dispatch_program):
-    """Every other predicate node is already the program's own, so lowering hands it through unchanged."""
+    """Every other condition node is already the program's own, so lowering hands it through unchanged."""
     assert dispatch_program.variables['dispatch'].where == Mask(CAPACITY_POSITIVE)
 
 
@@ -576,72 +596,80 @@ def test_a_power_resolves_to_a_node_of_its_own(dispatch_spec):
     [
         pytest.param(
             'sum(q)',
-            Sum(VariableReference('q'), (Axis('g'), Axis('h'))),
+            Sum(VariableReference('q', dims=('g', 'h')), (Axis('g'), Axis('h')), dims=()),
             id='a-bare-sum-sums-away-every-dim-the-operand-carries',
         ),
         pytest.param(
-            'sum(q, over=h)', Sum(VariableReference('q'), (Axis('h'),)), id='an-over-sums-away-the-dim-it-names'
+            'sum(q, over=h)',
+            Sum(VariableReference('q', dims=('g', 'h')), (Axis('h'),), dims=('g',)),
+            id='an-over-sums-away-the-dim-it-names',
         ),
         pytest.param(
             'sum(p, over=g, by=lk[h])',
-            Sum(Join(VariableReference('p'), LK_JOIN), (Axis('g', Column('lk', 'g')),)),
+            Sum(
+                Join(VariableReference('p', dims=('g',)), LK_JOIN, dims=('h',)),
+                (Axis('g', Column('lk', 'g')),),
+                dims=('h',),
+            ),
             id='a-grouped-sum-is-a-sum-over-the-axis-its-join-opens',
         ),
         pytest.param(
             'at(r, by=lk[h])',
-            Join(VariableReference('r'), JoinColumns('lk', LK, ('h',), ('g',))),
+            Join(VariableReference('r', dims=('h',)), JoinColumns('lk', LK, ('h',), ('g',)), dims=('g',)),
             id='an-at-is-the-same-join-the-other-way-with-no-sum-over-it',
         ),
         pytest.param(
             "shift(p, along=g, offset=1, edge='wrap')",
-            Translate(VariableReference('p'), 'g', offset=1, wrap=True, fill=None),
+            Translate(VariableReference('p', dims=('g',)), 'g', offset=1, wrap=True, fill=None, dims=('g',)),
             id='a-wrapping-translation-fills-nothing',
         ),
         pytest.param(
             'shift(p, along=g, offset=-2, edge=0)',
-            Translate(VariableReference('p'), 'g', offset=-2, wrap=False, fill=0.0),
+            Translate(VariableReference('p', dims=('g',)), 'g', offset=-2, wrap=False, fill=0.0, dims=('g',)),
             id='a-lead-is-a-negative-offset-and-the-edge-is-what-it-fills-with',
         ),
         pytest.param(
             'shift(p, along=g, offset=lead, edge=0)',
-            Translate(VariableReference('p'), 'g', offset='lead', wrap=False, fill=0.0),
+            Translate(VariableReference('p', dims=('g',)), 'g', offset='lead', wrap=False, fill=0.0, dims=('g',)),
             id='a-named-offset-crosses-as-the-parameter-name',
         ),
         pytest.param(
             "shift(p, along=g, offset=+lead, edge='wrap')",
-            Translate(VariableReference('p'), 'g', offset='lead', wrap=True, fill=None),
+            Translate(VariableReference('p', dims=('g',)), 'g', offset='lead', wrap=True, fill=None, dims=('g',)),
             id='a-named-offset-written-with-a-plus-is-the-parameter',
         ),
         pytest.param(
             'shift(p, along=g, offset=1, within=lk[h], edge=0)',
             Translate(
-                VariableReference('p'),
+                VariableReference('p', dims=('g',)),
                 'g',
                 offset=1,
                 wrap=False,
                 fill=0.0,
                 partition=Partition('lk', LK, 'g', ('h',), ()),
+                dims=('g',),
             ),
             id='a-translation-stops-at-the-edges-of-the-relation-it-names',
         ),
         pytest.param(
             'sum_back(p, along=g, window=3)',
-            WindowSum(VariableReference('p'), 'g', width=3, wrap=False),
+            WindowSum(VariableReference('p', dims=('g',)), 'g', width=3, wrap=False, dims=('g',)),
             id='a-window-is-one-node-rather-than-a-fold-of-translations',
         ),
         pytest.param(
             'sum_back(p, along=g, window=lead)',
-            WindowSum(VariableReference('p'), 'g', width='lead', wrap=False),
+            WindowSum(VariableReference('p', dims=('g',)), 'g', width='lead', wrap=False, dims=('g',)),
             id='a-named-width-crosses-as-the-parameter-name',
         ),
         pytest.param(
             'sum_back(p, along=g, window=2, within=lk[h])',
             WindowSum(
-                VariableReference('p'),
+                VariableReference('p', dims=('g',)),
                 'g',
                 width=2,
                 wrap=False,
                 partition=Partition('lk', LK, 'g', ('h',), ()),
+                dims=('g',),
             ),
             id='a-window-stops-at-the-edges-of-the-relation-it-names',
         ),
@@ -723,7 +751,11 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     assert program.relations == {'zone_of': declared}, 'the relation sits once in the program, under its name'
     zonal = program.constraints['zonal'].lhs
     columns = JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('zone', 'snapshot'))
-    assert zonal == Sum(Join(VariableReference('p'), columns), (Axis('generator', Column('zone_of', 'generator')),)), (
+    assert zonal == Sum(
+        Join(VariableReference('p', dims=('generator', 'snapshot')), columns, dims=('snapshot', 'zone')),
+        (Axis('generator', Column('zone_of', 'generator')),),
+        dims=('snapshot', 'zone'),
+    ), (
         'a grouped sum is a sum over a join: the join names the column over the over= dim and the unnamed key '
         'column as joined on, the by= column and that key column as grouped by, and the sum stands over the axis '
         'the join opens for the column it drops'
@@ -739,13 +771,18 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     )
     assert program.constraints['history'].lhs == Sum(
         Join(
-            VariableReference('p'), JoinColumns('zone_of', declared, ('snapshot', 'generator'), ('zone', 'generator'))
+            VariableReference('p', dims=('generator', 'snapshot')),
+            JoinColumns('zone_of', declared, ('snapshot', 'generator'), ('zone', 'generator')),
+            dims=('generator', 'zone'),
         ),
         (Axis('snapshot', Column('zone_of', 'snapshot')),),
+        dims=('generator', 'zone'),
     ), 'the same table joined on its other key column'
     priced = program.constraints['priced'].rhs
     assert priced == Join(
-        ParameterReference('price'), JoinColumns('zone_of', declared, ('zone', 'snapshot'), ('generator', 'snapshot'))
+        ParameterReference('price', dims=('snapshot', 'zone')),
+        JoinColumns('zone_of', declared, ('zone', 'snapshot'), ('generator', 'snapshot')),
+        dims=('generator', 'snapshot'),
     ), 'and an at is the bare join, on the value column, grouped by the key columns'
     assert isinstance(priced, Join)
     assert (priced.columns.dropped_dims, priced.columns.added_dims, priced.columns.kept) == (
@@ -771,33 +808,46 @@ def test_a_binary_variable_lowers_to_a_binary_domain():
 
 def test_a_divisor_under_a_join_is_still_named():
     """`children` has to descend through every node, or a refusal loses its name."""
-    quotient = Divide(VariableReference('x'), ParameterReference('rate'))
+    quotient = Divide(
+        VariableReference('x', dims=('component',)),
+        ParameterReference('rate', dims=('component',)),
+        dims=('component',),
+    )
     component_of = Relation((('flow', 'flow'), ('component', 'component')), ('flow',))
-    looked_up = Join(quotient, JoinColumns('component_of', component_of, ('component',), ('flow',)))
+    looked_up = Join(quotient, JoinColumns('component_of', component_of, ('component',), ('flow',)), dims=('flow',))
 
     assert parameters_of(looked_up) == frozenset({'rate'}), 'the walk descends through `Join`'
-    assert parameters_of(Sum(looked_up, (Axis('flow'),))) == frozenset({'rate'}), 'and through a `Sum` over it'
+    assert parameters_of(Sum(looked_up, (Axis('flow'),), dims=())) == frozenset({'rate'}), 'and through a `Sum` over it'
 
 
 def test_a_divisor_under_a_power_is_still_named():
     """`children` had no branch for `Power`, so every walk stopped at it and a divisor written
     `d ** 2` was reported with no parameter at all (#403)."""
-    quotient = Divide(VariableReference('x'), Power(ParameterReference('d'), Constant(2.0)))
+    d, two = ParameterReference('d', dims=()), Constant(2.0, dims=())
+    quotient = Divide(VariableReference('x', dims=()), Power(d, two, dims=()), dims=())
 
-    assert children(quotient.divisor) == (ParameterReference('d'), Constant(2.0)), 'the base first, then the exponent'
+    assert children(quotient.divisor) == (d, two), 'the base first, then the exponent'
     assert parameters_of(quotient) == frozenset({'d'}), 'the walk descends through `Power`'
 
 
 OUTER = Mask(ParameterDefined('committable', ('g',)))
 INNER = Mask(ParameterDefined('flag', ('g',)))
+X, P, ZERO, Q = (
+    VariableReference('x', dims=('g',)),
+    VariableReference('p', dims=('g',)),
+    Constant(0.0, dims=()),
+    ParameterReference('q', dims=('g',)),
+)
 NESTED = Add(
-    VariableReference('x'),
+    X,
     Cases(
         (
-            Region(OUTER, Cases((Region(INNER, VariableReference('p')), Region(~INNER, Constant(0.0))))),
-            Region(~OUTER, ParameterReference('q')),
-        )
+            Region(OUTER, Cases((Region(INNER, P), Region(~INNER, ZERO)), dims=('g',))),
+            Region(~OUTER, Q),
+        ),
+        dims=('g',),
     ),
+    dims=('g',),
 )
 
 
@@ -806,12 +856,12 @@ def test_walk_regions_carries_the_regions_a_node_stands_under():
     and every consumer recursed for it on its own (#473)."""
     assert list(walk_regions(NESTED)) == [
         (NESTED, ()),
-        (VariableReference('x'), ()),
+        (X, ()),
         (NESTED.right, ()),
         (NESTED.right.regions[0].value, (OUTER,)),
-        (VariableReference('p'), (OUTER, INNER)),
-        (Constant(0.0), (OUTER, ~INNER)),
-        (ParameterReference('q'), (~OUTER,)),
+        (P, (OUTER, INNER)),
+        (ZERO, (OUTER, ~INNER)),
+        (Q, (~OUTER,)),
     ], (
         'parents first; a node outside any `cases:` carries nothing; a `Cases` carries only the regions '
         'above it; a value under two `cases:` carries both, the outer one first'
@@ -1021,7 +1071,7 @@ def test_a_region_s_when_is_a_mask_with_its_own_dims():
     always_on, boundary, remainder = _cases_in(to_spec(CASED).program).regions
 
     assert all(isinstance(r.when, Mask) for r in (always_on, boundary, remainder)), (
-        'every region, the synthesized remainder included, carries its predicate as a Mask'
+        'every region, the synthesized remainder included, carries its condition as a Mask'
     )
     assert always_on.when.dims == frozenset({'g'}), "`not committable` reads the parameter's dims"
     assert boundary.when.dims == frozenset({'g', 't'}), 'the position comparison adds its dimension'

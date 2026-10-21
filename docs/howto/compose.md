@@ -209,7 +209,7 @@ which each component pins at its own port.
 | any other entry                                   | one fragment declares it, and a second is refused                                                                                                                                                                       |
 | an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the entry where the introducer wrote none                                                                       |
 | a given expression                                | the body of the definition carries no dimension that the `dims` of the reading fragment do not name                                                                                                                     |
-| a given mask                                      | the `dims` of the reading fragment name exactly the dimensions that the predicate of the defining fragment reads                                                                                                        |
+| a given condition                                 | the `dims` of the reading fragment name exactly the dimensions that the condition of the defining fragment reads                                                                                                        |
 | a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                                                  |
 | an expression with `adds_to:`                     | the sum it names is the body one fragment defines, if any, followed by every term by its name, in the order of the list. [Terms](../reference/language/parameters-variables-constraints.md#terms) gives what is refused |
 | `objective`                                       | one fragment sets it, and a second is refused. Several fragments contribute to it as terms of a sum the objective reads                                                                                                 |
@@ -370,6 +370,9 @@ Given variable 'Generator_p' collides with the variable of the same name. Rename
 | an entry under one kind of `given:` | it is edited, added or removed like any entry, and the other kinds stay    |
 | `version`, `description`            | the patch's value replaces the base's                                      |
 | a field an earlier patch writes     | the later patch's value replaces it                                        |
+| a term on a base that reads the sum | it adds to the sum, as it does in a fragment                               |
+| a term on a base that defines a sum | it is refused. [Merge it](#a-term-on-a-merged-spec) instead                |
+| `adds_to: null` on a term           | the entry stays as a named expression, and adds to nothing                 |
 
 ## A partial entry on a missing name
 
@@ -428,3 +431,36 @@ the closest name the base does have:
 ```text
 patch 'stale.yaml' removes the constraint 'power_balnce', which its base does not declare. Delete the removal from the patch, or fix the name. Did you mean 'power_balance'?
 ```
+
+## A term on a merged spec
+
+`merge` defines each sum in the spec it returns, so the sum is no longer under
+`given:`. A patch can add no term to it:
+
+```text
+Named expression 'Store_injection': it adds to 'Bus_injection', which this file defines. Write the term into the body of 'Bus_injection', or read 'Bus_injection' under 'given: expressions:' and add its body as a term.
+```
+
+To add a term, merge the fragment that adds it with the merged spec:
+
+```python
+spec = ms.merge(['network.yaml', 'generator.yaml', 'load.yaml'])
+spec = ms.merge([spec, 'store.yaml'])
+```
+
+`Bus_injection` is `Generator_injection + Load_injection + Store_injection`.
+
+To remove a term, write the body of the sum again without it, in a patch:
+
+```yaml title="no_load.yaml"
+expressions:
+  Bus_injection: Generator_injection
+```
+
+```python
+spec = ms.override(ms.merge(['network.yaml', 'generator.yaml', 'load.yaml']), ['no_load.yaml'])
+```
+
+`Bus_injection` is `Generator_injection`, and `Load_injection` stays as a named
+expression that no sum reads. The patch names each term that stays, so lay it
+after the last `merge`.

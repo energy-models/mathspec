@@ -68,19 +68,23 @@ has one row.
 
 **Frame**
 : The dimensions over which an entry ranges.
-The data of an expression, a mask and a bound parameter must fit inside their defined frame
+The data of an expression, a condition and a bound parameter must fit inside their defined frame
 ([how dimensions combine](language/expressions.md#how-dimensions-combine)).
 
 **Group**
 : The labels of a relation `value` column, used for grouping the relation's keys.
 `within=<column>` can be used to apply `shift`, `sum_back` or `position()` separately per group.
 
-## Masks and absence
+## Conditions, masks and absence
 
-**Mask** · **predicate**
-: A predicate is a true-or-false expression in the
-[where grammar](language/expressions.md#where-strings). A mask is a predicate
-on an entry, and the coordinates it admits.
+**Condition**
+: A true-or-false expression in the
+[condition grammar](language/expressions.md#conditions). A `conditions:` entry
+gives one a name. A `holds:` checks a condition against the data.
+
+**Mask**
+: What a `where:` does with a condition: it keeps the coordinates where the
+condition is true, and leaves out the rest.
 
 **Absence**
 : No value at a coordinate. A masked-out variable has no column there, and a
@@ -97,7 +101,7 @@ default), absence (`absent`), or a value, such as `0`
 **Primitive**
 : A construct built into the language, which every engine implements and the
 typesetter prints.
-This covers the operators and the `where` comparisons.
+This covers the operators and the comparisons in a condition.
 
 **Formulation**
 : An entry that states ordinary variables and constraints rather than being

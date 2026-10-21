@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 import mathspec._sos as sos
-from mathspec._dimensions import dims_of
 from mathspec._resolution import resolve_expression_text
 from mathspec.errors import DimensionError
 from mathspec.program import Piecewise, PiecewiseMethod, Variable, carries_variable
@@ -307,7 +306,7 @@ def leaves_ungated(gate: VariableSpec | Variable | None) -> bool:
 def curve_frame(spec: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expression]) -> tuple[str, ...]:
     """The dimensions entry *name* builds one curve per coordinate of: every one its links and its gate carry.
 
-    In file order, because iterating a set would vary the emitted
+    Sorted by name, because iterating a set would vary the emitted
     ``dims`` — and every column index behind it — per process. *links* are the
     entry's link expressions typed, as [`resolve_links`][] answers.
 
@@ -317,19 +316,15 @@ def curve_frame(spec: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expres
             expression carries.
     """
     context = f"piecewise '{name}'"
-    carried = [(f'link {i} expression', dims_of(node, spec, f'{context} link {i}')) for i, node in enumerate(links)]
+    carried = [(f'link {i} expression', frozenset(node.dims)) for i, node in enumerate(links)]
     if pw.activity is not None:
         carried.append(('activity', frozenset(spec.variables[pw.activity].dims)))
-    frame: list[str] = []
     for what, found in carried:
-        for d in (d for d in spec.dimensions if d in found):
-            if d == pw.over:
-                raise DimensionError(
-                    f"{context}: {what} already carries the breakpoint dimension '{pw.over}'. "
-                    f'Write the {what} without it.'
-                )
-            if d not in frame:
-                frame.append(d)
+        if pw.over in found:
+            raise DimensionError(
+                f"{context}: {what} already carries the breakpoint dimension '{pw.over}'. Write the {what} without it."
+            )
+    frame = sorted(set().union(*(found for _, found in carried)))
     for i, link in enumerate(pw.links):
         if stray := [d for d in spec.parameters[link.values].dims if d != pw.over and d not in frame]:
             raise DimensionError(

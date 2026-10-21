@@ -98,7 +98,7 @@ parameters:
 | $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{G} \times \mathcal{A}`$ |
 | $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{G} \times \mathcal{A}`$ |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
@@ -133,7 +133,7 @@ parameters:
 | $`\mathrm{rating}`$ | `rating` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{lcoe}`$ | `lcoe` (scalar) |
 | $`\mathit{net}`$ | `net` over $`\mathcal{T}`$ — what a snapshot spills, less what it lacks |
-| $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{T} \times \mathcal{B}`$ |
+| $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{B} \times \mathcal{T}`$ |
 | $`\mathrm{startup\_cost}`$ | `startup_cost` over $`\mathcal{T} \times \mathcal{G}`$ — what starting a unit in this snapshot costs, which the horizon's edge changes |
 
 #### Notation
@@ -669,7 +669,7 @@ p_{t,g} \le \mathrm{startup\_cost}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g 
 
 #### Expression with a declared frame in a constraint
 
-names the expression with a declared frame: the row reads it at every snapshot, though its body has no snapshot
+names the expression with declared dims, read in the row's own order
 
 ```yaml
 constraints:
@@ -698,17 +698,17 @@ expressions:
 
 #### Named expression with a declared frame
 
-a frame wider than the body, in an order of its own: the value is the same at every snapshot
+dims declared in an order of their own, each one the expression is indexed over
 
 ```yaml
 expressions:
   rating:
     dims: [generator, snapshot]
-    expression: eta * p_max
+    expression: eta * p_max * sum(load, over=bus)
 ```
 
 ```math
-\mathrm{rating}_{g,t} = \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\mathrm{rating}_{g,t} = \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \cdot \left( \sum_{b \in \mathcal{B}} \mathrm{load}_{t,b} \right) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Plain expression that is a signed sum
@@ -795,31 +795,31 @@ expressions:
 ```
 
 ```math
-\mathit{marginal\_price}_{t,b} = \lambda_{\mathrm{balance},t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+\mathit{marginal\_price}_{b,t} = \lambda_{\mathrm{balance},t,b} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
 ```
 
-### Named masks
+### Named conditions
 
-#### Named mask
+#### Named condition
 
-a named predicate with its words: a use prints the symbol over the dims its predicate reads, the predicate prints once
+a named condition with its words: a use prints the symbol over the dims its condition reads, the condition prints once
 
 ```yaml
-masks:
+conditions:
   dispatchable:
-    where: "p_max > 0 AND NOT is_flexible"
+    condition: "p_max > 0 AND NOT is_flexible"
 ```
 
 ```math
 \mathrm{dispatchable}_{g} \iff \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} \qquad \forall\, g \in \mathcal{G}
 ```
 
-#### Mask that reads a mask
+#### Condition that reads a condition
 
 the one-line form, reading another mask and a data-only entry
 
 ```yaml
-masks:
+conditions:
   priced_dispatch: "dispatchable AND spend_cap > 0"
 ```
 
@@ -827,7 +827,7 @@ masks:
 \mathrm{priced\_dispatch}_{g} \iff \mathrm{dispatchable}_{g} \wedge \mathrm{spend}^{\mathrm{cap}}_{g} > 0 \qquad \forall\, g \in \mathcal{G}
 ```
 
-#### Mask in a condition
+#### Named condition in a condition
 
 a mask as the where, beside a condition of the constraint's own
 
@@ -1059,37 +1059,37 @@ piecewise:
 ```
 
 ```math
-\left( \mathit{shipment}_{p,m},\ \mathit{scaled}_{p,m} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{b},\ \mathrm{y}_{b}) \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\left( \mathit{shipment}_{p,m},\ \mathit{scaled}_{p,m} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{b},\ \mathrm{y}_{b}) \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 Written out by `spec.expand()`:
 
 ```math
-0 \le \lambda_{p,m,b} \le 1 \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M},\ b \in \mathcal{B}
+0 \le \lambda_{m,p,b} \le 1 \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P},\ b \in \mathcal{B}
 ```
 
 ```math
-\delta_{p,m,b} \in \{0, 1\} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M},\ b \in \mathcal{B}
+\delta_{m,p,b} \in \{0, 1\} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P},\ b \in \mathcal{B}
 ```
 
 ```math
-\sum_{b \in \mathcal{B}} \lambda_{p,m,b} = 1 \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\sum_{b \in \mathcal{B}} \lambda_{m,p,b} = 1 \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
-\mathit{shipment}_{p,m} = \sum_{b \in \mathcal{B}} \lambda_{p,m,b} \cdot \mathrm{x}_{b} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\mathit{shipment}_{p,m} = \sum_{b \in \mathcal{B}} \lambda_{m,p,b} \cdot \mathrm{x}_{b} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
-\mathit{scaled}_{p,m} = \sum_{b \in \mathcal{B}} \lambda_{p,m,b} \cdot \mathrm{y}_{b} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\mathit{scaled}_{p,m} = \sum_{b \in \mathcal{B}} \lambda_{m,p,b} \cdot \mathrm{y}_{b} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
-\sum_{b \in \mathcal{B}} \delta_{p,m,b} \le 1 \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\sum_{b \in \mathcal{B}} \delta_{m,p,b} \le 1 \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
-\lambda_{p,m,b} \le \delta_{p,m,b} + \delta_{p,m,b \boxminus_{0} 1} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M},\ b \in \mathcal{B}
+\lambda_{m,p,b} \le \delta_{m,p,b} + \delta_{m,p,b \boxminus_{0} 1} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P},\ b \in \mathcal{B}
 ```
 
 ```math
@@ -1122,29 +1122,29 @@ piecewise:
 ```
 
 ```math
-\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 Written out by `spec.expand()`:
 
 ```math
-0 \le \lambda_{t,g,b} \le 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B}
+0 \le \lambda_{g,t,b} \le 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B}
 ```
 
 ```math
-\sum_{b \in \mathcal{B}} \lambda_{t,g,b} = 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\sum_{b \in \mathcal{B}} \lambda_{g,t,b} = 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\mathit{dispatch}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{dispatch}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{g,t,b} \cdot \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{g,t,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\left( \lambda_{t,g,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \lambda_{g,t,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
@@ -1177,25 +1177,25 @@ piecewise:
 ```
 
 ```math
-\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{conv}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{conv}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 Written out by `spec.expand()`:
 
 ```math
-0 \le \lambda_{t,g,b} \le 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B}
+0 \le \lambda_{g,t,b} \le 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B}
 ```
 
 ```math
-\sum_{b \in \mathcal{B}} \lambda_{t,g,b} = 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\sum_{b \in \mathcal{B}} \lambda_{g,t,b} = 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\mathit{dispatch}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{dispatch}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{g,t,b} \cdot \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{g,t,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
@@ -1235,21 +1235,21 @@ piecewise:
 ```
 
 ```math
-\mathit{op\_cost}_{t,g} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b})(\mathit{dispatch}_{t,g}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{op\_cost}_{t,g} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b})(\mathit{dispatch}_{t,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 Written out by `spec.expand()`:
 
 ```math
-\mathit{op\_cost}_{t,g} \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \ge \left( \mathrm{y}_{g,b} - \mathrm{y}_{g,b \boxminus_{0} 1} \right) \cdot \left( \mathit{dispatch}_{t,g} - \mathrm{x}_{g,b} \right) + \mathrm{y}_{g,b} \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) > 0
+\mathit{op\_cost}_{t,g} \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \ge \left( \mathrm{y}_{g,b} - \mathrm{y}_{g,b \boxminus_{0} 1} \right) \cdot \left( \mathit{dispatch}_{t,g} - \mathrm{x}_{g,b} \right) + \mathrm{y}_{g,b} \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) > 0
 ```
 
 ```math
-\mathit{dispatch}_{t,g} \ge \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = 0
+\mathit{dispatch}_{t,g} \ge \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = 0
 ```
 
 ```math
-\mathit{dispatch}_{t,g} \le \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = \lvert \mathcal{B} \rvert - 1
+\mathit{dispatch}_{t,g} \le \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = \lvert \mathcal{B} \rvert - 1
 ```
 
 ```math
@@ -1594,7 +1594,7 @@ constraints:
 
 #### Count over a dimension
 
-a count of the coordinates a predicate admits, which reduces one dim away
+a count of the coordinates a condition admits, which reduces one dim away
 
 ```yaml
 constraints:
@@ -1624,9 +1624,9 @@ constraints:
 \theta_{b} \le \mathrm{tech\_cap}_{b,e} \qquad \forall\, b \in \mathcal{B},\ e \in \mathcal{E} \,:\, \lvert \{ e' \in \mathcal{E} \,:\, \mathrm{tech\_cap}_{b,e'} > 0 \} \rvert \ge 2
 ```
 
-#### Predicate at the previous coordinate
+#### Condition at the previous coordinate
 
-a predicate read one coordinate back, which is false where the translation vacates
+a condition read one coordinate back, which is false where the translation vacates
 
 ```yaml
 constraints:
@@ -1640,9 +1640,9 @@ constraints:
 \mathit{slack}_{t} \le \mathrm{load}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{load}_{t,b} \text{ is defined} \wedge \neg \left( \mathrm{load}_{t - 1,b} \text{ is defined} \right)
 ```
 
-#### Predicate through a relation
+#### Condition through a relation
 
-a predicate read through a relation: a bus is held only where its zone has a cap at all
+a condition read through a relation: a bus is held only where its zone has a cap at all
 
 ```yaml
 constraints:

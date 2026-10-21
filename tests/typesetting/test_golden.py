@@ -19,7 +19,7 @@ from mathspec._operators import BUILTIN_NAMES
 from mathspec._typesetting import FORMATS, legend, to_latex, typeset, walk
 from mathspec._typesetting.format import OPERATOR_NAMES
 from mathspec._validation import to_spec
-from mathspec.program import Dual, Expression, ExpressionReference, Join, Predicate, Sum, Translate, WindowSum
+from mathspec.program import Condition, Dual, Expression, ExpressionReference, Join, Sum, Translate, WindowSum
 from tests.typesetting import golden
 from tests.typesetting.fixtures import LATEX
 
@@ -139,7 +139,7 @@ def _rendered_trees() -> Iterator[object]:
         if (mask := program.variables[name].where) is not None:
             yield mask.root
     for assumption in program.assumptions.values():
-        yield assumption.predicate.root
+        yield assumption.holds.root
         if assumption.where is not None:
             yield assumption.where.root
     for name in spec.expressions:
@@ -151,7 +151,7 @@ def _rendered_trees() -> Iterator[object]:
 #: A dataclass the walk steps *through* rather than renders: a region has no
 #: branch of its own — its ``when`` and ``value`` do — the columns a join
 #: names, the axes a sum is over and the relation it reads are the facts a
-#: node carries rather than nodes, and a ``Mask`` is the wrapper a leaf carries a predicate in. None is a
+#: node carries rather than nodes, and a ``Mask`` is the wrapper a leaf carries a condition in. None is a
 #: member of any node union, so they are subtracted from what the tree walk
 #: finds rather than added to what the vocabulary declares.
 CARRIERS = {'Axis', 'Column', 'Region', 'JoinColumns', 'Mask', 'Partition', 'Relation'}
@@ -166,7 +166,7 @@ def test_the_golden_model_carries_every_node_kind_the_walk_renders():
     `coverage` installed, and its failure names the construct rather than a line.
     """
     kinds = {type(node).__name__ for tree in _rendered_trees() for node in _nodes(tree)} - CARRIERS
-    declared = {node.__name__ for node in (*get_args(Predicate), *get_args(Expression), ExpressionReference)}
+    declared = {node.__name__ for node in (*get_args(Condition), *get_args(Expression), ExpressionReference)}
     assert kinds == declared, (
         f'tests/typesetting/golden/model.yaml reaches {sorted(kinds - declared)} and misses '
         f'{sorted(declared - kinds)}. Every node the walk renders needs a case here, '

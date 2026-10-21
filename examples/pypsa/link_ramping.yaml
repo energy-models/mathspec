@@ -20,8 +20,8 @@ given:
     Link_p_nom_effective: { dims: [scenario, link] }
     Link_previous_status: { dims: [scenario, snapshot, link] }
     Link_p_nom_committed: { dims: [scenario, link] }
-  masks:
-    Link_com_ext: { dims: [snapshot, link] }
+  conditions:
+    Link_com_ext: { dims: [link, snapshot] }
 
 dimensions:
   scenario:
@@ -139,13 +139,13 @@ expressions:
           * (Link_previous_status - Link_status)
     otherwise: Link_ramp_down_rate * Link_p_nom_effective
 
-masks:
+conditions:
   Link_ramps_from_previous:
     description: >-
       a snapshot whose ramp reads a previous output — any snapshot but its
       period's first, and the horizon's first where the link comes in off or
       carries an initial output
-    where: >-
+    condition: >-
       position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
       (Link_status_initial == 0 OR Link_p_init))
 

@@ -144,9 +144,9 @@ expressions:
   spend: # a plain named expression: its symbol prints where it is used, its body once as a definition
     description: what a snapshot's dispatch costs
     expression: sum(p * cost, over=generator)
-  rating: # a frame wider than the body, in an order of its own: the value is the same at every snapshot
+  rating: # dims declared in an order of their own, each one the expression is indexed over
     dims: [generator, snapshot]
-    expression: eta * p_max
+    expression: eta * p_max * sum(load, over=bus)
   lcoe: sum(p * cost) / sum(p) # nothing in the math reads it, so its divisor may carry a variable
   net: # a plain expression that opens with a minus
     description: what a snapshot spills, less what it lacks
@@ -160,9 +160,9 @@ expressions:
       winter: { when: "position(snapshot) > 0 and season_of == 'winter'", expression: cost * 2 }
     otherwise: 0
 
-masks:
-  dispatchable: # a named predicate with its words: a use prints the symbol over the dims its predicate reads, the predicate prints once
-    where: "p_max > 0 AND NOT is_flexible"
+conditions:
+  dispatchable: # a named condition with its words: a use prints the symbol over the dims its condition reads, the condition prints once
+    condition: "p_max > 0 AND NOT is_flexible"
     description: a unit that dispatches and cannot be turned down
   priced_dispatch: "dispatchable AND spend_cap > 0" # the one-line form, reading another mask and a data-only entry
 
@@ -173,7 +173,7 @@ constraints:
   starts: # names the cased expression: its symbol prints here, its block once below
     dims: [snapshot, generator]
     expression: p <= startup_cost
-  under_rating: # names the expression with a declared frame: the row reads it at every snapshot, though its body has no snapshot
+  under_rating: # names the expression with declared dims, read in the row's own order
     dims: [snapshot, generator]
     expression: p <= rating
   balance: # sum over a relation
@@ -314,7 +314,7 @@ constraints:
     dims: []
     where: "sum(p_max, over=generator) >= budget"
     expression: sum(p) <= budget
-  counted: # a count of the coordinates a predicate admits, which reduces one dim away
+  counted: # a count of the coordinates a condition admits, which reduces one dim away
     dims: [bus]
     where: "count(tech_cap > 0, over=technology) >= 2"
     expression: theta <= budget
@@ -322,11 +322,11 @@ constraints:
     dims: [bus, technology]
     where: "count(tech_cap > 0, over=technology) >= 2"
     expression: theta <= tech_cap
-  run_start: # a predicate read one coordinate back, which is false where the translation vacates
+  run_start: # a condition read one coordinate back, which is false where the translation vacates
     dims: [snapshot, bus]
     where: "load AND NOT shift(load, along=snapshot, offset=1)"
     expression: slack <= load
-  zoned: # a predicate read through a relation: a bus is held only where its zone has a cap at all
+  zoned: # a condition read through a relation: a bus is held only where its zone has a cap at all
     dims: [bus]
     where: "at(zone_cap, by=zone_of[zone])"
     expression: theta <= budget
