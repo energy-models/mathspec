@@ -75,7 +75,6 @@ class Namespace:
         '_conditions',
         '_loading',
         '_named',
-        'allowed',
         'bodies',
         'conditions',
         'constraints',
@@ -118,11 +117,6 @@ class Namespace:
             **{p: pd.dtype for p, pd in parameters.items()},
             **{m: cast('DeclaredDtype', 'bool') for m in spec.given.conditions},
             **{d: dd.dtype for d, dd in spec.dimensions.items()},
-        }
-        #: dimension name -> the labels it allows, for the dimensions
-        #: that list them; what a label compared against one of them must be.
-        self.allowed: dict[str, tuple[str | int, ...]] = {
-            d: tuple(dd.allowed) for d, dd in spec.dimensions.items() if dd.allowed is not None
         }
         #: parameter name -> the value its ``missing:`` reads a missing row as,
         #: for the parameters that name one; what a comparison in a condition reads there.

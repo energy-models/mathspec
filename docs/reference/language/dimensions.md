@@ -47,15 +47,10 @@ variables:
 Each label has the `dtype` of the dimension. The list holds at least one label,
 and each label once. On a `str` dimension a number such as `2030` is refused,
 so quote it as `'2030'`. A `float` or `datetime` dimension takes no `allowed`.
-Every other rule of the `dtype` stays the same.
 
 A [condition](expressions.md#conditions) that compares the dimension, or a
 relation column over it, against a label that is not in the list is refused at
-load. `carrier_of == 'gnrtr'` above is refused:
-
-```text
-Variable 'p': 'gnrtr' is not a label of 'carrier', which allows only ['ccgt', 'ocgt', 'wind']. Write one of them, or add 'gnrtr' to the allowed labels of 'carrier'.
-```
+load, so `carrier_of == 'gnrtr'` above is refused.
 
 The tool that attaches the data refuses a coordinate that is not in the list,
 in the table of the dimension and in every relation column over it.

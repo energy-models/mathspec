@@ -510,11 +510,12 @@ class ConditionResolver:
             if typed is None:
                 return node
             value = typed
-        if labelled in ns.allowed and value not in ns.allowed[labelled]:
+        allowed = ns.spec.dimensions[labelled].allowed if labelled else None
+        if allowed is not None and value not in allowed:
             shown = repr(value) if isinstance(value, str) else f'{value:g}'
             self.errors.append(
                 f"{context}: {shown} is not a label of '{labelled}', which allows only "
-                f"{list(ns.allowed[labelled])}. Write one of them, or add {shown} to the allowed labels of '{labelled}'."
+                f"{allowed}. Write one of them, or add {shown} to the allowed labels of '{labelled}'."
             )
             return node
 

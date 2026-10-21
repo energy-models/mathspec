@@ -288,8 +288,8 @@ class RelationSpec(_StrictSpec):
         return tuple(role for role, _ in side_columns(self.values))
 
 
-#: The dtypes whose labels a dimension may list under ``allowed``.
-_LISTABLE: tuple[DimensionDtype, ...] = ('str', 'int')
+#: The dtypes whose labels a dimension may list under ``allowed``, and the type each label must be.
+_LABEL_TYPES: dict[str, type] = {'str': str, 'int': int}
 
 
 class DimensionSpec(_StrictSpec):
@@ -324,18 +324,14 @@ class DimensionSpec(_StrictSpec):
         if not isinstance(v, list) or 'dtype' not in info.data:
             return v
         dtype = info.data['dtype']
-        if dtype not in _LISTABLE:
+        if (kind := _LABEL_TYPES.get(dtype)) is None:
             raise ValueError(f'lists the labels of a str or int dimension, and this one is {dtype}. Leave allowed out.')
         if not v:
             raise ValueError('lists no label. List at least one, or leave allowed out.')
-        if dtype == 'str' and (wrong := [label for label in v if not isinstance(label, str)]):
-            shown = _as_yaml(wrong[0])
-            raise ValueError(f"lists {shown}, which is not a str. Quote it: '{shown}'.")
-        if dtype == 'int' and (
-            wrong := [label for label in v if isinstance(label, bool) or not isinstance(label, int)]
-        ):
+        if wrong := [label for label in v if type(label) is not kind]:
             shown = repr(wrong[0]) if isinstance(wrong[0], str) else _as_yaml(wrong[0])
-            raise ValueError(f'lists {shown}, which is not an int. Write a whole number, or declare dtype: str.')
+            rewrite = f"Quote it: '{shown}'." if kind is str else 'Write a whole number, or declare dtype: str.'
+            raise ValueError(f'lists {shown}, which is not of dtype {dtype}. {rewrite}')
         if twice := sorted({label for label in v if v.count(label) > 1}):
             raise ValueError(f'lists {twice[0]!r} twice. List each label once.')
         return v

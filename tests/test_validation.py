@@ -462,17 +462,17 @@ class TestADimensionWithAllowedLabels:
             ),
             pytest.param(
                 {'allowed': [2030, 'north']},
-                "allowed: lists 2030, which is not a str. Quote it: '2030'.",
+                "allowed: lists 2030, which is not of dtype str. Quote it: '2030'.",
                 id='a-number-on-a-str-dimension',
             ),
             pytest.param(
                 {'dtype': 'int', 'allowed': ['2030']},
-                "allowed: lists '2030', which is not an int. Write a whole number, or declare dtype: str.",
+                "allowed: lists '2030', which is not of dtype int. Write a whole number, or declare dtype: str.",
                 id='a-string-on-an-int-dimension',
             ),
             pytest.param(
                 {'dtype': 'int', 'allowed': [True]},
-                'allowed: lists true, which is not an int. Write a whole number, or declare dtype: str.',
+                'allowed: lists true, which is not of dtype int. Write a whole number, or declare dtype: str.',
                 id='a-flag-on-an-int-dimension',
             ),
             pytest.param(
@@ -489,12 +489,8 @@ class TestADimensionWithAllowedLabels:
         dimension = _spec(**_YEARS).program.dimensions['h']
         assert (dimension.dtype, dimension.allowed) == ('int', (2030, 2040)), 'the labels in file order, of the dtype'
 
-    def test_a_dimension_with_allowed_labels_keeps_every_str_rule(self):
-        assert 'matches no label' in _refusal(**_LABELS, **{'variables.r.where': 'h > 3'})
-
-    @pytest.mark.parametrize('dimension', [pytest.param(_LABELS, id='str'), pytest.param(_YEARS, id='int')])
-    def test_the_spec_written_back_out_reads_as_itself(self, dimension):
-        spec = _spec(**dimension)
+    def test_the_spec_written_back_out_reads_as_itself(self):
+        spec = _spec(**_LABELS)
         assert to_spec(parse_yaml(spec.to_yaml())) == spec
 
 

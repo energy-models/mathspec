@@ -273,10 +273,9 @@ A comparison is checked against the declared `dtype`. A `datetime` dimension is
 compared against a quoted ISO date such as `'2030-01-01'` or
 `'2030-01-01T06:00'`, and a number against it is a load error.
 
-String labels compare bytewise, whatever the dimension's order. A label that
-no coordinate carries compares equal to nothing. Where the dimension lists its
-labels under [`allowed`](dimensions.md#allowed), a label that is not in the list
-is a load error.
+String labels compare bytewise, whatever the dimension's order, and a label
+the dimension does not carry compares equal to nothing. A label outside the
+dimension's [`allowed`](dimensions.md#allowed) list is a load error.
 
 The language cannot compare two dimensions, so precompute a boolean parameter
 instead.
