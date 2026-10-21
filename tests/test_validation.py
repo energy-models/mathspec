@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from pydantic import ValidationError
 
 from mathspec._resolution import Namespace
 from mathspec._typesetting import FORMATS, to_markdown, typeset_line
@@ -19,6 +20,7 @@ from mathspec._validation import to_spec
 from mathspec._yaml import parse_yaml, read_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
 from mathspec.program import DimensionPosition
+from mathspec.spec import DimensionSpec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SMALL_MODEL, spec_of, varied, where_of
 
 if TYPE_CHECKING:
@@ -483,6 +485,8 @@ class TestADimensionWithAnEnum:
             pytest.param({'variables.p.where': "lk[h] != 'west'"}, id='a-named-relation-column'),
             pytest.param({'conditions.west': "h == 'west'"}, id='a-named-condition'),
             pytest.param({'assumptions.west': {'holds': "lk != 'west'"}}, id='an-assumption'),
+            pytest.param({'variables.r.where': "h < 'west'"}, id='a-dimension-less-than-a-label'),
+            pytest.param({'variables.p.where': "lk >= 'west'"}, id='a-relation-column-at-least-a-label'),
         ],
     )
     def test_a_label_not_in_the_enum_is_refused(self, patch):
@@ -495,6 +499,7 @@ class TestADimensionWithAnEnum:
         [
             pytest.param({'variables.r.where': "h == 'north'"}, id='a-dimension'),
             pytest.param({'variables.p.where': 'lk != south'}, id='a-relation-column'),
+            pytest.param({'variables.r.where': "h < 'south'"}, id='a-dimension-less-than-a-label'),
         ],
     )
     def test_a_label_in_the_enum_is_admitted(self, patch):
@@ -520,13 +525,32 @@ class TestADimensionWithAnEnum:
             ),
             pytest.param(
                 {'dtype': 'int', 'enum': ['north']},
-                'dimensions.h: enum on a dimension of dtype int. An enum lists str labels: write dtype: str, or leave enum out.',
+                'dimensions.h.enum: is on a dimension of dtype int, and an enum takes only str labels. '
+                'Write dtype: str, or leave enum out.',
                 id='a-dtype-other-than-str',
+            ),
+            pytest.param(
+                {'dtype': 'int', 'enum': [2030, 2040]},
+                'dimensions.h.enum: is on a dimension of dtype int, and an enum takes only str labels. '
+                'Write dtype: str, or leave enum out.',
+                id='int-labels-on-an-int-dimension',
             ),
         ],
     )
     def test_a_mistake_in_the_enum_is_refused(self, entry, refusal):
         assert _refusal(**{'dimensions.h': entry}) == refusal
+
+    @pytest.mark.parametrize(
+        ('enum', 'refusal'),
+        [
+            pytest.param(('north', 'north'), "lists 'north' twice", id='a-duplicate'),
+            pytest.param((), 'lists no label', id='no-label'),
+        ],
+    )
+    def test_an_enum_built_in_python_is_held_to_the_same_rules(self, enum, refusal):
+        """A tuple passed to ``DimensionSpec`` skipped the checks that a YAML list gets, so a duplicate loaded."""
+        with pytest.raises(ValidationError, match=refusal):
+            DimensionSpec(enum=enum)
 
     def test_the_program_carries_the_enum_and_the_dtype_str(self):
         dimension = _spec(**_ENUM).program.dimensions['h']

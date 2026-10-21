@@ -51,7 +51,9 @@ same dimension. An `enum` with any other `dtype` is refused. The dimension is a
 
 A [condition](expressions.md#conditions) that compares the dimension, or a
 relation column over it, against a label that is not in the list is refused at
-load. `carrier_of == 'gnrtr'` above is refused:
+load. This applies to every comparison operator, `<`, `<=`, `>` and `>=`
+included, so a bound must also be a label in the list. `carrier_of == 'gnrtr'`
+above is refused:
 
 ```text
 Variable 'p': 'gnrtr' is not a label of 'carrier', which allows only ['ccgt', 'ocgt', 'wind']. Write one of them, or add 'gnrtr' to the enum of 'carrier'.

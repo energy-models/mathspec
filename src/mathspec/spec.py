@@ -314,9 +314,18 @@ class DimensionSpec(_StrictSpec):
 
     @field_validator('enum', mode='before')
     @classmethod
-    def _strings_listed_once(cls, v: object) -> object:
-        """A number or a flag in YAML is not the label its text spells, so it is refused rather than read as one."""
-        if not isinstance(v, list):
+    def _strings_listed_once(cls, v: object, info: ValidationInfo[object]) -> object:
+        """A number or a flag in YAML is not the label its text spells, so it is refused rather than read as one.
+
+        The dtype is checked first, so ``dtype: int`` with int labels is told to
+        drop the enum rather than to quote labels that would then be refused.
+        """
+        if v is not None and info.data.get('dtype', 'str') != 'str':
+            raise ValueError(
+                f'is on a dimension of dtype {info.data["dtype"]}, and an enum takes only str labels. '
+                'Write dtype: str, or leave enum out.'
+            )
+        if not isinstance(v, (list, tuple)):
             return v
         if not v:
             raise ValueError('lists no label. List at least one, or leave enum out.')
@@ -326,14 +335,6 @@ class DimensionSpec(_StrictSpec):
         if twice := sorted({label for label in v if v.count(label) > 1}):
             raise ValueError(f'lists {twice[0]!r} twice. List each label once.')
         return v
-
-    @model_validator(mode='after')
-    def _an_enum_lists_strings(self) -> DimensionSpec:
-        """An enum lists labels, which are strings, so it is refused on a dimension of another dtype."""
-        if self.enum is not None and self.dtype != 'str':
-            msg = f'enum on a dimension of dtype {self.dtype}. An enum lists str labels: write dtype: str, or leave enum out.'
-            raise ValueError(msg)
-        return self
 
     @model_serializer(mode='wrap')
     def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
