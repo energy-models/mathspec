@@ -342,12 +342,10 @@ class DimensionSpec(_StrictSpec):
 
     @model_serializer(mode='wrap')
     def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``ordered`` is written where it is true, and ``labels`` where it lists some: leaving either out says the default."""
+        """``ordered`` is written where it is true: false is what leaving it out says."""
         written = cast('dict[str, object]', handler(self))
         if not self.ordered:
             written.pop('ordered', None)
-        if self.labels is None:
-            written.pop('labels', None)
         return written
 
 
