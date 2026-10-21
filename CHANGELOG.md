@@ -20,7 +20,7 @@ This release also makes most modules of mathspec private, so the public API is s
 
 ### What to change in a spec file
 
-- Rename `masks:` to `conditions:`, and `given: masks:` to `given: conditions:`. Inside an entry, write the condition under `condition:` instead of `where:`. The loader refuses a file that still writes `masks:`, and the error lists the keys it accepts ([#907](https://github.com/energy-models/mathspec/pull/907)).
+- Rename `masks:` to `conditions:`, also under `given:`, and `where:` to `condition:` inside each entry ([#907](https://github.com/energy-models/mathspec/pull/907)).
 
   ```yaml
   conditions:
@@ -28,17 +28,17 @@ This release also makes most modules of mathspec private, so the public API is s
       condition: build_year <= period_year AND period_year < build_year + lifetime
   ```
 
-- Remove a dimension from a named expression's `dims:` when its expression is not indexed over that dimension. The loader now refuses such an entry. In 0.3.x it loaded, and every reader saw the same value at each coordinate of that dimension. For the same reason, a merge is refused when no term of a sum is indexed over a dimension that the sum's readers name ([#898](https://github.com/energy-models/mathspec/pull/898)).
-- Expect index lists in name order. The loader sorts by name the dimensions it works out for an entry, such as a named condition or a named expression without `dims:`. Every expression node lists its dimensions in the same order. So two files that list `dimensions:` in different orders load to the same program, and the typeset index can read `g, t` where it read `t, g` before ([#911](https://github.com/energy-models/mathspec/pull/911), [#899](https://github.com/energy-models/mathspec/pull/899)).
-- Rewrite a condition that uses `<`, `<=`, `>` or `>=` on a `str` or `bool` value. The loader now refuses it, and the error names the rewrite. In 0.3.x, `generator < 'b9'` compared the labels byte by byte, so `'b10'` came before `'b9'` whatever the order of the dimension. Compare a `str` with `==` or `!=`. To select by place along a dimension declared `ordered: true`, use `position(generator) < 3`. Test a `bool` parameter by its bare name, `flag` or `not flag` ([#931](https://github.com/energy-models/mathspec/pull/931)).
-- Compare two specs with `python -m mathspec diff a.yaml b.yaml`. `canonical --check` and `canonical --write` are gone ([#874](https://github.com/energy-models/mathspec/pull/874)).
+- Remove from a named expression's `dims:` each dimension that its expression is not indexed over ([#898](https://github.com/energy-models/mathspec/pull/898)).
+- Replace `<`, `<=`, `>` or `>=` on a `str` or `bool` value with `==` or `!=`, with `position()` on an ordered dimension, or with the bare name of a `bool` parameter ([#931](https://github.com/energy-models/mathspec/pull/931)).
+- Replace `canonical --check` and `canonical --write` with `python -m mathspec diff a.yaml b.yaml` ([#874](https://github.com/energy-models/mathspec/pull/874)).
+- Expect dimension lists in name order, also in typeset output ([#911](https://github.com/energy-models/mathspec/pull/911), [#899](https://github.com/energy-models/mathspec/pull/899)).
 - Expect `to_yaml()` to write a short list or mapping of names on one line ([#871](https://github.com/energy-models/mathspec/pull/871)).
 
 ### What to change in Python code
 
-- Import only from `mathspec`, `mathspec.spec`, `mathspec.program` and `mathspec.errors`. The name of every other module now starts with an underscore. For example, write `from mathspec import to_latex` ([#878](https://github.com/energy-models/mathspec/pull/878)).
-- In `mathspec.spec`, every class name ends in `Spec`: `VariableBlock` is now `VariableSpec`, and `MaskBlock` is now `ConditionSpec`. `typeset_declaration` is now `typeset_line` ([#855](https://github.com/energy-models/mathspec/pull/855), [#907](https://github.com/energy-models/mathspec/pull/907)).
-- In `mathspec.program`, rename with care: four names now mean something else. Old code that uses them raises no error, because each name still exists. So rename the reference nodes first, and only then drop the `Declaration` suffixes ([#855](https://github.com/energy-models/mathspec/pull/855), [#907](https://github.com/energy-models/mathspec/pull/907)):
+- Import only from `mathspec`, `mathspec.spec`, `mathspec.program` and `mathspec.errors` ([#878](https://github.com/energy-models/mathspec/pull/878)).
+- In `mathspec.spec`, rename `VariableBlock` to `VariableSpec`, `MaskBlock` to `ConditionSpec`, and every other class in the same way. Rename `typeset_declaration` to `typeset_line` ([#855](https://github.com/energy-models/mathspec/pull/855), [#907](https://github.com/energy-models/mathspec/pull/907)).
+- In `mathspec.program`, rename the reference nodes before you remove the `Declaration` suffixes. Four names now mean something else, and old code that uses them raises no error ([#855](https://github.com/energy-models/mathspec/pull/855), [#907](https://github.com/energy-models/mathspec/pull/907)):
 
   | 0.3.x | 0.4.0 |
   | --- | --- |
@@ -46,17 +46,15 @@ This release also makes most modules of mathspec private, so the public API is s
   | `ParameterDeclaration`, `VariableDeclaration`, `ExpressionDeclaration`, `MaskDeclaration` | `Parameter`, `Variable`, `NamedExpression`, `NamedCondition` |
   | `ConstraintDeclaration` and every other `*Declaration` | `Constraint`, without the suffix |
 
-- In `mathspec.program`, replace "predicate" with "condition". `Predicate` is now `Condition`, and `PredicateOperator` is now `ComparisonOperator`. `TypedPredicate`, `JoinedPredicate` and `TranslatedPredicate` are now `TypedCondition`, `JoinedCondition` and `TranslatedCondition`. Four attributes and methods change too:
-  - `CountComparison.predicate` is now `.condition`.
-  - `Assumption.predicate` is now `.holds`.
-  - `MaskDeclaration.where` is now `NamedCondition.condition`.
-  - `where_children()` is now `condition_children()`.
-
-  `.masks` on `Spec`, `GivenSpec`, `Program` and `GivenTargets` is now `.conditions` ([#904](https://github.com/energy-models/mathspec/pull/904), [#907](https://github.com/energy-models/mathspec/pull/907)).
-- Pass `dims` when you build an expression node by hand. Every node now has a required `dims` field, and two nodes are equal only when their `dims` are equal. `dims_of` is gone, so read `node.dims` instead ([#899](https://github.com/energy-models/mathspec/pull/899)).
-- Catch `DimensionError` for a load whose faults all break a rule on dimensions. The error lists every fault. In 0.3.x, a fault inside a bare `sum(...)` or an `at(...)` raised `SchemaError` ([#899](https://github.com/energy-models/mathspec/pull/899)).
-
-The language reference page `declarations/` is now `parameters-variables-constraints/`, so update any link to it ([#855](https://github.com/energy-models/mathspec/pull/855)).
+- In `mathspec.program`, replace `Predicate` with `Condition` in every class name, but rename `PredicateOperator` to `ComparisonOperator`. Also rename ([#904](https://github.com/energy-models/mathspec/pull/904), [#907](https://github.com/energy-models/mathspec/pull/907)):
+  - `CountComparison.predicate` to `.condition`
+  - `Assumption.predicate` to `.holds`
+  - `MaskDeclaration.where` to `NamedCondition.condition`
+  - `where_children()` to `condition_children()`
+  - `.masks` to `.conditions` on `Spec`, `GivenSpec`, `Program` and `GivenTargets`
+- Pass `dims` to an expression node that you build by hand, and read `node.dims` instead of `dims_of` ([#899](https://github.com/energy-models/mathspec/pull/899)).
+- Catch `DimensionError` instead of `SchemaError` for a dimension fault inside `sum(...)` or `at(...)` ([#899](https://github.com/energy-models/mathspec/pull/899)).
+- Change links to the reference page `declarations/` to `parameters-variables-constraints/` ([#855](https://github.com/energy-models/mathspec/pull/855)).
 
 The pull requests in this release:
 
