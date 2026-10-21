@@ -555,8 +555,15 @@ class TestADimensionWithAnEnum:
             'the labels in file order, and str wherever a dtype is read'
         )
 
-    def test_a_dimension_with_an_enum_keeps_every_str_rule(self):
-        assert 'matches no label' in _refusal(**_ENUM, **{'variables.r.where': 'h > 3'})
+    @pytest.mark.parametrize(
+        ('where', 'refusal'),
+        [
+            pytest.param('h == 3', 'matches no label', id='a-number'),
+            pytest.param("h > 'north'", 'on which > is not defined', id='an-inequality'),
+        ],
+    )
+    def test_a_dimension_with_an_enum_keeps_every_str_rule(self, where, refusal):
+        assert refusal in _refusal(**_ENUM, **{'variables.r.where': where})
 
     @pytest.mark.parametrize(
         'entry',
