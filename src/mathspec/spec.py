@@ -75,7 +75,6 @@ __all__ = [
     'GivenVariableSpec',
     'MacroSpec',
     'ObjectiveSpec',
-    'OneOfSpec',
     'ParameterSpec',
     'PiecewiseLinkSpec',
     'PiecewiseSpec',
@@ -289,26 +288,38 @@ class RelationSpec(_StrictSpec):
         return tuple(role for role, _ in side_columns(self.values))
 
 
-class OneOfSpec(_StrictSpec):
-    """The labels a dimension allows, written ``dtype: {one_of: [...]}`` in place of ``dtype: str``.
+class DimensionSpec(_StrictSpec):
+    """A declared dimension, the dtype its coordinates must be, and whether their order means anything.
 
-    The labels are strings, at least one and each once, kept in the order the
-    file lists them. A condition that compares the dimension, or a relation
-    column over it, against any other label is refused at load.
+    A dimension is an axis and nothing else: it declares that the axis exists
+    and what its coordinates are typed as. Which coordinates there are is data,
+    and arrives when the data is attached; an ``enum`` only names the labels a
+    coordinate may have. The maps its members carry — a
+    generator's bus, a snapshot's period — are top-level ``relations:``
+    ([`RelationSpec`][]), keyed by their own name.
     """
 
-    _label: ClassVar[str] = "a dimension's dtype"
+    _label: ClassVar[str] = 'a dimension entry'
 
-    one_of: Annotated[list[str], Field(min_length=1, json_schema_extra={'uniqueItems': True})]
+    dtype: DimensionDtype = 'str'
+    #: The labels a ``str`` dimension allows, at least one and each once, in
+    #: file order. A condition that compares the dimension, or a relation
+    #: column over it, against any other label is refused at load.
+    enum: Annotated[tuple[str, ...], Field(min_length=1, json_schema_extra={'uniqueItems': True})] | None = None
+    #: Whether the order the data gives the coordinates in is part of the
+    #: model. Only an ordered dimension is one a construct may step or count
+    #: along; every other one is a set whose row order means nothing.
+    ordered: bool = False
+    description: str | None = None
 
-    @field_validator('one_of', mode='before')
+    @field_validator('enum', mode='before')
     @classmethod
     def _strings_listed_once(cls, v: object) -> object:
         """A number or a flag in YAML is not the label its text spells, so it is refused rather than read as one."""
         if not isinstance(v, list):
             return v
         if not v:
-            raise ValueError('lists no label. List at least one, or write dtype: str.')
+            raise ValueError('lists no label. List at least one, or leave enum out.')
         if not_text := [label for label in v if not isinstance(label, str)]:
             shown = _as_yaml(not_text[0])
             raise ValueError(f"takes only strings, and {shown} is not one. Quote it: '{shown}'.")
@@ -316,57 +327,22 @@ class OneOfSpec(_StrictSpec):
             raise ValueError(f'lists {twice[0]!r} twice. List each label once.')
         return v
 
-
-class DimensionSpec(_StrictSpec):
-    """A declared dimension, the dtype its coordinates must be, and whether their order means anything.
-
-    A dimension is an axis and nothing else: it declares that the axis exists
-    and what its coordinates are typed as. Which coordinates there are is data,
-    and arrives when the data is attached; a ``dtype: {one_of: [...]}``
-    ([`OneOfSpec`][]) only names the labels a coordinate may have. The maps its members carry — a
-    generator's bus, a snapshot's period — are top-level ``relations:``
-    ([`RelationSpec`][]), keyed by their own name.
-    """
-
-    _label: ClassVar[str] = 'a dimension entry'
-
-    dtype: DimensionDtype | OneOfSpec = 'str'
-    #: Whether the order the data gives the coordinates in is part of the
-    #: model. Only an ordered dimension is one a construct may step or count
-    #: along; every other one is a set whose row order means nothing.
-    ordered: bool = False
-    description: str | None = None
-
-    @field_validator('dtype', mode='before')
-    @classmethod
-    def _a_name_or_the_labels(cls, v: object) -> object:
-        """Each spelling is held to its own branch, so a mistake in one is not also reported against the other."""
-        if not isinstance(v, dict):
-            if v in get_args(DimensionDtype):
-                return v
-            names = ', '.join(get_args(DimensionDtype))
-            raise ValueError(f'{_as_yaml(v)} is not a dtype. Write one of {names}, or {{one_of: [<label>, ...]}}.')
-        try:
-            return OneOfSpec.model_validate(v)
-        except ValidationError as exc:
-            raise ValueError(str(schema_error(exc))) from None
-
-    @property
-    def label_dtype(self) -> DimensionDtype:
-        """What the labels are: ``str`` for a dimension that lists them under ``one_of``."""
-        return self.dtype if isinstance(self.dtype, str) else 'str'
-
-    @property
-    def members(self) -> tuple[str, ...] | None:
-        """The labels ``one_of`` allows, in file order, or ``None`` where any label of the dtype may come."""
-        return None if isinstance(self.dtype, str) else tuple(self.dtype.one_of)
+    @model_validator(mode='after')
+    def _an_enum_lists_strings(self) -> DimensionSpec:
+        """An enum lists labels, which are strings, so it is refused on a dimension of another dtype."""
+        if self.enum is not None and self.dtype != 'str':
+            msg = f'enum on a dimension of dtype {self.dtype}. An enum lists str labels: write dtype: str, or leave enum out.'
+            raise ValueError(msg)
+        return self
 
     @model_serializer(mode='wrap')
     def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``ordered`` is written where it is true: false is what leaving it out says."""
+        """``ordered`` is written where it is true and ``enum`` where it is listed: leaving either out says the default."""
         written = cast('dict[str, object]', handler(self))
         if not self.ordered:
             written.pop('ordered', None)
+        if self.enum is None:
+            written.pop('enum', None)
         return written
 
 

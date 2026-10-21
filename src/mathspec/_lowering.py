@@ -222,9 +222,7 @@ def lower(spec: Spec) -> Program:
         constraints=constraints,
         objective=objective,
         dimensions={
-            name: Dimension(
-                dtype=ddef.label_dtype, members=ddef.members, ordered=ddef.ordered, description=ddef.description
-            )
+            name: Dimension(dtype=ddef.dtype, enum=ddef.enum, ordered=ddef.ordered, description=ddef.description)
             for name, ddef in spec.dimensions.items()
         },
         relations=ns.relations,
