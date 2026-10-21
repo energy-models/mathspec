@@ -909,8 +909,8 @@ def test_a_program_is_built_by_keyword_so_a_field_added_later_cannot_reorder_an_
 
 
 @pytest.mark.parametrize('group', ['parameters', 'variables', 'constraints', 'dimensions', 'relations', 'sos'])
-def test_a_program_seals_its_entry_groups(dispatch_program, group):
-    """`frozen=True` sealed the fields and said nothing about what was behind them."""
+def test_a_program_freezes_its_entry_groups(dispatch_program, group):
+    """`frozen=True` froze the fields and said nothing about what was behind them."""
     with pytest.raises(TypeError):
         getattr(dispatch_program, group)['sneak'] = None  # pyrefly: ignore[unsupported-operation]  the point of the test
 
@@ -1186,7 +1186,7 @@ def test_a_lowered_spec_still_pickles_and_lowers_to_the_same_program():
     Lowering caches its expansion on the Spec, and a named expression's
     resolved node held its keyword arguments behind a ``MappingProxyType``,
     which pickle refuses — so a Spec that had been lowered could not cross a
-    process where a fresh one could. The seal pickles now, and the copy lowers
+    process where a fresh one could. The frozen mapping pickles now, and the copy lowers
     to the same program.
     """
     import pickle
@@ -1211,10 +1211,10 @@ def test_a_lowered_spec_still_pickles_and_lowers_to_the_same_program():
 def test_a_lowered_program_pickles_and_is_the_same_program():
     """A program crosses a process as itself, walked or not.
 
-    Every group of entries is sealed against writes, and the seal used
+    Every group of entries is frozen against writes, and the frozen mapping used
     to be a ``MappingProxyType``, which pickle refuses — so a program could
     be built by one process and never handed to another, and a consumer
-    running slices in a pool re-lowered the file per slice. The seal now
+    running slices in a pool re-lowered the file per slice. The frozen mapping now
     pickles, and so does what a walk caches on the program.
     """
     import pickle
@@ -1242,7 +1242,7 @@ def test_two_groups_of_a_program_merge_with_or_as_they_did_behind_the_proxy():
     """`program.constraints | program.variables` is a dict of both, as it was
     when the groups were `MappingProxyType`s — a consumer that walks every
     entry this way (specsolve's parity harness does) broke on alpha.78,
-    where the seal answered `|` with a `TypeError`."""
+    where the frozen mapping answered `|` with a `TypeError`."""
     program = to_spec(
         {
             'dimensions': {'t': {'dtype': 'int', 'ordered': True}},

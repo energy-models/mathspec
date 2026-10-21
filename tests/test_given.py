@@ -104,7 +104,7 @@ def test_a_program_carries_the_column_it_reads_apart_from_the_ones_it_builds():
     )
 
 
-def test_what_a_program_reads_is_sealed_like_what_it_builds():
+def test_what_a_program_reads_is_frozen_like_what_it_builds():
     program = to_spec(SUPPLY).program
     with pytest.raises(TypeError, match='does not support item assignment'):
         program.given.variables['p'] = program.given.variables['flow']

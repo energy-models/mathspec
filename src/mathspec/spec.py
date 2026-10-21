@@ -35,8 +35,8 @@ from pydantic import (
 )
 
 from mathspec._expression_parser import NAME, Sense
+from mathspec._frozen import Frozen
 from mathspec._operators import BUILTIN_NAMES
-from mathspec._sealed import Sealed
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
     DimensionDtype,
@@ -240,8 +240,8 @@ class RelationSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'a relation entry'
 
-    key: str | Listed[str] | Sealed[str, str]
-    values: str | Listed[str] | Sealed[str, str] | None = None
+    key: str | Listed[str] | Frozen[str, str]
+    values: str | Listed[str] | Frozen[str, str] | None = None
     #: Whether every combination of the key's dimensions needs a row:
     #: ``refused`` refuses data that leaves one out, and ``absent`` reads it
     #: as no row.
@@ -558,15 +558,15 @@ class GivenSpec(_StrictSpec):
     _label: ClassVar[str] = "the 'given:' section"
 
     #: Data another file declares ([`GivenParameterSpec`][]).
-    parameters: Sealed[str, GivenParameterSpec] = Sealed({})
+    parameters: Frozen[str, GivenParameterSpec] = Frozen({})
     #: Columns another file introduces ([`GivenVariableSpec`][]).
-    variables: Sealed[str, GivenVariableSpec] = Sealed({})
+    variables: Frozen[str, GivenVariableSpec] = Frozen({})
     #: Row families another model builds ([`GivenConstraintSpec`][]).
-    constraints: Sealed[str, GivenConstraintSpec] = Sealed({})
+    constraints: Frozen[str, GivenConstraintSpec] = Frozen({})
     #: Named expressions another file defines ([`GivenExpressionSpec`][]).
-    expressions: Sealed[str, GivenExpressionSpec] = Sealed({})
+    expressions: Frozen[str, GivenExpressionSpec] = Frozen({})
     #: Named conditions another file defines ([`GivenConditionSpec`][]).
-    conditions: Sealed[str, GivenConditionSpec] = Sealed({})
+    conditions: Frozen[str, GivenConditionSpec] = Frozen({})
 
     def __bool__(self) -> bool:
         """Whether the file reads anything it does not build."""
@@ -686,7 +686,7 @@ class ExpressionSpec(_StrictSpec):
     #: entry that leaves it out takes the dims of its body.
     dims: Listed[str] | None = None
     #: The regions, keyed by the name labelling the row each prints; every ``when`` is proved apart from the others.
-    cases: Annotated[Mapping[str, ExpressionCaseSpec], Field(min_length=1), AfterValidator(Sealed)] = Sealed({})
+    cases: Annotated[Mapping[str, ExpressionCaseSpec], Field(min_length=1), AfterValidator(Frozen)] = Frozen({})
     #: The value wherever no case's ``when`` holds, printed as the last row.
     otherwise: Expression | None = None
     #: The sum this entry adds to as a term, a ``given: expressions:`` entry of this file, or ``None``.
@@ -1069,18 +1069,18 @@ class Spec(_StrictSpec):
     description: str | None = None
     #: What this file reads and does not build ([`GivenSpec`][]). Empty in a file that stands alone.
     given: GivenSpec = GivenSpec()
-    dimensions: Sealed[str, DimensionSpec] = Sealed({})
-    relations: Sealed[str, RelationSpec] = Sealed({})
-    parameters: Sealed[str, ParameterSpec] = Sealed({})
-    conditions: Sealed[str, ConditionSpec] = Sealed({})
-    variables: Sealed[str, VariableSpec] = Sealed({})
-    expressions: Sealed[str, ExpressionSpec] = Sealed({})
+    dimensions: Frozen[str, DimensionSpec] = Frozen({})
+    relations: Frozen[str, RelationSpec] = Frozen({})
+    parameters: Frozen[str, ParameterSpec] = Frozen({})
+    conditions: Frozen[str, ConditionSpec] = Frozen({})
+    variables: Frozen[str, VariableSpec] = Frozen({})
+    expressions: Frozen[str, ExpressionSpec] = Frozen({})
     objective: ObjectiveSpec | None = None
-    constraints: Sealed[str, ConstraintSpec] = Sealed({})
-    sos: Sealed[str, SosSpec] = Sealed({})
-    piecewise: Sealed[str, PiecewiseSpec] = Sealed({})
-    assumptions: Sealed[str, AssumptionSpec] = Sealed({})
-    macros: Sealed[str, MacroSpec] = Sealed({})
+    constraints: Frozen[str, ConstraintSpec] = Frozen({})
+    sos: Frozen[str, SosSpec] = Frozen({})
+    piecewise: Frozen[str, PiecewiseSpec] = Frozen({})
+    assumptions: Frozen[str, AssumptionSpec] = Frozen({})
+    macros: Frozen[str, MacroSpec] = Frozen({})
 
     @cached_property
     def program(self) -> Program:

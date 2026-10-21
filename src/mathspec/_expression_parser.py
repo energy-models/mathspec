@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Literal, assert_never, cast, get_args
 
 import pyparsing as pp
 
-from mathspec._sealed import Sealed
+from mathspec._frozen import Frozen
 from mathspec.errors import SchemaError
 
 if TYPE_CHECKING:
@@ -139,7 +139,7 @@ class FunctionCallNode:
     kwargs: Mapping[str, ArithmeticNode] = field(default_factory=dict, hash=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'kwargs', Sealed(self.kwargs))
+        object.__setattr__(self, 'kwargs', Frozen(self.kwargs))
 
     def __str__(self) -> str:
         passed = [*(str(arg) for arg in self.args), *(f'{key}={value}' for key, value in self.kwargs.items())]

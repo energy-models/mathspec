@@ -228,5 +228,5 @@ fom = "fom"
 # correcting the spelling deletes the test.
 egde = "egde"
 # `ser` is pydantic-core's abbreviation in `wrap_serializer_function_ser_schema`,
-# which src/mathspec/_sealed.py calls by name.
+# which src/mathspec/_frozen.py calls by name.
 ser = "ser"

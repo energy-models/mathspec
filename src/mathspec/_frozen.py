@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The seal on what the language hands out — a mapping nothing can write to, which pickles."""
+"""The frozen mapping the language hands out — one nothing can write to, which pickles."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from pydantic_core import CoreSchema
 
 
-class Sealed[K, V](Mapping[K, V]):
+class Frozen[K, V](Mapping[K, V]):
     """A mapping nothing can write to, which pickles.
 
     What every group a program hands out is held behind, and a node's
@@ -66,7 +66,7 @@ class Sealed[K, V](Mapping[K, V]):
 
     @classmethod
     def __get_pydantic_core_schema__(cls, source: object, handler: GetCoreSchemaHandler) -> CoreSchema:
-        """Validated as the mapping it seals, then sealed; written back out as a plain mapping.
+        """Validated as the mapping it freezes, then frozen; written back out as a plain mapping.
 
         So a pydantic model can hold one as a field, and its default, without
         handing out a mapping a consumer can write to.
