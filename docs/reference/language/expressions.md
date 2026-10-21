@@ -281,7 +281,9 @@ byte by byte, and `'b10'` would come before `'b9'` whatever the dimension's
 order. To compare along the order of a dimension declared `ordered: true`, use
 [`position()`](#position).
 
-A label the dimension does not carry compares equal to nothing.
+A label that no coordinate carries compares equal to nothing. Where the dimension
+lists its labels under [`one_of`](dimensions.md#one_of), a label that is not in the
+list is a load error.
 
 The language cannot compare two dimensions, so precompute a boolean parameter
 instead.
