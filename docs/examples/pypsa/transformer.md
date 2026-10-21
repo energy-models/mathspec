@@ -107,11 +107,11 @@ parameters:
   Transformer_s_nom_set:
     description: a given nominal apparent power for an extendable transformer; one without a value has no row here
     dims: [transformer]
-    missing: 0
+    missing: absent
   Transformer_s_set:
     description: a given flow schedule; a transformer without one has no row here
     dims: [scenario, snapshot, transformer]
-    missing: 0
+    missing: absent
   Transformer_v_ang_max:
     description: >-
       the most the voltage angle difference across a transformer, its phase
@@ -404,8 +404,8 @@ constraints:
 | $`\underline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_min` over $`\Xi \times \mathcal{M}`$ — least nominal apparent power an extendable transformer may be built at |
 | $`\overline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_max` over $`\Xi \times \mathcal{M}`$ — most nominal apparent power an extendable transformer may be built at |
 | $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
-| $`\sigma^{\mathrm{nom,set}}`$ | `Transformer_s_nom_set` over $`\mathcal{M}`$, $`0`$ where the data has no row — a given nominal apparent power for an extendable transformer; one without a value has no row here |
-| $`\sigma^{\mathrm{set}}`$ | `Transformer_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, $`0`$ where the data has no row — a given flow schedule; a transformer without one has no row here |
+| $`\sigma^{\mathrm{nom,set}}`$ | `Transformer_s_nom_set` over $`\mathcal{M}`$, `absent` where the data has no row — a given nominal apparent power for an extendable transformer; one without a value has no row here |
+| $`\sigma^{\mathrm{set}}`$ | `Transformer_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, `absent` where the data has no row — a given flow schedule; a transformer without one has no row here |
 | $`\overline{\delta}^{\sigma}`$ | `Transformer_v_ang_max` over $`\Xi \times \mathcal{M}`$, $`0`$ where the data has no row — the most the voltage angle difference across a transformer, its phase shift included, may be either way, in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default. The deprecated `v_ang_min` is ignored, as a line's |
 | $`\mathrm{x}^{\mathrm{eff},\sigma}`$ | `Transformer_x_pu_eff` over $`\Xi \times \mathcal{M}`$ — the transformer's effective series reactance — PyPSA's `x_pu_eff`, `x` over its `s_nom` times its tap ratio, data prep |
 | $`\mathrm{x}^{\sigma}`$ | `Transformer_cycle_weight` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{C}`$, $`0`$ where the data has no row — the transformer's effective series reactance, `x` times its tap ratio, signed by its orientation in the cycle — PyPSA's `x_pu_eff`, the cycle basis, data prep; a transformer in no cycle has no row. From the first scenario only, as a line's |
