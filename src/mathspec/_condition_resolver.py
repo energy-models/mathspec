@@ -507,6 +507,12 @@ class ConditionResolver:
             if typed is None:
                 return node
             value = typed
+        if dtype == 'str' and plain.op not in ('==', '!='):
+            self.errors.append(
+                f'{context}: {plain.name} {plain.op} {value!r} orders str labels, which have no order. '
+                'Compare them with == or !=, or precompute the ordering as a boolean parameter.'
+            )
+            return node
 
         match kind:
             case 'parameter':
@@ -753,7 +759,9 @@ def _relation_pair_error(context: str, node: _Plain, other: str, ns: Namespace, 
     Both relations are read at their keys, so the keys must be over the same
     dimensions or no row carries both; and the two columns must be over one
     dimension, or no value of one is ever a value of the other. Both wrong
-    answers are silent, and a build's data library decides which one.
+    answers are silent, and a build's data library decides which one. Two
+    columns over a ``str`` dimension are not ordered, for the reason a ``str``
+    label is not.
     """
     comparison = f"'{node.name} {node.op} {other}'"
     left_name, right_name = _split_column(node.name)[0], _split_column(other)[0]
@@ -769,5 +777,10 @@ def _relation_pair_error(context: str, node: _Plain, other: str, ns: Namespace, 
         return (
             f"{context}: {comparison} compares '{node.name}' (a column over '{ls.dim(left)}') with "
             f"'{other}' (a column over '{rs.dim(right)}'). Compare two columns over the same dimension."
+        )
+    if node.op not in ('==', '!=') and ns.dtypes[ls.dim(left)] == 'str':
+        return (
+            f"{context}: {comparison} orders two columns over '{ls.dim(left)}', whose str labels have no order. "
+            'Compare them with == or !=, or precompute the ordering as a boolean parameter.'
         )
     return None

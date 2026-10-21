@@ -273,8 +273,10 @@ A comparison is checked against the declared `dtype`. A `datetime` dimension is
 compared against a quoted ISO date such as `'2030-01-01'` or
 `'2030-01-01T06:00'`, and a number against it is a load error.
 
-String labels compare bytewise, whatever the dimension's order, and a label
-the dimension does not carry compares equal to nothing.
+A `str` label compares only with `==` and `!=`, so `g < 'm'` is a load error.
+To select members by their place along an ordered dimension, use
+[`position(d)`](#position). A label the dimension does not carry compares equal
+to nothing.
 
 The language cannot compare two dimensions, so precompute a boolean parameter
 instead.

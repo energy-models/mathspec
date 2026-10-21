@@ -405,6 +405,55 @@ class TestDimensionKwargs:
             _spec(**{'dimensions.g': {'dtype': dtype}, 'variables.p.where': where})
 
 
+_TWO_LINKS = {'relations.lk2': {'key': 'g', 'values': 'h'}}
+
+
+class TestAStrLabelHasNoOrder:
+    """A str label compares only with ``==`` and ``!=``.
+
+    Before, ``g < 'm'`` loaded and compared the labels bytewise. A tool that
+    holds the labels as an enum type orders them by their place in its list,
+    so the same condition could select other rows there.
+    """
+
+    @pytest.mark.parametrize(
+        ('patch', 'comparison'),
+        [
+            pytest.param({'variables.p.where': "g < 'm'"}, "g < 'm'", id='an-ordered-dimension'),
+            pytest.param(
+                {'dimensions.g': {'dtype': 'str'}, 'variables.p.where': "g >= 'm'"},
+                "g >= 'm'",
+                id='an-unordered-dimension',
+            ),
+            pytest.param({'variables.p.where': 'g > m'}, "g > 'm'", id='an-unquoted-label'),
+            pytest.param({'variables.p.where': "lk <= 'm'"}, "lk <= 'm'", id='a-relation-column'),
+            pytest.param({'variables.p.where': "tag > 'm'"}, "tag > 'm'", id='a-str-parameter'),
+            pytest.param({'conditions.low': "g < 'm'"}, "g < 'm'", id='a-named-condition'),
+            pytest.param({**_TWO_LINKS, 'variables.p.where': 'lk < lk2'}, "'lk < lk2'", id='two-relation-columns'),
+        ],
+    )
+    def test_an_ordering_comparison_is_refused(self, patch, comparison):
+        message = _refusal(**patch)
+        assert comparison in message, message
+        assert 'Compare them with == or !=, or precompute the ordering as a boolean parameter.' in message, message
+
+    @pytest.mark.parametrize(
+        'patch',
+        [
+            pytest.param({'variables.p.where': "g == 'm'"}, id='a-dimension-equal-to-a-label'),
+            pytest.param({'variables.p.where': "tag != 'm'"}, id='a-str-parameter-not-equal-to-a-label'),
+            pytest.param({**_TWO_LINKS, 'variables.p.where': 'lk == lk2'}, id='two-equal-relation-columns'),
+            pytest.param({'dimensions.g': {'dtype': 'int'}, 'variables.p.where': 'g > 3'}, id='an-int-dimension'),
+            pytest.param(
+                {'dimensions.g': {'dtype': 'datetime'}, 'variables.p.where': "g >= '2030-01-01'"},
+                id='a-datetime-dimension',
+            ),
+        ],
+    )
+    def test_an_equality_or_a_non_str_ordering_loads(self, patch):
+        _spec(**patch)
+
+
 class TestAnUndeclaredKeywordIsRefusedOnce:
     """A keyword an operator does not declare is refused by its signature, once (#441).
 
