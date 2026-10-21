@@ -278,7 +278,8 @@ or `bool` compares with `==` and `!=`, and an inequality on it is a load error.
 A relation column reads the dtype of its target dimension, so the rule holds
 there too. `generator < 'b9'` is refused, because it would compare the labels
 byte by byte, and `'b10'` would come before `'b9'` whatever the dimension's
-order. To compare along that order, use [`position()`](#position).
+order. To compare along the order of a dimension declared `ordered: true`, use
+[`position()`](#position).
 
 A label the dimension does not carry compares equal to nothing.
 

@@ -147,6 +147,8 @@ class Subject:
     ``kind`` separates the namespaces that could otherwise collide: a
     dimension's coordinates and its *rank* are two subjects over one name, and
     a rank is further split by the ``within=`` columns it is counted within.
+    A comparison on a relation is split by the column it reads, because two
+    columns of one row hold two values.
     """
 
     kind: Literal['param', 'expression', 'dim', 'rank', 'relation', 'relation_pair', 'variable']
@@ -161,6 +163,8 @@ class Subject:
             return f'the position of {self.name}{within}'
         if self.kind == 'relation_pair':
             return f'{self.name} vs {self.qualifier}'
+        if self.kind == 'relation' and self.qualifier:
+            return f'{self.name}[{self.qualifier}]'
         return self.name
 
 
@@ -296,8 +300,10 @@ def _subject_of(node: TypedCondition) -> Subject:
             if partition is None:
                 return Subject('rank', name)
             return Subject('rank', name, partition.name, partition.grouped)
-        case RelationDefined(name=name) | RelationComparison(name=name):
+        case RelationDefined(name=name):
             return Subject('relation', name)
+        case RelationComparison(name=name, column=column):
+            return Subject('relation', name, column)
         case RelationPairComparison(name=name, other=other):
             return Subject('relation_pair', name, other)
         case ExpressionComparison():
@@ -543,17 +549,16 @@ def _read(node: TypedCondition, value: Cell, grid: _Grid) -> Cell:
 def _compare(value: Cell, op: ComparisonOperator, literal: _Literal) -> bool:
     """One atom's truth in one cell. Both sides are already this cell's frame.
 
+    A label none of the masks names meets only == and !=, because the loader
+    refuses an inequality on a ``str``.
+
     Raises:
         AssertionError: The cell and the literal are of different kinds, which
             the dtype rules keep apart before a mask is proved.
     """
     if isinstance(value, Special):
         if value is Special.OTHER:
-            # a label none of the masks names sorts nowhere
-            if op in ('==', '!='):
-                return op == '!='
-            msg = f'a label neither case names is ordered with {op!r}. Compare labels with == or != instead'
-            raise Undecidable(msg)
+            return op == '!='
         value = math.inf if value is Special.POS_INF else -math.inf
     if isinstance(value, int | float) and isinstance(literal, int | float):
         return _ordered(float(value), op, float(literal))
