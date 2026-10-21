@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(spec)!: a loaded spec cannot be changed, so the file it writes back out is always the one its program comes from ([#923](https://github.com/energy-models/mathspec/pull/923))
 - feat(program): each expression node states the dimensions it is read over ([#899](https://github.com/energy-models/mathspec/pull/899))
 - fix(language): two files that declare their dimensions in different orders load to the same program by sorting dimension lists by name ([#911](https://github.com/energy-models/mathspec/pull/911))
 - refactor(language)!: a file names a condition under `conditions:` rather than `masks:` ([#907](https://github.com/energy-models/mathspec/pull/907))
