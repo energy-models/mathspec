@@ -37,7 +37,6 @@ if TYPE_CHECKING:
 
 #: The public names of ``mathspec.program``, sorted.
 __all__ = [
-    'ORDERED_DTYPES',
     'Add',
     'Advice',
     'AdviceKind',
@@ -147,10 +146,6 @@ ParameterDtype = Literal['float', 'int', 'bool', 'str']
 #: dimension's, because a relation takes its target's dtype. It is the union of
 #: both, because a condition names all three kinds and reads the dtype the same way.
 DeclaredDtype = ParameterDtype | DimensionDtype
-
-#: The dtypes whose values a condition may order with <, <=, > or >=. A ``str``
-#: or ``bool`` compares only with == and !=.
-ORDERED_DTYPES: tuple[DeclaredDtype, ...] = ('float', 'int', 'datetime')
 
 #: The domain a variable may declare.
 VariableDomain = Literal['continuous', 'integer', 'binary']

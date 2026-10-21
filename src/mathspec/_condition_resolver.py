@@ -38,7 +38,6 @@ from mathspec._expression_parser import (
 from mathspec._expression_resolver import ExpressionResolver, condition_compared
 from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
 from mathspec.program import (
-    ORDERED_DTYPES,
     Add,
     And,
     BooleanLiteral,
@@ -566,6 +565,20 @@ class ConditionResolver:
             return None
         return column
 
+    def _inequality_rewrite(self, node: _Plain, dtype: DeclaredDtype) -> str:
+        """What to write in place of an inequality on a value whose dtype does not define one.
+
+        Only an ordered dimension has a place to select by, so only it is told
+        about ``position()``; everywhere else that hint names a construct that
+        cannot apply.
+        """
+        if dtype == 'bool':
+            return f"Test the bare name, '{node.name}' or 'not {node.name}'"
+        name = _split_column(node.name)[0]
+        if self.ns.kind(name) == 'dimension' and not self.ns.unordered(name):
+            return f'Select members by their place with position({name}) {node.op} n, or compare it with == or !='
+        return 'Compare it with == or !=, or precompute the comparison as a boolean parameter'
+
     def _typed_literal(self, node: _Plain, dtype: DeclaredDtype) -> float | str | datetime.date | None:
         """The comparison's literal, checked against the declared dtype.
 
@@ -578,15 +591,10 @@ class ConditionResolver:
         value = node.value
         text = isinstance(value, str)
 
-        if node.op not in ('==', '!=') and dtype not in ORDERED_DTYPES:
-            rewrite = (
-                f"Test the bare name, '{node.name}' or 'not {node.name}'"
-                if dtype == 'bool'
-                else 'Compare it with == or !=, or use position() on an ordered dimension'
-            )
+        if node.op not in ('==', '!=') and dtype not in _INEQUALITY_DTYPES:
+            rewrite = self._inequality_rewrite(node, dtype)
             self.errors.append(
-                f"{context}: '{node.name}' has dtype '{dtype}', which has no order, so {node.op} "
-                f'cannot compare its values. {rewrite}.'
+                f"{context}: '{node.name}' has dtype '{dtype}', on which {node.op} is not defined. {rewrite}."
             )
             return None
 
@@ -629,6 +637,10 @@ class ConditionResolver:
 
 #: An ISO literal carrying a time-of-day, which decides date vs datetime.
 _HAS_TIME = re.compile(r'[T ]\d')
+
+#: The dtypes on which a condition may use an inequality: <, <=, > or >=. A
+#: ``str`` or ``bool`` compares only with == and !=.
+_INEQUALITY_DTYPES: tuple[DeclaredDtype, ...] = ('float', 'int', 'datetime')
 
 
 def _declared_as(ns: Namespace, name: str) -> str:
@@ -767,7 +779,8 @@ def _relation_pair_error(context: str, node: _Plain, other: str, ns: Namespace, 
     dimensions or no row carries both; and the two columns must be over one
     dimension, or no value of one is ever a value of the other. Both wrong
     answers are silent, and a build's data library decides which one. Two
-    columns over a dimension outside ``ORDERED_DTYPES`` are not ordered.
+    columns over a dimension outside ``_INEQUALITY_DTYPES`` compare only with
+    == and !=.
     """
     comparison = f"'{node.name} {node.op} {other}'"
     left_name, right_name = _split_column(node.name)[0], _split_column(other)[0]
@@ -785,9 +798,10 @@ def _relation_pair_error(context: str, node: _Plain, other: str, ns: Namespace, 
             f"'{other}' (a column over '{rs.dim(right)}'). Compare two columns over the same dimension."
         )
     dtype = ns.dtypes[ls.dim(left)]
-    if node.op not in ('==', '!=') and dtype not in ORDERED_DTYPES:
+    if node.op not in ('==', '!=') and dtype not in _INEQUALITY_DTYPES:
         return (
-            f"{context}: {comparison} orders two columns over '{ls.dim(left)}', which has dtype '{dtype}' "
-            f'and no order. Compare them with == or !=, or use position() on an ordered dimension.'
+            f"{context}: {comparison} compares two columns over '{ls.dim(left)}', of dtype '{dtype}', "
+            f'on which {node.op} is not defined. Compare them with == or !=, or precompute the comparison as a '
+            'boolean parameter.'
         )
     return None

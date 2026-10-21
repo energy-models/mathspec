@@ -297,6 +297,9 @@ class TestDual:
         assert to_spec(varied(self.BASE, expressions={'price': 'dual(lim)'})).expressions['price']
 
 
+_NO_INEQUALITY_REWRITE = 'Compare it with == or !=, or precompute the comparison as a boolean parameter.'
+
+
 class TestDimensionKwargs:
     """A dim kwarg that names nothing is a silent no-op, not an error — `sum(p, over=snapshto)` used to load."""
 
@@ -409,34 +412,52 @@ class TestDimensionKwargs:
         [
             pytest.param(
                 {'variables.p.where': "g < 'b'"},
-                ["'g' has dtype 'str', which has no order", 'Compare it with == or !=, or use position()'],
-                id='dimension',
+                [
+                    "'g' has dtype 'str', on which < is not defined",
+                    'Select members by their place with position(g) < n',
+                ],
+                id='an-ordered-dimension',
             ),
             pytest.param(
-                {'variables.p.where': "tag >= 'b'"}, ["'tag' has dtype 'str', which has no order"], id='parameter'
+                {'dimensions.g': {'dtype': 'str'}, 'variables.p.where': "g > 'b'"},
+                ["'g' has dtype 'str', on which > is not defined", _NO_INEQUALITY_REWRITE],
+                id='an-unordered-dimension',
             ),
             pytest.param(
-                {'variables.p.where': "lk > 'b'"}, ["'lk' has dtype 'str', which has no order"], id='relation-column'
+                {'variables.p.where': "tag >= 'b'"},
+                ["'tag' has dtype 'str', on which >= is not defined", _NO_INEQUALITY_REWRITE],
+                id='parameter',
+            ),
+            pytest.param(
+                {'variables.p.where': "lk > 'b'"},
+                ["'lk' has dtype 'str', on which > is not defined", _NO_INEQUALITY_REWRITE],
+                id='relation-column',
             ),
             pytest.param(
                 {'conditions.late': "g <= 'b'", 'variables.p.where': 'late'},
-                ["'g' has dtype 'str', which has no order"],
+                ["'g' has dtype 'str', on which <= is not defined", 'position(g) <= n'],
                 id='named-condition',
             ),
             pytest.param(
                 {'relations.lk2': {'key': 'g', 'values': 'h'}, 'variables.p.where': 'lk < lk2'},
-                ["orders two columns over 'h', which has dtype 'str' and no order"],
+                [
+                    "compares two columns over 'h', of dtype 'str', on which < is not defined",
+                    'Compare them with == or !=, or precompute the comparison as a boolean parameter.',
+                ],
                 id='two-relation-columns',
             ),
             pytest.param(
                 {'variables.p.where': 'flag > 0'},
-                ["'flag' has dtype 'bool', which has no order", "'flag' or 'not flag'"],
+                ["'flag' has dtype 'bool', on which > is not defined", "'flag' or 'not flag'"],
                 id='bool-parameter',
             ),
         ],
     )
-    def test_an_ordering_on_an_unordered_dtype_is_refused(self, patch, fragments):
-        """`<` on a str compared the labels bytewise, so `'b10' < 'b9'` held whatever the dimension's order."""
+    def test_an_inequality_on_a_str_or_a_bool_is_refused(self, patch, fragments):
+        """`<` on a str compared the labels bytewise, so `'b10' < 'b9'` held whatever the dimension's order.
+
+        Only an ordered dimension has a place to select by, so only its message names ``position()``.
+        """
         message = _refusal(SMALL_MODEL, **patch)
         for fragment in fragments:
             assert fragment in message, message
@@ -1106,6 +1127,28 @@ class TestAConditionIsAnOperand:
             constraints={'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
         )
         assert 'it counts the coordinates a condition admits, which only the data decides' in message
+
+    def test_an_inequality_between_two_relation_columns_is_undecidable_in_a_case_when(self):
+        """The analysis does not decide an inequality between two relation columns, whatever their dtype.
+
+        Before, the refusal said that two relations have no order, which is false for two int columns.
+        """
+        message = _refusal(
+            **{'dimensions.h': {'dtype': 'int'}, 'relations.lk2': {'key': 'g', 'values': 'h'}},
+            expressions={
+                'pick': {
+                    'dims': ['g'],
+                    'cases': {
+                        'below': {'when': 'lk < lk2', 'expression': '1'},
+                        'some': {'when': 'c > 0', 'expression': '2'},
+                    },
+                    'otherwise': '0',
+                }
+            },
+            constraints={'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
+        )
+        assert 'this analysis does not decide an inequality between two relation columns' in message, message
+        assert 'no order' not in message, message
 
     def test_a_read_through_a_relation_is_undecidable_in_a_case_when(self):
         """Which rows a relation maps onto a coordinate is the data's to say, so two cases split by one are not proved apart."""

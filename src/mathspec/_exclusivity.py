@@ -186,7 +186,7 @@ class _Grid:
             for node in mask.atoms:
                 subject = _subject_of(node)
                 subjects[id(node)] = subject
-                _observe(node, subject, values.setdefault(subject, set()), dtypes)
+                _observe(node, subject, values.setdefault(subject, set()))
         return cls({s: _cells_for(s, seen, dtypes) for s, seen in values.items()}, subjects, defaults)
 
     @property
@@ -244,13 +244,11 @@ def _signed_literal(node: Expression) -> float | None:
     return None
 
 
-def _observe(
-    node: TypedCondition, subject: Subject, values: set[_Literal], dtypes: Mapping[str, DeclaredDtype]
-) -> None:
+def _observe(node: TypedCondition, subject: Subject, values: set[_Literal]) -> None:
     """Record what *node* says about its subject: a position, or a literal.
 
-    ``position()`` converts the dimension to an integer, so an ordering over a
-    rank is an ordering of integers and every comparator is admitted there.
+    ``position()`` converts the dimension to an integer, so an inequality on a
+    rank is one on integers and every comparator is admitted there.
     """
     if isinstance(node, ExpressionComparison):
         raise Undecidable(_expression_rewrite(node))
@@ -277,8 +275,9 @@ def _observe(
     elif isinstance(node, RelationPairComparison):
         if node.op not in ('==', '!='):
             msg = (
-                f'{subject} is ordered with {node.op!r}, and two relations have no order. '
-                f'Compare them with == or !=, or precompute the ordering as a boolean parameter and test that'
+                f'{subject} uses {node.op!r}, and this analysis does not decide an inequality between two '
+                'relation columns. Compare them with == or !=, or precompute the comparison as a boolean '
+                'parameter and test that'
             )
             raise Undecidable(msg)
     elif isinstance(node, ParameterComparison | DimensionComparison | RelationComparison):
