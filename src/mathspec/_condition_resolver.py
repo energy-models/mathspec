@@ -766,7 +766,8 @@ def _relation_pair_error(context: str, node: _Plain, other: str, ns: Namespace, 
     Both relations are read at their keys, so the keys must be over the same
     dimensions or no row carries both; and the two columns must be over one
     dimension, or no value of one is ever a value of the other. Both wrong
-    answers are silent, and a build's data library decides which one.
+    answers are silent, and a build's data library decides which one. Two
+    columns over a dimension outside ``ORDERED_DTYPES`` are not ordered.
     """
     comparison = f"'{node.name} {node.op} {other}'"
     left_name, right_name = _split_column(node.name)[0], _split_column(other)[0]
@@ -782,5 +783,11 @@ def _relation_pair_error(context: str, node: _Plain, other: str, ns: Namespace, 
         return (
             f"{context}: {comparison} compares '{node.name}' (a column over '{ls.dim(left)}') with "
             f"'{other}' (a column over '{rs.dim(right)}'). Compare two columns over the same dimension."
+        )
+    dtype = ns.dtypes[ls.dim(left)]
+    if node.op not in ('==', '!=') and dtype not in ORDERED_DTYPES:
+        return (
+            f"{context}: {comparison} orders two columns over '{ls.dim(left)}', which has dtype '{dtype}' "
+            f'and no order. Compare them with == or !=, or use position() on an ordered dimension.'
         )
     return None

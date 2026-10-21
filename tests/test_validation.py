@@ -424,6 +424,11 @@ class TestDimensionKwargs:
                 id='named-condition',
             ),
             pytest.param(
+                {'relations.lk2': {'key': 'g', 'values': 'h'}, 'variables.p.where': 'lk < lk2'},
+                ["orders two columns over 'h', which has dtype 'str' and no order"],
+                id='two-relation-columns',
+            ),
+            pytest.param(
                 {'variables.p.where': 'flag > 0'},
                 ["'flag' has dtype 'bool', which has no order", "'flag' or 'not flag'"],
                 id='bool-parameter',
