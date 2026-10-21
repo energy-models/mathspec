@@ -297,7 +297,7 @@ class TestDual:
         assert to_spec(varied(self.BASE, expressions={'price': 'dual(lim)'})).expressions['price']
 
 
-_NO_ORDER_REWRITE = 'Compare it with == or !=, or precompute the ordering as a boolean parameter.'
+_NO_INEQUALITY_REWRITE = 'Compare it with == or !=, or precompute the comparison as a boolean parameter.'
 
 
 class TestDimensionKwargs:
@@ -412,52 +412,55 @@ class TestDimensionKwargs:
         [
             pytest.param(
                 {'variables.p.where': "g < 'b'"},
-                ["'g' has dtype 'str', which has no order", 'Select members by their place with position(g) < n'],
+                [
+                    "'g' has dtype 'str', on which < is not defined",
+                    'Select members by their place with position(g) < n',
+                ],
                 True,
                 id='an-ordered-dimension',
             ),
             pytest.param(
                 {'dimensions.g': {'dtype': 'str'}, 'variables.p.where': "g > 'b'"},
-                ["'g' has dtype 'str', which has no order", _NO_ORDER_REWRITE],
+                ["'g' has dtype 'str', on which > is not defined", _NO_INEQUALITY_REWRITE],
                 False,
                 id='an-unordered-dimension',
             ),
             pytest.param(
                 {'variables.p.where': "tag >= 'b'"},
-                ["'tag' has dtype 'str', which has no order", _NO_ORDER_REWRITE],
+                ["'tag' has dtype 'str', on which >= is not defined", _NO_INEQUALITY_REWRITE],
                 False,
                 id='parameter',
             ),
             pytest.param(
                 {'variables.p.where': "lk > 'b'"},
-                ["'lk' has dtype 'str', which has no order", _NO_ORDER_REWRITE],
+                ["'lk' has dtype 'str', on which > is not defined", _NO_INEQUALITY_REWRITE],
                 False,
                 id='relation-column',
             ),
             pytest.param(
                 {'conditions.late': "g <= 'b'", 'variables.p.where': 'late'},
-                ["'g' has dtype 'str', which has no order", 'position(g) <= n'],
+                ["'g' has dtype 'str', on which <= is not defined", 'position(g) <= n'],
                 True,
                 id='named-condition',
             ),
             pytest.param(
                 {'relations.lk2': {'key': 'g', 'values': 'h'}, 'variables.p.where': 'lk < lk2'},
                 [
-                    "orders two columns over 'h', which has dtype 'str' and no order",
-                    'Compare them with == or !=, or precompute the ordering as a boolean parameter.',
+                    "compares two columns over 'h', of dtype 'str', on which < is not defined",
+                    'Compare them with == or !=, or precompute the comparison as a boolean parameter.',
                 ],
                 False,
                 id='two-relation-columns',
             ),
             pytest.param(
                 {'variables.p.where': 'flag > 0'},
-                ["'flag' has dtype 'bool', which has no order", "'flag' or 'not flag'"],
+                ["'flag' has dtype 'bool', on which > is not defined", "'flag' or 'not flag'"],
                 False,
                 id='bool-parameter',
             ),
         ],
     )
-    def test_an_ordering_on_an_unordered_dtype_is_refused(self, patch, fragments, names_position):
+    def test_an_inequality_on_a_str_or_a_bool_is_refused(self, patch, fragments, names_position):
         """`<` on a str compared the labels bytewise, so `'b10' < 'b9'` held whatever the dimension's order.
 
         Only an ordered dimension has a place to select by, so only its message names ``position()``.
@@ -484,7 +487,7 @@ class TestDimensionKwargs:
             ),
         ],
     )
-    def test_an_equality_or_an_ordering_of_an_ordered_dtype_loads(self, patch):
+    def test_an_equality_or_an_inequality_on_a_number_or_a_datetime_loads(self, patch):
         _spec(**patch)
 
 
