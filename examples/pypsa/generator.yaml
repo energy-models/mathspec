@@ -124,7 +124,7 @@ parameters:
   Generator_p_set:
     description: a given output schedule; a generator without one has no row here
     dims: [scenario, snapshot, generator]
-    missing: absent
+    missing: 0
   Generator_p_nom_min:
     description: least nominal power an extendable generator may be built at
     dims: [scenario, generator]
@@ -142,7 +142,7 @@ parameters:
   Generator_p_nom_set:
     description: a given nominal power for an extendable generator; one without a value has no row here
     dims: [generator]
-    missing: absent
+    missing: 0
   Generator_e_sum_min:
     description: least energy over the horizon; minus infinity where no floor is meant
     dims: [scenario, generator]
@@ -155,18 +155,18 @@ parameters:
       `co2_emissions` over the generator's efficiency at the snapshot, data prep; a generator
       of an unweighted carrier has no row
     dims: [scenario, global_constraint, snapshot, generator]
-    missing: absent
+    missing: 0
   Generator_operational_limit_weight:
     description: one where the generator is in the row's set — data prep; one outside it has no row
     dims: [scenario, global_constraint, generator]
-    missing: absent
+    missing: 0
   Generator_tech_capacity_weight:
     description: >-
       one where the generator is in the row's carrier-and-bus set — data
       prep; one outside it, or one that does not stand in the row's
       `investment_period`, has no row
     dims: [global_constraint, generator]
-    missing: absent
+    missing: 0
 
 variables:
   Generator_p:
