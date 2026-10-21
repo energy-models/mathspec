@@ -510,6 +510,12 @@ class ConditionResolver:
             if typed is None:
                 return node
             value = typed
+        if labelled in ns.enum and plain.op not in ('==', '!='):
+            self.errors.append(
+                f"{context}: {plain.name} {plain.op} {value!r} orders the labels of '{labelled}', which lists them "
+                'under enum. An enum dimension compares only with == and !=.'
+            )
+            return node
         if labelled in ns.enum and value not in ns.enum[labelled]:
             self.errors.append(
                 f"{context}: {value!r} is not a label of '{labelled}', which allows only "

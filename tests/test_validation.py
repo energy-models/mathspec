@@ -485,8 +485,6 @@ class TestADimensionWithAnEnum:
             pytest.param({'variables.p.where': "lk[h] != 'west'"}, id='a-named-relation-column'),
             pytest.param({'conditions.west': "h == 'west'"}, id='a-named-condition'),
             pytest.param({'assumptions.west': {'holds': "lk != 'west'"}}, id='an-assumption'),
-            pytest.param({'variables.r.where': "h < 'west'"}, id='a-dimension-less-than-a-label'),
-            pytest.param({'variables.p.where': "lk >= 'west'"}, id='a-relation-column-at-least-a-label'),
         ],
     )
     def test_a_label_not_in_the_enum_is_refused(self, patch):
@@ -499,11 +497,25 @@ class TestADimensionWithAnEnum:
         [
             pytest.param({'variables.r.where': "h == 'north'"}, id='a-dimension'),
             pytest.param({'variables.p.where': 'lk != south'}, id='a-relation-column'),
-            pytest.param({'variables.r.where': "h < 'south'"}, id='a-dimension-less-than-a-label'),
         ],
     )
     def test_a_label_in_the_enum_is_admitted(self, patch):
         _spec(**_ENUM, **patch)
+
+    @pytest.mark.parametrize(
+        ('patch', 'comparison'),
+        [
+            pytest.param({'variables.r.where': "h < 'south'"}, "h < 'south'", id='a-label-in-the-enum'),
+            pytest.param({'variables.r.where': "h > 'west'"}, "h > 'west'", id='a-label-not-in-the-enum'),
+            pytest.param({'variables.p.where': "lk >= 'north'"}, "lk >= 'north'", id='a-relation-column'),
+            pytest.param({'conditions.low': "h <= 'north'"}, "h <= 'north'", id='a-named-condition'),
+        ],
+    )
+    def test_an_ordering_comparison_is_refused(self, patch, comparison):
+        """Labels compare bytewise, but polars and DuckDB order an enum by its list, so ``<`` could select other rows there."""
+        message = _refusal(**_ENUM, **patch)
+        assert f"{comparison} orders the labels of 'h', which lists them under enum" in message, message
+        assert 'An enum dimension compares only with == and !=.' in message, message
 
     @pytest.mark.parametrize(
         ('entry', 'refusal'),
