@@ -405,11 +405,11 @@ class TestDimensionKwargs:
             _spec(**{'dimensions.g': {'dtype': dtype}, 'variables.p.where': where})
 
 
-_MEMBERS = {'dimensions.h': {'dtype': {'one_of': ['north', 'south']}}}
+_ENUM = {'dimensions.h': {'enum': ['north', 'south']}}
 
 
-class TestADimensionWithMembers:
-    """A dimension that lists its labels under ``dtype: {one_of: [...]}`` refuses a condition naming another (#519).
+class TestADimensionWithAnEnum:
+    """A dimension that lists its labels under ``enum`` refuses a condition naming another (#519).
 
     Before, ``carrier == 'gnrtr'`` loaded and compared equal to nothing, so a
     misspelt label emptied the mask without a word.
@@ -427,9 +427,10 @@ class TestADimensionWithMembers:
             pytest.param({'assumptions.west': {'holds': "lk != 'west'"}}, id='an-assumption'),
         ],
     )
-    def test_a_label_that_is_not_a_member_is_refused(self, patch):
-        message = _refusal(**_MEMBERS, **patch)
+    def test_a_label_not_in_the_enum_is_refused(self, patch):
+        message = _refusal(**_ENUM, **patch)
         assert "'west' is not a label of 'h', which allows only ['north', 'south']" in message, message
+        assert "add 'west' to the enum of 'h'" in message, message
 
     @pytest.mark.parametrize(
         'patch',
@@ -438,55 +439,57 @@ class TestADimensionWithMembers:
             pytest.param({'variables.p.where': 'lk != south'}, id='a-relation-column'),
         ],
     )
-    def test_a_member_is_admitted(self, patch):
-        _spec(**_MEMBERS, **patch)
+    def test_a_label_in_the_enum_is_admitted(self, patch):
+        _spec(**_ENUM, **patch)
 
     @pytest.mark.parametrize(
-        ('dtype', 'refusal'),
+        ('entry', 'refusal'),
         [
             pytest.param(
-                {'one_of': []},
-                'one_of: lists no label. List at least one, or write dtype: str.',
-                id='no-member',
+                {'enum': []},
+                'dimensions.h.enum: lists no label. List at least one, or leave enum out.',
+                id='no-label',
             ),
             pytest.param(
-                {'one_of': ['north', 'north']},
-                "one_of: lists 'north' twice. List each label once.",
+                {'enum': ['north', 'north']},
+                "dimensions.h.enum: lists 'north' twice. List each label once.",
                 id='a-duplicate',
             ),
             pytest.param(
-                {'one_of': [2030, 'north']},
-                "one_of: takes only strings, and 2030 is not one. Quote it: '2030'.",
+                {'enum': [2030, 'north']},
+                "dimensions.h.enum: takes only strings, and 2030 is not one. Quote it: '2030'.",
                 id='a-number',
             ),
             pytest.param(
-                {'one_off': ['north']},
-                "unknown key 'one_off' in a dimension's dtype. Did you mean 'one_of'?",
-                id='a-misspelt-key',
-            ),
-            pytest.param(
-                'strr',
-                'strr is not a dtype. Write one of float, int, str, datetime, or {one_of: [<label>, ...]}.',
-                id='a-misspelt-name',
+                {'dtype': 'int', 'enum': ['north']},
+                'dimensions.h: enum on a dimension of dtype int. An enum lists str labels: write dtype: str, or leave enum out.',
+                id='a-dtype-other-than-str',
             ),
         ],
     )
-    def test_a_mistake_in_the_dtype_is_named_once(self, dtype, refusal):
-        """A dtype is a name or a mapping, and a mistake in one was also reported against the other."""
-        assert _refusal(**{'dimensions.h': {'dtype': dtype}}) == f'dimensions.h.dtype: {refusal}'
+    def test_a_mistake_in_the_enum_is_refused(self, entry, refusal):
+        assert _refusal(**{'dimensions.h': entry}) == refusal
 
-    def test_the_program_carries_the_members_and_the_dtype_str(self):
-        dimension = _spec(**_MEMBERS).program.dimensions['h']
-        assert (dimension.dtype, dimension.members) == ('str', ('north', 'south')), (
-            'the members in file order, and str wherever a dtype is read'
+    def test_the_program_carries_the_enum_and_the_dtype_str(self):
+        dimension = _spec(**_ENUM).program.dimensions['h']
+        assert (dimension.dtype, dimension.enum) == ('str', ('north', 'south')), (
+            'the labels in file order, and str wherever a dtype is read'
         )
 
-    def test_a_dimension_with_members_keeps_every_str_rule(self):
-        assert 'matches no label' in _refusal(**_MEMBERS, **{'variables.r.where': 'h > 3'})
+    def test_a_dimension_with_an_enum_keeps_every_str_rule(self):
+        assert 'matches no label' in _refusal(**_ENUM, **{'variables.r.where': 'h > 3'})
 
-    def test_the_spec_written_back_out_reads_as_itself(self):
-        spec = _spec(**_MEMBERS)
+    @pytest.mark.parametrize(
+        'entry',
+        [
+            pytest.param({'enum': ['north', 'south']}, id='an-enum'),
+            pytest.param({'dtype': 'str'}, id='no-enum'),
+        ],
+    )
+    def test_the_spec_written_back_out_reads_as_itself(self, entry):
+        spec = _spec(**{'dimensions.h': entry})
         assert to_spec(parse_yaml(spec.to_yaml())) == spec
+        assert ('enum' in spec.to_yaml()) == ('enum' in entry), 'enum is written only where the file lists one'
 
 
 class TestAnUndeclaredKeywordIsRefusedOnce:

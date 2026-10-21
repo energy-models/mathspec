@@ -510,10 +510,10 @@ class ConditionResolver:
             if typed is None:
                 return node
             value = typed
-        if labelled in ns.members and value not in ns.members[labelled]:
+        if labelled in ns.enum and value not in ns.enum[labelled]:
             self.errors.append(
                 f"{context}: {value!r} is not a label of '{labelled}', which allows only "
-                f"{list(ns.members[labelled])}. Write one of them, or add {value!r} to the one_of of '{labelled}'."
+                f"{list(ns.enum[labelled])}. Write one of them, or add {value!r} to the enum of '{labelled}'."
             )
             return node
 
