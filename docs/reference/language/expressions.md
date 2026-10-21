@@ -276,7 +276,8 @@ compared against a quoted ISO date such as `'2030-01-01'` or
 String labels compare bytewise, whatever the dimension's order. A label that
 no coordinate carries compares equal to nothing. Where the dimension lists its
 labels under [`enum`](dimensions.md#enum), a label that is not in the list
-is a load error.
+is a load error with every operator, so `carrier < 'm'` is refused unless `m`
+is a label of `carrier`.
 
 The language cannot compare two dimensions, so precompute a boolean parameter
 instead.
