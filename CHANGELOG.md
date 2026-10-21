@@ -13,7 +13,8 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(spec): a loaded spec holds each `dims:` list and each side of a relation sorted by name ([#916](https://github.com/energy-models/mathspec/pull/916))
-- feat(language): every entry is indexed by its dimensions sorted by name, whatever order the file writes them in ([#914](https://github.com/energy-models/mathspec/pull/914))
+- feat(language)!: every entry is indexed by its dimensions sorted by name, whatever order the file writes them in ([#914](https://github.com/energy-models/mathspec/pull/914))
+  - This breaks the program API. `Mask.dims` is a tuple sorted by name, not a `frozenset`, so a tool that compares it with a set (`where.dims <= set(dims)`) must build a set first. `Relation.columns` lists the key's columns first, each side sorted by role, and `Relation.dims` lists each dimension once, sorted by name. Every `dims` and `frame` in the program is sorted by name, so a tool that lays out its result by them gets a new order.
 - feat(program): each expression node states the dimensions it is read over ([#899](https://github.com/energy-models/mathspec/pull/899))
 - fix(language): two files that declare their dimensions in different orders load to the same program by sorting dimension lists by name ([#911](https://github.com/energy-models/mathspec/pull/911))
 - refactor(language)!: a file names a condition under `conditions:` rather than `masks:` ([#907](https://github.com/energy-models/mathspec/pull/907))

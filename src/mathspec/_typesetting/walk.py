@@ -412,7 +412,7 @@ class Walk:
         return node
 
     def _sum(self, node: Sum, ctx: _Context) -> tuple[str, int]:
-        """A reduction over named dims: one dummy index per dim, in file order, or the group-by over a join."""
+        """A reduction over named dims: one dummy index per dim, sorted by name, or the group-by over a join."""
         if isinstance(node.operand, Join) and node.operand.columns.axes:
             return self._grouped_sum(node.operand, ctx)
         memberships = []

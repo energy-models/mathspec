@@ -144,7 +144,7 @@ expressions:
   spend: # a plain named expression: its symbol prints where it is used, its body once as a definition
     description: what a snapshot's dispatch costs
     expression: sum(p * cost, over=generator)
-  rating: # dims declared in an order of their own, each one the expression is indexed over
+  rating: # dims declared, each one the expression is indexed over
     dims: [generator, snapshot]
     expression: eta * p_max * sum(load, over=bus)
   lcoe: sum(p * cost) / sum(p) # nothing in the math reads it, so its divisor may carry a variable

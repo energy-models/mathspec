@@ -698,7 +698,7 @@ expressions:
 
 #### Named expression with a declared frame
 
-dims declared in an order of their own, each one the expression is indexed over
+dims declared, each one the expression is indexed over
 
 ```yaml
 expressions:
