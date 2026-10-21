@@ -465,11 +465,11 @@ class TestDimensionKwargs:
             assert fragment in message, message
 
 
-_ENUM = {'dimensions.h': {'enum': ['north', 'south']}}
+_ONE_OF = {'dimensions.h': {'one_of': ['north', 'south']}}
 
 
-class TestADimensionWithAnEnum:
-    """A dimension that lists its labels under ``enum`` refuses a condition naming another (#519).
+class TestADimensionWithOneOf:
+    """A dimension that lists its labels under ``one_of`` refuses a condition naming another (#519).
 
     Before, ``carrier == 'gnrtr'`` loaded and compared equal to nothing, so a
     misspelt label emptied the mask without a word.
@@ -487,10 +487,10 @@ class TestADimensionWithAnEnum:
             pytest.param({'assumptions.west': {'holds': "lk != 'west'"}}, id='an-assumption'),
         ],
     )
-    def test_a_label_not_in_the_enum_is_refused(self, patch):
-        message = _refusal(**_ENUM, **patch)
+    def test_a_label_not_in_one_of_is_refused(self, patch):
+        message = _refusal(**_ONE_OF, **patch)
         assert "'west' is not a label of 'h', which allows only ['north', 'south']" in message, message
-        assert "add 'west' to the enum of 'h'" in message, message
+        assert "add 'west' to the one_of of 'h'" in message, message
 
     @pytest.mark.parametrize(
         'patch',
@@ -499,59 +499,59 @@ class TestADimensionWithAnEnum:
             pytest.param({'variables.p.where': 'lk != south'}, id='a-relation-column'),
         ],
     )
-    def test_a_label_in_the_enum_is_admitted(self, patch):
-        _spec(**_ENUM, **patch)
+    def test_a_label_in_one_of_is_admitted(self, patch):
+        _spec(**_ONE_OF, **patch)
 
     @pytest.mark.parametrize(
         ('entry', 'refusal'),
         [
             pytest.param(
-                {'enum': []},
-                'dimensions.h.enum: lists no label. List at least one, or leave enum out.',
+                {'one_of': []},
+                'dimensions.h.one_of: lists no label. List at least one, or leave one_of out.',
                 id='no-label',
             ),
             pytest.param(
-                {'enum': ['north', 'north']},
-                "dimensions.h.enum: lists 'north' twice. List each label once.",
+                {'one_of': ['north', 'north']},
+                "dimensions.h.one_of: lists 'north' twice. List each label once.",
                 id='a-duplicate',
             ),
             pytest.param(
-                {'enum': [2030, 'north']},
-                "dimensions.h.enum: takes only strings, and 2030 is not one. Quote it: '2030'.",
+                {'one_of': [2030, 'north']},
+                "dimensions.h.one_of: takes only strings, and 2030 is not one. Quote it: '2030'.",
                 id='a-number',
             ),
             pytest.param(
-                {'dtype': 'int', 'enum': ['north']},
-                'dimensions.h.enum: is on a dimension of dtype int, and an enum takes only str labels. '
-                'Write dtype: str, or leave enum out.',
+                {'dtype': 'int', 'one_of': ['north']},
+                'dimensions.h.one_of: is on a dimension of dtype int, and one_of takes only str labels. '
+                'Write dtype: str, or leave one_of out.',
                 id='a-dtype-other-than-str',
             ),
             pytest.param(
-                {'dtype': 'int', 'enum': [2030, 2040]},
-                'dimensions.h.enum: is on a dimension of dtype int, and an enum takes only str labels. '
-                'Write dtype: str, or leave enum out.',
+                {'dtype': 'int', 'one_of': [2030, 2040]},
+                'dimensions.h.one_of: is on a dimension of dtype int, and one_of takes only str labels. '
+                'Write dtype: str, or leave one_of out.',
                 id='int-labels-on-an-int-dimension',
             ),
         ],
     )
-    def test_a_mistake_in_the_enum_is_refused(self, entry, refusal):
+    def test_a_mistake_in_one_of_is_refused(self, entry, refusal):
         assert _refusal(**{'dimensions.h': entry}) == refusal
 
     @pytest.mark.parametrize(
-        ('enum', 'refusal'),
+        ('labels', 'refusal'),
         [
             pytest.param(('north', 'north'), "lists 'north' twice", id='a-duplicate'),
             pytest.param((), 'lists no label', id='no-label'),
         ],
     )
-    def test_an_enum_built_in_python_is_held_to_the_same_rules(self, enum, refusal):
+    def test_a_one_of_built_in_python_is_held_to_the_same_rules(self, labels, refusal):
         """A tuple passed to ``DimensionSpec`` skipped the checks that a YAML list gets, so a duplicate loaded."""
         with pytest.raises(ValidationError, match=refusal):
-            DimensionSpec(enum=enum)
+            DimensionSpec(one_of=labels)
 
-    def test_the_program_carries_the_enum_and_the_dtype_str(self):
-        dimension = _spec(**_ENUM).program.dimensions['h']
-        assert (dimension.dtype, dimension.enum) == ('str', ('north', 'south')), (
+    def test_the_program_carries_one_of_and_the_dtype_str(self):
+        dimension = _spec(**_ONE_OF).program.dimensions['h']
+        assert (dimension.dtype, dimension.one_of) == ('str', ('north', 'south')), (
             'the labels in file order, and str wherever a dtype is read'
         )
 
@@ -562,20 +562,20 @@ class TestADimensionWithAnEnum:
             pytest.param("h > 'north'", 'on which > is not defined', id='an-inequality'),
         ],
     )
-    def test_a_dimension_with_an_enum_keeps_every_str_rule(self, where, refusal):
-        assert refusal in _refusal(**_ENUM, **{'variables.r.where': where})
+    def test_a_dimension_with_one_of_keeps_every_str_rule(self, where, refusal):
+        assert refusal in _refusal(**_ONE_OF, **{'variables.r.where': where})
 
     @pytest.mark.parametrize(
         'entry',
         [
-            pytest.param({'enum': ['north', 'south']}, id='an-enum'),
-            pytest.param({'dtype': 'str'}, id='no-enum'),
+            pytest.param({'one_of': ['north', 'south']}, id='a-one-of'),
+            pytest.param({'dtype': 'str'}, id='no-one-of'),
         ],
     )
     def test_the_spec_written_back_out_reads_as_itself(self, entry):
         spec = _spec(**{'dimensions.h': entry})
         assert to_spec(parse_yaml(spec.to_yaml())) == spec
-        assert ('enum' in spec.to_yaml()) == ('enum' in entry), 'enum is written only where the file lists one'
+        assert ('one_of' in spec.to_yaml()) == ('one_of' in entry), 'one_of is written only where the file lists one'
 
 
 class TestAnUndeclaredKeywordIsRefusedOnce:

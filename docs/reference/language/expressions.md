@@ -282,7 +282,7 @@ order. To compare along the order of a dimension declared `ordered: true`, use
 [`position()`](#position).
 
 A label that no coordinate carries compares equal to nothing. Where the dimension
-lists its labels under [`enum`](dimensions.md#enum), a label that is not in the
+lists its labels under [`one_of`](dimensions.md#one_of), a label that is not in the
 list is a load error.
 
 The language cannot compare two dimensions, so precompute a boolean parameter

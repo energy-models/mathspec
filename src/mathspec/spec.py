@@ -293,7 +293,7 @@ class DimensionSpec(_StrictSpec):
 
     A dimension is an axis and nothing else: it declares that the axis exists
     and what its coordinates are typed as. Which coordinates there are is data,
-    and arrives when the data is attached; an ``enum`` only names the labels a
+    and arrives when the data is attached; a ``one_of`` only names the labels a
     coordinate may have. The maps its members carry — a
     generator's bus, a snapshot's period — are top-level ``relations:``
     ([`RelationSpec`][]), keyed by their own name.
@@ -305,30 +305,30 @@ class DimensionSpec(_StrictSpec):
     #: The labels a ``str`` dimension allows, at least one and each once, in
     #: file order. A condition that compares the dimension, or a relation
     #: column over it, against any other label is refused at load.
-    enum: Annotated[tuple[str, ...], Field(min_length=1, json_schema_extra={'uniqueItems': True})] | None = None
+    one_of: Annotated[tuple[str, ...], Field(min_length=1, json_schema_extra={'uniqueItems': True})] | None = None
     #: Whether the order the data gives the coordinates in is part of the
     #: model. Only an ordered dimension is one a construct may step or count
     #: along; every other one is a set whose row order means nothing.
     ordered: bool = False
     description: str | None = None
 
-    @field_validator('enum', mode='before')
+    @field_validator('one_of', mode='before')
     @classmethod
     def _strings_listed_once(cls, v: object, info: ValidationInfo[object]) -> object:
         """A number or a flag in YAML is not the label its text spells, so it is refused rather than read as one.
 
         The dtype is checked first, so ``dtype: int`` with int labels is told to
-        drop the enum rather than to quote labels that would then be refused.
+        drop one_of rather than to quote labels that would then be refused.
         """
         if v is not None and info.data.get('dtype', 'str') != 'str':
             raise ValueError(
-                f'is on a dimension of dtype {info.data["dtype"]}, and an enum takes only str labels. '
-                'Write dtype: str, or leave enum out.'
+                f'is on a dimension of dtype {info.data["dtype"]}, and one_of takes only str labels. '
+                'Write dtype: str, or leave one_of out.'
             )
         if not isinstance(v, (list, tuple)):
             return v
         if not v:
-            raise ValueError('lists no label. List at least one, or leave enum out.')
+            raise ValueError('lists no label. List at least one, or leave one_of out.')
         if not_text := [label for label in v if not isinstance(label, str)]:
             shown = _as_yaml(not_text[0])
             raise ValueError(f"takes only strings, and {shown} is not one. Quote it: '{shown}'.")
@@ -338,12 +338,12 @@ class DimensionSpec(_StrictSpec):
 
     @model_serializer(mode='wrap')
     def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``ordered`` is written where it is true and ``enum`` where it is listed: leaving either out says the default."""
+        """``ordered`` is written where it is true and ``one_of`` where it is listed: leaving either out says the default."""
         written = cast('dict[str, object]', handler(self))
         if not self.ordered:
             written.pop('ordered', None)
-        if self.enum is None:
-            written.pop('enum', None)
+        if self.one_of is None:
+            written.pop('one_of', None)
         return written
 
 
