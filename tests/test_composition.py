@@ -25,7 +25,7 @@ import yaml
 import mathspec.spec as spec_module
 from mathspec import merge, override, to_markdown, to_spec
 from mathspec._canonical import canonical_yaml
-from mathspec.errors import LanguageError
+from mathspec.errors import LanguageError, SchemaError
 from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, varied
 
 if TYPE_CHECKING:
@@ -667,6 +667,31 @@ def test_a_patch_that_rewrites_a_dimension_is_refused(patch, says):
     with pytest.raises(LanguageError) as raised:
         override(DISPATCH_MODEL, [patch])
     assert says in str(raised.value), 'the refusal names the rewrite rather than only what is wrong'
+
+
+@pytest.mark.parametrize(
+    'restated',
+    [
+        pytest.param({}, id='no-field'),
+        pytest.param({'values': 'bus'}, id='no-key'),
+        pytest.param({'key': 'port'}, id='the-key-alone'),
+    ],
+)
+def test_a_patch_that_restates_a_relation_in_part_is_refused_with_the_rewrite(restated):
+    """A relation the schema refuses on its own was refused by the schema, without the patch or the rewrite.
+
+    `relations: {port_bus: {}}` failed with `key: Field required`, where the same entry under
+    `dimensions:` names the patch and says how to restate the entry.
+    """
+    with pytest.raises(LanguageError, match=r"patch '#1' declares the relation 'port_bus'") as raised:
+        override(SURFACE, [{'relations': {'port_bus': restated}}])
+    assert 'Restate the relation as its base declares it' in str(raised.value), 'the refusal names the rewrite'
+
+
+def test_a_misspelled_key_in_a_restated_relation_names_the_key_it_meant():
+    """A restatement that misspells a key is a typo, not a second declaration, so the near-miss is named."""
+    with pytest.raises(SchemaError, match=r"unknown key 'kye' in a relation entry. Did you mean 'key'\?"):
+        override(SURFACE, [{'relations': {'port_bus': {'kye': 'port', 'values': 'bus'}}}])
 
 
 #: `SURFACE` with `port_bus` declared `missing: absent`.

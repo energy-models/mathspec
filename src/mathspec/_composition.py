@@ -105,7 +105,7 @@ from pydantic import BaseModel, ValidationError
 
 from mathspec._validation import to_spec
 from mathspec._yaml import read_spec
-from mathspec.errors import LanguageError, did_you_mean, schema_error
+from mathspec.errors import LanguageError, SchemaError, did_you_mean, schema_error
 from mathspec.program import variables_of
 from mathspec.spec import GivenSpec, Spec
 
@@ -276,6 +276,23 @@ def _same(owner: type[BaseModel], section: str, a: object, b: object, *, aside: 
     """
     x, y = _read(owner, section, a), _read(owner, section, b)
     return all(getattr(x, f) == getattr(y, f) for f in type(x).model_fields if f not in aside)
+
+
+def _restates(section: str, declared: object, restated: dict[str, object], *, aside: frozenset[str]) -> bool:
+    """Whether a patch's *restated* fields declare an entry as *declared* does, each field in *aside* apart.
+
+    A restatement the schema refuses on its own, such as a relation with no
+    ``key:``, does not say what the base says, so the patch's refusal names
+    the rewrite. A key the schema does not know stays a schema error, which
+    names the near-miss.
+    """
+    known = restated.keys() <= _entry_class(Spec, section).model_fields.keys()
+    try:
+        return _same(Spec, section, declared, restated, aside=aside)
+    except SchemaError:
+        if not known:
+            raise
+        return False
 
 
 def _agreed(
@@ -862,7 +879,7 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
             )
         if changed and not restated:
             continue
-        if not _same(Spec, section, out[key], restated, aside=changeable):
+        if not _restates(section, out[key], restated, aside=changeable):
             fields = ' and '.join(f'`{f}`' for f in sorted(changeable))
             raise LanguageError(
                 f"patch '{name}' declares the {singular} '{key}' as {entry!r}, where its base "
