@@ -13,6 +13,13 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(language)!: a missing row reads as the value the file names, and `missing: neutral` is gone ([#894](https://github.com/energy-models/mathspec/pull/894))
+- feat(program): each expression node states the dimensions it is read over ([#899](https://github.com/energy-models/mathspec/pull/899))
+- fix(language): two files that declare their dimensions in different orders load to the same program by sorting dimension lists by name ([#911](https://github.com/energy-models/mathspec/pull/911))
+- refactor(language)!: a file names a condition under `conditions:` rather than `masks:` ([#907](https://github.com/energy-models/mathspec/pull/907))
+- refactor(api)!: the docs, the error messages and the program classes call a true-or-false `where` expression a condition rather than a predicate ([#904](https://github.com/energy-models/mathspec/pull/904))
+- fix(language)!: a named expression whose `dims:` gives a dimension its expression is not indexed over is refused at load ([#898](https://github.com/energy-models/mathspec/pull/898))
+- docs: the compose guide says how to add or remove a term on a merged spec ([#901](https://github.com/energy-models/mathspec/pull/901))
+- fix(composition): a fragment returned by `override` merges as the file it came from does ([#900](https://github.com/energy-models/mathspec/pull/900))
 - docs: the changelog is listed under Reference rather than About ([#895](https://github.com/energy-models/mathspec/pull/895))
 - docs(pypsa): an extendable unit has a capacity to choose exactly where its active flag is set, as in PyPSA ([#886](https://github.com/energy-models/mathspec/pull/886))
 - refactor(api)!: a module outside spec, program and errors has a name that starts with an underscore ([#878](https://github.com/energy-models/mathspec/pull/878))

@@ -260,12 +260,12 @@ expressions:
     expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period[period]), over=line)
     adds_to: Cycle_angle_sum
 
-masks:
+conditions:
   Line_lossy:
     description: >-
       a line that stands in the snapshot's period, where the run models
       transmission losses
-    where: transmission_losses AND Line_active
+    condition: transmission_losses AND Line_active
 
 constraints:
   Line_fix_s_lower:
@@ -406,11 +406,11 @@ constraints:
 | $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$, $`0`$ where the data has no row — the line's capital cost where its carrier is in the row's set, times the objective weights of the periods it stands in where the row names no `investment_period` under `multi_investment_periods` — data prep; a line outside the set, or one that does not stand in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Line_capital_cost` without `fom_cost` (`components.py:1151-1169`, `global_constraints.py:870-879`) |
 | $`\mathrm{m}^{l}`$ | `Line_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{K}`$, $`0`$ where the data has no row — one where the line is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{on}^{s,\mathrm{lossy}}`$ | `Line_lossy` over $`\mathcal{T} \times \mathcal{K}`$ — a line that stands in the snapshot's period, where the run models transmission losses |
+| $`\mathrm{on}^{s,\mathrm{lossy}}`$ | `Line_lossy` over $`\mathcal{K} \times \mathcal{T}`$ — a line that stands in the snapshot's period, where the run models transmission losses |
 
 #### Variables
 
@@ -425,21 +425,21 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{Line\_transmission\_volume\_expansion}`$ | `Line_transmission_volume_expansion` over $`\Xi \times \mathcal{G}`$ |
-| $`\mathit{Line\_transmission\_expansion\_cost}`$ | `Line_transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$ |
+| $`\mathit{Line\_transmission\_volume\_expansion}`$ | `Line_transmission_volume_expansion` over $`\mathcal{G} \times \Xi`$ |
+| $`\mathit{Line\_transmission\_expansion\_cost}`$ | `Line_transmission_expansion_cost` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{Line\_tech\_capacity\_expansion}`$ | `Line_tech_capacity_expansion` over $`\mathcal{G}`$ |
 | $`\mathit{Line\_capex}`$ | `Line_capex` (scalar) |
-| $`\mathit{Line\_additions}`$ | `Line_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
+| $`\mathit{Line\_additions}`$ | `Line_additions` over $`\mathcal{I} \times \mathcal{Y}`$ |
 | $`\check{s}`$ | `Line_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the flow a line's post-contingency rows read — its flow where it stands, nothing where it does not, since PyPSA builds those rows for every branch of the sub-network in every snapshot |
-| $`\mathit{Line\_injection}`$ | `Line_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
-| $`\mathit{Line\_angle\_sum}`$ | `Line_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ |
+| $`\mathit{Line\_injection}`$ | `Line_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ |
+| $`\mathit{Line\_angle\_sum}`$ | `Line_angle_sum` over $`\mathcal{C} \times \Xi \times \mathcal{T}`$ |
 
-#### Masks
+#### Conditions
 
 **`Line_lossy`**
 
 ```math
-\mathrm{on}^{s,\mathrm{lossy}}_{t,k} \iff \mathrm{lossy} \wedge \mathrm{on}^{s}_{t,k} \qquad \forall\, t \in \mathcal{T},\ k \in \mathcal{K}
+\mathrm{on}^{s,\mathrm{lossy}}_{k,t} \iff \mathrm{lossy} \wedge \mathrm{on}^{s}_{t,k} \qquad \forall\, k \in \mathcal{K},\ t \in \mathcal{T}
 ```
 
 #### Variable domains
@@ -453,7 +453,7 @@ s_{\xi,t,k} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k 
 **`Line_loss`**
 
 ```math
-\ell_{\xi,t,k} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{t,k}
+\ell_{\xi,t,k} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{k,t}
 ```
 
 **`Line_s_nom_ext`**
@@ -473,13 +473,13 @@ N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:
 **`Line_transmission_volume_expansion`**
 
 ```math
-\mathit{Line\_transmission\_volume\_expansion}_{\xi,g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{len}_{\xi,g,k} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+\mathit{Line\_transmission\_volume\_expansion}_{g,\xi} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{len}_{\xi,g,k} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`Line_transmission_expansion_cost`**
 
 ```math
-\mathit{Line\_transmission\_expansion\_cost}_{\xi,g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{cc}_{\xi,g,k} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+\mathit{Line\_transmission\_expansion\_cost}_{g,\xi} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{cc}_{\xi,g,k} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`Line_tech_capacity_expansion`**
@@ -497,7 +497,7 @@ N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:
 **`Line_additions`**
 
 ```math
-\mathit{Line\_additions}_{y,i} = \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_carrier}(k) = i} S_{k} \cdot \mathrm{new}^{s}_{y,k} \qquad \forall\, y \in \mathcal{Y},\ i \in \mathcal{I}
+\mathit{Line\_additions}_{i,y} = \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_carrier}(k) = i} S_{k} \cdot \mathrm{new}^{s}_{y,k} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 **`Line_s_monitored`**
@@ -509,13 +509,13 @@ N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:
 **`Line_injection`**
 
 ```math
-\mathit{Line\_injection}_{\xi,t,n} = -\left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} s_{\xi,t,k} \right) + \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} s_{\xi,t,k} - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} \ell_{\xi,t,k} \right) - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} \ell_{\xi,t,k} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+\mathit{Line\_injection}_{n,\xi,t} = -\left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} s_{\xi,t,k} \right) + \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} s_{\xi,t,k} - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} \ell_{\xi,t,k} \right) - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} \ell_{\xi,t,k} \right) \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Line_angle_sum`**
 
 ```math
-\mathit{Line\_angle\_sum}_{\xi,t,c} = \sum_{k \in \mathcal{K}} s_{\xi,t,k} \cdot \mathrm{x}_{\mathrm{snapshot\_period}(t),k,c} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
+\mathit{Line\_angle\_sum}_{c,\xi,t} = \sum_{k \in \mathcal{K}} s_{\xi,t,k} \cdot \mathrm{x}_{\mathrm{snapshot\_period}(t),k,c} \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Subject to
@@ -589,18 +589,18 @@ s_{\xi,t,k} \le \frac{\overline{\delta}_{\xi,k} \cdot \frac{3.141592653589793}{1
 **`Line_loss_upper`**
 
 ```math
-\ell_{\xi,t,k} \le \overline{\ell}_{\xi,t,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{t,k}
+\ell_{\xi,t,k} \le \overline{\ell}_{\xi,t,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{k,t}
 ```
 
 **`Line_loss_tangents_forward`**
 
 ```math
-\ell_{\xi,t,k} + \mathrm{a}_{\xi,t,k,e} \cdot s_{\xi,t,k} \ge \mathrm{b}_{\xi,t,k,e} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ e \in \mathcal{E} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{t,k}
+\ell_{\xi,t,k} + \mathrm{a}_{\xi,t,k,e} \cdot s_{\xi,t,k} \ge \mathrm{b}_{\xi,t,k,e} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ e \in \mathcal{E} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{k,t}
 ```
 
 **`Line_loss_tangents_reverse`**
 
 ```math
-\ell_{\xi,t,k} - \mathrm{a}_{\xi,t,k,e} \cdot s_{\xi,t,k} \ge \mathrm{b}_{\xi,t,k,e} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ e \in \mathcal{E} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{t,k}
+\ell_{\xi,t,k} - \mathrm{a}_{\xi,t,k,e} \cdot s_{\xi,t,k} \ge \mathrm{b}_{\xi,t,k,e} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ e \in \mathcal{E} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{k,t}
 ```
 <!-- gallery:end -->

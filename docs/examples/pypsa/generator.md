@@ -237,12 +237,12 @@ expressions:
     expression: sum(Generator_sign * Generator_p, over=generator, by=Generator_bus[bus])
     adds_to: Bus_injection
 
-masks:
+conditions:
   Generator_committed:
     description: >-
       a committable generator that stands in the snapshot's period — every
       unit-commitment row's set
-    where: Generator_committable AND Generator_active
+    condition: Generator_committable AND Generator_active
 
 constraints:
   Generator_fix_p_lower:
@@ -375,11 +375,11 @@ assumptions:
 | $`\mathrm{b}`$ | `Generator_operational_limit_weight` over $`\Xi \times \mathcal{L} \times \mathcal{G}`$, $`0`$ where the data has no row — one where the generator is in the row's set — data prep; one outside it has no row |
 | $`\mathrm{m}`$ | `Generator_tech_capacity_weight` over $`\mathcal{L} \times \mathcal{G}`$, $`0`$ where the data has no row — one where the generator is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{T} \times \mathcal{G}`$ — a committable generator that stands in the snapshot's period — every unit-commitment row's set |
+| $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{G} \times \mathcal{T}`$ — a committable generator that stands in the snapshot's period — every unit-commitment row's set |
 
 #### Variables
 
@@ -395,20 +395,20 @@ assumptions:
 |---|---|
 | $`\widetilde{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_effective` over $`\Xi \times \mathcal{G}`$ — the build a generator's limits are taken against — the chosen one where it is extendable, the given one otherwise |
 | $`\widehat{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_committed` over $`\Xi \times \mathcal{G}`$ — the build a committed unit's ramp rows are taken against — one module where the build is extendable and modular, the given build otherwise |
-| $`\mathit{Generator\_primary\_energy}`$ | `Generator_primary_energy` over $`\Xi \times \mathcal{L}`$ |
-| $`\mathit{Generator\_operational\_limit}`$ | `Generator_operational_limit` over $`\Xi \times \mathcal{L}`$ |
+| $`\mathit{Generator\_primary\_energy}`$ | `Generator_primary_energy` over $`\mathcal{L} \times \Xi`$ |
+| $`\mathit{Generator\_operational\_limit}`$ | `Generator_operational_limit` over $`\mathcal{L} \times \Xi`$ |
 | $`\mathit{Generator\_tech\_capacity\_expansion}`$ | `Generator_tech_capacity_expansion` over $`\mathcal{L}`$ |
 | $`\mathit{Generator\_opex}`$ | `Generator_opex` over $`\Xi`$ |
 | $`\mathit{Generator\_capex}`$ | `Generator_capex` (scalar) |
-| $`\mathit{Generator\_additions}`$ | `Generator_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
-| $`\mathit{Generator\_injection}`$ | `Generator_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
+| $`\mathit{Generator\_additions}`$ | `Generator_additions` over $`\mathcal{I} \times \mathcal{Y}`$ |
+| $`\mathit{Generator\_injection}`$ | `Generator_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ |
 
-#### Masks
+#### Conditions
 
 **`Generator_committed`**
 
 ```math
-\mathrm{on}^{\mathrm{com}}_{t,g} \iff \mathrm{com}_{g} \wedge \mathrm{on}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathrm{on}^{\mathrm{com}}_{g,t} \iff \mathrm{com}_{g} \wedge \mathrm{on}_{t,g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Variable domains
@@ -448,13 +448,13 @@ P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \
 **`Generator_primary_energy`**
 
 ```math
-\mathit{Generator\_primary\_energy}_{\xi,l} = \sum_{g \in \mathcal{G}} \sum_{t \in \mathcal{T}} p_{\xi,t,g} \cdot \mathit{w}^{\mathrm{gc}}_{\xi,l,t} \cdot \mathrm{a}_{\xi,l,t,g} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L}
+\mathit{Generator\_primary\_energy}_{l,\xi} = \sum_{g \in \mathcal{G}} \sum_{t \in \mathcal{T}} p_{\xi,t,g} \cdot \mathit{w}^{\mathrm{gc}}_{\xi,l,t} \cdot \mathrm{a}_{\xi,l,t,g} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi
 ```
 
 **`Generator_operational_limit`**
 
 ```math
-\mathit{Generator\_operational\_limit}_{\xi,l} = \sum_{g \in \mathcal{G}} \sum_{t \in \mathcal{T}} p_{\xi,t,g} \cdot \mathit{w}^{\mathrm{gc}}_{\xi,l,t} \cdot \mathrm{b}_{\xi,l,g} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L}
+\mathit{Generator\_operational\_limit}_{l,\xi} = \sum_{g \in \mathcal{G}} \sum_{t \in \mathcal{T}} p_{\xi,t,g} \cdot \mathit{w}^{\mathrm{gc}}_{\xi,l,t} \cdot \mathrm{b}_{\xi,l,g} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi
 ```
 
 **`Generator_tech_capacity_expansion`**
@@ -478,13 +478,13 @@ P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \
 **`Generator_additions`**
 
 ```math
-\mathit{Generator\_additions}_{y,i} = \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_carrier}(g) = i} P_{g} \cdot \mathrm{new}_{y,g} \qquad \forall\, y \in \mathcal{Y},\ i \in \mathcal{I}
+\mathit{Generator\_additions}_{i,y} = \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_carrier}(g) = i} P_{g} \cdot \mathrm{new}_{y,g} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 **`Generator_injection`**
 
 ```math
-\mathit{Generator\_injection}_{\xi,t,n} = \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_bus}(g) = n} \mathrm{sgn}_{g} \cdot p_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+\mathit{Generator\_injection}_{n,\xi,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_bus}(g) = n} \mathrm{sgn}_{g} \cdot p_{\xi,t,g} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Subject to

@@ -92,7 +92,7 @@ expressions:
 | Symbol | Meaning |
 |---|---|
 | $`\check{\mathrm{load}}`$ | `Load_demand` over $`\Xi \times \mathcal{T} \times \mathcal{D}`$ — what a load draws from its bus's balance — its demand times its sign where it is active, nothing where it is not, since PyPSA drops an inactive load from the balance (`constraints.py:1513-1514`) |
-| $`\mathrm{Load\_injection}`$ | `Load_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
+| $`\mathrm{Load\_injection}`$ | `Load_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ |
 
 #### Definitions
 
@@ -105,6 +105,6 @@ expressions:
 **`Load_injection`**
 
 ```math
-\mathrm{Load\_injection}_{\xi,t,n} = \sum_{d \in \mathcal{D} \,:\, \mathrm{Load\_bus}(d) = n} \check{\mathrm{load}}_{\xi,t,d} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+\mathrm{Load\_injection}_{n,\xi,t} = \sum_{d \in \mathcal{D} \,:\, \mathrm{Load\_bus}(d) = n} \check{\mathrm{load}}_{\xi,t,d} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->

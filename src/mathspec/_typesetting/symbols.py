@@ -102,8 +102,8 @@ class Symbols:
     ``p`` is not a collision.
 
     Attributes:
-        name: Each parameter's, variable's, expression's and mask's symbol.
-            A mask is upright, being read off the data as a parameter is.
+        name: Each parameter's, variable's, expression's and named condition's symbol.
+            A named condition is upright, being read off the data as a parameter is.
         constraint: Each constraint's symbol, the subscript ``dual(c)`` prints
             λ against. Off the flat namespace, like the constraints themselves
             — a spec may name a constraint after a variable, so this is its
@@ -144,8 +144,8 @@ def symbols_for(program: Program, fmt: Format, table: SymbolTable) -> Symbols:
         *program.given.variables,
         *program.expressions,
         *program.given.expressions,
-        *program.masks,
-        *program.given.masks,
+        *program.conditions,
+        *program.given.conditions,
     )
     declared = frozenset(names)
 
@@ -291,8 +291,8 @@ def _declared(program: Program) -> set[str]:
         | set(program.given.variables)
         | set(program.expressions)
         | set(program.given.expressions)
-        | set(program.masks)
-        | set(program.given.masks)
+        | set(program.conditions)
+        | set(program.given.conditions)
         | set(program.constraints)
         | set(program.given.constraints)
     )

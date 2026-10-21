@@ -17,6 +17,11 @@ from pathlib import Path
 import pytest
 
 import mathspec.program as program_module
+from mathspec._condition_parser import (
+    ColumnNode,
+    UnresolvedComparisonNode,
+    parse_condition,
+)
 from mathspec._expression_parser import (
     BinaryOperatorNode,
     ColumnsNode,
@@ -28,11 +33,6 @@ from mathspec._expression_parser import (
     NumberNode,
     UnaryOperatorNode,
     parse_expression,
-)
-from mathspec._where_parser import (
-    ColumnNode,
-    UnresolvedComparisonNode,
-    parse_where,
 )
 from mathspec.errors import SchemaError
 from mathspec.program import (
@@ -51,7 +51,7 @@ def test_the_grammar_builds_the_program_s_own_node_classes():
     consumer's `isinstance` against the program's classes holds on any tree —
     two homes for `And` would make it hold on neither.
     """
-    tree = parse_where('a AND NOT b OR True')
+    tree = parse_condition('a AND NOT b OR True')
     assert type(tree) is program_module.Or
     assert type(tree.left) is program_module.And
     assert type(tree.left.right) is program_module.Not
@@ -231,14 +231,14 @@ def test_a_list_the_grammar_cannot_read_is_refused_at_load(text):
 )
 def test_scientific_notation_is_a_number(text, value):
     assert parse_expression(text) == NumberNode(value)
-    assert parse_where(f'p > {text}').right == NumberNode(value), 'a where side is the expression grammar'
+    assert parse_condition(f'p > {text}').right == NumberNode(value), 'a where side is the expression grammar'
 
 
 @pytest.mark.parametrize('spelling', ['inf', '.inf'])
 def test_inf_is_a_literal(spelling):
     """Both spellings, since `bounds: {upper: .inf}` is how YAML writes it."""
     assert parse_expression(f'p <= {spelling}').right == NumberNode(float('inf'))
-    assert parse_where(f'p < {spelling}').right == NumberNode(float('inf')), 'and a where reads it as one too'
+    assert parse_condition(f'p < {spelling}').right == NumberNode(float('inf')), 'and a where reads it as one too'
 
 
 @pytest.mark.parametrize('name', ['inflow', 'influx', 'infeed', 'infrastructure', 'inf_max'])
@@ -261,14 +261,14 @@ def test_a_name_may_begin_with_inf(name):
 def test_a_where_string_parses_to_its_node(text, node_type, attrs):
     """A bare name parses to an existence check; what it *names* is
     resolution's problem, not the parser's."""
-    node = parse_where(text)
+    node = parse_condition(text)
     assert isinstance(node, node_type)
     for attr, expected in attrs.items():
         assert getattr(node, attr) == expected
 
 
 def test_and_binds_tighter_than_or():
-    assert parse_where('a OR b AND c') == Or(NameNode('a'), And(NameNode('b'), NameNode('c')))
+    assert parse_condition('a OR b AND c') == Or(NameNode('a'), And(NameNode('b'), NameNode('c')))
 
 
 @pytest.mark.parametrize(
@@ -285,7 +285,7 @@ def test_conjuncts_flattens_the_and_spine(text, expected):
 
     `_conjuncts` is the one home of the flatten rule; `Mask.conjuncts` is the
     door a consumer asks it through."""
-    assert [n.name for n in _conjuncts(parse_where(text))] == expected
+    assert [n.name for n in _conjuncts(parse_condition(text))] == expected
 
 
 @pytest.mark.parametrize(
@@ -294,8 +294,8 @@ def test_conjuncts_flattens_the_and_spine(text, expected):
     ids=['or', 'not', 'or-of-and', 'not-of-and'],
 )
 def test_conjuncts_does_not_split_or_or_not(text):
-    result = _conjuncts(parse_where(text))
-    assert result == (parse_where(text),), 'a non-AND top node is its own only conjunct'
+    result = _conjuncts(parse_condition(text))
+    assert result == (parse_condition(text),), 'a non-AND top node is its own only conjunct'
 
 
 @pytest.mark.parametrize(
@@ -314,20 +314,20 @@ def test_conjuncts_does_not_split_or_or_not(text):
 def test_a_quoted_right_hand_side_is_a_label(text, right):
     """Quoting says "label, not name" (#460): unquoted, `combined-cycle` or `CCGT 400MW` was
     unsayable, and a bare word may name an entry."""
-    node = parse_where(text)
+    node = parse_condition(text)
     assert isinstance(node, UnresolvedComparisonNode)
     assert node.right == right
 
 
 def test_a_relation_column_is_named_in_brackets():
     """`ends[bus0]` names a column on a where side, and a side reads one column, so a list of them is refused."""
-    assert parse_where('ends[bus0] != ends[bus1]') == UnresolvedComparisonNode(
+    assert parse_condition('ends[bus0] != ends[bus1]') == UnresolvedComparisonNode(
         ColumnNode('ends', 'bus0'), '!=', ColumnNode('ends', 'bus1')
     )
-    with pytest.raises(SchemaError, match='Cannot parse the where string'):
-        parse_where('ends[bus0] + 1 > 0')
+    with pytest.raises(SchemaError, match='Cannot parse the condition'):
+        parse_condition('ends[bus0] + 1 > 0')
     with pytest.raises(SchemaError, match=r'Compare each column on its own: ends\[bus0\] == … AND ends\[bus1\] == …'):
-        parse_where("ends[bus0, bus1] == 'x'")
+        parse_condition("ends[bus0, bus1] == 'x'")
 
 
 @pytest.mark.parametrize(
@@ -369,7 +369,7 @@ def test_a_column_selection_names_one_relation_and_its_columns(text, columns):
 def test_position_is_a_call_on_the_left_hand_side(text, op, right, kwargs):
     """`position(dim)` is the left-hand side, so every comparator reads one way (#32), and it arrives as the
     call the expression grammar builds; what its arguments may be is resolution's to say."""
-    node = parse_where(text)
+    node = parse_condition(text)
     assert isinstance(node, UnresolvedComparisonNode)
     assert node.left == FunctionCallNode('position', (NameNode('snapshot'),), kwargs)
     assert node.op == op
@@ -391,17 +391,17 @@ def test_position_is_a_call_on_the_left_hand_side(text, op, right, kwargs):
 def test_a_side_is_any_arithmetic_to_the_grammar(text):
     """The grammar hands both sides over bare; what the language admits on a side is decided in resolution,
     where the spec is (`TestAWhereSideIsReadInResolution`)."""
-    assert isinstance(parse_where(text), UnresolvedComparisonNode)
+    assert isinstance(parse_condition(text), UnresolvedComparisonNode)
 
 
-def test_a_bracketed_predicate_is_still_a_predicate():
+def test_a_bracketed_condition_is_still_a_condition():
     """`(a > 0) AND b` groups a comparison; only `(a + b) <= c` brackets arithmetic."""
-    assert isinstance(parse_where('(a > 0) AND b'), And)
+    assert isinstance(parse_condition('(a > 0) AND b'), And)
 
 
 def test_a_where_side_is_held_to_the_depth_an_expression_is():
     with pytest.raises(SchemaError, match='nests 121 deep'):
-        parse_where(' + '.join(['p'] * 120) + ' > 0')
+        parse_condition(' + '.join(['p'] * 120) + ' > 0')
 
 
 @pytest.mark.parametrize(
@@ -411,26 +411,26 @@ def test_a_where_side_is_held_to_the_depth_an_expression_is():
         pytest.param('p_max > 0 && committable', r'Write AND', id='doubled-ampersand'),
         pytest.param('p_max > 0 | committable', r'Write OR', id='pipe'),
         pytest.param('p_max > 0 || committable', r'Write OR', id='doubled-pipe'),
-        pytest.param('~committable', r'Write NOT before the predicate', id='tilde'),
-        pytest.param('!committable', r'Write NOT before the predicate', id='bang'),
+        pytest.param('~committable', r'Write NOT before the condition', id='tilde'),
+        pytest.param('!committable', r'Write NOT before the condition', id='bang'),
         pytest.param('status = 0', r'is not a comparison. Write ==', id='a-lone-equals'),
     ],
 )
 def test_a_where_parse_failure_names_the_rewrite(text, rewrite):
     """The connective habits of pandas and C are refused with their rewrite, not the grammar's complaint alone."""
     with pytest.raises(SchemaError, match=rewrite):
-        parse_where(text)
+        parse_condition(text)
 
 
 def test_a_legal_where_operator_is_never_diagnosed():
-    """`!=`, `<` and `>` are predicates here, unlike on the expression side, so no diagnosis may fire on them."""
-    assert parse_where('status != 0') == UnresolvedComparisonNode(NameNode('status'), '!=', NumberNode(0.0))
-    assert parse_where('p_max < 5') == UnresolvedComparisonNode(NameNode('p_max'), '<', NumberNode(5.0))
+    """`!=`, `<` and `>` are conditions here, unlike on the expression side, so no diagnosis may fire on them."""
+    assert parse_condition('status != 0') == UnresolvedComparisonNode(NameNode('status'), '!=', NumberNode(0.0))
+    assert parse_condition('p_max < 5') == UnresolvedComparisonNode(NameNode('p_max'), '<', NumberNode(5.0))
 
 
 def test_an_unrelated_parse_failure_says_nothing_about_positions():
     with pytest.raises(SchemaError) as excinfo:
-        parse_where('p_max >')
+        parse_condition('p_max >')
     assert 'position()' not in str(excinfo.value)
 
 
@@ -438,7 +438,7 @@ def test_a_string_parses_to_one_shared_tree():
     """Drop the memo and this passes on `==` alone — `is` is the claim."""
     text = 'sum(p * cost, over=generator) == load'
     assert parse_expression(text) is parse_expression(text), 'the same expression string parses to one tree'
-    assert parse_where('p_max > 0') is parse_where('p_max > 0'), 'and so does the same where string'
+    assert parse_condition('p_max > 0') is parse_condition('p_max > 0'), 'and so does the same where string'
 
 
 def test_a_parse_failure_is_raised_every_time_it_is_asked_for():
@@ -464,7 +464,7 @@ def test_a_parse_failure_is_raised_every_time_it_is_asked_for():
             id='parentheses-nested-past-the-parser',
         ),
         pytest.param(
-            ' AND '.join(['p'] * 400), parse_where, r'carrying part of the test', id='a-long-chain-of-predicates'
+            ' AND '.join(['p'] * 400), parse_condition, r'carrying part of the test', id='a-long-chain-of-conditions'
         ),
     ],
 )

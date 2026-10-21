@@ -22,7 +22,7 @@ variables:
 With `capacity = {wind: 10, gas: 5, old: 0}`, the model has `dispatch[wind]` and
 `dispatch[gas]`, but no `dispatch[old]`.
 
-The [`where` grammar](expressions.md#where-strings) says what a `where:` may
+The [condition grammar](expressions.md#conditions) says what a `where:` may
 hold.
 
 ## What creates absence

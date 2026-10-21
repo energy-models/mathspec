@@ -289,12 +289,12 @@ expressions:
       + sum(Link_output_arrival, over=link_output, by=Link_output_bus[bus])
     adds_to: Bus_injection
 
-masks:
+conditions:
   Link_committed:
     description: >-
       a committable link that stands in the snapshot's period — every
       unit-commitment row's set
-    where: Link_committable AND Link_active
+    condition: Link_committable AND Link_active
 
 constraints:
   Link_fix_p_lower:
@@ -427,11 +427,11 @@ assumptions:
 | $`\mathrm{cc}^{f}`$ | `Link_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{L}`$, $`0`$ where the data has no row — the link's capital cost where its carrier is in the row's set, times the objective weights of the periods it stands in where the row names no `investment_period` under `multi_investment_periods` — data prep; a link outside the set, or one that does not stand in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Link_capital_cost` without `fom_cost` (`components.py:1151-1169`, `global_constraints.py:870-879`) |
 | $`\mathrm{m}^{f}`$ | `Link_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{L}`$, $`0`$ where the data has no row — one where the link is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
 
-#### Masks
+#### Conditions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{T} \times \mathcal{L}`$ — a committable link that stands in the snapshot's period — every unit-commitment row's set |
+| $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{L} \times \mathcal{T}`$ — a committable link that stands in the snapshot's period — every unit-commitment row's set |
 
 #### Variables
 
@@ -448,13 +448,13 @@ assumptions:
 | $`\widetilde{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_effective` over $`\Xi \times \mathcal{L}`$ — the build a link's limits are taken against — the chosen one where it is extendable, the given one otherwise |
 | $`\widehat{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_committed` over $`\Xi \times \mathcal{L}`$ — the build a committed link's ramp rows are taken against — one module where the build is extendable and modular, the given build otherwise |
 | $`\overrightarrow{f}`$ | `Link_output_arrival` over $`\Xi \times \mathcal{T} \times \mathcal{O}`$ — what a link delivers to an output port at a snapshot — its flow delayed by the port's `delay` within its investment period, times the port's efficiency at the snapshot the flow arrives; where the port is `cyclic_delay` the delayed flow wraps from the period's end, and where it is not the flow still in transit at the period's first snapshots is lost. A port that does not delay (`delay` zero) delivers its flow unshifted, cyclic or not |
-| $`\mathit{Link\_transmission\_volume\_expansion}`$ | `Link_transmission_volume_expansion` over $`\Xi \times \mathcal{G}`$ |
-| $`\mathit{Link\_transmission\_expansion\_cost}`$ | `Link_transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$ |
+| $`\mathit{Link\_transmission\_volume\_expansion}`$ | `Link_transmission_volume_expansion` over $`\mathcal{G} \times \Xi`$ |
+| $`\mathit{Link\_transmission\_expansion\_cost}`$ | `Link_transmission_expansion_cost` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{Link\_tech\_capacity\_expansion}`$ | `Link_tech_capacity_expansion` over $`\mathcal{G}`$ |
 | $`\mathit{Link\_opex}`$ | `Link_opex` over $`\Xi`$ |
 | $`\mathit{Link\_capex}`$ | `Link_capex` (scalar) |
-| $`\mathit{Link\_additions}`$ | `Link_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
-| $`\mathit{Link\_injection}`$ | `Link_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
+| $`\mathit{Link\_additions}`$ | `Link_additions` over $`\mathcal{I} \times \mathcal{Y}`$ |
+| $`\mathit{Link\_injection}`$ | `Link_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ |
 
 #### Notation
 
@@ -464,12 +464,12 @@ assumptions:
 | $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
 | $`t \ominus^{\mathrm{relation}(t)} k`$ | `within=relation[...]` — $`t-k`$ inside the group of $`t`$ |
 
-#### Masks
+#### Conditions
 
 **`Link_committed`**
 
 ```math
-\mathrm{on}^{f,\mathrm{com}}_{t,l} \iff \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, t \in \mathcal{T},\ l \in \mathcal{L}
+\mathrm{on}^{f,\mathrm{com}}_{l,t} \iff \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, l \in \mathcal{L},\ t \in \mathcal{T}
 ```
 
 #### Variable domains
@@ -515,13 +515,13 @@ F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{
 **`Link_transmission_volume_expansion`**
 
 ```math
-\mathit{Link\_transmission\_volume\_expansion}_{\xi,g} = \sum_{l \in \mathcal{L}} F_{l} \cdot \mathrm{len}^{f}_{\xi,g,l} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+\mathit{Link\_transmission\_volume\_expansion}_{g,\xi} = \sum_{l \in \mathcal{L}} F_{l} \cdot \mathrm{len}^{f}_{\xi,g,l} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`Link_transmission_expansion_cost`**
 
 ```math
-\mathit{Link\_transmission\_expansion\_cost}_{\xi,g} = \sum_{l \in \mathcal{L}} F_{l} \cdot \mathrm{cc}^{f}_{\xi,g,l} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+\mathit{Link\_transmission\_expansion\_cost}_{g,\xi} = \sum_{l \in \mathcal{L}} F_{l} \cdot \mathrm{cc}^{f}_{\xi,g,l} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`Link_tech_capacity_expansion`**
@@ -545,13 +545,13 @@ F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{
 **`Link_additions`**
 
 ```math
-\mathit{Link\_additions}_{y,i} = \sum_{l \in \mathcal{L} \,:\, \mathrm{Link\_carrier}(l) = i} F_{l} \cdot \mathrm{new}^{f}_{y,l} \qquad \forall\, y \in \mathcal{Y},\ i \in \mathcal{I}
+\mathit{Link\_additions}_{i,y} = \sum_{l \in \mathcal{L} \,:\, \mathrm{Link\_carrier}(l) = i} F_{l} \cdot \mathrm{new}^{f}_{y,l} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 **`Link_injection`**
 
 ```math
-\mathit{Link\_injection}_{\xi,t,n} = -\left( \sum_{l \in \mathcal{L} \,:\, \mathrm{Link\_bus0}(l) = n} f_{\xi,t,l} \right) + \sum_{o \in \mathcal{O} \,:\, \mathrm{Link\_output\_bus}(o) = n} \overrightarrow{f}_{\xi,t,o} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+\mathit{Link\_injection}_{n,\xi,t} = -\left( \sum_{l \in \mathcal{L} \,:\, \mathrm{Link\_bus0}(l) = n} f_{\xi,t,l} \right) + \sum_{o \in \mathcal{O} \,:\, \mathrm{Link\_output\_bus}(o) = n} \overrightarrow{f}_{\xi,t,o} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Subject to

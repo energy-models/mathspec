@@ -149,8 +149,8 @@ def test_a_special_ordered_set_prints_the_line_the_document_prints_for_it():
     spec = to_spec(EXAMPLES / 'sos.yaml').expand('piecewise')
     line = typeset_line(spec, 'cost_curve', 'latex')
     assert line == (
-        r'\left( \mathit{cost\_curve\_lam}_{t,g,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 '
-        r'\qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}'
+        r'\left( \mathit{cost\_curve\_lam}_{g,t,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 '
+        r'\qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}'
     )
 
 
@@ -172,7 +172,7 @@ GIVEN = varied(
         pytest.param(
             PLAIN,
             'spent',
-            r"'spent' is not a named expression, mask, constraint, special ordered set, curve, assumption or variable.*spend",
+            r"'spent' is not a named expression, condition, constraint, special ordered set, curve, assumption or variable.*spend",
             id='a-near-miss',
         ),
         pytest.param(PLAIN, 'objective', r"'objective' is not a named expression", id='the-objective-has-no-name'),

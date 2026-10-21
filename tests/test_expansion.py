@@ -141,9 +141,10 @@ def test_a_call_expands_to_core_ast(expressions, macros, call, want):
 def test_a_named_expression_arrives_under_the_node_carrying_its_name():
     ns = Namespace(spec(expressions={'gen_cost': 'p * cost'}))
     resolved = expression_of('sum(gen_cost, over=generator)', ns, 'e')
+    frame = ('generator', 'snapshot')
+    body = Multiply(VariableReference('p', dims=frame), ParameterReference('cost', dims=('generator',)), dims=frame)
     assert resolved == Sum(
-        ExpressionReference('gen_cost', Multiply(VariableReference('p'), ParameterReference('cost'))),
-        (Axis('generator'),),
+        ExpressionReference('gen_cost', body, dims=frame), (Axis('generator'),), dims=('snapshot',)
     ), 'the body is inlined resolved and the name kept, for the typesetter to define it once'
     assert isinstance(resolved, Sum)
     assert resolved.operand is expression_of('gen_cost', ns, 'another use'), 'every use reads the one node'

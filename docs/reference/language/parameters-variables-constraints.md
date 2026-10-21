@@ -45,8 +45,8 @@ A null or NaN value is **refused** when the data is attached, so a coordinate
 with no value has no row. `inf` and `-inf` are values.
 
 Only `float` and `int` are values. A `str` parameter is a label and a `bool`
-parameter is a mask, and each selects rows in a
-[`where`](expressions.md#where-strings). Writing either as a coefficient, a
+parameter is a condition, and each selects rows in a
+[`where:`](expressions.md#conditions). Writing either as a coefficient, a
 term or a divisor is a load error, so declare a `0` or `1` that you multiply by
 as `dtype: int`.
 
@@ -80,7 +80,7 @@ every missing coordinate. A table with gaps on purpose is declared `absent`,
 and an [assumption](absence.md#a-table-with-gaps-on-purpose) says where it
 must have a row.
 
-A bare numeric name in a `where` asks whether the data has a row, whatever the
+A bare numeric name in a condition asks whether the data has a row, whatever the
 `missing:`, so `where: p_nom_max` selects the rows the data gives. Under
 `refused` every coordinate has a row, so a bare `float` name asks only "is it
 finite?", and a bare `int` or `str` name is a load error. A comparison reads the
@@ -149,7 +149,7 @@ and a pinned variable is still a variable.
 
 `given:` holds what this file reads and does not build: data under
 `parameters:`, columns under `variables:`, named expressions under
-`expressions:`, masks under `masks:`, and row families under `constraints:`. It
+`expressions:`, named conditions under `conditions:`, and row families under `constraints:`. It
 takes those five keys and no other, and a file with a `given:` section loads and
 prints on its own.
 
@@ -291,9 +291,9 @@ constraints:
 
 There is no body, but a [term](#terms) of this file may add to the name. This
 file reads the name as it reads a given variable: a quantity over its `dims`,
-of degree one. A `where` does not read it, because a mask is built before any
-variable exists, so read a predicate that another file defines as a
-[given mask](#given-masks) instead. A name declared under both `expressions:` and
+of degree one. A condition does not read it, because a condition is read before any
+variable exists, so read a condition that another file defines as a
+[given condition](#given-conditions) instead. A name declared under both `expressions:` and
 `given: expressions:` is refused. The typeset legend lists a given expression
 under _Given_.
 
@@ -377,9 +377,11 @@ added like any other.
 - A merged spec takes further terms: a merge defines every sum it has
   terms for, and a later merge adds to that body. So the first merge that holds
   the terms of a sum also holds a file that reads it.
-- Where no file defines the sum, the terms are its body. The sum runs over
-  the frame its readers state, every reader writes the dims in the same
-  order, and the sum takes the first description a reader wrote.
+- Where no file defines the sum, the terms are its body. Every reader writes
+  the dims in the same order. The sum is indexed over each of those dims over
+  which a term is indexed, and it takes the first description a reader wrote.
+  A reader's row over a dimension over which no term is indexed is refused, as
+  it is over a definition.
 - Where no file defines the sum, some file reads it for more than adding to it.
   That file reads the sum and adds nothing, or uses it in its math. Terms that
   only their own files read are refused, and the message names the nearest name,
@@ -397,16 +399,16 @@ added like any other.
   fragment '#2' adds 't' to 'injection', and 't' reads 'injection' back through 'x' of '#1', so the sum would define itself. Write 't' from something else, or define 'x' without 'injection'.
   ```
 
-### `given: masks`
+### `given: conditions`
 
-A given mask is a [mask](named.md#masks) this file reads and another file
-defines.
+A given condition is a [named condition](named.md#conditions) this file reads
+and another file defines.
 
 ```yaml
 given:
   variables:
     p: { dims: [period, generator] }
-  masks:
+  conditions:
     stands:
       dims: [period, generator]
       description: the generator stands in this period
@@ -424,18 +426,19 @@ constraints:
 
 | Field         |                                                        |                |
 | ------------- | ------------------------------------------------------ | -------------- |
-| `dims`        | required. The dimensions the definer's predicate reads |                |
+| `dims`        | required. The dimensions the definer's condition reads |                |
 | `description` | free text                                              | default `null` |
 
-There is no predicate, because the file that defines the mask owns it. A
-`where` reads the name as data over its `dims`, true or false at each
-coordinate. A `where` may read a given mask but not a given expression, because
-a mask reads nothing that a solve decides. The name is refused in arithmetic,
-the same as a mask. The typeset legend lists a given mask under _Given_.
+There is no condition here, because the file that defines it owns it. A
+condition in this file reads the name as data over its `dims`, true or false at
+each coordinate. A condition may read a given condition but not a given
+expression, because a condition reads nothing that a solve decides. The name is
+refused in arithmetic, the same as a named condition. The typeset legend lists
+a given condition under _Given_.
 
-[`merge`](../../howto/compose.md#a-library-of-components) folds a given mask
-into the mask that another fragment defines. The `dims` name exactly the
-dimensions that the predicate of the defining file reads, and a `given:` entry
+[`merge`](../../howto/compose.md#a-library-of-components) folds a given
+condition into the condition that another fragment defines. The `dims` name exactly the
+dimensions that the condition of the defining file reads, and a `given:` entry
 that names a different set is refused, with both sets of dimensions in the
 message.
 

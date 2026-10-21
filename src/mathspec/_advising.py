@@ -68,7 +68,7 @@ def _given(program: Program) -> list[Advice]:
             for name in given.expressions
         ),
         *(Advice('given', name, _given_note('row family', name)) for name in given.constraints),
-        *(Advice('given', name, _given_note('mask', name)) for name in given.masks),
+        *(Advice('given', name, _given_note('condition', name)) for name in given.conditions),
     ]
 
 

@@ -254,12 +254,12 @@ expressions:
       + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot_period[period]), over=transformer)
     adds_to: Cycle_angle_sum
 
-masks:
+conditions:
   Transformer_lossy:
     description: >-
       a transformer that stands in the snapshot's period, where the run models
       transmission losses
-    where: transmission_losses AND Transformer_active
+    condition: transmission_losses AND Transformer_active
 
 constraints:
   Transformer_fix_s_lower:

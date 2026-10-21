@@ -23,6 +23,9 @@ from mathspec.program import (
     And,
     BooleanLiteral,
     Cases,
+    ComparisonOperator,
+    Condition,
+    ConditionReference,
     Constant,
     CountComparison,
     DimensionComparison,
@@ -34,9 +37,8 @@ from mathspec.program import (
     ExpressionReference,
     Join,
     JoinColumns,
-    JoinedPredicate,
+    JoinedCondition,
     Mask,
-    MaskReference,
     Multiply,
     Negate,
     Not,
@@ -46,14 +48,12 @@ from mathspec.program import (
     ParameterReference,
     Partition,
     Power,
-    Predicate,
-    PredicateOperator,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
     Sum,
     Translate,
-    TranslatedPredicate,
+    TranslatedCondition,
     VariableDefined,
     VariableReference,
     WindowSum,
@@ -74,11 +74,11 @@ if TYPE_CHECKING:
 _PRECEDENCE: dict[BinaryOperator, int] = {'+': 1, '-': 1, '*': 2, '/': 2, '**': 3}
 _ATOM = 5
 
-#: The same for a predicate: ``OR`` binds loosest, then ``AND``, then ``NOT``;
+#: The same for a condition: ``OR`` binds loosest, then ``AND``, then ``NOT``;
 #: a comparison sits above the connectives and is bracketed under none.
-_WHERE_PRECEDENCE = {'or': 0, 'and': 1, 'comparison': 2, 'not': 3}
+_CONDITION_PRECEDENCE = {'or': 0, 'and': 1, 'comparison': 2, 'not': 3}
 
-#: The predicates that are one relation between two sides, which a line may
+#: The conditions that are one relation between two sides, which a line may
 #: align on the way it aligns a constraint.
 AlignedComparison = (
     ParameterComparison
@@ -90,7 +90,7 @@ AlignedComparison = (
     | RelationPairComparison
 )
 
-_PREDICATES: dict[PredicateOperator, OperatorName] = {
+_COMPARISONS: dict[ComparisonOperator, OperatorName] = {
     '==': 'equal',
     '!=': 'ne',
     '<=': 'le',
@@ -209,7 +209,11 @@ def _unsigned(node: Expression) -> Expression | None:
     if isinstance(node, Multiply | Divide):
         first, second = (node.left, node.right) if isinstance(node, Multiply) else (node.numerator, node.divisor)
         if (head := _unsigned(first)) is not None:
-            return Multiply(head, second) if isinstance(node, Multiply) else Divide(head, second)
+            return (
+                Multiply(head, second, dims=node.dims)
+                if isinstance(node, Multiply)
+                else Divide(head, second, dims=node.dims)
+            )
     return None
 
 
@@ -385,7 +389,9 @@ class Walk:
         precedence = _PRECEDENCE[op]
         operand = self._substituted(node.right)
         if op == '+' and isinstance(operand, Add):
-            return self._binary(Add(Add(node.left, operand.left), operand.right), ctx)
+            head = {*node.left.dims, *operand.left.dims}
+            joined = Add(node.left, operand.left, dims=tuple(d for d in node.dims if d in head))
+            return self._binary(Add(joined, operand.right, dims=node.dims), ctx)
         left = self._expression(node.left, ctx, need=precedence)
         if op == '+':
             while (unsigned := _unsigned(operand)) is not None:
@@ -520,24 +526,24 @@ class Walk:
         additive = isinstance(node, Negate | Add)
         return self._expression(node, ctx, need=2 if additive else 0)
 
-    # -- where strings -----------------------------------------------------
+    # -- conditions --------------------------------------------------------
 
-    def _predicate(self, node: Predicate, ctx: _Context, *, need: int = 0) -> str:
-        text, precedence = self._where(node, ctx)
+    def _condition(self, node: Condition, ctx: _Context, *, need: int = 0) -> str:
+        text, precedence = self._boolean(node, ctx)
         return self.format.parenthesise(text) if precedence < need else text
 
-    def _where(self, node: Predicate, ctx: _Context) -> tuple[str, int]:
-        comparison = _WHERE_PRECEDENCE['comparison']
+    def _boolean(self, node: Condition, ctx: _Context) -> tuple[str, int]:
+        comparison = _CONDITION_PRECEDENCE['comparison']
         if isinstance(node, BooleanLiteral):
             assert not node.value, 'an always-true mask is folded away or refused before anything prints it'
             return self._op('false'), _ATOM
 
-        if isinstance(node, MaskReference):
-            return ctx.indexed(self.symbols.name[node.name], list(self.program.masks[node.name].dims)), _ATOM
+        if isinstance(node, ConditionReference):
+            return ctx.indexed(self.symbols.name[node.name], list(self.program.conditions[node.name].dims)), _ATOM
 
         if isinstance(node, ParameterDefined):
             indexed = ctx.indexed(self.symbols.name[node.name], list(node.dims))
-            if node.name in self.program.given.masks or self._parameters[node.name].dtype == 'bool':
+            if node.name in self.program.given.conditions or self._parameters[node.name].dtype == 'bool':
                 return indexed, _ATOM
             return f'{indexed} {self.format.prose(" is defined")}', comparison
 
@@ -551,30 +557,30 @@ class Walk:
             left, right = self.sides(node, ctx)
             return f'{left} {right}', comparison
 
-        if isinstance(node, TranslatedPredicate):
+        if isinstance(node, TranslatedCondition):
             moved = ctx.translated(node.along, _Step(node.offset, 'plain'))
-            return self._where(node.operand.root, moved)
+            return self._boolean(node.operand.root, moved)
 
-        if isinstance(node, JoinedPredicate):
-            return self._where(node.operand.root, self._looked_up(node.columns, ctx))
+        if isinstance(node, JoinedCondition):
+            return self._boolean(node.operand.root, self._looked_up(node.columns, ctx))
 
         if isinstance(node, RelationDefined):
             return self._relation_row(node.name, self._frame_key(node.name, ctx)), comparison
 
         if isinstance(node, Not):
             return (
-                f'{self._op("not")} {self._predicate(node.operand, ctx, need=_WHERE_PRECEDENCE["not"])}',
-                _WHERE_PRECEDENCE['not'],
+                f'{self._op("not")} {self._condition(node.operand, ctx, need=_CONDITION_PRECEDENCE["not"])}',
+                _CONDITION_PRECEDENCE['not'],
             )
 
         if isinstance(node, And):
-            need = _WHERE_PRECEDENCE['and']
-            sides = [self._predicate(node.left, ctx, need=need), self._predicate(node.right, ctx, need=need)]
+            need = _CONDITION_PRECEDENCE['and']
+            sides = [self._condition(node.left, ctx, need=need), self._condition(node.right, ctx, need=need)]
             return self.format.joined(sides, self._op('and')), need
 
         if isinstance(node, Or):
-            need = _WHERE_PRECEDENCE['or']
-            sides = [self._predicate(node.left, ctx, need=need), self._predicate(node.right, ctx, need=need)]
+            need = _CONDITION_PRECEDENCE['or']
+            sides = [self._condition(node.left, ctx, need=need), self._condition(node.right, ctx, need=need)]
             return self.format.joined(sides, self._op('or')), need
 
         assert_never(node)
@@ -582,7 +588,7 @@ class Walk:
     def sides(self, node: AlignedComparison, ctx: _Context) -> tuple[str, str]:
         """One comparison as its two sides, the relation symbol leading the right.
 
-        Split so that a line whose whole predicate is one comparison aligns on
+        Split so that a line whose whole condition is one comparison aligns on
         the relation, as a constraint does.
         """
         if isinstance(node, ParameterComparison):
@@ -607,12 +613,12 @@ class Walk:
         elif isinstance(node, CountComparison):
             index, inner = ctx.reducing(node.over)
             counted = self.format.set_of(
-                self._membership(node.over, index), self._predicate(node.predicate.root, inner)
+                self._membership(node.over, index), self._condition(node.condition.root, inner)
             )
             left, right = self.format.cardinality(counted), self._number(node.value)
         else:
             assert_never(node)
-        return left, f'{self._op(_PREDICATES[node.op])} {right}'
+        return left, f'{self._op(_COMPARISONS[node.op])} {right}'
 
     def _literal(self, value: float | str | datetime.date) -> str:
         return self._number(value) if isinstance(value, int | float) else self.format.quoted(str(value))
@@ -633,14 +639,14 @@ class Walk:
             size = self.format.subscript(size, [grouping])
         return f'{self.format.cardinality(size)} {self._op("minus")} {self._number(-at)}'
 
-    def _condition(self, ctx: _Context, mask: Mask | None) -> str:
+    def _mask_condition(self, ctx: _Context, mask: Mask | None) -> str:
         """The mask on a quantifier, printed.
 
         A mask every row passes arrives as ``None`` — resolution folds it,
         so this prints what a program carries — and a quantifier with no
         condition prints none.
         """
-        return '' if mask is None else self._predicate(mask.root, ctx)
+        return '' if mask is None else self._condition(mask.root, ctx)
 
     def _quantifier(self, dims: list[str], condition: str) -> str:
         if not dims and not condition:
@@ -657,7 +663,7 @@ class Walk:
     def equations(self) -> list[tuple[str, list[Line]]]:
         """Every titled section of equations."""
         return [
-            ('Masks', [self.mask(name) for name in self.program.masks]),
+            ('Conditions', [self.condition(name) for name in self.program.conditions]),
             ('Variable domains', [self._variable(name) for name in self.program.variables]),
             ('Definitions', self._definitions()),
             ('Objective', self._objective()),
@@ -694,11 +700,11 @@ class Walk:
     def _constraint(self, name: str) -> Line:
         constraint = self.program.constraints[name]
         ctx = self._context(frame=constraint.dims)
-        condition = self._condition(ctx, constraint.where)
+        condition = self._mask_condition(ctx, constraint.where)
         return Line(
             label=name,
             left=self._expression(constraint.lhs, ctx),
-            right=f'{self._op(_PREDICATES[constraint.sense])} {self._expression(constraint.rhs, ctx)}',
+            right=f'{self._op(_COMPARISONS[constraint.sense])} {self._expression(constraint.rhs, ctx)}',
             condition=self._quantifier(list(constraint.dims), condition),
         )
 
@@ -747,24 +753,24 @@ class Walk:
             condition=self._quantifier(frame, ''),
         )
 
-    def mask(self, name: str) -> Line:
-        """The line defining one mask, ``symbol ⟺ predicate`` over its frame.
+    def condition(self, name: str) -> Line:
+        """The line defining one named condition, ``symbol ⟺ condition`` over its frame.
 
-        A mask is a predicate rather than a value, so it is defined with ⟺
+        A named condition is true or false rather than a value, so it is defined with ⟺
         where an expression is defined with =; every use prints the symbol.
         """
-        entry = self.program.masks[name]
+        entry = self.program.conditions[name]
         frame = list(entry.dims)
         ctx = self._context(frame)
         return Line(
             label=name,
             left=ctx.indexed(self.symbols.name[name], frame),
-            right=f'{self._op("iff")} {self._predicate(entry.where.root, ctx)}',
+            right=f'{self._op("iff")} {self._condition(entry.condition.root, ctx)}',
             condition=self._quantifier(frame, ''),
         )
 
     def line(self, name: str) -> Line:
-        """The one line *name* prints as: a named expression, a mask, a constraint, a set, a curve, an assumption, or a variable's domain.
+        """The one line *name* prints as: a named expression, a named condition, a constraint, a set, a curve, an assumption, or a variable's domain.
 
         An assumption is looked up where the document prints it from, so a
         condition a curve's method states is a line a reader can ask for
@@ -778,7 +784,7 @@ class Walk:
         program = self.program
         kinds = {
             'named expression': (program.expressions, self.definition),
-            'mask': (program.masks, self.mask),
+            'condition': (program.conditions, self.condition),
             'constraint': (program.constraints, self._constraint),
             'special ordered set': (program.sos, self._sos),
             'curve': (program.piecewise, self._piecewise),
@@ -789,7 +795,7 @@ class Walk:
         if not found:
             everything = {n for group, _ in kinds.values() for n in group}
             msg = (
-                f"'{name}' is not a named expression, mask, constraint, special ordered set, curve, assumption "
+                f"'{name}' is not a named expression, condition, constraint, special ordered set, curve, assumption "
                 f'or variable. {did_you_mean(name, everything)}'
             )
             raise SchemaError(msg)
@@ -811,13 +817,13 @@ class Walk:
         return [*arms, (self._expression(last.value, ctx), self.format.prose('otherwise'))]
 
     def _arm_condition(self, when: Mask, ctx: _Context) -> str:
-        return f'{self.format.prose("if ")} {self._predicate(when.root, ctx, need=_WHERE_PRECEDENCE["and"])}'
+        return f'{self.format.prose("if ")} {self._condition(when.root, ctx, need=_CONDITION_PRECEDENCE["and"])}'
 
     def _variable(self, name: str) -> Line:
         entry = self.program.variables[name]
         ctx = self._context(frame=entry.dims)
         symbol = ctx.indexed(self.symbols.name[name], list(entry.dims))
-        condition = self._quantifier(list(entry.dims), self._condition(ctx, entry.where))
+        condition = self._quantifier(list(entry.dims), self._mask_condition(ctx, entry.where))
         lower, upper = entry.lower, entry.upper
 
         if entry.domain == 'binary':
@@ -862,16 +868,18 @@ class Walk:
         return [self._assumption(name) for name in self.program.assumptions]
 
     def _assumption(self, name: str) -> Line:
-        """One assumption: the predicate over the frame both its masks name, under its ``where``."""
+        """One assumption: the condition over the frame both its masks name, under its ``where``."""
         assumption = self.program.assumptions[name]
-        holds, where = assumption.predicate, assumption.where
+        holds, where = assumption.holds, assumption.where
         frame = self._sorted(holds.dims | (where.dims if where is not None else frozenset()))
         ctx = self._context(frame)
         if isinstance(holds.root, AlignedComparison):
             left, right = self.sides(holds.root, ctx)
         else:
-            left, right = self._predicate(holds.root, ctx), ''
-        return Line(label=name, left=left, right=right, condition=self._quantifier(frame, self._condition(ctx, where)))
+            left, right = self._condition(holds.root, ctx), ''
+        return Line(
+            label=name, left=left, right=right, condition=self._quantifier(frame, self._mask_condition(ctx, where))
+        )
 
     def _piecewise(self, name: str) -> Line:
         """One ``piecewise:`` entry as the curve it states, over the frame it states one per coordinate of.
@@ -894,7 +902,7 @@ class Walk:
         else:
             pinned = links[1 - bounded]
             left = self._expression(links[bounded], ctx)
-            sign = self._op(_PREDICATES[entry.links[bounded].sign])
+            sign = self._op(_COMPARISONS[entry.links[bounded].sign])
             right = f'{sign} {self.format.apply(locus, self._expression(pinned, ctx))}'
         return Line(label=name, left=left, right=right, condition=self._quantifier(frame, ''))
 
@@ -929,7 +937,7 @@ class Walk:
         if entry.points is None:
             return over
         admitted = ParameterDefined(entry.points, tuple(self.program.parameters[entry.points].dims))
-        return f'{over} {self._op("such_that")} {self._predicate(admitted, ctx)}'
+        return f'{over} {self._op("such_that")} {self._condition(admitted, ctx)}'
 
     def _gate(self, entry: Piecewise, ctx: _Context) -> str:
         """The factor an ``activity:`` puts on the locus, or ``''`` where the entry has none.
@@ -948,7 +956,7 @@ class Walk:
         mask = gate.where
         if mask is None or gate.missing == 0:
             return symbol
-        where = self._predicate(mask.root, ctx, need=_WHERE_PRECEDENCE['and'])
+        where = self._condition(mask.root, ctx, need=_CONDITION_PRECEDENCE['and'])
         return self.format.cases(
             [(symbol, f'{self.format.prose("if ")} {where}'), ('1', self.format.prose('otherwise'))]
         )

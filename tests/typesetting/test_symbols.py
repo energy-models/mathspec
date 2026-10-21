@@ -176,7 +176,7 @@ def test_one_table_spells_the_entries_a_file_states_and_the_rows_they_state():
     table = {'notation': 'latex', 'names': {'curve_lam': r'\lambda'}}
 
     assert r'\lambda' not in to_latex(spec, symbols=table, legend=False), 'no weight stands where the curve prints'
-    assert r'\lambda_{t,g,b}' in to_latex(spec.expand(), symbols=table, legend=False)
+    assert r'\lambda_{g,t,b}' in to_latex(spec.expand(), symbols=table, legend=False)
 
 
 def test_a_misspelled_name_is_still_a_typo_where_a_formulation_could_have_emitted_it():

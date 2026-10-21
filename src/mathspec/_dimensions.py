@@ -4,10 +4,12 @@
 
 """Static dim-set checking — a type system whose type is a set of dim names.
 
-Every node's dim set is computable before any data is attached, so this pass runs
-at load on the resolved tree. The per-node rules are the "Dim algebra" table in
-``docs/reference/language/expressions.md``; a constraint's two sides together
-must equal its ``dims``, and a where or a bound may not exceed the frame.
+Every node states its dims, so every rule is decided at load. Resolution holds
+each node to the rule of its operator as it builds the node ([`check_node`][]);
+the rules are the "Dim algebra" table in
+``docs/reference/language/expressions.md``. [`check_spec`][] holds each entry
+to its own: a constraint's two sides together are indexed over exactly its
+``dims``, and a where or a bound is indexed over no dim the entry is not.
 """
 
 from __future__ import annotations
@@ -16,91 +18,52 @@ from typing import TYPE_CHECKING, assert_never
 
 from mathspec.errors import DimensionError, case_context
 from mathspec.program import (
-    Add,
     Cases,
-    Constant,
     CountComparison,
     DimensionComparison,
     DimensionPosition,
-    Divide,
-    Dual,
     Expression,
     ExpressionComparison,
-    ExpressionReference,
     Join,
     JoinColumns,
-    JoinedPredicate,
+    JoinedCondition,
     Mask,
-    Multiply,
-    Negate,
     ParameterComparison,
     ParameterDefined,
-    ParameterReference,
     Partition,
-    Power,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
     Sum,
     Translate,
-    TranslatedPredicate,
+    TranslatedCondition,
     VariableDefined,
-    VariableReference,
     WindowSum,
-    children,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from mathspec.program import Program
     from mathspec.spec import Spec
 
 
-def dims_of(node: Expression, spec: Spec, context: str) -> frozenset[str]:
-    """The dim set of a resolved expression, checking every rule on the way.
+def check_node(node: Sum | Join | Translate | WindowSum, spec: Spec, context: str) -> None:
+    """The dim rule *node*'s own operator holds it to, on the dims its operand states.
+
+    Resolution calls it on each node it builds, so a tree is checked once,
+    bottom up, and no pass walks it again.
 
     Raises:
-        DimensionError: On the first rule broken.
+        DimensionError: *node* breaks the rule.
     """
-    if isinstance(node, Constant):
-        return frozenset()
-
-    if isinstance(node, ParameterReference):
-        return frozenset({**spec.parameters, **spec.given.parameters}[node.name].dims)
-
-    if isinstance(node, VariableReference):
-        columns = {**spec.variables, **spec.given.variables, **spec.given.expressions}
-        return frozenset(columns[node.name].dims or ())
-
-    if isinstance(node, Dual):
-        return frozenset({**spec.constraints, **spec.given.constraints}[node.constraint].dims)
-
-    if isinstance(node, ExpressionReference):
-        return _named_dims(node, spec, context)
-
-    if isinstance(node, Cases):
-        return frozenset().union(*(dims_of(region.value, spec, context) for region in node.regions))
-
-    if isinstance(node, Negate | Add | Multiply | Power | Divide):
-        return frozenset().union(*(dims_of(child, spec, context) for child in children(node)))
-
+    inner = frozenset(node.operand.dims)
     if isinstance(node, Sum):
-        return _sum_dims(node, spec, context)
-    inner = dims_of(node.operand, spec, context)
-    if isinstance(node, Join):
-        assert not node.columns.axes, 'a join that opens axes is read only by the sum that closes them'
-        return join_dims(node.columns, inner, context, 'the expression')
-    if isinstance(node, Translate | WindowSum):
-        return _translation_dims(node, inner, spec, context)
-
-    assert_never(node)
-
-
-def _named_dims(node: ExpressionReference, spec: Spec, context: str) -> frozenset[str]:
-    """An entry's declared frame where it has one — a narrower arm or body broadcasts along the rest — else its body's."""
-    declared = spec.expressions[node.name].dims
-    if declared is not None:
-        return frozenset(declared)
-    return dims_of(node.body, spec, context)
+        _check_sum(node, inner, context)
+    elif isinstance(node, Join):
+        join_dims(node.columns, inner, context, 'the expression')
+    else:
+        _check_translation(node, inner, spec, context)
 
 
 def _not_carried(context: str, call: str, inner: frozenset[str], rewrite: str) -> str:
@@ -108,27 +71,24 @@ def _not_carried(context: str, call: str, inner: frozenset[str], rewrite: str) -
     return f'{context}: {call} but the expression has only the dims {sorted(inner)}. {rewrite}.'
 
 
-def _sum_dims(node: Sum, spec: Spec, context: str) -> frozenset[str]:
+def _check_sum(node: Sum, inner: frozenset[str], context: str) -> None:
     """``sum`` reduces each dim in ``over`` away, so the operand carries every one.
 
     The axes a join opens never reach a frame: the sum over the join closes
-    every one, so its frame is the join's frame less them.
+    every one, and the join's own rules are the sum's.
     """
     if isinstance(node.operand, Join) and node.operand.columns.axes:
-        join = node.operand
-        assert node.over == join.columns.axes, 'a sum through a relation closes exactly the axes its join opens'
-        return join_dims(join.columns, dims_of(join.operand, spec, context), context, 'the expression')
-    inner = dims_of(node.operand, spec, context)
+        assert node.over == node.operand.columns.axes, 'a sum through a relation closes exactly the axes its join opens'
+        return
     for summed in node.over:
         if summed.dimension not in inner:
             raise DimensionError(
                 _not_carried(context, f'sum(over={summed})', inner, 'Remove the sum, or correct the dimension')
             )
-    return inner - {axis.dimension for axis in node.over}
 
 
 def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand: str) -> frozenset[str]:
-    """The dims *inner* has once *columns* joins it, an expression's or a predicate's alike.
+    """The dims *inner* has once *columns* joins it, an expression's or a condition's alike.
 
     The dims joined on go and the dims grouped by arrive. A column both
     joined on and grouped by keeps its dim. The call a refusal quotes is
@@ -160,14 +120,24 @@ def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand
             f'dimension.'
         )
     _check_joined(call, columns, inner, context)
-    return (inner - set(columns.joined_dims)) | set(columns.grouped_dims)
+    return joined(columns, inner)
+
+
+def sorted_dims(*dims: Iterable[str]) -> tuple[str, ...]:
+    """Every dim in *dims*, once, sorted by name: what a node states as ``dims``."""
+    return tuple(sorted(set().union(*dims)))
+
+
+def joined(columns: JoinColumns, inner: Iterable[str]) -> frozenset[str]:
+    """The dims a join on *columns* leaves of *inner*: the dims joined on go, and the dims grouped by arrive."""
+    return (frozenset(inner) - set(columns.joined_dims)) | set(columns.grouped_dims)
 
 
 #: The operator name a file writes for each translation, which its refusals quote.
 _VERBS: dict[type[Translate | WindowSum], str] = {Translate: 'shift', WindowSum: 'sum_back'}
 
 
-def _translation_dims(node: Translate | WindowSum, inner: frozenset[str], spec: Spec, context: str) -> frozenset[str]:
+def _check_translation(node: Translate | WindowSum, inner: frozenset[str], spec: Spec, context: str) -> None:
     """``shift`` and ``sum_back`` keep every dim, and a named amount and a partition are checked here."""
     verb = _VERBS[type(node)]
     if node.along not in inner:
@@ -183,7 +153,6 @@ def _translation_dims(node: Translate | WindowSum, inner: frozenset[str], spec: 
     if node.partition is not None:
         within = f'{node.partition.name}[{", ".join(node.partition.grouped)}]'
         _check_joined(f'{verb}(along={node.along}, within={within})', node.partition, inner, context)
-    return inner
 
 
 def _check_joined(call: str, use: JoinColumns | Partition, inner: frozenset[str], context: str) -> None:
@@ -246,7 +215,7 @@ def check_spec(spec: Spec, program: Program) -> None:
     for vname, vdef in spec.variables.items():
         frame = frozenset(vdef.dims)
         context = f"Variable '{vname}'"
-        _check_where_dims(program.variables[vname].where, frame, context)
+        _check_condition_dims(program.variables[vname].where, frame, context)
         for side in ('lower', 'upper'):
             bound = getattr(vdef.bounds, side)
             if isinstance(bound, str):
@@ -264,13 +233,16 @@ def check_spec(spec: Spec, program: Program) -> None:
             continue
         frame = frozenset(declared.dims)
         if not isinstance(entry.expression, Cases):
-            _check_body_dims(entry.expression, spec, frame, f"Named expression '{ename}'")
+            indexed = _check_body_dims(entry.expression, frame, f"Named expression '{ename}'")
+            _check_dims_are_indexed(ename, frame, indexed, 'the expression is not')
             continue
+        indexed = frozenset[str]()
         for region, label in zip(entry.expression.regions, [*declared.cases, None], strict=True):
             context = case_context(ename, label)
             if label is not None:
-                _check_where_dims(region.when, frame, context)
-            _check_value_dims(region.value, spec, frame, context)
+                _check_condition_dims(region.when, frame, context)
+            indexed |= _check_value_dims(region.value, frame, context) | region.when.dims
+        _check_dims_are_indexed(ename, frame, indexed, 'no case value and no `when:` is')
 
     for ename, entry in program.expressions.items():
         if entry.adds_to is None:
@@ -285,8 +257,8 @@ def check_spec(spec: Spec, program: Program) -> None:
     for cname, constraint in program.constraints.items():
         frame = frozenset(constraint.dims)
         context = f"Constraint '{cname}'"
-        _check_where_dims(constraint.where, frame, context)
-        got = dims_of(constraint.lhs, spec, context) | dims_of(constraint.rhs, spec, context)
+        _check_condition_dims(constraint.where, frame, context)
+        got = frozenset((*constraint.lhs.dims, *constraint.rhs.dims))
         if got != frame:
             stray, missing = sorted(got - frame), sorted(frame - got)
             detail = (
@@ -299,7 +271,7 @@ def check_spec(spec: Spec, program: Program) -> None:
 
     if program.objective is not None:
         context = 'The objective'
-        got = dims_of(program.objective.expression, spec, context)
+        got = program.objective.expression.dims
         if got:
             raise DimensionError(
                 f'{context}: the expression carries dims {sorted(got)}, and an objective is one '
@@ -308,36 +280,54 @@ def check_spec(spec: Spec, program: Program) -> None:
             )
 
 
-def _check_value_dims(node: Expression, spec: Spec, frame: frozenset[str], context: str) -> None:
+def _check_value_dims(node: Expression, frame: frozenset[str], context: str) -> frozenset[str]:
     """A region's value may only carry dims the frame does — the ``otherwise:`` included.
 
     A wider one would give the quantity dims its entry does not, which is
     the second answer a ``dims:`` exists to avoid.
     """
-    got = dims_of(node, spec, context)
+    got = frozenset(node.dims)
     if not got <= frame:
         raise DimensionError(
             f'{context}: the value carries dims {sorted(got - frame)} outside the dims: '
             f'{sorted(frame)}. Add them to dims:, or take them out of the value.'
         )
+    return got
 
 
-def _check_body_dims(node: Expression, spec: Spec, frame: frozenset[str], context: str) -> None:
-    """A plain entry's body may only carry dims its declared frame does; fewer is constant along the rest."""
-    got = dims_of(node, spec, context)
+def _check_body_dims(node: Expression, frame: frozenset[str], context: str) -> frozenset[str]:
+    """A plain entry's expression is indexed only over dims its ``dims:`` gives; the dims it is indexed over come back."""
+    got = frozenset(node.dims)
     if not got <= frame:
         raise DimensionError(
             f'{context}: the body carries dims {sorted(got - frame)} outside the dims: {sorted(frame)}. '
             f'Add them to dims:, or take them out of the body.'
         )
+    return got
 
 
-def _check_where_dims(
+def _check_dims_are_indexed(name: str, declared: frozenset[str], indexed: frozenset[str], subject: str) -> None:
+    """A declared ``dims:`` gives only dims the expression is indexed over, so the entry stands for its expression.
+
+    A dim the expression is not indexed over would make the entry constant
+    along it, and then the entry would not be its expression:
+    ``sum(entry, over=d)`` would load where the expression summed over ``d``
+    is refused.
+    """
+    if extra := sorted(declared - indexed):
+        raise DimensionError(
+            f"Named expression '{name}': dims: gives {extra}, but {subject} indexed over {extra}. A named "
+            f'expression stands for its expression, so dims: gives only the dimensions it is indexed over. Take '
+            f"{extra} out of dims:; an expression that reads '{name}' still repeats it along its own other dims."
+        )
+
+
+def _check_condition_dims(
     mask: Mask | None,
     frame: frozenset[str],
     context: str,
 ) -> None:
-    """A predicate may only test dims the frame carries; reducing an outside dim to fit would fail open.
+    """A condition may only test dims the frame carries; reducing an outside dim to fit would fail open.
 
     The refusal names the leaf that left the frame, reading its dims as
     [`dims`][mathspec.program.Mask.dims] does.
@@ -358,13 +348,13 @@ def _check_where_dims(
             case RelationComparison() | RelationPairComparison() | RelationDefined():
                 leaf = f"where-relation '{atom.name}'"
             case ExpressionComparison():
-                leaf = 'a where-comparison of expressions'
+                leaf = 'a comparison of expressions'
             case CountComparison():
-                leaf = f"a where-count over '{atom.over}'"
-            case TranslatedPredicate():
-                leaf = f"a where-predicate translated along '{atom.along}'"
-            case JoinedPredicate():
-                leaf = f"a where-predicate read through '{atom.columns.name}'"
+                leaf = f"a count over '{atom.over}'"
+            case TranslatedCondition():
+                leaf = f"a condition translated along '{atom.along}'"
+            case JoinedCondition():
+                leaf = f"a condition read through '{atom.columns.name}'"
             case _:
                 assert_never(atom)
         raise DimensionError(

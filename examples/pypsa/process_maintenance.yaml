@@ -14,8 +14,8 @@ given:
   variables:
     Process_status: { dims: [scenario, snapshot, process], domain: integer }
     Process_p_nom_ext: { dims: [process] }
-  masks:
-    Process_committed: { dims: [snapshot, process] }
+  conditions:
+    Process_committed: { dims: [process, snapshot] }
 
 dimensions:
   scenario:
@@ -110,13 +110,13 @@ variables:
     bounds:
       lower: 0
 
-masks:
+conditions:
   Process_maint_ext:
     description: >-
       a maintainable process with an extendable build, unless it is
       committable and modular, that stands in the snapshot's period — the
       maintenance rows against the chosen build
-    where: >-
+    condition: >-
       Process_maintainable
       AND Process_p_nom_extendable
       AND NOT (Process_committable AND Process_p_nom_mod > 0)

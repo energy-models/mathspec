@@ -501,13 +501,13 @@ assumptions:
 | $`\overleftarrow{e}`$ | `Store_energy_carried_in` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — the energy a store opens a snapshot with — at the first snapshot it stands in, its last such snapshot's less standing loss where it is cyclic and the given initial energy, which no standing loss has touched yet, where it is not; the previous snapshot's less standing loss otherwise. A store built in a later period opens in that period, and a cyclic one that retires closes on its own last snapshot. Per period, the same holds with each investment period as the horizon |
 | $`\mathit{last}^{e}`$ | `Store_last_counted_active` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{V}`$ — one at the last snapshot a row counts where a store stands, and zero elsewhere — a store that retires before the last counted snapshot closes on its last active level, as PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:507-510`) |
 | $`\mathit{w}^{e}`$ | `Store_closing_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{V}`$ — what the energy a store holds at a snapshot counts for in a row as its closing level — the years of the period at the last snapshot of each counted period where the store reopens per period, one at the last counted snapshot it stands in where it does not, and nothing elsewhere |
-| $`\mathit{Store\_primary\_energy}`$ | `Store_primary_energy` over $`\Xi \times \mathcal{G}`$ |
-| $`\mathit{Store\_operational\_limit}`$ | `Store_operational_limit` over $`\Xi \times \mathcal{G}`$ |
+| $`\mathit{Store\_primary\_energy}`$ | `Store_primary_energy` over $`\mathcal{G} \times \Xi`$ |
+| $`\mathit{Store\_operational\_limit}`$ | `Store_operational_limit` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{Store\_tech\_capacity\_expansion}`$ | `Store_tech_capacity_expansion` over $`\mathcal{G}`$ |
 | $`\mathit{Store\_opex}`$ | `Store_opex` over $`\Xi`$ |
 | $`\mathit{Store\_capex}`$ | `Store_capex` (scalar) |
-| $`\mathit{Store\_additions}`$ | `Store_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
-| $`\mathit{Store\_injection}`$ | `Store_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
+| $`\mathit{Store\_additions}`$ | `Store_additions` over $`\mathcal{I} \times \mathcal{Y}`$ |
+| $`\mathit{Store\_injection}`$ | `Store_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ |
 
 #### Notation
 
@@ -568,13 +568,13 @@ N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:
 **`Store_primary_energy`**
 
 ```math
-\mathit{Store\_primary\_energy}_{\xi,g} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{\xi,g,t,v} \cdot \mathrm{a}^{e}_{\xi,g,v} \right) \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+\mathit{Store\_primary\_energy}_{g,\xi} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{\xi,g,t,v} \cdot \mathrm{a}^{e}_{\xi,g,v} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`Store_operational_limit`**
 
 ```math
-\mathit{Store\_operational\_limit}_{\xi,g} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{\xi,g,t,v} \cdot \mathrm{b}^{e}_{\xi,g,v} \right) \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
+\mathit{Store\_operational\_limit}_{g,\xi} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{\xi,g,t,v} \cdot \mathrm{b}^{e}_{\xi,g,v} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`Store_tech_capacity_expansion`**
@@ -598,13 +598,13 @@ N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:
 **`Store_additions`**
 
 ```math
-\mathit{Store\_additions}_{y,i} = \sum_{v \in \mathcal{V} \,:\, \mathrm{Store\_carrier}(v) = i} E_{v} \cdot \mathrm{new}^{e}_{y,v} \qquad \forall\, y \in \mathcal{Y},\ i \in \mathcal{I}
+\mathit{Store\_additions}_{i,y} = \sum_{v \in \mathcal{V} \,:\, \mathrm{Store\_carrier}(v) = i} E_{v} \cdot \mathrm{new}^{e}_{y,v} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 **`Store_injection`**
 
 ```math
-\mathit{Store\_injection}_{\xi,t,n} = \sum_{v \in \mathcal{V} \,:\, \mathrm{Store\_bus}(v) = n} \mathrm{sgn}^{q}_{v} \cdot q_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+\mathit{Store\_injection}_{n,\xi,t} = \sum_{v \in \mathcal{V} \,:\, \mathrm{Store\_bus}(v) = n} \mathrm{sgn}^{q}_{v} \cdot q_{\xi,t,v} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Subject to
