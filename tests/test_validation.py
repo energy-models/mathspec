@@ -1128,6 +1128,28 @@ class TestAConditionIsAnOperand:
         )
         assert 'it counts the coordinates a condition admits, which only the data decides' in message
 
+    def test_an_inequality_between_two_relation_columns_is_undecidable_in_a_case_when(self):
+        """The analysis does not decide an inequality between two relation columns, whatever their dtype.
+
+        Before, the refusal said that two relations have no order, which is false for two int columns.
+        """
+        message = _refusal(
+            **{'dimensions.h': {'dtype': 'int'}, 'relations.lk2': {'key': 'g', 'values': 'h'}},
+            expressions={
+                'pick': {
+                    'dims': ['g'],
+                    'cases': {
+                        'below': {'when': 'lk < lk2', 'expression': '1'},
+                        'some': {'when': 'c > 0', 'expression': '2'},
+                    },
+                    'otherwise': '0',
+                }
+            },
+            constraints={'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
+        )
+        assert 'this analysis does not decide an inequality between two relation columns' in message, message
+        assert 'no order' not in message, message
+
     def test_a_read_through_a_relation_is_undecidable_in_a_case_when(self):
         """Which rows a relation maps onto a coordinate is the data's to say, so two cases split by one are not proved apart."""
         message = _refusal(
