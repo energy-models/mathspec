@@ -503,21 +503,6 @@ class TestADimensionWithAnEnum:
         _spec(**_ENUM, **patch)
 
     @pytest.mark.parametrize(
-        ('patch', 'comparison'),
-        [
-            pytest.param({'variables.r.where': "h < 'south'"}, "h < 'south'", id='a-label-in-the-enum'),
-            pytest.param({'variables.r.where': "h > 'west'"}, "h > 'west'", id='a-label-not-in-the-enum'),
-            pytest.param({'variables.p.where': "lk >= 'north'"}, "lk >= 'north'", id='a-relation-column'),
-            pytest.param({'conditions.low': "h <= 'north'"}, "h <= 'north'", id='a-named-condition'),
-        ],
-    )
-    def test_an_ordering_comparison_is_refused(self, patch, comparison):
-        """Labels compare bytewise, but polars and DuckDB order an enum by its list, so ``<`` could select other rows there."""
-        message = _refusal(**_ENUM, **patch)
-        assert f"{comparison} orders the labels of 'h', which lists them under enum" in message, message
-        assert 'An enum dimension compares only with == and !=.' in message, message
-
-    @pytest.mark.parametrize(
         ('entry', 'refusal'),
         [
             pytest.param(

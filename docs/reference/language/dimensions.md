@@ -57,9 +57,6 @@ load. `carrier_of == 'gnrtr'` above is refused:
 Variable 'p': 'gnrtr' is not a label of 'carrier', which allows only ['ccgt', 'ocgt', 'wind']. Write one of them, or add 'gnrtr' to the enum of 'carrier'.
 ```
 
-The dimension and a relation column over it compare only with `==` and `!=`,
-so `carrier_of < 'ocgt'` is refused.
-
 The tool that attaches the data refuses a coordinate that is not in the list,
 in the table of the dimension and in every relation column over it.
 
