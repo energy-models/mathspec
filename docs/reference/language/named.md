@@ -84,7 +84,8 @@ constraints:
       <= ramp_limit * previous_status + start_up_limit * (1 - previous_status)
 ```
 
-Each case prints as one row of the definition, and `otherwise:` as the last:
+Each case prints as one row of the definition, sorted by name, and
+`otherwise:` as the last:
 
 $$\mathit{previous\_status}_{g,t} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \cr \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \cr \mathit{status}_{g,t - 1} & \text{otherwise} \end{cases} \qquad \forall\thinspace g \in \mathcal{G},\enspace t \in \mathcal{T}$$
 
@@ -106,7 +107,7 @@ A named expression carries **exactly one** of `expression:` and `cases:`.
   > Narrow one of the two `when:` strings by the negation of the other, or drop
   > the wider one and let `otherwise:` cover that region.
 
-  The cases carry no order.
+  The cases carry no order, so `to_spec` sorts them by name.
 
 - A `when:` must be a question the data answers. `True`, `False`, and a mask
   that folds to one of them, such as `committable OR True`, are refused.

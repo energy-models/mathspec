@@ -226,8 +226,9 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
     Every expression is printed from its parsed tree, so what is left of a
     difference is a difference in the spec. The entries of each section, the
     ones under each kind of ``given:`` too, a ``dims:`` list and each side of
-    a relation arrive sorted by name, as the spec holds them. A ``where`` string, the order of the regions under ``cases:`` and
-    the order of a piecewise entry's links are all left as written.
+    a relation, and the regions under ``cases:`` arrive sorted by name, as the
+    spec holds them. A ``where`` string and the order of a piecewise entry's
+    links are left as written.
 
     Args:
         spec: The loaded spec.

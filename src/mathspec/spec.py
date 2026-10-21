@@ -694,7 +694,8 @@ class ExpressionSpec(_StrictSpec):
     #: The dimensions the quantity ranges over. ``cases:`` needs it, and a plain
     #: entry that leaves it out takes the dims of its body.
     dims: Dims | None = None
-    #: The regions, keyed by the name labelling the row each prints; every ``when`` is proved apart from the others.
+    #: The regions, keyed by the name labelling the row each prints and sorted by that name as the spec loads;
+    #: every ``when`` is proved apart from the others, so their order means nothing.
     cases: Annotated[dict[str, ExpressionCaseSpec], Field(min_length=1)] = {}
     #: The value wherever no case's ``when`` holds, printed as the last row.
     otherwise: Expression | None = None
@@ -706,6 +707,11 @@ class ExpressionSpec(_StrictSpec):
     @classmethod
     def _from_string(cls, data: object) -> object:
         return {'expression': data} if isinstance(data, str) else data
+
+    @field_validator('cases')
+    @classmethod
+    def _regions_by_name(cls, v: dict[str, ExpressionCaseSpec]) -> object:
+        return _by_name(v)
 
     @model_validator(mode='after')
     def _one_form_or_the_other(self) -> Self:
