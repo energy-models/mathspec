@@ -30,6 +30,7 @@ This release also makes most modules of mathspec private, so the public API is s
 
 - Remove a dimension from a named expression's `dims:` when its expression is not indexed over that dimension. The loader now refuses such an entry. In 0.3.x it loaded, and every reader saw the same value at each coordinate of that dimension. For the same reason, a merge is refused when no term of a sum is indexed over a dimension that the sum's readers name ([#898](https://github.com/energy-models/mathspec/pull/898)).
 - Expect index lists in name order. The loader sorts by name the dimensions it works out for an entry, such as a named condition or a named expression without `dims:`. Every expression node lists its dimensions in the same order. So two files that list `dimensions:` in different orders load to the same program, and the typeset index can read `g, t` where it read `t, g` before ([#911](https://github.com/energy-models/mathspec/pull/911), [#899](https://github.com/energy-models/mathspec/pull/899)).
+- Rewrite a condition that uses `<`, `<=`, `>` or `>=` on a `str` or `bool` value. The loader now refuses it, and the error names the rewrite. In 0.3.x, `generator < 'b9'` compared the labels byte by byte, so `'b10'` came before `'b9'` whatever the order of the dimension. Compare a `str` with `==` or `!=`. To select by place along a dimension declared `ordered: true`, use `position(generator) < 3`. Test a `bool` parameter by its bare name, `flag` or `not flag` ([#931](https://github.com/energy-models/mathspec/pull/931)).
 - Compare two specs with `python -m mathspec diff a.yaml b.yaml`. `canonical --check` and `canonical --write` are gone ([#874](https://github.com/energy-models/mathspec/pull/874)).
 - Expect `to_yaml()` to write a short list or mapping of names on one line ([#871](https://github.com/energy-models/mathspec/pull/871)).
 
@@ -64,6 +65,8 @@ The pull requests in this release:
 - refactor(language)!: a file names its conditions under `conditions:` instead of `masks:` ([#907](https://github.com/energy-models/mathspec/pull/907))
 - fix(language)!: the loader refuses a named expression whose `dims:` names a dimension that its expression is not indexed over ([#898](https://github.com/energy-models/mathspec/pull/898))
 - fix(language): two files that list their dimensions in different orders load to the same program, because the loader sorts dimension lists by name ([#911](https://github.com/energy-models/mathspec/pull/911))
+- fix(language)!: the loader refuses a condition that uses `<`, `<=`, `>` or `>=` on a `str` or `bool` value ([#931](https://github.com/energy-models/mathspec/pull/931))
+- fix(language): the loader refuses a case-when whose cases test different columns of one relation, when one row can meet both cases ([#934](https://github.com/energy-models/mathspec/pull/934))
 - fix(language): when a patch changes a dimension, the error says that a field the patch leaves out takes its default value ([#857](https://github.com/energy-models/mathspec/pull/857))
 
 ### Python API

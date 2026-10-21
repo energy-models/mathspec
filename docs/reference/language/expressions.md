@@ -273,8 +273,15 @@ A comparison is checked against the declared `dtype`. A `datetime` dimension is
 compared against a quoted ISO date such as `'2030-01-01'` or
 `'2030-01-01T06:00'`, and a number against it is a load error.
 
-String labels compare bytewise, whatever the dimension's order, and a label
-the dimension does not carry compares equal to nothing.
+Only a number or a `datetime` compares with `<`, `<=`, `>` and `>=`. A `str`
+or `bool` compares with `==` and `!=`, and an inequality on it is a load error.
+A relation column reads the dtype of its target dimension, so the rule holds
+there too. `generator < 'b9'` is refused, because it would compare the labels
+byte by byte, and `'b10'` would come before `'b9'` whatever the dimension's
+order. To compare along the order of a dimension declared `ordered: true`, use
+[`position()`](#position).
+
+A label the dimension does not carry compares equal to nothing.
 
 The language cannot compare two dimensions, so precompute a boolean parameter
 instead.
