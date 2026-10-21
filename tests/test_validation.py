@@ -1150,6 +1150,31 @@ class TestAConditionIsAnOperand:
         assert 'this analysis does not decide an inequality between two relation columns' in message, message
         assert 'no order' not in message, message
 
+    @pytest.mark.parametrize(
+        ('first', 'second', 'witness'),
+        [
+            pytest.param('two[a] > 3', 'two[b] <= 3', 'two[a] is 4.0, two[b] is 2.0', id='inequalities'),
+            pytest.param('two[a] == 3', 'two[b] == 4', 'two[a] is 3.0, two[b] is 4.0', id='equalities'),
+        ],
+    )
+    def test_two_columns_of_one_relation_are_not_proved_apart_in_a_case_when(self, first, second, witness):
+        """One row holds a value in each column, so a test on one column does not exclude a test on the other.
+
+        Before, both columns were read as one value, and two cases that a row can satisfy together loaded.
+        """
+        message = _refusal(
+            **{'dimensions.n': {'dtype': 'int'}, 'relations.two': {'key': 'g', 'values': {'a': 'n', 'b': 'n'}}},
+            expressions={
+                'pick': {
+                    'dims': ['g'],
+                    'cases': {'one': {'when': first, 'expression': '1'}, 'other': {'when': second, 'expression': '2'}},
+                    'otherwise': '0',
+                }
+            },
+            constraints={'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
+        )
+        assert f'both claim the value where {witness}' in message, message
+
     def test_a_read_through_a_relation_is_undecidable_in_a_case_when(self):
         """Which rows a relation maps onto a coordinate is the data's to say, so two cases split by one are not proved apart."""
         message = _refusal(
