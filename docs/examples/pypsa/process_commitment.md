@@ -563,6 +563,6 @@ u^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\
 **`Process_big_m_where_committed_and_extendable`**
 
 ```math
-\mathrm{M}^{z}_{\xi,j} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j}
+\mathrm{M}^{z}_{\xi,j} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t}
 ```
 <!-- gallery:end -->

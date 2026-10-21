@@ -563,6 +563,6 @@ u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \
 **`Generator_big_m_where_committed_and_extendable`**
 
 ```math
-\mathrm{M}_{\xi,g} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g}
+\mathrm{M}_{\xi,g} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
 ```
 <!-- gallery:end -->

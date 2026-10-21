@@ -12434,7 +12434,7 @@ Generator_big_m_where_committed_and_extendable:
 ```
 
 ```math
-\mathrm{M}_{\xi,g} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{t,g}
+\mathrm{M}_{\xi,g} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
 ```
 
 ### `Link_big_m_where_committed_and_extendable`
@@ -12450,7 +12450,7 @@ Link_big_m_where_committed_and_extendable:
 ```
 
 ```math
-\mathrm{M}^{f}_{\xi,l} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l}
+\mathrm{M}^{f}_{\xi,l} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t}
 ```
 
 ### `Process_big_m_where_committed_and_extendable`
@@ -12466,7 +12466,7 @@ Process_big_m_where_committed_and_extendable:
 ```
 
 ```math
-\mathrm{M}^{z}_{\xi,j} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{t,j}
+\mathrm{M}^{z}_{\xi,j} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t}
 ```
 
 ### `Generator_maintenance_events_positive`

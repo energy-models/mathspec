@@ -563,6 +563,6 @@ u^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\
 **`Link_big_m_where_committed_and_extendable`**
 
 ```math
-\mathrm{M}^{f}_{\xi,l} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{t,l}
+\mathrm{M}^{f}_{\xi,l} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t}
 ```
 <!-- gallery:end -->
