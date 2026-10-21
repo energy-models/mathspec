@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- fix(language): a case-when whose cases test different columns of one relation is refused when one row can meet both ([#934](https://github.com/energy-models/mathspec/pull/934))
 - fix(language)!: a condition that uses `<`, `<=`, `>` or `>=` on a `str` or `bool` value is refused at load ([#931](https://github.com/energy-models/mathspec/pull/931))
 - feat(program): each expression node states the dimensions it is read over ([#899](https://github.com/energy-models/mathspec/pull/899))
 - fix(language): two files that declare their dimensions in different orders load to the same program by sorting dimension lists by name ([#911](https://github.com/energy-models/mathspec/pull/911))
