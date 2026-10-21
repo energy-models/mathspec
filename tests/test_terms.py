@@ -539,7 +539,7 @@ def test_readers_that_order_the_frame_apart_are_refused():
 
 def test_the_composed_sum_is_read_over_the_readers_frame():
     """The frame the readers state holds the terms to it when the composed spec loads."""
-    assert merge([BALANCE, FLEET, DEMAND]).expressions['injection'].dims == BUS_FRAME
+    assert merge([BALANCE, FLEET, DEMAND]).expressions['injection'].dims == tuple(BUS_FRAME)
 
 
 def test_a_composed_sum_is_indexed_only_over_dims_a_term_is_indexed_over():

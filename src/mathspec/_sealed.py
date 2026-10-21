@@ -7,10 +7,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Any, get_args, override
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    from pydantic import GetCoreSchemaHandler
+    from pydantic_core import CoreSchema
 
 
 class Sealed[K, V](Mapping[K, V]):
@@ -60,3 +63,19 @@ class Sealed[K, V](Mapping[K, V]):
 
     def __setstate__(self, items: dict[K, V]) -> None:
         self._items = items
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source: object, handler: GetCoreSchemaHandler) -> CoreSchema:
+        """Validated as the mapping it seals, then sealed; written back out as a plain mapping.
+
+        So a pydantic model can hold one as a field, and its default, without
+        handing out a mapping a consumer can write to.
+        """
+        from pydantic_core import core_schema
+
+        key, value = get_args(source) or (Any, Any)
+        return core_schema.no_info_after_validator_function(
+            cls,
+            handler.generate_schema(dict[key, value]),
+            serialization=core_schema.wrap_serializer_function_ser_schema(lambda v, write: write(dict(v))),
+        )

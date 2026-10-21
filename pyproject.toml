@@ -227,3 +227,6 @@ fom = "fom"
 # case is that a typo of a real operator keyword is refused by the signature, so
 # correcting the spelling deletes the test.
 egde = "egde"
+# `ser` is pydantic-core's abbreviation in `wrap_serializer_function_ser_schema`,
+# which src/mathspec/_sealed.py calls by name.
+ser = "ser"

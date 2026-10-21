@@ -103,6 +103,7 @@ from typing import TYPE_CHECKING, cast, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
+from mathspec._sealed import Sealed
 from mathspec._validation import to_spec
 from mathspec._yaml import read_spec
 from mathspec.errors import LanguageError, did_you_mean, schema_error
@@ -119,7 +120,7 @@ SHARED_SECTIONS = ('dimensions', 'relations')
 OWNED_SECTIONS = tuple(
     name
     for name, field in Spec.model_fields.items()
-    if get_origin(field.annotation) is dict and name not in SHARED_SECTIONS
+    if get_origin(field.annotation) is Sealed and name not in SHARED_SECTIONS
 )
 
 GIVEN_KINDS = {
