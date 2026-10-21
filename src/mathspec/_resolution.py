@@ -84,8 +84,8 @@ class Namespace:
         'dtypes',
         'follow_ons',
         'given_conditions',
+        'labels',
         'leaf_dims',
-        'members',
         'parameters',
         'relations',
         'spec',
@@ -117,12 +117,12 @@ class Namespace:
         self.dtypes: dict[str, DeclaredDtype] = {
             **{p: pd.dtype for p, pd in parameters.items()},
             **{m: cast('DeclaredDtype', 'bool') for m in spec.given.conditions},
-            **{d: dd.label_dtype for d, dd in spec.dimensions.items()},
+            **{d: dd.dtype for d, dd in spec.dimensions.items()},
         }
-        #: dimension name -> the labels its ``one_of`` allows, for the dimensions
+        #: dimension name -> the labels it allows, for the dimensions
         #: that list them; what a label compared against one of them must be.
-        self.members: dict[str, tuple[str, ...]] = {
-            d: members for d, dd in spec.dimensions.items() if (members := dd.members) is not None
+        self.labels: dict[str, tuple[str | int, ...]] = {
+            d: tuple(dd.labels) for d, dd in spec.dimensions.items() if dd.labels is not None
         }
         #: parameter name -> the value its ``missing:`` reads a missing row as,
         #: for the parameters that name one; what a comparison in a condition reads there.

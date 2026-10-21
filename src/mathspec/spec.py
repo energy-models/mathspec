@@ -75,7 +75,6 @@ __all__ = [
     'GivenVariableSpec',
     'MacroSpec',
     'ObjectiveSpec',
-    'OneOfSpec',
     'ParameterSpec',
     'PiecewiseLinkSpec',
     'PiecewiseSpec',
@@ -289,32 +288,8 @@ class RelationSpec(_StrictSpec):
         return tuple(role for role, _ in side_columns(self.values))
 
 
-class OneOfSpec(_StrictSpec):
-    """The labels a dimension allows, written ``dtype: {one_of: [...]}`` in place of ``dtype: str``.
-
-    The labels are strings, at least one and each once, kept in the order the
-    file lists them. A condition that compares the dimension, or a relation
-    column over it, against any other label is refused at load.
-    """
-
-    _label: ClassVar[str] = "a dimension's dtype"
-
-    one_of: Annotated[list[str], Field(min_length=1, json_schema_extra={'uniqueItems': True})]
-
-    @field_validator('one_of', mode='before')
-    @classmethod
-    def _strings_listed_once(cls, v: object) -> object:
-        """A number or a flag in YAML is not the label its text spells, so it is refused rather than read as one."""
-        if not isinstance(v, list):
-            return v
-        if not v:
-            raise ValueError('lists no label. List at least one, or write dtype: str.')
-        if not_text := [label for label in v if not isinstance(label, str)]:
-            shown = _as_yaml(not_text[0])
-            raise ValueError(f"takes only strings, and {shown} is not one. Quote it: '{shown}'.")
-        if twice := sorted({label for label in v if v.count(label) > 1}):
-            raise ValueError(f'lists {twice[0]!r} twice. List each label once.')
-        return v
+#: The dtypes whose labels a dimension may list under ``labels``.
+_LISTABLE: tuple[DimensionDtype, ...] = ('str', 'int')
 
 
 class DimensionSpec(_StrictSpec):
@@ -322,51 +297,57 @@ class DimensionSpec(_StrictSpec):
 
     A dimension is an axis and nothing else: it declares that the axis exists
     and what its coordinates are typed as. Which coordinates there are is data,
-    and arrives when the data is attached; a ``dtype: {one_of: [...]}``
-    ([`OneOfSpec`][]) only names the labels a coordinate may have. The maps its members carry — a
+    and arrives when the data is attached; ``labels`` only names the labels a
+    coordinate may have. The maps its members carry — a
     generator's bus, a snapshot's period — are top-level ``relations:``
     ([`RelationSpec`][]), keyed by their own name.
     """
 
     _label: ClassVar[str] = 'a dimension entry'
 
-    dtype: DimensionDtype | OneOfSpec = 'str'
+    dtype: DimensionDtype = 'str'
+    #: The labels a coordinate may have, in file order, each once and each of
+    #: the dimension's dtype, ``str`` or ``int``. A condition that compares the
+    #: dimension, or a relation column over it, against any other label is
+    #: refused at load. ``None`` allows any label of the dtype.
+    labels: Annotated[list[str | int], Field(min_length=1, json_schema_extra={'uniqueItems': True})] | None = None
     #: Whether the order the data gives the coordinates in is part of the
     #: model. Only an ordered dimension is one a construct may step or count
     #: along; every other one is a set whose row order means nothing.
     ordered: bool = False
     description: str | None = None
 
-    @field_validator('dtype', mode='before')
+    @field_validator('labels', mode='before')
     @classmethod
-    def _a_name_or_the_labels(cls, v: object) -> object:
-        """Each spelling is held to its own branch, so a mistake in one is not also reported against the other."""
-        if not isinstance(v, dict):
-            if v in get_args(DimensionDtype):
-                return v
-            names = ', '.join(get_args(DimensionDtype))
-            raise ValueError(f'{_as_yaml(v)} is not a dtype. Write one of {names}, or {{one_of: [<label>, ...]}}.')
-        try:
-            return OneOfSpec.model_validate(v)
-        except ValidationError as exc:
-            raise ValueError(str(schema_error(exc))) from None
-
-    @property
-    def label_dtype(self) -> DimensionDtype:
-        """What the labels are: ``str`` for a dimension that lists them under ``one_of``."""
-        return self.dtype if isinstance(self.dtype, str) else 'str'
-
-    @property
-    def members(self) -> tuple[str, ...] | None:
-        """The labels ``one_of`` allows, in file order, or ``None`` where any label of the dtype may come."""
-        return None if isinstance(self.dtype, str) else tuple(self.dtype.one_of)
+    def _labels_of_the_dtype(cls, v: object, info: ValidationInfo[object]) -> object:
+        """A label of another type matches no coordinate, so it is refused rather than read as the text it spells."""
+        if not isinstance(v, list) or 'dtype' not in info.data:
+            return v
+        dtype = info.data['dtype']
+        if dtype not in _LISTABLE:
+            raise ValueError(f'lists the labels of a str or int dimension, and this one is {dtype}. Leave labels out.')
+        if not v:
+            raise ValueError('lists no label. List at least one, or leave labels out.')
+        if dtype == 'str' and (wrong := [label for label in v if not isinstance(label, str)]):
+            shown = _as_yaml(wrong[0])
+            raise ValueError(f"lists {shown}, which is not a str. Quote it: '{shown}'.")
+        if dtype == 'int' and (
+            wrong := [label for label in v if isinstance(label, bool) or not isinstance(label, int)]
+        ):
+            shown = repr(wrong[0]) if isinstance(wrong[0], str) else _as_yaml(wrong[0])
+            raise ValueError(f'lists {shown}, which is not an int. Write a whole number, or declare dtype: str.')
+        if twice := sorted({label for label in v if v.count(label) > 1}):
+            raise ValueError(f'lists {twice[0]!r} twice. List each label once.')
+        return v
 
     @model_serializer(mode='wrap')
     def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``ordered`` is written where it is true: false is what leaving it out says."""
+        """``ordered`` is written where it is true, and ``labels`` where it lists some: leaving either out says the default."""
         written = cast('dict[str, object]', handler(self))
         if not self.ordered:
             written.pop('ordered', None)
+        if self.labels is None:
+            written.pop('labels', None)
         return written
 
 

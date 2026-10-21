@@ -223,7 +223,10 @@ def lower(spec: Spec) -> Program:
         objective=objective,
         dimensions={
             name: Dimension(
-                dtype=ddef.label_dtype, members=ddef.members, ordered=ddef.ordered, description=ddef.description
+                dtype=ddef.dtype,
+                labels=None if ddef.labels is None else tuple(ddef.labels),
+                ordered=ddef.ordered,
+                description=ddef.description,
             )
             for name, ddef in spec.dimensions.items()
         },
