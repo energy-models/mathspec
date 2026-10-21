@@ -37,7 +37,17 @@ from mathspec.program import (
     WindowSum,
     children,
 )
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, dims_reversed, expression_of, spec_of, varied, where_of
+from tests.fixtures import (
+    DISPATCH_MODEL,
+    EXAMPLES,
+    SPECS,
+    dims_reversed,
+    entries_reversed,
+    expression_of,
+    spec_of,
+    varied,
+    where_of,
+)
 
 #: Every class an expression node is an instance of.
 EXPRESSION_NODES = get_args(Expression)
@@ -884,6 +894,30 @@ def test_the_order_a_file_writes_a_list_in_reaches_no_value_of_the_spec(path):
     backwards = to_spec(dims_reversed(spec.to_dict()))
     assert backwards == spec, 'every dims: list and each side of a relation is sorted as the spec loads'
     assert backwards.to_yaml() == spec.to_yaml(), 'so the spec writes back one text'
+
+
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_the_order_a_file_lists_its_entries_in_reaches_no_value_of_the_spec(path):
+    """A spec held each section's entries in the order its file listed them, so two files that state one spec
+    wrote back two texts and lowered to programs that list their entries in two orders."""
+    spec = to_spec(path)
+    backwards = to_spec(entries_reversed(spec.to_dict()))
+    assert backwards.to_yaml() == spec.to_yaml(), 'the entries of each section are sorted as the spec loads'
+    for section in (
+        'dimensions',
+        'relations',
+        'parameters',
+        'conditions',
+        'variables',
+        'expressions',
+        'constraints',
+        'sos',
+        'piecewise',
+        'assumptions',
+    ):
+        assert list(getattr(backwards.program, section)) == list(getattr(spec.program, section)), (
+            f'so the program lists its {section} in one order'
+        )
 
 
 def _dims_tuples(root: object) -> Iterator[tuple[str, tuple[str, ...]]]:

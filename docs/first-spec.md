@@ -155,22 +155,22 @@ python -m mathspec markdown dispatch.yaml
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
     | $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units |
+    | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
     #### Parameters
 
     | Symbol | Meaning |
     |---|---|
     | $`\mathrm{capacity}`$ | `capacity` over $`\mathcal{G}`$ — installed capacity |
-    | $`\mathrm{load}`$ | `load` over $`\mathcal{T}`$ — demand to be met |
     | $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$ — marginal cost |
+    | $`\mathrm{load}`$ | `load` over $`\mathcal{T}`$ — demand to be met |
 
     #### Variables
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{T} \times \mathcal{G}`$ — output of a generator in a snapshot |
+    | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{G} \times \mathcal{T}`$ — output of a generator in a snapshot |
 
     #### Variable domains
 

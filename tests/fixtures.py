@@ -106,6 +106,18 @@ def dims_reversed(data: Any) -> Any:
     return data
 
 
+def entries_reversed(data: dict[str, Any]) -> dict[str, Any]:
+    """*data* with the entries of every section, and of each kind under ``given:``, in reverse order."""
+
+    def backwards(section: Any) -> Any:
+        return dict(reversed(section.items())) if isinstance(section, dict) else section
+
+    return {
+        key: {kind: backwards(entries) for kind, entries in value.items()} if key == 'given' else backwards(value)
+        for key, value in data.items()
+    }
+
+
 def _columns_reversed(relation: Any) -> Any:
     """A relation entry with its ``key`` and ``values`` columns in reverse order."""
     if not isinstance(relation, dict):

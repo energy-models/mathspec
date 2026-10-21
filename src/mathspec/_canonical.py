@@ -201,15 +201,15 @@ def _canonical_links(links: list[list[object]]) -> list[list[object]]:
     return [[canonical_text(cast('str', link[0])), *link[1:]] for link in links]
 
 
-def _sorted_entries(section: dict[str, object], *, bare_is_expression: bool = False) -> dict[str, object]:
-    """One section's entries sorted by name, each with its expressions in the normal form.
+def _canonical_entries(section: dict[str, object], *, bare_is_expression: bool = False) -> dict[str, object]:
+    """One section's entries, each with its expressions in the normal form.
 
     A named expression written on one line serialises back as a bare string,
     which is the expression itself, so *bare_is_expression* normalises it too.
     """
     return {
         name: canonical_text(entry) if bare_is_expression and isinstance(entry, str) else _canonical_entry(entry)
-        for name, entry in sorted(section.items())
+        for name, entry in section.items()
     }
 
 
@@ -223,11 +223,12 @@ def _canonical_field(key: str, value: object) -> object:
 def canonical_dict(spec: Spec) -> dict[str, object]:
     """The spec as plain data, in the form two files that state the same spec share.
 
-    Entries are sorted by name, the ones under each kind of ``given:``
-    too, and every expression is printed from its parsed tree, so what is
-    left of a difference is a difference in the spec. A ``dims:`` list and
-    each side of a relation arrive sorted, as the spec holds them. A ``where`` string, the order of the regions under ``cases:`` and
-    the order of a piecewise entry's links are all left as written.
+    Every expression is printed from its parsed tree, so what is left of a
+    difference is a difference in the spec. The entries of each section, the
+    ones under each kind of ``given:`` too, a ``dims:`` list and each side of
+    a relation, and the regions under ``cases:`` arrive sorted by name, as the
+    spec holds them. A ``where`` string and the order of a piecewise entry's
+    links are left as written.
 
     Args:
         spec: The loaded spec.
@@ -241,9 +242,9 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
     built: dict[str, object] = {}
     for section, value in data.items():
         if section == 'given' and isinstance(value, dict):
-            built[section] = {kind: _sorted_entries(entries) for kind, entries in sorted(value.items())}
+            built[section] = {kind: _canonical_entries(entries) for kind, entries in sorted(value.items())}
         elif isinstance(value, dict) and section != 'objective':
-            built[section] = _sorted_entries(value, bare_is_expression=section == 'expressions')
+            built[section] = _canonical_entries(value, bare_is_expression=section == 'expressions')
         else:
             built[section] = _canonical_entry(value)
     piecewise = built.get('piecewise')

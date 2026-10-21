@@ -6,34 +6,34 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T}`$ |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{B} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `connection` is `absent` where the data has no row |
-| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{B} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
-| $`\mathcal{Z}`$ | index $`z`$ — `zone` with $`\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
+| $`\mathcal{B}`$ | index $`b`$ — `bp` |
+| $`\mathcal{U}`$ | index $`u`$ — `bus` with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `connection` is `absent` where the data has no row |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
-| $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$ |
-| $`\mathcal{A}`$ | index $`a`$ — `bp` |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T},\ \mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
+| $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E}`$ |
+| $`\mathcal{Z}`$ | index $`z`$ — `zone` with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{B} \times \mathcal{G}`$ |
+| $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{B} \times \mathcal{G}`$ |
+| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$, `neutral` where the data has no row |
+| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{B} \times \mathcal{G}`$, `neutral` where the data has no row |
+| $`\mathrm{budget}`$ | `budget` (scalar) |
+| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, `neutral` where the data has no row |
+| $`\mathrm{eta}`$ | `eta` over $`\mathcal{G}`$ |
+| $`\mathrm{growth}`$ | `growth` (scalar) |
+| $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
+| $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
+| $`\mathrm{load}`$ | `load` over $`\mathcal{U} \times \mathcal{T}`$ |
+| $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
-| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, `neutral` where the data has no row |
-| $`\mathrm{load}`$ | `load` over $`\mathcal{B} \times \mathcal{T}`$ |
-| $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
+| $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{U} \times \mathcal{E}`$, `absent` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
-| $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{B} \times \mathcal{E}`$, `absent` where the data has no row |
-| $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
-| $`\mathrm{eta}`$ | `eta` over $`\mathcal{G}`$ |
-| $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
-| $`\mathrm{budget}`$ | `budget` (scalar) |
-| $`\mathrm{growth}`$ | `growth` (scalar) |
-| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{A} \times \mathcal{G}`$, `neutral` where the data has no row |
-| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{A} \times \mathcal{G}`$, `neutral` where the data has no row |
-| $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{A} \times \mathcal{G}`$ |
-| $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{A} \times \mathcal{G}`$ |
 
 #### Conditions
 
@@ -46,31 +46,31 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 | Symbol | Meaning |
 |---|---|
-| $`p`$ | `p` over $`\mathcal{G} \times \mathcal{T}`$ |
-| $`\mathit{spill}`$ | `spill` over $`\mathcal{T}`$ |
-| $`\mathit{slack}`$ | `slack` over $`\mathcal{T}`$ |
-| $`\theta`$ | `theta` over $`\mathcal{B}`$ |
-| $`\mathit{on}`$ | `on` over $`\mathcal{G} \times \mathcal{T}`$ |
-| $`\mathit{units}`$ | `units` over $`\mathcal{G}`$ |
-| $`\mathit{spare}`$ | `spare` over $`\mathcal{G}`$ |
-| $`\mathit{reserve}`$ | `reserve` (scalar) |
-| $`\mathit{headroom}`$ | `headroom` (scalar), `neutral` where the mask leaves it out |
-| $`\mathit{weight}`$ | `weight` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{G} \times \mathcal{T}`$ |
+| $`\mathit{headroom}`$ | `headroom` (scalar), `neutral` where the mask leaves it out |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{G} \times \mathcal{T}`$ |
+| $`\mathit{on}`$ | `on` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{op\_cost}`$ | `op_cost` over $`\mathcal{G} \times \mathcal{T}`$ |
+| $`p`$ | `p` over $`\mathcal{G} \times \mathcal{T}`$ |
+| $`\mathit{reserve}`$ | `reserve` (scalar) |
+| $`\mathit{slack}`$ | `slack` over $`\mathcal{T}`$ |
+| $`\mathit{spare}`$ | `spare` over $`\mathcal{G}`$ |
+| $`\mathit{spill}`$ | `spill` over $`\mathcal{T}`$ |
+| $`\theta`$ | `theta` over $`\mathcal{U}`$ |
+| $`\mathit{units}`$ | `units` over $`\mathcal{G}`$ |
 | $`\mathit{warm}`$ | `warm` over $`\mathcal{G} \times \mathcal{T}`$ |
+| $`\mathit{weight}`$ | `weight` over $`\mathcal{G} \times \mathcal{T}`$ |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{spend}^{\mathrm{cap}}`$ | `spend_cap` over $`\mathcal{G}`$ |
-| $`\mathit{spend}`$ | `spend` over $`\mathcal{T}`$ — what a snapshot's dispatch costs |
-| $`\mathrm{rating}`$ | `rating` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{lcoe}`$ | `lcoe` (scalar) |
+| $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{U} \times \mathcal{T}`$ |
 | $`\mathit{net}`$ | `net` over $`\mathcal{T}`$ — what a snapshot spills, less what it lacks |
-| $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{B} \times \mathcal{T}`$ |
+| $`\mathrm{rating}`$ | `rating` over $`\mathcal{G} \times \mathcal{T}`$ |
+| $`\mathit{spend}`$ | `spend` over $`\mathcal{T}`$ — what a snapshot's dispatch costs |
+| $`\mathrm{spend}^{\mathrm{cap}}`$ | `spend_cap` over $`\mathcal{G}`$ |
 | $`\mathrm{startup\_cost}`$ | `startup_cost` over $`\mathcal{G} \times \mathcal{T}`$ — what starting a unit in this snapshot costs, which the horizon's edge changes |
 
 #### Notation
@@ -100,52 +100,10 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 #### Variable domains
 
-**`p`**
+**`fuel`**
 
 ```math
-\mathrm{p}^{\mathrm{min}}_{g} \le p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} \vee \mathrm{p}^{\mathrm{min}}_{g} > 0
-```
-
-**`spill`**
-
-```math
-\mathit{spill}_{t} \ge 0 \qquad \forall\, t \in \mathcal{T}
-```
-
-**`slack`**
-
-```math
-\mathit{slack}_{t} \le 100 \qquad \forall\, t \in \mathcal{T}
-```
-
-**`theta`**
-
-```math
-\theta_{b} \in \mathbb{R} \qquad \forall\, b \in \mathcal{B}
-```
-
-**`on`**
-
-```math
-\mathit{on}_{g,t} \in \{0, 1\} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
-```
-
-**`units`**
-
-```math
-0 \le \mathit{units}_{g} \le 10, \mathit{units}_{g} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G}
-```
-
-**`spare`**
-
-```math
-\mathit{spare}_{g} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G}
-```
-
-**`reserve`**
-
-```math
-\mathit{reserve} \ge 0
+\mathit{fuel}_{g,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 **`headroom`**
@@ -154,22 +112,16 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 \mathit{headroom} \ge 0 \qquad \text{where } \mathrm{budget} \text{ is defined}
 ```
 
-**`weight`**
-
-```math
-0 \le \mathit{weight}_{g,t} \le 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
-```
-
-**`fuel`**
-
-```math
-\mathit{fuel}_{g,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
-```
-
 **`heat`**
 
 ```math
 \mathit{heat}_{g,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`on`**
+
+```math
+\mathit{on}_{g,t} \in \{0, 1\} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 **`op_cost`**
@@ -178,36 +130,72 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 \mathit{op\_cost}_{g,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
+**`p`**
+
+```math
+\mathrm{p}^{\mathrm{min}}_{g} \le p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} \vee \mathrm{p}^{\mathrm{min}}_{g} > 0
+```
+
+**`reserve`**
+
+```math
+\mathit{reserve} \ge 0
+```
+
+**`slack`**
+
+```math
+\mathit{slack}_{t} \le 100 \qquad \forall\, t \in \mathcal{T}
+```
+
+**`spare`**
+
+```math
+\mathit{spare}_{g} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G}
+```
+
+**`spill`**
+
+```math
+\mathit{spill}_{t} \ge 0 \qquad \forall\, t \in \mathcal{T}
+```
+
+**`theta`**
+
+```math
+\theta_{u} \in \mathbb{R} \qquad \forall\, u \in \mathcal{U}
+```
+
+**`units`**
+
+```math
+0 \le \mathit{units}_{g} \le 10, \mathit{units}_{g} \in \mathbb{Z} \qquad \forall\, g \in \mathcal{G}
+```
+
 **`warm`**
 
 ```math
 \mathit{warm}_{g,t} \in \{0, 1\} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{is\_flexible}_{g}
 ```
 
+**`weight`**
+
+```math
+0 \le \mathit{weight}_{g,t} \le 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
 #### Definitions
-
-**`spend_cap`**
-
-```math
-\mathrm{spend}^{\mathrm{cap}}_{g} = \mathrm{cost}_{g} \cdot 2 \qquad \forall\, g \in \mathcal{G}
-```
-
-**`spend`**
-
-```math
-\mathit{spend}_{t} = \sum_{g \in \mathcal{G}} p_{g,t} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
-```
-
-**`rating`**
-
-```math
-\mathrm{rating}_{g,t} = \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \cdot \left( \sum_{b \in \mathcal{B}} \mathrm{load}_{b,t} \right) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
-```
 
 **`lcoe`**
 
 ```math
 \mathit{lcoe} = \frac{\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} \cdot \mathrm{cost}_{g}}{\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t}}
+```
+
+**`marginal_price`**
+
+```math
+\mathit{marginal\_price}_{u,t} = \lambda_{\mathrm{balance},u,t} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T}
 ```
 
 **`net`**
@@ -216,10 +204,22 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 \mathit{net}_{t} = -\mathit{spill}_{t} + \mathit{slack}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
-**`marginal_price`**
+**`rating`**
 
 ```math
-\mathit{marginal\_price}_{b,t} = \lambda_{\mathrm{balance},b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+\mathrm{rating}_{g,t} = \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \cdot \left( \sum_{u \in \mathcal{U}} \mathrm{load}_{u,t} \right) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`spend`**
+
+```math
+\mathit{spend}_{t} = \sum_{g \in \mathcal{G}} p_{g,t} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
+```
+
+**`spend_cap`**
+
+```math
+\mathrm{spend}^{\mathrm{cap}}_{g} = \mathrm{cost}_{g} \cdot 2 \qquad \forall\, g \in \mathcal{G}
 ```
 
 **`startup_cost`**
@@ -236,52 +236,46 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 #### Subject to
 
+**`ahead`**
+
+```math
+p_{g,t} \le p_{g,t \oplus 1} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`always`**
+
+```math
+\mathit{spill}_{t} \ge 0 \qquad \forall\, t \in \mathcal{T}
+```
+
+**`arithmetic`**
+
+```math
+\sum_{g \in \mathcal{G}} \left( \frac{p_{g,t}}{2} - \mathrm{cost}_{g} + 10^{-5} \cdot p_{g,t} + 2.5 \times 10^{-7} \cdot \mathrm{cost}_{g} + 0.5 \cdot p_{g,t} \right) \ge -\left( \sum_{g \in \mathcal{G}} p_{g,t} \right) \cdot \left( -3 \right) \qquad \forall\, t \in \mathcal{T}
+```
+
+**`balance`**
+
+```math
+\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = u} p_{g,t} + \mathit{spill}_{t} - \mathit{slack}_{t} = \mathrm{load}_{u,t} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T}
+```
+
 **`budgeted`**
 
 ```math
 \mathit{spend}_{t} \le \mathrm{budget} \qquad \forall\, t \in \mathcal{T}
 ```
 
-**`starts`**
+**`capped`**
 
 ```math
-p_{g,t} \le \mathrm{startup\_cost}_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{spend}^{\mathrm{cap}}_{g} > 0 \vee \neg \mathrm{is\_flexible}_{g}
 ```
 
-**`under_rating`**
+**`ceiling`**
 
 ```math
-p_{g,t} \le \mathrm{rating}_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
-```
-
-**`balance`**
-
-```math
-\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{g,t} + \mathit{spill}_{t} - \mathit{slack}_{t} = \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
-```
-
-**`netted`**
-
-```math
-\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{g,t} + \mathit{net}_{t} = \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
-```
-
-**`ramp`**
-
-```math
-p_{g,t} - p_{g,t \ominus 1} \le p_{g,t - 1} + \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
-```
-
-**`edges`**
-
-```math
-p_{g,t \boxminus_{0} 1} \le p_{g,t \boxplus_{0} 1} + \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
-```
-
-**`ahead`**
-
-```math
-p_{g,t} \le p_{g,t \oplus 1} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\theta_{u} \le \infty \qquad \forall\, u \in \mathcal{U}
 ```
 
 **`composed`**
@@ -290,10 +284,28 @@ p_{g,t} \le p_{g,t \oplus 1} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal
 p_{g,t - 2} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
-**`uncomposed`**
+**`connected`**
 
 ```math
-p_{g,\left( t - 1 \right) \boxminus_{0} \mathrm{lead}} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+p_{g,t} \le \mathrm{load}_{u,t} \qquad \forall\, u \in \mathcal{U},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \left( u,\ g \right) \in \mathrm{connection}
+```
+
+**`counted`**
+
+```math
+\theta_{u} \le \mathrm{budget} \qquad \forall\, u \in \mathcal{U} \,:\, \lvert \{ e \in \mathcal{E} \,:\, \mathrm{tech\_cap}_{u,e} > 0 \} \rvert \ge 2
+```
+
+**`counted_here`**
+
+```math
+\theta_{u} \le \mathrm{tech\_cap}_{u,e} \qquad \forall\, u \in \mathcal{U},\ e \in \mathcal{E} \,:\, \lvert \{ e' \in \mathcal{E} \,:\, \mathrm{tech\_cap}_{u,e'} > 0 \} \rvert \ge 2
+```
+
+**`covered`**
+
+```math
+\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} \le \mathrm{budget} \qquad \text{where } \sum_{g \in \mathcal{G}} \mathrm{p}^{\mathrm{max}}_{g} \ge \mathrm{budget}
 ```
 
 **`crossed`**
@@ -302,16 +314,28 @@ p_{g,\left( t - 1 \right) \boxminus_{0} \mathrm{lead}} \le \mathrm{p}^{\mathrm{m
 p_{g + 1,t \ominus 1} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
-**`lead_time`**
+**`edges`**
 
 ```math
-p_{g,t \boxminus_{0} \mathrm{lead}} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+p_{g,t \boxminus_{0} 1} \le p_{g,t \boxplus_{0} 1} + \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
-**`in_season`**
+**`efficiency`**
 
 ```math
-p_{g,t} \le p_{g,t \ominus^{\mathrm{season\_of}(t)} 1} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+p_{g,t} \le \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`first`**
+
+```math
+\mathit{on}_{g,t} = 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{pos}(t) = 0 \vee \mathrm{pos}_{\mathrm{season\_of}(t)}(t) = 0
+```
+
+**`grouped_once`**
+
+```math
+\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bt.bus}(g) = u \wedge \mathrm{gen\_bt.technology}(g) = e} p_{g,t} \le \mathrm{tech\_cap}_{u,e} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T},\ e \in \mathcal{E}
 ```
 
 **`held_in_season`**
@@ -320,34 +344,28 @@ p_{g,t} \le p_{g,t \ominus^{\mathrm{season\_of}(t)} 1} \qquad \forall\, g \in \m
 p_{g,t} \le p_{g,t \boxminus_{0}^{\mathrm{season\_of}(t)} 1} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
-**`window`**
-
-```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < 3} \mathit{on}_{g,t'} \le \mathit{units}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
-```
-
 **`history`**
 
 ```math
 \sum_{t' \in \mathcal{T} \,:\, 0 \le t \ominus t' < \mathrm{min\_up}} \mathit{on}_{g,t'} \le \mathit{units}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
-**`seasonal_window`**
+**`in_season`**
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t -^{\mathrm{season\_of}(t)} t' < 3} \mathit{on}_{g,t'} \le \mathit{units}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+p_{g,t} \le p_{g,t \ominus^{\mathrm{season\_of}(t)} 1} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
-**`lookup`**
+**`last`**
 
 ```math
-\mathit{spill}_{t} \le \mathrm{zone\_cap}_{\mathrm{zone\_of}(b)} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+\mathit{on}_{g,t} = 0 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{pos}(t) = \lvert \mathcal{T} \rvert - 1 \vee \mathrm{pos}_{\mathrm{season\_of}(t)}(t) = \lvert \mathcal{T}_{\mathrm{season\_of}(t)} \rvert - 1
 ```
 
-**`grouped_once`**
+**`lead_time`**
 
 ```math
-\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bt.bus}(g) = b \wedge \mathrm{gen\_bt.technology}(g) = e} p_{g,t} \le \mathrm{tech\_cap}_{b,e} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T},\ e \in \mathcal{E}
+p_{g,t \boxminus_{0} \mathrm{lead}} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 **`looked_up_once`**
@@ -356,28 +374,130 @@ p_{g,t} \le p_{g,t \boxminus_{0}^{\mathrm{season\_of}(t)} 1} \qquad \forall\, g 
 \mathit{units}_{g} \le \mathrm{tech\_cap}_{\mathrm{gen\_bt.bus}(g),\mathrm{gen\_bt.technology}(g)} \qquad \forall\, g \in \mathcal{G}
 ```
 
-**`within_bus`**
+**`lookup`**
 
 ```math
-\mathit{units}_{g} \le \mathit{units}_{g \boxminus_{0}^{\mathrm{gen\_bt.bus}(g)} 1} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{pos}_{\left( \mathrm{gen\_bt.bus}(g),\ \mathrm{gen\_bt.technology}(g) \right)}(g) = 0
+\mathit{spill}_{t} \le \mathrm{zone\_cap}_{\mathrm{zone\_of}(u)} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T}
+```
+
+**`margin`**
+
+```math
+p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} - \mathrm{p}^{\mathrm{min}}_{g} > \frac{\mathrm{cost}_{g}}{2}
+```
+
+**`masked`**
+
+```math
+p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{priced\_dispatch}_{g} \wedge \mathrm{pos}(t) > 0
+```
+
+**`netted`**
+
+```math
+\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = u} p_{g,t} + \mathit{net}_{t} = \mathrm{load}_{u,t} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T}
+```
+
+**`never`**
+
+```math
+\mathit{slack}_{t} \ge 0 \qquad \forall\, t \in \mathcal{T} \,:\, \bot
+```
+
+**`northern`**
+
+```math
+\mathit{slack}_{t} \le \mathrm{load}_{u,t} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \mathrm{zone\_of}(u) = \text{'}\mathrm{north}\text{'} \wedge \mathrm{zone\_of}(u) \neq \mathrm{area\_of}(u) \wedge \mathrm{zone\_of}(u) \text{ is defined}
+```
+
+**`ramp`**
+
+```math
+p_{g,t} - p_{g,t \ominus 1} \le p_{g,t - 1} + \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`ramped`**
+
+```math
+\mathit{slack}_{t} \le \mathrm{load}_{u,t} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \mathrm{load}_{u,t} - \mathrm{load}_{u,t \boxminus_{0} 1} \le \mathrm{zone\_cap}_{\mathrm{zone\_of}(u)} \wedge \mathrm{pos}(t) > 0
+```
+
+**`redundant`**
+
+```math
+\mathit{spill}_{t} \ge 0 \qquad \forall\, t \in \mathcal{T} \,:\, \mathit{spill}_{t} \text{ exists}
 ```
 
 **`relational`**
 
 ```math
-\sum_{g \in \mathcal{G} \,:\, \left( b,\ g \right) \in \mathrm{connection}} p_{g,t} \le \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
-```
-
-**`connected`**
-
-```math
-p_{g,t} \le \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \left( b,\ g \right) \in \mathrm{connection}
+\sum_{g \in \mathcal{G} \,:\, \left( u,\ g \right) \in \mathrm{connection}} p_{g,t} \le \mathrm{load}_{u,t} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T}
 ```
 
 **`representative`**
 
 ```math
 \sum_{t' \in \mathcal{T} \,:\, \mathrm{rep\_of}(t') = t} \mathit{spill}_{t'} \le \mathit{spill}_{\mathrm{rep\_of}(t)} \qquad \forall\, t \in \mathcal{T}
+```
+
+**`run_start`**
+
+```math
+\mathit{slack}_{t} \le \mathrm{load}_{u,t} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \mathrm{load}_{u,t} \text{ is defined} \wedge \neg \left( \mathrm{load}_{u,t - 1} \text{ is defined} \right)
+```
+
+**`running`**
+
+```math
+\theta_{u} \le \mathrm{load}_{u,t} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \theta_{u} \text{ exists} \wedge t \ge 3
+```
+
+**`scalar`**
+
+```math
+\mathit{units}_{g} \le \mathrm{budget} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{cost}_{g} \text{ is defined}
+```
+
+**`seasonal_window`**
+
+```math
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t -^{\mathrm{season\_of}(t)} t' < 3} \mathit{on}_{g,t'} \le \mathit{units}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`starts`**
+
+```math
+p_{g,t} \le \mathrm{startup\_cost}_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`total`**
+
+```math
+\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} \le \mathrm{budget}
+```
+
+**`uncomposed`**
+
+```math
+p_{g,\left( t - 1 \right) \boxminus_{0} \mathrm{lead}} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`under_rating`**
+
+```math
+p_{g,t} \le \mathrm{rating}_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`window`**
+
+```math
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < 3} \mathit{on}_{g,t'} \le \mathit{units}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`within_bus`**
+
+```math
+\mathit{units}_{g} \le \mathit{units}_{g \boxminus_{0}^{\mathrm{gen\_bt.bus}(g)} 1} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{pos}_{\left( \mathrm{gen\_bt.bus}(g),\ \mathrm{gen\_bt.technology}(g) \right)}(g) = 0
 ```
 
 **`zonal`**
@@ -392,142 +512,22 @@ p_{g,t} \le \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ g \in \math
 \sum_{t \in \mathcal{T} \,:\, \mathrm{gen\_zone}(g,\ t) = z} p_{g,t} \le \mathrm{zone\_cap}_{z} \qquad \forall\, g \in \mathcal{G},\ z \in \mathcal{Z}
 ```
 
-**`zonal_membership`**
-
-```math
-\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_zone}(g,\ t) \text{ is defined}} \mathit{units}_{g} \le \mathrm{budget} \qquad \forall\, t \in \mathcal{T}
-```
-
 **`zonal_lookup`**
 
 ```math
 p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ t)} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{gen\_zone}(g,\ t) = \text{'}\mathrm{north}\text{'} \wedge \mathrm{pos}_{\mathrm{gen\_zone}(g,\ t)}(g) = 0
 ```
 
-**`arithmetic`**
+**`zonal_membership`**
 
 ```math
-\sum_{g \in \mathcal{G}} \left( \frac{p_{g,t}}{2} - \mathrm{cost}_{g} + 10^{-5} \cdot p_{g,t} + 2.5 \times 10^{-7} \cdot \mathrm{cost}_{g} + 0.5 \cdot p_{g,t} \right) \ge -\left( \sum_{g \in \mathcal{G}} p_{g,t} \right) \cdot \left( -3 \right) \qquad \forall\, t \in \mathcal{T}
-```
-
-**`total`**
-
-```math
-\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} \le \mathrm{budget}
-```
-
-**`scalar`**
-
-```math
-\mathit{units}_{g} \le \mathrm{budget} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{cost}_{g} \text{ is defined}
-```
-
-**`running`**
-
-```math
-\theta_{b} \le \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T} \,:\, \theta_{b} \text{ exists} \wedge t \ge 3
-```
-
-**`first`**
-
-```math
-\mathit{on}_{g,t} = 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{pos}(t) = 0 \vee \mathrm{pos}_{\mathrm{season\_of}(t)}(t) = 0
-```
-
-**`last`**
-
-```math
-\mathit{on}_{g,t} = 0 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{pos}(t) = \lvert \mathcal{T} \rvert - 1 \vee \mathrm{pos}_{\mathrm{season\_of}(t)}(t) = \lvert \mathcal{T}_{\mathrm{season\_of}(t)} \rvert - 1
-```
-
-**`northern`**
-
-```math
-\mathit{slack}_{t} \le \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T} \,:\, \mathrm{zone\_of}(b) = \text{'}\mathrm{north}\text{'} \wedge \mathrm{zone\_of}(b) \neq \mathrm{area\_of}(b) \wedge \mathrm{zone\_of}(b) \text{ is defined}
-```
-
-**`efficiency`**
-
-```math
-p_{g,t} \le \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
-```
-
-**`ceiling`**
-
-```math
-\theta_{b} \le \infty \qquad \forall\, b \in \mathcal{B}
-```
-
-**`always`**
-
-```math
-\mathit{spill}_{t} \ge 0 \qquad \forall\, t \in \mathcal{T}
-```
-
-**`redundant`**
-
-```math
-\mathit{spill}_{t} \ge 0 \qquad \forall\, t \in \mathcal{T} \,:\, \mathit{spill}_{t} \text{ exists}
-```
-
-**`never`**
-
-```math
-\mathit{slack}_{t} \ge 0 \qquad \forall\, t \in \mathcal{T} \,:\, \bot
-```
-
-**`margin`**
-
-```math
-p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} - \mathrm{p}^{\mathrm{min}}_{g} > \frac{\mathrm{cost}_{g}}{2}
-```
-
-**`ramped`**
-
-```math
-\mathit{slack}_{t} \le \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T} \,:\, \mathrm{load}_{b,t} - \mathrm{load}_{b,t \boxminus_{0} 1} \le \mathrm{zone\_cap}_{\mathrm{zone\_of}(b)} \wedge \mathrm{pos}(t) > 0
-```
-
-**`covered`**
-
-```math
-\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} \le \mathrm{budget} \qquad \text{where } \sum_{g \in \mathcal{G}} \mathrm{p}^{\mathrm{max}}_{g} \ge \mathrm{budget}
-```
-
-**`counted`**
-
-```math
-\theta_{b} \le \mathrm{budget} \qquad \forall\, b \in \mathcal{B} \,:\, \lvert \{ e \in \mathcal{E} \,:\, \mathrm{tech\_cap}_{b,e} > 0 \} \rvert \ge 2
-```
-
-**`counted_here`**
-
-```math
-\theta_{b} \le \mathrm{tech\_cap}_{b,e} \qquad \forall\, b \in \mathcal{B},\ e \in \mathcal{E} \,:\, \lvert \{ e' \in \mathcal{E} \,:\, \mathrm{tech\_cap}_{b,e'} > 0 \} \rvert \ge 2
-```
-
-**`run_start`**
-
-```math
-\mathit{slack}_{t} \le \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T} \,:\, \mathrm{load}_{b,t} \text{ is defined} \wedge \neg \left( \mathrm{load}_{b,t - 1} \text{ is defined} \right)
+\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_zone}(g,\ t) \text{ is defined}} \mathit{units}_{g} \le \mathrm{budget} \qquad \forall\, t \in \mathcal{T}
 ```
 
 **`zoned`**
 
 ```math
-\theta_{b} \le \mathrm{budget} \qquad \forall\, b \in \mathcal{B} \,:\, \mathrm{zone\_cap}_{\mathrm{zone\_of}(b)} \text{ is defined}
-```
-
-**`capped`**
-
-```math
-p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{spend}^{\mathrm{cap}}_{g} > 0 \vee \neg \mathrm{is\_flexible}_{g}
-```
-
-**`masked`**
-
-```math
-p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{priced\_dispatch}_{g} \wedge \mathrm{pos}(t) > 0
+\theta_{u} \le \mathrm{budget} \qquad \forall\, u \in \mathcal{U} \,:\, \mathrm{zone\_cap}_{\mathrm{zone\_of}(u)} \text{ is defined}
 ```
 
 **`adjacent`**
@@ -536,34 +536,34 @@ p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t
 \left( \mathit{weight}_{g,t} \right)_{g \in \mathcal{G}} \in \mathrm{SOS}2 \qquad \forall\, t \in \mathcal{T}
 ```
 
-**`fuel_curve`**
-
-```math
-\left( p_{g,t},\ \mathit{fuel}_{g,t},\ \mathit{heat}_{g,t} \right) \in \mathit{on}_{g,t} \cdot \mathrm{pwl}_{a \in \mathcal{A}}(\mathrm{bp\_x}_{a,g},\ \mathrm{bp\_y}_{a,g},\ \mathrm{bp\_heat}_{a,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
-```
-
 **`cost_curve`**
 
 ```math
-\mathit{op\_cost}_{g,t} \ge \begin{cases} \mathit{warm}_{g,t} & \text{if } \mathrm{is\_flexible}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{a \in \mathcal{A} \,:\, \mathrm{bp\_run}_{a,g}}(\mathrm{bp\_x}_{a,g},\ \mathrm{bp\_y}_{a,g})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\mathit{op\_cost}_{g,t} \ge \begin{cases} \mathit{warm}_{g,t} & \text{if } \mathrm{is\_flexible}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`fuel_curve`**
+
+```math
+\left( p_{g,t},\ \mathit{fuel}_{g,t},\ \mathit{heat}_{g,t} \right) \in \mathit{on}_{g,t} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g},\ \mathrm{bp\_heat}_{b,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 **`hull_curve`**
 
 ```math
-\left( p_{g,t},\ \mathit{fuel}_{g,t} \right) \in \mathrm{conv}_{a \in \mathcal{A}}(\mathrm{bp\_x}_{a,g},\ \mathrm{bp\_heat}_{a,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\left( p_{g,t},\ \mathit{fuel}_{g,t} \right) \in \mathrm{conv}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_heat}_{b,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 **`lp_curve`**
 
 ```math
-\mathit{fuel}_{g,t} \ge \mathrm{pwl}_{a \in \mathcal{A} \,:\, \mathrm{bp\_x}_{a,g} \text{ is defined}}(\mathrm{bp\_x}_{a,g},\ \mathrm{bp\_y}_{a,g})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\mathit{fuel}_{g,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 **`ramp_curve`**
 
 ```math
-\mathit{heat}_{g,t} \le \mathrm{pwl}_{a \in \mathcal{A}}(\mathrm{bp\_x}_{a,g},\ \mathrm{bp\_heat}_{a,g})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\mathit{heat}_{g,t} \le \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_heat}_{b,g})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Assumptions
@@ -574,34 +574,16 @@ p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t
 \mathrm{p}^{\mathrm{min}}_{g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G}
 ```
 
-**`efficiency_is_a_fraction`**
-
-```math
-\mathrm{eta}_{g} > 0 \wedge \mathrm{eta}_{g} \le 1 \qquad \forall\, g \in \mathcal{G}
-```
-
-**`lead_times_are_short`**
-
-```math
-\mathrm{lead}_{g} \le 3 \qquad \forall\, g \in \mathcal{G}
-```
-
-**`zones_agree`**
-
-```math
-\mathrm{zone\_of}(b) = \mathrm{area\_of}(b) \qquad \forall\, b \in \mathcal{B}
-```
-
 **`budget_covers_the_peak`**
 
 ```math
 \sum_{g \in \mathcal{G}} \mathrm{p}^{\mathrm{max}}_{g} \ge \mathrm{budget}
 ```
 
-**`ramps_are_gentle`**
+**`efficiency_is_a_fraction`**
 
 ```math
-\mathrm{load}_{b,t} - \mathrm{load}_{b,t \boxminus_{0} 1} \le \mathrm{budget} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T} \,:\, \mathrm{pos}(t) > 0
+\mathrm{eta}_{g} > 0 \wedge \mathrm{eta}_{g} \le 1 \qquad \forall\, g \in \mathcal{G}
 ```
 
 **`flexible_units_have_headroom`**
@@ -610,98 +592,116 @@ p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t
 \mathrm{p}^{\mathrm{min}}_{g} < \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{is\_flexible}_{g}
 ```
 
+**`lead_times_are_short`**
+
+```math
+\mathrm{lead}_{g} \le 3 \qquad \forall\, g \in \mathcal{G}
+```
+
 **`northern_demand_is_real`**
 
 ```math
-\mathrm{load}_{b,t} \ge 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T} \,:\, \mathrm{zone\_of}(b) = \text{'}\mathrm{north}\text{'}
+\mathrm{load}_{u,t} \ge 0 \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \mathrm{zone\_of}(u) = \text{'}\mathrm{north}\text{'}
 ```
 
-**`fuel_curve_complete`**
+**`ramps_are_gentle`**
 
 ```math
-\mathrm{bp\_x}_{a,g} \text{ is defined} \wedge \mathrm{bp\_y}_{a,g} \text{ is defined} \wedge \mathrm{bp\_heat}_{a,g} \text{ is defined} \qquad \forall\, a \in \mathcal{A},\ g \in \mathcal{G}
+\mathrm{load}_{u,t} - \mathrm{load}_{u,t \boxminus_{0} 1} \le \mathrm{budget} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \mathrm{pos}(t) > 0
+```
+
+**`zones_agree`**
+
+```math
+\mathrm{zone\_of}(u) = \mathrm{area\_of}(u) \qquad \forall\, u \in \mathcal{U}
 ```
 
 **`cost_curve_complete`**
 
 ```math
-\mathrm{bp\_x}_{a,g} \text{ is defined} \wedge \mathrm{bp\_y}_{a,g} \text{ is defined} \qquad \forall\, a \in \mathcal{A},\ g \in \mathcal{G} \,:\, \mathrm{bp\_run}_{a,g}
+\mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_y}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{bp\_run}_{b,g}
 ```
 
 **`cost_curve_contiguous`**
 
 ```math
-\lvert \{ a \in \mathcal{A} \,:\, \mathrm{bp\_run}_{a,g} \wedge \neg \mathrm{bp\_run}_{a - 1,g} \} \rvert = 1 \qquad \forall\, g \in \mathcal{G}
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \wedge \neg \mathrm{bp\_run}_{b - 1,g} \} \rvert = 1 \qquad \forall\, g \in \mathcal{G}
+```
+
+**`fuel_curve_complete`**
+
+```math
+\mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_y}_{b,g} \text{ is defined} \wedge \mathrm{bp\_heat}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G}
 ```
 
 **`hull_curve_complete`**
 
 ```math
-\mathrm{bp\_x}_{a,g} \text{ is defined} \wedge \mathrm{bp\_heat}_{a,g} \text{ is defined} \qquad \forall\, a \in \mathcal{A},\ g \in \mathcal{G}
+\mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_heat}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G}
 ```
 
 **`hull_curve_increasing`**
 
 ```math
-\mathrm{bp\_x}_{a \boxminus_{0} 1,g} < \mathrm{bp\_x}_{a,g} \qquad \forall\, a \in \mathcal{A},\ g \in \mathcal{G} \,:\, \mathrm{pos}(a) > 0
+\mathrm{bp\_x}_{b \boxminus_{0} 1,g} < \mathrm{bp\_x}_{b,g} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{pos}(b) > 0
 ```
 
 **`hull_curve_curvature`**
 
 ```math
-\lvert \{ a \in \mathcal{A} \,:\, \left( \mathrm{bp\_heat}_{a,g} - \mathrm{bp\_heat}_{a \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{bp\_x}_{a \boxplus_{0} 1,g} - \mathrm{bp\_x}_{a,g} \right) > \left( \mathrm{bp\_heat}_{a \boxplus_{0} 1,g} - \mathrm{bp\_heat}_{a,g} \right) \cdot \left( \mathrm{bp\_x}_{a,g} - \mathrm{bp\_x}_{a \boxminus_{0} 1,g} \right) \wedge \mathrm{pos}(a) > 0 \wedge \mathrm{pos}(a) \neq \lvert \mathcal{A} \rvert - 1 \} \rvert = 0 \vee \lvert \{ a \in \mathcal{A} \,:\, \left( \mathrm{bp\_heat}_{a,g} - \mathrm{bp\_heat}_{a \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{bp\_x}_{a \boxplus_{0} 1,g} - \mathrm{bp\_x}_{a,g} \right) < \left( \mathrm{bp\_heat}_{a \boxplus_{0} 1,g} - \mathrm{bp\_heat}_{a,g} \right) \cdot \left( \mathrm{bp\_x}_{a,g} - \mathrm{bp\_x}_{a \boxminus_{0} 1,g} \right) \wedge \mathrm{pos}(a) > 0 \wedge \mathrm{pos}(a) \neq \lvert \mathcal{A} \rvert - 1 \} \rvert = 0 \qquad \forall\, g \in \mathcal{G}
+\lvert \{ b \in \mathcal{B} \,:\, \left( \mathrm{bp\_heat}_{b,g} - \mathrm{bp\_heat}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{bp\_x}_{b \boxplus_{0} 1,g} - \mathrm{bp\_x}_{b,g} \right) > \left( \mathrm{bp\_heat}_{b \boxplus_{0} 1,g} - \mathrm{bp\_heat}_{b,g} \right) \cdot \left( \mathrm{bp\_x}_{b,g} - \mathrm{bp\_x}_{b \boxminus_{0} 1,g} \right) \wedge \mathrm{pos}(b) > 0 \wedge \mathrm{pos}(b) \neq \lvert \mathcal{B} \rvert - 1 \} \rvert = 0 \vee \lvert \{ b \in \mathcal{B} \,:\, \left( \mathrm{bp\_heat}_{b,g} - \mathrm{bp\_heat}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{bp\_x}_{b \boxplus_{0} 1,g} - \mathrm{bp\_x}_{b,g} \right) < \left( \mathrm{bp\_heat}_{b \boxplus_{0} 1,g} - \mathrm{bp\_heat}_{b,g} \right) \cdot \left( \mathrm{bp\_x}_{b,g} - \mathrm{bp\_x}_{b \boxminus_{0} 1,g} \right) \wedge \mathrm{pos}(b) > 0 \wedge \mathrm{pos}(b) \neq \lvert \mathcal{B} \rvert - 1 \} \rvert = 0 \qquad \forall\, g \in \mathcal{G}
 ```
 
 **`lp_curve_complete`**
 
 ```math
-\mathrm{bp\_x}_{a,g} \text{ is defined} \wedge \mathrm{bp\_y}_{a,g} \text{ is defined} \qquad \forall\, a \in \mathcal{A},\ g \in \mathcal{G} \,:\, \mathrm{bp\_x}_{a,g} \text{ is defined}
+\mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_y}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined}
 ```
 
 **`lp_curve_increasing`**
 
 ```math
-\mathrm{bp\_x}_{a \boxminus_{0} 1,g} < \mathrm{bp\_x}_{a,g} \qquad \forall\, a \in \mathcal{A},\ g \in \mathcal{G} \,:\, \mathrm{bp\_x}_{a,g} \text{ is defined} \wedge \mathrm{bp\_x}_{a - 1,g} \text{ is defined}
+\mathrm{bp\_x}_{b \boxminus_{0} 1,g} < \mathrm{bp\_x}_{b,g} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_x}_{b - 1,g} \text{ is defined}
 ```
 
 **`lp_curve_curvature`**
 
 ```math
-\left( \mathrm{bp\_y}_{a,g} - \mathrm{bp\_y}_{a \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{bp\_x}_{a \boxplus_{0} 1,g} - \mathrm{bp\_x}_{a,g} \right) \le \left( \mathrm{bp\_y}_{a \boxplus_{0} 1,g} - \mathrm{bp\_y}_{a,g} \right) \cdot \left( \mathrm{bp\_x}_{a,g} - \mathrm{bp\_x}_{a \boxminus_{0} 1,g} \right) \qquad \forall\, a \in \mathcal{A},\ g \in \mathcal{G} \,:\, \mathrm{bp\_x}_{a,g} \text{ is defined} \wedge \mathrm{bp\_x}_{a - 1,g} \text{ is defined} \wedge \mathrm{bp\_x}_{a + 1,g} \text{ is defined}
+\left( \mathrm{bp\_y}_{b,g} - \mathrm{bp\_y}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{bp\_x}_{b \boxplus_{0} 1,g} - \mathrm{bp\_x}_{b,g} \right) \le \left( \mathrm{bp\_y}_{b \boxplus_{0} 1,g} - \mathrm{bp\_y}_{b,g} \right) \cdot \left( \mathrm{bp\_x}_{b,g} - \mathrm{bp\_x}_{b \boxminus_{0} 1,g} \right) \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_x}_{b - 1,g} \text{ is defined} \wedge \mathrm{bp\_x}_{b + 1,g} \text{ is defined}
 ```
 
 **`lp_curve_breakpoints`**
 
 ```math
-\lvert \{ a \in \mathcal{A} \,:\, \mathrm{bp\_x}_{a,g} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, g \in \mathcal{G}
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, g \in \mathcal{G}
 ```
 
 **`lp_curve_contiguous`**
 
 ```math
-\lvert \{ a \in \mathcal{A} \,:\, \mathrm{bp\_x}_{a,g} \text{ is defined} \wedge \neg \left( \mathrm{bp\_x}_{a - 1,g} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, g \in \mathcal{G}
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \neg \left( \mathrm{bp\_x}_{b - 1,g} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, g \in \mathcal{G}
 ```
 
 **`ramp_curve_complete`**
 
 ```math
-\mathrm{bp\_x}_{a,g} \text{ is defined} \wedge \mathrm{bp\_heat}_{a,g} \text{ is defined} \qquad \forall\, a \in \mathcal{A},\ g \in \mathcal{G}
+\mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_heat}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G}
 ```
 
 **`ramp_curve_increasing`**
 
 ```math
-\mathrm{bp\_x}_{a \boxminus_{0} 1,g} < \mathrm{bp\_x}_{a,g} \qquad \forall\, a \in \mathcal{A},\ g \in \mathcal{G} \,:\, \mathrm{pos}(a) > 0
+\mathrm{bp\_x}_{b \boxminus_{0} 1,g} < \mathrm{bp\_x}_{b,g} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{pos}(b) > 0
 ```
 
 **`ramp_curve_curvature`**
 
 ```math
-\left( \mathrm{bp\_heat}_{a,g} - \mathrm{bp\_heat}_{a \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{bp\_x}_{a \boxplus_{0} 1,g} - \mathrm{bp\_x}_{a,g} \right) \ge \left( \mathrm{bp\_heat}_{a \boxplus_{0} 1,g} - \mathrm{bp\_heat}_{a,g} \right) \cdot \left( \mathrm{bp\_x}_{a,g} - \mathrm{bp\_x}_{a \boxminus_{0} 1,g} \right) \qquad \forall\, a \in \mathcal{A},\ g \in \mathcal{G} \,:\, \mathrm{pos}(a) > 0 \wedge \mathrm{pos}(a) \neq \lvert \mathcal{A} \rvert - 1
+\left( \mathrm{bp\_heat}_{b,g} - \mathrm{bp\_heat}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{bp\_x}_{b \boxplus_{0} 1,g} - \mathrm{bp\_x}_{b,g} \right) \ge \left( \mathrm{bp\_heat}_{b \boxplus_{0} 1,g} - \mathrm{bp\_heat}_{b,g} \right) \cdot \left( \mathrm{bp\_x}_{b,g} - \mathrm{bp\_x}_{b \boxminus_{0} 1,g} \right) \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{pos}(b) > 0 \wedge \mathrm{pos}(b) \neq \lvert \mathcal{B} \rvert - 1
 ```
 
 **`ramp_curve_breakpoints`**
 
 ```math
-\lvert \{ a \in \mathcal{A} \,:\, \mathrm{bp\_x}_{a,g} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, g \in \mathcal{G}
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, g \in \mathcal{G}
 ```

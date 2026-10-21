@@ -10,10 +10,10 @@ that builds models, a renderer or a checker.
 
 ## `Spec` and `Program`
 
-A `Spec` holds the file as written: its `macros:`, its descriptions, its
-entries in the order the file lists them, and a `piecewise:` entry as one
-entry. It sorts by name what no order reaches: each `dims:` list, and each side
-of a relation, the key's columns before the values'. A `Program` holds what the
+A `Spec` holds the file as written: its `macros:`, its descriptions, and a
+`piecewise:` entry as one entry. It sorts by name what no order reaches: the
+entries of each section, each `dims:` list, and each side of a relation, the
+key's columns before the values'. A `Program` holds what the
 file means:
 every macro expanded, every name typed, every operator resolved to a node, and
 every dimension and degree rule already checked. A curve stays one curve there
@@ -360,9 +360,9 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 - A constant is never folded into another. `2 * 3` stays `2 * 3`, so a
   reviewer sees a changed coefficient in the diff.
 
-Three things are left as the file wrote them: a condition in the `where`
-grammar, the order of the regions under `cases:`, and the order of a piecewise
-entry's links. A difference in any of them is a difference in the text.
+Two things are left as the file wrote them: a condition in the `where`
+grammar, and the order of a piecewise entry's links. A difference in either is
+a difference in the text.
 
 The normal form sorts `dimensions:` and every `dims:` list by name. This
 changes no dims of the program, because the program sorts every dims by name.

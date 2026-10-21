@@ -55,9 +55,9 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{N}`$ | index $`n`$ — `bus` — network nodes |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{N}`$ | index $`n`$ — `bus` — network nodes |
 
 #### Subject to
 

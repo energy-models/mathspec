@@ -186,7 +186,7 @@ class ConditionResolver:
                 if node.name == self.self_variable:
                     self.errors.append(
                         f"{context}: variable '{node.name}' tests itself in its own where. "
-                        f'Test a parameter, or another variable declared before it.'
+                        f'Test a parameter, or another variable.'
                     )
                 else:
                     return VariableDefined(node.name, ns.leaf_dims[node.name])

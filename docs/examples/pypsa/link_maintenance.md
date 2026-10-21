@@ -248,33 +248,33 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$, data another file declares |
-| $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$, data another file declares |
-| $`\mathrm{f}^{\mathrm{mod}}`$ | `Link_p_nom_mod` over $`\mathcal{L}`$, data another file declares |
 | $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{L} \times \mathcal{T}`$, data another file declares |
-| $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
-| $`\underline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_min` over $`\mathcal{L} \times \Xi`$, data another file declares |
+| $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$, data another file declares |
+| $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$, data another file declares |
 | $`\overline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_max` over $`\mathcal{L} \times \Xi`$, data another file declares |
-| $`u^{f}`$ | `Link_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
+| $`\underline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_min` over $`\mathcal{L} \times \Xi`$, data another file declares |
+| $`\mathrm{f}^{\mathrm{mod}}`$ | `Link_p_nom_mod` over $`\mathcal{L}`$, data another file declares |
+| $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
 | $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ |
+| $`u^{f}`$ | `Link_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
 | $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{L} \times \mathcal{T}`$, a condition another file defines |
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — controllable connections, each from one bus to the buses it delivers to |
 | $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — dispatch periods |
-| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T}`$, `Link_maintenance_cover` is `absent` where the data has no row — controllable connections, each from one bus to the buses it delivers to |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{mnt}^{f}`$ | `Link_maintainable` over $`\mathcal{L}`$ — whether a link must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
-| $`\gamma^{f}`$ | `Link_maintenance_pu` over $`\mathcal{L} \times \Xi`$ — the share of the build a maintenance event takes off |
-| $`\mathrm{n}^{f,\mathrm{mnt}}`$ | `Link_maintenance_events` over $`\mathcal{L} \times \Xi`$ — how many maintenance events the horizon holds |
 | $`\tau^{f,\mathrm{mnt}}`$ | `Link_maintenance_duration` over $`\mathcal{L} \times \Xi`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the link is not maintainable. No row reads it: data prep turns it into `Link_maintenance_cover` and `Link_maintenance_start_blocked`, and the assumptions hold it to the horizon |
+| $`\mathrm{n}^{f,\mathrm{mnt}}`$ | `Link_maintenance_events` over $`\mathcal{L} \times \Xi`$ — how many maintenance events the horizon holds |
+| $`\gamma^{f}`$ | `Link_maintenance_pu` over $`\mathcal{L} \times \Xi`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{blk}^{f}`$ | `Link_maintenance_start_blocked` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the link does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 
 #### Conditions
@@ -288,8 +288,8 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mu^{f}`$ | `Link_maintenance` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, `neutral` where the mask leaves it out — `Link-maintenance` — whether a maintainable link is in maintenance: continuous, and one exactly where an event covers the snapshot |
-| $`\mu^{f,\mathrm{up}}`$ | `Link_maintenance_start` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, `neutral` where the mask leaves it out — `Link-maintenance_start` — whether a maintenance event starts in this snapshot |
 | $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, `neutral` where the mask leaves it out — `Link-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
+| $`\mu^{f,\mathrm{up}}`$ | `Link_maintenance_start` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, `neutral` where the mask leaves it out — `Link-maintenance_start` — whether a maintenance event starts in this snapshot |
 | $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, `neutral` where the mask leaves it out — `Link-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
 
 #### Conditions
@@ -308,16 +308,16 @@ assumptions:
 0 \le \mu^{f}_{l,\xi,t} \le 1 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t}
 ```
 
-**`Link_maintenance_start`**
-
-```math
-\mu^{f,\mathrm{up}}_{l,\xi,t} \in \{0, 1\} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t}
-```
-
 **`Link_maintenance_capacity`**
 
 ```math
 \mu^{f,\mathrm{nom}}_{l,\xi,t} \ge 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{mnt,ext}}_{l,t}
+```
+
+**`Link_maintenance_start`**
+
+```math
+\mu^{f,\mathrm{up}}_{l,\xi,t} \in \{0, 1\} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t}
 ```
 
 **`Link_maintenance_status`**
@@ -334,10 +334,22 @@ assumptions:
 \sum_{t \in \mathcal{T}} \mu^{f,\mathrm{up}}_{l,\xi,t} = \mathrm{n}^{f,\mathrm{mnt}}_{l,\xi} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{mnt}^{f}_{l}
 ```
 
-**`Link_maint_window`**
+**`Link_maint_modstatus_lb`**
 
 ```math
-\mu^{f}_{l,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( t,\ l,\ \xi,\ t' \right) \in \mathrm{Link\_maintenance\_cover}} \mu^{f,\mathrm{up}}_{l,\xi,t'} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t}
+\mu^{f,u}_{l,\xi,t} \ge u^{f}_{l,\xi,t} - \frac{\overline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi}}{\mathrm{f}^{\mathrm{mod}}_{l}} \cdot \left( 1 - \mu^{f}_{l,\xi,t} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+```
+
+**`Link_maint_modstatus_le_maint`**
+
+```math
+\mu^{f,u}_{l,\xi,t} \le \frac{\overline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi}}{\mathrm{f}^{\mathrm{mod}}_{l}} \cdot \mu^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+```
+
+**`Link_maint_modstatus_le_status`**
+
+```math
+\mu^{f,u}_{l,\xi,t} \le u^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 
 **`Link_maint_start_horizon`**
@@ -346,16 +358,28 @@ assumptions:
 \mu^{f,\mathrm{up}}_{l,\xi,t} = 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{blk}^{f}_{l,\xi,t}
 ```
 
-**`Link_maintcap_upper`**
+**`Link_maint_status_lb`**
 
 ```math
-\mu^{f,\mathrm{nom}}_{l,\xi,t} \le F_{l} - \underline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} \cdot \left( 1 - \mu^{f}_{l,\xi,t} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{mnt,ext}}_{l,t}
+\mu^{f,u}_{l,\xi,t} \ge u^{f}_{l,\xi,t} + \mu^{f}_{l,\xi,t} - 1 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
 ```
 
-**`Link_maintcap_upper_nommax`**
+**`Link_maint_status_le_maint`**
 
 ```math
-\mu^{f,\mathrm{nom}}_{l,\xi,t} \le \overline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} \cdot \mu^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{mnt,ext}}_{l,t}
+\mu^{f,u}_{l,\xi,t} \le \mu^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+```
+
+**`Link_maint_status_le_status`**
+
+```math
+\mu^{f,u}_{l,\xi,t} \le u^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+```
+
+**`Link_maint_window`**
+
+```math
+\mu^{f}_{l,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( t,\ l,\ \xi,\ t' \right) \in \mathrm{Link\_maintenance\_cover}} \mu^{f,\mathrm{up}}_{l,\xi,t'} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t}
 ```
 
 **`Link_maintcap_lower_nommax`**
@@ -370,54 +394,24 @@ assumptions:
 \mu^{f,\mathrm{nom}}_{l,\xi,t} \ge \underline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} \cdot \mu^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{mnt,ext}}_{l,t} \wedge \underline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} > 0
 ```
 
-**`Link_maint_status_le_status`**
+**`Link_maintcap_upper`**
 
 ```math
-\mu^{f,u}_{l,\xi,t} \le u^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+\mu^{f,\mathrm{nom}}_{l,\xi,t} \le F_{l} - \underline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} \cdot \left( 1 - \mu^{f}_{l,\xi,t} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{mnt,ext}}_{l,t}
 ```
 
-**`Link_maint_status_le_maint`**
+**`Link_maintcap_upper_nommax`**
 
 ```math
-\mu^{f,u}_{l,\xi,t} \le \mu^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
-```
-
-**`Link_maint_status_lb`**
-
-```math
-\mu^{f,u}_{l,\xi,t} \ge u^{f}_{l,\xi,t} + \mu^{f}_{l,\xi,t} - 1 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
-```
-
-**`Link_maint_modstatus_le_status`**
-
-```math
-\mu^{f,u}_{l,\xi,t} \le u^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
-```
-
-**`Link_maint_modstatus_le_maint`**
-
-```math
-\mu^{f,u}_{l,\xi,t} \le \frac{\overline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi}}{\mathrm{f}^{\mathrm{mod}}_{l}} \cdot \mu^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
-```
-
-**`Link_maint_modstatus_lb`**
-
-```math
-\mu^{f,u}_{l,\xi,t} \ge u^{f}_{l,\xi,t} - \frac{\overline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi}}{\mathrm{f}^{\mathrm{mod}}_{l}} \cdot \left( 1 - \mu^{f}_{l,\xi,t} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+\mu^{f,\mathrm{nom}}_{l,\xi,t} \le \overline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} \cdot \mu^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{mnt,ext}}_{l,t}
 ```
 
 #### Assumptions
 
-**`Link_maintenance_events_positive`**
+**`Link_maintenance_build_cap_is_finite`**
 
 ```math
-\mathrm{n}^{f,\mathrm{mnt}}_{l,\xi} > 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{mnt}^{f}_{l}
-```
-
-**`Link_maintenance_duration_positive`**
-
-```math
-\tau^{f,\mathrm{mnt}}_{l,\xi} > 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{mnt}^{f}_{l}
+\overline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} < \infty \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{ext}^{f}_{l}
 ```
 
 **`Link_maintenance_duration_fits_the_horizon`**
@@ -426,16 +420,22 @@ assumptions:
 \tau^{f,\mathrm{mnt}}_{l,\xi} \le \sum_{t \in \mathcal{T}} \mathrm{w}^{\mathrm{gen}}_{t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{mnt}^{f}_{l}
 ```
 
+**`Link_maintenance_duration_positive`**
+
+```math
+\tau^{f,\mathrm{mnt}}_{l,\xi} > 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{mnt}^{f}_{l}
+```
+
 **`Link_maintenance_events_fit_the_horizon`**
 
 ```math
 \tau^{f,\mathrm{mnt}}_{l,\xi} \cdot \mathrm{n}^{f,\mathrm{mnt}}_{l,\xi} \le \sum_{t \in \mathcal{T}} \mathrm{w}^{\mathrm{gen}}_{t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{mnt}^{f}_{l}
 ```
 
-**`Link_maintenance_build_cap_is_finite`**
+**`Link_maintenance_events_positive`**
 
 ```math
-\overline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} < \infty \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{ext}^{f}_{l}
+\mathrm{n}^{f,\mathrm{mnt}}_{l,\xi} > 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{mnt}^{f}_{l}
 ```
 
 **`Link_maintenance_module_count_is_finite`**

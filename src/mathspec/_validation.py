@@ -98,7 +98,7 @@ def undeclared_dimension(kind: str, name: str, dimension: str) -> str:
 
 
 def _flat_namespace(spec: Spec) -> list[tuple[str, Iterable[str]]]:
-    """Each kind of entry whose names share the one namespace an expression reads, in file order."""
+    """Each kind of entry whose names share the one namespace an expression reads."""
     return [
         ('dimension', spec.dimensions),
         ('relation', spec.relations),

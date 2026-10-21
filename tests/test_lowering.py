@@ -132,7 +132,7 @@ def shapes_spec() -> Spec:
 
 
 def test_program_structure(dispatch_program):
-    assert list(dispatch_program.parameters) == ['capacity', 'load', 'cost'], 'keyed by name, in file order'
+    assert list(dispatch_program.parameters) == ['capacity', 'cost', 'load'], 'keyed by name, sorted by name'
     ((vname, v),) = dispatch_program.variables.items()
     assert vname == 'dispatch'
     assert v.dims == ('generator', 'snapshot'), 'the frame is the dims, sorted by name'
@@ -504,8 +504,8 @@ def test_a_condition_read_through_a_relation_is_lowered_and_keeps_the_relation_i
 def test_assumptions_carry_the_file_s_entries_and_the_curves_behind_them():
     """One mapping holds every fact about the data, so a consumer attaching it has one loop and one refusal.
 
-    The file's entries come first, in the order it wrote them; each
-    ``piecewise:`` entry's conditions follow under the name a refusal quotes.
+    The file's entries and each ``piecewise:`` entry's conditions, under the
+    name a refusal quotes, stand in one mapping sorted by name.
     """
     program = expanded(EXAMPLES / 'piecewise_lp.yaml', 'piecewise').program
     derived = [name for name in program.assumptions if name.startswith('cost_curve_')]
@@ -514,11 +514,11 @@ def test_assumptions_carry_the_file_s_entries_and_the_curves_behind_them():
         'a method states its conditions in the language the file writes, so one kind stands in the mapping'
     )
     assert derived == [
-        'cost_curve_complete',
-        'cost_curve_increasing',
-        'cost_curve_curvature',
         'cost_curve_breakpoints',
-    ], 'an lp curve over a whole axis assumes four things of its breakpoints, completeness first'
+        'cost_curve_complete',
+        'cost_curve_curvature',
+        'cost_curve_increasing',
+    ], 'an lp curve over a whole axis assumes four things of its breakpoints, sorted by name'
 
 
 def test_an_assumption_lowers_both_of_its_masks():

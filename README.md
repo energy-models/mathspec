@@ -120,16 +120,16 @@ Least-cost dispatch of a generator fleet against an hourly load.
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{S}`$ | index $`s`$ — `snapshot` — dispatch periods |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units |
+| $`\mathcal{S}`$ | index $`s`$ — `snapshot` — dispatch periods |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
 | $`\bar p`$ | `capacity` over $`\mathcal{G}`$ — installed capacity |
-| $`\ell`$ | `load` over $`\mathcal{S}`$ — demand to be met |
 | $`c`$ | `cost` over $`\mathcal{G}`$ — marginal cost |
+| $`\ell`$ | `load` over $`\mathcal{S}`$ — demand to be met |
 
 #### Variables
 

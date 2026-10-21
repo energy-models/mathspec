@@ -19,16 +19,12 @@ dimensions:
 
 Every dimension named anywhere in the file is declared here.
 
-The order of a `dims:` list changes nothing. An entry is indexed by its
-dimensions sorted by name, and the indices print in that order: a variable `p`
-with `dims: [snapshot, generator]` prints as $`p_{g,t}`$.
-
-The order of the entries under `dimensions:` changes nothing in the program.
-The typeset document reads it in two places. The legend lists the dimensions in
-that order, and where two dimensions start with the same letter, the one
-declared first takes that letter as its index. With `period` declared before
-`plant`, a variable `x` over both prints as $`x_{p,l}`$. With `plant` first, it
-prints as $`x_{e,p}`$.
+The order of the entries under `dimensions:`, and the order of a `dims:` list,
+change nothing. An entry is indexed by its dimensions sorted by name, and the
+indices print in that order: a variable `p` with `dims: [snapshot, generator]`
+prints as $`p_{g,t}`$. The legend lists the dimensions sorted by name too, and
+where two dimensions start with the same letter, the first by name takes that
+letter as its index: `period` prints as $`p`$ and `plant` as $`l`$.
 
 | Field         |                                                       |                 |
 | ------------- | ----------------------------------------------------- | --------------- |

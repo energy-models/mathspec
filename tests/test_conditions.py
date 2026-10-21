@@ -189,7 +189,7 @@ def test_cases_split_by_a_named_condition_are_proved_apart_through_its_condition
         'cases': {'on': {'when': 'a', 'expression': 1}, 'off': {'when': 'flag', 'expression': 2}},
         'otherwise': 0,
     }
-    with pytest.raises(LanguageError, match=r"cases 'on' and 'off' both claim the value where flag is true"):
+    with pytest.raises(LanguageError, match=r"cases 'off' and 'on' both claim the value where flag is true"):
         to_spec(varied(SMALL_MODEL, **{'conditions.a': 'flag', 'expressions.e': case}))
     apart = varied(case, **{'cases.off.when': 'NOT a'})
     assert to_spec(varied(SMALL_MODEL, **{'conditions.a': 'flag', 'expressions.e': apart}))

@@ -102,21 +102,21 @@ Unit commitment with a start-up ramp, the formulation `cases:` exists for. The s
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{committable}`$ | `committable` over $`\mathcal{G}`$ — whether the unit may be switched off |
-| $`\mathrm{status}^{\mathrm{initial}}`$ | `status_initial` over $`\mathcal{G}`$ — whether the unit was running before the horizon |
 | $`\mathrm{capacity}`$ | `capacity` over $`\mathcal{G}`$ — installed capacity |
+| $`\mathrm{committable}`$ | `committable` over $`\mathcal{G}`$ — whether the unit may be switched off |
+| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$ — marginal cost |
+| $`\mathrm{load}`$ | `load` over $`\mathcal{T}`$ — demand to be met |
 | $`\mathrm{min\_output}`$ | `min_output` over $`\mathcal{G}`$ — output floor while running |
 | $`\mathrm{ramp\_limit}`$ | `ramp_limit` over $`\mathcal{G}`$ — how far output may move between snapshots while running |
 | $`\mathrm{start\_up\_limit}`$ | `start_up_limit` over $`\mathcal{G}`$ — how far it may move in the snapshot it starts in |
-| $`\mathrm{load}`$ | `load` over $`\mathcal{T}`$ — demand to be met |
-| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$ — marginal cost |
+| $`\mathrm{status}^{\mathrm{initial}}`$ | `status_initial` over $`\mathcal{G}`$ — whether the unit was running before the horizon |
 
 #### Variables
 
@@ -168,28 +168,28 @@ Unit commitment with a start-up ramp, the formulation `cases:` exists for. The s
 
 #### Subject to
 
-**`power_balance`**
-
-```math
-\sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
-```
-
-**`upper`**
-
-```math
-\mathit{dispatch}_{g,t} \le \mathit{status}_{g,t} \cdot \mathrm{capacity}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
-```
-
 **`lower`**
 
 ```math
 \mathit{dispatch}_{g,t} \ge \mathit{status}_{g,t} \cdot \mathrm{min\_output}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
+**`power_balance`**
+
+```math
+\sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
+```
+
 **`ramp_up`**
 
 ```math
 \mathit{dispatch}_{g,t} - \mathit{dispatch}_{g,t \boxminus_{0} 1} \le \mathrm{ramp\_limit}_{g} \cdot \mathit{previous\_status}_{g,t} + \mathrm{start\_up\_limit}_{g} \cdot \left( 1 - \mathit{previous\_status}_{g,t} \right) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`upper`**
+
+```math
+\mathit{dispatch}_{g,t} \le \mathit{status}_{g,t} \cdot \mathrm{capacity}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Assumptions

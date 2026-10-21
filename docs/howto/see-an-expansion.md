@@ -125,16 +125,16 @@ names each row the expansion adds.
 
         _Subject to_
 
-        **`pick_pick`**
-
-        ```math
-        \sum_{g \in \mathcal{G}} \mathit{pick\_seg}_{g} \le 1
-        ```
-
         **`pick_nonzero`**
 
         ```math
         p_{g} \le 10 \cdot \mathit{pick\_seg}_{g} \qquad \forall\, g \in \mathcal{G}
+        ```
+
+        **`pick_pick`**
+
+        ```math
+        \sum_{g \in \mathcal{G}} \mathit{pick\_seg}_{g} \le 1
         ```
 
 <!-- expansion:set:end -->
@@ -256,6 +256,12 @@ the set out too.
 
         _Variable domains_
 
+        **`curve_lam`**
+
+        ```math
+        0 \le \mathit{curve\_lam}_{b} \le 1 \qquad \forall\, b \in \mathcal{B}
+        ```
+
         **`x`**
 
         ```math
@@ -266,12 +272,6 @@ the set out too.
 
         ```math
         y \ge 0
-        ```
-
-        **`curve_lam`**
-
-        ```math
-        0 \le \mathit{curve\_lam}_{b} \le 1 \qquad \forall\, b \in \mathcal{B}
         ```
 
         _Subject to_
@@ -362,18 +362,6 @@ the set out too.
 
         _Variable domains_
 
-        **`x`**
-
-        ```math
-        x \ge 0
-        ```
-
-        **`y`**
-
-        ```math
-        y \ge 0
-        ```
-
         **`curve_lam`**
 
         ```math
@@ -386,7 +374,25 @@ the set out too.
         \mathit{curve\_seg}_{b} \in \{0, 1\} \qquad \forall\, b \in \mathcal{B}
         ```
 
+        **`x`**
+
+        ```math
+        x \ge 0
+        ```
+
+        **`y`**
+
+        ```math
+        y \ge 0
+        ```
+
         _Subject to_
+
+        **`curve_adjacency`**
+
+        ```math
+        \mathit{curve\_lam}_{b} \le \mathit{curve\_seg}_{b} + \mathit{curve\_seg}_{b \boxminus_{0} 1} \qquad \forall\, b \in \mathcal{B}
+        ```
 
         **`curve_convexity`**
 
@@ -410,12 +416,6 @@ the set out too.
 
         ```math
         \sum_{b \in \mathcal{B}} \mathit{curve\_seg}_{b} \le 1
-        ```
-
-        **`curve_adjacency`**
-
-        ```math
-        \mathit{curve\_lam}_{b} \le \mathit{curve\_seg}_{b} + \mathit{curve\_seg}_{b \boxminus_{0} 1} \qquad \forall\, b \in \mathcal{B}
         ```
 
         _Assumptions_

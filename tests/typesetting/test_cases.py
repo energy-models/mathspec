@@ -148,16 +148,16 @@ def test_the_table_may_rename_a_named_expression_cased_or_plain():
     assert 's_{t} & =' in tex, 'the definition prints under the spelling the table gave'
 
 
-def test_the_definitions_print_in_file_order():
-    """The file's order, not a set's — six of them, so a shuffle cannot pass by luck.
+def test_the_definitions_print_sorted_by_name():
+    """Name order, not a set's — six of them, written in reverse, so a shuffle cannot pass by luck.
 
     The names were once collected into a `frozenset`, whose iteration order
     follows string hashes and so is re-randomised every process: the section
     printed its rows in a different order on each run, and a generated page
     carrying two of them would churn on every regeneration.
     """
-    declared = ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot']
+    declared = ['foxtrot', 'echo', 'delta', 'charlie', 'bravo', 'alpha']
     tex = to_latex(varied(CASED, **{f'expressions.{n}': BY_REGION for n in declared}), legend=False)
     section = tex[tex.index('Definitions') : tex.index('Objective')]
     labels = re.findall(r'^\\text\{(\w+)\} &&', section, flags=re.MULTILINE)
-    assert labels == ['headroom', *declared], "file order, the file's own"
+    assert labels == sorted(['headroom', *declared]), 'sorted by name, not in the order the file writes them'

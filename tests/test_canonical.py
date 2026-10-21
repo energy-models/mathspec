@@ -197,6 +197,18 @@ def _commitment_with_its_cases_reversed() -> dict[str, object]:
     return varied(raw, **{'expressions.previous_status.cases': dict(reversed(cases.items()))})
 
 
+def test_the_order_of_the_regions_under_cases_is_no_difference():
+    """The regions are proved apart rather than tried in turn, so their order means nothing. A spec held them
+    as the file wrote them, so two files that state one spec wrote two texts and printed two documents."""
+    written, reordered = (
+        ms.to_spec(raw_of(EXAMPLES / 'commitment.yaml')),
+        ms.to_spec(_commitment_with_its_cases_reversed()),
+    )
+    assert reordered.to_yaml(canonical=True) == written.to_yaml(canonical=True), 'one canonical text'
+    assert reordered.to_yaml() == written.to_yaml(), 'the spec writes the regions back sorted by name'
+    assert ms.to_latex(reordered) == ms.to_latex(written), 'the rows print sorted by name, otherwise last'
+
+
 def _piecewise_with_its_links_reversed() -> dict[str, object]:
     raw = raw_of(EXAMPLES / 'piecewise.yaml')
     return varied(raw, **{'piecewise.cost_curve.links': raw['piecewise']['cost_curve']['links'][::-1]})
@@ -205,11 +217,6 @@ def _piecewise_with_its_links_reversed() -> dict[str, object]:
 @pytest.mark.parametrize(
     ('written', 'reordered'),
     [
-        pytest.param(
-            raw_of(EXAMPLES / 'commitment.yaml'),
-            _commitment_with_its_cases_reversed(),
-            id='the-regions-under-cases',
-        ),
         pytest.param(
             raw_of(EXAMPLES / 'piecewise.yaml'),
             _piecewise_with_its_links_reversed(),

@@ -196,12 +196,12 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
+| $`\overline{\mathrm{s}}`$ | `Line_s_max_pu` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$, data another file declares |
 | $`\mathrm{s}^{\mathrm{nom}}`$ | `Line_s_nom` over $`\mathcal{K} \times \Xi`$, data another file declares |
 | $`\mathrm{ext}^{s}`$ | `Line_s_nom_extendable` over $`\mathcal{K}`$, data another file declares |
-| $`\overline{\mathrm{s}}`$ | `Line_s_max_pu` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$, data another file declares |
+| $`\overline{\sigma}`$ | `Transformer_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, data another file declares |
 | $`\sigma^{\mathrm{nom}}`$ | `Transformer_s_nom` over $`\Xi \times \mathcal{M}`$, data another file declares |
 | $`\mathrm{ext}^{\sigma}`$ | `Transformer_s_nom_extendable` over $`\mathcal{M}`$, data another file declares |
-| $`\overline{\sigma}`$ | `Transformer_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, data another file declares |
 | $`S`$ | `Line_s_nom_ext` over $`\mathcal{K}`$ |
 | $`\Sigma`$ | `Transformer_s_nom_ext` over $`\mathcal{M}`$ |
 | $`\check{s}`$ | `Line_s_monitored` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$, an expression another file defines |
@@ -211,12 +211,12 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 | $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K}`$, `Outage_line` is `absent` where the data has no row — passive branches, each between two buses, their flow set by impedance |
-| $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$, `Outage_transformer` is `absent` where the data has no row — passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised |
 | $`\mathcal{K}^{\mathrm{out}}`$ | index $`\kappa`$ — `outage` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K},\ \mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$, `Outage_line` is `absent` where the data has no row, `Outage_transformer` is `absent` where the data has no row — the passive branches a security-constrained run takes out one at a time — PyPSA's `branch_outages`, each a line or a transformer; none on a plain run |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
+| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
+| $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$, `Outage_transformer` is `absent` where the data has no row — passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised |
 
 #### Parameters
 
@@ -241,18 +241,6 @@ constraints:
 
 #### Subject to
 
-**`Line_fix_s_lower_security`**
-
-```math
-\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined}
-```
-
-**`Line_fix_s_upper_security`**
-
-```math
-\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined}
-```
-
 **`Line_ext_s_lower_security`**
 
 ```math
@@ -265,16 +253,16 @@ constraints:
 \check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot S_{k} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined}
 ```
 
-**`Transformer_fix_s_lower_security`**
+**`Line_fix_s_lower_security`**
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined}
 ```
 
-**`Transformer_fix_s_upper_security`**
+**`Line_fix_s_upper_security`**
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined}
 ```
 
 **`Transformer_ext_s_lower_security`**
@@ -287,5 +275,17 @@ constraints:
 
 ```math
 \check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined}
+```
+
+**`Transformer_fix_s_lower_security`**
+
+```math
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined}
+```
+
+**`Transformer_fix_s_upper_security`**
+
+```math
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined}
 ```
 <!-- gallery:end -->
