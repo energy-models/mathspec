@@ -8,22 +8,34 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast, overload
 
+from mathspec._condition_parser import (
+    ColumnNode,
+    UnresolvedComparisonNode,
+    UnresolvedConditionCallNode,
+    UnresolvedCountNode,
+    parse_condition,
+)
 from mathspec._expression_parser import (
     BinaryOperatorNode,
     ColumnsNode,
     ComparisonNode,
     FunctionCallNode,
+    KeywordNode,
     NameListNode,
+    NameNode,
     UnaryOperatorNode,
     operand,
     parse_expression,
 )
 from mathspec._yaml import dump_yaml
+from mathspec.program import And, BooleanLiteral, Not, Or
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
+    from mathspec._condition_parser import UnresolvedConditionNode
     from mathspec._expression_parser import ArithmeticNode, ParsedNode
+    from mathspec.program import Condition
     from mathspec.spec import Spec
 
 #: Which sign a term of a sum is written under, which is also the operator that
@@ -35,6 +47,11 @@ Sign = Literal['+', '-']
 #: values]`` list the file wrote, so its expression is a position rather than a
 #: key.
 _EXPRESSION_KEYS = ('expression', 'otherwise', 'template')
+
+#: Where an entry's condition text sits under a section, once the spec is plain
+#: data. A condition is read by its own grammar, so it is printed by its own
+#: printer.
+_CONDITION_KEYS = ('where', 'when', 'condition', 'holds')
 
 
 def _signed(sign: Sign, node: ArithmeticNode) -> tuple[Sign, ArithmeticNode]:
@@ -195,6 +212,73 @@ def canonical_text(text: str) -> str:
     return laid_out(normalised(parse_expression(text)))
 
 
+def canonical_condition(text: str) -> str:
+    """One condition string in the normal form, parsed and printed rather than edited."""
+    return printed_condition(parse_condition(text))
+
+
+def printed_condition(node: Condition | UnresolvedConditionNode) -> str:
+    """*node* as text, with every order the logic does not fix put into one order.
+
+    ``AND`` and ``OR`` commute, so a chain of one of them is flattened and its
+    operands sorted by the text each prints as. The keywords print in upper
+    case. A side of a comparison is normalised as an expression is, and the
+    two sides keep their places, as an expression's comparison does. A
+    bracket is printed only where the grammar needs it, and around a
+    comparison under ``NOT``, which a reader would otherwise take for a
+    negated name.
+
+    Raises:
+        TypeError: If *node* is a resolved leaf, which the grammar never builds.
+    """
+    if isinstance(node, (And, Or)):
+        word = ' AND ' if isinstance(node, And) else ' OR '
+        return word.join(sorted(_connected(item, node) for item in _chain(node)))
+    if isinstance(node, Not):
+        inner = printed_condition(node.operand)
+        if isinstance(node.operand, (NameNode, BooleanLiteral, UnresolvedConditionCallNode)):
+            return f'NOT {inner}'
+        return f'NOT ({inner})'
+    if isinstance(node, BooleanLiteral):
+        return str(node.value)
+    if isinstance(node, NameNode):
+        return node.name
+    if isinstance(node, UnresolvedComparisonNode):
+        return f'{_side(node.left)} {node.op} {_side(node.right)}'
+    if isinstance(node, UnresolvedConditionCallNode):
+        passed = [printed_condition(node.operand), *(f'{k}={_side(v)}' for k, v in sorted(node.kwargs.items()))]
+        return f'{node.name}({", ".join(passed)})'
+    if isinstance(node, UnresolvedCountNode):
+        return f'{printed_condition(node.call)} {node.op} {_side(node.value)}'
+    msg = f'{node!r} is not a node the condition grammar builds.'
+    raise TypeError(msg)
+
+
+def _chain(node: And | Or) -> Iterator[Condition | UnresolvedConditionNode]:
+    """The operands of a chain of one connective, on either side, as the grammar folds ``a AND b AND c``."""
+    for item in (node.left, node.right):
+        if type(item) is type(node):
+            yield from _chain(item)
+        else:
+            yield item
+
+
+def _connected(item: Condition | UnresolvedConditionNode, chain: And | Or) -> str:
+    """One operand of a chain, bracketed where it is an ``OR`` under an ``AND``, which binds tighter."""
+    text = printed_condition(item)
+    return f'({text})' if isinstance(chain, And) and isinstance(item, Or) else text
+
+
+def _side(node: ArithmeticNode | ColumnNode) -> str:
+    """A side of a comparison or a keyword's value, an arithmetic one in the normal form of an expression."""
+    if isinstance(node, ColumnNode):
+        return node.shown
+    if isinstance(node, KeywordNode):
+        escaped = node.value.replace('\\', '\\\\').replace("'", "\\'")
+        return f"'{escaped}'"
+    return str(normalised(node))
+
+
 def _canonical_entry(entry: object) -> object:
     """One entry, with every expression under it normalised and everything else untouched."""
     if isinstance(entry, dict):
@@ -209,34 +293,45 @@ def _canonical_links(links: list[list[object]]) -> list[list[object]]:
     return [[canonical_text(cast('str', link[0])), *link[1:]] for link in links]
 
 
-def _canonical_entries(section: dict[str, object], *, bare_is_expression: bool = False) -> dict[str, object]:
-    """One section's entries, each with its expressions in the normal form.
+def _canonical_entries(section: dict[str, object], *, bare: Callable[[str], str] | None = None) -> dict[str, object]:
+    """One section's entries, each with its expressions and conditions in the normal form.
 
-    A named expression written on one line serialises back as a bare string,
-    which is the expression itself, so *bare_is_expression* normalises it too.
+    A named expression, a named condition and an assumption written on one
+    line serialise back as a bare string, which is the expression or the
+    condition itself, so *bare* normalises it too.
     """
     return {
-        name: canonical_text(entry) if bare_is_expression and isinstance(entry, str) else _canonical_entry(entry)
+        name: bare(entry) if bare is not None and isinstance(entry, str) else _canonical_entry(entry)
         for name, entry in section.items()
     }
 
 
 def _canonical_field(key: str, value: object) -> object:
-    """One field of an entry in the normal form, an expression being the one it rewrites."""
+    """One field of an entry in the normal form, an expression or a condition being the ones it rewrites."""
     if key in _EXPRESSION_KEYS and isinstance(value, str):
         return canonical_text(value)
+    if key in _CONDITION_KEYS and isinstance(value, str):
+        return canonical_condition(value)
     return _canonical_entry(value)
+
+
+#: What an entry written as a bare string is, by the section it sits in.
+_BARE: dict[str, Callable[[str], str]] = {
+    'expressions': canonical_text,
+    'conditions': canonical_condition,
+    'assumptions': canonical_condition,
+}
 
 
 def canonical_dict(spec: Spec) -> dict[str, object]:
     """The spec as plain data, in the form two files that state the same spec share.
 
-    Every expression is printed from its parsed tree, so what is left of a
-    difference is a difference in the spec. The entries of each section, the
-    ones under each kind of ``given:`` too, a ``dims:`` list and each side of
-    a relation, and the regions under ``cases:`` arrive sorted by name, as the
-    spec holds them. A ``where`` string and the order of a piecewise entry's
-    links are left as written.
+    Every expression and every condition is printed from its parsed tree, so
+    what is left of a difference is a difference in the spec. The entries of
+    each section, the ones under each kind of ``given:`` too, a ``dims:``
+    list and each side of a relation, and the regions under ``cases:`` arrive
+    sorted by name, as the spec holds them. The order of a piecewise entry's
+    links is left as written.
 
     Args:
         spec: The loaded spec.
@@ -252,7 +347,7 @@ def canonical_dict(spec: Spec) -> dict[str, object]:
         if section == 'given' and isinstance(value, dict):
             built[section] = {kind: _canonical_entries(entries) for kind, entries in sorted(value.items())}
         elif isinstance(value, dict) and section != 'objective':
-            built[section] = _canonical_entries(value, bare_is_expression=section == 'expressions')
+            built[section] = _canonical_entries(value, bare=_BARE.get(section))
         else:
             built[section] = _canonical_entry(value)
     piecewise = built.get('piecewise')

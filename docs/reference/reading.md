@@ -352,10 +352,16 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
   own sign. A term that changes is then one line of a diff.
 - A constant is never folded into another. `2 * 3` stays `2 * 3`, so a
   reviewer sees a changed coefficient in the diff.
+- Every condition under `where:`, `when:`, `condition:` and `holds:` is
+  printed from its parsed tree too. `AND`, `OR` and `NOT` print in upper case,
+  the operands of `AND` and of `OR` are sorted, and a bracket stays only where
+  the grammar needs it, or around a comparison under `NOT`.
+- The two sides of a comparison keep their places, in an expression and in a
+  condition, so `p_max > 0` and `0 < p_max` are two texts.
 
-Two things are left as the file wrote them: a condition in the `where`
-grammar, and the order of a piecewise entry's links. A difference in either is
-a difference in the text.
+The order of a piecewise entry's links is left as the file wrote it, because a
+link's position names the rows it emits. A difference there is a difference in
+the text.
 
 The spec holds its entries, every `dims:` list, each side of a relation, the
 regions under `cases:` and the `kwargs` of a macro sorted by name, so the normal

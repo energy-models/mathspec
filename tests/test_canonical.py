@@ -22,7 +22,8 @@ import yaml
 
 import mathspec as ms
 from mathspec.__main__ import main
-from mathspec._canonical import _factors, _signed_terms, canonical_text, laid_out, normalised
+from mathspec._canonical import _factors, _signed_terms, canonical_condition, canonical_text, laid_out, normalised
+from mathspec._condition_parser import parse_condition
 from mathspec._expression_parser import (
     BinaryOperatorNode,
     ComparisonNode,
@@ -33,6 +34,7 @@ from mathspec._expression_parser import (
     operand,
     parse_expression,
 )
+from mathspec.program import And, BooleanLiteral, Not, Or
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, dims_reversed, raw_of, varied
 
 if TYPE_CHECKING:
@@ -250,6 +252,82 @@ def test_the_order_a_macro_lists_its_keywords_in_is_no_difference():
     assert reordered.to_yaml(canonical=True) == written.to_yaml(canonical=True), 'one canonical text'
 
 
+@pytest.mark.parametrize(
+    ('source', 'key', 'written', 'reordered'),
+    [
+        pytest.param(
+            DISPATCH_MODEL,
+            'variables.p.where',
+            'p_max > 0 and cost > 0',
+            'cost > 0 AND p_max > 0',
+            id='the-operands-of-and-and-the-case-of-the-keyword',
+        ),
+        pytest.param(
+            DISPATCH_MODEL,
+            'constraints.balance.where',
+            'load > 1 OR load < 0',
+            '(load < 0) or load>1',
+            id='the-operands-of-or-the-brackets-and-the-spacing',
+        ),
+        pytest.param(
+            DISPATCH_MODEL,
+            'variables.p.where',
+            'p_max + cost > 0',
+            'cost + p_max > 0',
+            id='the-terms-on-a-side-of-a-comparison',
+        ),
+        pytest.param(
+            DISPATCH_MODEL,
+            'conditions.cheap',
+            'cost < 1 AND NOT p_max',
+            'not p_max and cost < 1',
+            id='a-condition-entry-written-as-a-string',
+        ),
+        pytest.param(
+            DISPATCH_MODEL,
+            'assumptions.a_fraction',
+            {'holds': 'p_max >= 0 AND p_max <= 1', 'where': 'p_max AND cost'},
+            {'holds': 'p_max <= 1 and p_max >= 0', 'where': 'cost and p_max'},
+            id='an-assumption-and-its-where',
+        ),
+        pytest.param(
+            raw_of(EXAMPLES / 'commitment.yaml'),
+            'expressions.previous_status.cases.boundary.when',
+            'committable and position(snapshot) == 0',
+            'position(snapshot) == 0 AND committable',
+            id='the-when-of-a-case',
+        ),
+    ],
+)
+def test_a_condition_is_written_one_way(source, key, written, reordered):
+    """A condition is read by its own grammar, and the form printed it as the file wrote it. Two files whose
+    conditions differ only in the order of AND or OR, the case of a keyword, a bracket or a space stated one
+    spec and wrote two texts."""
+    texts = {ms.to_spec(varied(source, **{key: text})).to_yaml(canonical=True) for text in (written, reordered)}
+    assert len(texts) == 1, 'one canonical text for both spellings of the condition'
+
+
+@pytest.mark.parametrize(
+    ('written', 'canonical'),
+    [
+        pytest.param('b and a', 'a AND b', id='and-is-sorted-and-upper-case'),
+        pytest.param('c or (b or a)', 'a OR b OR c', id='a-chain-of-or-is-flattened'),
+        pytest.param('(b or a) and c', '(a OR b) AND c', id='an-or-under-an-and-keeps-its-brackets'),
+        pytest.param('c or b and a', 'a AND b OR c', id='an-and-under-an-or-needs-none'),
+        pytest.param('not (b and a)', 'NOT (a AND b)', id='not-brackets-a-connective'),
+        pytest.param('not a > 0', 'NOT (a > 0)', id='not-brackets-a-comparison'),
+        pytest.param('not (not a)', 'NOT (NOT a)', id='and-another-not'),
+        pytest.param('true or a', 'True OR a', id='a-literal'),
+        pytest.param("tag == 'it\\'s'", "tag == 'it\\'s'", id='a-quoted-label-keeps-its-escape'),
+        pytest.param('lk[h] == h', 'lk[h] == h', id='a-column-of-a-relation'),
+        pytest.param('count(b or a, over=t) >= 2', 'count(a OR b, over=t) >= 2', id='a-count'),
+        pytest.param('count(a, over=t, by=g) >= 1', 'count(a, by=g, over=t) >= 1', id='a-calls-kwargs-are-sorted'),
+    ],
+)
+def test_a_condition_is_printed_one_way(written, canonical):
+    assert canonical_condition(written) == canonical, 'the normal form of the condition, whole'
+
+
 def _piecewise_with_its_links_reversed() -> dict[str, object]:
     raw = raw_of(EXAMPLES / 'piecewise.yaml')
     return varied(raw, **{'piecewise.cost_curve.links': raw['piecewise']['cost_curve']['links'][::-1]})
@@ -264,9 +342,9 @@ def _piecewise_with_its_links_reversed() -> dict[str, object]:
             id='the-links-of-a-piecewise-entry',
         ),
         pytest.param(
-            varied(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0 and cost > 0'}),
-            varied(DISPATCH_MODEL, **{'variables.p.where': 'cost > 0 and p_max > 0'}),
-            id='the-conditions-of-a-where',
+            varied(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0'}),
+            varied(DISPATCH_MODEL, **{'variables.p.where': '0 < p_max'}),
+            id='the-sides-of-a-comparison-in-a-condition',
         ),
     ],
 )
@@ -535,3 +613,45 @@ def test_the_names_a_file_reads_are_sorted_like_the_names_it_declares():
         )
     )
     assert ms.to_spec(one).to_yaml(canonical=True) == ms.to_spec(other).to_yaml(canonical=True)
+
+
+#: The names a generated condition draws from, each read as true or false.
+FLAGS = ['a', 'b', 'c', 'long_flag']
+
+
+def _condition_tree(rng: random.Random, depth: int = 0) -> str:
+    """One random condition over the flags, written with any case and any brackets a file could use."""
+    if depth >= 4 or rng.random() < 0.3:
+        return rng.choice([*FLAGS, 'true', 'False'])
+    roll = rng.random()
+    if roll < 0.2:
+        return f'{rng.choice(["not", "NOT"])} ({_condition_tree(rng, depth + 1)})'
+    word = rng.choice(['and', 'AND', 'or', 'OR'])
+    return f'({_condition_tree(rng, depth + 1)}) {word} ({_condition_tree(rng, depth + 1)})'
+
+
+def _truth(node: object, env: dict[str, bool]) -> bool:
+    if isinstance(node, NameNode):
+        return env[node.name]
+    if isinstance(node, BooleanLiteral):
+        return node.value
+    if isinstance(node, Not):
+        return not _truth(node.operand, env)
+    if isinstance(node, And):
+        return _truth(node.left, env) and _truth(node.right, env)
+    assert isinstance(node, Or), f'{node} is not a kind this evaluator was given'
+    return _truth(node.left, env) or _truth(node.right, env)
+
+
+def test_a_condition_in_the_form_holds_where_the_one_it_came_from_holds():
+    """Sorting operands and dropping brackets are rewrites, and a bracket dropped in the wrong place turns
+    `(a OR b) AND c` into `a OR b AND c`, which holds where the condition does not. 500 generated conditions,
+    each checked on every assignment of its flags."""
+    for seed in range(500):
+        written = _condition_tree(random.Random(seed))
+        printed = canonical_condition(written)
+        before, after = parse_condition(written), parse_condition(printed)
+        for values in itertools.product([False, True], repeat=len(FLAGS)):
+            env = dict(zip(FLAGS, values, strict=True))
+            assert _truth(before, env) == _truth(after, env), f'seed {seed}: `{written}` printed as `{printed}`'
+        assert canonical_condition(printed) == printed, f'seed {seed}: `{printed}` is not a fixed point'
