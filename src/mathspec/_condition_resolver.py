@@ -508,9 +508,14 @@ class ConditionResolver:
                 return node
             value = typed
         if dtype == 'str' and plain.op not in ('==', '!='):
+            by_place = (
+                f'select members by their place with position({left_name}) {plain.op} n, '
+                if kind == 'dimension' and not ns.unordered(left_name)
+                else ''
+            )
             self.errors.append(
                 f'{context}: {plain.name} {plain.op} {value!r} orders str labels, which have no order. '
-                'Compare them with == or !=, or precompute the ordering as a boolean parameter.'
+                f'Compare them with == or !=, {by_place}or precompute the ordering as a boolean parameter.'
             )
             return node
 
