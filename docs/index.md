@@ -56,35 +56,35 @@ the **How** tab shows the call.
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathcal{S}`$ | index $`s`$ — `snapshot` — dispatch periods |
     | $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units |
+    | $`\mathcal{S}`$ | index $`s`$ — `snapshot` — dispatch periods |
 
     #### Parameters
 
     | Symbol | Meaning |
     |---|---|
     | $`\bar p`$ | `capacity` over $`\mathcal{G}`$ — installed capacity |
-    | $`\ell`$ | `load` over $`\mathcal{S}`$ — demand to be met |
     | $`c`$ | `cost` over $`\mathcal{G}`$ — marginal cost |
+    | $`\ell`$ | `load` over $`\mathcal{S}`$ — demand to be met |
 
     #### Variables
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{S} \times \mathcal{G}`$ — output of a generator in a snapshot |
+    | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{G} \times \mathcal{S}`$ — output of a generator in a snapshot |
 
     #### Variable domains
 
     **`dispatch`**
 
     ```math
-    0 \le \mathit{dispatch}_{s,g} \le \bar p_{g} \qquad \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0
+    0 \le \mathit{dispatch}_{g,s} \le \bar p_{g} \qquad \forall\, g \in \mathcal{G},\ s \in \mathcal{S} \,:\, \bar p_{g} > 0
     ```
 
     #### Objective
 
     ```math
-    \min \sum_{s \in \mathcal{S},\ g \in \mathcal{G}} \mathit{dispatch}_{s,g} \cdot c_{g}
+    \min \sum_{g \in \mathcal{G},\ s \in \mathcal{S}} \mathit{dispatch}_{g,s} \cdot c_{g}
     ```
 
     #### Subject to
@@ -92,7 +92,7 @@ the **How** tab shows the call.
     **`power_balance`**
 
     ```math
-    \sum_{g \in \mathcal{G}} \mathit{dispatch}_{s,g} = \ell_{s} \qquad \forall\, s \in \mathcal{S}
+    \sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,s} = \ell_{s} \qquad \forall\, s \in \mathcal{S}
     ```
 
 === "LaTeX"
@@ -102,35 +102,35 @@ the **How** tab shows the call.
 
     \paragraph{Sets}
     \begin{description}
-    \item[{$\mathcal{S}$}] index $s$ --- \texttt{snapshot} --- dispatch periods
     \item[{$\mathcal{G}$}] index $g$ --- \texttt{generator} --- generating units
+    \item[{$\mathcal{S}$}] index $s$ --- \texttt{snapshot} --- dispatch periods
     \end{description}
 
     \paragraph{Parameters}
     \begin{description}
     \item[{$\bar p$}] \texttt{capacity} over $\mathcal{G}$ --- installed capacity
-    \item[{$\ell$}] \texttt{load} over $\mathcal{S}$ --- demand to be met
     \item[{$c$}] \texttt{cost} over $\mathcal{G}$ --- marginal cost
+    \item[{$\ell$}] \texttt{load} over $\mathcal{S}$ --- demand to be met
     \end{description}
 
     \paragraph{Variables}
     \begin{description}
-    \item[{$\mathit{dispatch}$}] \texttt{dispatch} over $\mathcal{S} \times \mathcal{G}$ --- output of a generator in a snapshot
+    \item[{$\mathit{dispatch}$}] \texttt{dispatch} over $\mathcal{G} \times \mathcal{S}$ --- output of a generator in a snapshot
     \end{description}
 
     \paragraph{Variable domains}
     \begin{align*}
-    \text{dispatch} && 0 \le \mathit{dispatch}_{s,g} & \le \bar p_{g} && \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0
+    \text{dispatch} && 0 \le \mathit{dispatch}_{g,s} & \le \bar p_{g} && \forall\, g \in \mathcal{G},\ s \in \mathcal{S} \,:\, \bar p_{g} > 0
     \end{align*}
 
     \paragraph{Objective}
     \begin{align*}
-     && \min & \sum_{s \in \mathcal{S},\ g \in \mathcal{G}} \mathit{dispatch}_{s,g} \cdot c_{g}
+     && \min & \sum_{g \in \mathcal{G},\ s \in \mathcal{S}} \mathit{dispatch}_{g,s} \cdot c_{g}
     \end{align*}
 
     \paragraph{Subject to}
     \begin{align*}
-    \text{power\_balance} && \sum_{g \in \mathcal{G}} \mathit{dispatch}_{s,g} & = \ell_{s} && \forall\, s \in \mathcal{S}
+    \text{power\_balance} && \sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,s} & = \ell_{s} && \forall\, s \in \mathcal{S}
     \end{align*}
     ```
 

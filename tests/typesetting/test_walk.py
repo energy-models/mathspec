@@ -16,7 +16,7 @@ from mathspec._typesetting.format import OPERATOR_NAMES
 from mathspec._typesetting.symbols import _derive_name_symbol, chosen_expressions, symbols_for
 from mathspec._validation import to_spec
 from mathspec.errors import LanguageError
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, varied
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SPECS, dims_reversed, entries_reversed, varied
 from tests.typesetting import golden
 from tests.typesetting.fixtures import EVERY_FORMAT, LATEX
 
@@ -49,7 +49,7 @@ def test_a_dimension_index_never_steals_a_letter_a_variable_owns(name: FormatNam
     }
     text = typeset(model, name)
     assert fmt.subscript('p', ['t', 'p']) not in text, 'the dimension index took the letter the variable owns'
-    assert fmt.subscript('p', ['t', 'l']) in text
+    assert fmt.subscript('p', ['l', 't']) in text
 
 
 @EVERY_FORMAT
@@ -547,7 +547,7 @@ def test_a_parameter_is_upright_and_a_variable_is_italic(name: FormatName, fmt: 
     text = typeset(DISPATCH_MODEL, name, legend=False)
     assert fmt.subscript(fmt.upright('load'), ['t']) in text
     assert fmt.subscript(fmt.italic('load'), ['t']) not in text, 'a parameter never prints italic'
-    assert fmt.subscript('p', ['t', 'g']) in text, 'a variable is chosen, so it stays italic'
+    assert fmt.subscript('p', ['g', 't']) in text, 'a variable is chosen, so it stays italic'
 
 
 def test_nothing_the_model_is_given_prints_italic():
@@ -716,7 +716,7 @@ def test_a_value_column_the_call_consumes_is_a_condition_like_a_produced_one():
     assert (
         r'\sum_{g \in \mathcal{G},\ b \in \mathcal{B} \,:\, '
         r'\mathrm{gen\_bt.bus}(g) = b \wedge \mathrm{gen\_bt.technology}(g) = e}'
-    ) in row, 'both columns the call touches are read, in the order the table declares them'
+    ) in row, 'both columns the call touches are read, the key column first'
 
 
 # ---------------------------------------------------------------------------
@@ -752,10 +752,10 @@ def _row(expression: str, where: str | None = None, **patch: object) -> str:
     [
         pytest.param(
             'p == at(sum(q, over=generator, by=bus_of[bus]), by=bus_of[bus])',
-            r"\sum_{g' \in \mathcal{G} \,:\, \mathrm{bus\_of}(g') = \mathrm{bus\_of}(g)} q_{t,g'}",
+            r"\sum_{g' \in \mathcal{G} \,:\, \mathrm{bus\_of}(g') = \mathrm{bus\_of}(g)} q_{g',t}",
             id='grouped-by-a-relation',
         ),
-        pytest.param('p == q - sum(q, over=generator)', r"\sum_{g' \in \mathcal{G}} q_{t,g'}", id='over-the-whole-dim'),
+        pytest.param('p == q - sum(q, over=generator)', r"\sum_{g' \in \mathcal{G}} q_{g',t}", id='over-the-whole-dim'),
     ],
 )
 def test_a_reduction_under_its_own_dimension_takes_a_fresh_dummy(expression: str, expected: str):
@@ -795,24 +795,24 @@ def test_a_condition_is_bracketed_exactly_where_it_could_read_otherwise(where: s
 @pytest.mark.parametrize(
     ('expression', 'expected', 'forbidden'),
     [
-        pytest.param('p == q - -(q + k)', r'q_{t,g} + q_{t,g} + \mathrm{k}', '- -', id='minus-minus-folds-to-plus'),
+        pytest.param('p == q - -(q + k)', r'q_{g,t} + q_{g,t} + \mathrm{k}', '- -', id='minus-minus-folds-to-plus'),
         pytest.param(
-            'p == q - -2 * k', r'q_{t,g} + 2 \cdot \mathrm{k}', '- -', id='a-sign-on-the-first-factor-folds-too'
+            'p == q - -2 * k', r'q_{g,t} + 2 \cdot \mathrm{k}', '- -', id='a-sign-on-the-first-factor-folds-too'
         ),
-        pytest.param('p == q + -k / 2', r'q_{t,g} - \frac{\mathrm{k}}{2}', '+ -', id='a-sign-on-a-dividend-folds-too'),
+        pytest.param('p == q + -k / 2', r'q_{g,t} - \frac{\mathrm{k}}{2}', '+ -', id='a-sign-on-a-dividend-folds-too'),
         pytest.param(
             'p == q * -(q + k)',
-            r'q_{t,g} \cdot \left( -\left( q_{t,g} + \mathrm{k} \right) \right)',
+            r'q_{g,t} \cdot \left( -\left( q_{g,t} + \mathrm{k} \right) \right)',
             r'\cdot -',
             id='a-negation-as-a-factor',
         ),
         pytest.param(
             'p == 2 * +(q + k)',
-            r'2 \cdot \left( q_{t,g} + \mathrm{k} \right)',
+            r'2 \cdot \left( q_{g,t} + \mathrm{k} \right)',
             r'\left( \left(',
             id='a-unary-plus-says-nothing',
         ),
-        pytest.param('p == -q * 2', r'-q_{t,g} \cdot 2', r'\left(', id='a-negated-first-factor'),
+        pytest.param('p == -q * 2', r'-q_{g,t} \cdot 2', r'\left(', id='a-negated-first-factor'),
     ],
 )
 def test_a_sign_beside_an_operator_is_bracketed_or_folded(expression, expected, forbidden):
@@ -824,10 +824,10 @@ def test_a_sign_beside_an_operator_is_bracketed_or_folded(expression, expected, 
 @pytest.mark.parametrize(
     ('literal', 'expected'),
     [
-        pytest.param('1e-5', r'10^{-5} \cdot q_{t,g}', id='a-power-of-ten'),
-        pytest.param('2.5e-7', r'2.5 \times 10^{-7} \cdot q_{t,g}', id='a-mantissa'),
-        pytest.param('1e6', r'1000000 \cdot q_{t,g}', id='a-whole-number-prints-whole'),
-        pytest.param('0.5', r'0.5 \cdot q_{t,g}', id='a-plain-decimal'),
+        pytest.param('1e-5', r'10^{-5} \cdot q_{g,t}', id='a-power-of-ten'),
+        pytest.param('2.5e-7', r'2.5 \times 10^{-7} \cdot q_{g,t}', id='a-mantissa'),
+        pytest.param('1e6', r'1000000 \cdot q_{g,t}', id='a-whole-number-prints-whole'),
+        pytest.param('0.5', r'0.5 \cdot q_{g,t}', id='a-plain-decimal'),
     ],
 )
 def test_a_float_prints_as_a_number_not_as_python(literal, expected):
@@ -1077,3 +1077,25 @@ def test_a_set_is_labelled_by_the_entry_that_declares_it(name: FormatName, fmt: 
 
     assert 'pick' in text, 'the set carries the key it was declared under'
     assert 'p sos' not in text
+
+
+@pytest.mark.parametrize('fmt', sorted(FORMATS))
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_the_order_a_file_lists_its_entries_in_prints_nowhere(path, fmt):
+    """The document printed each section's entries, and the legend its dimensions, in the order the file listed
+    them, so two files that state one model printed two documents."""
+    spec = to_spec(path)
+    assert typeset(to_spec(entries_reversed(spec.to_dict())), fmt) == typeset(spec, fmt), (
+        'every section prints its entries sorted by name, whatever order the file lists them in'
+    )
+
+
+@pytest.mark.parametrize('fmt', sorted(FORMATS))
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_the_order_a_dims_list_is_written_in_prints_nowhere(path, fmt):
+    """An entry printed its indices in the order its `dims:` wrote them, so two files that state one model
+    printed two documents."""
+    spec = to_spec(path)
+    assert typeset(to_spec(dims_reversed(spec.to_dict())), fmt) == typeset(spec, fmt), (
+        'every index prints sorted by name, whatever order a dims: list is written in'
+    )

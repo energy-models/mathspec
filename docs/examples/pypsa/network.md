@@ -12,7 +12,7 @@ This file states the buses and the balance at each bus. It is one of the [24 fra
 given:
   expressions:
     Bus_injection:
-      dims: [scenario, snapshot, bus]
+      dims: [bus, scenario, snapshot]
       description: >-
         what every component puts into a bus, less what it takes out of it;
         PyPSA writes each term into the balance, and a load on its right-hand
@@ -49,21 +49,21 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression another file defines — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$, an expression another file defines — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{N}`$ | index $`n`$ — `bus` — network nodes |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{N}`$ | index $`n`$ — `bus` — network nodes |
 
 #### Subject to
 
 **`Bus_nodal_balance`**
 
 ```math
-\mathit{Bus\_injection}_{\xi,t,n} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+\mathit{Bus\_injection}_{n,\xi,t} = 0 \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->

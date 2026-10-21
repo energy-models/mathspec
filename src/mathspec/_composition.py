@@ -43,7 +43,7 @@ What that means for each section:
   so a composed spec takes more terms in a later merge. A definition
   written as ``cases:`` takes no term. Where no fragment defines the
   name, the composed spec defines it as its terms, indexed over each dim
-  the readers state, in their one order, that a term is indexed over. Some
+  the readers state that a term is indexed over. Some
   fragment then has to read the name for more than adding to it: read it without
   adding to it, or use it in its math. A name only its terms read, or only one fragment reads, is what a
   misspelt ``given:`` entry looks like, so it is refused. A term that
@@ -163,8 +163,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
             adds a term to a variable, a parameter, a constraint or a
             definition written as ``cases:``; a term reads its own sum through
             another fragment; a name no fragment defines is read by nothing
-            but the fragments that add a term to it, or by one fragment alone;
-            the readers of such a name write its dims in different orders; two
+            but the fragments that add a term to it, or by one fragment alone; two
             fragments are written against different language versions; two
             fragments set the objective; or the composed spec does not load.
         FileNotFoundError: A ``str`` with no newline that names no file.
@@ -381,7 +380,7 @@ def _summed(
     The terms join with a plain ``+``, the loosest operator there is, so a
     sum composed in two merges reads as the one composed in one. Where no
     fragment defines the name, the terms are the body, indexed over each dim
-    the readers state that a term is indexed over, in the readers' order; the
+    the readers state that a term is indexed over; the
     composed load holds every reader to those dims, as it does to a definer's.
     """
     summed: dict[str, object] = {}
@@ -400,7 +399,7 @@ def _summed(
         _read_elsewhere(loaded, key, contributors)
         indexed = _definer_frame(loaded, key)
         entry: dict[str, object] = {
-            'dims': [d for d in _frame(read, key) if d in indexed],
+            'dims': sorted(indexed & set(cast('list[str]', _mapping(reading)['dims']))),
             'expression': ' + '.join(names),
         }
         if said := _mapping(reading).get('description'):
@@ -480,28 +479,6 @@ def _path(reads: Mapping[str, frozenset[str]], start: str, goal: str) -> list[st
                 trail[step] = [*trail[name], step]
                 frontier.append(step)
     return None
-
-
-def _frame(read: Mapping[str, dict[str, object]], key: str) -> list[str]:
-    """The dims every fragment reads the sum *key* over, in the order they all write.
-
-    No fragment defines the sum, so no fragment's order is the one to take:
-    the first reader's would make the order of the list reach the canonical
-    text, which keeps an entry's dims as written.
-    """
-    frames = [
-        (name, cast('list[str]', entry['dims']))
-        for name, sections in read.items()
-        if (entry := _mapping(_mapping(_mapping(sections.get('given')).get('expressions')).get(key)))
-    ]
-    (first, dims), *rest = frames
-    for name, other in rest:
-        if other != dims:
-            raise LanguageError(
-                f"fragments '{first}' and '{name}' read the sum {key!r} over {dims} and {other}. "
-                f'Write `dims:` in the same order in every file.'
-            )
-    return dims
 
 
 def _read_elsewhere(loaded: Mapping[str, Spec], key: str, contributors: list[str]) -> None:

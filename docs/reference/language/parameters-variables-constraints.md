@@ -377,7 +377,7 @@ added like any other.
   terms for, and a later merge adds to that body. So the first merge that holds
   the terms of a sum also holds a file that reads it.
 - Where no file defines the sum, the terms are its body. Every reader writes
-  the dims in the same order. The sum is indexed over each of those dims over
+  the same dims, in any order. The sum is indexed over each of those dims over
   which a term is indexed, and it takes the first description a reader wrote.
   A reader's row over a dimension over which no term is indexed is refused, as
   it is over a definition.

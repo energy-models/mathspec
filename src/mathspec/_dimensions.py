@@ -241,7 +241,7 @@ def check_spec(spec: Spec, program: Program) -> None:
             context = case_context(ename, label)
             if label is not None:
                 _check_condition_dims(region.when, frame, context)
-            indexed |= _check_value_dims(region.value, frame, context) | region.when.dims
+            indexed |= _check_value_dims(region.value, frame, context) | frozenset(region.when.dims)
         _check_dims_are_indexed(ename, frame, indexed, 'no case value and no `when:` is')
 
     for ename, entry in program.expressions.items():
@@ -336,7 +336,7 @@ def _check_condition_dims(
         return
 
     for atom in mask.atoms:
-        if not (outside := sorted(Mask(atom).dims - frame)):
+        if not (outside := [d for d in Mask(atom).dims if d not in frame]):
             continue
         match atom:
             case ParameterDefined() | ParameterComparison():

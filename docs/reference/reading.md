@@ -11,7 +11,10 @@ that builds models, a renderer or a checker.
 ## `Spec` and `Program`
 
 A `Spec` holds the file as written: its `macros:`, its descriptions, and a
-`piecewise:` entry as one entry. A `Program` holds what the file means:
+`piecewise:` entry as one entry. It sorts by name what no order reaches: the
+entries of each section, each `dims:` list, and each side of a relation, the
+key's columns before the values'. A `Program` holds what the
+file means:
 every macro expanded, every name typed, every operator resolved to a node, and
 every dimension and degree rule already checked. A curve stays one curve there
 until [`spec.expand()`](#formulations-written-out) writes it out. The
@@ -154,11 +157,11 @@ dimensions of that sum. A `Join` also opens one `Axis` for each column it
 drops, but an axis is not a dimension and is not in `dims`. An
 `ExpressionReference` has the dimensions of its body.
 
-A node's `dims` are always sorted by name. The order of `dimensions:` and the
-order of an entry's `dims:` do not change them. An entry that declares
-`dims: [snapshot, generator]` has
-`program.expressions[name].dims == ('snapshot', 'generator')`, and each
-`ExpressionReference` to it has `dims == ('generator', 'snapshot')`.
+A node's `dims` are sorted by name, as an entry's are. The order of
+`dimensions:` and the order of an entry's `dims:` do not change them. An entry
+that declares `dims: [snapshot, generator]` has
+`program.expressions[name].dims == ('generator', 'snapshot')`, and each
+`ExpressionReference` to it has the same `dims`.
 
 A `ConditionReference` stands where a `conditions:` entry is read. Its `body` is the
 condition of the entry, the root of `program.conditions[name].condition`, and it is true
@@ -172,7 +175,7 @@ The mask also answers four questions:
 - `.conjuncts` flattens the `AND` spine, and stops at an `OR` or a `NOT`.
 - `.names_read` gives the entries the mask names.
 - `.atoms` gives its leaves, with the connectives removed.
-- `.dims` gives the dimensions the mask is read at.
+- `.dims` gives the dimensions the mask is read at, sorted by name.
 
 A comparison of expressions arrives as an `ExpressionComparison`. Its two
 sides are program expressions like a constraint's, and its `dims` are every
@@ -229,7 +232,7 @@ layer = to_spec(
 
 sorted(layer.variables)  # []
 sorted(layer.given.variables)  # ['p']
-layer.given.constraints['balance'].dims  # ('snapshot', 'bus')
+layer.given.constraints['balance'].dims  # ('bus', 'snapshot')
 ```
 
 The host model provides each name: it holds a column or a row family of that
@@ -349,13 +352,12 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
 - A constant is never folded into another. `2 * 3` stays `2 * 3`, so a
   reviewer sees a changed coefficient in the diff.
 
-Four things are left as the file wrote them: a condition in the `where`
-grammar, the order of the regions under `cases:`, the order of an entry's
-`dims`, and the order of a piecewise entry's links. A difference in any of them
-is a difference in the text.
+Two things are left as the file wrote them: a condition in the `where`
+grammar, and the order of a piecewise entry's links. A difference in either is
+a difference in the text.
 
-The normal form sorts `dimensions:`. This changes no dims of the program,
-because a frame the loader derives is sorted by name.
+The normal form sorts `dimensions:` and every `dims:` list by name. This
+changes no dims of the program, because the program sorts every dims by name.
 
 The normal form states the same spec, but it does not load to a `Spec` equal
 to the original, because a reprinted expression is a different string. Writing

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec._dimensions import check_spec, sorted_dims
+from mathspec._dimensions import check_spec
 from mathspec._expansion import expand, parse_template
 from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec._resolution import (
@@ -135,7 +135,7 @@ def lower(spec: Spec) -> Program:
         errors.extend(refusals)
         if named is not None:
             body = Mask(named.body)
-            conditions[mname] = NamedCondition(body, tuple(sorted(body.dims)), mdef.description)
+            conditions[mname] = NamedCondition(body, body.dims, mdef.description)
 
     variables = {}
     for vname, vdef in spec.variables.items():
@@ -235,7 +235,7 @@ def lower(spec: Spec) -> Program:
         expressions={
             name: NamedExpression(
                 entry.body,
-                _frame_of(name, entry, spec),
+                entry.dims,
                 in_math=name in in_math,
                 description=spec.expressions[name].description,
                 adds_to=spec.expressions[name].adds_to,
@@ -338,17 +338,11 @@ def _loop(target: str, entry: ExpressionReference, sums: Mapping[str, list[Expre
     return None
 
 
-def _frame_of(name: str, entry: ExpressionReference, spec: Spec) -> tuple[str, ...]:
-    """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's, sorted by name."""
-    declared = spec.expressions[name].dims
-    return entry.dims if declared is None else tuple(declared)
-
-
 def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterReference | None:
     if value is None:
         return None
     if isinstance(value, str):
-        return ParameterReference(value, dims=sorted_dims(ns.leaf_dims[value]))
+        return ParameterReference(value, dims=ns.leaf_dims[value])
     return Constant(value, dims=())
 
 

@@ -409,7 +409,7 @@ FEASIBILITY = {k: v for k, v in DISPATCH_MODEL.items() if k != 'objective'}
 def test_a_patch_names_only_the_field_it_changes():
     laid = override(DISPATCH_MODEL, [{'variables': {'p': {'where': 'p_max > 0'}}}])
     p = laid.variables['p']
-    assert (p.dims, p.bounds.lower, p.bounds.upper, p.where) == (['snapshot', 'generator'], 0, 'p_max', 'p_max > 0'), (
+    assert (p.dims, p.bounds.lower, p.bounds.upper, p.where) == (['generator', 'snapshot'], 0, 'p_max', 'p_max > 0'), (
         'the fields the patch does not name are the ones the base declared'
     )
 

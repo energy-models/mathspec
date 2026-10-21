@@ -41,6 +41,11 @@ column named after a dimension it is not over, `{values: {period: zone}}`, is
 refused. A call reads `period` as the name of the column, and the column and
 the dimension must then agree.
 
+The order of the columns under `key:` and under `values:` changes nothing. The
+key's columns come first, and each side is sorted by column name. The typeset
+legend prints the table in that order, so `connection` above prints as
+$`\mathrm{connection} \subseteq \mathcal{B} \times \mathcal{G}`$.
+
 ### Cardinalities
 
 | intention                                    | written                                                  | cardinality                                 |

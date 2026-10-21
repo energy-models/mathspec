@@ -33,7 +33,7 @@ from mathspec._expression_parser import (
     operand,
     parse_expression,
 )
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, raw_of, varied
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, dims_reversed, raw_of, varied
 
 if TYPE_CHECKING:
     from mathspec._expression_parser import ArithmeticNode, ParsedNode
@@ -167,12 +167,12 @@ def _written_backwards(raw: object, depth: int = 3) -> object:
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
 def test_a_file_written_backwards_writes_the_same_text(path):
-    """The section order, the file order in each section and the key
-    order in each entry are spelling. A file that writes all three in
-    reverse is the same spec, so it writes the same text."""
+    """The section order, the file order in each section, the key order in
+    each entry and the order of each `dims:` list are spelling. A file that
+    writes all four in reverse is the same spec, so it writes the same text."""
     raw = raw_of(path)
-    backwards = ms.to_spec(_written_backwards(raw)).to_yaml(canonical=True)
-    assert backwards == ms.to_spec(raw).to_yaml(canonical=True), 'three orders reversed, one text'
+    backwards = ms.to_spec(dims_reversed(_written_backwards(raw))).to_yaml(canonical=True)
+    assert backwards == ms.to_spec(raw).to_yaml(canonical=True), 'four orders reversed, one text'
 
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
@@ -197,6 +197,18 @@ def _commitment_with_its_cases_reversed() -> dict[str, object]:
     return varied(raw, **{'expressions.previous_status.cases': dict(reversed(cases.items()))})
 
 
+def test_the_order_of_the_regions_under_cases_is_no_difference():
+    """The regions are proved apart rather than tried in turn, so their order means nothing. A spec held them
+    as the file wrote them, so two files that state one spec wrote two texts and printed two documents."""
+    written, reordered = (
+        ms.to_spec(raw_of(EXAMPLES / 'commitment.yaml')),
+        ms.to_spec(_commitment_with_its_cases_reversed()),
+    )
+    assert reordered.to_yaml(canonical=True) == written.to_yaml(canonical=True), 'one canonical text'
+    assert reordered.to_yaml() == written.to_yaml(), 'the spec writes the regions back sorted by name'
+    assert ms.to_latex(reordered) == ms.to_latex(written), 'the rows print sorted by name, otherwise last'
+
+
 def _piecewise_with_its_links_reversed() -> dict[str, object]:
     raw = raw_of(EXAMPLES / 'piecewise.yaml')
     return varied(raw, **{'piecewise.cost_curve.links': raw['piecewise']['cost_curve']['links'][::-1]})
@@ -205,16 +217,6 @@ def _piecewise_with_its_links_reversed() -> dict[str, object]:
 @pytest.mark.parametrize(
     ('written', 'reordered'),
     [
-        pytest.param(
-            DISPATCH_MODEL,
-            varied(DISPATCH_MODEL, **{'variables.p.dims': ['generator', 'snapshot']}),
-            id='the-dims-of-an-entry',
-        ),
-        pytest.param(
-            raw_of(EXAMPLES / 'commitment.yaml'),
-            _commitment_with_its_cases_reversed(),
-            id='the-regions-under-cases',
-        ),
         pytest.param(
             raw_of(EXAMPLES / 'piecewise.yaml'),
             _piecewise_with_its_links_reversed(),

@@ -40,13 +40,13 @@ WITH_MARGINAL_COST = varied(
                 'dimensions': {'generator': {'index': 'u', 'set': r'\mathcal{U}'}},
                 'names': {'p': r'\pi', 'marginal_cost': r'c^{\mathrm{marg}}'},
             },
-            (r'\pi_{t,u}', r'c^{\mathrm{marg}}_{u}', r'u \in \mathcal{U}', r'\mathrm{load}_{t}'),
+            (r'\pi_{u,t}', r'c^{\mathrm{marg}}_{u}', r'u \in \mathcal{U}', r'\mathrm{load}_{t}'),
             id='latex',
         ),
         pytest.param(
             to_typst,
             TYPST_SYMBOLS,
-            ('pi_(t,u)', 'bar(p)_(u)', 'u in cal(U)', 'upright("load")_(t)'),
+            ('pi_(u,t)', 'bar(p)_(u)', 'u in cal(U)', 'upright("load")_(t)'),
             id='typst',
         ),
     ],
@@ -174,7 +174,7 @@ def test_one_table_spells_the_entries_a_file_states_and_the_rows_they_state():
     table = {'notation': 'latex', 'names': {'curve_lam': r'\lambda'}}
 
     assert r'\lambda' not in to_latex(spec, symbols=table, legend=False), 'no weight stands where the curve prints'
-    assert r'\lambda_{g,t,b}' in to_latex(spec.expand(), symbols=table, legend=False)
+    assert r'\lambda_{b,g,t}' in to_latex(spec.expand(), symbols=table, legend=False)
 
 
 def test_a_misspelled_name_is_still_a_typo_where_a_formulation_could_have_emitted_it():
