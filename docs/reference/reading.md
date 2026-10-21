@@ -347,6 +347,8 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
   order.
 - Entries are sorted by name within each section.
 - A field that holds its default is left out, whether the file wrote it or not.
+  The one exception is `version`, which is always written, so `version: 0`
+  stays.
 - Every expression is printed from its parsed tree, so the spacing and the
   brackets are the printer's rather than the author's.
 - The terms of a sum are sorted, and so are the factors of a product and the
