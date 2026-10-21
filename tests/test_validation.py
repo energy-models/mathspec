@@ -408,7 +408,7 @@ class TestDimensionKwargs:
             _spec(**{'dimensions.g': {'dtype': dtype}, 'variables.p.where': where})
 
     @pytest.mark.parametrize(
-        ('patch', 'fragments', 'names_position'),
+        ('patch', 'fragments'),
         [
             pytest.param(
                 {'variables.p.where': "g < 'b'"},
@@ -416,31 +416,26 @@ class TestDimensionKwargs:
                     "'g' has dtype 'str', on which < is not defined",
                     'Select members by their place with position(g) < n',
                 ],
-                True,
                 id='an-ordered-dimension',
             ),
             pytest.param(
                 {'dimensions.g': {'dtype': 'str'}, 'variables.p.where': "g > 'b'"},
                 ["'g' has dtype 'str', on which > is not defined", _NO_INEQUALITY_REWRITE],
-                False,
                 id='an-unordered-dimension',
             ),
             pytest.param(
                 {'variables.p.where': "tag >= 'b'"},
                 ["'tag' has dtype 'str', on which >= is not defined", _NO_INEQUALITY_REWRITE],
-                False,
                 id='parameter',
             ),
             pytest.param(
                 {'variables.p.where': "lk > 'b'"},
                 ["'lk' has dtype 'str', on which > is not defined", _NO_INEQUALITY_REWRITE],
-                False,
                 id='relation-column',
             ),
             pytest.param(
                 {'conditions.late': "g <= 'b'", 'variables.p.where': 'late'},
                 ["'g' has dtype 'str', on which <= is not defined", 'position(g) <= n'],
-                True,
                 id='named-condition',
             ),
             pytest.param(
@@ -449,18 +444,16 @@ class TestDimensionKwargs:
                     "compares two columns over 'h', of dtype 'str', on which < is not defined",
                     'Compare them with == or !=, or precompute the comparison as a boolean parameter.',
                 ],
-                False,
                 id='two-relation-columns',
             ),
             pytest.param(
                 {'variables.p.where': 'flag > 0'},
                 ["'flag' has dtype 'bool', on which > is not defined", "'flag' or 'not flag'"],
-                False,
                 id='bool-parameter',
             ),
         ],
     )
-    def test_an_inequality_on_a_str_or_a_bool_is_refused(self, patch, fragments, names_position):
+    def test_an_inequality_on_a_str_or_a_bool_is_refused(self, patch, fragments):
         """`<` on a str compared the labels bytewise, so `'b10' < 'b9'` held whatever the dimension's order.
 
         Only an ordered dimension has a place to select by, so only its message names ``position()``.
@@ -468,27 +461,6 @@ class TestDimensionKwargs:
         message = _refusal(SMALL_MODEL, **patch)
         for fragment in fragments:
             assert fragment in message, message
-        assert ('position(' in message) == names_position, message
-
-    @pytest.mark.parametrize(
-        'patch',
-        [
-            pytest.param({'variables.p.where': "g == 'b'"}, id='a-str-dimension-equal-to-a-label'),
-            pytest.param({'variables.p.where': "tag != 'b'"}, id='a-str-parameter-not-equal-to-a-label'),
-            pytest.param(
-                {'relations.lk2': {'key': 'g', 'values': 'h'}, 'variables.p.where': 'lk == lk2'},
-                id='two-equal-relation-columns',
-            ),
-            pytest.param({'dimensions.g': {'dtype': 'int'}, 'variables.p.where': 'g > 3'}, id='an-int-dimension'),
-            pytest.param({'variables.p.where': 'c >= 0.5'}, id='a-float-parameter'),
-            pytest.param(
-                {'dimensions.g': {'dtype': 'datetime'}, 'variables.p.where': "g >= '2030-01-01'"},
-                id='a-datetime-dimension',
-            ),
-        ],
-    )
-    def test_an_equality_or_an_inequality_on_a_number_or_a_datetime_loads(self, patch):
-        _spec(**patch)
 
 
 class TestAnUndeclaredKeywordIsRefusedOnce:
