@@ -665,13 +665,13 @@ class Dimension:
     #: whatever table carries it, so the declared type is what that column is
     #: checked against, as ``Parameter.dtype`` is for a value column.
     dtype: DimensionDtype = 'str'
-    #: The labels the file allows under ``labels:``, in file order and of
+    #: The labels the file allows under ``allowed:``, in file order and of
     #: ``dtype``, or ``None`` where it lists none. A consumer attaching data
     #: refuses a coordinate that is not one of them, in the dimension's own
     #: table and in every relation column over it, as it refuses a column of the
     #: wrong dtype. The loader has already refused a condition that names
     #: another label.
-    labels: tuple[str | int, ...] | None = None
+    allowed: tuple[str | int, ...] | None = None
     #: Whether the order of the labels is part of the model. Where it is, a
     #: tool keeps the labels in the order the data gives them.
     ordered: bool = False

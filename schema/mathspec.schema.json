@@ -167,8 +167,32 @@
     },
     "DimensionSpec": {
       "additionalProperties": false,
-      "description": "A declared dimension, the dtype its coordinates must be, and whether their order means anything.\n\nA dimension is an axis and nothing else: it declares that the axis exists\nand what its coordinates are typed as. Which coordinates there are is data,\nand arrives when the data is attached; ``labels`` only names the labels a\ncoordinate may have. The maps its members carry \u2014 a\ngenerator's bus, a snapshot's period \u2014 are top-level ``relations:``\n([`RelationSpec`][]), keyed by their own name.",
+      "description": "A declared dimension, the dtype its coordinates must be, and whether their order means anything.\n\nA dimension is an axis and nothing else: it declares that the axis exists\nand what its coordinates are typed as. Which coordinates there are is data,\nand arrives when the data is attached; ``allowed`` only names the labels a\ncoordinate may have. The maps its members carry \u2014 a\ngenerator's bus, a snapshot's period \u2014 are top-level ``relations:``\n([`RelationSpec`][]), keyed by their own name.",
       "properties": {
+        "allowed": {
+          "anyOf": [
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Allowed"
+        },
         "description": {
           "anyOf": [
             {
@@ -191,30 +215,6 @@
           ],
           "title": "Dtype",
           "type": "string"
-        },
-        "labels": {
-          "anyOf": [
-            {
-              "items": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "integer"
-                  }
-                ]
-              },
-              "minItems": 1,
-              "type": "array",
-              "uniqueItems": true
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Labels"
         },
         "ordered": {
           "default": false,

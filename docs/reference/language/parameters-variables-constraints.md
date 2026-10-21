@@ -51,7 +51,7 @@ term or a divisor is a load error, so declare a `0` or `1` that you multiply by
 as `dtype: int`.
 
 A `str` parameter takes any label. To allow only a fixed list of labels,
-declare a dimension with [`labels`](dimensions.md#labels) and a relation into
+declare a dimension with [`allowed`](dimensions.md#allowed) and a relation into
 it in place of the parameter.
 
 ### A missing row

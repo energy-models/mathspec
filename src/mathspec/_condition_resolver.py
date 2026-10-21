@@ -510,11 +510,11 @@ class ConditionResolver:
             if typed is None:
                 return node
             value = typed
-        if labelled in ns.labels and value not in ns.labels[labelled]:
+        if labelled in ns.allowed and value not in ns.allowed[labelled]:
             shown = repr(value) if isinstance(value, str) else f'{value:g}'
             self.errors.append(
                 f"{context}: {shown} is not a label of '{labelled}', which allows only "
-                f"{list(ns.labels[labelled])}. Write one of them, or add {shown} to the labels of '{labelled}'."
+                f"{list(ns.allowed[labelled])}. Write one of them, or add {shown} to the allowed labels of '{labelled}'."
             )
             return node
 

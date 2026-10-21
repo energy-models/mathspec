@@ -277,7 +277,7 @@ class Legend:
         clauses = []
         if dim in noticed.numeric_coordinates:
             clauses.append(f' ({self.format.mono(self.program.dimensions[dim].dtype)} coordinates)')
-        if (labels := self.program.dimensions[dim].labels) is not None:
+        if (labels := self.program.dimensions[dim].allowed) is not None:
             clauses.append(f' (labels {", ".join(self.format.mono(str(label)) for label in labels)})')
         if carried:
             maps = self.format.joined([self._signature(c, lk) for c, lk in carried.items()], '')

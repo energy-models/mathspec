@@ -288,7 +288,7 @@ class RelationSpec(_StrictSpec):
         return tuple(role for role, _ in side_columns(self.values))
 
 
-#: The dtypes whose labels a dimension may list under ``labels``.
+#: The dtypes whose labels a dimension may list under ``allowed``.
 _LISTABLE: tuple[DimensionDtype, ...] = ('str', 'int')
 
 
@@ -297,7 +297,7 @@ class DimensionSpec(_StrictSpec):
 
     A dimension is an axis and nothing else: it declares that the axis exists
     and what its coordinates are typed as. Which coordinates there are is data,
-    and arrives when the data is attached; ``labels`` only names the labels a
+    and arrives when the data is attached; ``allowed`` only names the labels a
     coordinate may have. The maps its members carry — a
     generator's bus, a snapshot's period — are top-level ``relations:``
     ([`RelationSpec`][]), keyed by their own name.
@@ -310,14 +310,14 @@ class DimensionSpec(_StrictSpec):
     #: the dimension's dtype, ``str`` or ``int``. A condition that compares the
     #: dimension, or a relation column over it, against any other label is
     #: refused at load. ``None`` allows any label of the dtype.
-    labels: Annotated[list[str | int], Field(min_length=1, json_schema_extra={'uniqueItems': True})] | None = None
+    allowed: Annotated[list[str | int], Field(min_length=1, json_schema_extra={'uniqueItems': True})] | None = None
     #: Whether the order the data gives the coordinates in is part of the
     #: model. Only an ordered dimension is one a construct may step or count
     #: along; every other one is a set whose row order means nothing.
     ordered: bool = False
     description: str | None = None
 
-    @field_validator('labels', mode='before')
+    @field_validator('allowed', mode='before')
     @classmethod
     def _labels_of_the_dtype(cls, v: object, info: ValidationInfo[object]) -> object:
         """A label of another type matches no coordinate, so it is refused rather than read as the text it spells."""
@@ -325,9 +325,9 @@ class DimensionSpec(_StrictSpec):
             return v
         dtype = info.data['dtype']
         if dtype not in _LISTABLE:
-            raise ValueError(f'lists the labels of a str or int dimension, and this one is {dtype}. Leave labels out.')
+            raise ValueError(f'lists the labels of a str or int dimension, and this one is {dtype}. Leave allowed out.')
         if not v:
-            raise ValueError('lists no label. List at least one, or leave labels out.')
+            raise ValueError('lists no label. List at least one, or leave allowed out.')
         if dtype == 'str' and (wrong := [label for label in v if not isinstance(label, str)]):
             shown = _as_yaml(wrong[0])
             raise ValueError(f"lists {shown}, which is not a str. Quote it: '{shown}'.")

@@ -224,7 +224,7 @@ def lower(spec: Spec) -> Program:
         dimensions={
             name: Dimension(
                 dtype=ddef.dtype,
-                labels=None if ddef.labels is None else tuple(ddef.labels),
+                allowed=None if ddef.allowed is None else tuple(ddef.allowed),
                 ordered=ddef.ordered,
                 description=ddef.description,
             )

@@ -405,12 +405,12 @@ class TestDimensionKwargs:
             _spec(**{'dimensions.g': {'dtype': dtype}, 'variables.p.where': where})
 
 
-_LABELS = {'dimensions.h': {'dtype': 'str', 'labels': ['north', 'south']}}
-_YEARS = {'dimensions.h': {'dtype': 'int', 'labels': [2030, 2040]}}
+_LABELS = {'dimensions.h': {'dtype': 'str', 'allowed': ['north', 'south']}}
+_YEARS = {'dimensions.h': {'dtype': 'int', 'allowed': [2030, 2040]}}
 
 
-class TestADimensionWithLabels:
-    """A dimension that lists its labels under ``labels:`` refuses a condition naming another (#519).
+class TestADimensionWithAllowedLabels:
+    """A dimension that lists its labels under ``allowed:`` refuses a condition naming another (#519).
 
     Before, ``carrier == 'gnrtr'`` loaded and compared equal to nothing, so a
     misspelt label emptied the mask without a word.
@@ -451,45 +451,45 @@ class TestADimensionWithLabels:
         ('dimension', 'refusal'),
         [
             pytest.param(
-                {'labels': []},
-                'labels: lists no label. List at least one, or leave labels out.',
+                {'allowed': []},
+                'allowed: lists no label. List at least one, or leave allowed out.',
                 id='no-label',
             ),
             pytest.param(
-                {'labels': ['north', 'north']},
-                "labels: lists 'north' twice. List each label once.",
+                {'allowed': ['north', 'north']},
+                "allowed: lists 'north' twice. List each label once.",
                 id='a-duplicate',
             ),
             pytest.param(
-                {'labels': [2030, 'north']},
-                "labels: lists 2030, which is not a str. Quote it: '2030'.",
+                {'allowed': [2030, 'north']},
+                "allowed: lists 2030, which is not a str. Quote it: '2030'.",
                 id='a-number-on-a-str-dimension',
             ),
             pytest.param(
-                {'dtype': 'int', 'labels': ['2030']},
-                "labels: lists '2030', which is not an int. Write a whole number, or declare dtype: str.",
+                {'dtype': 'int', 'allowed': ['2030']},
+                "allowed: lists '2030', which is not an int. Write a whole number, or declare dtype: str.",
                 id='a-string-on-an-int-dimension',
             ),
             pytest.param(
-                {'dtype': 'int', 'labels': [True]},
-                'labels: lists true, which is not an int. Write a whole number, or declare dtype: str.',
+                {'dtype': 'int', 'allowed': [True]},
+                'allowed: lists true, which is not an int. Write a whole number, or declare dtype: str.',
                 id='a-flag-on-an-int-dimension',
             ),
             pytest.param(
-                {'dtype': 'datetime', 'labels': ['2030-01-01']},
-                'labels: lists the labels of a str or int dimension, and this one is datetime. Leave labels out.',
+                {'dtype': 'datetime', 'allowed': ['2030-01-01']},
+                'allowed: lists the labels of a str or int dimension, and this one is datetime. Leave allowed out.',
                 id='a-datetime-dimension',
             ),
         ],
     )
-    def test_a_mistake_in_the_labels_is_named(self, dimension, refusal):
+    def test_a_mistake_in_the_allowed_labels_is_named(self, dimension, refusal):
         assert _refusal(**{'dimensions.h': dimension}) == f'dimensions.h.{refusal}'
 
-    def test_the_program_carries_the_labels(self):
+    def test_the_program_carries_the_allowed_labels(self):
         dimension = _spec(**_YEARS).program.dimensions['h']
-        assert (dimension.dtype, dimension.labels) == ('int', (2030, 2040)), 'the labels in file order, of the dtype'
+        assert (dimension.dtype, dimension.allowed) == ('int', (2030, 2040)), 'the labels in file order, of the dtype'
 
-    def test_a_dimension_with_labels_keeps_every_str_rule(self):
+    def test_a_dimension_with_allowed_labels_keeps_every_str_rule(self):
         assert 'matches no label' in _refusal(**_LABELS, **{'variables.r.where': 'h > 3'})
 
     @pytest.mark.parametrize('dimension', [pytest.param(_LABELS, id='str'), pytest.param(_YEARS, id='int')])
