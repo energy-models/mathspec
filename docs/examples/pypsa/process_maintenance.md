@@ -251,33 +251,33 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{ext}^{z}`$ | `Process_p_nom_extendable` over $`\mathcal{J}`$, data another file declares |
-| $`\underline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_min` over $`\mathcal{J} \times \Xi`$, data another file declares |
-| $`\overline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_max` over $`\mathcal{J} \times \Xi`$, data another file declares |
-| $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$, data another file declares |
-| $`\mathrm{z}^{\mathrm{mod}}`$ | `Process_p_nom_mod` over $`\mathcal{J}`$, data another file declares |
 | $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{J} \times \mathcal{T}`$, data another file declares |
+| $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$, data another file declares |
+| $`\mathrm{ext}^{z}`$ | `Process_p_nom_extendable` over $`\mathcal{J}`$, data another file declares |
+| $`\overline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_max` over $`\mathcal{J} \times \Xi`$, data another file declares |
+| $`\underline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_min` over $`\mathcal{J} \times \Xi`$, data another file declares |
+| $`\mathrm{z}^{\mathrm{mod}}`$ | `Process_p_nom_mod` over $`\mathcal{J}`$, data another file declares |
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
-| $`u^{z}`$ | `Process_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ |
+| $`u^{z}`$ | `Process_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
 | $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{J} \times \mathcal{T}`$, a condition another file defines |
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{J} \times \Xi \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate |
 | $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Process\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{J} \times \Xi \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Process\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{J} \times \Xi \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — dispatch periods |
-| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{J} \times \Xi \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{mnt}^{z}`$ | `Process_maintainable` over $`\mathcal{J}`$ — whether a process must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
-| $`\gamma^{z}`$ | `Process_maintenance_pu` over $`\mathcal{J} \times \Xi`$ — the share of the build a maintenance event takes off |
-| $`\mathrm{n}^{z,\mathrm{mnt}}`$ | `Process_maintenance_events` over $`\mathcal{J} \times \Xi`$ — how many maintenance events the horizon holds |
 | $`\tau^{z,\mathrm{mnt}}`$ | `Process_maintenance_duration` over $`\mathcal{J} \times \Xi`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the process is not maintainable. No row reads it: data prep turns it into `Process_maintenance_cover` and `Process_maintenance_start_blocked`, and the assumptions hold it to the horizon |
+| $`\mathrm{n}^{z,\mathrm{mnt}}`$ | `Process_maintenance_events` over $`\mathcal{J} \times \Xi`$ — how many maintenance events the horizon holds |
+| $`\gamma^{z}`$ | `Process_maintenance_pu` over $`\mathcal{J} \times \Xi`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{blk}^{z}`$ | `Process_maintenance_start_blocked` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the process does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
 
 #### Conditions
@@ -291,8 +291,8 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mu^{z}`$ | `Process_maintenance` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, `neutral` where the mask leaves it out — `Process-maintenance` — whether a maintainable process is in maintenance: continuous, and one exactly where an event covers the snapshot |
-| $`\mu^{z,\mathrm{up}}`$ | `Process_maintenance_start` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, `neutral` where the mask leaves it out — `Process-maintenance_start` — whether a maintenance event starts in this snapshot |
 | $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, `neutral` where the mask leaves it out — `Process-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
+| $`\mu^{z,\mathrm{up}}`$ | `Process_maintenance_start` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, `neutral` where the mask leaves it out — `Process-maintenance_start` — whether a maintenance event starts in this snapshot |
 | $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, `neutral` where the mask leaves it out — `Process-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
 
 #### Conditions
@@ -311,16 +311,16 @@ assumptions:
 0 \le \mu^{z}_{j,\xi,t} \le 1 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t}
 ```
 
-**`Process_maintenance_start`**
-
-```math
-\mu^{z,\mathrm{up}}_{j,\xi,t} \in \{0, 1\} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t}
-```
-
 **`Process_maintenance_capacity`**
 
 ```math
 \mu^{z,\mathrm{nom}}_{j,\xi,t} \ge 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{mnt,ext}}_{j,t}
+```
+
+**`Process_maintenance_start`**
+
+```math
+\mu^{z,\mathrm{up}}_{j,\xi,t} \in \{0, 1\} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t}
 ```
 
 **`Process_maintenance_status`**
@@ -337,10 +337,22 @@ assumptions:
 \sum_{t \in \mathcal{T}} \mu^{z,\mathrm{up}}_{j,\xi,t} = \mathrm{n}^{z,\mathrm{mnt}}_{j,\xi} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{mnt}^{z}_{j}
 ```
 
-**`Process_maint_window`**
+**`Process_maint_modstatus_lb`**
 
 ```math
-\mu^{z}_{j,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( t,\ j,\ \xi,\ t' \right) \in \mathrm{Process\_maintenance\_cover}} \mu^{z,\mathrm{up}}_{j,\xi,t'} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t}
+\mu^{z,u}_{j,\xi,t} \ge u^{z}_{j,\xi,t} - \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \left( 1 - \mu^{z}_{j,\xi,t} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+```
+
+**`Process_maint_modstatus_le_maint`**
+
+```math
+\mu^{z,u}_{j,\xi,t} \le \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \mu^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+```
+
+**`Process_maint_modstatus_le_status`**
+
+```math
+\mu^{z,u}_{j,\xi,t} \le u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 **`Process_maint_start_horizon`**
@@ -349,16 +361,28 @@ assumptions:
 \mu^{z,\mathrm{up}}_{j,\xi,t} = 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{blk}^{z}_{j,\xi,t}
 ```
 
-**`Process_maintcap_upper`**
+**`Process_maint_status_lb`**
 
 ```math
-\mu^{z,\mathrm{nom}}_{j,\xi,t} \le Z_{j} - \underline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} \cdot \left( 1 - \mu^{z}_{j,\xi,t} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{mnt,ext}}_{j,t}
+\mu^{z,u}_{j,\xi,t} \ge u^{z}_{j,\xi,t} + \mu^{z}_{j,\xi,t} - 1 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
 ```
 
-**`Process_maintcap_upper_nommax`**
+**`Process_maint_status_le_maint`**
 
 ```math
-\mu^{z,\mathrm{nom}}_{j,\xi,t} \le \overline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} \cdot \mu^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{mnt,ext}}_{j,t}
+\mu^{z,u}_{j,\xi,t} \le \mu^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+```
+
+**`Process_maint_status_le_status`**
+
+```math
+\mu^{z,u}_{j,\xi,t} \le u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+```
+
+**`Process_maint_window`**
+
+```math
+\mu^{z}_{j,\xi,t} = \sum_{t' \in \mathcal{T} \,:\, \left( t,\ j,\ \xi,\ t' \right) \in \mathrm{Process\_maintenance\_cover}} \mu^{z,\mathrm{up}}_{j,\xi,t'} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t}
 ```
 
 **`Process_maintcap_lower_nommax`**
@@ -373,54 +397,24 @@ assumptions:
 \mu^{z,\mathrm{nom}}_{j,\xi,t} \ge \underline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} \cdot \mu^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{mnt,ext}}_{j,t} \wedge \underline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} > 0
 ```
 
-**`Process_maint_status_le_status`**
+**`Process_maintcap_upper`**
 
 ```math
-\mu^{z,u}_{j,\xi,t} \le u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
+\mu^{z,\mathrm{nom}}_{j,\xi,t} \le Z_{j} - \underline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} \cdot \left( 1 - \mu^{z}_{j,\xi,t} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{mnt,ext}}_{j,t}
 ```
 
-**`Process_maint_status_le_maint`**
+**`Process_maintcap_upper_nommax`**
 
 ```math
-\mu^{z,u}_{j,\xi,t} \le \mu^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
-```
-
-**`Process_maint_status_lb`**
-
-```math
-\mu^{z,u}_{j,\xi,t} \ge u^{z}_{j,\xi,t} + \mu^{z}_{j,\xi,t} - 1 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
-```
-
-**`Process_maint_modstatus_le_status`**
-
-```math
-\mu^{z,u}_{j,\xi,t} \le u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
-```
-
-**`Process_maint_modstatus_le_maint`**
-
-```math
-\mu^{z,u}_{j,\xi,t} \le \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \mu^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
-```
-
-**`Process_maint_modstatus_lb`**
-
-```math
-\mu^{z,u}_{j,\xi,t} \ge u^{z}_{j,\xi,t} - \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \left( 1 - \mu^{z}_{j,\xi,t} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\mu^{z,\mathrm{nom}}_{j,\xi,t} \le \overline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} \cdot \mu^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{mnt,ext}}_{j,t}
 ```
 
 #### Assumptions
 
-**`Process_maintenance_events_positive`**
+**`Process_maintenance_build_cap_is_finite`**
 
 ```math
-\mathrm{n}^{z,\mathrm{mnt}}_{j,\xi} > 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{mnt}^{z}_{j}
-```
-
-**`Process_maintenance_duration_positive`**
-
-```math
-\tau^{z,\mathrm{mnt}}_{j,\xi} > 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{mnt}^{z}_{j}
+\overline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} < \infty \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j}
 ```
 
 **`Process_maintenance_duration_fits_the_horizon`**
@@ -429,16 +423,22 @@ assumptions:
 \tau^{z,\mathrm{mnt}}_{j,\xi} \le \sum_{t \in \mathcal{T}} \mathrm{w}^{\mathrm{gen}}_{t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{mnt}^{z}_{j}
 ```
 
+**`Process_maintenance_duration_positive`**
+
+```math
+\tau^{z,\mathrm{mnt}}_{j,\xi} > 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{mnt}^{z}_{j}
+```
+
 **`Process_maintenance_events_fit_the_horizon`**
 
 ```math
 \tau^{z,\mathrm{mnt}}_{j,\xi} \cdot \mathrm{n}^{z,\mathrm{mnt}}_{j,\xi} \le \sum_{t \in \mathcal{T}} \mathrm{w}^{\mathrm{gen}}_{t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{mnt}^{z}_{j}
 ```
 
-**`Process_maintenance_build_cap_is_finite`**
+**`Process_maintenance_events_positive`**
 
 ```math
-\overline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} < \infty \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j}
+\mathrm{n}^{z,\mathrm{mnt}}_{j,\xi} > 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{mnt}^{z}_{j}
 ```
 
 **`Process_maintenance_module_count_is_finite`**

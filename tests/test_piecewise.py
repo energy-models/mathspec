@@ -630,12 +630,12 @@ def test_an_entry_assumes_of_its_data_what_the_method_implies():
     program = expanded(LP_MASKED, 'piecewise').program
 
     assert list(program.assumptions) == [
-        'cost_curve_complete',
-        'cost_curve_increasing',
-        'cost_curve_curvature',
         'cost_curve_breakpoints',
+        'cost_curve_complete',
         'cost_curve_contiguous',
-    ], 'an lp curve with a mask assumes all five, each named after the entry that implies it'
+        'cost_curve_curvature',
+        'cost_curve_increasing',
+    ], 'an lp curve with a mask assumes all five, each named after the entry that implies it, sorted by name'
     assert all(isinstance(a, Assumption) for a in program.assumptions.values()), (
         'a method states its conditions in the same language the file does, so a consumer has one kind to read'
     )

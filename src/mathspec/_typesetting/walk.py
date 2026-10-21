@@ -709,7 +709,7 @@ class Walk:
         )
 
     def _definitions(self) -> list[Line]:
-        """One line per named expression, in file order, defining it.
+        """One line per named expression, sorted by name, defining it.
 
         A use prints the symbol and the entry prints here, as a paper states a
         quantity it names. Every declared one prints, used or not. Inlining

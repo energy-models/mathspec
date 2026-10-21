@@ -1064,8 +1064,8 @@ class Separability:
 class Program:
     """A complete declarative description of a mathematical program, with no data in it.
 
-    Every group of entries is keyed by the name the file wrote, in the
-    order it wrote them, and is read-only: the mappings are wrapped at
+    Every group of entries is keyed by the name the file wrote, sorted by
+    name, and is read-only: the mappings are wrapped at
     construction, so a consumer cannot rewrite what another consumer reads.
     Every ``dims`` and ``frame`` in it is sorted by name, whatever order the
     file writes them in. A whole program is not hashable — the entries and expression nodes

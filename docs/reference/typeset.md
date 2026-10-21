@@ -63,7 +63,7 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
   breakpoints. A spec that assumes nothing of its data prints no such
   heading.
 - A [named expression](language/named.md) prints its symbol where it is used
-  and its body once, under a **Definitions** heading, in file order. A
+  and its body once, under a **Definitions** heading, sorted by name. A
   cased expression, a [reported entry](language/named.md#reported-expressions)
   and a [term](language/parameters-variables-constraints.md#terms) keep their definition line
   under either `inline_expressions` setting.

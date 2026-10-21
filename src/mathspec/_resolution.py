@@ -580,7 +580,7 @@ def self_existence(where: Condition, variable: str, context: str) -> str | None:
     return (
         f"{context}: variable '{variable}' asks whether it exists in its own `where:`, through a named condition, which "
         f'nothing can answer — its `where:` is what decides where it exists. Test a parameter, or another '
-        f'variable declared before it.'
+        f'variable.'
     )
 
 

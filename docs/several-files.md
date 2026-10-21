@@ -230,6 +230,12 @@ print(ms.to_markdown(spec, legend=False))
 
     #### Definitions
 
+    **`consumption`**
+
+    ```math
+    \mathrm{consumption}_{b,t} = -\mathrm{demand}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+    ```
+
     **`generation`**
 
     ```math
@@ -240,12 +246,6 @@ print(ms.to_markdown(spec, legend=False))
 
     ```math
     \mathit{generation}^{\mathrm{cost}} = \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} \mathit{dispatch}_{g,t} \cdot \mathrm{cost}_{g}
-    ```
-
-    **`consumption`**
-
-    ```math
-    \mathrm{consumption}_{b,t} = -\mathrm{demand}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
     ```
 
     **`injection`**

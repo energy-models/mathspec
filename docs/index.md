@@ -56,16 +56,16 @@ the **How** tab shows the call.
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathcal{S}`$ | index $`s`$ — `snapshot` — dispatch periods |
     | $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units |
+    | $`\mathcal{S}`$ | index $`s`$ — `snapshot` — dispatch periods |
 
     #### Parameters
 
     | Symbol | Meaning |
     |---|---|
     | $`\bar p`$ | `capacity` over $`\mathcal{G}`$ — installed capacity |
-    | $`\ell`$ | `load` over $`\mathcal{S}`$ — demand to be met |
     | $`c`$ | `cost` over $`\mathcal{G}`$ — marginal cost |
+    | $`\ell`$ | `load` over $`\mathcal{S}`$ — demand to be met |
 
     #### Variables
 
@@ -102,15 +102,15 @@ the **How** tab shows the call.
 
     \paragraph{Sets}
     \begin{description}
-    \item[{$\mathcal{S}$}] index $s$ --- \texttt{snapshot} --- dispatch periods
     \item[{$\mathcal{G}$}] index $g$ --- \texttt{generator} --- generating units
+    \item[{$\mathcal{S}$}] index $s$ --- \texttt{snapshot} --- dispatch periods
     \end{description}
 
     \paragraph{Parameters}
     \begin{description}
     \item[{$\bar p$}] \texttt{capacity} over $\mathcal{G}$ --- installed capacity
-    \item[{$\ell$}] \texttt{load} over $\mathcal{S}$ --- demand to be met
     \item[{$c$}] \texttt{cost} over $\mathcal{G}$ --- marginal cost
+    \item[{$\ell$}] \texttt{load} over $\mathcal{S}$ --- demand to be met
     \end{description}
 
     \paragraph{Variables}

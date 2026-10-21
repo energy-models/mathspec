@@ -16,7 +16,7 @@ from mathspec._typesetting.format import OPERATOR_NAMES
 from mathspec._typesetting.symbols import _derive_name_symbol, chosen_expressions, symbols_for
 from mathspec._validation import to_spec
 from mathspec.errors import LanguageError
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SPECS, dims_reversed, varied
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SPECS, dims_reversed, entries_reversed, varied
 from tests.typesetting import golden
 from tests.typesetting.fixtures import EVERY_FORMAT, LATEX
 
@@ -1077,6 +1077,17 @@ def test_a_set_is_labelled_by_the_entry_that_declares_it(name: FormatName, fmt: 
 
     assert 'pick' in text, 'the set carries the key it was declared under'
     assert 'p sos' not in text
+
+
+@pytest.mark.parametrize('fmt', sorted(FORMATS))
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_the_order_a_file_lists_its_entries_in_prints_nowhere(path, fmt):
+    """The document printed each section's entries, and the legend its dimensions, in the order the file listed
+    them, so two files that state one model printed two documents."""
+    spec = to_spec(path)
+    assert typeset(to_spec(entries_reversed(spec.to_dict())), fmt) == typeset(spec, fmt), (
+        'every section prints its entries sorted by name, whatever order the file lists them in'
+    )
 
 
 @pytest.mark.parametrize('fmt', sorted(FORMATS))

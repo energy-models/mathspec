@@ -551,6 +551,11 @@ class GivenConditionSpec(_GivenEntrySpec):
     description: str | None = None
 
 
+def _by_name(section: object) -> object:
+    """*section*'s entries sorted by name, so the order a file lists them in reaches nothing a consumer reads."""
+    return dict(sorted(section.items())) if isinstance(section, dict) else section
+
+
 class GivenSpec(_StrictSpec):
     """What this file reads and does not build, by kind. Closed at the five kinds."""
 
@@ -566,6 +571,11 @@ class GivenSpec(_StrictSpec):
     expressions: dict[str, GivenExpressionSpec] = {}
     #: Named conditions another file defines ([`GivenConditionSpec`][]).
     conditions: dict[str, GivenConditionSpec] = {}
+
+    @field_validator('*')
+    @classmethod
+    def _entries_by_name(cls, v: object) -> object:
+        return _by_name(v)
 
     def __bool__(self) -> bool:
         """Whether the file reads anything it does not build."""
@@ -1127,6 +1137,11 @@ class Spec(_StrictSpec):
             )
         except ValidationError as exc:
             raise schema_error(exc) from None
+
+    @field_validator('*')
+    @classmethod
+    def _entries_by_name(cls, v: object) -> object:
+        return _by_name(v)
 
     @field_validator('version')
     @classmethod
