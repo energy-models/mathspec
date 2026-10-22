@@ -54,16 +54,16 @@ for a cost that is zero, `missing: 1` for an efficiency that is one, and
 row of an `absent` parameter, or of a parameter with a value, does at each
 position:
 
-| Position                                                    | `absent`                              | a value                                 |
-| ----------------------------------------------------------- | ------------------------------------- | --------------------------------------- |
-| a coefficient, or a constant on either side of a comparison | removes the row                       | reads the value                         |
-| a factor of a summand in a `sum`                            | removes the summand, not the row      | reads the value                         |
-| a divisor                                                   | removes the row                       | reads the value. `0` is refused at load |
-| a `bounds:` entry                                           | leaves that side of the variable open | reads the value                         |
-| the amount of an `offset=` or a `window=`                   | makes the operator absent there       | reads the value                         |
-| a comparison in a `where`                                   | is false                              | compares the value                      |
-| a bare `bool` name in a `where`                             | is false                              | reads the value                         |
-| a bare number or label in a `where`                         | is false                              | is false                                |
+| Position                                                    | `absent`                              | a value                                                                    |
+| ----------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------- |
+| a coefficient, or a constant on either side of a comparison | removes the row                       | reads the value                                                            |
+| a factor of a summand in a `sum`                            | removes the summand, not the row      | reads the value                                                            |
+| a divisor                                                   | removes the row                       | reads the value. `0` is refused at load, unless a guard leaves the row out |
+| a `bounds:` entry                                           | leaves that side of the variable open | reads the value                                                            |
+| the amount of an `offset=` or a `window=`                   | makes the operator absent there       | reads the value                                                            |
+| a comparison in a `where`                                   | is false                              | compares the value                                                         |
+| a bare `bool` name in a `where`                             | is false                              | reads the value                                                            |
+| a bare number or label in a `where`                         | is false                              | is false                                                                   |
 
 A value of `0` as an amount reads `shift(x, along=t, offset=0)` as `x` itself,
 and sums nothing under `sum_back(x, along=t, window=0)`. A curve needs a row at
@@ -72,6 +72,35 @@ each breakpoint its `points:` admits, and
 of a table that a curve reads means. For a bound only where the data has one,
 mask the variable, or declare the parameter `missing: absent` or
 `missing: .inf`.
+
+### A guarded divisor
+
+A divisor that a missing row of a `missing: 0` parameter can make `0` is
+refused at load, unless a guard leaves every missing row out where the quotient
+is read. A guard is a condition that is false at a missing row, such as `c > 0`,
+`c != 0` or the bare name `c`. It guards the quotient when it is one of the
+conditions joined by `AND` in one of these places:
+
+- the `where:` of the constraint,
+- the `when:` of the case that holds the quotient,
+- the `where:` of a variable that multiplies the quotient, because the product
+  is absent where that variable is absent.
+
+```yaml
+parameters:
+  c: { dims: [g], missing: 0 }
+  d: { dims: [g] }
+constraints:
+  per_unit:
+    dims: [g]
+    where: "c > 0"
+    expression: y <= d / c
+```
+
+A guard holds only at the coordinate where it is read. A `sum`, a window, a
+`shift` or an `at` reads other coordinates, so a guard outside one of them does
+not guard a divisor inside it. A named expression is read over its own
+dimensions, so a guard for its divisor goes in its own `cases:`.
 
 ## How absence travels
 
@@ -174,8 +203,10 @@ a storage with inflow and no store, there is no row.
 
 A variable takes `missing: absent` or a finite number, because a variable has
 no data to refuse. A number needs a `where:`. It must lie in the `domain:` of
-the variable, so a `binary` variable takes `0` or `1`, and inside its literal
-`bounds:`. `to_spec` refuses the file otherwise. Inside a summing operator,
+the variable, so a `binary` variable takes `0` or `1`, and `to_spec` refuses
+the file otherwise. The `bounds:` hold only inside the mask, so the number may
+lie outside them: a unit with `lower: 1` where it is built can have
+`missing: 0` where it is not. Inside a summing operator,
 `missing: 0` changes nothing, and another number adds itself once for each
 coordinate that the mask leaves out. The typeset legend prints the number
 where the mask leaves it out beside the variable.
@@ -194,5 +225,6 @@ divisor is absent, and where its divisor is exactly zero, whether a solve or the
 data gave that zero. A solved value is read as the engine reads it back, so
 an engine may read a value within its solver's tolerance of zero as zero. A
 missing row of an `absent` divisor parameter makes the quotient absent, and
-`to_spec` refuses a divisor that a `missing: 0` parameter can make zero. A
+`to_spec` refuses a divisor that a `missing: 0` parameter can make zero,
+unless a [guard](#a-guarded-divisor) leaves the missing row out. A
 deleted row has [no dual](named.md#reading-a-constraints-dual).

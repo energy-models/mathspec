@@ -440,12 +440,12 @@ class VariableSpec(_StrictSpec):
     def _a_number_fits_the_variable(self) -> VariableSpec:
         """The number stands for the variable where its mask leaves it out, so a mask must leave something out.
 
-        The number lies in the variable's domain and inside its literal bounds.
+        The number lies in the variable's domain. The bounds hold only inside
+        the mask, so the number may lie outside them.
         """
         v = self.missing
         if isinstance(v, str):
             return self
-        lower, upper = self.bounds.lower, self.bounds.upper
         if self.where is None:
             msg = (
                 f'missing: {_as_yaml(v)} needs a `where:`. A variable with no mask exists at every '
@@ -455,10 +455,6 @@ class VariableSpec(_StrictSpec):
             msg = f'missing: {_as_yaml(v)} on a binary variable, which takes 0 or 1.'
         elif self.domain == 'integer' and not float(v).is_integer():
             msg = f'missing: {_as_yaml(v)} on an integer variable, which takes an integer.'
-        elif isinstance(lower, int | float) and v < lower:
-            msg = f'missing: {_as_yaml(v)} is below bounds.lower {_as_yaml(lower)}. Write a number inside the bounds.'
-        elif isinstance(upper, int | float) and v > upper:
-            msg = f'missing: {_as_yaml(v)} is above bounds.upper {_as_yaml(upper)}. Write a number inside the bounds.'
         else:
             return self
         raise ValueError(msg)
