@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- fix(language): a divisor that a where, a case or a masked variable guards loads under missing: 0, and so does a variable number outside its bounds ([#942](https://github.com/energy-models/mathspec/pull/942))
 - docs(pypsa): a PyPSA schedule, weight or limit that the data leaves out is absent rather than zero, and a committable extendable unit is assumed to have its big-M ([#912](https://github.com/energy-models/mathspec/pull/912))
 - feat(language)!: a missing row reads as the value the file names, and `missing: neutral` is gone ([#894](https://github.com/energy-models/mathspec/pull/894))
 - feat(program): each expression node states the dimensions it is read over ([#899](https://github.com/energy-models/mathspec/pull/899))
