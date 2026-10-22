@@ -2782,6 +2782,13 @@ def test_a_divisor_guarded_against_a_missing_row_loads(section):
             },
             id='a-mask-on-another-term',
         ),
+        pytest.param(
+            {
+                'variables.y': {'dims': ['g'], 'where': 'c > 0', 'missing': 1},
+                'constraints.cap': {'dims': [], 'expression': 'sum(y / c, over=g) <= 1'},
+            },
+            id='a-mask-of-a-variable-that-reads-a-number-outside-it',
+        ),
     ],
 )
 def test_a_guard_that_leaves_a_missing_row_in_does_not_spare_the_divisor(section):

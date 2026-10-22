@@ -351,9 +351,11 @@ def _zero_divisor_refusals(
     """[`zero_divisor_refusals`][mathspec._divisors.zero_divisor_refusals] over every expression the file declares.
 
     Read once every variable mask is resolved, because a masked factor spares
-    a divisor wherever its mask leaves a missing row out.
+    a divisor wherever its mask leaves a missing row out. Only a variable that
+    is absent outside its mask spares one: a ``missing:`` number stands for it
+    there, and the quotient is read.
     """
-    masks = {name: v.where for name, v in variables.items()}
+    masks = {name: v.where for name, v in variables.items() if v.missing == 'absent'}
     found: list[str] = []
     for name, entry in entries.items():
         found += zero_divisor_refusals(entry.body, f"Named expression '{name}'", spec.parameters, masks)

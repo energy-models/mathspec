@@ -6,9 +6,9 @@
 
 The language puts that 0 in, so no data can repair it. A guard spares the
 divisor where it is false at every missing row: a conjunct of the ``where``
-of the declaration, of the ``when`` of a case, or of the mask of a variable
-that is a factor of the quotient, since an absent factor makes the whole
-product absent. A guard holds only at the coordinate it is read at, so a
+of the declaration, of the ``when`` of a case, or of the mask of a
+``missing: absent`` variable that is a factor of the quotient, since an absent
+factor makes the whole product absent. A guard holds only at the coordinate it is read at, so a
 sum, a window, a shift or a lookup drops every guard from outside it.
 """
 
@@ -53,7 +53,8 @@ def zero_divisor_refusals(
 ) -> list[str]:
     """A refusal for each ``missing: 0`` parameter that can make a divisor under *expression* 0.
 
-    *masks* are the variables' ``where`` masks, and *where* is the mask of the
+    *masks* are the ``where`` masks of the variables that are absent outside
+    them, and *where* is the mask of the
     declaration that holds *expression*. A named expression is not entered:
     it is read over its own frame, so it is checked as its own entry.
     """

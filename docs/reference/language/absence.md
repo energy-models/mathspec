@@ -83,8 +83,10 @@ conditions joined by `AND` in one of these places:
 
 - the `where:` of the constraint,
 - the `when:` of the case that holds the quotient,
-- the `where:` of a variable that multiplies the quotient, because the product
-  is absent where that variable is absent.
+- the `where:` of a variable that multiplies the quotient and is
+  `missing: absent`, because the product is absent where that variable is
+  absent. A variable with a `missing:` number reads that number outside its
+  mask, so its mask guards nothing.
 
 ```yaml
 parameters:
