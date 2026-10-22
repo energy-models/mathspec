@@ -20,6 +20,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("is_flexible")$: `is_flexible` over $cal(G)$, `false` where the data has no row
 / $upright("zone_cap")$: `zone_cap` over $cal(Z)$
 / $upright("tech_cap")$: `tech_cap` over $cal(B) times cal(E)$, `absent` where the data has no row
+/ $upright("link_eff")$: `link_eff` over $cal(G) times cal(B)$, only where $(g, b) in upright("connection")$, $1$ where the data has no row
 / $upright("min_up")$: `min_up` over $cal(G)$
 / $upright("eta")$: `eta` over $cal(G)$
 / $upright("lead")$: `lead` over $cal(G)$

@@ -2499,9 +2499,19 @@ def test_a_parameter_mask_is_part_of_the_program():
             id='a-mask-that-reads-a-variable',
         ),
         pytest.param(
+            {'parameters.c.where': 'on', 'conditions.on': 'p'},
+            "Parameter 'c': its `where:` reads variable 'p'",
+            id='a-mask-that-reads-a-variable-through-a-named-condition',
+        ),
+        pytest.param(
             {'parameters.c.where': 'c > 0'},
             "Parameter 'c': its `where:` reads 'c' itself",
             id='a-mask-that-reads-its-own-parameter',
+        ),
+        pytest.param(
+            {'parameters.c.where': 'big', 'conditions.big': 'c > 0'},
+            "Parameter 'c': its `where:` reads 'c' itself",
+            id='a-mask-that-reads-its-own-parameter-through-a-named-condition',
         ),
         pytest.param(
             {'parameters.c.where': 'flag', 'parameters.flag.where': 'c > 0'},
