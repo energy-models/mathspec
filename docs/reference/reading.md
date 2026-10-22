@@ -135,6 +135,10 @@ a numeric parameter asks whether the data has a row, so a value does not answer
 it. A `ParameterDefined` on a `bool` parameter reads the value. Under
 `'absent'`, a bound that reads a missing row leaves that side open.
 
+An engine must refuse a divisor that is `0` in a row it builds, whatever made it
+`0`: a missing row, a value or a constant
+([zero divisors in the data](language/absence.md#zero-divisors-in-the-data)).
+
 ## Nodes and masks
 
 Import the node classes from `mathspec.program` to test a node with

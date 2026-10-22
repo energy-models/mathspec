@@ -104,6 +104,23 @@ A guard holds only at the coordinate where it is read. A `sum`, a window, a
 not guard a divisor inside it. A named expression is read over its own
 dimensions, so a guard for its divisor goes in its own `cases:`.
 
+### Zero divisors in the data
+
+An engine must refuse a divisor that is `0` in a row it builds, or in a summand
+it adds, when the data is attached. The refusal names the divisor. The check
+at load reads only the shape of a divisor, so these files load. The engine
+refuses each one where the data makes its divisor `0`:
+
+- `x / (1 - c)` with `c: { missing: 1 }`, at a missing row of `c`;
+- `x / ((c + 1) - 1)` with `c: { missing: 0 }`, at a missing row of `c`;
+- a case that holds `1 - 1`, where its `when:` holds;
+- `x / c`, at a present row of `c` that is `0`.
+
+A row or a summand that is absent divides nothing. So the engine does not
+refuse a divisor where a `where:`, a case or an absent variable leaves it out. A
+[reported expression](#reported-values) is not refused: its quotient is absent
+where its divisor is `0`.
+
 ## How absence travels
 
 An absent term in arithmetic removes the whole row. An absent term inside a
