@@ -60,7 +60,7 @@ parameters:
       `Link_maintenance_cover` and `Link_maintenance_start_blocked`, and the
       assumptions hold it to the horizon
     dims: [scenario, link]
-    missing: 0
+    missing: absent
   Link_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, because the snapshots it

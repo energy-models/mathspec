@@ -97,7 +97,7 @@ parameters:
       (`components.py:1050-1121`). Below the internal power a solve wants, it caps that
       internal power; data prep
     dims: [scenario, process]
-    missing: 0
+    missing: absent
 
 variables:
   Process_status:
@@ -295,3 +295,12 @@ constraints:
     dims: [scenario, snapshot, process]
     where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
     expression: Process_shut_down <= Process_n_mod
+
+assumptions:
+  Process_big_m_where_committed_and_extendable:
+    holds: "Process_big_m"
+    where: "Process_com_ext"
+    description: >-
+      a committable process with an extendable, non-modular build has
+      the big-M its rows release it by — PyPSA computes one for each
+      (`get_committable_big_m_values`)

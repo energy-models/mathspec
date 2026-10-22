@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(pypsa): a PyPSA schedule, weight or limit that the data leaves out is absent rather than zero, and a committable extendable unit is assumed to have its big-M ([#912](https://github.com/energy-models/mathspec/pull/912))
 - feat(language)!: a missing row reads as the value the file names, and `missing: neutral` is gone ([#894](https://github.com/energy-models/mathspec/pull/894))
 - feat(program): each expression node states the dimensions it is read over ([#899](https://github.com/energy-models/mathspec/pull/899))
 - fix(language): two files that declare their dimensions in different orders load to the same program by sorting dimension lists by name ([#911](https://github.com/energy-models/mathspec/pull/911))
