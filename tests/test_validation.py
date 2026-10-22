@@ -2544,15 +2544,29 @@ def test_a_variable_missing_that_reads_data_is_refused(written, fragment):
             'missing: 1.5 on an integer variable, which takes an integer',
             id='integer',
         ),
-        pytest.param({'bounds': {'lower': 0}, 'missing': -1}, 'missing: -1 is below bounds.lower 0', id='below-lower'),
-        pytest.param(
-            {'bounds': {'upper': 10}, 'missing': 11}, 'missing: 11 is above bounds.upper 10', id='above-upper'
-        ),
     ],
 )
 def test_a_variable_missing_outside_what_the_variable_takes_is_refused(declared, fragment):
     """The number stands for the variable where the mask leaves it out, so the file contradicted itself."""
     assert fragment in _refusal(**{'variables.p': {'dims': ['g'], 'where': 'c', **declared}})
+
+
+@pytest.mark.parametrize(
+    'declared',
+    [
+        pytest.param({'bounds': {'lower': 1, 'upper': 4}, 'missing': 0}, id='below-a-literal-lower-bound'),
+        pytest.param({'bounds': {'lower': -10, 'upper': -1}, 'missing': 0}, id='above-a-literal-upper-bound'),
+        pytest.param({'domain': 'integer', 'bounds': {'lower': 1}, 'missing': 0}, id='an-integer-with-a-minimum'),
+    ],
+)
+def test_a_variable_number_outside_its_bounds_loads(declared):
+    """`missing: 0` on a variable with `lower: 1` was refused, though the bounds hold only inside the mask.
+
+    A unit of one to four modules where it is a candidate has no modules elsewhere, so the number outside the mask
+    lies outside the bounds by design. A parameter bound already loaded the same file.
+    """
+    spec = to_spec(varied(SMALL_MODEL, **{'variables.p': {'dims': ['g'], 'where': 'c', **declared}}))
+    assert spec.program.variables['p'].missing == 0
 
 
 @pytest.mark.parametrize(
@@ -2640,6 +2654,146 @@ def test_a_divisor_that_reads_a_missing_row_as_zero_is_refused(section):
 )
 def test_a_parameter_read_as_zero_loads_where_it_divides_nothing(patch):
     assert to_spec(varied(SMALL_MODEL, **patch)).program.constraints['cap'] is not None
+
+
+@pytest.mark.parametrize(
+    'section',
+    [
+        pytest.param(
+            {'constraints.cap': {'dims': ['g'], 'where': 'c > 0', 'expression': 'p / c <= 1'}}, id='above-zero'
+        ),
+        pytest.param({'constraints.cap': {'dims': ['g'], 'where': 'c', 'expression': 'p / c <= 1'}}, id='has-a-row'),
+        pytest.param(
+            {'constraints.cap': {'dims': ['g'], 'where': 'c != 0', 'expression': 'p / c <= 1'}}, id='not-zero'
+        ),
+        pytest.param(
+            {'constraints.cap': {'dims': ['g'], 'where': 'flag AND c < -1', 'expression': 'p / c <= 1'}},
+            id='in-a-conjunction',
+        ),
+        pytest.param(
+            {
+                'conditions.priced': 'c > 0',
+                'constraints.cap': {'dims': ['g'], 'where': 'priced', 'expression': 'p / c <= 1'},
+            },
+            id='a-named-condition',
+        ),
+        pytest.param(
+            {
+                'expressions.e': {
+                    'dims': ['g'],
+                    'cases': {'on': {'when': 'c > 0', 'expression': '1 / c'}},
+                    'otherwise': '0',
+                }
+            },
+            id='a-case',
+        ),
+        pytest.param(
+            {
+                'expressions.e': {
+                    'dims': ['g'],
+                    'cases': {'on': {'when': 'c > 0', 'expression': 'c'}},
+                    'otherwise': '1',
+                },
+                'constraints.cap': {'dims': ['g'], 'expression': 'p / e <= 1'},
+            },
+            id='a-case-in-the-divisor',
+        ),
+        pytest.param(
+            {
+                'variables.y': {'dims': ['g'], 'where': 'c > 0'},
+                'constraints.cap': {'dims': [], 'expression': 'sum(y / c, over=g) <= 1'},
+            },
+            id='a-masked-numerator',
+        ),
+        pytest.param(
+            {
+                'variables.y': {'dims': ['g'], 'where': 'c > 0'},
+                'constraints.cap': {'dims': [], 'expression': 'sum(k / c * y, over=g) <= 1'},
+            },
+            id='a-masked-factor',
+        ),
+    ],
+)
+def test_a_divisor_guarded_against_a_missing_row_loads(section):
+    """A missing row of a `missing: 0` divisor was refused even where a `where:`, a case or a mask left it out.
+
+    A `where: c > 0` is false at a missing row, so no row divides there, yet the file was refused.
+    """
+    assert to_spec(varied(SMALL_MODEL, **{'parameters.c.missing': 0, **section})) is not None
+
+
+@pytest.mark.parametrize(
+    'section',
+    [
+        pytest.param(
+            {'constraints.cap': {'dims': ['g'], 'where': 'c >= 0', 'expression': 'p / c <= 1'}},
+            id='a-guard-that-admits-zero',
+        ),
+        pytest.param(
+            {'constraints.cap': {'dims': ['g'], 'where': 'flag OR c > 0', 'expression': 'p / c <= 1'}},
+            id='a-guard-under-an-or',
+        ),
+        pytest.param(
+            {'constraints.cap': {'dims': ['g'], 'where': 'NOT (c > 0)', 'expression': 'p / c <= 1'}},
+            id='a-negated-guard',
+        ),
+        pytest.param(
+            {
+                'constraints.cap': {
+                    'dims': ['g'],
+                    'where': 'c > 0',
+                    'expression': "p / shift(c, along=g, offset=1, edge='wrap') <= 1",
+                }
+            },
+            id='a-guard-at-another-coordinate',
+        ),
+        pytest.param(
+            {
+                'constraints.cap': {
+                    'dims': ['g'],
+                    'where': 'c > 0',
+                    'expression': "shift(p / c, along=g, offset=1, edge='wrap') <= 1",
+                }
+            },
+            id='a-guard-outside-a-shift',
+        ),
+        pytest.param(
+            {'constraints.cap': {'dims': ['g'], 'where': 'k / c > 1', 'expression': 'p <= 1'}},
+            id='a-quotient-in-a-where',
+        ),
+        pytest.param(
+            {'constraints.cap': {'dims': [], 'where': 'k > 0', 'expression': 'sum(p / c, over=g) <= 1'}},
+            id='a-guard-on-another-parameter',
+        ),
+        pytest.param(
+            {
+                'variables.y': {'dims': ['g'], 'where': 'c > 0'},
+                'constraints.cap': {
+                    'dims': [],
+                    'expression': "sum(shift(y, along=g, offset=1, edge='wrap') / c, over=g) <= 1",
+                },
+            },
+            id='a-mask-at-another-coordinate',
+        ),
+        pytest.param(
+            {
+                'variables.y': {'dims': ['g'], 'where': 'c > 0'},
+                'constraints.cap': {'dims': [], 'expression': 'sum(y + p / c, over=g) <= 1'},
+            },
+            id='a-mask-on-another-term',
+        ),
+        pytest.param(
+            {
+                'variables.y': {'dims': ['g'], 'where': 'c > 0', 'missing': 1},
+                'constraints.cap': {'dims': [], 'expression': 'sum(y / c, over=g) <= 1'},
+            },
+            id='a-mask-of-a-variable-that-reads-a-number-outside-it',
+        ),
+    ],
+)
+def test_a_guard_that_leaves_a_missing_row_in_does_not_spare_the_divisor(section):
+    message = _refusal(**{'parameters.c.missing': 0, **section})
+    assert "reads 'c', which is declared missing: 0, so a missing row of 'c' makes the divisor 0" in message
 
 
 #: One dimension every construct below reads the order of, and a breakpoint

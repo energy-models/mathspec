@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from mathspec._dimensions import check_spec, sorted_dims
+from mathspec._divisors import zero_divisor_refusals
 from mathspec._expansion import expand, parse_template
 from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec._resolution import (
@@ -187,6 +188,7 @@ def lower(spec: Spec) -> Program:
             errors.append(refusal)
         curves[pname] = links
 
+    errors.extend(_zero_divisor_refusals(spec, variables, entries, constraints, objective, curves))
     if errors:
         raise ns.error(errors)
 
@@ -336,6 +338,36 @@ def _loop(target: str, entry: ExpressionReference, sums: Mapping[str, list[Expre
                 seen.add(read)
                 stack.append(([*path, read], variables_of(*sums[read])))
     return None
+
+
+def _zero_divisor_refusals(
+    spec: Spec,
+    variables: Mapping[str, Variable],
+    entries: Mapping[str, ExpressionReference],
+    constraints: Mapping[str, Constraint],
+    objective: Objective | None,
+    curves: Mapping[str, tuple[Expression, ...]],
+) -> list[str]:
+    """[`zero_divisor_refusals`][mathspec._divisors.zero_divisor_refusals] over every expression the file declares.
+
+    Read once every variable mask is resolved, because a masked factor spares
+    a divisor wherever its mask leaves a missing row out. Only a variable that
+    is absent outside its mask spares one: a ``missing:`` number stands for it
+    there, and the quotient is read.
+    """
+    masks = {name: v.where for name, v in variables.items() if v.missing == 'absent'}
+    found: list[str] = []
+    for name, entry in entries.items():
+        found += zero_divisor_refusals(entry.body, f"Named expression '{name}'", spec.parameters, masks)
+    for name, c in constraints.items():
+        for side in (c.lhs, c.rhs):
+            found += zero_divisor_refusals(side, f"Constraint '{name}'", spec.parameters, masks, c.where)
+    if objective is not None:
+        found += zero_divisor_refusals(objective.expression, 'The objective', spec.parameters, masks)
+    for name, links in curves.items():
+        for link in links:
+            found += zero_divisor_refusals(link, f"piecewise '{name}'", spec.parameters, masks)
+    return list(dict.fromkeys(found))
 
 
 def _frame_of(name: str, entry: ExpressionReference, spec: Spec) -> tuple[str, ...]:
