@@ -54,7 +54,7 @@ as `dtype: int`.
 ### A missing row
 
 `missing:` says what it means when the data has no row at a coordinate of the
-`dims`. A table that lost a row in preparation looks the same as a table that
+`dims`, after the parameter's [mask](#a-parameters-mask) if it has one. A table that lost a row in preparation looks the same as a table that
 never had the row, so the file says which one you mean.
 
 ```yaml
@@ -136,21 +136,24 @@ constraints:
 
 $$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{e,b,t} \cdot p_{e,t} = 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}$$
 
-Outside its mask a parameter is [absent](absence.md), wherever it is read. In
-`balance`, a term `efficiency * p` at an entity that is not wired to the bus is
-absent, so the sum adds up only the wired entities. The mask does not change
-the dimensions of the parameter, and it does not change what the data supplies
-inside it:
+A parameter's coordinates are decided in two steps, in this order:
 
-| At a coordinate              | The parameter                                                           |
-| ---------------------------- | ----------------------------------------------------------------------- |
-| inside the mask, with a row  | reads the row                                                           |
-| inside the mask, with no row | follows `missing:`: refused, absent, or the value it names              |
-| outside the mask             | is absent. A row of the data there is dropped when the data is attached |
+1. `where:` is a mask on the `dims`. It keeps the coordinates where its
+   condition is true. At every other coordinate the parameter is
+   [absent](absence.md), wherever it is read, and a row of the data there is
+   dropped when the data is attached.
+2. At each coordinate the mask keeps, the data has a row or it does not. A row
+   is read as it is. A missing row follows the parameter's
+   [`missing:`](#a-missing-row): it is refused, absent, or the value
+   `missing:` names.
 
-So `missing: 1` above fills only the wired pairs, and under `refused` the data
-needs a row only inside the mask. A row outside the mask is not an error. To
-refuse such a row, state it as an
+`missing:` never reaches a coordinate that the mask leaves out. So
+`missing: 1` above fills only the wired pairs, and under `refused` the data
+needs a row at each wired pair and snapshot, and nowhere else. In `balance`,
+`efficiency * p` is absent at an entity that is not wired to the bus, so the sum
+adds up only the wired entities.
+
+A row outside the mask is not an error. To refuse such a row, state it as an
 [assumption](absence.md#a-table-with-gaps-on-purpose):
 `{holds: "connection", where: "efficiency"}`.
 

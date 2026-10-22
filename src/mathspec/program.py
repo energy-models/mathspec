@@ -713,14 +713,15 @@ class Parameter:
 
     dims: tuple[str, ...]
     dtype: ParameterDtype = 'float'
-    #: What a missing row means, or the value it reads as wherever a value is
-    #: read. A bare numeric name in a ``where`` still asks whether the data has
-    #: a row.
+    #: What a missing row inside the mask means, or the value it reads as
+    #: wherever a value is read. A bare numeric name in a ``where`` still asks
+    #: whether the data has a row.
     missing: ParameterMissing = 'refused'
     description: str | None = None
     #: The coordinates the parameter has, or ``None`` for every coordinate of
-    #: its dims. Outside the mask the parameter is absent: a consumer drops
-    #: the rows of its data there, and ``missing:`` applies only inside.
+    #: its dims. The mask comes first: outside it the parameter is absent, and
+    #: a consumer drops the rows of its data there. ``missing`` then applies
+    #: to the coordinates the mask keeps.
     where: Mask | None = None
 
 

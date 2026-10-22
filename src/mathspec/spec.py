@@ -324,8 +324,9 @@ class ParameterSpec(_StrictSpec):
 
     dims: list[str]
     dtype: ParameterDtype = 'float'
-    #: The coordinates the parameter has, in the condition grammar. Outside
-    #: them it is absent, and a row of its data there is dropped.
+    #: The coordinates the parameter has, in the condition grammar. The mask
+    #: comes first: outside it the parameter is absent, and a row of its data
+    #: there is dropped. ``missing:`` then applies to the coordinates it keeps.
     where: str | None = None
     missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None

@@ -136,12 +136,13 @@ it. A `ParameterDefined` on a `bool` parameter reads the value. Under
 `'absent'`, a bound that reads a missing row leaves that side open.
 
 `program.parameters[name].where` is the parameter's mask, or `None` where it
-has every coordinate of its `dims`. Outside the mask the parameter is absent
-wherever it is read. When the engine attaches the data, it drops the rows
-outside the mask, and applies `missing:` only inside it: a value fills a
-missing row inside the mask, and `'refused'` asks for a row only there. A mask
-reads no variable, and no mask reads its own parameter, so the engine can
-evaluate each mask from the data before it reads the parameter
+has every coordinate of its `dims`. The engine applies the mask first: outside
+it the parameter is absent wherever it is read, and the engine drops the rows of
+the data there when it attaches. Then it applies `missing:` to the coordinates
+the mask keeps: a value fills a missing row there, and `'refused'` asks for a
+row only there. A mask reads no variable, and no mask reads its own parameter,
+so the engine can evaluate each mask from the data before it reads the
+parameter
 ([a parameter's mask](language/parameters-variables-constraints.md#a-parameters-mask)).
 
 An engine must refuse a divisor that is `0` in a row it builds, whatever made it
