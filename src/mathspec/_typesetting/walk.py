@@ -719,6 +719,14 @@ class Walk:
         """
         return [self.definition(name) for name in self.defined()]
 
+    def parameter_masks(self) -> dict[str, str]:
+        """Each masked parameter's mask, printed over the parameter's own indices for its legend row."""
+        return {
+            name: self._condition(entry.where.root, self._context(entry.dims))
+            for name, entry in self.program.parameters.items()
+            if entry.where is not None
+        }
+
     def defined(self) -> list[str]:
         """The named expressions that print under their own symbol: every one, or only the unsubstitutable when inlining.
 

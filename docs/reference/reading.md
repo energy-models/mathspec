@@ -123,8 +123,8 @@ written  # "assumption 'cost_is_never_negative' does not hold for the data attac
 `program.parameters[name].missing` says what a missing row of that parameter
 means: `'refused'`, `'absent'`, or the value that the row reads as. A given
 parameter is a `GivenParameter` under `program.given.parameters`, with its
-`dims` and `dtype` and no `missing`, because the file that declares the
-parameter says. The program of `spec.expand(...)` reports the same values.
+`dims` and `dtype` and no `missing` or `where`, because the file that
+declares the parameter says. The program of `spec.expand(...)` reports the same values.
 `program.relations[name].missing` is `'refused'` or `'absent'`.
 
 Under `'refused'`, the engine does not build the model from a table with a
@@ -134,6 +134,15 @@ expression, in a bound, and in a comparison in a mask. A `ParameterDefined` on
 a numeric parameter asks whether the data has a row, so a value does not answer
 it. A `ParameterDefined` on a `bool` parameter reads the value. Under
 `'absent'`, a bound that reads a missing row leaves that side open.
+
+`program.parameters[name].where` is the parameter's mask, or `None` where it
+has every coordinate of its `dims`. Outside the mask the parameter is absent
+wherever it is read. When the engine attaches the data, it drops the rows
+outside the mask, and applies `missing:` only inside it: a value fills a
+missing row inside the mask, and `'refused'` asks for a row only there. A mask
+reads no variable, and no mask reads its own parameter, so the engine can
+evaluate each mask from the data before it reads the parameter
+([a parameter's mask](language/parameters-variables-constraints.md#a-parameters-mask)).
 
 An engine must refuse a divisor that is `0` in a row it builds, whatever made it
 `0`: a missing row, a value or a constant

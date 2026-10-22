@@ -27,17 +27,19 @@ hold.
 
 ## What creates absence
 
-| Construct                                                     | What is absent                                                                     |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `where:` on a variable                                        | the variable, at the masked coordinates                                            |
-| `where:` on a constraint                                      | the row                                                                            |
-| `shift(x, along=d, offset=n)` without `edge=`                 | the vacated edge coordinate ([shift](operators.md#shift))                          |
-| a key combination a `missing: absent` relation has no row for | that combination's place in the relation ([relations](relations.md#a-missing-row)) |
-| a missing row of a `missing: absent` parameter                | the parameter, at that coordinate                                                  |
+| Construct                                                     | What is absent                                                                                                         |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `where:` on a variable                                        | the variable, at the masked coordinates                                                                                |
+| `where:` on a parameter                                       | the parameter, at the masked coordinates ([a parameter's mask](parameters-variables-constraints.md#a-parameters-mask)) |
+| `where:` on a constraint                                      | the row                                                                                                                |
+| `shift(x, along=d, offset=n)` without `edge=`                 | the vacated edge coordinate ([shift](operators.md#shift))                                                              |
+| a key combination a `missing: absent` relation has no row for | that combination's place in the relation ([relations](relations.md#a-missing-row))                                     |
+| a missing row of a `missing: absent` parameter                | the parameter, at that coordinate                                                                                      |
 
-Nothing else creates absence. A missing row is the only gap a parameter can
-have, because a null or NaN value is [refused](parameters-variables-constraints.md#parameters) when
-the data is attached. The parameter's [`missing:`](parameters-variables-constraints.md#a-missing-row)
+Nothing else creates absence. Inside its mask, a missing row is the only gap
+a parameter can have, because a null or NaN value is
+[refused](parameters-variables-constraints.md#parameters) when the data is
+attached. The parameter's [`missing:`](parameters-variables-constraints.md#a-missing-row)
 key says what a missing row is:
 
 | `missing:`            | A missing row                                               |

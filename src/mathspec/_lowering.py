@@ -59,7 +59,7 @@ from mathspec.program import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable, Iterator, Mapping
 
     from mathspec.program import Expression
     from mathspec.spec import AssumptionSpec, Spec
@@ -138,6 +138,8 @@ def lower(spec: Spec) -> Program:
         if named is not None:
             body = Mask(named.body)
             conditions[mname] = NamedCondition(body, tuple(sorted(body.dims)), mdef.description)
+
+    parameter_masks = _parameter_masks(spec, ns, errors)
 
     variables = {}
     for vname, vdef in spec.variables.items():
@@ -218,7 +220,7 @@ def lower(spec: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: Parameter(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description)
+            name: Parameter(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description, parameter_masks.get(name))
             for name, pdef in spec.parameters.items()
         },
         variables=variables,
@@ -382,6 +384,64 @@ def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterRefe
     if isinstance(value, str):
         return ParameterReference(value, dims=sorted_dims(ns.leaf_dims[value]))
     return Constant(value, dims=())
+
+
+def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, Mask | None]:
+    """Each parameter's ``where:`` typed, a refusal appended for each mask nothing can evaluate.
+
+    A consumer evaluates a parameter's mask when it attaches the data, before
+    any variable has a value, and before the parameter itself has rows to
+    read. So a mask may not read a variable, and the masks may not read one
+    another in a cycle: each would need its own answer first.
+    """
+    masks: dict[str, Mask | None] = {}
+    for pname, pdef in spec.parameters.items():
+        if pdef.where is None:
+            continue
+        context = f"Parameter '{pname}'"
+        mask = masks[pname] = mask_of(resolve_condition_text(pdef.where, ns, context, errors))
+        if mask is not None:
+            errors.extend(
+                f"{context}: its `where:` reads variable '{v}', and a parameter's mask is evaluated from the data "
+                f'alone, before any variable has a value. Test a parameter or a relation instead.'
+                for v in sorted(mask.names_read & {*spec.variables, *spec.given.variables})
+            )
+    errors.extend(_mask_cycles(masks))
+    return masks
+
+
+def _mask_cycles(masks: Mapping[str, Mask | None]) -> Iterator[str]:
+    """A refusal for each parameter whose mask reads itself, directly or through other parameters' masks."""
+    reads = {name: mask.names_read & masks.keys() for name, mask in masks.items() if mask is not None}
+    for start in sorted(reads):
+        chain = _chain_back(start, reads)
+        if chain is None:
+            continue
+        if len(chain) == 2:
+            yield (
+                f"Parameter '{start}': its `where:` reads '{start}' itself, and whether a row is there is what "
+                f'the mask decides. Test a relation or another parameter.'
+            )
+        else:
+            yield (
+                f"Parameter '{start}': its `where:` reads itself through {' -> '.join(chain)}, so no mask can be "
+                f'evaluated first. Test a relation or a parameter that has no mask.'
+            )
+
+
+def _chain_back(start: str, reads: Mapping[str, frozenset[str]]) -> tuple[str, ...] | None:
+    """The shortest chain of masks from *start* back to *start*, or ``None`` where none returns."""
+    chains: dict[str, tuple[str, ...]] = {start: (start,)}
+    frontier = [start]
+    while frontier:
+        current = frontier.pop(0)
+        for nxt in sorted(reads.get(current, ())):
+            if nxt == start:
+                return (*chains[current], start)
+            if nxt not in chains:
+                chains[nxt] = (*chains[current], nxt)
+                frontier.append(nxt)
+    return None
 
 
 def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:

@@ -212,6 +212,9 @@ def check_spec(spec: Spec, program: Program) -> None:
     Raises:
         DimensionError: On the first entry that breaks one.
     """
+    for pname, parameter in program.parameters.items():
+        _check_condition_dims(parameter.where, frozenset(parameter.dims), f"Parameter '{pname}'")
+
     for vname, vdef in spec.variables.items():
         frame = frozenset(vdef.dims)
         context = f"Variable '{vname}'"

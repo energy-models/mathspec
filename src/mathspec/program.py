@@ -718,6 +718,10 @@ class Parameter:
     #: a row.
     missing: ParameterMissing = 'refused'
     description: str | None = None
+    #: The coordinates the parameter has, or ``None`` for every coordinate of
+    #: its dims. Outside the mask the parameter is absent: a consumer drops
+    #: the rows of its data there, and ``missing:`` applies only inside.
+    where: Mask | None = None
 
 
 @dataclass(frozen=True)

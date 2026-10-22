@@ -153,7 +153,12 @@ class ConditionResolver:
         match kind:
             case 'parameter':
                 declared = ns.spec.parameters.get(node.name)
-                if declared is not None and declared.missing == 'refused' and declared.dtype in ('int', 'str'):
+                if (
+                    declared is not None
+                    and declared.missing == 'refused'
+                    and declared.where is None
+                    and declared.dtype in ('int', 'str')
+                ):
                     rewrite = (
                         f'Declare `missing: absent`, or compare the label: where: "{node.name} == \'...\'".'
                         if declared.dtype == 'str'

@@ -318,12 +318,15 @@ class DimensionSpec(_StrictSpec):
 
 
 class ParameterSpec(_StrictSpec):
-    """A declared parameter with dims and dtype, and what a missing row of its data means."""
+    """A declared parameter with dims and dtype, the coordinates it has, and what a missing row of its data means."""
 
     _label: ClassVar[str] = 'a parameter entry'
 
     dims: list[str]
     dtype: ParameterDtype = 'float'
+    #: The coordinates the parameter has, in the condition grammar. Outside
+    #: them it is absent, and a row of its data there is dropped.
+    where: str | None = None
     missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
 

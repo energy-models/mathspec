@@ -119,9 +119,11 @@ class Namespace:
             **{d: dd.dtype for d, dd in spec.dimensions.items()},
         }
         #: parameter name -> the value its ``missing:`` reads a missing row as,
-        #: for the parameters that name one; what a comparison in a condition reads there.
+        #: for the unmasked parameters that name one; what a comparison in a
+        #: condition reads there. A masked parameter is absent outside its mask,
+        #: so its missing row may also compare false, and none is assumed.
         self.defaults: dict[str, bool | float] = {
-            p: pd.missing for p, pd in spec.parameters.items() if not isinstance(pd.missing, str)
+            p: pd.missing for p, pd in spec.parameters.items() if not isinstance(pd.missing, str) and pd.where is None
         }
         #: relation name -> its columns and key, as declared.
         self.relations: dict[str, Relation] = {
