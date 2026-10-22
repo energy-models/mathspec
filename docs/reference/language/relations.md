@@ -212,3 +212,36 @@ compares a column under `values:`, written `l[c]`, against a label, compares
 two columns of one table, or tests that a row exists
 ([conditions](expressions.md#conditions)). A comparison reads one column,
 so `calendar[month, weekday] == 'x'` is refused.
+
+A bare relation name in a `where:` tests that a row exists, read at the
+relation's key. On a variable, it builds the variable only at the rows of the
+relation:
+
+```yaml
+dimensions:
+  generator: { dtype: str }
+  bus: { dtype: str }
+  snapshot: { dtype: int }
+relations:
+  connection: { key: [generator, bus], missing: absent } # the pairs that are wired
+parameters:
+  load: { dims: [bus, snapshot] }
+variables:
+  flow:
+    dims: [generator, bus, snapshot]
+    where: connection
+    bounds: { lower: 0 }
+constraints:
+  balance:
+    dims: [bus, snapshot]
+    expression: sum(flow, over=generator) == load
+```
+
+$$\mathit{flow}_{g,b,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B},\ t \in \mathcal{T} \,:\, (g, b) \in \mathrm{connection}$$
+
+$$\sum_{g \in \mathcal{G}} \mathit{flow}_{g,b,t} = \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}$$
+
+`flow` has a column only at a pair that `connection` lists. At every other pair
+it is [absent](absence.md), so `balance` adds up only the generators wired to
+each bus. The mask reads `(generator, bus)`, so it is the same at every
+snapshot.
