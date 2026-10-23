@@ -54,10 +54,6 @@ if TYPE_CHECKING:
 #: The most cells one pair of masks may multiply out to. Split a larger pair into several expressions.
 CELL_BUDGET = 8192
 
-#: The dtypes an ordering is decided against. Everything else compares only
-#: with == and !=, which need no order on the values.
-_ORDERED_DTYPES: tuple[DeclaredDtype, ...] = ('float', 'int', 'datetime')
-
 
 class Undecidable(Exception):  # noqa: N818
     """A pair this procedure will not reason about. Carries the rewrite."""
@@ -151,6 +147,8 @@ class Subject:
     ``kind`` separates the namespaces that could otherwise collide: a
     dimension's coordinates and its *rank* are two subjects over one name, and
     a rank is further split by the ``within=`` columns it is counted within.
+    A comparison on a relation is split by the column it reads, because two
+    columns of one row hold two values.
     """
 
     kind: Literal['param', 'expression', 'dim', 'rank', 'relation', 'relation_pair', 'variable']
@@ -165,6 +163,8 @@ class Subject:
             return f'the position of {self.name}{within}'
         if self.kind == 'relation_pair':
             return f'{self.name} vs {self.qualifier}'
+        if self.kind == 'relation' and self.qualifier:
+            return f'{self.name}[{self.qualifier}]'
         return self.name
 
 
@@ -190,7 +190,7 @@ class _Grid:
             for node in mask.atoms:
                 subject = _subject_of(node)
                 subjects[id(node)] = subject
-                _observe(node, subject, values.setdefault(subject, set()), dtypes)
+                _observe(node, subject, values.setdefault(subject, set()))
         return cls({s: _cells_for(s, seen, dtypes) for s, seen in values.items()}, subjects, defaults)
 
     @property
@@ -248,13 +248,11 @@ def _signed_literal(node: Expression) -> float | None:
     return None
 
 
-def _observe(
-    node: TypedCondition, subject: Subject, values: set[_Literal], dtypes: Mapping[str, DeclaredDtype]
-) -> None:
+def _observe(node: TypedCondition, subject: Subject, values: set[_Literal]) -> None:
     """Record what *node* says about its subject: a position, or a literal.
 
-    ``position()`` converts the dimension to an integer, so an ordering over a
-    rank is an ordering of integers and every comparator is admitted there.
+    ``position()`` converts the dimension to an integer, so an inequality on a
+    rank is one on integers and every comparator is admitted there.
     """
     if isinstance(node, ExpressionComparison):
         raise Undecidable(_expression_rewrite(node))
@@ -281,18 +279,12 @@ def _observe(
     elif isinstance(node, RelationPairComparison):
         if node.op not in ('==', '!='):
             msg = (
-                f'{subject} is ordered with {node.op!r}, and two relations have no order. '
-                f'Compare them with == or !=, or precompute the ordering as a boolean parameter and test that'
+                f'{subject} uses {node.op!r}, and this analysis does not decide an inequality between two '
+                'relation columns. Compare them with == or !=, or precompute the comparison as a boolean '
+                'parameter and test that'
             )
             raise Undecidable(msg)
     elif isinstance(node, ParameterComparison | DimensionComparison | RelationComparison):
-        if node.op not in ('==', '!=') and dtypes.get(subject.name) not in _ORDERED_DTYPES:
-            msg = (
-                f'{subject} has dtype {dtypes.get(subject.name)!r} and is ordered with '
-                f'{node.op!r}, which puts no two of its values in order. Compare it with '
-                f'== or !=, or declare it as a number'
-            )
-            raise Undecidable(msg)
         values.add(node.value)
 
 
@@ -308,8 +300,10 @@ def _subject_of(node: TypedCondition) -> Subject:
             if partition is None:
                 return Subject('rank', name)
             return Subject('rank', name, partition.name, partition.grouped)
-        case RelationDefined(name=name) | RelationComparison(name=name):
+        case RelationDefined(name=name):
             return Subject('relation', name)
+        case RelationComparison(name=name, column=column):
+            return Subject('relation', name, column)
         case RelationPairComparison(name=name, other=other):
             return Subject('relation_pair', name, other)
         case ExpressionComparison():
@@ -555,17 +549,16 @@ def _read(node: TypedCondition, value: Cell, grid: _Grid) -> Cell:
 def _compare(value: Cell, op: ComparisonOperator, literal: _Literal) -> bool:
     """One atom's truth in one cell. Both sides are already this cell's frame.
 
+    A label none of the masks names meets only == and !=, because the loader
+    refuses an inequality on a ``str``.
+
     Raises:
         AssertionError: The cell and the literal are of different kinds, which
             the dtype rules keep apart before a mask is proved.
     """
     if isinstance(value, Special):
         if value is Special.OTHER:
-            # a label none of the masks names sorts nowhere
-            if op in ('==', '!='):
-                return op == '!='
-            msg = f'a label neither case names is ordered with {op!r}. Compare labels with == or != instead'
-            raise Undecidable(msg)
+            return op == '!='
         value = math.inf if value is Special.POS_INF else -math.inf
     if isinstance(value, int | float) and isinstance(literal, int | float):
         return _ordered(float(value), op, float(literal))

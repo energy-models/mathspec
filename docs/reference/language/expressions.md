@@ -158,8 +158,8 @@ QUOTED     ::= "'" chars "'" | '"' chars '"'
 | `name` (bare)                            | named condition            | Its condition ([conditions](named.md#conditions)). A given condition is true or false at each coordinate, as a `bool` parameter is                                                                                                                                                                   |
 | `name OP value`                          | parameter                  | Element-wise. A missing row with no `missing:` value compares false                                                                                                                                                                                                                                  |
 | `name OP value`                          | dimension                  | A filter on the frame's own coordinate column                                                                                                                                                                                                                                                        |
-| `name OP value`, `name[col] OP value`    | relation                   | A filter on a value column, read at the relation's key. Name the column where the key determines several. A comparison reads one column                                                                                                                                                              |
-| `name OP name`, `name[a] OP name[b]`     | two relation columns       | Legal where both relations are keyed over the same dimensions and both columns are over one dimension. `ends[bus0] != ends[bus1]` excludes a self-loop                                                                                                                                               |
+| `name OP value`, `name[col] OP value`    | relation                   | A filter on a value column, read at the relation's key. Name the column where the key determines several. A comparison reads one column. Where the relation has no row, the comparison is false for every operator, `!=` included, so `NOT` of it is true there                                      |
+| `name OP name`, `name[a] OP name[b]`     | two relation columns       | Legal where both relations are keyed over the same dimensions and both columns are over one dimension. `ends[bus0] != ends[bus1]` excludes a self-loop. Where either relation has no row, the comparison is false                                                                                    |
 | `expression OP expression`               | arithmetic over parameters | Coordinate by coordinate, over every dimension either side carries ([arithmetic in a comparison](#arithmetic-in-a-comparison)). A side with no value at a coordinate compares false                                                                                                                  |
 | `position(name) OP i`                    | dimension                  | Where the row sits along the dimension's own order. `0` is first, and a negative number counts from the end                                                                                                                                                                                          |
 | `position(name, within=relation[c])`     | dimension                  | The same, counted within each group the relation makes                                                                                                                                                                                                                                               |
@@ -273,8 +273,15 @@ A comparison is checked against the declared `dtype`. A `datetime` dimension is
 compared against a quoted ISO date such as `'2030-01-01'` or
 `'2030-01-01T06:00'`, and a number against it is a load error.
 
-String labels compare bytewise, whatever the dimension's order, and a label
-the dimension does not carry compares equal to nothing.
+Only a number or a `datetime` compares with `<`, `<=`, `>` and `>=`. A `str`
+or `bool` compares with `==` and `!=`, and an inequality on it is a load error.
+A relation column reads the dtype of its target dimension, so the rule holds
+there too. `generator < 'b9'` is refused, because it would compare the labels
+byte by byte, and `'b10'` would come before `'b9'` whatever the dimension's
+order. To compare along the order of a dimension declared `ordered: true`, use
+[`position()`](#position).
+
+A label the dimension does not carry compares equal to nothing.
 
 The language cannot compare two dimensions, so precompute a boolean parameter
 instead.

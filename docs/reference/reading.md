@@ -142,6 +142,12 @@ a numeric parameter asks whether the data has a row, so a value does not answer
 it. A `ParameterDefined` on a `bool` parameter reads the value. Under
 `'absent'`, a bound that reads a missing row leaves that side open.
 
+A `RelationComparison` or a `RelationPairComparison` is false at a coordinate
+where a relation it reads has no row, whatever its operator: `!=` is false
+there too. A `Not` of it is then true. So `connection != 'input'` keeps no
+coordinate that `connection` leaves out, and `NOT connection == 'input'` keeps
+every one.
+
 ## Nodes and masks
 
 Import the node classes from `mathspec.program` to test a node with
