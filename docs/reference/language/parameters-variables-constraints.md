@@ -25,12 +25,13 @@ parameters:
     dims: [] # a scalar
 ```
 
-| Field         |                                                                |                   |
-| ------------- | -------------------------------------------------------------- | ----------------- |
-| `dims`        | required. The dimensions it is indexed by. `[]` means a scalar |                   |
-| `dtype`       | `float`, `int`, `bool`, `str`                                  | default `float`   |
-| `missing`     | what a missing row means ([a missing row](#a-missing-row))     | default `refused` |
-| `description` | free text                                                      | default `null`    |
+| Field         |                                                                   |                   |
+| ------------- | ----------------------------------------------------------------- | ----------------- |
+| `dims`        | required. The dimensions it is indexed by. `[]` means a scalar    |                   |
+| `dtype`       | `float`, `int`, `bool`, `str`                                     | default `float`   |
+| `where`       | the coordinates it has ([a parameter's mask](#a-parameters-mask)) | default `null`    |
+| `missing`     | what a missing row means ([a missing row](#a-missing-row))        | default `refused` |
+| `description` | free text                                                         | default `null`    |
 
 The column has to match the `dtype`:
 
@@ -53,7 +54,7 @@ as `dtype: int`.
 ### A missing row
 
 `missing:` says what it means when the data has no row at a coordinate of the
-`dims`. A table that lost a row in preparation looks the same as a table that
+`dims`, after the parameter's [mask](#a-parameters-mask) if it has one. A table that lost a row in preparation looks the same as a table that
 never had the row, so the file says which one you mean.
 
 ```yaml
@@ -83,7 +84,8 @@ must have a row.
 A bare numeric name in a condition asks whether the data has a row, whatever the
 `missing:`, so `where: p_nom_max` selects the rows the data gives. Under
 `refused` every coordinate has a row, so a bare `float` name asks only "is it
-finite?", and a bare `int` or `str` name is a load error. A comparison reads the
+finite?", and a bare `int` or `str` name is a load error, unless the parameter
+has a [mask](#a-parameters-mask). A comparison reads the
 value, so `where: efficiency <= 1` is true at a missing row of `efficiency`
 above, which reads `1` there. Under `absent`, a comparison at a missing row is
 false. A bare `bool` name reads its value, so `where: active` reads `true` at a
@@ -99,13 +101,81 @@ A value has the parameter's dtype:
 | `str`   | none. A label has no value to fill                      |
 
 A NaN, a quoted number and `missing: null` are refused. A `given:` parameter
-has no `missing:`, because the file that declares the parameter owns it. A
+has no `missing:` and no `where:`, because the file that declares the
+parameter owns both. A
 parameter that a [`piecewise:`](piecewise.md#missing-breakpoints) entry reads
 takes `missing:` too, and a values parameter of a curve with `points:` declares
 a `missing:` other than `refused`.
 
 The typeset legend prints what a missing row means beside the parameter, such
 as `` `0` where the data has no row ``, and prints nothing for `refused`.
+
+### A parameter's mask
+
+`where:` limits a parameter to the coordinates where a
+[condition](expressions.md#conditions) is true. It fits a table that is
+declared over several dimensions but has meaning only at some combinations of
+their labels:
+
+```yaml
+dimensions:
+  entity: { dtype: str }
+  bus: { dtype: str }
+  snapshot: { dtype: int }
+relations:
+  connection: { key: [entity, bus], missing: absent } # the pairs that are wired
+parameters:
+  efficiency: { dims: [entity, bus, snapshot], where: connection, missing: 1 }
+variables:
+  p: { dims: [entity, snapshot] }
+constraints:
+  balance:
+    dims: [bus, snapshot]
+    expression: sum(efficiency * p, over=entity) == 0
+```
+
+$$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{e,b,t} \cdot p_{e,t} = 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}$$
+
+A parameter's coordinates are decided in two steps, in this order:
+
+1. `where:` is a mask on the `dims`. It keeps the coordinates where its
+   condition is true. At every other coordinate the parameter is
+   [absent](absence.md), wherever it is read, and a row of the data there is
+   dropped when the data is attached.
+2. At each coordinate the mask keeps, the data has a row or it does not. A row
+   is read as it is. A missing row follows the parameter's
+   [`missing:`](#a-missing-row): it is refused, absent, or the value
+   `missing:` names.
+
+`missing:` never reaches a coordinate that the mask leaves out. So
+`missing: 1` above fills only the wired pairs, and under `refused` the data
+needs a row at each wired pair and snapshot, and nowhere else. In `balance`,
+`efficiency * p` is absent at an entity that is not wired to the bus, so the sum
+adds up only the wired entities.
+
+A row outside the mask is not an error. To refuse such a row, state it as an
+[assumption](absence.md#a-table-with-gaps-on-purpose):
+`{holds: "connection", where: "efficiency"}`.
+
+A mask reads what comes before the parameters. [Dimensions](dimensions.md)
+say which labels exist, and [relations](relations.md) say which combinations of
+labels exist. A relation has no `where:`, so a mask can read any relation. A
+parameter that has no mask comes before the masked ones too. So the mask is read
+from the data alone, before the parameter itself, and four masks are refused at
+load:
+
+- a mask that reads a variable;
+- a mask that reads its own parameter;
+- a mask that reads a parameter that has a mask of its own;
+- a mask over a dimension that the parameter does not have.
+
+```text
+Parameter 'efficiency': its `where:` reads variable 'p', and a parameter's mask is evaluated from the data alone, before any variable has a value. Test a parameter or a relation instead.
+```
+
+The typeset legend prints the mask beside the dimensions, as `only where` and
+the condition. For `efficiency` it prints only where
+$(e, b) \in \mathrm{connection}$.
 
 ## `variables`
 

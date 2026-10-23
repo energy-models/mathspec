@@ -139,6 +139,8 @@ def lower(spec: Spec) -> Program:
             body = Mask(named.body)
             conditions[mname] = NamedCondition(body, tuple(sorted(body.dims)), mdef.description)
 
+    parameter_masks = _parameter_masks(spec, ns, errors)
+
     variables = {}
     for vname, vdef in spec.variables.items():
         where = resolve_condition_text(vdef.where, ns, f"Variable '{vname}'", errors, self_variable=vname)
@@ -218,7 +220,7 @@ def lower(spec: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: Parameter(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description)
+            name: Parameter(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description, parameter_masks.get(name))
             for name, pdef in spec.parameters.items()
         },
         variables=variables,
@@ -382,6 +384,37 @@ def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterRefe
     if isinstance(value, str):
         return ParameterReference(value, dims=sorted_dims(ns.leaf_dims[value]))
     return Constant(value, dims=())
+
+
+def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, Mask | None]:
+    """Each parameter's ``where:`` typed, a refusal appended for each mask that reads what it may not.
+
+    A consumer evaluates a parameter's mask from the data alone, before any
+    variable has a value and before any mask has been applied. So a mask reads
+    dimensions, relations and unmasked parameters, and no masks can wait on
+    one another.
+    """
+    masked = {name for name, pdef in spec.parameters.items() if pdef.where is not None}
+    masks: dict[str, Mask | None] = {}
+    for pname in sorted(masked):
+        context = f"Parameter '{pname}'"
+        mask = masks[pname] = mask_of(resolve_condition_text(spec.parameters[pname].where, ns, context, errors))
+        if mask is None:
+            continue
+        errors.extend(
+            f"{context}: its `where:` reads variable '{v}', and a parameter's mask is evaluated from the data "
+            f'alone, before any variable has a value. Test a parameter or a relation instead.'
+            for v in sorted(mask.names_read & {*spec.variables, *spec.given.variables})
+        )
+        errors.extend(
+            f"{context}: its `where:` reads '{pname}' itself, and whether a row is there is what the mask "
+            f'decides. Test a relation or another parameter.'
+            if read == pname
+            else f"{context}: its `where:` reads '{read}', which has a mask of its own. Test what the mask of "
+            f"'{read}' tests, or a relation."
+            for read in sorted(mask.names_read & masked)
+        )
+    return masks
 
 
 def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:

@@ -54,6 +54,7 @@ parameters:
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
+  link_eff: { dims: [generator, bus], where: connection, missing: 1 } # a mask: the legend says where it has coordinates, then what a missing row inside them reads as
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }
@@ -88,6 +89,7 @@ parameters:
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{B} \times \mathcal{E}`$, `absent` where the data has no row |
+| $`\mathrm{link\_eff}`$ | `link_eff` over $`\mathcal{G} \times \mathcal{B}`$, only where $`\left( g,\ b \right) \in \mathrm{connection}`$, $`1`$ where the data has no row |
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{eta}`$ | `eta` over $`\mathcal{G}`$ |
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |

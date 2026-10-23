@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from mathspec._resolution import Namespace
-from mathspec._typesetting import FORMATS, to_markdown, typeset_line
+from mathspec._typesetting import FORMATS, to_markdown, typeset, typeset_line
 from mathspec._validation import to_spec
 from mathspec._yaml import parse_yaml, read_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
@@ -2570,12 +2570,104 @@ def test_a_values_table_under_points_is_not_refused(parameter, declared):
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'int', 'missing': 0}}, id='an-int-under-a-value'),
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'str', 'missing': 'absent'}}, id='a-label-under-absent'),
         pytest.param({'given.parameters.n': {'dims': ['g'], 'dtype': 'int'}}, id='a-given-int'),
+        pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'int', 'where': 'flag'}}, id='a-masked-int'),
     ],
 )
 def test_a_bare_parameter_whose_answer_needs_the_data_loads(patch):
     """The declaring file owns a given parameter's `missing:`, so this file cannot decide its rows."""
     spec = to_spec(varied(SMALL_MODEL, **patch, **{'variables.p.where': 'n'}))
     assert spec.program.variables['p'].where is not None, 'the bare name stays a mask'
+
+
+#: A parameter over the pairs of `g` and `h` that a bare relation lists, with a fill.
+_MASKED = {
+    'relations.pair': {'key': ['g', 'h'], 'missing': 'absent'},
+    'parameters.w': {'dims': ['g', 'h'], 'where': 'pair', 'missing': 1},
+}
+
+
+def test_a_parameter_mask_is_part_of_the_program():
+    """A consumer reads where a parameter has coordinates off the program, and the file writes the mask back."""
+    spec = _spec(**_MASKED)
+    assert spec.program.parameters['w'].where is not None, 'the mask reaches the program'
+    assert spec.program.parameters['w'].where.names_read == {'pair'}, 'the mask reads the relation and nothing else'
+    assert spec.program.parameters['c'].where is None, 'a parameter with no `where:` has every coordinate'
+    assert to_spec(spec.to_yaml()).program == spec.program, 'the mask survives a round trip through YAML'
+
+
+@pytest.mark.parametrize(
+    ('patch', 'fragment'),
+    [
+        pytest.param(
+            {'parameters.c.where': 'p'},
+            "Parameter 'c': its `where:` reads variable 'p', and a parameter's mask is evaluated from the data alone",
+            id='a-mask-that-reads-a-variable',
+        ),
+        pytest.param(
+            {'parameters.c.where': 'on', 'conditions.on': 'p'},
+            "Parameter 'c': its `where:` reads variable 'p'",
+            id='a-mask-that-reads-a-variable-through-a-named-condition',
+        ),
+        pytest.param(
+            {'parameters.c.where': 'c > 0'},
+            "Parameter 'c': its `where:` reads 'c' itself",
+            id='a-mask-that-reads-its-own-parameter',
+        ),
+        pytest.param(
+            {'parameters.c.where': 'big', 'conditions.big': 'c > 0'},
+            "Parameter 'c': its `where:` reads 'c' itself",
+            id='a-mask-that-reads-its-own-parameter-through-a-named-condition',
+        ),
+        pytest.param(
+            {'parameters.c.where': 'flag', 'parameters.flag.where': "lk == 'x'"},
+            "Parameter 'c': its `where:` reads 'flag', which has a mask of its own. Test what the mask of 'flag' "
+            'tests, or a relation.',
+            id='a-mask-that-reads-a-masked-parameter',
+        ),
+        pytest.param(
+            {'parameters.c.where': 'flag', 'parameters.flag.where': 'c > 0'},
+            "Parameter 'c': its `where:` reads 'flag', which has a mask of its own",
+            id='two-masks-that-read-each-other',
+        ),
+        pytest.param(
+            {'parameters.k.where': 'flag'},
+            "Parameter 'k': where-parameter 'flag' reads dims ['g'] outside the declared dims []",
+            id='a-mask-over-a-dimension-the-parameter-lacks',
+        ),
+    ],
+)
+def test_a_parameter_mask_that_nothing_can_evaluate_is_refused(patch, fragment):
+    assert fragment in _refusal(**patch)
+
+
+def test_a_masked_parameter_is_not_read_as_its_fill_outside_the_mask():
+    """Outside its mask a parameter is absent, so a comparison on it is false there, whatever `missing:` says.
+
+    The case check read every missing row as the value `missing:` names. At
+    such a row `cost` reads 0, so neither `when:` holds and the two cases look
+    apart. Outside the mask both comparisons are false, both negations true,
+    and both cases claim the coordinate.
+    """
+    cases = {
+        'low': {'when': 'NOT cost > -1', 'expression': 1},
+        'high': {'when': 'NOT cost < 1', 'expression': 2},
+    }
+    patch = {
+        'parameters.cost': {'dims': ['g', 'h'], 'missing': 0},
+        'expressions.level': {'dims': ['g', 'h'], 'cases': cases, 'otherwise': 0},
+    }
+    assert _spec(**patch).program.expressions['level'] is not None, 'unmasked, a missing row reads 0 and no case holds'
+    masked = {**patch, **_MASKED, 'parameters.cost': {**patch['parameters.cost'], 'where': 'pair'}}
+    assert "cases 'low' and 'high' both claim the value where cost has no row" in _refusal(**masked)
+
+
+@pytest.mark.parametrize('fmt', FORMATS)
+def test_the_legend_says_where_a_parameter_has_coordinates(fmt: FormatName):
+    """The mask decides which rows of the data count, so a reader of the legend sees it beside the dims."""
+    spec = _spec(**_MASKED, **{'variables.q.bounds': {'upper': 'w'}})
+    row = next(line for line in typeset(spec, fmt).splitlines() if 'only where' in line)
+    assert 'pair' in row, 'the legend row names the relation the mask reads'
+    assert row.index('only where') < row.index('where the data has no row'), 'the mask comes before the fill'
 
 
 def test_a_given_parameter_has_no_missing():

@@ -72,6 +72,15 @@ column per declared column, named after it.
 - Row order has no meaning, because the order comes from the
   [dimension](dimensions.md).
 
+These checks read only the labels of the relation's dimensions. A relation has
+no `where:`, and nothing else decides its rows. So a relation comes before the
+entries that read it: a [parameter's mask](parameters-variables-constraints.md#a-parameters-mask),
+a variable's or a constraint's `where:`, and an assumption. To state that a
+relation must have certain rows, write an [assumption](assumptions.md). For
+`line_to` [below](#a-missing-row), `{holds: "line_to", where: "closed"}` says
+that every closed line has an end, where `closed` is a `bool` parameter over
+`line`.
+
 ### A missing row
 
 `missing:` says whether every combination of the key's dimensions needs a row.
