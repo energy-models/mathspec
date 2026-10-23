@@ -36,7 +36,6 @@ from mathspec._operators import BUILTIN_NAMES
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
     DimensionDtype,
-    MissingReading,
     ObjectiveSense,
     ParameterDtype,
     PiecewiseMethod,
@@ -44,7 +43,6 @@ from mathspec.program import (
     RelationMissing,
     SosType,
     VariableDomain,
-    VariableMissing,
 )
 
 if TYPE_CHECKING:
@@ -139,15 +137,18 @@ NUMERIC_DTYPES: frozenset[ParameterDtype] = frozenset({'float', 'int'})
 #: and ``-inf`` as the numbers they name, which an editor would otherwise flag.
 _MISSING_SCHEMA: dict[str, object] = {
     'anyOf': [
-        {'enum': list(get_args(MissingReading))},
+        {'enum': list(get_args(RelationMissing))},
         {'type': 'boolean'},
         {'type': 'number'},
         {'enum': ['inf', '-inf']},
     ],
 }
 
-#: The spellings of a missing row, for a refusal to list.
-_READINGS = ', '.join(get_args(MissingReading))
+#: What a variable's ``missing:`` is written as: ``absent``, or a finite number.
+_VARIABLE_MISSING_SCHEMA: dict[str, object] = {'anyOf': [{'enum': ['absent']}, {'type': 'number'}]}
+
+#: The words a parameter's ``missing:`` takes beside a value, for a refusal to list.
+_WORDS = ', '.join(get_args(RelationMissing))
 
 
 def _without_refused(written: dict[str, object]) -> dict[str, object]:
@@ -164,7 +165,7 @@ def _as_yaml(v: object) -> str:
 
 def _missing_null(kind: str, rewrite: str) -> ValueError:
     """``missing: null`` reads as either the default or an absent row, so it is refused for the word that says which."""
-    return ValueError(f'missing: null on {kind} names no reading. {rewrite}')
+    return ValueError(f'missing: null on {kind} says nothing. {rewrite}')
 
 
 #: Every formulation, in the order [`Spec.expand`][] writes them out: a curve
@@ -242,7 +243,7 @@ class RelationSpec(_StrictSpec):
     @field_validator('missing', mode='before')
     @classmethod
     def _refused_or_absent(cls, v: object) -> object:
-        """A label is data, so no value fills a gap in a map, and neutral reads as absent wherever a map is read."""
+        """A label is data, so no value fills a gap in a map."""
         if v is None:
             raise _missing_null(
                 'a relation', 'Write absent where a key combination may have no row, or leave the key out for refused.'
@@ -323,7 +324,7 @@ class ParameterSpec(_StrictSpec):
 
     dims: list[str]
     dtype: ParameterDtype = 'float'
-    missing: Annotated[MissingReading | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
+    missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -336,11 +337,11 @@ class ParameterSpec(_StrictSpec):
             )
         if v in ('inf', '-inf'):
             return float(cast('str', v))
-        if isinstance(v, str) and v not in get_args(MissingReading):
-            msg = f'missing is the string {v!r}. It takes {_READINGS}, or a value: a number, true or false.'
+        if isinstance(v, str) and v not in get_args(RelationMissing):
+            msg = f'missing is the string {v!r}. It takes {_WORDS}, or a value: a number, true or false.'
             raise ValueError(msg)
         if isinstance(v, float) and math.isnan(v):
-            msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _READINGS + '.'
+            msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _WORDS + '.'
             raise ValueError(msg)
         return v
 
@@ -351,13 +352,10 @@ class ParameterSpec(_StrictSpec):
 
     @model_validator(mode='after')
     def _a_value_fits_the_dtype(self) -> ParameterSpec:
-        """A value fills rows of the column, so it has the column's dtype, and a label has no neutral value."""
+        """A value fills rows of the column, so it has the column's dtype, and a label has none."""
         v = self.missing
-        if self.dtype == 'str' and v not in ('refused', 'absent'):
-            msg = (
-                f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill, '
-                f'and no neutral one.'
-            )
+        if self.dtype == 'str' and not isinstance(v, str):
+            msg = f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill.'
             raise ValueError(msg)
         if isinstance(v, str):
             return self
@@ -421,33 +419,45 @@ class VariableSpec(_StrictSpec):
     where: str | None = None
     bounds: BoundsSpec = BoundsSpec()
     domain: VariableDomain = 'continuous'
-    missing: VariableMissing = 'absent'
+    missing: Annotated[Literal['absent'] | int | float, WithJsonSchema(_VARIABLE_MISSING_SCHEMA)] = 'absent'
     description: str | None = None
 
     @field_validator('missing', mode='before')
     @classmethod
-    def _absent_or_neutral(cls, v: object) -> object:
-        """A variable has no data, so the readings of data do not apply to it."""
+    def _absent_or_a_number(cls, v: object) -> object:
+        """A variable has no data, so ``refused`` does not apply to it, and only a finite number can stand for it."""
         if v is None:
-            raise _missing_null('a variable', 'Write neutral, or leave the key out for absent.')
-        if v not in get_args(VariableMissing):
-            msg = (
-                f'missing: {_as_yaml(v)} on a variable, which takes absent or neutral. A variable has no data, '
-                f'so refused and a value apply only to a parameter.'
-            )
-            raise ValueError(msg)
-        return v
+            raise _missing_null('a variable', 'Write a number, or leave the key out for absent.')
+        if v == 'absent' or (isinstance(v, int | float) and not isinstance(v, bool) and math.isfinite(v)):
+            return v
+        msg = (
+            f'missing: {_as_yaml(v)} on a variable, which takes absent or a finite number. A variable has no data, '
+            f'so refused and a flag apply only to a parameter.'
+        )
+        raise ValueError(msg)
 
     @model_validator(mode='after')
-    def _neutral_needs_a_mask(self) -> VariableSpec:
-        """``missing:`` says what a masked-out coordinate means, so one must be missable."""
-        if self.missing != 'absent' and self.where is None:
+    def _a_number_fits_the_variable(self) -> VariableSpec:
+        """The number stands for the variable where its mask leaves it out, so a mask must leave something out.
+
+        The number lies in the variable's domain. The bounds hold only inside
+        the mask, so the number may lie outside them.
+        """
+        v = self.missing
+        if isinstance(v, str):
+            return self
+        if self.where is None:
             msg = (
-                f'missing: {self.missing} needs a `where:`. A variable with no mask exists at every '
+                f'missing: {_as_yaml(v)} needs a `where:`. A variable with no mask exists at every '
                 f'coordinate of its dims, so nothing is missing. Add a `where:`, or delete `missing:`.'
             )
-            raise ValueError(msg)
-        return self
+        elif self.domain == 'binary' and v not in (0, 1):
+            msg = f'missing: {_as_yaml(v)} on a binary variable, which takes 0 or 1.'
+        elif self.domain == 'integer' and not float(v).is_integer():
+            msg = f'missing: {_as_yaml(v)} on an integer variable, which takes an integer.'
+        else:
+            return self
+        raise ValueError(msg)
 
 
 class _GivenEntrySpec(_StrictSpec):

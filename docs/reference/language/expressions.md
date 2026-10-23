@@ -70,6 +70,15 @@ objective:
 because an expression reads no [dimension](#name-resolution). Write `x * x` for
 a square.
 
+A divisor that `edge=0` can make 0 is refused at load, because the file itself
+puts that 0 in. `p / shift(c, along=t, offset=1, edge=0)` divides by 0 at the
+first `t`, whatever the data holds. The same holds where the shift is a factor,
+a numerator, a base, the operand of a sum, another shift or a lookup, a named
+expression or a region of a case, and in a sum only where every term can be 0:
+`shift(c, along=t, offset=1, edge=0) + 1` loads. Write `edge='wrap'`, or an
+`edge=` value other than 0. A divisor that a missing row makes 0 is refused in
+the same way, as [absence](absence.md#a-guarded-divisor) states.
+
 ## Name resolution
 
 One flat namespace covers dimensions, relations, parameters, variables, named
@@ -211,7 +220,7 @@ The right-hand side is a whole number. A fraction, a parameter, and a
 comparison a count can never fail or never meet (`>= 0`, `< 0`, or any
 negative number) are load errors.
 
-### Reading a condition at the previous coordinate
+### Reading a condition at another coordinate
 
 `shift(<condition>, along=<dimension>, offset=<integer>)` reads the condition
 `offset` coordinates back. It is **false** where the translation vacates, and

@@ -121,9 +121,10 @@ written  # "assumption 'cost_is_never_negative' does not hold for the data attac
 ```
 
 `program.parameters[name].missing` says what a missing row of that parameter
-means: `'refused'`, `'absent'`, `'neutral'`, or the value that the row reads as.
-It is `None` for a given parameter, because the file that declares the
-parameter says. The program of `spec.expand(...)` reports the same readings.
+means: `'refused'`, `'absent'`, or the value that the row reads as. A given
+parameter is a `GivenParameter` under `program.given.parameters`, with its
+`dims` and `dtype` and no `missing`, because the file that declares the
+parameter says. The program of `spec.expand(...)` reports the same values.
 `program.relations[name].missing` is `'refused'` or `'absent'`.
 
 Under `'refused'`, the engine does not build the model from a table with a
@@ -133,6 +134,10 @@ expression, in a bound, and in a comparison in a mask. A `ParameterDefined` on
 a numeric parameter asks whether the data has a row, so a value does not answer
 it. A `ParameterDefined` on a `bool` parameter reads the value. Under
 `'absent'`, a bound that reads a missing row leaves that side open.
+
+An engine must refuse a divisor that is `0` in a row it builds, whatever made it
+`0`: a missing row, a value or a constant
+([zero divisors in the data](language/absence.md#zero-divisors-in-the-data)).
 
 A `RelationComparison` or a `RelationPairComparison` is false at a coordinate
 where a relation it reads has no row, whatever its operator: `!=` is false

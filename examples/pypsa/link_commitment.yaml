@@ -97,7 +97,7 @@ parameters:
       (`components.py:1050-1121`). Below the flow a solve wants, it caps that
       flow; data prep
     dims: [scenario, link]
-    missing: neutral
+    missing: absent
 
 variables:
   Link_status:
@@ -295,3 +295,12 @@ constraints:
     dims: [scenario, snapshot, link]
     where: Link_committed AND Link_p_nom_extendable AND Link_p_nom_mod > 0
     expression: Link_shut_down <= Link_n_mod
+
+assumptions:
+  Link_big_m_where_committed_and_extendable:
+    holds: "Link_big_m"
+    where: "Link_com_ext"
+    description: >-
+      a committable link with an extendable, non-modular build has
+      the big-M its rows release it by — PyPSA computes one for each
+      (`get_committable_big_m_values`)

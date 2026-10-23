@@ -658,8 +658,7 @@
             {
               "enum": [
                 "refused",
-                "absent",
-                "neutral"
+                "absent"
               ]
             },
             {
@@ -955,13 +954,18 @@
           "type": "string"
         },
         "missing": {
-          "default": "absent",
-          "enum": [
-            "absent",
-            "neutral"
+          "anyOf": [
+            {
+              "enum": [
+                "absent"
+              ]
+            },
+            {
+              "type": "number"
+            }
           ],
-          "title": "Missing",
-          "type": "string"
+          "default": "absent",
+          "title": "Missing"
         },
         "where": {
           "anyOf": [

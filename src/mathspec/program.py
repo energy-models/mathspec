@@ -66,14 +66,13 @@ __all__ = [
     'ExpressionReference',
     'Footprint',
     'Given',
+    'GivenParameter',
     'GivenTargets',
     'Join',
     'JoinColumns',
     'JoinedCondition',
     'Link',
     'Mask',
-    'Missing',
-    'MissingReading',
     'Multiply',
     'NamedCondition',
     'NamedExpression',
@@ -86,6 +85,7 @@ __all__ = [
     'ParameterComparison',
     'ParameterDefined',
     'ParameterDtype',
+    'ParameterMissing',
     'ParameterReference',
     'Partition',
     'Piecewise',
@@ -150,21 +150,17 @@ DeclaredDtype = ParameterDtype | DimensionDtype
 #: The domain a variable may declare.
 VariableDomain = Literal['continuous', 'integer', 'binary']
 
-#: What a missing row means. ``refused`` refuses the data. ``absent`` removes
-#: the row of a term that reads it. ``neutral`` reads the value that contributes
-#: nothing: ``0`` as a coefficient, ``false`` in a ``where``.
-MissingReading = Literal['refused', 'absent', 'neutral']
-
-#: A parameter's ``missing:``: a reading, or the value a missing row reads as.
-Missing = MissingReading | bool | float
-
-#: A relation's ``missing:``. A key combination with no row is refused, or is not in the relation.
+#: A relation's ``missing:``. ``refused`` refuses data that leaves a key
+#: combination out, and ``absent`` reads it as no row.
 RelationMissing = Literal['refused', 'absent']
 
-#: What a masked variable means where its ``where`` masks it out. ``absent`` is
-#: the default: a term that carries it removes its row. ``neutral`` says the
-#: quantity *is* zero there, so the term contributes nothing and the row stands.
-VariableMissing = Literal['absent', 'neutral']
+#: A parameter's ``missing:``: what a relation takes, or the value a missing row reads as.
+ParameterMissing = RelationMissing | bool | float
+
+#: A variable's ``missing:``. ``absent``, the default, removes the row of a term
+#: that carries the variable where its ``where`` masks it out. A number is what
+#: the quantity is there, so the term reads that number and the row stands.
+VariableMissing = Literal['absent'] | float
 
 #: Which way an objective is optimised (the entry rules).
 ObjectiveSense = Literal['minimize', 'maximize']
@@ -718,9 +714,9 @@ class Parameter:
     dims: tuple[str, ...]
     dtype: ParameterDtype = 'float'
     #: What a missing row means, or the value it reads as wherever a value is
-    #: read; ``None`` for a given parameter, whose declaring file says. A bare
-    #: numeric name in a ``where`` still asks whether the data has a row.
-    missing: Missing | None = 'refused'
+    #: read. A bare numeric name in a ``where`` still asks whether the data has
+    #: a row.
+    missing: ParameterMissing = 'refused'
     description: str | None = None
 
 
@@ -752,6 +748,18 @@ class Given:
 
 
 @dataclass(frozen=True)
+class GivenParameter:
+    """Data this program reads and another file declares: the frame the dim rules read, and the dtype a where compares against.
+
+    What a missing row means is the declaring file's ``missing:``, so it is not here.
+    """
+
+    dims: tuple[str, ...]
+    dtype: ParameterDtype = 'float'
+    description: str | None = None
+
+
+@dataclass(frozen=True)
 class GivenTargets:
     """What a program reads and does not build, by kind.
 
@@ -760,7 +768,7 @@ class GivenTargets:
     """
 
     #: Data another file declares, by name, with the dtype a condition compares against.
-    parameters: Mapping[str, Parameter] = Sealed({})
+    parameters: Mapping[str, GivenParameter] = Sealed({})
     #: Columns the host model provides, by name.
     variables: Mapping[str, Given] = Sealed({})
     #: Row families the host model provides, by name, read back after the solve.
@@ -1404,13 +1412,11 @@ class CountComparison:
 
 @dataclass(frozen=True)
 class TranslatedCondition:
-    """*operand* read at a neighbouring coordinate — ``shift(points, along=bp, offset=1)``.
+    """*operand* read ``offset`` coordinates back along one dimension — ``shift(points, along=bp, offset=1)``.
 
-    False where the translation vacates, and there is no ``edge=`` to state.
-    The arithmetic translation needs one because no number is neutral and
-    inventing one changes the answer; false is what a missing row already
-    means in a mask, so the condition form has the value the language already
-    gives it.
+    A negative ``offset`` reads forward. Where the shift reads past the edge,
+    the condition is false, as a missing row is false in any condition, so the
+    file states no ``edge=``.
     """
 
     operand: Mask
