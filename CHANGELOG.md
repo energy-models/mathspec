@@ -15,21 +15,91 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 - fix(language): a divisor that a where, a case or a masked variable guards loads under missing: 0, and so does a variable number outside its bounds ([#942](https://github.com/energy-models/mathspec/pull/942))
 - docs(pypsa): a PyPSA schedule, weight or limit that the data leaves out is absent rather than zero, and a committable extendable unit is assumed to have its big-M ([#912](https://github.com/energy-models/mathspec/pull/912))
 - feat(language)!: a missing row reads as the value the file names, and `missing: neutral` is gone ([#894](https://github.com/energy-models/mathspec/pull/894))
-- feat(program): each expression node states the dimensions it is read over ([#899](https://github.com/energy-models/mathspec/pull/899))
-- fix(language): two files that declare their dimensions in different orders load to the same program by sorting dimension lists by name ([#911](https://github.com/energy-models/mathspec/pull/911))
-- refactor(language)!: a file names a condition under `conditions:` rather than `masks:` ([#907](https://github.com/energy-models/mathspec/pull/907))
-- refactor(api)!: the docs, the error messages and the program classes call a true-or-false `where` expression a condition rather than a predicate ([#904](https://github.com/energy-models/mathspec/pull/904))
-- fix(language)!: a named expression whose `dims:` gives a dimension its expression is not indexed over is refused at load ([#898](https://github.com/energy-models/mathspec/pull/898))
-- docs: the compose guide says how to add or remove a term on a merged spec ([#901](https://github.com/energy-models/mathspec/pull/901))
-- fix(composition): a fragment returned by `override` merges as the file it came from does ([#900](https://github.com/energy-models/mathspec/pull/900))
-- docs: the changelog is listed under Reference rather than About ([#895](https://github.com/energy-models/mathspec/pull/895))
-- docs(pypsa): an extendable unit has a capacity to choose exactly where its active flag is set, as in PyPSA ([#886](https://github.com/energy-models/mathspec/pull/886))
-- refactor(api)!: a module outside spec, program and errors has a name that starts with an underscore ([#878](https://github.com/energy-models/mathspec/pull/878))
-- feat(cli)!: `python -m mathspec diff` compares two specs in the canonical form, and `canonical` no longer rewrites or checks a file ([#874](https://github.com/energy-models/mathspec/pull/874))
-- feat(spec)!: a spec written back out puts short lists and mappings of names on one line ([#871](https://github.com/energy-models/mathspec/pull/871))
-- feat(typesetting): the legend keys its notation in a table rather than in paragraphs ([#870](https://github.com/energy-models/mathspec/pull/870))
-- refactor(api)!: a spec class ends in `Spec`, a program class takes its construct's name, and the docs call one named item an entry ([#855](https://github.com/energy-models/mathspec/pull/855))
-- fix(language): a patch that changes a dimension is told that a field it leaves out reads as its default ([#857](https://github.com/energy-models/mathspec/pull/857))
+- docs(language): a comparison on a relation is false where the relation has no row, whatever its operator ([#947](https://github.com/energy-models/mathspec/pull/947))
+- docs(language): the relations page shows a variable masked by a bare relation, so it exists only at the pairs the relation lists ([#946](https://github.com/energy-models/mathspec/pull/946))
+
+## 0.4.0 (2026-10-21)
+
+**This release will not load most files written for 0.3.x.**
+
+This release makes the words for conditions and masks clearer. A file now names its conditions under `conditions:` instead of `masks:`. A condition is a true-or-false expression, such as `capacity > 0`. To mask means what a `where:` does with a condition: it keeps the coordinates where the condition is true, and drops the others. An assumption's `holds:` reads a condition too, but it only checks the data and masks nothing. So a named condition is not always a mask, and the section is now called `conditions:`.
+
+This release also makes most modules of mathspec private, so the public API is smaller. The language version stays `0`.
+
+### What to change in a spec file
+
+- Rename `masks:` to `conditions:`, also under `given:`, and `where:` to `condition:` inside each entry ([#907](https://github.com/energy-models/mathspec/pull/907)).
+
+  ```yaml
+  conditions:
+    stands:
+      condition: build_year <= period_year AND period_year < build_year + lifetime
+  ```
+
+- Remove from a named expression's `dims:` each dimension that its expression is not indexed over ([#898](https://github.com/energy-models/mathspec/pull/898)).
+- Replace `<`, `<=`, `>` or `>=` on a `str` or `bool` value with `==` or `!=`, with `position()` on an ordered dimension, or with the bare name of a `bool` parameter ([#931](https://github.com/energy-models/mathspec/pull/931)).
+- Replace `canonical --check` and `canonical --write` with `python -m mathspec diff a.yaml b.yaml` ([#874](https://github.com/energy-models/mathspec/pull/874)).
+- Expect dimension lists in name order, also in typeset output ([#911](https://github.com/energy-models/mathspec/pull/911), [#899](https://github.com/energy-models/mathspec/pull/899)).
+- Expect `to_yaml()` to write a short list or mapping of names on one line ([#871](https://github.com/energy-models/mathspec/pull/871)).
+
+### What to change in Python code
+
+- Import only from `mathspec`, `mathspec.spec`, `mathspec.program` and `mathspec.errors` ([#878](https://github.com/energy-models/mathspec/pull/878)).
+- In `mathspec.spec`, rename `VariableBlock` to `VariableSpec`, `MaskBlock` to `ConditionSpec`, and every other class in the same way. Rename `typeset_declaration` to `typeset_line` ([#855](https://github.com/energy-models/mathspec/pull/855), [#907](https://github.com/energy-models/mathspec/pull/907)).
+- In `mathspec.program`, rename the reference nodes before you remove the `Declaration` suffixes. Four names now mean something else, and old code that uses them raises no error ([#855](https://github.com/energy-models/mathspec/pull/855), [#907](https://github.com/energy-models/mathspec/pull/907)):
+
+  | 0.3.x | 0.4.0 |
+  | --- | --- |
+  | `Parameter`, `Variable`, `NamedExpression`, `NamedMask` (the reference nodes) | `ParameterReference`, `VariableReference`, `ExpressionReference`, `ConditionReference` |
+  | `ParameterDeclaration`, `VariableDeclaration`, `ExpressionDeclaration`, `MaskDeclaration` | `Parameter`, `Variable`, `NamedExpression`, `NamedCondition` |
+  | `ConstraintDeclaration` and every other `*Declaration` | `Constraint`, without the suffix |
+
+- In `mathspec.program`, replace `Predicate` with `Condition` in every class name, but rename `PredicateOperator` to `ComparisonOperator`. Also rename ([#904](https://github.com/energy-models/mathspec/pull/904), [#907](https://github.com/energy-models/mathspec/pull/907)):
+  - `CountComparison.predicate` to `.condition`
+  - `Assumption.predicate` to `.holds`
+  - `MaskDeclaration.where` to `NamedCondition.condition`
+  - `where_children()` to `condition_children()`
+  - `.masks` to `.conditions` on `Spec`, `GivenSpec`, `Program` and `GivenTargets`
+- Pass `dims` to an expression node that you build by hand, and read `node.dims` instead of `dims_of` ([#899](https://github.com/energy-models/mathspec/pull/899)).
+- Catch `DimensionError` instead of `SchemaError` for a dimension fault inside `sum(...)` or `at(...)` ([#899](https://github.com/energy-models/mathspec/pull/899)).
+- Change links to the reference page `declarations/` to `parameters-variables-constraints/` ([#855](https://github.com/energy-models/mathspec/pull/855)).
+
+The pull requests in this release:
+
+### Language
+
+- refactor(language)!: a file names its conditions under `conditions:` instead of `masks:` ([#907](https://github.com/energy-models/mathspec/pull/907))
+- fix(language)!: the loader refuses a named expression whose `dims:` names a dimension that its expression is not indexed over ([#898](https://github.com/energy-models/mathspec/pull/898))
+- fix(language): two files that list their dimensions in different orders load to the same program, because the loader sorts dimension lists by name ([#911](https://github.com/energy-models/mathspec/pull/911))
+- fix(language)!: the loader refuses a condition that uses `<`, `<=`, `>` or `>=` on a `str` or `bool` value ([#931](https://github.com/energy-models/mathspec/pull/931))
+- fix(language): the loader refuses a case-when whose cases test different columns of one relation, when one row can meet both cases ([#934](https://github.com/energy-models/mathspec/pull/934))
+- fix(language): when a patch changes a dimension, the error says that a field the patch leaves out takes its default value ([#857](https://github.com/energy-models/mathspec/pull/857))
+
+### Python API
+
+- refactor(api)!: every module except `spec`, `program` and `errors` is private, and its name starts with an underscore ([#878](https://github.com/energy-models/mathspec/pull/878))
+- refactor(api)!: the name of a class in `mathspec.spec` ends in `Spec`, a class in `mathspec.program` takes the name of what it declares, and the docs call one named item an entry ([#855](https://github.com/energy-models/mathspec/pull/855))
+- refactor(api)!: the docs, the error messages and the classes in `mathspec.program` call a true-or-false expression a condition instead of a predicate ([#904](https://github.com/energy-models/mathspec/pull/904))
+- feat(program)!: each expression node in the program lists the dimensions it is indexed over ([#899](https://github.com/energy-models/mathspec/pull/899))
+
+### Writing, comparing and composing specs
+
+- feat(spec)!: `to_yaml()` writes a short list or mapping of names on one line ([#871](https://github.com/energy-models/mathspec/pull/871))
+- feat(cli)!: `python -m mathspec diff` compares two specs in their canonical form, and `canonical` no longer checks or rewrites a file ([#874](https://github.com/energy-models/mathspec/pull/874))
+- fix(composition): a fragment that `override` returns merges in the same way as the file it came from ([#900](https://github.com/energy-models/mathspec/pull/900))
+
+### Typesetting
+
+- feat(typesetting): the legend lists its notation in a table instead of in paragraphs ([#870](https://github.com/energy-models/mathspec/pull/870))
+
+### Documentation
+
+- docs: the composition guide shows how to add a term to a merged spec, or remove one ([#901](https://github.com/energy-models/mathspec/pull/901))
+- docs: the changelog is now under Reference instead of About ([#895](https://github.com/energy-models/mathspec/pull/895))
+
+### PyPSA example
+
+- docs(pypsa): an extendable unit has a capacity to choose only where its active flag is set, as in PyPSA ([#886](https://github.com/energy-models/mathspec/pull/886))
 
 ## 0.3.0 (2026-10-15)
 

@@ -297,6 +297,9 @@ class TestDual:
         assert to_spec(varied(self.BASE, expressions={'price': 'dual(lim)'})).expressions['price']
 
 
+_NO_INEQUALITY_REWRITE = 'Compare it with == or !=, or precompute the comparison as a boolean parameter.'
+
+
 class TestDimensionKwargs:
     """A dim kwarg that names nothing is a silent no-op, not an error — `sum(p, over=snapshto)` used to load."""
 
@@ -393,7 +396,7 @@ class TestDimensionKwargs:
         ('dtype', 'where', 'match'),
         [
             ('datetime', 'g > 0', 'compares against 1970-01-01'),
-            ('str', 'g > 3', 'matches no label'),
+            ('str', 'g == 3', 'matches no label'),
             ('int', "g > 'x'", 'matches nothing'),
             ('datetime', "g > 'not-a-date'", 'is not an ISO date'),
         ],
@@ -403,6 +406,61 @@ class TestDimensionKwargs:
         datetime as "after the epoch" and silently drops every earlier coordinate."""
         with pytest.raises(LanguageError, match=match):
             _spec(**{'dimensions.g': {'dtype': dtype}, 'variables.p.where': where})
+
+    @pytest.mark.parametrize(
+        ('patch', 'fragments'),
+        [
+            pytest.param(
+                {'variables.p.where': "g < 'b'"},
+                [
+                    "'g' has dtype 'str', on which < is not defined",
+                    'Select members by their place with position(g) < n',
+                ],
+                id='an-ordered-dimension',
+            ),
+            pytest.param(
+                {'dimensions.g': {'dtype': 'str'}, 'variables.p.where': "g > 'b'"},
+                ["'g' has dtype 'str', on which > is not defined", _NO_INEQUALITY_REWRITE],
+                id='an-unordered-dimension',
+            ),
+            pytest.param(
+                {'variables.p.where': "tag >= 'b'"},
+                ["'tag' has dtype 'str', on which >= is not defined", _NO_INEQUALITY_REWRITE],
+                id='parameter',
+            ),
+            pytest.param(
+                {'variables.p.where': "lk > 'b'"},
+                ["'lk' has dtype 'str', on which > is not defined", _NO_INEQUALITY_REWRITE],
+                id='relation-column',
+            ),
+            pytest.param(
+                {'conditions.late': "g <= 'b'", 'variables.p.where': 'late'},
+                ["'g' has dtype 'str', on which <= is not defined", 'position(g) <= n'],
+                id='named-condition',
+            ),
+            pytest.param(
+                {'relations.lk2': {'key': 'g', 'values': 'h'}, 'variables.p.where': 'lk < lk2'},
+                [
+                    "compares two columns over 'h', of dtype 'str', on which < is not defined",
+                    'Compare them with == or !=, or precompute the comparison as a boolean parameter.',
+                ],
+                id='two-relation-columns',
+            ),
+            pytest.param(
+                {'variables.p.where': 'flag > 0'},
+                ["'flag' has dtype 'bool', on which > is not defined", "'flag' or 'not flag'"],
+                id='bool-parameter',
+            ),
+        ],
+    )
+    def test_an_inequality_on_a_str_or_a_bool_is_refused(self, patch, fragments):
+        """`<` on a str compared the labels bytewise, so `'b10' < 'b9'` held whatever the dimension's order.
+
+        Only an ordered dimension has a place to select by, so only its message names ``position()``.
+        """
+        message = _refusal(SMALL_MODEL, **patch)
+        for fragment in fragments:
+            assert fragment in message, message
 
 
 class TestAnUndeclaredKeywordIsRefusedOnce:
@@ -1069,6 +1127,53 @@ class TestAConditionIsAnOperand:
             constraints={'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
         )
         assert 'it counts the coordinates a condition admits, which only the data decides' in message
+
+    def test_an_inequality_between_two_relation_columns_is_undecidable_in_a_case_when(self):
+        """The analysis does not decide an inequality between two relation columns, whatever their dtype.
+
+        Before, the refusal said that two relations have no order, which is false for two int columns.
+        """
+        message = _refusal(
+            **{'dimensions.h': {'dtype': 'int'}, 'relations.lk2': {'key': 'g', 'values': 'h'}},
+            expressions={
+                'pick': {
+                    'dims': ['g'],
+                    'cases': {
+                        'below': {'when': 'lk < lk2', 'expression': '1'},
+                        'some': {'when': 'c > 0', 'expression': '2'},
+                    },
+                    'otherwise': '0',
+                }
+            },
+            constraints={'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
+        )
+        assert 'this analysis does not decide an inequality between two relation columns' in message, message
+        assert 'no order' not in message, message
+
+    @pytest.mark.parametrize(
+        ('first', 'second', 'witness'),
+        [
+            pytest.param('two[a] > 3', 'two[b] <= 3', 'two[a] is 4.0, two[b] is 2.0', id='inequalities'),
+            pytest.param('two[a] == 3', 'two[b] == 4', 'two[a] is 3.0, two[b] is 4.0', id='equalities'),
+        ],
+    )
+    def test_two_columns_of_one_relation_are_not_proved_apart_in_a_case_when(self, first, second, witness):
+        """One row holds a value in each column, so a test on one column does not exclude a test on the other.
+
+        Before, both columns were read as one value, and two cases that a row can satisfy together loaded.
+        """
+        message = _refusal(
+            **{'dimensions.n': {'dtype': 'int'}, 'relations.two': {'key': 'g', 'values': {'a': 'n', 'b': 'n'}}},
+            expressions={
+                'pick': {
+                    'dims': ['g'],
+                    'cases': {'one': {'when': first, 'expression': '1'}, 'other': {'when': second, 'expression': '2'}},
+                    'otherwise': '0',
+                }
+            },
+            constraints={'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
+        )
+        assert f'both claim the value where {witness}' in message, message
 
     def test_a_read_through_a_relation_is_undecidable_in_a_case_when(self):
         """Which rows a relation maps onto a coordinate is the data's to say, so two cases split by one are not proved apart."""
