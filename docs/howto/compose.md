@@ -254,7 +254,7 @@ constraints:
 ```
 
 ```text
-fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'missing': 'absent'}. Restate the dims as 'generator.yaml' declares them, or leave the field out.
+fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['generator', 'snapshot'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['generator', 'snapshot'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'description': '`Generator-p` — what a generator produces in a snapshot'}. Restate the dims as 'generator.yaml' declares them, or leave the field out.
 ```
 
 Two fragments that both only read an entry must read it the same way,
@@ -366,6 +366,7 @@ Given variable 'Generator_p' collides with the variable of the same name. Rename
 | `null` under a section's name       | it is refused                                                              |
 | a dimension or a relation           | it is added, or restated as the base declares it                           |
 | `ordered:` on a restated dimension  | `true` makes the dimension ordered; `false` over an ordered one is refused |
+| `description:` on a restated entry  | the patch's description replaces the base's; `null` removes it             |
 | `missing:` on a relation            | it changes whether every key combination needs a row, as on a parameter    |
 | an entry under one kind of `given:` | it is edited, added or removed like any entry, and the other kinds stay    |
 | `version`, `description`            | the patch's value replaces the base's                                      |
@@ -389,14 +390,23 @@ as the base spells it.
 
 ## A dimension redeclared
 
-A patch may add a dimension or a relation, and may restate one the base
-declares. The restatement says what the base says: half an entry is a
-second reading of the same name, and a field written at its default is the
-same as one left out. Changing one under the expressions already written
-over it is refused, and so is removing one:
+A patch may add a dimension or a relation. For one that the base declares, a
+patch may change three fields and no others:
+
+| Field         | On                        | What the patch may do                                                     |
+| ------------- | ------------------------- | ------------------------------------------------------------------------- |
+| `description` | a dimension or a relation | replace the base's text, or remove it with `null`                         |
+| `ordered`     | a dimension               | set it to `true`, but not to `false` or `null` where the base has `true`  |
+| `missing`     | a relation                | replace the base's value, or put back the default, `refused`, with `null` |
+
+An entry that writes only these fields changes only these fields. An entry that
+writes any other field, or no field, must declare the dimension or the relation
+as the base does, and a field it leaves out reads as its default. The math in
+the base is already written over the dimension, so a patch that changes it is
+refused, and so is a patch that removes it:
 
 ```text
-patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch adjusts the math, not the coordinate space the math is already written over: each field but `ordered` has to read as the base reads it, and a field the patch leaves out reads as its default. Restate the dimension as its base declares it, leave it out, or give the patch a dimension of its own under a name of its own.
+patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch may change only `description` and `ordered` of a dimension its base declares, because the math in the base is already written over it. Every other field must be as the base declares it, and a field the patch leaves out reads as its default. Restate the dimension as its base declares it, leave it out, or give the patch a dimension of its own under a name of its own.
 ```
 
 `ordered` says that the members of a dimension have an order, and it does not
@@ -408,10 +418,9 @@ it, because a construct in the base may already step along `snapshot`:
 patch 'unordered.yaml' says the dimension 'snapshot' is not ordered, where its base declares it ordered. A patch can add `ordered: true` but cannot remove it, because a construct in the base may step along it. Leave `ordered` out of the patch.
 ```
 
-`missing:` is a claim about the data, not the coordinate space. A patch may
-change it on a relation as on a parameter, and may name it alone:
-`relations: {gen_bus: {missing: absent}}`. `null` puts the default, `refused`,
-back.
+`missing:` says what a key with no row in the data means. A patch may change it
+on a relation as on a parameter, and may write it alone:
+`relations: {gen_bus: {missing: absent}}`.
 
 ## A section set to `null`
 

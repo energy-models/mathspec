@@ -309,11 +309,16 @@ about whether the windowed answer equals the whole-horizon answer.
 `spec.to_dict()` returns the spec as plain data, and `spec.to_yaml()` returns
 that data as a file. Both round-trip, so `to_spec(spec.to_dict()) == spec`.
 
-`to_yaml()` writes every value, so `domain: continuous` is written out. It
-leaves out a `null` and an empty section, but it writes `dims: []`, because
-that says the entry is a scalar.
+`to_yaml()` writes the fields the file wrote, and no others. A default the file
+writes out, such as `ordered: false`, is written back, and a default it leaves
+out, such as `domain: continuous`, is not. A spec that `merge`, `override` or
+`expand` builds writes the fields its fragments and its own code set. The
+writer always writes `version:`, so a written file states the language version
+it is read in. It leaves out a `null` and an empty section. It writes
+`dims: []`, because that says the entry is a scalar, and an entry the file wrote
+as `{}`, because that entry still declares its name.
 
-`to_yaml()` writes a short list on one line, such as `dims: [snapshot, generator]`.
+`to_yaml()` writes a short list on one line, such as `dims: [generator, snapshot]`.
 It also writes a short mapping of numbers and names on one line, such as
 `bounds: {lower: 0, upper: p_max}`. An entry with a description or an
 expression keeps one key on each line, even for an expression as short as
@@ -341,6 +346,9 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
   `piecewise`, `assumptions`, `macros`. The keys of an entry also come in one
   order.
 - Entries are sorted by name within each section.
+- A field that holds its default is left out, whether the file wrote it or not.
+  The one exception is `version`, which is always written, so `version: 0`
+  stays.
 - Every expression is printed from its parsed tree, so the spacing and the
   brackets are the printer's rather than the author's.
 - The terms of a sum are sorted, and so are the factors of a product, the

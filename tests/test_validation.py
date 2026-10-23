@@ -1892,12 +1892,31 @@ class TestTheFrontDoor:
         written = to_spec(DISPATCH_MODEL).to_yaml()
         assert 'relations' not in written and 'macros' not in written, 'a section declaring nothing says nothing'
 
-    def test_a_default_is_written_out_and_an_absence_is_not(self):
-        written = to_spec(DISPATCH_MODEL).to_dict()
-        assert written['variables']['p']['domain'] == 'continuous', 'a default is a fact the reviewer reads'
-        assert 'upper' in written['variables']['p']['bounds'] and 'where' not in written['variables']['p'], (
-            'a null and an infinite bound say nothing, so they are not written'
-        )
+    def test_an_empty_kind_under_given_is_not_written(self):
+        """`given: {parameters: {}}` was written back, though an empty section says nothing."""
+        written = to_spec(varied(DISPATCH_MODEL, **{'given.parameters': {}})).to_dict()
+        assert 'given' not in written, 'a kind of given entry that declares nothing is not written'
+
+    def test_an_entry_whose_only_field_is_null_still_declares_it(self):
+        """`g: {description: null}` wrote back as nothing, so the written file named a dimension it did not declare."""
+        spec = to_spec({'dimensions': {'g': {'description': None}}, 'parameters': {'p': {'dims': ['g']}}})
+        assert spec.to_dict()['dimensions'] == {'g': {}}, 'the null goes and the entry stays'
+        assert to_spec(spec.to_dict()) == spec
+
+    def test_a_spec_writes_the_fields_its_file_wrote_and_its_version(self):
+        """A spec wrote back some defaults its file left out, such as `domain: continuous`, and dropped
+        others its file wrote, such as `ordered: false`."""
+        written = to_spec(
+            {
+                'dimensions': {'g': {}, 't': {'dtype': 'int', 'ordered': False}},
+                'variables': {'p': {'dims': ['g'], 'domain': 'continuous'}, 'q': {'dims': ['g'], 'where': None}},
+            }
+        ).to_dict()
+        assert written == {
+            'version': 0,
+            'dimensions': {'g': {}, 't': {'dtype': 'int', 'ordered': False}},
+            'variables': {'p': {'dims': ['g'], 'domain': 'continuous'}, 'q': {'dims': ['g']}},
+        }, 'every field the file wrote, a default included, no field it left out, no null, and the version'
 
 
 #: A model with room for a cased expression: two dimensions, so an arm can be
@@ -2622,17 +2641,33 @@ def test_a_type_1_set_reads_no_order():
 
 
 @pytest.mark.parametrize(
-    ('ordered', 'written'),
+    'declared',
     [
-        pytest.param(False, {'dtype': 'int'}, id='unordered'),
-        pytest.param(True, {'dtype': 'int', 'ordered': True}, id='ordered'),
+        pytest.param({'dtype': 'int'}, id='left-out'),
+        pytest.param({'dtype': 'int', 'ordered': False}, id='written-false'),
+        pytest.param({'dtype': 'int', 'ordered': True}, id='written-true'),
     ],
 )
-def test_a_dimension_writes_ordered_only_where_it_is_true(ordered, written):
-    """Leaving it out is what `false` says, so a file that never wrote it round-trips unchanged."""
-    spec = to_spec({'dimensions': {'t': {'dtype': 'int', 'ordered': ordered}}})
-    assert spec.to_dict()['dimensions'] == {'t': written}
+def test_a_dimension_writes_ordered_as_its_file_wrote_it(declared):
+    """`ordered: false` was dropped on the way back out, so a file that wrote it did not round-trip unchanged."""
+    spec = to_spec({'dimensions': {'t': declared}})
+    assert spec.to_dict()['dimensions'] == {'t': declared}, 'the dimension writes the fields its file wrote'
     assert to_spec(spec.to_dict()) == spec
+
+
+def test_the_canonical_form_writes_no_default():
+    """Two files that differ only in a default they write out state one spec, so they write one canonical text."""
+    spelled = {
+        'dimensions': {'g': {'dtype': 'str', 'ordered': False}},
+        'variables': {'p': {'dims': ['g'], 'domain': 'continuous'}},
+    }
+    left_out = {'dimensions': {'g': {}}, 'variables': {'p': {'dims': ['g']}}}
+    assert to_spec(spelled).to_yaml(canonical=True) == to_spec(left_out).to_yaml(canonical=True), (
+        'every default is left out of the canonical form'
+    )
+    assert (
+        to_spec(left_out).to_yaml(canonical=True) == 'version: 0\ndimensions:\n  g: {}\nvariables:\n  p: {dims: [g]}\n'
+    ), 'an entry that sets no field still declares it, and the version is written'
 
 
 @pytest.mark.parametrize(
