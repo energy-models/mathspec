@@ -31,9 +31,8 @@ expressions:
 
 An entry is a bare string, or a mapping with a `description:` and a `dims:`.
 The `dims:` are the dimensions over which the quantity is indexed. When
-`dims:` is left out, the expression itself decides them, sorted by name. When `dims:` is
-declared, it sets the order of the indices, and it names the dimensions over
-which the expression is indexed. The loader refuses an expression that is
+`dims:` is left out, the expression itself decides them. When `dims:` is
+declared, it names the dimensions over which the expression is indexed. The loader refuses an expression that is
 indexed over a dimension not given in `dims:`, and a `dims:` that gives a
 dimension over which the expression is not indexed. An expression that reads
 the entry repeats its value along each of its own dimensions that the entry is
@@ -85,9 +84,10 @@ constraints:
       <= ramp_limit * previous_status + start_up_limit * (1 - previous_status)
 ```
 
-Each case prints as one row of the definition, and `otherwise:` as the last:
+Each case prints as one row of the definition, sorted by name, and
+`otherwise:` as the last:
 
-$$\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \cr \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \cr \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\thinspace t \in \mathcal{T},\enspace g \in \mathcal{G}$$
+$$\mathit{previous\_status}_{g,t} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \cr \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \cr \mathit{status}_{g,t - 1} & \text{otherwise} \end{cases} \qquad \forall\thinspace g \in \mathcal{G},\enspace t \in \mathcal{T}$$
 
 A named expression carries **exactly one** of `expression:` and `cases:`.
 
@@ -107,7 +107,7 @@ A named expression carries **exactly one** of `expression:` and `cases:`.
   > Narrow one of the two `when:` strings by the negation of the other, or drop
   > the wider one and let `otherwise:` cover that region.
 
-  The cases carry no order.
+  The cases carry no order, so `to_spec` sorts them by name.
 
 - A `when:` must be a question the data answers. `True`, `False`, and a mask
   that folds to one of them, such as `committable OR True`, are refused.
@@ -289,6 +289,8 @@ macros:
 - The formal arguments are the names under `args` and `kwargs`. Inside a
   template, a formal hides a name the spec declares, but a formal may not
   collide with a declared dimension.
+- A call passes `args` by position and `kwargs` by name. So `to_spec` keeps
+  the order of `args` and sorts `kwargs` by name.
 - The loader checks the number of arguments at each call site. It reports a
   cycle of macros with the chain of names that forms it.
 - `to_spec` checks every template against every rule a call site is held to,

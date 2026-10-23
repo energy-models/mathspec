@@ -4,7 +4,7 @@
 
 given:
   expressions:
-    Carrier_additions: { dims: [period, carrier] }
+    Carrier_additions: { dims: [carrier, period] }
 
 dimensions:
   period:

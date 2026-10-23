@@ -308,21 +308,21 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$, data another file declares |
-| $`\mathrm{f}^{\mathrm{nom}}`$ | `Link_p_nom` over $`\Xi \times \mathcal{L}`$, data another file declares |
-| $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$, data another file declares |
-| $`\underline{\mathrm{f}}`$ | `Link_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, data another file declares |
-| $`\overline{\mathrm{f}}`$ | `Link_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, data another file declares |
-| $`\mathrm{f}^{\mathrm{mod}}`$ | `Link_p_nom_mod` over $`\mathcal{L}`$, data another file declares |
-| $`\mathrm{N}^{f,\mathrm{fix}}`$ | `Link_modules_installed` over $`\Xi \times \mathcal{L}`$, data another file declares |
+| $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{L} \times \mathcal{T}`$, data another file declares |
+| $`\gamma^{f}`$ | `Link_maintenance_pu` over $`\mathcal{L} \times \Xi`$, data another file declares |
+| $`\mathrm{N}^{f,\mathrm{fix}}`$ | `Link_modules_installed` over $`\mathcal{L} \times \Xi`$, data another file declares |
+| $`\overline{\mathrm{f}}`$ | `Link_p_max_pu` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, data another file declares |
+| $`\underline{\mathrm{f}}`$ | `Link_p_min_pu` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, data another file declares |
 | $`\mathrm{nonneg}^{f}`$ | `Link_p_min_pu_nonneg` over $`\mathcal{L}`$, data another file declares |
-| $`\gamma^{f}`$ | `Link_maintenance_pu` over $`\Xi \times \mathcal{L}`$, data another file declares |
+| $`\mathrm{f}^{\mathrm{nom}}`$ | `Link_p_nom` over $`\mathcal{L} \times \Xi`$, data another file declares |
+| $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$, data another file declares |
+| $`\mathrm{f}^{\mathrm{mod}}`$ | `Link_p_nom_mod` over $`\mathcal{L}`$, data another file declares |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
-| $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{T} \times \mathcal{L}`$, data another file declares |
-| $`f`$ | `Link_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
+| $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$, data another file declares |
+| $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
+| $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
 | $`N^{f}`$ | `Link_n_mod` over $`\mathcal{L}`$ |
-| $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
-| $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
+| $`f`$ | `Link_p` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
 | $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Link_commitment_opex` to |
 | $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{L} \times \mathcal{T}`$, a condition another file defines |
@@ -331,25 +331,25 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 | $`\mathcal{L}`$ | index $`l`$ — `link` — controllable connections, each from one bus to the buses it delivers to |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
+| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\mathcal{L} \times \Xi`$, `neutral` where the data has no row — the bound a committed extendable link's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the flow a solve wants, it caps that flow; data prep |
 | $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$ — whether flow is gated by an on/off status decision |
-| $`\mathrm{UT}^{f}`$ | `Link_min_up_time` over $`\Xi \times \mathcal{L}`$ — least snapshots a link stays on once started |
-| $`\mathrm{DT}^{f}`$ | `Link_min_down_time` over $`\Xi \times \mathcal{L}`$ — least snapshots a link stays off once stopped |
-| $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\Xi \times \mathcal{L}`$ — one where the link was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
-| $`\mathrm{hold}^{f}`$ | `Link_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true while the up time a link brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
-| $`\mathrm{rest}^{f}`$ | `Link_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true while the down time a link brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
-| $`\mathrm{c}^{f,\mathrm{up}}`$ | `Link_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one start in this snapshot |
-| $`\mathrm{c}^{f,\mathrm{dn}}`$ | `Link_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one stop in this snapshot |
-| $`\mathrm{c}^{f,\mathrm{on}}`$ | `Link_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the bound a committed extendable link's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the flow a solve wants, it caps that flow; data prep |
+| $`\mathrm{DT}^{f}`$ | `Link_min_down_time` over $`\mathcal{L} \times \Xi`$ — least snapshots a link stays off once stopped |
+| $`\mathrm{UT}^{f}`$ | `Link_min_up_time` over $`\mathcal{L} \times \Xi`$ — least snapshots a link stays on once started |
+| $`\mathrm{rest}^{f}`$ | `Link_must_stay_down` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — true while the down time a link brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
+| $`\mathrm{hold}^{f}`$ | `Link_must_stay_up` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — true while the up time a link brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
+| $`\mathrm{c}^{f,\mathrm{dn}}`$ | `Link_shut_down_cost` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — cost of one stop in this snapshot |
+| $`\mathrm{c}^{f,\mathrm{on}}`$ | `Link_stand_by_cost` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — cost of one snapshot spent on |
+| $`\mathrm{c}^{f,\mathrm{up}}`$ | `Link_start_up_cost` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — cost of one start in this snapshot |
+| $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\mathcal{L} \times \Xi`$ — one where the link was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
 
 #### Conditions
 
@@ -361,17 +361,17 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`u^{f}`$ | `Link_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `Link-status` — how much of a committable link is on: an integer the rows below cap at one, or at the module count where the build is modular |
-| $`\mathit{up}^{f}`$ | `Link_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `Link-start_up` — how much of a committable link turns on this snapshot, capped as the status is |
-| $`\mathit{dn}^{f}`$ | `Link_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — `Link-shut_down` — how much of a committable link turns off this snapshot, capped as the status is |
+| $`\mathit{dn}^{f}`$ | `Link_shut_down` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — `Link-shut_down` — how much of a committable link turns off this snapshot, capped as the status is |
+| $`\mathit{up}^{f}`$ | `Link_start_up` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — `Link-start_up` — how much of a committable link turns on this snapshot, capped as the status is |
+| $`u^{f}`$ | `Link_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — `Link-status` — how much of a committable link is on: an integer the rows below cap at one, or at the module count where the build is modular |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the commitment state a link carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
-| $`\overleftarrow{u}^{\circ f}`$ | `Link_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the state a link carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Link\_commitment\_opex}`$ | `Link_commitment_opex` over $`\Xi`$ |
+| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — the commitment state a link carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
+| $`\overleftarrow{u}^{\circ f}`$ | `Link_status_carried_over` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — the state a link carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
 
 #### Notation
 
@@ -384,168 +384,168 @@ constraints:
 **`Link_com_ext`**
 
 ```math
-\mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \iff \mathrm{com}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \wedge \mathrm{on}^{f}_{t,l} \qquad \forall\, l \in \mathcal{L},\ t \in \mathcal{T}
+\mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \iff \mathrm{com}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \wedge \mathrm{on}^{f}_{l,t} \qquad \forall\, l \in \mathcal{L},\ t \in \mathcal{T}
 ```
 
 #### Variable domains
 
-**`Link_status`**
+**`Link_shut_down`**
 
 ```math
-u^{f}_{\xi,t,l} \ge 0, u^{f}_{\xi,t,l} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t}
+\mathit{dn}^{f}_{l,\xi,t} \ge 0, \mathit{dn}^{f}_{l,\xi,t} \in \mathbb{Z} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t}
 ```
 
 **`Link_start_up`**
 
 ```math
-\mathit{up}^{f}_{\xi,t,l} \ge 0, \mathit{up}^{f}_{\xi,t,l} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t}
+\mathit{up}^{f}_{l,\xi,t} \ge 0, \mathit{up}^{f}_{l,\xi,t} \in \mathbb{Z} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t}
 ```
 
-**`Link_shut_down`**
+**`Link_status`**
 
 ```math
-\mathit{dn}^{f}_{\xi,t,l} \ge 0, \mathit{dn}^{f}_{\xi,t,l} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t}
+u^{f}_{l,\xi,t} \ge 0, u^{f}_{l,\xi,t} \in \mathbb{Z} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t}
 ```
 
 #### Definitions
 
+**`Link_commitment_opex`**
+
+```math
+\mathit{Link\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} u^{f}_{l,\xi,t} \cdot \mathrm{c}^{f,\mathrm{on}}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{up}^{f}_{l,\xi,t} \cdot \mathrm{c}^{f,\mathrm{up}}_{l,\xi,t} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{dn}^{f}_{l,\xi,t} \cdot \mathrm{c}^{f,\mathrm{dn}}_{l,\xi,t} \qquad \forall\, \xi \in \Xi
+```
+
 **`Link_previous_status`**
 
 ```math
-\overleftarrow{u}^{f}_{\xi,t,l} = \begin{cases} 0 & \text{if } \mathrm{pos}(t) > 0 \wedge \neg \mathrm{on}^{f}_{t - 1,l} \\ \overleftarrow{u}^{\circ f}_{\xi,t,l} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
+\overleftarrow{u}^{f}_{l,\xi,t} = \begin{cases} 0 & \text{if } \mathrm{pos}(t) > 0 \wedge \neg \mathrm{on}^{f}_{l,t - 1} \\ \overleftarrow{u}^{\circ f}_{l,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Link_status_carried_over`**
 
 ```math
-\overleftarrow{u}^{\circ f}_{\xi,t,l} = \begin{cases} \mathrm{u}^{f,0}_{\xi,l} & \text{if } \mathrm{pos}(t) = 0 \\ u^{f}_{\xi,t - 1,l} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L}
-```
-
-**`Link_commitment_opex`**
-
-```math
-\mathit{Link\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} u^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{on}}_{\xi,t,l} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{up}^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{up}}_{\xi,t,l} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{dn}^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{dn}}_{\xi,t,l} \qquad \forall\, \xi \in \Xi
+\overleftarrow{u}^{\circ f}_{l,\xi,t} = \begin{cases} \mathrm{u}^{f,0}_{l,\xi} & \text{if } \mathrm{pos}(t) = 0 \\ u^{f}_{l,\xi,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Subject to
 
-**`Link_com_p_lower`**
-
-```math
-f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( u^{f}_{\xi,t,l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,u}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
-```
-
-**`Link_com_p_upper`**
-
-```math
-f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( u^{f}_{\xi,t,l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,u}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
-```
-
-**`Link_com_transition_start_up`**
-
-```math
-\mathit{up}^{f}_{\xi,t,l} \ge u^{f}_{\xi,t,l} - \overleftarrow{u}^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t}
-```
-
-**`Link_com_transition_shut_down`**
-
-```math
-\mathit{dn}^{f}_{\xi,t,l} \ge \overleftarrow{u}^{f}_{\xi,t,l} - u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t}
-```
-
-**`Link_com_up_time`**
-
-```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}^{f}} \mathit{up}^{f}_{\xi,t',l} \le u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{UT}^{f}_{\xi,l} > 0 \wedge \mathrm{pos}(t) > 0
-```
-
 **`Link_com_down_time`**
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}^{f}} \mathit{dn}^{f}_{\xi,t',l} \le 1 - u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{DT}^{f}_{\xi,l} > 0 \wedge \mathrm{pos}(t) > 0
-```
-
-**`Link_com_status_must_stay_up`**
-
-```math
-u^{f}_{\xi,t,l} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{hold}^{f}_{\xi,t,l}
-```
-
-**`Link_com_status_must_stay_down`**
-
-```math
-u^{f}_{\xi,t,l} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{rest}^{f}_{\xi,t,l}
-```
-
-**`Link_com_ext_p_upper_cap`**
-
-```math
-f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \left( F_{l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,\mathrm{nom}}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t}
-```
-
-**`Link_com_ext_p_upper_big_m`**
-
-```math
-f_{\xi,t,l} \le \mathrm{M}^{f}_{\xi,l} \cdot u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t}
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}^{f}} \mathit{dn}^{f}_{l,\xi,t'} \le 1 - u^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{DT}^{f}_{l,\xi} > 0 \wedge \mathrm{pos}(t) > 0
 ```
 
 **`Link_com_ext_p_lower`**
 
 ```math
-f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \left( F_{l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,\mathrm{nom}}_{\xi,t,l} \right) + \mathrm{M}^{f}_{\xi,l} \cdot u^{f}_{\xi,t,l} - \mathrm{M}^{f}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t}
+f_{l,\xi,t} \ge \underline{\mathrm{f}}_{l,\xi,t} \cdot \left( F_{l} - \gamma^{f}_{l,\xi} \cdot \mu^{f,\mathrm{nom}}_{l,\xi,t} \right) + \mathrm{M}^{f}_{l,\xi} \cdot u^{f}_{l,\xi,t} - \mathrm{M}^{f}_{l,\xi} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t}
 ```
 
 **`Link_com_ext_p_lower_nonneg`**
 
 ```math
-f_{\xi,t,l} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \wedge \mathrm{nonneg}^{f}_{l}
+f_{l,\xi,t} \ge 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \wedge \mathrm{nonneg}^{f}_{l}
+```
+
+**`Link_com_ext_p_upper_big_m`**
+
+```math
+f_{l,\xi,t} \le \mathrm{M}^{f}_{l,\xi} \cdot u^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t}
+```
+
+**`Link_com_ext_p_upper_cap`**
+
+```math
+f_{l,\xi,t} \le \overline{\mathrm{f}}_{l,\xi,t} \cdot \left( F_{l} - \gamma^{f}_{l,\xi} \cdot \mu^{f,\mathrm{nom}}_{l,\xi,t} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t}
 ```
 
 **`Link_com_mod_p_lower`**
 
 ```math
-f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{mod}}_{l} \cdot \left( u^{f}_{\xi,t,l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,u}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+f_{l,\xi,t} \ge \underline{\mathrm{f}}_{l,\xi,t} \cdot \mathrm{f}^{\mathrm{mod}}_{l} \cdot \left( u^{f}_{l,\xi,t} - \gamma^{f}_{l,\xi} \cdot \mu^{f,u}_{l,\xi,t} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 
 **`Link_com_mod_p_upper`**
 
 ```math
-f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{mod}}_{l} \cdot \left( u^{f}_{\xi,t,l} - \gamma^{f}_{\xi,l} \cdot \mu^{f,u}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+f_{l,\xi,t} \le \overline{\mathrm{f}}_{l,\xi,t} \cdot \mathrm{f}^{\mathrm{mod}}_{l} \cdot \left( u^{f}_{l,\xi,t} - \gamma^{f}_{l,\xi} \cdot \mu^{f,u}_{l,\xi,t} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 
-**`Link_status_p_fixed_upper`**
+**`Link_com_p_lower`**
 
 ```math
-u^{f}_{\xi,t,l} \le \mathrm{N}^{f,\mathrm{fix}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+f_{l,\xi,t} \ge \underline{\mathrm{f}}_{l,\xi,t} \cdot \mathrm{f}^{\mathrm{nom}}_{l,\xi} \cdot \left( u^{f}_{l,\xi,t} - \gamma^{f}_{l,\xi} \cdot \mu^{f,u}_{l,\xi,t} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
 ```
 
-**`Link_start_up_p_fixed_upper`**
+**`Link_com_p_upper`**
 
 ```math
-\mathit{up}^{f}_{\xi,t,l} \le \mathrm{N}^{f,\mathrm{fix}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+f_{l,\xi,t} \le \overline{\mathrm{f}}_{l,\xi,t} \cdot \mathrm{f}^{\mathrm{nom}}_{l,\xi} \cdot \left( u^{f}_{l,\xi,t} - \gamma^{f}_{l,\xi} \cdot \mu^{f,u}_{l,\xi,t} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+```
+
+**`Link_com_status_must_stay_down`**
+
+```math
+u^{f}_{l,\xi,t} = 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{rest}^{f}_{l,\xi,t}
+```
+
+**`Link_com_status_must_stay_up`**
+
+```math
+u^{f}_{l,\xi,t} = 1 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{hold}^{f}_{l,\xi,t}
+```
+
+**`Link_com_transition_shut_down`**
+
+```math
+\mathit{dn}^{f}_{l,\xi,t} \ge \overleftarrow{u}^{f}_{l,\xi,t} - u^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t}
+```
+
+**`Link_com_transition_start_up`**
+
+```math
+\mathit{up}^{f}_{l,\xi,t} \ge u^{f}_{l,\xi,t} - \overleftarrow{u}^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t}
+```
+
+**`Link_com_up_time`**
+
+```math
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}^{f}} \mathit{up}^{f}_{l,\xi,t'} \le u^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{UT}^{f}_{l,\xi} > 0 \wedge \mathrm{pos}(t) > 0
 ```
 
 **`Link_shut_down_p_fixed_upper`**
 
 ```math
-\mathit{dn}^{f}_{\xi,t,l} \le \mathrm{N}^{f,\mathrm{fix}}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
-```
-
-**`Link_status_p_nom_variable_upper`**
-
-```math
-u^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
-```
-
-**`Link_start_up_p_nom_variable_upper`**
-
-```math
-\mathit{up}^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+\mathit{dn}^{f}_{l,\xi,t} \le \mathrm{N}^{f,\mathrm{fix}}_{l,\xi} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
 ```
 
 **`Link_shut_down_p_nom_variable_upper`**
 
 ```math
-\mathit{dn}^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+\mathit{dn}^{f}_{l,\xi,t} \le N^{f}_{l} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+```
+
+**`Link_start_up_p_fixed_upper`**
+
+```math
+\mathit{up}^{f}_{l,\xi,t} \le \mathrm{N}^{f,\mathrm{fix}}_{l,\xi} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+```
+
+**`Link_start_up_p_nom_variable_upper`**
+
+```math
+\mathit{up}^{f}_{l,\xi,t} \le N^{f}_{l} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+```
+
+**`Link_status_p_fixed_upper`**
+
+```math
+u^{f}_{l,\xi,t} \le \mathrm{N}^{f,\mathrm{fix}}_{l,\xi} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right)
+```
+
+**`Link_status_p_nom_variable_upper`**
+
+```math
+u^{f}_{l,\xi,t} \le N^{f}_{l} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 <!-- gallery:end -->

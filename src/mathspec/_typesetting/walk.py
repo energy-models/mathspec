@@ -361,7 +361,7 @@ class Walk:
     def _dual(self, node: Dual, ctx: _Context) -> str:
         """λ subscripted by the constraint's symbol, then the indices of the constraint's own frame."""
         frames = {**self.program.constraints, **self.program.given.constraints}
-        frame = self._sorted(frozenset(frames[node.constraint].dims))
+        frame = frames[node.constraint].dims
         return self.format.subscript(
             self._op('dual'), [self.symbols.constraint[node.constraint], *(ctx.subscript(d) for d in frame)]
         )
@@ -412,12 +412,12 @@ class Walk:
         return node
 
     def _sum(self, node: Sum, ctx: _Context) -> tuple[str, int]:
-        """A reduction over named dims: one dummy index per dim, in file order, or the group-by over a join."""
+        """A reduction over named dims: one dummy index per dim, sorted by name, or the group-by over a join."""
         if isinstance(node.operand, Join) and node.operand.columns.axes:
             return self._grouped_sum(node.operand, ctx)
         memberships = []
         inner = ctx
-        for d in self._sorted(frozenset(axis.dimension for axis in node.over)):
+        for d in sorted({axis.dimension for axis in node.over}):
             dummy, inner = inner.reducing(d)
             memberships.append(self._membership(d, dummy))
         domain = self.format.joined(memberships, '')
@@ -709,7 +709,7 @@ class Walk:
         )
 
     def _definitions(self) -> list[Line]:
-        """One line per named expression, in file order, defining it.
+        """One line per named expression, sorted by name, defining it.
 
         A use prints the symbol and the entry prints here, as a paper states a
         quantity it names. Every declared one prints, used or not. Inlining
@@ -871,7 +871,7 @@ class Walk:
         """One assumption: the condition over the frame both its masks name, under its ``where``."""
         assumption = self.program.assumptions[name]
         holds, where = assumption.holds, assumption.where
-        frame = self._sorted(holds.dims | (where.dims if where is not None else frozenset()))
+        frame = sorted({*holds.dims, *(where.dims if where is not None else ())})
         ctx = self._context(frame)
         if isinstance(holds.root, AlignedComparison):
             left, right = self.sides(holds.root, ctx)
@@ -967,7 +967,3 @@ class Walk:
             return ctx.indexed(self.symbols.name[value.name], list(self._parameters[value.name].dims))
         assert isinstance(value, Constant), 'a bound is a number or the name of a parameter'
         return self._number(value.value)
-
-    def _sorted(self, dims: frozenset[str]) -> list[str]:
-        order = list(self.program.dimensions)
-        return sorted(dims, key=order.index)

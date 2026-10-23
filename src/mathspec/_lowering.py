@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec._dimensions import check_spec, sorted_dims
+from mathspec._dimensions import check_spec
 from mathspec._expansion import expand, parse_template
 from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec._resolution import (
@@ -135,7 +135,7 @@ def lower(spec: Spec) -> Program:
         errors.extend(refusals)
         if named is not None:
             body = Mask(named.body)
-            conditions[mname] = NamedCondition(body, tuple(sorted(body.dims)), mdef.description)
+            conditions[mname] = NamedCondition(body, body.dims, mdef.description)
 
     variables = {}
     for vname, vdef in spec.variables.items():
@@ -147,7 +147,7 @@ def lower(spec: Spec) -> Program:
         else:
             lower_bound, upper_bound = _bound(vdef.bounds.lower, ns), _bound(vdef.bounds.upper, ns)
         variables[vname] = Variable(
-            tuple(vdef.dims),
+            vdef.dims,
             where=mask_of(where),
             lower=lower_bound,
             upper=upper_bound,
@@ -162,9 +162,7 @@ def lower(spec: Spec) -> Program:
         where = resolve_condition_text(cdef.where, ns, context, errors)
         if (sides := resolve_constraint_text(cdef.expression, ns, context, errors)) is not None:
             lhs, sense, rhs = sides
-            constraints[cname] = Constraint(
-                tuple(cdef.dims), lhs, sense, rhs, mask_of(where), description=cdef.description
-            )
+            constraints[cname] = Constraint(cdef.dims, lhs, sense, rhs, mask_of(where), description=cdef.description)
 
     objective = None
     if spec.objective is not None:
@@ -215,7 +213,7 @@ def lower(spec: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: Parameter(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description)
+            name: Parameter(pdef.dims, pdef.dtype, pdef.missing, pdef.description)
             for name, pdef in spec.parameters.items()
         },
         variables=variables,
@@ -235,7 +233,7 @@ def lower(spec: Spec) -> Program:
         expressions={
             name: NamedExpression(
                 entry.body,
-                _frame_of(name, entry, spec),
+                entry.dims,
                 in_math=name in in_math,
                 description=spec.expressions[name].description,
                 adds_to=spec.expressions[name].adds_to,
@@ -245,13 +243,12 @@ def lower(spec: Spec) -> Program:
         conditions=conditions,
         given=GivenTargets(
             parameters={
-                name: Parameter(tuple(g.dims), g.dtype, None, g.description)
-                for name, g in spec.given.parameters.items()
+                name: Parameter(g.dims, g.dtype, None, g.description) for name, g in spec.given.parameters.items()
             },
-            variables={name: Given(tuple(g.dims), g.description) for name, g in spec.given.variables.items()},
-            constraints={name: Given(tuple(g.dims), g.description) for name, g in spec.given.constraints.items()},
-            expressions={name: Given(tuple(g.dims), g.description) for name, g in spec.given.expressions.items()},
-            conditions={name: Given(tuple(g.dims), g.description) for name, g in spec.given.conditions.items()},
+            variables={name: Given(g.dims, g.description) for name, g in spec.given.variables.items()},
+            constraints={name: Given(g.dims, g.description) for name, g in spec.given.constraints.items()},
+            expressions={name: Given(g.dims, g.description) for name, g in spec.given.expressions.items()},
+            conditions={name: Given(g.dims, g.description) for name, g in spec.given.conditions.items()},
         ),
         description=spec.description,
     )
@@ -338,17 +335,11 @@ def _loop(target: str, entry: ExpressionReference, sums: Mapping[str, list[Expre
     return None
 
 
-def _frame_of(name: str, entry: ExpressionReference, spec: Spec) -> tuple[str, ...]:
-    """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's, sorted by name."""
-    declared = spec.expressions[name].dims
-    return entry.dims if declared is None else tuple(declared)
-
-
 def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterReference | None:
     if value is None:
         return None
     if isinstance(value, str):
-        return ParameterReference(value, dims=sorted_dims(ns.leaf_dims[value]))
+        return ParameterReference(value, dims=ns.leaf_dims[value])
     return Constant(value, dims=())
 
 

@@ -40,13 +40,13 @@ PLAIN = varied(
         pytest.param(
             PLAIN,
             'spend',
-            r'\mathit{spend}_{t} = \sum_{g \in \mathcal{G}} p_{t,g} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}',
+            r'\mathit{spend}_{t} = \sum_{g \in \mathcal{G}} p_{g,t} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}',
             id='a-plain-expression-a-variable-reaches-so-the-symbol-is-italic',
         ),
         pytest.param(
             PLAIN,
             'total',
-            r'\mathit{total} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g}',
+            r'\mathit{total} = \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t}',
             id='a-scalar-expression-no-subscript-no-quantifier',
         ),
         pytest.param(
@@ -58,21 +58,21 @@ PLAIN = varied(
         pytest.param(
             CASED,
             'headroom',
-            r'\mathrm{headroom}_{t,g} = \begin{cases} \mathrm{p}^{\mathrm{max}}_{g} & '
-            r'\text{if } \mathrm{pos}(t) = 0 \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}',
+            r'\mathrm{headroom}_{g,t} = \begin{cases} \mathrm{p}^{\mathrm{max}}_{g} & '
+            r'\text{if } \mathrm{pos}(t) = 0 \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}',
             id='a-cased-expression-keeps-its-cases-layout',
         ),
         pytest.param(
             PLAIN,
             'budgeted',
-            r'\sum_{g \in \mathcal{G}} p_{t,g} \cdot \mathrm{cost}_{g} \le 10 \qquad '
+            r'\sum_{g \in \mathcal{G}} p_{g,t} \cdot \mathrm{cost}_{g} \le 10 \qquad '
             r'\forall\, t \in \mathcal{T} \,:\, \mathrm{load}_{t} > 0',
             id='a-constraint-with-its-mask-on-the-quantifier-and-its-expression-inlined',
         ),
         pytest.param(
             PLAIN,
             'p',
-            r'0 \le p_{t,g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}',
+            r'0 \le p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}',
             id='a-variable-prints-its-domain',
         ),
     ],
@@ -99,7 +99,7 @@ def test_a_line_on_its_own_inlines_the_expressions_it_uses_unless_told_otherwise
     by_symbol = typeset_line(PLAIN, 'budgeted', 'latex', inline_expressions=False)
     by_body = typeset_line(PLAIN, 'budgeted', 'latex')
     assert by_symbol.startswith(r'\mathit{spend}_{t} \le 10')
-    assert by_body.startswith(r'\sum_{g \in \mathcal{G}} p_{t,g} \cdot \mathrm{cost}_{g} \le 10')
+    assert by_body.startswith(r'\sum_{g \in \mathcal{G}} p_{g,t} \cdot \mathrm{cost}_{g} \le 10')
     assert typeset_line(PLAIN, 'spend', 'latex', inline_expressions=True).startswith(r'\mathit{spend}_{t} ='), (
         'asked for by name, a plain expression prints its definition whether or not its uses inline it'
     )
@@ -107,7 +107,7 @@ def test_a_line_on_its_own_inlines_the_expressions_it_uses_unless_told_otherwise
 
 def test_a_symbol_table_renames_an_expression_either_way():
     table = {'notation': 'latex', 'names': {'headroom': r'\bar h'}}
-    assert typeset_line(CASED, 'headroom', 'latex', symbols=table).startswith(r'\bar h_{t,g} =')
+    assert typeset_line(CASED, 'headroom', 'latex', symbols=table).startswith(r'\bar h_{g,t} =')
     table = {'notation': 'latex', 'names': {'spend': 'S'}}
     assert typeset_line(PLAIN, 'spend', 'latex', symbols=table).startswith('S_{t} =')
 
@@ -117,7 +117,7 @@ def test_a_body_naming_another_expression_inlines_it_on_its_own_and_names_it_in_
     the document both are defined, each once, so a use prints the symbol."""
     model = varied(PLAIN, **{'expressions.double_spend': 'spend * 2'})
     assert typeset_line(model, 'double_spend', 'latex') == (
-        r'\mathit{double\_spend}_{t} = \left( \sum_{g \in \mathcal{G}} p_{t,g} \cdot \mathrm{cost}_{g} \right) '
+        r'\mathit{double\_spend}_{t} = \left( \sum_{g \in \mathcal{G}} p_{g,t} \cdot \mathrm{cost}_{g} \right) '
         r'\cdot 2 \qquad \forall\, t \in \mathcal{T}'
     )
     assert typeset_line(model, 'double_spend', 'latex', inline_expressions=False) == (
@@ -138,9 +138,9 @@ NEGATED_TERM = varied(
 def test_a_substituted_term_that_opens_with_a_minus_prints_as_a_subtraction():
     """`spend + drawn`, with `drawn: -spend + total`, printed `spend + -spend + total` once substituted."""
     assert typeset_line(NEGATED_TERM, 'net', 'latex') == (
-        r'\sum_{g \in \mathcal{G}} p_{t,g} \cdot \mathrm{cost}_{g} '
-        r'- \left( \sum_{g \in \mathcal{G}} p_{t,g} \cdot \mathrm{cost}_{g} \right) '
-        r"+ \sum_{t' \in \mathcal{T},\ g \in \mathcal{G}} p_{t',g} = 0 \qquad \forall\, t \in \mathcal{T}"
+        r'\sum_{g \in \mathcal{G}} p_{g,t} \cdot \mathrm{cost}_{g} '
+        r'- \left( \sum_{g \in \mathcal{G}} p_{g,t} \cdot \mathrm{cost}_{g} \right) '
+        r"+ \sum_{g \in \mathcal{G},\ t' \in \mathcal{T}} p_{g,t'} = 0 \qquad \forall\, t \in \mathcal{T}"
     )
 
 
@@ -149,7 +149,7 @@ def test_a_special_ordered_set_prints_the_line_the_document_prints_for_it():
     spec = to_spec(EXAMPLES / 'sos.yaml').expand('piecewise')
     line = typeset_line(spec, 'cost_curve', 'latex')
     assert line == (
-        r'\left( \mathit{cost\_curve\_lam}_{g,t,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 '
+        r'\left( \mathit{cost\_curve\_lam}_{b,g,t} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 '
         r'\qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}'
     )
 

@@ -29,6 +29,7 @@ from mathspec.program import (
     Join,
     Mask,
     ParameterReference,
+    Relation,
     RelationPairComparison,
     Sum,
     Translate,
@@ -36,7 +37,17 @@ from mathspec.program import (
     WindowSum,
     children,
 )
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, expression_of, spec_of, varied, where_of
+from tests.fixtures import (
+    DISPATCH_MODEL,
+    EXAMPLES,
+    SPECS,
+    dims_reversed,
+    entries_reversed,
+    expression_of,
+    spec_of,
+    varied,
+    where_of,
+)
 
 #: Every class an expression node is an instance of.
 EXPRESSION_NODES = get_args(Expression)
@@ -625,7 +636,7 @@ def test_a_condition_is_read_at_the_coordinates_its_leaves_are_read_at(namespace
     where = where_of(condition, namespace, 'test')
 
     assert where is not None, 'a condition the connectives cannot settle survives the fold'
-    assert where.dims == expected
+    assert where.dims == tuple(sorted(expected))
 
 
 def test_a_condition_that_admits_every_row_has_no_leaves_left_to_read(namespace):
@@ -644,7 +655,7 @@ def test_the_frame_check_and_the_reading_walk_the_same_leaves(namespace):
     where = where_of('p_max > 0', namespace, 'test')
     assert where is not None
 
-    assert where.dims == {'generator'}, 'read at the generator axis'
+    assert where.dims == ('generator',), 'read at the generator axis'
     with pytest.raises(DimensionError, match=r"where-parameter 'p_max' reads dims \['generator'\]"):
         _check_condition_dims(where, frozenset({'snapshot'}), 'test')
 
@@ -777,7 +788,7 @@ def _derived(node: Expression, spec: Spec) -> frozenset[str]:
     if isinstance(node, ExpressionReference):
         return _derived(node.body, spec)
     if isinstance(node, Cases):
-        return frozenset().union(*(_derived(r.value, spec) | r.when.dims for r in node.regions))
+        return frozenset().union(*(_derived(r.value, spec) | frozenset(r.when.dims) for r in node.regions))
     if isinstance(node, Join):
         joined = _derived(node.operand, spec) - set(node.columns.joined_dims)
         return joined | set(node.columns.grouped_dims)
@@ -865,12 +876,101 @@ def test_every_fault_resolution_meets_is_listed_under_the_class_of_what_is_wrong
 
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
-def test_the_order_of_dimensions_reaches_no_value_of_the_program(path):
-    """The dims of a named condition, of a named expression that declares none, of a piecewise curve and of a
-    comparison of two expressions in a condition were in the order `dimensions:` declares. Two files that
-    differ only in that order loaded to different programs."""
+def test_the_order_a_file_writes_dimensions_in_reaches_no_value_of_the_program(path):
+    """An entry kept the order its `dims:` wrote, and a frame the loader derived took the order `dimensions:`
+    declares. Two files that differ only in those orders loaded to different programs."""
     spec = to_spec(path)
-    data = spec.to_dict()
+    data = dims_reversed(spec.to_dict())
     reversed_order = to_spec({**data, 'dimensions': dict(reversed(cast('dict', data['dimensions']).items()))})
-    assert reversed_order.program == spec.program, 'the order of dimensions: changes no value of the program'
+    assert reversed_order.program == spec.program, 'the order of dimensions: and of every dims: changes no value'
     assert reversed_order.expand().program == spec.expand().program, 'nor of the program its expansion lowers to'
+
+
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_the_order_a_file_writes_a_list_in_reaches_no_value_of_the_spec(path):
+    """A spec held each `dims:` list and each side of a relation as its file wrote them, so two files that state
+    one spec loaded to two specs, and wrote back two texts."""
+    spec = to_spec(path)
+    backwards = to_spec(dims_reversed(spec.to_dict()))
+    assert backwards == spec, 'every dims: list and each side of a relation is sorted as the spec loads'
+    assert backwards.to_yaml() == spec.to_yaml(), 'so the spec writes back one text'
+
+
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_the_order_a_file_lists_its_entries_in_reaches_no_value_of_the_spec(path):
+    """A spec held each section's entries in the order its file listed them, so two files that state one spec
+    wrote back two texts and lowered to programs that list their entries in two orders."""
+    spec = to_spec(path)
+    backwards = to_spec(entries_reversed(spec.to_dict()))
+    assert backwards.to_yaml() == spec.to_yaml(), 'the entries of each section are sorted as the spec loads'
+    for section in (
+        'dimensions',
+        'relations',
+        'parameters',
+        'conditions',
+        'variables',
+        'expressions',
+        'constraints',
+        'sos',
+        'piecewise',
+        'assumptions',
+    ):
+        assert list(getattr(backwards.program, section)) == list(getattr(spec.program, section)), (
+            f'so the program lists its {section} in one order'
+        )
+
+
+def _dims_tuples(root: object) -> Iterator[tuple[str, tuple[str, ...]]]:
+    """Every ``dims`` and ``frame`` a program holds, at any depth, under the name of the class that holds it.
+
+    `Mask.dims` and `Relation.dims` are properties rather than fields, so the walk asks for them.
+    """
+    seen: set[int] = set()
+    stack = [root]
+    while stack:
+        item = stack.pop()
+        if id(item) in seen or isinstance(item, str | int | float | bool | None):
+            continue
+        seen.add(id(item))
+        if isinstance(item, Mask | Relation):
+            yield type(item).__name__, item.dims
+        if isinstance(item, Mapping):
+            stack.extend(item.values())
+        elif isinstance(item, tuple | list | frozenset):
+            stack.extend(item)
+        elif is_dataclass(item) and not isinstance(item, type):
+            for f in fields(item):
+                value = getattr(item, f.name)
+                if f.name in ('dims', 'frame') and isinstance(value, tuple):
+                    yield type(item).__name__, value
+                else:
+                    stack.append(value)
+
+
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_every_dims_of_the_program_is_sorted_by_name(path):
+    spec = to_spec(path)
+    for loaded in (spec, spec.expand()):
+        found = list(_dims_tuples(loaded.program))
+        assert found, f'{path.name} holds no dims'
+        unsorted = [(holder, dims) for holder, dims in found if list(dims) != sorted(dims)]
+        assert not unsorted, f'{path.name}: these dims are not sorted by name: {unsorted[:3]}'
+
+
+@pytest.mark.parametrize(
+    'condition',
+    [
+        pytest.param('zone_of', id='the-bare-relation'),
+        pytest.param("zone_of[zone] == 'north'", id='a-column-against-a-label'),
+        pytest.param('zone_of[zone] == home_of[zone]', id='a-column-against-another-relation'),
+    ],
+)
+def test_a_condition_on_a_relation_states_its_key_dims_sorted_by_name(condition):
+    """A condition on a relation stated the dims in the order the relation lists its key."""
+    keyed_backwards = {'key': ['snapshot', 'generator'], 'values': 'zone'}
+    spec = _spec(**{'relations.zone_of': keyed_backwards, 'relations.home_of': keyed_backwards})
+    where = to_spec(varied(spec.to_dict(), **{'variables.p.where': condition})).program.variables['p'].where
+    assert where is not None
+    assert [dims for _, dims in _dims_tuples(where.root)] == [('generator', 'snapshot')], (
+        'the condition states the relation key dims, sorted by name'
+    )

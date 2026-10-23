@@ -130,9 +130,9 @@ class Namespace:
         #: parameter or variable name -> the ``dims`` it is read through. Stamped onto
         #: each leaf a condition names, the way a relation leaf carries ``over``.
         self.leaf_dims: dict[str, tuple[str, ...]] = {
-            **{p: tuple(pd.dims) for p, pd in parameters.items()},
-            **{m: tuple(md.dims) for m, md in spec.given.conditions.items()},
-            **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
+            **{p: pd.dims for p, pd in parameters.items()},
+            **{m: md.dims for m, md in spec.given.conditions.items()},
+            **{v: vd.dims or () for v, vd in variables.items()},
         }
         #: named expression -> its resolved node, or ``None``, and its refusals;
         #: filled the first time anything reads the name.
@@ -580,7 +580,7 @@ def self_existence(where: Condition, variable: str, context: str) -> str | None:
     return (
         f"{context}: variable '{variable}' asks whether it exists in its own `where:`, through a named condition, which "
         f'nothing can answer — its `where:` is what decides where it exists. Test a parameter, or another '
-        f'variable declared before it.'
+        f'variable.'
     )
 
 

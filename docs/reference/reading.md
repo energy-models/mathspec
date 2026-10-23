@@ -11,7 +11,10 @@ that builds models, a renderer or a checker.
 ## `Spec` and `Program`
 
 A `Spec` holds the file as written: its `macros:`, its descriptions, and a
-`piecewise:` entry as one entry. A `Program` holds what the file means:
+`piecewise:` entry as one entry. It sorts by name what no order reaches: the
+entries of each section, each `dims:` list, and each side of a relation, the
+key's columns before the values'. A `Program` holds what the
+file means:
 every macro expanded, every name typed, every operator resolved to a node, and
 every dimension and degree rule already checked. A curve stays one curve there
 until [`spec.expand()`](#formulations-written-out) writes it out. The
@@ -30,6 +33,11 @@ The program keeps each curve as the one entry the file states, so the
 typesetter and `advice` read the spec the author wrote. A program does not
 hold its spec: a tool handed a bare `Program` has what the file means, not the
 file.
+
+Neither changes after it loads. A section of a `Spec` is a read-only mapping,
+a list is a tuple, and no field can be set, so `spec.to_yaml()` writes the
+file that `spec.program` comes from. To change a spec, lay a patch over it with
+[`override`](api.md#mathspec.override), which loads the result as a new spec.
 
 The curve below [expands](language/piecewise.md) into a weight per breakpoint,
 a convexity row and one row per link:
@@ -160,11 +168,11 @@ dimensions of that sum. A `Join` also opens one `Axis` for each column it
 drops, but an axis is not a dimension and is not in `dims`. An
 `ExpressionReference` has the dimensions of its body.
 
-A node's `dims` are always sorted by name. The order of `dimensions:` and the
-order of an entry's `dims:` do not change them. An entry that declares
-`dims: [snapshot, generator]` has
-`program.expressions[name].dims == ('snapshot', 'generator')`, and each
-`ExpressionReference` to it has `dims == ('generator', 'snapshot')`.
+A node's `dims` are sorted by name, as an entry's are. The order of
+`dimensions:` and the order of an entry's `dims:` do not change them. An entry
+that declares `dims: [snapshot, generator]` has
+`program.expressions[name].dims == ('generator', 'snapshot')`, and each
+`ExpressionReference` to it has the same `dims`.
 
 A `ConditionReference` stands where a `conditions:` entry is read. Its `body` is the
 condition of the entry, the root of `program.conditions[name].condition`, and it is true
@@ -178,7 +186,7 @@ The mask also answers four questions:
 - `.conjuncts` flattens the `AND` spine, and stops at an `OR` or a `NOT`.
 - `.names_read` gives the entries the mask names.
 - `.atoms` gives its leaves, with the connectives removed.
-- `.dims` gives the dimensions the mask is read at.
+- `.dims` gives the dimensions the mask is read at, sorted by name.
 
 A comparison of expressions arrives as an `ExpressionComparison`. Its two
 sides are program expressions like a constraint's, and its `dims` are every
@@ -235,7 +243,7 @@ layer = to_spec(
 
 sorted(layer.variables)  # []
 sorted(layer.given.variables)  # ['p']
-layer.given.constraints['balance'].dims  # ('snapshot', 'bus')
+layer.given.constraints['balance'].dims  # ('bus', 'snapshot')
 ```
 
 The host model provides each name: it holds a column or a row family of that
@@ -312,11 +320,16 @@ about whether the windowed answer equals the whole-horizon answer.
 `spec.to_dict()` returns the spec as plain data, and `spec.to_yaml()` returns
 that data as a file. Both round-trip, so `to_spec(spec.to_dict()) == spec`.
 
-`to_yaml()` writes every value, so `domain: continuous` is written out. It
-leaves out a `null` and an empty section, but it writes `dims: []`, because
-that says the entry is a scalar.
+`to_yaml()` writes the fields the file wrote, and no others. A default the file
+writes out, such as `ordered: false`, is written back, and a default it leaves
+out, such as `domain: continuous`, is not. A spec that `merge`, `override` or
+`expand` builds writes the fields its fragments and its own code set. The
+writer always writes `version:`, so a written file states the language version
+it is read in. It leaves out a `null` and an empty section. It writes
+`dims: []`, because that says the entry is a scalar, and an entry the file wrote
+as `{}`, because that entry still declares its name.
 
-`to_yaml()` writes a short list on one line, such as `dims: [snapshot, generator]`.
+`to_yaml()` writes a short list on one line, such as `dims: [generator, snapshot]`.
 It also writes a short mapping of numbers and names on one line, such as
 `bounds: {lower: 0, upper: p_max}`. An entry with a description or an
 expression keeps one key on each line, even for an expression as short as
@@ -344,24 +357,34 @@ spec.to_yaml(canonical=True) == to_spec(spec.to_yaml(canonical=True)).to_yaml(ca
   `piecewise`, `assumptions`, `macros`. The keys of an entry also come in one
   order.
 - Entries are sorted by name within each section.
+- A field that holds its default is left out, whether the file wrote it or not.
+  The one exception is `version`, which is always written, so `version: 0`
+  stays.
 - Every expression is printed from its parsed tree, so the spacing and the
   brackets are the printer's rather than the author's.
-- The terms of a sum are sorted, and so are the factors of a product and the
-  keyword arguments of a call. Subtraction, division, exponentiation and a
+- The terms of a sum are sorted, and so are the factors of a product, the
+  keyword arguments of a call, and a list of names or the columns of a
+  relation in a call, such as `over=[generator, snapshot]`. Subtraction, division, exponentiation and a
   call's positional arguments keep the order the file wrote, because moving
   those changes what the spec says.
 - A sum of two or more terms is broken one term to a line, each under its
   own sign. A term that changes is then one line of a diff.
 - A constant is never folded into another. `2 * 3` stays `2 * 3`, so a
   reviewer sees a changed coefficient in the diff.
+- Every condition under `where:`, `when:`, `condition:` and `holds:` is
+  printed from its parsed tree too. `AND`, `OR` and `NOT` print in upper case,
+  the operands of `AND` and of `OR` are sorted, and a bracket stays only where
+  the grammar needs it, or around a comparison under `NOT`.
+- The two sides of a comparison keep their places, in an expression and in a
+  condition, so `p_max > 0` and `0 < p_max` are two texts.
 
-Four things are left as the file wrote them: a condition in the `where`
-grammar, the order of the regions under `cases:`, the order of an entry's
-`dims`, and the order of a piecewise entry's links. A difference in any of them
-is a difference in the text.
+The order of a piecewise entry's links is left as the file wrote it, because a
+link's position names the rows it emits. A difference there is a difference in
+the text.
 
-The normal form sorts `dimensions:`. This changes no dims of the program,
-because a frame the loader derives is sorted by name.
+The spec holds its entries, every `dims:` list, each side of a relation, the
+regions under `cases:` and the `kwargs` of a macro sorted by name, so the normal
+form writes them in that order too.
 
 The normal form states the same spec, but it does not load to a `Spec` equal
 to the original, because a reprinted expression is a different string. Writing

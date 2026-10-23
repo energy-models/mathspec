@@ -63,7 +63,7 @@ a flag. The [Python API](api.md#typesetting) gives each signature.
   breakpoints. A spec that assumes nothing of its data prints no such
   heading.
 - A [named expression](language/named.md) prints its symbol where it is used
-  and its body once, under a **Definitions** heading, in file order. A
+  and its body once, under a **Definitions** heading, sorted by name. A
   cased expression, a [reported entry](language/named.md#reported-expressions)
   and a [term](language/parameters-variables-constraints.md#terms) keep their definition line
   under either `inline_expressions` setting.
@@ -100,9 +100,9 @@ delimiters:
 
 ```python
 ms.typeset_line('spec.yaml', 'spend', 'latex')
-# \mathit{spend}_{t} = \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
+# \mathit{spend}_{t} = \sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
 ms.typeset_line('spec.yaml', 'balance', 'latex')
-# \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
+# \sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
 It takes what the other functions take, plus the name, the format and an

@@ -41,40 +41,33 @@ the tab prints the patch beside that math.
 ```yaml
 version: 0
 dimensions:
-  snapshot: {dtype: datetime, description: dispatch periods}
   bus: {dtype: str, description: network nodes}
-  port: {dtype: str, description: 'the connections components make, one label per connection'}
   generator: {dtype: str, description: 'generating units, each on one port'}
   load: {dtype: str, description: 'demands, each on one port'}
+  port: {dtype: str, description: 'the connections components make, one label per connection'}
+  snapshot: {dtype: datetime, description: dispatch periods}
 relations:
-  Port_bus: {key: port, values: bus}
   Generator_port: {key: generator, values: port}
   Load_port: {key: load, values: port}
+  Port_bus: {key: port, values: bus}
 parameters:
-  Generator_p_nom:
-    dims: [generator]
-    dtype: float
-    description: nominal power
   Generator_marginal_cost:
     dims: [generator]
-    dtype: float
     description: cost of one unit of output
+  Generator_p_nom:
+    dims: [generator]
+    description: nominal power
   Load_p_set:
-    dims: [snapshot, load]
-    dtype: float
+    dims: [load, snapshot]
     description: '`Load-p_set` — what a load takes in a snapshot'
 variables:
-  Port_p:
-    dims: [snapshot, port]
-    domain: continuous
-    missing: absent
-    description: what a port puts into its bus in a snapshot, negative for a withdrawal
   Generator_p:
-    dims: [snapshot, generator]
+    dims: [generator, snapshot]
     bounds: {lower: 0.0, upper: Generator_p_nom}
-    domain: continuous
-    missing: absent
     description: '`Generator-p` — what a generator produces in a snapshot'
+  Port_p:
+    dims: [port, snapshot]
+    description: what a port puts into its bus in a snapshot, negative for a withdrawal
 expressions:
   Generator_cost: sum(Generator_p * Generator_marginal_cost)
   total_cost:
@@ -84,16 +77,16 @@ expressions:
 objective: {sense: minimize, expression: total_cost}
 constraints:
   Bus_nodal_balance:
-    dims: [snapshot, bus]
+    dims: [bus, snapshot]
     expression: sum(Port_p, over=port, by=Port_bus[bus]) == 0
     description: '`Bus-nodal_balance` — what the ports on a bus put in nets to nothing'
   Generator_injection:
-    dims: [snapshot, generator]
+    dims: [generator, snapshot]
     expression: at(Port_p, by=Generator_port[port]) == Generator_p
     description: 'what a generator produces is what its port injects. No PyPSA row stands for this: PyPSA
       writes the generator into the balance instead'
   Load_withdrawal:
-    dims: [snapshot, load]
+    dims: [load, snapshot]
     expression: at(Port_p, by=Load_port[port]) == -Load_p_set
     description: 'what a load takes is what its port withdraws. No PyPSA row stands for this: PyPSA writes
       the load into the balance instead'
@@ -105,26 +98,26 @@ constraints:
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
     | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Port\_bus}: \mathcal{J} \to \mathcal{N}`$ — network nodes |
-    | $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{Port\_bus}: \mathcal{J} \to \mathcal{N},\ \mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J},\ \mathrm{Load\_port}: \mathcal{D} \to \mathcal{J}`$ — the connections components make, one label per connection |
     | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J}`$ — generating units, each on one port |
     | $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{Load\_port}: \mathcal{D} \to \mathcal{J}`$ — demands, each on one port |
+    | $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J},\ \mathrm{Load\_port}: \mathcal{D} \to \mathcal{J},\ \mathrm{Port\_bus}: \mathcal{J} \to \mathcal{N}`$ — the connections components make, one label per connection |
+    | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
     #### Parameters
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\mathcal{G}`$ — nominal power |
     | $`\mathrm{c}`$ | `Generator_marginal_cost` over $`\mathcal{G}`$ — cost of one unit of output |
-    | $`\mathrm{load}`$ | `Load_p_set` over $`\mathcal{T} \times \mathcal{D}`$ — `Load-p_set` — what a load takes in a snapshot |
+    | $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\mathcal{G}`$ — nominal power |
+    | $`\mathrm{load}`$ | `Load_p_set` over $`\mathcal{D} \times \mathcal{T}`$ — `Load-p_set` — what a load takes in a snapshot |
 
     #### Variables
 
     | Symbol | Meaning |
     |---|---|
-    | $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — what a port puts into its bus in a snapshot, negative for a withdrawal |
-    | $`p`$ | `Generator_p` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-p` — what a generator produces in a snapshot |
+    | $`p`$ | `Generator_p` over $`\mathcal{G} \times \mathcal{T}`$ — `Generator-p` — what a generator produces in a snapshot |
+    | $`f`$ | `Port_p` over $`\mathcal{J} \times \mathcal{T}`$ — what a port puts into its bus in a snapshot, negative for a withdrawal |
 
     #### Definitions
 
@@ -135,16 +128,16 @@ constraints:
 
     #### Variable domains
 
-    **`Port_p`**
-
-    ```math
-    f_{t,j} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
-    ```
-
     **`Generator_p`**
 
     ```math
-    0 \le p_{t,g} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    0 \le p_{g,t} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+    ```
+
+    **`Port_p`**
+
+    ```math
+    f_{j,t} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J},\ t \in \mathcal{T}
     ```
 
     #### Definitions
@@ -152,7 +145,7 @@ constraints:
     **`Generator_cost`**
 
     ```math
-    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+    \mathit{Generator\_cost} = \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} \cdot \mathrm{c}_{g}
     ```
 
     **`total_cost`**
@@ -172,19 +165,19 @@ constraints:
     **`Bus_nodal_balance`**
 
     ```math
-    \sum_{j \in \mathcal{J} \,:\, \mathrm{Port\_bus}(j) = n} f_{t,j} = 0 \qquad \forall\, t \in \mathcal{T},\ n \in \mathcal{N}
+    \sum_{j \in \mathcal{J} \,:\, \mathrm{Port\_bus}(j) = n} f_{j,t} = 0 \qquad \forall\, n \in \mathcal{N},\ t \in \mathcal{T}
     ```
 
     **`Generator_injection`**
 
     ```math
-    f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    f_{\mathrm{Generator\_port}(g),t} = p_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
     ```
 
     **`Load_withdrawal`**
 
     ```math
-    f_{t,\mathrm{Load\_port}(d)} = -\mathrm{load}_{t,d} \qquad \forall\, t \in \mathcal{T},\ d \in \mathcal{D}
+    f_{\mathrm{Load\_port}(d),t} = -\mathrm{load}_{d,t} \qquad \forall\, d \in \mathcal{D},\ t \in \mathcal{T}
     ```
 
 === "With commitment"
@@ -213,28 +206,28 @@ constraints:
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
     | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Port\_bus}: \mathcal{J} \to \mathcal{N}`$ — network nodes |
-    | $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{Port\_bus}: \mathcal{J} \to \mathcal{N},\ \mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J},\ \mathrm{Load\_port}: \mathcal{D} \to \mathcal{J}`$ — the connections components make, one label per connection |
     | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J}`$ — generating units, each on one port |
     | $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{Load\_port}: \mathcal{D} \to \mathcal{J}`$ — demands, each on one port |
+    | $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J},\ \mathrm{Load\_port}: \mathcal{D} \to \mathcal{J},\ \mathrm{Port\_bus}: \mathcal{J} \to \mathcal{N}`$ — the connections components make, one label per connection |
+    | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
     #### Parameters
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\mathcal{G}`$ — nominal power |
     | $`\mathrm{c}`$ | `Generator_marginal_cost` over $`\mathcal{G}`$ — cost of one unit of output |
-    | $`\mathrm{load}`$ | `Load_p_set` over $`\mathcal{T} \times \mathcal{D}`$ — `Load-p_set` — what a load takes in a snapshot |
     | $`\underline{\mathrm{p}}`$ | `Generator_p_min_pu` over $`\mathcal{G}`$ — least output, per unit of nominal power |
+    | $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\mathcal{G}`$ — nominal power |
+    | $`\mathrm{load}`$ | `Load_p_set` over $`\mathcal{D} \times \mathcal{T}`$ — `Load-p_set` — what a load takes in a snapshot |
 
     #### Variables
 
     | Symbol | Meaning |
     |---|---|
-    | $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — what a port puts into its bus in a snapshot, negative for a withdrawal |
-    | $`p`$ | `Generator_p` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-p` — what a generator produces in a snapshot |
-    | $`u`$ | `Generator_status` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-status` — whether a unit is on in a snapshot |
+    | $`p`$ | `Generator_p` over $`\mathcal{G} \times \mathcal{T}`$ — `Generator-p` — what a generator produces in a snapshot |
+    | $`u`$ | `Generator_status` over $`\mathcal{G} \times \mathcal{T}`$ — `Generator-status` — whether a unit is on in a snapshot |
+    | $`f`$ | `Port_p` over $`\mathcal{J} \times \mathcal{T}`$ — what a port puts into its bus in a snapshot, negative for a withdrawal |
 
     #### Definitions
 
@@ -245,22 +238,22 @@ constraints:
 
     #### Variable domains
 
-    **`Port_p`**
-
-    ```math
-    f_{t,j} \in \mathbb{R} \qquad \forall\, t \in \mathcal{T},\ j \in \mathcal{J}
-    ```
-
     **`Generator_p`**
 
     ```math
-    p_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    p_{g,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
     ```
 
     **`Generator_status`**
 
     ```math
-    u_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    u_{g,t} \in \{0, 1\} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+    ```
+
+    **`Port_p`**
+
+    ```math
+    f_{j,t} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J},\ t \in \mathcal{T}
     ```
 
     #### Definitions
@@ -268,7 +261,7 @@ constraints:
     **`Generator_cost`**
 
     ```math
-    \mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+    \mathit{Generator\_cost} = \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} \cdot \mathrm{c}_{g}
     ```
 
     **`total_cost`**
@@ -288,30 +281,30 @@ constraints:
     **`Bus_nodal_balance`**
 
     ```math
-    \sum_{j \in \mathcal{J} \,:\, \mathrm{Port\_bus}(j) = n} f_{t,j} = 0 \qquad \forall\, t \in \mathcal{T},\ n \in \mathcal{N}
-    ```
-
-    **`Generator_injection`**
-
-    ```math
-    f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-    ```
-
-    **`Load_withdrawal`**
-
-    ```math
-    f_{t,\mathrm{Load\_port}(d)} = -\mathrm{load}_{t,d} \qquad \forall\, t \in \mathcal{T},\ d \in \mathcal{D}
-    ```
-
-    **`Generator_com_p_upper`**
-
-    ```math
-    p_{t,g} \le \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    \sum_{j \in \mathcal{J} \,:\, \mathrm{Port\_bus}(j) = n} f_{j,t} = 0 \qquad \forall\, n \in \mathcal{N},\ t \in \mathcal{T}
     ```
 
     **`Generator_com_p_lower`**
 
     ```math
-    p_{t,g} \ge \underline{\mathrm{p}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    p_{g,t} \ge \underline{\mathrm{p}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+    ```
+
+    **`Generator_com_p_upper`**
+
+    ```math
+    p_{g,t} \le \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+    ```
+
+    **`Generator_injection`**
+
+    ```math
+    f_{\mathrm{Generator\_port}(g),t} = p_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+    ```
+
+    **`Load_withdrawal`**
+
+    ```math
+    f_{\mathrm{Load\_port}(d),t} = -\mathrm{load}_{d,t} \qquad \forall\, d \in \mathcal{D},\ t \in \mathcal{T}
     ```
 <!-- gallery:end -->

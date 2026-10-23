@@ -12,7 +12,7 @@ This file states Kirchhoff's voltage law around each cycle. It is one of the [24
 given:
   expressions:
     Cycle_angle_sum:
-      dims: [scenario, snapshot, cycle]
+      dims: [cycle, scenario, snapshot]
       description: >-
         the voltage angle differences around a cycle: every branch flow times
         its cycle weight, and every transformer phase shift
@@ -51,21 +51,21 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$, an expression another file defines — the voltage angle differences around a cycle: every branch flow times its cycle weight, and every transformer phase shift |
+| $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\mathcal{C} \times \Xi \times \mathcal{T}`$, an expression another file defines — the voltage angle differences around a cycle: every branch flow times its cycle weight, and every transformer phase shift |
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep. Each period has its own basis, of the branches that stand in it; a label is a position in that period's basis, so one label names a different cycle in another period |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep. Each period has its own basis, of the branches that stand in it; a label is a position in that period's basis, so one label names a different cycle in another period |
 
 #### Subject to
 
 **`Kirchhoff_Voltage_Law`**
 
 ```math
-\mathit{Cycle\_angle\_sum}_{\xi,t,c} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
+\mathit{Cycle\_angle\_sum}_{c,\xi,t} = 0 \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->

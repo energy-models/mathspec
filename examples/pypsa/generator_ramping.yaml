@@ -17,9 +17,9 @@ given:
     Generator_shut_down: { dims: [scenario, snapshot, generator], domain: integer }
     Generator_p_nom_ext: { dims: [generator] }
   expressions:
-    Generator_previous_status: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom_effective: { dims: [scenario, generator] }
-    Generator_p_nom_committed: { dims: [scenario, generator] }
+    Generator_previous_status: { dims: [generator, scenario, snapshot] }
+    Generator_p_nom_effective: { dims: [generator, scenario] }
+    Generator_p_nom_committed: { dims: [generator, scenario] }
   conditions:
     Generator_com_ext: { dims: [generator, snapshot] }
 

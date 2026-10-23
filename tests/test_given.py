@@ -99,12 +99,12 @@ def test_a_program_carries_the_column_it_reads_apart_from_the_ones_it_builds():
     assert sorted(program.given.variables) == ['flow'], (
         'and uses, for each of these, the column the host model provides'
     )
-    assert program.given.variables['flow'].dims == ('snapshot', 'port'), (
+    assert program.given.variables['flow'].dims == ('port', 'snapshot'), (
         'the frame is what a consumer checks against the host'
     )
 
 
-def test_what_a_program_reads_is_sealed_like_what_it_builds():
+def test_what_a_program_reads_is_frozen_like_what_it_builds():
     program = to_spec(SUPPLY).program
     with pytest.raises(TypeError, match='does not support item assignment'):
         program.given.variables['p'] = program.given.variables['flow']
@@ -145,7 +145,7 @@ def test_a_given_entry_is_refused_where_it_oversteps(entry, says):
 def test_an_expression_reads_a_given_column_as_it_reads_any_other():
     """Resolution and the dim algebra see one namespace, so the walk lands on the generator frame."""
     spec = to_spec(SUPPLY)
-    assert spec.constraints['gen_injects'].dims == ['snapshot', 'generator']
+    assert spec.constraints['gen_injects'].dims == ('generator', 'snapshot')
 
 
 def test_merging_folds_the_given_entry_into_the_one_that_introduces_it():
@@ -251,7 +251,7 @@ def test_a_fragment_that_reads_what_it_builds_is_refused(given, says):
 
 def test_a_given_entry_nothing_introduces_stays_for_a_consumer_to_bind():
     composed = merge([SUPPLY, {'dimensions': {'snapshot': {'dtype': 'int'}}}])
-    assert composed.given.variables['flow'].dims == ['snapshot', 'port'], 'a name nothing introduces is still read'
+    assert composed.given.variables['flow'].dims == ('port', 'snapshot'), 'a name nothing introduces is still read'
     assert sorted(composed.program.given.variables) == ['flow']
 
 
@@ -279,14 +279,14 @@ def test_a_dual_may_name_a_row_family_this_file_does_not_build():
 def test_the_program_carries_the_row_family_a_consumer_binds():
     program = to_spec(LAYER).program
     assert sorted(program.given.constraints) == ['balance']
-    assert program.given.constraints['balance'].dims == ('snapshot', 'bus'), (
+    assert program.given.constraints['balance'].dims == ('bus', 'snapshot'), (
         'the frame is what a consumer checks against the host'
     )
 
 
 def test_the_dual_takes_its_frame_from_the_given_entry():
     """Without the frame the reported expression has no dims, and nothing downstream could shape it."""
-    assert to_markdown(LAYER).count(r'\lambda_{\mathrm{balance},t,b}') == 1
+    assert to_markdown(LAYER).count(r'\lambda_{\mathrm{balance},b,t}') == 1, 'the dual prints once, over its frame'
 
 
 def test_a_given_row_family_prints_under_the_given_heading():
@@ -493,13 +493,13 @@ INJECTOR = {
 def test_a_fragment_reads_an_expression_it_does_not_define():
     spec = to_spec(BALANCE)
     assert sorted(spec.given.expressions) == ['injection']
-    assert spec.constraints['balance'].dims == ['snapshot', 'bus'], 'the frame the reader states is the one read'
+    assert spec.constraints['balance'].dims == ('bus', 'snapshot'), 'the frame the reader states is the one read'
 
 
 def test_a_program_carries_the_expression_it_reads_apart_from_the_ones_it_defines():
     program = to_spec(BALANCE).program
     assert not program.expressions
-    assert program.given.expressions['injection'].dims == ('snapshot', 'bus')
+    assert program.given.expressions['injection'].dims == ('bus', 'snapshot'), 'the dims sorted by name'
 
 
 def test_a_given_expression_prints_under_the_given_heading():

@@ -32,7 +32,7 @@ from mathspec._expression_parser import (
     keywords,
     parse_text,
 )
-from mathspec._sealed import Sealed
+from mathspec._frozen import Frozen
 from mathspec.program import (
     And,
     BooleanLiteral,
@@ -81,7 +81,7 @@ class UnresolvedConditionCallNode:
     kwargs: Mapping[str, ArithmeticNode] = field(default_factory=dict, hash=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'kwargs', Sealed(self.kwargs))
+        object.__setattr__(self, 'kwargs', Frozen(self.kwargs))
 
 
 @dataclass(frozen=True)

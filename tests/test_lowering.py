@@ -132,10 +132,10 @@ def shapes_spec() -> Spec:
 
 
 def test_program_structure(dispatch_program):
-    assert list(dispatch_program.parameters) == ['capacity', 'load', 'cost'], 'keyed by name, in file order'
+    assert list(dispatch_program.parameters) == ['capacity', 'cost', 'load'], 'keyed by name, sorted by name'
     ((vname, v),) = dispatch_program.variables.items()
     assert vname == 'dispatch'
-    assert v.dims == ('snapshot', 'generator'), 'the frame is the dims, in the order the file wrote it'
+    assert v.dims == ('generator', 'snapshot'), 'the frame is the dims, sorted by name'
     assert v.where == Mask(CAPACITY_POSITIVE)
     assert v.upper == ParameterReference('capacity', dims=('generator',))
 
@@ -303,7 +303,7 @@ def test_a_lowered_mask_answers_its_dims_conjuncts_and_atoms(variable, where, di
     `atoms` crosses the `OR` that `conjuncts` stops at."""
     mask = to_spec(varied(SMALL_MODEL, **{f'variables.{variable}.where': where})).program.variables[variable].where
 
-    assert mask.dims == frozenset(dims)
+    assert mask.dims == tuple(sorted(dims))
     assert len(mask.conjuncts) == conjuncts, 'an OR is one conjunct, a leaf is one conjunct'
     assert len(mask.atoms) == atoms, 'the leaves of every arm, connectives removed'
 
@@ -343,8 +343,8 @@ def test_a_synthetic_condition_answers_its_own_dims():
     """
     b = ParameterDefined('load', ('snapshot',))
 
-    assert Mask(Not(CAPACITY_POSITIVE)).dims == {'generator'}, 'negation keeps the dims it negates'
-    assert (Mask(CAPACITY_POSITIVE) & Mask(b)).dims == {'generator', 'snapshot'}, 'conjunction unions both sides'
+    assert Mask(Not(CAPACITY_POSITIVE)).dims == ('generator',), 'negation keeps the dims it negates'
+    assert (Mask(CAPACITY_POSITIVE) & Mask(b)).dims == ('generator', 'snapshot'), 'conjunction unions both sides'
     assert (Mask(CAPACITY_POSITIVE) & Mask(b)).root == And(CAPACITY_POSITIVE, b), (
         'the conjunction joins the roots under one AND'
     )
@@ -378,7 +378,7 @@ def test_a_held_leaf_walk_is_taken_after_the_fold_absorbed_a_branch():
     assert absorbed.root == BooleanLiteral(False)
     assert absorbed.atoms == (), 'the absorbed leaf is not among them'
     assert absorbed.names_read == frozenset(), 'nor named'
-    assert absorbed.dims == frozenset(), 'nor read at any dim'
+    assert absorbed.dims == (), 'nor read at any dim'
 
 
 def test_a_mask_over_an_unresolved_tree_is_refused_at_construction():
@@ -504,8 +504,8 @@ def test_a_condition_read_through_a_relation_is_lowered_and_keeps_the_relation_i
 def test_assumptions_carry_the_file_s_entries_and_the_curves_behind_them():
     """One mapping holds every fact about the data, so a consumer attaching it has one loop and one refusal.
 
-    The file's entries come first, in the order it wrote them; each
-    ``piecewise:`` entry's conditions follow under the name a refusal quotes.
+    The file's entries and each ``piecewise:`` entry's conditions, under the
+    name a refusal quotes, stand in one mapping sorted by name.
     """
     program = expanded(EXAMPLES / 'piecewise_lp.yaml', 'piecewise').program
     derived = [name for name in program.assumptions if name.startswith('cost_curve_')]
@@ -514,11 +514,11 @@ def test_assumptions_carry_the_file_s_entries_and_the_curves_behind_them():
         'a method states its conditions in the language the file writes, so one kind stands in the mapping'
     )
     assert derived == [
-        'cost_curve_complete',
-        'cost_curve_increasing',
-        'cost_curve_curvature',
         'cost_curve_breakpoints',
-    ], 'an lp curve over a whole axis assumes four things of its breakpoints, completeness first'
+        'cost_curve_complete',
+        'cost_curve_curvature',
+        'cost_curve_increasing',
+    ], 'an lp curve over a whole axis assumes four things of its breakpoints, sorted by name'
 
 
 def test_an_assumption_lowers_both_of_its_masks():
@@ -750,7 +750,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     declared = Relation(columns, ('generator', 'snapshot'))
     assert program.relations == {'zone_of': declared}, 'the relation sits once in the program, under its name'
     zonal = program.constraints['zonal'].lhs
-    columns = JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('zone', 'snapshot'))
+    columns = JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('snapshot', 'zone'))
     assert zonal == Sum(
         Join(VariableReference('p', dims=('generator', 'snapshot')), columns, dims=('snapshot', 'zone')),
         (Axis('generator', Column('zone_of', 'generator')),),
@@ -772,7 +772,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     assert program.constraints['history'].lhs == Sum(
         Join(
             VariableReference('p', dims=('generator', 'snapshot')),
-            JoinColumns('zone_of', declared, ('snapshot', 'generator'), ('zone', 'generator')),
+            JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('generator', 'zone')),
             dims=('generator', 'zone'),
         ),
         (Axis('snapshot', Column('zone_of', 'snapshot')),),
@@ -781,7 +781,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     priced = program.constraints['priced'].rhs
     assert priced == Join(
         ParameterReference('price', dims=('snapshot', 'zone')),
-        JoinColumns('zone_of', declared, ('zone', 'snapshot'), ('generator', 'snapshot')),
+        JoinColumns('zone_of', declared, ('snapshot', 'zone'), ('generator', 'snapshot')),
         dims=('generator', 'snapshot'),
     ), 'and an at is the bare join, on the value column, grouped by the key columns'
     assert isinstance(priced, Join)
@@ -798,7 +798,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     ], 'a comparison and an existence are both read at the key of a keyed relation'
     first_where = program.variables['first'].where
     assert first_where is not None
-    assert first_where.dims == {'generator', 'snapshot'}, 'a position within a group is read at every key column'
+    assert first_where.dims == ('generator', 'snapshot'), 'a position within a group is read at every key column'
 
 
 def test_a_binary_variable_lowers_to_a_binary_domain():
@@ -889,7 +889,7 @@ def test_a_relation_is_declared_as_the_file_declares_it():
     assert program.relations == {
         'season_of': Relation((('g', 'g'), ('season', 'season')), ('g',)),
         'at_bus': Relation((('g', 'g'), ('bus', 'bus')), ('g',)),
-    }, 'every relation under its own name, in file order'
+    }, 'every relation under its own name, its key column first'
     assert program.relations['season_of'].values == ('season',), 'and each says what its key determines'
     assert program.dimensions['g'] == Dimension(dtype='str'), 'a dimension carries its dtype and no relation'
 
@@ -909,8 +909,8 @@ def test_a_program_is_built_by_keyword_so_a_field_added_later_cannot_reorder_an_
 
 
 @pytest.mark.parametrize('group', ['parameters', 'variables', 'constraints', 'dimensions', 'relations', 'sos'])
-def test_a_program_seals_its_entry_groups(dispatch_program, group):
-    """`frozen=True` sealed the fields and said nothing about what was behind them."""
+def test_a_program_freezes_its_entry_groups(dispatch_program, group):
+    """`frozen=True` froze the fields and said nothing about what was behind them."""
     with pytest.raises(TypeError):
         getattr(dispatch_program, group)['sneak'] = None  # pyrefly: ignore[unsupported-operation]  the point of the test
 
@@ -1073,9 +1073,9 @@ def test_a_region_s_when_is_a_mask_with_its_own_dims():
     assert all(isinstance(r.when, Mask) for r in (always_on, boundary, remainder)), (
         'every region, the synthesized remainder included, carries its condition as a Mask'
     )
-    assert always_on.when.dims == frozenset({'g'}), "`not committable` reads the parameter's dims"
-    assert boundary.when.dims == frozenset({'g', 't'}), 'the position comparison adds its dimension'
-    assert remainder.when.dims == frozenset({'g', 't'}), 'the remainder reads every dim the stated cases do'
+    assert always_on.when.dims == ('g',), "`not committable` reads the parameter's dims"
+    assert boundary.when.dims == ('g', 't'), 'the position comparison adds its dimension'
+    assert remainder.when.dims == ('g', 't'), 'the remainder reads every dim the stated cases do'
 
 
 def test_the_lowered_regions_are_still_proved_apart():
@@ -1186,7 +1186,7 @@ def test_a_lowered_spec_still_pickles_and_lowers_to_the_same_program():
     Lowering caches its expansion on the Spec, and a named expression's
     resolved node held its keyword arguments behind a ``MappingProxyType``,
     which pickle refuses — so a Spec that had been lowered could not cross a
-    process where a fresh one could. The seal pickles now, and the copy lowers
+    process where a fresh one could. The frozen mapping pickles now, and the copy lowers
     to the same program.
     """
     import pickle
@@ -1211,10 +1211,10 @@ def test_a_lowered_spec_still_pickles_and_lowers_to_the_same_program():
 def test_a_lowered_program_pickles_and_is_the_same_program():
     """A program crosses a process as itself, walked or not.
 
-    Every group of entries is sealed against writes, and the seal used
+    Every group of entries is frozen against writes, and the frozen mapping used
     to be a ``MappingProxyType``, which pickle refuses — so a program could
     be built by one process and never handed to another, and a consumer
-    running slices in a pool re-lowered the file per slice. The seal now
+    running slices in a pool re-lowered the file per slice. The frozen mapping now
     pickles, and so does what a walk caches on the program.
     """
     import pickle
@@ -1242,7 +1242,7 @@ def test_two_groups_of_a_program_merge_with_or_as_they_did_behind_the_proxy():
     """`program.constraints | program.variables` is a dict of both, as it was
     when the groups were `MappingProxyType`s — a consumer that walks every
     entry this way (specsolve's parity harness does) broke on alpha.78,
-    where the seal answered `|` with a `TypeError`."""
+    where the frozen mapping answered `|` with a `TypeError`."""
     program = to_spec(
         {
             'dimensions': {'t': {'dtype': 'int', 'ordered': True}},

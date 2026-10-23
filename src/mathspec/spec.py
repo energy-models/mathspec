@@ -14,10 +14,12 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Mapping, Sequence
 from functools import cached_property
-from typing import TYPE_CHECKING, Annotated, ClassVar, Literal, Self, cast, get_args, override
+from typing import TYPE_CHECKING, Annotated, ClassVar, Literal, Self, TypeVar, cast, get_args, override
 
 from pydantic import (
+    AfterValidator,
     BaseModel,
     BeforeValidator,
     ConfigDict,
@@ -26,12 +28,14 @@ from pydantic import (
     ValidationInfo,
     ValidatorFunctionWrapHandler,
     WithJsonSchema,
+    WrapSerializer,
     field_validator,
     model_serializer,
     model_validator,
 )
 
 from mathspec._expression_parser import NAME, Sense
+from mathspec._frozen import Frozen
 from mathspec._operators import BUILTIN_NAMES
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
@@ -48,8 +52,6 @@ from mathspec.program import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from pydantic import GetJsonSchemaHandler, SerializerFunctionWrapHandler
     from pydantic.config import ExtraValues
     from pydantic_core import CoreSchema
@@ -85,6 +87,23 @@ __all__ = [
 ]
 
 
+_T = TypeVar('_T')
+
+#: A list in the file: a tuple once the spec loads, so nothing appends to it,
+#: and a list again when the spec is written back out.
+Listed = Annotated[tuple[_T, ...], WrapSerializer(lambda v, write: list(write(v)))]
+
+
+def _sorted(names: tuple[str, ...]) -> tuple[str, ...]:
+    """*names* sorted, still a tuple, so a sorted list stays as frozen as the rest of the spec."""
+    return tuple(sorted(names))
+
+
+#: A ``dims:`` list, sorted by name as it loads. Its order reaches nothing a
+#: consumer reads, so the spec holds the one order every file states it in.
+Dims = Annotated[Listed[str], AfterValidator(_sorted)]
+
+
 class _StrictSpec(BaseModel):
     """Base for every part of a spec: unknown keys are an error, not a shrug.
 
@@ -93,10 +112,19 @@ class _StrictSpec(BaseModel):
     ``wher:`` leaves it unmasked — loading a spec the file does not describe.
     """
 
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='forbid', frozen=True)
 
     #: What this entry or section is called in a YAML file, for the error message.
     _label: ClassVar[str]
+
+    @model_serializer(mode='wrap')
+    def _set_fields(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        """The fields the input set, a default it wrote out included, so a spec writes back what its file wrote.
+
+        The canonical form dumps with ``exclude_defaults``, which leaves a
+        default out whether the input set it or not.
+        """
+        return _as_set(self, cast('dict[str, object]', handler(self)))
 
     @model_validator(mode='before')
     @classmethod
@@ -150,11 +178,17 @@ _MISSING_SCHEMA: dict[str, object] = {
 _READINGS = ', '.join(get_args(MissingReading))
 
 
-def _without_refused(written: dict[str, object]) -> dict[str, object]:
-    """*written* with ``missing: refused`` left out, so the default written out and left out write one text."""
-    if written.get('missing') == 'refused':
-        written.pop('missing')
-    return written
+def _as_set(model: BaseModel, written: dict[str, object]) -> dict[str, object]:
+    """*written* cut to the fields *model*'s input set, less a null and an empty mapping, which say nothing.
+
+    An entry is a value inside a field rather than a field, so ``generator:
+    {}`` and ``generator: {description: null}`` both stay as ``{}``.
+    """
+    return {
+        key: value
+        for key, value in written.items()
+        if key in model.model_fields_set and value is not None and value != {}
+    }
 
 
 def _as_yaml(v: object) -> str:
@@ -191,7 +225,7 @@ def _also_written_as(
     return {'anyOf': [dict(generated), shorthand]}
 
 
-def side_columns(written: str | list[str] | dict[str, str] | None) -> tuple[tuple[str, str], ...]:
+def side_columns(written: str | Sequence[str] | Mapping[str, str] | None) -> tuple[tuple[str, str], ...]:
     """``(role, dimension)`` per column of one side of a relation, in written order.
 
     A bare name or a list names each column after the dimension it is over; a
@@ -199,7 +233,7 @@ def side_columns(written: str | list[str] | dict[str, str] | None) -> tuple[tupl
     """
     if written is None:
         return ()
-    if isinstance(written, dict):
+    if isinstance(written, Mapping):
         return tuple(written.items())
     return tuple((d, d) for d in ((written,) if isinstance(written, str) else written))
 
@@ -231,13 +265,25 @@ class RelationSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'a relation entry'
 
-    key: str | list[str] | dict[str, str]
-    values: str | list[str] | dict[str, str] | None = None
+    key: str | Listed[str] | Frozen[str, str]
+    values: str | Listed[str] | Frozen[str, str] | None = None
     #: Whether every combination of the key's dimensions needs a row:
     #: ``refused`` refuses data that leaves one out, and ``absent`` reads it
     #: as no row.
     missing: RelationMissing = 'refused'
     description: str | None = None
+
+    @field_validator('key', 'values')
+    @classmethod
+    def _sorted_by_role(
+        cls, v: str | tuple[str, ...] | Mapping[str, str] | None
+    ) -> str | tuple[str, ...] | Mapping[str, str] | None:
+        """One side's columns sorted by role as it loads, since their order reaches nothing a consumer reads."""
+        if isinstance(v, tuple):
+            return _sorted(v)
+        if isinstance(v, Mapping):
+            return Frozen(dict(sorted(v.items())))
+        return v
 
     @field_validator('missing', mode='before')
     @classmethod
@@ -254,11 +300,6 @@ class RelationSpec(_StrictSpec):
             )
             raise ValueError(msg)
         return v
-
-    @model_serializer(mode='wrap')
-    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``missing`` is written where it is not ``refused``: refused is what leaving it out says."""
-        return _without_refused(cast('dict[str, object]', handler(self)))
 
     @property
     def pairs(self) -> tuple[tuple[str, str], ...]:
@@ -307,21 +348,13 @@ class DimensionSpec(_StrictSpec):
     ordered: bool = False
     description: str | None = None
 
-    @model_serializer(mode='wrap')
-    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``ordered`` is written where it is true: false is what leaving it out says."""
-        written = cast('dict[str, object]', handler(self))
-        if not self.ordered:
-            written.pop('ordered', None)
-        return written
-
 
 class ParameterSpec(_StrictSpec):
     """A declared parameter with dims and dtype, and what a missing row of its data means."""
 
     _label: ClassVar[str] = 'a parameter entry'
 
-    dims: list[str]
+    dims: Dims
     dtype: ParameterDtype = 'float'
     missing: Annotated[MissingReading | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
@@ -343,11 +376,6 @@ class ParameterSpec(_StrictSpec):
             msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _READINGS + '.'
             raise ValueError(msg)
         return v
-
-    @model_serializer(mode='wrap')
-    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``missing`` is written where it is not ``refused``: refused is what leaving it out says."""
-        return _without_refused(cast('dict[str, object]', handler(self)))
 
     @model_validator(mode='after')
     def _a_value_fits_the_dtype(self) -> ParameterSpec:
@@ -417,7 +445,7 @@ class VariableSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'a variable entry'
 
-    dims: list[str]
+    dims: Dims
     where: str | None = None
     bounds: BoundsSpec = BoundsSpec()
     domain: VariableDomain = 'continuous'
@@ -459,11 +487,6 @@ class _GivenEntrySpec(_StrictSpec):
     the file did, and [`merge`][mathspec.merge] would compare that instead.
     """
 
-    @model_serializer(mode='wrap')
-    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        written = cast('dict[str, object]', handler(self))
-        return {key: value for key, value in written.items() if key in self.model_fields_set}
-
 
 class GivenParameterSpec(_GivenEntrySpec):
     """Data this file reads and another file declares.
@@ -475,7 +498,7 @@ class GivenParameterSpec(_GivenEntrySpec):
 
     _label: ClassVar[str] = 'a given parameter entry'
 
-    dims: list[str]
+    dims: Dims
     dtype: ParameterDtype = 'float'
     description: str | None = None
 
@@ -489,7 +512,7 @@ class GivenVariableSpec(_GivenEntrySpec):
 
     _label: ClassVar[str] = 'a given variable entry'
 
-    dims: list[str]
+    dims: Dims
     domain: VariableDomain = 'continuous'
     description: str | None = None
 
@@ -504,7 +527,7 @@ class GivenConstraintSpec(_GivenEntrySpec):
 
     _label: ClassVar[str] = 'a given constraint entry'
 
-    dims: list[str]
+    dims: Dims
     description: str | None = None
 
 
@@ -525,7 +548,7 @@ class GivenExpressionSpec(_GivenEntrySpec):
 
     _label: ClassVar[str] = 'a given expression entry'
 
-    dims: list[str]
+    dims: Dims
     description: str | None = None
 
 
@@ -539,8 +562,13 @@ class GivenConditionSpec(_GivenEntrySpec):
 
     _label: ClassVar[str] = 'a given condition entry'
 
-    dims: list[str]
+    dims: Dims
     description: str | None = None
+
+
+def _by_name(section: object) -> object:
+    """*section*'s entries sorted by name, so the order a file lists them in reaches nothing a consumer reads."""
+    return Frozen(dict(sorted(section.items()))) if isinstance(section, Mapping) else section
 
 
 class GivenSpec(_StrictSpec):
@@ -549,15 +577,20 @@ class GivenSpec(_StrictSpec):
     _label: ClassVar[str] = "the 'given:' section"
 
     #: Data another file declares ([`GivenParameterSpec`][]).
-    parameters: dict[str, GivenParameterSpec] = {}
+    parameters: Frozen[str, GivenParameterSpec] = Frozen({})
     #: Columns another file introduces ([`GivenVariableSpec`][]).
-    variables: dict[str, GivenVariableSpec] = {}
+    variables: Frozen[str, GivenVariableSpec] = Frozen({})
     #: Row families another model builds ([`GivenConstraintSpec`][]).
-    constraints: dict[str, GivenConstraintSpec] = {}
+    constraints: Frozen[str, GivenConstraintSpec] = Frozen({})
     #: Named expressions another file defines ([`GivenExpressionSpec`][]).
-    expressions: dict[str, GivenExpressionSpec] = {}
+    expressions: Frozen[str, GivenExpressionSpec] = Frozen({})
     #: Named conditions another file defines ([`GivenConditionSpec`][]).
-    conditions: dict[str, GivenConditionSpec] = {}
+    conditions: Frozen[str, GivenConditionSpec] = Frozen({})
+
+    @field_validator('*')
+    @classmethod
+    def _entries_by_name(cls, v: object) -> object:
+        return _by_name(v)
 
     def __bool__(self) -> bool:
         """Whether the file reads anything it does not build."""
@@ -569,7 +602,7 @@ class ConstraintSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'a constraint entry'
 
-    dims: list[str]
+    dims: Dims
     where: str | None = None
     expression: str
     description: str | None = None
@@ -595,8 +628,9 @@ class MacroSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'a macro entry'
 
-    args: list[str] = []
-    kwargs: list[str] = []
+    args: Listed[str] = ()
+    #: Sorted by name as it loads: a call passes each one by name, so their order means nothing.
+    kwargs: Annotated[Listed[str], AfterValidator(_sorted)] = ()
     template: str
     description: str | None = None
 
@@ -675,9 +709,10 @@ class ExpressionSpec(_StrictSpec):
     expression: Expression | None = None
     #: The dimensions the quantity ranges over. ``cases:`` needs it, and a plain
     #: entry that leaves it out takes the dims of its body.
-    dims: list[str] | None = None
-    #: The regions, keyed by the name labelling the row each prints; every ``when`` is proved apart from the others.
-    cases: Annotated[dict[str, ExpressionCaseSpec], Field(min_length=1)] = {}
+    dims: Dims | None = None
+    #: The regions, keyed by the name labelling the row each prints and sorted by that name as the spec loads;
+    #: every ``when`` is proved apart from the others, so their order means nothing.
+    cases: Annotated[Mapping[str, ExpressionCaseSpec], Field(min_length=1), AfterValidator(Frozen)] = Frozen({})
     #: The value wherever no case's ``when`` holds, printed as the last row.
     otherwise: Expression | None = None
     #: The sum this entry adds to as a term, a ``given: expressions:`` entry of this file, or ``None``.
@@ -688,6 +723,11 @@ class ExpressionSpec(_StrictSpec):
     @classmethod
     def _from_string(cls, data: object) -> object:
         return {'expression': data} if isinstance(data, str) else data
+
+    @field_validator('cases')
+    @classmethod
+    def _regions_by_name(cls, v: Mapping[str, ExpressionCaseSpec]) -> object:
+        return _by_name(v)
 
     @model_validator(mode='after')
     def _one_form_or_the_other(self) -> Self:
@@ -897,7 +937,7 @@ class PiecewiseSpec(_StrictSpec):
 
     #: The breakpoint dimension.
     over: str
-    links: list[PiecewiseLinkSpec]
+    links: Listed[PiecewiseLinkSpec]
     #: Which of [`PIECEWISE_METHODS`][] restricts the weights.
     method: PiecewiseMethod = 'adjacency'
     #: What the weights sum to: 1 where absent, or a binary that pins the formulation to 0 when it is 0.
@@ -1011,13 +1051,17 @@ SUPPORTED_VERSIONS: tuple[int, ...] = (0,)
 
 
 def _without_absence(value: object) -> object:
-    """*value* with every absent entry stripped, recursively — see [`Spec._drop_absence`][]."""
+    """*value* with every absent entry stripped, recursively — see [`Spec._drop_absence`][].
+
+    A mapping that stripping emptied goes, and one written empty stays: an
+    entry that sets no field, such as ``generator: {}``, still declares it.
+    """
     if not isinstance(value, dict):
         return value
     kept = {}
     for key, before in value.items():
         after = _without_absence(before)
-        if not _is_absent(after) and after != {}:
+        if not _is_absent(after) and (after != {} or before == {}):
             kept[key] = after
     return kept
 
@@ -1034,7 +1078,11 @@ class Spec(_StrictSpec):
     any route — ``to_spec``, [`model_validate`][], the constructor — runs
     every load-time check, expression pass included, and raises
     [`LanguageError`][mathspec.errors.LanguageError] on a spec the language refuses.
-    Holding one is the proof, so nothing downstream checks it again.
+    Holding one is the proof, so nothing downstream checks it again. Nothing
+    changes one after it loads either: a section is a read-only mapping, a
+    list is a tuple, and a field cannot be set, so [`to_yaml`][] writes the
+    file [`program`][] was lowered from. [`override`][mathspec.override] is
+    the edit, and loads what it makes as a new spec.
 
     The API is the thirteen sections plus ``version`` and
     ``description``, three ways back out — [`to_dict`][] for the spec as
@@ -1056,18 +1104,18 @@ class Spec(_StrictSpec):
     description: str | None = None
     #: What this file reads and does not build ([`GivenSpec`][]). Empty in a file that stands alone.
     given: GivenSpec = GivenSpec()
-    dimensions: dict[str, DimensionSpec] = {}
-    relations: dict[str, RelationSpec] = {}
-    parameters: dict[str, ParameterSpec] = {}
-    conditions: dict[str, ConditionSpec] = {}
-    variables: dict[str, VariableSpec] = {}
-    expressions: dict[str, ExpressionSpec] = {}
+    dimensions: Frozen[str, DimensionSpec] = Frozen({})
+    relations: Frozen[str, RelationSpec] = Frozen({})
+    parameters: Frozen[str, ParameterSpec] = Frozen({})
+    conditions: Frozen[str, ConditionSpec] = Frozen({})
+    variables: Frozen[str, VariableSpec] = Frozen({})
+    expressions: Frozen[str, ExpressionSpec] = Frozen({})
     objective: ObjectiveSpec | None = None
-    constraints: dict[str, ConstraintSpec] = {}
-    sos: dict[str, SosSpec] = {}
-    piecewise: dict[str, PiecewiseSpec] = {}
-    assumptions: dict[str, AssumptionSpec] = {}
-    macros: dict[str, MacroSpec] = {}
+    constraints: Frozen[str, ConstraintSpec] = Frozen({})
+    sos: Frozen[str, SosSpec] = Frozen({})
+    piecewise: Frozen[str, PiecewiseSpec] = Frozen({})
+    assumptions: Frozen[str, AssumptionSpec] = Frozen({})
+    macros: Frozen[str, MacroSpec] = Frozen({})
 
     @cached_property
     def program(self) -> Program:
@@ -1116,6 +1164,11 @@ class Spec(_StrictSpec):
         except ValidationError as exc:
             raise schema_error(exc) from None
 
+    @field_validator('*')
+    @classmethod
+    def _entries_by_name(cls, v: object) -> object:
+        return _by_name(v)
+
     @field_validator('version')
     @classmethod
     def _check_version(cls, v: int) -> int:
@@ -1137,9 +1190,12 @@ class Spec(_StrictSpec):
 
         An empty list stays, being a value rather than an absence (``dims:
         []`` is a scalar). On the serializer so that ``model_dump``,
-        [`to_dict`][] and [`to_yaml`][] agree.
+        [`to_dict`][] and [`to_yaml`][] agree. ``version`` is written whether
+        the file wrote it or not, so a written file states the language it is
+        read in.
         """
-        return cast('dict[str, object]', _without_absence(handler(self)))
+        written = _as_set(self, cast('dict[str, object]', handler(self)))
+        return {'version': self.version, **cast('dict[str, object]', _without_absence(written))}
 
     def to_dict(self) -> dict[str, object]:
         """The spec as plain data. ``to_spec(m.to_dict())`` reproduces it."""
@@ -1148,9 +1204,13 @@ class Spec(_StrictSpec):
     def to_yaml(self, *, canonical: bool = False) -> str:
         """The file a reviewer reads — including for a spec that never had one.
 
+        The fields the file wrote, and no others: a default it writes out is
+        written back, and one it leaves out is not. ``version`` is always
+        written. Sections and the keys of an entry come in the schema's order.
+
         Args:
             canonical: Write the normal form instead: entries sorted by
-                name, every expression printed from its parsed tree, one term
+                name, no field at its default, every expression printed from its parsed tree, one term
                 of a sum per line. Two files that state the same spec write
                 the same text, so what a diff shows is a difference in the
                 spec. The normal form loads to the same spec and not to an
@@ -1216,7 +1276,7 @@ class Spec(_StrictSpec):
             f'{section}: {name!r} is not a name. Start it with a letter or an underscore, '
             f'then use only letters, digits or underscores.'
             for section, value in sections
-            if isinstance(value, dict)
+            if isinstance(value, Mapping)
             for name in value
             if not re.fullmatch(NAME, name)
         ]

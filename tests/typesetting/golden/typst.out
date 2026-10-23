@@ -4,60 +4,60 @@
 every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 {net} \~ ^ \\ \*star\* \@ref \<label\>, and `a_name` in backticks set in code
 
 == Sets
-/ $cal(T)$: index $t$ --- `snapshot` (`int` coordinates) with $upright("season_of"): cal(T) arrow.r cal(S), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("rep_of"): cal(T) arrow.r cal(T)$
-/ $cal(G)$: index $g$ --- `generator` with $upright("gen_bus"): cal(G) arrow.r cal(B), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("connection") subset.eq cal(G) times cal(B), upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$, `connection` is `absent` where the data has no row
-/ $cal(B)$: index $b$ --- `bus` with $upright("gen_bus"): cal(G) arrow.r cal(B), upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("connection") subset.eq cal(G) times cal(B), upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row
-/ $cal(Z)$: index $z$ --- `zone` with $upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z)$, `area_of` is `absent` where the data has no row
+/ $cal(B)$: index $b$ --- `bp`
+/ $cal(U)$: index $u$ --- `bus` with $upright("area_of"): cal(U) arrow.r cal(Z), upright("connection") subset.eq cal(U) times cal(G), upright("gen_bt"): cal(G) arrow.r cal(U) times cal(E), upright("gen_bus"): cal(G) arrow.r cal(U), upright("zone_of"): cal(U) arrow.r cal(Z)$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row
+/ $cal(G)$: index $g$ --- `generator` with $upright("connection") subset.eq cal(U) times cal(G), upright("gen_bt"): cal(G) arrow.r cal(U) times cal(E), upright("gen_bus"): cal(G) arrow.r cal(U), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z)$, `connection` is `absent` where the data has no row
 / $cal(S)$: index $s$ --- `season` with $upright("season_of"): cal(T) arrow.r cal(S)$
-/ $cal(E)$: index $e$ --- `technology` with $upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$
-/ $cal(A)$: index $a$ --- `bp`
+/ $cal(T)$: index $t$ --- `snapshot` (`int` coordinates) with $upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("rep_of"): cal(T) arrow.r cal(T), upright("season_of"): cal(T) arrow.r cal(S)$
+/ $cal(E)$: index $e$ --- `technology` with $upright("gen_bt"): cal(G) arrow.r cal(U) times cal(E)$
+/ $cal(Z)$: index $z$ --- `zone` with $upright("area_of"): cal(U) arrow.r cal(Z), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("zone_of"): cal(U) arrow.r cal(Z)$, `area_of` is `absent` where the data has no row
 
 == Parameters
+/ $upright("bp_heat")$: `bp_heat` over $cal(B) times cal(G)$
+/ $upright("bp_run")$: `bp_run` over $cal(B) times cal(G)$
+/ $upright("bp_x")$: `bp_x` over $cal(B) times cal(G)$, `neutral` where the data has no row
+/ $upright("bp_y")$: `bp_y` over $cal(B) times cal(G)$, `neutral` where the data has no row
+/ $upright("budget")$: `budget` (scalar)
+/ $upright("cost")$: `cost` over $cal(G)$, `neutral` where the data has no row
+/ $upright("eta")$: `eta` over $cal(G)$
+/ $upright("growth")$: `growth` (scalar)
+/ $upright("is_flexible")$: `is_flexible` over $cal(G)$, `false` where the data has no row
+/ $upright("lead")$: `lead` over $cal(G)$
+/ $upright("load")$: `load` over $cal(U) times cal(T)$
+/ $upright("min_up")$: `min_up` over $cal(G)$
 / $upright("p")^(upright("max"))$: `p_max` over $cal(G)$, $infinity$ where the data has no row
 / $upright("p")^(upright("min"))$: `p_min` over $cal(G)$
-/ $upright("cost")$: `cost` over $cal(G)$, `neutral` where the data has no row
-/ $upright("load")$: `load` over $cal(T) times cal(B)$
-/ $upright("is_flexible")$: `is_flexible` over $cal(G)$, `false` where the data has no row
+/ $upright("tech_cap")$: `tech_cap` over $cal(U) times cal(E)$, `absent` where the data has no row
 / $upright("zone_cap")$: `zone_cap` over $cal(Z)$
-/ $upright("tech_cap")$: `tech_cap` over $cal(B) times cal(E)$, `absent` where the data has no row
-/ $upright("min_up")$: `min_up` over $cal(G)$
-/ $upright("eta")$: `eta` over $cal(G)$
-/ $upright("lead")$: `lead` over $cal(G)$
-/ $upright("budget")$: `budget` (scalar)
-/ $upright("growth")$: `growth` (scalar)
-/ $upright("bp_x")$: `bp_x` over $cal(G) times cal(A)$, `neutral` where the data has no row
-/ $upright("bp_y")$: `bp_y` over $cal(G) times cal(A)$, `neutral` where the data has no row
-/ $upright("bp_heat")$: `bp_heat` over $cal(G) times cal(A)$
-/ $upright("bp_run")$: `bp_run` over $cal(G) times cal(A)$
 
 == Conditions
 / $upright("dispatchable")$: `dispatchable` over $cal(G)$ --- a unit that dispatches and cannot be turned down
 / $upright("priced_dispatch")$: `priced_dispatch` over $cal(G)$
 
 == Variables
-/ $p$: `p` over $cal(T) times cal(G)$
-/ $italic("spill")$: `spill` over $cal(T)$
-/ $italic("slack")$: `slack` over $cal(T)$
-/ $theta$: `theta` over $cal(B)$
-/ $italic("on")$: `on` over $cal(T) times cal(G)$
-/ $italic("units")$: `units` over $cal(G)$
-/ $italic("spare")$: `spare` over $cal(G)$
-/ $italic("reserve")$: `reserve` (scalar)
+/ $italic("fuel")$: `fuel` over $cal(G) times cal(T)$
 / $italic("headroom")$: `headroom` (scalar), `neutral` where the mask leaves it out
-/ $italic("weight")$: `weight` over $cal(T) times cal(G)$
-/ $italic("fuel")$: `fuel` over $cal(T) times cal(G)$
-/ $italic("heat")$: `heat` over $cal(T) times cal(G)$
-/ $italic("op_cost")$: `op_cost` over $cal(T) times cal(G)$
-/ $italic("warm")$: `warm` over $cal(T) times cal(G)$
+/ $italic("heat")$: `heat` over $cal(G) times cal(T)$
+/ $italic("on")$: `on` over $cal(G) times cal(T)$
+/ $italic("op_cost")$: `op_cost` over $cal(G) times cal(T)$
+/ $p$: `p` over $cal(G) times cal(T)$
+/ $italic("reserve")$: `reserve` (scalar)
+/ $italic("slack")$: `slack` over $cal(T)$
+/ $italic("spare")$: `spare` over $cal(G)$
+/ $italic("spill")$: `spill` over $cal(T)$
+/ $theta$: `theta` over $cal(U)$
+/ $italic("units")$: `units` over $cal(G)$
+/ $italic("warm")$: `warm` over $cal(G) times cal(T)$
+/ $italic("weight")$: `weight` over $cal(G) times cal(T)$
 
 == Definitions
-/ $upright("spend")^(upright("cap"))$: `spend_cap` over $cal(G)$
-/ $italic("spend")$: `spend` over $cal(T)$ --- what a snapshot's dispatch costs
-/ $upright("rating")$: `rating` over $cal(G) times cal(T)$
 / $italic("lcoe")$: `lcoe` (scalar)
+/ $italic("marginal_price")$: `marginal_price` over $cal(U) times cal(T)$
 / $italic("net")$: `net` over $cal(T)$ --- what a snapshot spills, less what it lacks
-/ $italic("marginal_price")$: `marginal_price` over $cal(B) times cal(T)$
-/ $upright("startup_cost")$: `startup_cost` over $cal(T) times cal(G)$ --- what starting a unit in this snapshot costs, which the horizon's edge changes
+/ $upright("rating")$: `rating` over $cal(G) times cal(T)$
+/ $italic("spend")$: `spend` over $cal(T)$ --- what a snapshot's dispatch costs
+/ $upright("spend")^(upright("cap"))$: `spend_cap` over $cal(G)$
+/ $upright("startup_cost")$: `startup_cost` over $cal(G) times cal(T)$ --- what starting a unit in this snapshot costs, which the horizon's edge changes
 
 == Notation
 / $t minus.o k$: `edge='wrap'` --- $t-k$, cyclic
@@ -74,115 +74,115 @@ $ upright("dispatchable") & upright("dispatchable")_(g) & arrow.l.r.double.long 
 
 == Variable domains
 #set math.equation(numbering: "(1)")
-$ upright("p") & upright("p")^(upright("min"))_(g) <= p_(t,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) colon upright("p")^(upright("max"))_(g) > 0 and not upright("is_flexible")_(g) or upright("p")^(upright("min"))_(g) > 0 \
-  upright("spill") & italic("spill")_(t) & >= 0 & forall t in cal(T) \
-  upright("slack") & italic("slack")_(t) & <= 100 & forall t in cal(T) \
-  upright("theta") & theta_(b) & in RR & forall b in cal(B) \
-  upright("on") & italic("on")_(t,g) & in {0, 1} & forall t in cal(T), g in cal(G) \
-  upright("units") & 0 <= italic("units")_(g) & <= 10, italic("units")_(g) in ZZ & forall g in cal(G) \
-  upright("spare") & italic("spare")_(g) & in ZZ & forall g in cal(G) \
-  upright("reserve") & italic("reserve") & >= 0 \
+$ upright("fuel") & italic("fuel")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
   upright("headroom") & italic("headroom") & >= 0 & upright("where ") upright("budget") upright(" is defined") \
-  upright("weight") & 0 <= italic("weight")_(t,g) & <= 1 & forall t in cal(T), g in cal(G) \
-  upright("fuel") & italic("fuel")_(t,g) & >= 0 & forall t in cal(T), g in cal(G) \
-  upright("heat") & italic("heat")_(t,g) & >= 0 & forall t in cal(T), g in cal(G) \
-  upright("op_cost") & italic("op_cost")_(t,g) & >= 0 & forall t in cal(T), g in cal(G) \
-  upright("warm") & italic("warm")_(t,g) & in {0, 1} & forall t in cal(T), g in cal(G) colon upright("is_flexible")_(g) $
+  upright("heat") & italic("heat")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
+  upright("on") & italic("on")_(g,t) & in {0, 1} & forall g in cal(G), t in cal(T) \
+  upright("op_cost") & italic("op_cost")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
+  upright("p") & upright("p")^(upright("min"))_(g) <= p_(g,t) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) colon upright("p")^(upright("max"))_(g) > 0 and not upright("is_flexible")_(g) or upright("p")^(upright("min"))_(g) > 0 \
+  upright("reserve") & italic("reserve") & >= 0 \
+  upright("slack") & italic("slack")_(t) & <= 100 & forall t in cal(T) \
+  upright("spare") & italic("spare")_(g) & in ZZ & forall g in cal(G) \
+  upright("spill") & italic("spill")_(t) & >= 0 & forall t in cal(T) \
+  upright("theta") & theta_(u) & in RR & forall u in cal(U) \
+  upright("units") & 0 <= italic("units")_(g) & <= 10, italic("units")_(g) in ZZ & forall g in cal(G) \
+  upright("warm") & italic("warm")_(g,t) & in {0, 1} & forall g in cal(G), t in cal(T) colon upright("is_flexible")_(g) \
+  upright("weight") & 0 <= italic("weight")_(g,t) & <= 1 & forall g in cal(G), t in cal(T) $
 
 == Definitions
 #set math.equation(numbering: "(1)")
-$ upright("spend_cap") & upright("spend")^(upright("cap"))_(g) & = upright("cost")_(g) dot 2 & forall g in cal(G) \
-  upright("spend") & italic("spend")_(t) & = sum_(g in cal(G)) p_(t,g) dot upright("cost")_(g) & forall t in cal(T) \
-  upright("rating") & upright("rating")_(g,t) & = upright("eta")_(g) dot upright("p")^(upright("max"))_(g) dot (sum_(b in cal(B)) upright("load")_(t,b)) & forall g in cal(G), t in cal(T) \
-  upright("lcoe") & italic("lcoe") & = frac(sum_(t in cal(T), g in cal(G)) p_(t,g) dot upright("cost")_(g), sum_(t in cal(T), g in cal(G)) p_(t,g)) \
+$ upright("lcoe") & italic("lcoe") & = frac(sum_(g in cal(G), t in cal(T)) p_(g,t) dot upright("cost")_(g), sum_(g in cal(G), t in cal(T)) p_(g,t)) \
+  upright("marginal_price") & italic("marginal_price")_(u,t) & = lambda_(upright("balance"),u,t) & forall u in cal(U), t in cal(T) \
   upright("net") & italic("net")_(t) & = -italic("spill")_(t) + italic("slack")_(t) & forall t in cal(T) \
-  upright("marginal_price") & italic("marginal_price")_(b,t) & = lambda_(upright("balance"),t,b) & forall b in cal(B), t in cal(T) \
-  upright("startup_cost") & upright("startup_cost")_(t,g) & = cases(upright("cost")_(g) & upright("if ") upright("pos")(t) = 0, upright("cost")_(g) dot 2 & upright("if ") upright("pos")(t) > 0 and upright("season_of")(t) = upright("'winter'"), 0 & upright("otherwise")) & forall t in cal(T), g in cal(G) $
+  upright("rating") & upright("rating")_(g,t) & = upright("eta")_(g) dot upright("p")^(upright("max"))_(g) dot (sum_(u in cal(U)) upright("load")_(u,t)) & forall g in cal(G), t in cal(T) \
+  upright("spend") & italic("spend")_(t) & = sum_(g in cal(G)) p_(g,t) dot upright("cost")_(g) & forall t in cal(T) \
+  upright("spend_cap") & upright("spend")^(upright("cap"))_(g) & = upright("cost")_(g) dot 2 & forall g in cal(G) \
+  upright("startup_cost") & upright("startup_cost")_(g,t) & = cases(upright("cost")_(g) & upright("if ") upright("pos")(t) = 0, upright("cost")_(g) dot 2 & upright("if ") upright("pos")(t) > 0 and upright("season_of")(t) = upright("'winter'"), 0 & upright("otherwise")) & forall g in cal(G), t in cal(T) $
 
 == Objective
 #set math.equation(numbering: "(1)")
-$  & max & sum_(t in cal(T), g in cal(G)) p_(t,g) dot upright("cost")_(g) + sum_(t in cal(T), g in cal(G)) p_(t,g) dot p_(t,g) dot upright("cost")_(g) + sum_(t in cal(T), g in cal(G)) p_(t,g) dot upright("cost")_(g) dot upright("growth")^(upright("lead")_(g)) + sum_(t in cal(T), g in cal(G)) p_(t,g) dot (upright("growth")^(upright("lead")_(g)))^(2) + sum_(t in cal(T), g in cal(G)) p_(t,g) dot upright("p")^(upright("max"))_(g) - italic("reserve") - italic("headroom") $
+$  & max & sum_(g in cal(G), t in cal(T)) p_(g,t) dot upright("cost")_(g) + sum_(g in cal(G), t in cal(T)) p_(g,t) dot p_(g,t) dot upright("cost")_(g) + sum_(g in cal(G), t in cal(T)) p_(g,t) dot upright("cost")_(g) dot upright("growth")^(upright("lead")_(g)) + sum_(g in cal(G), t in cal(T)) p_(g,t) dot (upright("growth")^(upright("lead")_(g)))^(2) + sum_(g in cal(G), t in cal(T)) p_(g,t) dot upright("p")^(upright("max"))_(g) - italic("reserve") - italic("headroom") $
 
 == Subject to
 #set math.equation(numbering: "(1)")
-$ upright("budgeted") & italic("spend")_(t) & <= upright("budget") & forall t in cal(T) \
-  upright("starts") & p_(t,g) & <= upright("startup_cost")_(t,g) & forall t in cal(T), g in cal(G) \
-  upright("under_rating") & p_(t,g) & <= upright("rating")_(g,t) & forall t in cal(T), g in cal(G) \
-  upright("balance") & sum_(g in cal(G) colon upright("gen_bus")(g) = b) p_(t,g) + italic("spill")_(t) - italic("slack")_(t) & = upright("load")_(t,b) & forall t in cal(T), b in cal(B) \
-  upright("netted") & sum_(g in cal(G) colon upright("gen_bus")(g) = b) p_(t,g) + italic("net")_(t) & = upright("load")_(t,b) & forall t in cal(T), b in cal(B) \
-  upright("ramp") & p_(t,g) - p_(t minus.o 1,g) & <= p_(t - 1,g) + upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) \
-  upright("edges") & p_(t minus.square_(0) 1,g) & <= p_(t plus.square_(0) 1,g) + upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) \
-  upright("ahead") & p_(t,g) & <= p_(t plus.o 1,g) & forall t in cal(T), g in cal(G) \
-  upright("composed") & p_(t - 2,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) \
-  upright("uncomposed") & p_((t - 1) minus.square_(0) upright("lead"),g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) \
-  upright("crossed") & p_(t minus.o 1,g + 1) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) \
-  upright("lead_time") & p_(t minus.square_(0) upright("lead"),g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) \
-  upright("in_season") & p_(t,g) & <= p_(t minus.o^(upright("season_of")(t)) 1,g) & forall t in cal(T), g in cal(G) \
-  upright("held_in_season") & p_(t,g) & <= p_(t minus.square_(0)^(upright("season_of")(t)) 1,g) & forall t in cal(T), g in cal(G) \
-  upright("window") & sum_(t' in cal(T) colon 0 <= t - t' < 3) italic("on")_(t',g) & <= italic("units")_(g) & forall t in cal(T), g in cal(G) \
-  upright("history") & sum_(t' in cal(T) colon 0 <= t minus.o t' < upright("min_up")) italic("on")_(t',g) & <= italic("units")_(g) & forall t in cal(T), g in cal(G) \
-  upright("seasonal_window") & sum_(t' in cal(T) colon 0 <= t -^(upright("season_of")(t)) t' < 3) italic("on")_(t',g) & <= italic("units")_(g) & forall t in cal(T), g in cal(G) \
-  upright("lookup") & italic("spill")_(t) & <= upright("zone_cap")_(upright("zone_of")(b)) & forall t in cal(T), b in cal(B) \
-  upright("grouped_once") & sum_(g in cal(G) colon upright("gen_bt.bus")(g) = b and upright("gen_bt.technology")(g) = e) p_(t,g) & <= upright("tech_cap")_(b,e) & forall t in cal(T), b in cal(B), e in cal(E) \
-  upright("looked_up_once") & italic("units")_(g) & <= upright("tech_cap")_(upright("gen_bt.bus")(g),upright("gen_bt.technology")(g)) & forall g in cal(G) \
-  upright("within_bus") & italic("units")_(g) & <= italic("units")_(g minus.square_(0)^(upright("gen_bt.bus")(g)) 1) & forall g in cal(G) colon upright("pos")_((upright("gen_bt.bus")(g), upright("gen_bt.technology")(g)))(g) = 0 \
-  upright("relational") & sum_(g in cal(G) colon (g, b) in upright("connection")) p_(t,g) & <= upright("load")_(t,b) & forall t in cal(T), b in cal(B) \
-  upright("connected") & p_(t,g) & <= upright("load")_(t,b) & forall t in cal(T), g in cal(G), b in cal(B) colon (g, b) in upright("connection") \
-  upright("representative") & sum_(t' in cal(T) colon upright("rep_of")(t') = t) italic("spill")_(t') & <= italic("spill")_(upright("rep_of")(t)) & forall t in cal(T) \
-  upright("zonal") & sum_(g in cal(G) colon upright("gen_zone")(g, t) = z) p_(t,g) & <= upright("zone_cap")_(z) & forall t in cal(T), z in cal(Z) \
-  upright("zonal_history") & sum_(t in cal(T) colon upright("gen_zone")(g, t) = z) p_(t,g) & <= upright("zone_cap")_(z) & forall g in cal(G), z in cal(Z) \
-  upright("zonal_membership") & sum_(g in cal(G) colon upright("gen_zone")(g, t) upright(" is defined")) italic("units")_(g) & <= upright("budget") & forall t in cal(T) \
-  upright("zonal_lookup") & p_(t,g) & <= italic("spill")_(t) dot upright("zone_cap")_(upright("gen_zone")(g, t)) & forall t in cal(T), g in cal(G) colon upright("gen_zone")(g, t) = upright("'north'") and upright("pos")_(upright("gen_zone")(g, t))(g) = 0 \
-  upright("arithmetic") & sum_(g in cal(G)) (frac(p_(t,g), 2) - upright("cost")_(g) + 10^(-5) dot p_(t,g) + 2.5 times 10^(-7) dot upright("cost")_(g) + 0.5 dot p_(t,g)) & >= -(sum_(g in cal(G)) p_(t,g)) dot (-3) & forall t in cal(T) \
-  upright("total") & sum_(t in cal(T), g in cal(G)) p_(t,g) & <= upright("budget") \
-  upright("scalar") & italic("units")_(g) & <= upright("budget") & forall g in cal(G) colon upright("cost")_(g) upright(" is defined") \
-  upright("running") & theta_(b) & <= upright("load")_(t,b) & forall t in cal(T), b in cal(B) colon theta_(b) upright(" exists") and t >= 3 \
-  upright("first") & italic("on")_(t,g) & = 1 & forall t in cal(T), g in cal(G) colon upright("pos")(t) = 0 or upright("pos")_(upright("season_of")(t))(t) = 0 \
-  upright("last") & italic("on")_(t,g) & = 0 & forall t in cal(T), g in cal(G) colon upright("pos")(t) = abs(cal(T)) - 1 or upright("pos")_(upright("season_of")(t))(t) = abs(cal(T)_(upright("season_of")(t))) - 1 \
-  upright("northern") & italic("slack")_(t) & <= upright("load")_(t,b) & forall t in cal(T), b in cal(B) colon upright("zone_of")(b) = upright("'north'") and upright("zone_of")(b) != upright("area_of")(b) and upright("zone_of")(b) upright(" is defined") \
-  upright("efficiency") & p_(t,g) & <= upright("eta")_(g) dot upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) \
-  upright("ceiling") & theta_(b) & <= infinity & forall b in cal(B) \
+$ upright("ahead") & p_(g,t) & <= p_(g,t plus.o 1) & forall g in cal(G), t in cal(T) \
   upright("always") & italic("spill")_(t) & >= 0 & forall t in cal(T) \
-  upright("redundant") & italic("spill")_(t) & >= 0 & forall t in cal(T) colon italic("spill")_(t) upright(" exists") \
+  upright("arithmetic") & sum_(g in cal(G)) (frac(p_(g,t), 2) - upright("cost")_(g) + 10^(-5) dot p_(g,t) + 2.5 times 10^(-7) dot upright("cost")_(g) + 0.5 dot p_(g,t)) & >= -(sum_(g in cal(G)) p_(g,t)) dot (-3) & forall t in cal(T) \
+  upright("balance") & sum_(g in cal(G) colon upright("gen_bus")(g) = u) p_(g,t) + italic("spill")_(t) - italic("slack")_(t) & = upright("load")_(u,t) & forall u in cal(U), t in cal(T) \
+  upright("budgeted") & italic("spend")_(t) & <= upright("budget") & forall t in cal(T) \
+  upright("capped") & p_(g,t) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) colon upright("spend")^(upright("cap"))_(g) > 0 or not upright("is_flexible")_(g) \
+  upright("ceiling") & theta_(u) & <= infinity & forall u in cal(U) \
+  upright("composed") & p_(g,t - 2) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
+  upright("connected") & p_(g,t) & <= upright("load")_(u,t) & forall u in cal(U), g in cal(G), t in cal(T) colon (u, g) in upright("connection") \
+  upright("counted") & theta_(u) & <= upright("budget") & forall u in cal(U) colon abs({e in cal(E) colon upright("tech_cap")_(u,e) > 0}) >= 2 \
+  upright("counted_here") & theta_(u) & <= upright("tech_cap")_(u,e) & forall u in cal(U), e in cal(E) colon abs({e' in cal(E) colon upright("tech_cap")_(u,e') > 0}) >= 2 \
+  upright("covered") & sum_(g in cal(G), t in cal(T)) p_(g,t) & <= upright("budget") & upright("where ") sum_(g in cal(G)) upright("p")^(upright("max"))_(g) >= upright("budget") \
+  upright("crossed") & p_(g + 1,t minus.o 1) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
+  upright("edges") & p_(g,t minus.square_(0) 1) & <= p_(g,t plus.square_(0) 1) + upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
+  upright("efficiency") & p_(g,t) & <= upright("eta")_(g) dot upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
+  upright("first") & italic("on")_(g,t) & = 1 & forall g in cal(G), t in cal(T) colon upright("pos")(t) = 0 or upright("pos")_(upright("season_of")(t))(t) = 0 \
+  upright("grouped_once") & sum_(g in cal(G) colon upright("gen_bt.bus")(g) = u and upright("gen_bt.technology")(g) = e) p_(g,t) & <= upright("tech_cap")_(u,e) & forall u in cal(U), t in cal(T), e in cal(E) \
+  upright("held_in_season") & p_(g,t) & <= p_(g,t minus.square_(0)^(upright("season_of")(t)) 1) & forall g in cal(G), t in cal(T) \
+  upright("history") & sum_(t' in cal(T) colon 0 <= t minus.o t' < upright("min_up")) italic("on")_(g,t') & <= italic("units")_(g) & forall g in cal(G), t in cal(T) \
+  upright("in_season") & p_(g,t) & <= p_(g,t minus.o^(upright("season_of")(t)) 1) & forall g in cal(G), t in cal(T) \
+  upright("last") & italic("on")_(g,t) & = 0 & forall g in cal(G), t in cal(T) colon upright("pos")(t) = abs(cal(T)) - 1 or upright("pos")_(upright("season_of")(t))(t) = abs(cal(T)_(upright("season_of")(t))) - 1 \
+  upright("lead_time") & p_(g,t minus.square_(0) upright("lead")) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
+  upright("looked_up_once") & italic("units")_(g) & <= upright("tech_cap")_(upright("gen_bt.bus")(g),upright("gen_bt.technology")(g)) & forall g in cal(G) \
+  upright("lookup") & italic("spill")_(t) & <= upright("zone_cap")_(upright("zone_of")(u)) & forall u in cal(U), t in cal(T) \
+  upright("margin") & p_(g,t) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) colon upright("p")^(upright("max"))_(g) - upright("p")^(upright("min"))_(g) > frac(upright("cost")_(g), 2) \
+  upright("masked") & p_(g,t) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) colon upright("priced_dispatch")_(g) and upright("pos")(t) > 0 \
+  upright("netted") & sum_(g in cal(G) colon upright("gen_bus")(g) = u) p_(g,t) + italic("net")_(t) & = upright("load")_(u,t) & forall u in cal(U), t in cal(T) \
   upright("never") & italic("slack")_(t) & >= 0 & forall t in cal(T) colon bot \
-  upright("margin") & p_(t,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) colon upright("p")^(upright("max"))_(g) - upright("p")^(upright("min"))_(g) > frac(upright("cost")_(g), 2) \
-  upright("ramped") & italic("slack")_(t) & <= upright("load")_(t,b) & forall t in cal(T), b in cal(B) colon upright("load")_(t,b) - upright("load")_(t minus.square_(0) 1,b) <= upright("zone_cap")_(upright("zone_of")(b)) and upright("pos")(t) > 0 \
-  upright("covered") & sum_(t in cal(T), g in cal(G)) p_(t,g) & <= upright("budget") & upright("where ") sum_(g in cal(G)) upright("p")^(upright("max"))_(g) >= upright("budget") \
-  upright("counted") & theta_(b) & <= upright("budget") & forall b in cal(B) colon abs({e in cal(E) colon upright("tech_cap")_(b,e) > 0}) >= 2 \
-  upright("counted_here") & theta_(b) & <= upright("tech_cap")_(b,e) & forall b in cal(B), e in cal(E) colon abs({e' in cal(E) colon upright("tech_cap")_(b,e') > 0}) >= 2 \
-  upright("run_start") & italic("slack")_(t) & <= upright("load")_(t,b) & forall t in cal(T), b in cal(B) colon upright("load")_(t,b) upright(" is defined") and not (upright("load")_(t - 1,b) upright(" is defined")) \
-  upright("zoned") & theta_(b) & <= upright("budget") & forall b in cal(B) colon upright("zone_cap")_(upright("zone_of")(b)) upright(" is defined") \
-  upright("capped") & p_(t,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) colon upright("spend")^(upright("cap"))_(g) > 0 or not upright("is_flexible")_(g) \
-  upright("masked") & p_(t,g) & <= upright("p")^(upright("max"))_(g) & forall t in cal(T), g in cal(G) colon upright("priced_dispatch")_(g) and upright("pos")(t) > 0 \
-  upright("adjacent") & (italic("weight")_(t,g))_(g in cal(G)) & in upright("SOS")2 & forall t in cal(T) \
-  upright("fuel_curve") & (p_(t,g), italic("fuel")_(t,g), italic("heat")_(t,g)) & in italic("on")_(t,g) dot upright("pwl")_(a in cal(A))(upright("bp_x")_(g,a), upright("bp_y")_(g,a), upright("bp_heat")_(g,a)) & forall g in cal(G), t in cal(T) \
-  upright("cost_curve") & italic("op_cost")_(t,g) & >= cases(italic("warm")_(t,g) & upright("if ") upright("is_flexible")_(g), 1 & upright("otherwise")) dot upright("pwl")_(a in cal(A) colon upright("bp_run")_(g,a))(upright("bp_x")_(g,a), upright("bp_y")_(g,a))(p_(t,g)) & forall g in cal(G), t in cal(T) \
-  upright("hull_curve") & (p_(t,g), italic("fuel")_(t,g)) & in upright("conv")_(a in cal(A))(upright("bp_x")_(g,a), upright("bp_heat")_(g,a)) & forall g in cal(G), t in cal(T) \
-  upright("lp_curve") & italic("fuel")_(t,g) & >= upright("pwl")_(a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined"))(upright("bp_x")_(g,a), upright("bp_y")_(g,a))(p_(t,g)) & forall g in cal(G), t in cal(T) \
-  upright("ramp_curve") & italic("heat")_(t,g) & <= upright("pwl")_(a in cal(A))(upright("bp_x")_(g,a), upright("bp_heat")_(g,a))(p_(t,g)) & forall g in cal(G), t in cal(T) $
+  upright("northern") & italic("slack")_(t) & <= upright("load")_(u,t) & forall u in cal(U), t in cal(T) colon upright("zone_of")(u) = upright("'north'") and upright("zone_of")(u) != upright("area_of")(u) and upright("zone_of")(u) upright(" is defined") \
+  upright("ramp") & p_(g,t) - p_(g,t minus.o 1) & <= p_(g,t - 1) + upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
+  upright("ramped") & italic("slack")_(t) & <= upright("load")_(u,t) & forall u in cal(U), t in cal(T) colon upright("load")_(u,t) - upright("load")_(u,t minus.square_(0) 1) <= upright("zone_cap")_(upright("zone_of")(u)) and upright("pos")(t) > 0 \
+  upright("redundant") & italic("spill")_(t) & >= 0 & forall t in cal(T) colon italic("spill")_(t) upright(" exists") \
+  upright("relational") & sum_(g in cal(G) colon (u, g) in upright("connection")) p_(g,t) & <= upright("load")_(u,t) & forall u in cal(U), t in cal(T) \
+  upright("representative") & sum_(t' in cal(T) colon upright("rep_of")(t') = t) italic("spill")_(t') & <= italic("spill")_(upright("rep_of")(t)) & forall t in cal(T) \
+  upright("run_start") & italic("slack")_(t) & <= upright("load")_(u,t) & forall u in cal(U), t in cal(T) colon upright("load")_(u,t) upright(" is defined") and not (upright("load")_(u,t - 1) upright(" is defined")) \
+  upright("running") & theta_(u) & <= upright("load")_(u,t) & forall u in cal(U), t in cal(T) colon theta_(u) upright(" exists") and t >= 3 \
+  upright("scalar") & italic("units")_(g) & <= upright("budget") & forall g in cal(G) colon upright("cost")_(g) upright(" is defined") \
+  upright("seasonal_window") & sum_(t' in cal(T) colon 0 <= t -^(upright("season_of")(t)) t' < 3) italic("on")_(g,t') & <= italic("units")_(g) & forall g in cal(G), t in cal(T) \
+  upright("starts") & p_(g,t) & <= upright("startup_cost")_(g,t) & forall g in cal(G), t in cal(T) \
+  upright("total") & sum_(g in cal(G), t in cal(T)) p_(g,t) & <= upright("budget") \
+  upright("uncomposed") & p_(g,(t - 1) minus.square_(0) upright("lead")) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
+  upright("under_rating") & p_(g,t) & <= upright("rating")_(g,t) & forall g in cal(G), t in cal(T) \
+  upright("window") & sum_(t' in cal(T) colon 0 <= t - t' < 3) italic("on")_(g,t') & <= italic("units")_(g) & forall g in cal(G), t in cal(T) \
+  upright("within_bus") & italic("units")_(g) & <= italic("units")_(g minus.square_(0)^(upright("gen_bt.bus")(g)) 1) & forall g in cal(G) colon upright("pos")_((upright("gen_bt.bus")(g), upright("gen_bt.technology")(g)))(g) = 0 \
+  upright("zonal") & sum_(g in cal(G) colon upright("gen_zone")(g, t) = z) p_(g,t) & <= upright("zone_cap")_(z) & forall t in cal(T), z in cal(Z) \
+  upright("zonal_history") & sum_(t in cal(T) colon upright("gen_zone")(g, t) = z) p_(g,t) & <= upright("zone_cap")_(z) & forall g in cal(G), z in cal(Z) \
+  upright("zonal_lookup") & p_(g,t) & <= italic("spill")_(t) dot upright("zone_cap")_(upright("gen_zone")(g, t)) & forall g in cal(G), t in cal(T) colon upright("gen_zone")(g, t) = upright("'north'") and upright("pos")_(upright("gen_zone")(g, t))(g) = 0 \
+  upright("zonal_membership") & sum_(g in cal(G) colon upright("gen_zone")(g, t) upright(" is defined")) italic("units")_(g) & <= upright("budget") & forall t in cal(T) \
+  upright("zoned") & theta_(u) & <= upright("budget") & forall u in cal(U) colon upright("zone_cap")_(upright("zone_of")(u)) upright(" is defined") \
+  upright("adjacent") & (italic("weight")_(g,t))_(g in cal(G)) & in upright("SOS")2 & forall t in cal(T) \
+  upright("cost_curve") & italic("op_cost")_(g,t) & >= cases(italic("warm")_(g,t) & upright("if ") upright("is_flexible")_(g), 1 & upright("otherwise")) dot upright("pwl")_(b in cal(B) colon upright("bp_run")_(b,g))(upright("bp_x")_(b,g), upright("bp_y")_(b,g))(p_(g,t)) & forall g in cal(G), t in cal(T) \
+  upright("fuel_curve") & (p_(g,t), italic("fuel")_(g,t), italic("heat")_(g,t)) & in italic("on")_(g,t) dot upright("pwl")_(b in cal(B))(upright("bp_x")_(b,g), upright("bp_y")_(b,g), upright("bp_heat")_(b,g)) & forall g in cal(G), t in cal(T) \
+  upright("hull_curve") & (p_(g,t), italic("fuel")_(g,t)) & in upright("conv")_(b in cal(B))(upright("bp_x")_(b,g), upright("bp_heat")_(b,g)) & forall g in cal(G), t in cal(T) \
+  upright("lp_curve") & italic("fuel")_(g,t) & >= upright("pwl")_(b in cal(B) colon upright("bp_x")_(b,g) upright(" is defined"))(upright("bp_x")_(b,g), upright("bp_y")_(b,g))(p_(g,t)) & forall g in cal(G), t in cal(T) \
+  upright("ramp_curve") & italic("heat")_(g,t) & <= upright("pwl")_(b in cal(B))(upright("bp_x")_(b,g), upright("bp_heat")_(b,g))(p_(g,t)) & forall g in cal(G), t in cal(T) $
 
 == Assumptions
 #set math.equation(numbering: "(1)")
 $ upright("bounds_do_not_cross") & upright("p")^(upright("min"))_(g) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G) \
-  upright("efficiency_is_a_fraction") & upright("eta")_(g) > 0 and upright("eta")_(g) <= 1 &  & forall g in cal(G) \
-  upright("lead_times_are_short") & upright("lead")_(g) & <= 3 & forall g in cal(G) \
-  upright("zones_agree") & upright("zone_of")(b) & = upright("area_of")(b) & forall b in cal(B) \
   upright("budget_covers_the_peak") & sum_(g in cal(G)) upright("p")^(upright("max"))_(g) & >= upright("budget") \
-  upright("ramps_are_gentle") & upright("load")_(t,b) - upright("load")_(t minus.square_(0) 1,b) & <= upright("budget") & forall t in cal(T), b in cal(B) colon upright("pos")(t) > 0 \
+  upright("efficiency_is_a_fraction") & upright("eta")_(g) > 0 and upright("eta")_(g) <= 1 &  & forall g in cal(G) \
   upright("flexible_units_have_headroom") & upright("p")^(upright("min"))_(g) & < upright("p")^(upright("max"))_(g) & forall g in cal(G) colon upright("is_flexible")_(g) \
-  upright("northern_demand_is_real") & upright("load")_(t,b) & >= 0 & forall t in cal(T), b in cal(B) colon upright("zone_of")(b) = upright("'north'") \
-  upright("fuel_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_y")_(g,a) upright(" is defined") and upright("bp_heat")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) \
-  upright("cost_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_y")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) colon upright("bp_run")_(g,a) \
-  upright("cost_curve_contiguous") & abs({a in cal(A) colon upright("bp_run")_(g,a) and not upright("bp_run")_(g,a - 1)}) & = 1 & forall g in cal(G) \
-  upright("hull_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_heat")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) \
-  upright("hull_curve_increasing") & upright("bp_x")_(g,a minus.square_(0) 1) & < upright("bp_x")_(g,a) & forall g in cal(G), a in cal(A) colon upright("pos")(a) > 0 \
-  upright("hull_curve_curvature") & abs({a in cal(A) colon (upright("bp_heat")_(g,a) - upright("bp_heat")_(g,a minus.square_(0) 1)) dot (upright("bp_x")_(g,a plus.square_(0) 1) - upright("bp_x")_(g,a)) > (upright("bp_heat")_(g,a plus.square_(0) 1) - upright("bp_heat")_(g,a)) dot (upright("bp_x")_(g,a) - upright("bp_x")_(g,a minus.square_(0) 1)) and upright("pos")(a) > 0 and upright("pos")(a) != abs(cal(A)) - 1}) = 0 or abs({a in cal(A) colon (upright("bp_heat")_(g,a) - upright("bp_heat")_(g,a minus.square_(0) 1)) dot (upright("bp_x")_(g,a plus.square_(0) 1) - upright("bp_x")_(g,a)) < (upright("bp_heat")_(g,a plus.square_(0) 1) - upright("bp_heat")_(g,a)) dot (upright("bp_x")_(g,a) - upright("bp_x")_(g,a minus.square_(0) 1)) and upright("pos")(a) > 0 and upright("pos")(a) != abs(cal(A)) - 1}) = 0 &  & forall g in cal(G) \
-  upright("lp_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_y")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined") \
-  upright("lp_curve_increasing") & upright("bp_x")_(g,a minus.square_(0) 1) & < upright("bp_x")_(g,a) & forall g in cal(G), a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined") and upright("bp_x")_(g,a - 1) upright(" is defined") \
-  upright("lp_curve_curvature") & (upright("bp_y")_(g,a) - upright("bp_y")_(g,a minus.square_(0) 1)) dot (upright("bp_x")_(g,a plus.square_(0) 1) - upright("bp_x")_(g,a)) & <= (upright("bp_y")_(g,a plus.square_(0) 1) - upright("bp_y")_(g,a)) dot (upright("bp_x")_(g,a) - upright("bp_x")_(g,a minus.square_(0) 1)) & forall g in cal(G), a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined") and upright("bp_x")_(g,a - 1) upright(" is defined") and upright("bp_x")_(g,a + 1) upright(" is defined") \
-  upright("lp_curve_breakpoints") & abs({a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined")}) & >= 2 & forall g in cal(G) \
-  upright("lp_curve_contiguous") & abs({a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined") and not (upright("bp_x")_(g,a - 1) upright(" is defined"))}) & = 1 & forall g in cal(G) \
-  upright("ramp_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_heat")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) \
-  upright("ramp_curve_increasing") & upright("bp_x")_(g,a minus.square_(0) 1) & < upright("bp_x")_(g,a) & forall g in cal(G), a in cal(A) colon upright("pos")(a) > 0 \
-  upright("ramp_curve_curvature") & (upright("bp_heat")_(g,a) - upright("bp_heat")_(g,a minus.square_(0) 1)) dot (upright("bp_x")_(g,a plus.square_(0) 1) - upright("bp_x")_(g,a)) & >= (upright("bp_heat")_(g,a plus.square_(0) 1) - upright("bp_heat")_(g,a)) dot (upright("bp_x")_(g,a) - upright("bp_x")_(g,a minus.square_(0) 1)) & forall g in cal(G), a in cal(A) colon upright("pos")(a) > 0 and upright("pos")(a) != abs(cal(A)) - 1 \
-  upright("ramp_curve_breakpoints") & abs({a in cal(A) colon upright("bp_x")_(g,a) upright(" is defined")}) & >= 2 & forall g in cal(G) $
+  upright("lead_times_are_short") & upright("lead")_(g) & <= 3 & forall g in cal(G) \
+  upright("northern_demand_is_real") & upright("load")_(u,t) & >= 0 & forall u in cal(U), t in cal(T) colon upright("zone_of")(u) = upright("'north'") \
+  upright("ramps_are_gentle") & upright("load")_(u,t) - upright("load")_(u,t minus.square_(0) 1) & <= upright("budget") & forall u in cal(U), t in cal(T) colon upright("pos")(t) > 0 \
+  upright("zones_agree") & upright("zone_of")(u) & = upright("area_of")(u) & forall u in cal(U) \
+  upright("cost_curve_complete") & upright("bp_x")_(b,g) upright(" is defined") and upright("bp_y")_(b,g) upright(" is defined") &  & forall b in cal(B), g in cal(G) colon upright("bp_run")_(b,g) \
+  upright("cost_curve_contiguous") & abs({b in cal(B) colon upright("bp_run")_(b,g) and not upright("bp_run")_(b - 1,g)}) & = 1 & forall g in cal(G) \
+  upright("fuel_curve_complete") & upright("bp_x")_(b,g) upright(" is defined") and upright("bp_y")_(b,g) upright(" is defined") and upright("bp_heat")_(b,g) upright(" is defined") &  & forall b in cal(B), g in cal(G) \
+  upright("hull_curve_complete") & upright("bp_x")_(b,g) upright(" is defined") and upright("bp_heat")_(b,g) upright(" is defined") &  & forall b in cal(B), g in cal(G) \
+  upright("hull_curve_increasing") & upright("bp_x")_(b minus.square_(0) 1,g) & < upright("bp_x")_(b,g) & forall b in cal(B), g in cal(G) colon upright("pos")(b) > 0 \
+  upright("hull_curve_curvature") & abs({b in cal(B) colon (upright("bp_heat")_(b,g) - upright("bp_heat")_(b minus.square_(0) 1,g)) dot (upright("bp_x")_(b plus.square_(0) 1,g) - upright("bp_x")_(b,g)) > (upright("bp_heat")_(b plus.square_(0) 1,g) - upright("bp_heat")_(b,g)) dot (upright("bp_x")_(b,g) - upright("bp_x")_(b minus.square_(0) 1,g)) and upright("pos")(b) > 0 and upright("pos")(b) != abs(cal(B)) - 1}) = 0 or abs({b in cal(B) colon (upright("bp_heat")_(b,g) - upright("bp_heat")_(b minus.square_(0) 1,g)) dot (upright("bp_x")_(b plus.square_(0) 1,g) - upright("bp_x")_(b,g)) < (upright("bp_heat")_(b plus.square_(0) 1,g) - upright("bp_heat")_(b,g)) dot (upright("bp_x")_(b,g) - upright("bp_x")_(b minus.square_(0) 1,g)) and upright("pos")(b) > 0 and upright("pos")(b) != abs(cal(B)) - 1}) = 0 &  & forall g in cal(G) \
+  upright("lp_curve_complete") & upright("bp_x")_(b,g) upright(" is defined") and upright("bp_y")_(b,g) upright(" is defined") &  & forall b in cal(B), g in cal(G) colon upright("bp_x")_(b,g) upright(" is defined") \
+  upright("lp_curve_increasing") & upright("bp_x")_(b minus.square_(0) 1,g) & < upright("bp_x")_(b,g) & forall b in cal(B), g in cal(G) colon upright("bp_x")_(b,g) upright(" is defined") and upright("bp_x")_(b - 1,g) upright(" is defined") \
+  upright("lp_curve_curvature") & (upright("bp_y")_(b,g) - upright("bp_y")_(b minus.square_(0) 1,g)) dot (upright("bp_x")_(b plus.square_(0) 1,g) - upright("bp_x")_(b,g)) & <= (upright("bp_y")_(b plus.square_(0) 1,g) - upright("bp_y")_(b,g)) dot (upright("bp_x")_(b,g) - upright("bp_x")_(b minus.square_(0) 1,g)) & forall b in cal(B), g in cal(G) colon upright("bp_x")_(b,g) upright(" is defined") and upright("bp_x")_(b - 1,g) upright(" is defined") and upright("bp_x")_(b + 1,g) upright(" is defined") \
+  upright("lp_curve_breakpoints") & abs({b in cal(B) colon upright("bp_x")_(b,g) upright(" is defined")}) & >= 2 & forall g in cal(G) \
+  upright("lp_curve_contiguous") & abs({b in cal(B) colon upright("bp_x")_(b,g) upright(" is defined") and not (upright("bp_x")_(b - 1,g) upright(" is defined"))}) & = 1 & forall g in cal(G) \
+  upright("ramp_curve_complete") & upright("bp_x")_(b,g) upright(" is defined") and upright("bp_heat")_(b,g) upright(" is defined") &  & forall b in cal(B), g in cal(G) \
+  upright("ramp_curve_increasing") & upright("bp_x")_(b minus.square_(0) 1,g) & < upright("bp_x")_(b,g) & forall b in cal(B), g in cal(G) colon upright("pos")(b) > 0 \
+  upright("ramp_curve_curvature") & (upright("bp_heat")_(b,g) - upright("bp_heat")_(b minus.square_(0) 1,g)) dot (upright("bp_x")_(b plus.square_(0) 1,g) - upright("bp_x")_(b,g)) & >= (upright("bp_heat")_(b plus.square_(0) 1,g) - upright("bp_heat")_(b,g)) dot (upright("bp_x")_(b,g) - upright("bp_x")_(b minus.square_(0) 1,g)) & forall b in cal(B), g in cal(G) colon upright("pos")(b) > 0 and upright("pos")(b) != abs(cal(B)) - 1 \
+  upright("ramp_curve_breakpoints") & abs({b in cal(B) colon upright("bp_x")_(b,g) upright(" is defined")}) & >= 2 & forall g in cal(G) $

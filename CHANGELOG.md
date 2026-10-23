@@ -12,6 +12,10 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(spec)!: a loaded spec is sorted by name and cannot be changed, writes back the fields its file wrote, and prints one canonical text for two files that differ only in order or spelling ([#924](https://github.com/energy-models/mathspec/pull/924))
+  - This breaks the spec API. A spec field cannot be set, and a section cannot gain or lose an entry: use `override(spec, [patch])`. A list in a spec is a tuple, and a section is a `Frozen` mapping, not a `dict`. Entries, `dims:` lists, relation columns, `cases:` regions and a macro's `kwargs:` are sorted by name.
+  - This breaks the program API. `Mask.dims` is a tuple sorted by name, not a `frozenset`, so a tool that compares it with a set (`where.dims <= set(dims)`) must build a set first. `Relation.columns` lists the key's columns first, each side sorted by role, and `Relation.dims` lists each dimension once, sorted by name. Every `dims` and `frame` in the program is sorted by name, so a tool that lays out its result by them gets a new order.
+  - This breaks a patch. A patch entry over a dimension or a relation that its base declares may write only `description`, `ordered` and `missing`, or else must declare the whole entry.
 - docs(language): a comparison on a relation is false where the relation has no row, whatever its operator ([#947](https://github.com/energy-models/mathspec/pull/947))
 - docs(language): the relations page shows a variable masked by a bare relation, so it exists only at the pairs the relation lists ([#946](https://github.com/energy-models/mathspec/pull/946))
 

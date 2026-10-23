@@ -5,7 +5,7 @@
 given:
   expressions:
     Bus_injection:
-      dims: [scenario, snapshot, bus]
+      dims: [bus, scenario, snapshot]
       description: >-
         what every component puts into a bus, less what it takes out of it;
         PyPSA writes each term into the balance, and a load on its right-hand

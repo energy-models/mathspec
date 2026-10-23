@@ -8,8 +8,8 @@ given:
     transmission_losses: { dims: [], dtype: bool }
   expressions:
     total_cost: { dims: [] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
-    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
+    Bus_injection: { dims: [bus, scenario, snapshot] }
+    Cycle_angle_sum: { dims: [cycle, scenario, snapshot] }
 
 dimensions:
   scenario:

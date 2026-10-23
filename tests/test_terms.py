@@ -20,7 +20,7 @@ from mathspec import advice, merge, override, to_markdown, to_spec, typeset, typ
 from mathspec._canonical import canonical_yaml
 from mathspec._typesetting import FORMATS
 from mathspec.errors import DimensionError, LanguageError
-from tests.fixtures import BALANCE, BUS_DIMS, BUS_FRAME, INJECTION, section
+from tests.fixtures import BALANCE, BUS_DIMS, BUS_FRAME, INJECTION, dims_reversed, section
 
 #: A generator fleet: what it puts in is its term.
 FLEET = {
@@ -96,7 +96,7 @@ def _demand(target: str = 'injection', body: object = '-load', dims: list[str] =
 def test_a_contributor_loads_alone_and_its_term_is_its_named_expression():
     program = to_spec(DEMAND).program
     assert program.expressions['demand_injection'].adds_to == 'injection'
-    assert program.given.expressions['injection'].dims == ('snapshot', 'bus'), 'the file reads what it adds to'
+    assert program.given.expressions['injection'].dims == ('bus', 'snapshot'), 'the file reads what it adds to'
 
 
 def test_a_term_round_trips_with_what_it_adds_to():
@@ -112,7 +112,7 @@ def test_a_term_is_read_by_the_math():
 
 def test_a_contributor_reads_the_name_as_the_whole_sum():
     """Alone and composed the file reads one thing, so nothing has to refuse a file that adds and reads."""
-    assert to_spec(CAPPED).program.constraints['capped'].dims == ('snapshot', 'bus')
+    assert to_spec(CAPPED).program.constraints['capped'].dims == ('bus', 'snapshot'), 'the dims sorted by name'
     composed = merge([BALANCE, CAPPED, DEMAND])
     assert composed.constraints['capped'].expression == 'injection <= 10'
     assert composed.program.expressions['injection'].in_math, 'composed, the cap reads the sum of every term'
@@ -526,20 +526,17 @@ def test_a_sum_a_sibling_declares_as_another_kind_names_that_kind():
         merge([network, DEMAND])
 
 
-def test_readers_that_order_the_frame_apart_are_refused():
-    """The sum took its dims from the first reader, so the order of the list reached the canonical text."""
-    reversed_ = {**BALANCE, 'given': {'expressions': {'injection': {'dims': ['bus', 'snapshot']}}}}
-    with pytest.raises(
-        LanguageError,
-        match=r"fragments '#1' and '#2' read the sum 'injection' over \['bus', 'snapshot'\] and "
-        r"\['snapshot', 'bus'\]",
-    ):
-        merge([reversed_, FLEET])
+def test_readers_that_list_the_frame_in_two_orders_compose_one_sum():
+    """Two readers of one sum that wrote its dims in two orders were refused, because the first reader's order
+    reached the canonical text."""
+    assert canonical_yaml(merge([dims_reversed(BALANCE), FLEET])) == canonical_yaml(merge([BALANCE, FLEET])), (
+        'the order a reader lists the dims in reaches no canonical text'
+    )
 
 
 def test_the_composed_sum_is_read_over_the_readers_frame():
     """The frame the readers state holds the terms to it when the composed spec loads."""
-    assert merge([BALANCE, FLEET, DEMAND]).expressions['injection'].dims == BUS_FRAME
+    assert merge([BALANCE, FLEET, DEMAND]).expressions['injection'].dims == tuple(sorted(BUS_FRAME)), 'sorted by name'
 
 
 def test_a_composed_sum_is_indexed_only_over_dims_a_term_is_indexed_over():
@@ -600,7 +597,7 @@ def test_two_readers_that_disagree_about_the_frame_are_refused():
 def test_a_term_over_fewer_dimensions_merges_where_another_carries_the_rest():
     flat = {**DEMAND, 'parameters': {'load': {'dims': ['bus']}}}
     composed = merge([BALANCE, flat, FLEET])
-    assert composed.program.expressions['injection'].dims == ('snapshot', 'bus')
+    assert composed.program.expressions['injection'].dims == ('bus', 'snapshot'), 'the dims sorted by name'
 
 
 @pytest.mark.parametrize(
@@ -659,9 +656,9 @@ def test_a_given_expression_prints_no_line_of_its_own(spec):
 def test_the_composed_sum_prints_its_terms_by_name():
     composed = merge([FLEET, DEMAND, BALANCE])
     assert typeset_line(composed, 'injection', 'typst', inline_expressions=False) == (
-        'italic("injection")_(t,b) = italic("generator_injection")_(b,t) + upright("demand_injection")_(b,t) '
-        'quad forall t in cal(T), b in cal(B)'
-    ), 'the sum keeps the dims its reader declares, and a term that declares none prints them sorted by name'
+        'italic("injection")_(b,t) = italic("generator_injection")_(b,t) + upright("demand_injection")_(b,t) '
+        'quad forall b in cal(B), t in cal(T)'
+    ), 'every index prints sorted by name'
 
 
 @pytest.mark.parametrize('fmt', sorted(FORMATS))

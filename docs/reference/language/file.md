@@ -27,6 +27,12 @@ A spec file is a YAML mapping with **thirteen section keys**, plus
 A file with no `objective` is a **feasibility problem**: it asks whether the
 constraints can all be met.
 
+The order of the sections, and the order of the entries in a section, change
+nothing. `to_spec` sorts the entries of each section by name, and the entries
+under each kind of `given:` too. The program, the typeset document and
+`to_yaml()` list them in that order, so a file that declares `p` before `flow`
+under `variables:` prints `flow` first.
+
 ## `description`
 
 `description` is free text that says what the spec is. It is optional, and a

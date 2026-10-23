@@ -25,7 +25,7 @@ import yaml
 import mathspec.spec as spec_module
 from mathspec import merge, override, to_markdown, to_spec
 from mathspec._canonical import canonical_yaml
-from mathspec.errors import LanguageError
+from mathspec.errors import LanguageError, SchemaError
 from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, varied
 
 if TYPE_CHECKING:
@@ -409,7 +409,7 @@ FEASIBILITY = {k: v for k, v in DISPATCH_MODEL.items() if k != 'objective'}
 def test_a_patch_names_only_the_field_it_changes():
     laid = override(DISPATCH_MODEL, [{'variables': {'p': {'where': 'p_max > 0'}}}])
     p = laid.variables['p']
-    assert (p.dims, p.bounds.lower, p.bounds.upper, p.where) == (['snapshot', 'generator'], 0, 'p_max', 'p_max > 0'), (
+    assert (p.dims, p.bounds.lower, p.bounds.upper, p.where) == (('generator', 'snapshot'), 0, 'p_max', 'p_max > 0'), (
         'the fields the patch does not name are the ones the base declared'
     )
 
@@ -563,9 +563,78 @@ def test_a_patch_restates_a_dimension_as_the_schema_reads_it(dimension, restated
     assert laid.dimensions[dimension].ordered is ordered
 
 
-def test_a_patch_that_withdraws_ordered_is_refused():
+@pytest.mark.parametrize(
+    ('base', 'patch', 'read', 'description'),
+    [
+        pytest.param(
+            varied(DISPATCH_MODEL, **{'dimensions.generator.description': 'what produces'}),
+            {'dimensions': {'generator': {'description': 'a unit'}}},
+            lambda spec: spec.dimensions['generator'].description,
+            'a unit',
+            id='a-dimension',
+        ),
+        pytest.param(
+            varied(SURFACE, **{'relations.port_bus.description': 'where a port connects'}),
+            {'relations': {'port_bus': {'key': 'port', 'values': 'bus', 'description': 'a port and its bus'}}},
+            lambda spec: spec.relations['port_bus'].description,
+            'a port and its bus',
+            id='a-relation',
+        ),
+        pytest.param(
+            DISPATCH_MODEL,
+            {'dimensions': {'snapshot': {'description': 'a period'}}},
+            lambda spec: spec.dimensions['snapshot'].description,
+            'a period',
+            id='the-description-alone',
+        ),
+        pytest.param(
+            varied(DISPATCH_MODEL, **{'dimensions.generator.description': 'what produces'}),
+            {'dimensions': {'generator': {'description': None}}},
+            lambda spec: spec.dimensions['generator'].description,
+            None,
+            id='null-removes-a-dimension-description',
+        ),
+        pytest.param(
+            varied(SURFACE, **{'relations.port_bus.description': 'where a port connects'}),
+            {'relations': {'port_bus': {'description': None}}},
+            lambda spec: spec.relations['port_bus'].description,
+            None,
+            id='null-removes-a-relation-description',
+        ),
+    ],
+)
+def test_a_patch_that_restates_a_shared_entry_gives_it_its_own_description(base, patch, read, description):
+    """A restatement with other prose was refused as a change of the space, and then accepted with its prose dropped.
+
+    A patch that wrote only a description was compared as a restatement of the whole entry, so it was refused
+    over a dimension whose other fields are not the defaults. A `null` description kept the base's.
+    Prose is not part of the space, and a patch lays over its base, so the patch's description wins, and
+    `null` removes it, as `null` on a field does elsewhere in a patch.
+    """
+    assert read(override(base, [patch])) == description, "the patch's description, not the base's"
+
+
+def test_a_patch_may_add_ordered_alone():
+    """A patch that wrote only `ordered: true` was compared as a whole restatement of the dimension.
+
+    Its `dtype` read as the default, so over a dimension of another dtype it was refused.
+    """
+    base = varied(DISPATCH_MODEL, **{'dimensions.generator.dtype': 'int'})
+    assert override(base, [{'dimensions': {'generator': {'ordered': True}}}]).dimensions['generator'].ordered
+
+
+@pytest.mark.parametrize(
+    'restated',
+    [
+        pytest.param({'dtype': 'int', 'ordered': False}, id='written-false'),
+        pytest.param({'ordered': False}, id='false-alone'),
+        pytest.param({'ordered': None}, id='null'),
+    ],
+)
+def test_a_patch_that_withdraws_ordered_is_refused(restated):
+    """`ordered: null` over an ordered dimension was refused by the schema, without the rewrite."""
     with pytest.raises(LanguageError, match=r"says the dimension 'snapshot' is not ordered") as raised:
-        override(DISPATCH_MODEL, [{'dimensions': {'snapshot': {'dtype': 'int', 'ordered': False}}}])
+        override(DISPATCH_MODEL, [{'dimensions': {'snapshot': restated}}])
     assert 'Leave `ordered` out of the patch' in str(raised.value), 'the refusal names the rewrite'
 
 
@@ -600,6 +669,31 @@ def test_a_patch_that_rewrites_a_dimension_is_refused(patch, says):
     assert says in str(raised.value), 'the refusal names the rewrite rather than only what is wrong'
 
 
+@pytest.mark.parametrize(
+    'restated',
+    [
+        pytest.param({}, id='no-field'),
+        pytest.param({'values': 'bus'}, id='no-key'),
+        pytest.param({'key': 'port'}, id='the-key-alone'),
+    ],
+)
+def test_a_patch_that_restates_a_relation_in_part_is_refused_with_the_rewrite(restated):
+    """A relation the schema refuses on its own was refused by the schema, without the patch or the rewrite.
+
+    `relations: {port_bus: {}}` failed with `key: Field required`, where the same entry under
+    `dimensions:` names the patch and says how to restate the entry.
+    """
+    with pytest.raises(LanguageError, match=r"patch '#1' declares the relation 'port_bus'") as raised:
+        override(SURFACE, [{'relations': {'port_bus': restated}}])
+    assert 'Restate the relation as its base declares it' in str(raised.value), 'the refusal names the rewrite'
+
+
+def test_a_misspelled_key_in_a_restated_relation_names_the_key_it_meant():
+    """A restatement that misspells a key is a typo, not a second declaration, so the near-miss is named."""
+    with pytest.raises(SchemaError, match=r"unknown key 'kye' in a relation entry. Did you mean 'key'\?"):
+        override(SURFACE, [{'relations': {'port_bus': {'kye': 'port', 'values': 'bus'}}}])
+
+
 #: `SURFACE` with `port_bus` declared `missing: absent`.
 ABSENT_SURFACE = varied(SURFACE, **{'relations.port_bus.missing': 'absent'})
 
@@ -616,7 +710,7 @@ ABSENT_SURFACE = varied(SURFACE, **{'relations.port_bus.missing': 'absent'})
     ],
 )
 def test_a_patch_changes_what_a_key_the_map_leaves_out_means(base, relation, missing):
-    """`missing:` is a claim about the data, not the coordinate space, and a patch that wrote it was refused as one."""
+    """`missing:` says what a key with no row means, and a patch that wrote it was refused as a change of the relation."""
     assert override(base, [{'relations': {'port_bus': relation}}]).relations['port_bus'].missing == missing
 
 
@@ -705,7 +799,7 @@ def test_a_patch_over_one_kind_of_given_leaves_the_other_alone():
     """`given:` is laid over a kind at a time, so patching the columns cannot drop the row families."""
     laid = override(GIVEN_BASE, [{'given': {'variables': {'p': {'domain': 'binary'}}}}])
     p = laid.given.variables['p']
-    assert (p.dims, p.domain) == (['g'], 'binary'), 'the given column is edited field by field like any entry'
+    assert (p.dims, p.domain) == (('g',), 'binary'), 'the given column is edited field by field like any entry'
     assert sorted(laid.given.constraints) == ['cap'], 'the kind the patch did not name is still there'
 
 
@@ -752,7 +846,7 @@ def test_a_loaded_spec_is_a_base_as_readily_as_a_mapping():
 def test_a_patch_creates_a_given_entry_of_every_kind(kind, entry):
     """`override` lays `given:` over by the kinds `merge` folds, so a kind added to one reaches the other."""
     laid = override(GIVEN_BASE, [{'given': {kind: {'r': entry}}}])
-    assert getattr(laid.given, kind)['r'].dims == ['g']
+    assert getattr(laid.given, kind)['r'].dims == ('g',)
     assert sorted(laid.given.variables) == ['p'], 'the kinds the patch did not name are still there'
 
 

@@ -22,7 +22,8 @@ import yaml
 
 import mathspec as ms
 from mathspec.__main__ import main
-from mathspec._canonical import _factors, _signed_terms, canonical_text, laid_out, normalised
+from mathspec._canonical import _factors, _signed_terms, canonical_condition, canonical_text, laid_out, normalised
+from mathspec._condition_parser import parse_condition
 from mathspec._expression_parser import (
     BinaryOperatorNode,
     ComparisonNode,
@@ -33,7 +34,8 @@ from mathspec._expression_parser import (
     operand,
     parse_expression,
 )
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, raw_of, varied
+from mathspec.program import And, BooleanLiteral, Not, Or
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, dims_reversed, raw_of, varied
 
 if TYPE_CHECKING:
     from mathspec._expression_parser import ArithmeticNode, ParsedNode
@@ -158,7 +160,7 @@ def _written_backwards(raw: object, depth: int = 3) -> object:
 
     Three levels reach the sections, the entries of each section and the
     keys of each entry. They stop above `cases:`, whose regions
-    are a mapping that the form keeps in the file's order.
+    `test_the_order_of_the_regions_under_cases_is_no_difference` reverses.
     """
     if depth == 0 or not isinstance(raw, dict):
         return raw
@@ -167,12 +169,12 @@ def _written_backwards(raw: object, depth: int = 3) -> object:
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
 def test_a_file_written_backwards_writes_the_same_text(path):
-    """The section order, the file order in each section and the key
-    order in each entry are spelling. A file that writes all three in
-    reverse is the same spec, so it writes the same text."""
+    """The section order, the file order in each section, the key order in
+    each entry and the order of each `dims:` list are spelling. A file that
+    writes all four in reverse is the same spec, so it writes the same text."""
     raw = raw_of(path)
-    backwards = ms.to_spec(_written_backwards(raw)).to_yaml(canonical=True)
-    assert backwards == ms.to_spec(raw).to_yaml(canonical=True), 'three orders reversed, one text'
+    backwards = ms.to_spec(dims_reversed(_written_backwards(raw))).to_yaml(canonical=True)
+    assert backwards == ms.to_spec(raw).to_yaml(canonical=True), 'four orders reversed, one text'
 
 
 @pytest.mark.parametrize('path', SPECS, ids=lambda path: path.stem)
@@ -197,6 +199,135 @@ def _commitment_with_its_cases_reversed() -> dict[str, object]:
     return varied(raw, **{'expressions.previous_status.cases': dict(reversed(cases.items()))})
 
 
+def test_the_order_of_the_regions_under_cases_is_no_difference():
+    """The regions are proved apart rather than tried in turn, so their order means nothing. A spec held them
+    as the file wrote them, so two files that state one spec wrote two texts and printed two documents."""
+    written, reordered = (
+        ms.to_spec(raw_of(EXAMPLES / 'commitment.yaml')),
+        ms.to_spec(_commitment_with_its_cases_reversed()),
+    )
+    assert reordered.to_yaml(canonical=True) == written.to_yaml(canonical=True), 'one canonical text'
+    assert reordered.to_yaml() == written.to_yaml(), 'the spec writes the regions back sorted by name'
+    assert ms.to_latex(reordered) == ms.to_latex(written), 'the rows print sorted by name, otherwise last'
+
+
+@pytest.mark.parametrize(
+    ('path', 'key', 'written', 'reordered'),
+    [
+        pytest.param(
+            EXAMPLES / 'operators' / 'sum_list.yaml',
+            'constraints.carrier_total.expression',
+            'sum(p, over=[snapshot, generator]) <= limit',
+            'sum(p, over=[generator, snapshot]) <= limit',
+            id='the-names-in-over',
+        ),
+        pytest.param(
+            EXAMPLES / 'operators' / 'sum_by_column_lists.yaml',
+            'constraints.slot_cap.expression',
+            'sum(p, over=[generator, period], by=slot_of[bus, technology]) <= cap',
+            'sum(p, over=[generator, period], by=slot_of[technology, bus]) <= cap',
+            id='the-columns-of-a-relation',
+        ),
+    ],
+)
+def test_the_order_of_a_list_in_a_call_is_no_difference(path, key, written, reordered):
+    """A list of names and the columns of a relation in a call name a set: a repeat is refused, and the
+    program reads them sorted. The form printed them as written, so two files that state one spec wrote two
+    texts."""
+    raw = raw_of(path)
+    texts = {ms.to_spec(varied(raw, **{key: text})).to_yaml(canonical=True) for text in (written, reordered)}
+    assert len(texts) == 1, 'one canonical text for both orders of the list'
+
+
+def test_the_order_a_macro_lists_its_keywords_in_is_no_difference():
+    """A call passes a keyword formal by name, so the order of `kwargs:` means nothing. A spec held it as
+    the file wrote it, so two files that state one spec were unequal and wrote two texts."""
+    macro = {'args': ['x'], 'template': 'x * z + b'}
+    written, reordered = (
+        ms.to_spec(varied(DISPATCH_MODEL, **{'macros.f': {**macro, 'kwargs': kwargs}}))
+        for kwargs in (['z', 'b'], ['b', 'z'])
+    )
+    assert reordered == written, 'one spec'
+    assert reordered.to_yaml() == written.to_yaml(), 'the spec writes the keywords back sorted by name'
+    assert reordered.to_yaml(canonical=True) == written.to_yaml(canonical=True), 'one canonical text'
+
+
+@pytest.mark.parametrize(
+    ('source', 'key', 'written', 'reordered'),
+    [
+        pytest.param(
+            DISPATCH_MODEL,
+            'variables.p.where',
+            'p_max > 0 and cost > 0',
+            'cost > 0 AND p_max > 0',
+            id='the-operands-of-and-and-the-case-of-the-keyword',
+        ),
+        pytest.param(
+            DISPATCH_MODEL,
+            'constraints.balance.where',
+            'load > 1 OR load < 0',
+            '(load < 0) or load>1',
+            id='the-operands-of-or-the-brackets-and-the-spacing',
+        ),
+        pytest.param(
+            DISPATCH_MODEL,
+            'variables.p.where',
+            'p_max + cost > 0',
+            'cost + p_max > 0',
+            id='the-terms-on-a-side-of-a-comparison',
+        ),
+        pytest.param(
+            DISPATCH_MODEL,
+            'conditions.cheap',
+            'cost < 1 AND NOT p_max',
+            'not p_max and cost < 1',
+            id='a-condition-entry-written-as-a-string',
+        ),
+        pytest.param(
+            DISPATCH_MODEL,
+            'assumptions.a_fraction',
+            {'holds': 'p_max >= 0 AND p_max <= 1', 'where': 'p_max AND cost'},
+            {'holds': 'p_max <= 1 and p_max >= 0', 'where': 'cost and p_max'},
+            id='an-assumption-and-its-where',
+        ),
+        pytest.param(
+            raw_of(EXAMPLES / 'commitment.yaml'),
+            'expressions.previous_status.cases.boundary.when',
+            'committable and position(snapshot) == 0',
+            'position(snapshot) == 0 AND committable',
+            id='the-when-of-a-case',
+        ),
+    ],
+)
+def test_a_condition_is_written_one_way(source, key, written, reordered):
+    """A condition is read by its own grammar, and the form printed it as the file wrote it. Two files whose
+    conditions differ only in the order of AND or OR, the case of a keyword, a bracket or a space stated one
+    spec and wrote two texts."""
+    texts = {ms.to_spec(varied(source, **{key: text})).to_yaml(canonical=True) for text in (written, reordered)}
+    assert len(texts) == 1, 'one canonical text for both spellings of the condition'
+
+
+@pytest.mark.parametrize(
+    ('written', 'canonical'),
+    [
+        pytest.param('b and a', 'a AND b', id='and-is-sorted-and-upper-case'),
+        pytest.param('c or (b or a)', 'a OR b OR c', id='a-chain-of-or-is-flattened'),
+        pytest.param('(b or a) and c', '(a OR b) AND c', id='an-or-under-an-and-keeps-its-brackets'),
+        pytest.param('c or b and a', 'a AND b OR c', id='an-and-under-an-or-needs-none'),
+        pytest.param('not (b and a)', 'NOT (a AND b)', id='not-brackets-a-connective'),
+        pytest.param('not a > 0', 'NOT (a > 0)', id='not-brackets-a-comparison'),
+        pytest.param('not (not a)', 'NOT (NOT a)', id='and-another-not'),
+        pytest.param('true or a', 'True OR a', id='a-literal'),
+        pytest.param("tag == 'it\\'s'", "tag == 'it\\'s'", id='a-quoted-label-keeps-its-escape'),
+        pytest.param('lk[h] == h', 'lk[h] == h', id='a-column-of-a-relation'),
+        pytest.param('count(b or a, over=t) >= 2', 'count(a OR b, over=t) >= 2', id='a-count'),
+        pytest.param('count(a, over=t, by=g) >= 1', 'count(a, by=g, over=t) >= 1', id='a-calls-kwargs-are-sorted'),
+    ],
+)
+def test_a_condition_is_printed_one_way(written, canonical):
+    assert canonical_condition(written) == canonical, 'the normal form of the condition, whole'
+
+
 def _piecewise_with_its_links_reversed() -> dict[str, object]:
     raw = raw_of(EXAMPLES / 'piecewise.yaml')
     return varied(raw, **{'piecewise.cost_curve.links': raw['piecewise']['cost_curve']['links'][::-1]})
@@ -206,24 +337,14 @@ def _piecewise_with_its_links_reversed() -> dict[str, object]:
     ('written', 'reordered'),
     [
         pytest.param(
-            DISPATCH_MODEL,
-            varied(DISPATCH_MODEL, **{'variables.p.dims': ['generator', 'snapshot']}),
-            id='the-dims-of-an-entry',
-        ),
-        pytest.param(
-            raw_of(EXAMPLES / 'commitment.yaml'),
-            _commitment_with_its_cases_reversed(),
-            id='the-regions-under-cases',
-        ),
-        pytest.param(
             raw_of(EXAMPLES / 'piecewise.yaml'),
             _piecewise_with_its_links_reversed(),
             id='the-links-of-a-piecewise-entry',
         ),
         pytest.param(
-            varied(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0 and cost > 0'}),
-            varied(DISPATCH_MODEL, **{'variables.p.where': 'cost > 0 and p_max > 0'}),
-            id='the-conditions-of-a-where',
+            varied(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0'}),
+            varied(DISPATCH_MODEL, **{'variables.p.where': '0 < p_max'}),
+            id='the-sides-of-a-comparison-in-a-condition',
         ),
     ],
 )
@@ -492,3 +613,45 @@ def test_the_names_a_file_reads_are_sorted_like_the_names_it_declares():
         )
     )
     assert ms.to_spec(one).to_yaml(canonical=True) == ms.to_spec(other).to_yaml(canonical=True)
+
+
+#: The names a generated condition draws from, each read as true or false.
+FLAGS = ['a', 'b', 'c', 'long_flag']
+
+
+def _condition_tree(rng: random.Random, depth: int = 0) -> str:
+    """One random condition over the flags, written with any case and any brackets a file could use."""
+    if depth >= 4 or rng.random() < 0.3:
+        return rng.choice([*FLAGS, 'true', 'False'])
+    roll = rng.random()
+    if roll < 0.2:
+        return f'{rng.choice(["not", "NOT"])} ({_condition_tree(rng, depth + 1)})'
+    word = rng.choice(['and', 'AND', 'or', 'OR'])
+    return f'({_condition_tree(rng, depth + 1)}) {word} ({_condition_tree(rng, depth + 1)})'
+
+
+def _truth(node: object, env: dict[str, bool]) -> bool:
+    if isinstance(node, NameNode):
+        return env[node.name]
+    if isinstance(node, BooleanLiteral):
+        return node.value
+    if isinstance(node, Not):
+        return not _truth(node.operand, env)
+    if isinstance(node, And):
+        return _truth(node.left, env) and _truth(node.right, env)
+    assert isinstance(node, Or), f'{node} is not a kind this evaluator was given'
+    return _truth(node.left, env) or _truth(node.right, env)
+
+
+def test_a_condition_in_the_form_holds_where_the_one_it_came_from_holds():
+    """Sorting operands and dropping brackets are rewrites, and a bracket dropped in the wrong place turns
+    `(a OR b) AND c` into `a OR b AND c`, which holds where the condition does not. 500 generated conditions,
+    each checked on every assignment of its flags."""
+    for seed in range(500):
+        written = _condition_tree(random.Random(seed))
+        printed = canonical_condition(written)
+        before, after = parse_condition(written), parse_condition(printed)
+        for values in itertools.product([False, True], repeat=len(FLAGS)):
+            env = dict(zip(FLAGS, values, strict=True))
+            assert _truth(before, env) == _truth(after, env), f'seed {seed}: `{written}` printed as `{printed}`'
+        assert canonical_condition(printed) == printed, f'seed {seed}: `{printed}` is not a fixed point'

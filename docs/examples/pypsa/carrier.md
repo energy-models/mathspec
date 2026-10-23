@@ -11,7 +11,7 @@ This file states the growth limits of each carrier. It is one of the [24 fragmen
 ```yaml
 given:
   expressions:
-    Carrier_additions: { dims: [period, carrier] }
+    Carrier_additions: { dims: [carrier, period] }
 
 dimensions:
   period:
@@ -67,14 +67,14 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression another file defines |
+| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{I} \times \mathcal{Y}`$, an expression another file defines |
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{Y}`$ | index $`y`$ — `period` — investment periods — PyPSA's `investment_periods` |
 | $`\mathcal{I}`$ | index $`i`$ — `carrier` — energy carriers, what a growth limit is set per |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` — investment periods — PyPSA's `investment_periods` |
 
 #### Parameters
 
@@ -108,6 +108,6 @@ constraints:
 **`Carrier_growth_limit`**
 
 ```math
-\mathit{Carrier\_additions}_{y,i} - \mathit{Carrier\_additions}_{y \boxminus_{0} 1,i} \cdot \mathrm{r}^{+}_{i} \le \overline{\Delta}_{i} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y} \,:\, \overline{\Delta}_{i} \text{ is defined}
+\mathit{Carrier\_additions}_{i,y} - \mathit{Carrier\_additions}_{i,y \boxminus_{0} 1} \cdot \mathrm{r}^{+}_{i} \le \overline{\Delta}_{i} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y} \,:\, \overline{\Delta}_{i} \text{ is defined}
 ```
 <!-- gallery:end -->

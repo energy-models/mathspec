@@ -210,23 +210,23 @@ and the [typesetter](../typeset.md) prints it. The specs themselves are on
 <!-- operator-math:begin -->
 | Operator | Renders as |
 |---|---|
-| `sum(array)` | $`\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \le \mathrm{budget}`$ |
-| `sum(array, over=dim)` | $`\sum_{g \in \mathcal{G}} p_{t,g} \le \mathrm{limit}_{t} \qquad \forall\, t \in \mathcal{T}`$ |
-| `sum(array, over=[a, …])` | $`\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g,c} \le \mathrm{limit}_{c} \qquad \forall\, c \in \mathcal{C}`$ |
-| `sum(array, over=dim, by=relation[c])` | $`\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{t,g} \le \mathrm{limit}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}`$ |
-| `sum(array, over=dim, by=relation[c]), joining on the rest of the key` | $`\sum_{g \in \mathcal{G} \,:\, \mathrm{zone\_of}(g,\ e) = z} p_{g,e} \ge \mathrm{demand}_{z,e} \qquad \forall\, z \in \mathcal{Z},\ e \in \mathcal{E}`$ |
+| `sum(array)` | $`\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} \le \mathrm{budget}`$ |
+| `sum(array, over=dim)` | $`\sum_{g \in \mathcal{G}} p_{g,t} \le \mathrm{limit}_{t} \qquad \forall\, t \in \mathcal{T}`$ |
+| `sum(array, over=[a, …])` | $`\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{c,g,t} \le \mathrm{limit}_{c} \qquad \forall\, c \in \mathcal{C}`$ |
+| `sum(array, over=dim, by=relation[c])` | $`\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{g,t} \le \mathrm{limit}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}`$ |
+| `sum(array, over=dim, by=relation[c]), joining on the rest of the key` | $`\sum_{g \in \mathcal{G} \,:\, \mathrm{zone\_of}(g,\ e) = z} p_{g,e} \ge \mathrm{demand}_{e,z} \qquad \forall\, e \in \mathcal{E},\ z \in \mathcal{Z}`$ |
 | `sum(array, over=[dim, …], by=relation[c, …])` | $`\sum_{g \in \mathcal{G},\ e \in \mathcal{E} \,:\, \mathrm{slot\_of.bus}(g,\ e) = b \wedge \mathrm{slot\_of.technology}(g,\ e) = t} p_{g,e} \le \mathrm{cap}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}`$ |
 | `at(array, by=relation[c])` | $`p_{t} \le \mathrm{cap}_{\mathrm{period\_of}(t)} \qquad \forall\, t \in \mathcal{T}`$ |
 | `at(array, by=relation[c]), two columns over one dimension` | $`f_{l} \le \mathrm{cap}_{\mathrm{ends.bus0}(l)} \qquad \forall\, l \in \mathcal{L}`$ |
 | `shift(array, along=dim, offset=n)` | $`p_{t} \le p_{t - 1} \qquad \forall\, t \in \mathcal{T}`$ |
 | `shift(array, along=dim, offset=n, edge='wrap')` | $`p_{t} \le p_{t \ominus 1} \qquad \forall\, t \in \mathcal{T}`$ |
 | `shift(array, along=dim, offset=n, edge=v)` | $`p_{t} \le p_{t \boxminus_{0} 1} \qquad \forall\, t \in \mathcal{T}`$ |
-| `shift(array, along=dim, offset=p, edge=…)` | $`\mathit{order}_{t,m \boxminus_{0} \mathrm{lead}} \ge \mathrm{demand}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}`$ |
+| `shift(array, along=dim, offset=p, edge=…)` | $`\mathit{order}_{m \boxminus_{0} \mathrm{lead},t} \ge \mathrm{demand}_{m,t} \qquad \forall\, m \in \mathcal{M},\ t \in \mathcal{T}`$ |
 | `shift(array, along=dim, offset=n, within=relation[c])` | $`p_{t} \le p_{t \ominus^{\mathrm{season\_of}(t)} 1} \qquad \forall\, t \in \mathcal{T}`$ |
-| `sum_back(array, along=dim, window=n)` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < 3} \mathit{started}_{u,h'} \le \mathit{on}_{u,h} \qquad \forall\, u \in \mathcal{U},\ h \in \mathcal{H}`$ |
-| `sum_back(array, along=dim, window=p)` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < \mathrm{min\_up}} \mathit{started}_{u,h'} \le \mathit{on}_{u,h} \qquad \forall\, u \in \mathcal{U},\ h \in \mathcal{H}`$ |
-| `sum_back(array, along=dim, window=p, edge='wrap')` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h \ominus h' < \mathrm{min\_up}} \mathit{started}_{u,h'} \le \mathit{on}_{u,h} \qquad \forall\, u \in \mathcal{U},\ h \in \mathcal{H}`$ |
-| `sum_back(array, along=dim, window=n, within=relation[c])` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h -^{\mathrm{day\_of}(h)} h' < 3} \mathit{started}_{u,h'} \le \mathit{on}_{u,h} \qquad \forall\, u \in \mathcal{U},\ h \in \mathcal{H}`$ |
+| `sum_back(array, along=dim, window=n)` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < 3} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$ |
+| `sum_back(array, along=dim, window=p)` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < \mathrm{min\_up}} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$ |
+| `sum_back(array, along=dim, window=p, edge='wrap')` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h \ominus h' < \mathrm{min\_up}} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$ |
+| `sum_back(array, along=dim, window=n, within=relation[c])` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h -^{\mathrm{day\_of}(h)} h' < 3} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$ |
 | `dual(constraint)` | $`\mathit{price}_{t} = \lambda_{\mathrm{balance},t} \qquad \forall\, t \in \mathcal{T}`$ |
 <!-- operator-math:end -->
 
