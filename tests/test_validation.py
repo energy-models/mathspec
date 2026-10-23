@@ -2514,8 +2514,14 @@ def test_a_parameter_mask_is_part_of_the_program():
             id='a-mask-that-reads-its-own-parameter-through-a-named-condition',
         ),
         pytest.param(
+            {'parameters.c.where': 'flag', 'parameters.flag.where': "lk == 'x'"},
+            "Parameter 'c': its `where:` reads 'flag', which has a mask of its own. Test what the mask of 'flag' "
+            'tests, or a relation.',
+            id='a-mask-that-reads-a-masked-parameter',
+        ),
+        pytest.param(
             {'parameters.c.where': 'flag', 'parameters.flag.where': 'c > 0'},
-            "Parameter 'c': its `where:` reads itself through c -> flag -> c",
+            "Parameter 'c': its `where:` reads 'flag', which has a mask of its own",
             id='two-masks-that-read-each-other',
         ),
         pytest.param(

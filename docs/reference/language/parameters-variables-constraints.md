@@ -157,12 +157,16 @@ A row outside the mask is not an error. To refuse such a row, state it as an
 [assumption](absence.md#a-table-with-gaps-on-purpose):
 `{holds: "connection", where: "efficiency"}`.
 
-The mask is read from the data alone, before the parameter itself, so three
-masks are refused at load:
+A mask reads what comes before the parameters. [Dimensions](dimensions.md)
+say which labels exist, and [relations](relations.md) say which combinations of
+labels exist. A relation has no `where:`, so a mask can read any relation. A
+parameter that has no mask comes before the masked ones too. So the mask is read
+from the data alone, before the parameter itself, and four masks are refused at
+load:
 
 - a mask that reads a variable;
-- a mask that reads its own parameter, directly or through the masks of other
-  parameters;
+- a mask that reads its own parameter;
+- a mask that reads a parameter that has a mask of its own;
 - a mask over a dimension that the parameter does not have.
 
 ```text

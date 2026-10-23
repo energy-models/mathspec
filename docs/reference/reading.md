@@ -140,9 +140,9 @@ has every coordinate of its `dims`. The engine applies the mask first: outside
 it the parameter is absent wherever it is read, and the engine drops the rows of
 the data there when it attaches. Then it applies `missing:` to the coordinates
 the mask keeps: a value fills a missing row there, and `'refused'` asks for a
-row only there. A mask reads no variable, and no mask reads its own parameter,
-so the engine can evaluate each mask from the data before it reads the
-parameter
+row only there. A mask reads no variable and no masked parameter, so the
+engine can evaluate each mask from the dimensions, the relations and the
+unmasked parameters, before it reads any masked parameter
 ([a parameter's mask](language/parameters-variables-constraints.md#a-parameters-mask)).
 
 An engine must refuse a divisor that is `0` in a row it builds, whatever made it
