@@ -34,6 +34,11 @@ typesetter and `advice` read the spec the author wrote. A program does not
 hold its spec: a tool handed a bare `Program` has what the file means, not the
 file.
 
+Neither changes after it loads. A section of a `Spec` is a read-only mapping,
+a list is a tuple, and no field can be set, so `spec.to_yaml()` writes the
+file that `spec.program` comes from. To change a spec, lay a patch over it with
+[`override`](api.md#mathspec.override), which loads the result as a new spec.
+
 The curve below [expands](language/piecewise.md) into a weight per breakpoint,
 a convexity row and one row per link:
 

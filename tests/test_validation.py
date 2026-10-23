@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from pydantic import ValidationError
 
 from mathspec._resolution import Namespace
 from mathspec._typesetting import FORMATS, to_markdown, typeset_line
@@ -1886,7 +1887,7 @@ class TestTheFrontDoor:
         """`dims: []` is a scalar entry, not an absence — stripping it would put the variable on every dim it names."""
         model = _spec(**{'variables.p.dims': []})
         assert model.to_dict()['variables']['p']['dims'] == [], 'the empty frame is written out, not dropped'
-        assert to_spec(model.to_dict()).variables['p'].dims == [], 'and reads back as the scalar it declares'
+        assert to_spec(model.to_dict()).variables['p'].dims == (), 'and reads back as the scalar it declares'
 
     def test_an_empty_section_is_not_written(self):
         written = to_spec(DISPATCH_MODEL).to_yaml()
@@ -1946,6 +1947,48 @@ def _cased(cases: dict[str, Any] | None = None, **entry: Any) -> dict[str, Any]:
             **entry,
         }
     )
+
+
+#: Every kind of thing a spec holds: an entry, a field two levels down, a list,
+#: a section, the given sections, and the cases of an expression.
+_PROBED = {
+    **DISPATCH_MODEL,
+    'expressions': {
+        'price': {
+            'dims': ['generator'],
+            'cases': {'cheap': {'when': 'cost < 1', 'expression': 'cost'}},
+            'otherwise': '2 * cost',
+        }
+    },
+}
+
+
+@pytest.mark.parametrize(
+    'write',
+    [
+        pytest.param(lambda s: setattr(s, 'description', 'edited'), id='a-top-level-field'),
+        pytest.param(lambda s: setattr(s.variables['p'], 'where', 'p_max > 1'), id='a-field-of-an-entry'),
+        pytest.param(lambda s: setattr(s.variables['p'].bounds, 'upper', 1), id='a-field-two-levels-down'),
+        pytest.param(lambda s: s.variables['p'].dims.append('extra'), id='a-name-appended-to-a-list'),
+        pytest.param(lambda s: s.parameters.__setitem__('extra', s.parameters['cost']), id='an-entry-added'),
+        pytest.param(lambda s: s.parameters.pop('cost'), id='an-entry-removed'),
+        pytest.param(lambda s: s.given.parameters.__setitem__('extra', None), id='a-given-entry-added'),
+        pytest.param(lambda s: s.expressions['price'].cases.pop('cheap'), id='a-case-removed'),
+    ],
+)
+def test_a_loaded_spec_cannot_be_written_to(write):
+    """A spec edited after load would write out a file its program was never lowered from.
+
+    The program is lowered once, as the spec loads, so an edit in place left
+    `to_yaml()` writing what `program` did not hold, and the file need not
+    load. `override` is the edit: it lays a patch over the spec and loads the
+    result.
+    """
+    spec = to_spec(_PROBED)
+    before = spec.to_yaml()
+    with pytest.raises((ValidationError, TypeError, AttributeError)):
+        write(spec)
+    assert spec.to_yaml() == before, 'the spec still reads as it loaded'
 
 
 class TestExpressionCases:

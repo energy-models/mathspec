@@ -104,7 +104,7 @@ def test_a_program_carries_the_column_it_reads_apart_from_the_ones_it_builds():
     )
 
 
-def test_what_a_program_reads_is_sealed_like_what_it_builds():
+def test_what_a_program_reads_is_frozen_like_what_it_builds():
     program = to_spec(SUPPLY).program
     with pytest.raises(TypeError, match='does not support item assignment'):
         program.given.variables['p'] = program.given.variables['flow']
@@ -145,7 +145,7 @@ def test_a_given_entry_is_refused_where_it_oversteps(entry, says):
 def test_an_expression_reads_a_given_column_as_it_reads_any_other():
     """Resolution and the dim algebra see one namespace, so the walk lands on the generator frame."""
     spec = to_spec(SUPPLY)
-    assert spec.constraints['gen_injects'].dims == ['generator', 'snapshot']
+    assert spec.constraints['gen_injects'].dims == ('generator', 'snapshot')
 
 
 def test_merging_folds_the_given_entry_into_the_one_that_introduces_it():
@@ -251,7 +251,7 @@ def test_a_fragment_that_reads_what_it_builds_is_refused(given, says):
 
 def test_a_given_entry_nothing_introduces_stays_for_a_consumer_to_bind():
     composed = merge([SUPPLY, {'dimensions': {'snapshot': {'dtype': 'int'}}}])
-    assert composed.given.variables['flow'].dims == ['port', 'snapshot'], 'a name nothing introduces is still read'
+    assert composed.given.variables['flow'].dims == ('port', 'snapshot'), 'a name nothing introduces is still read'
     assert sorted(composed.program.given.variables) == ['flow']
 
 
@@ -493,7 +493,7 @@ INJECTOR = {
 def test_a_fragment_reads_an_expression_it_does_not_define():
     spec = to_spec(BALANCE)
     assert sorted(spec.given.expressions) == ['injection']
-    assert spec.constraints['balance'].dims == ['bus', 'snapshot'], 'the frame the reader states is the one read'
+    assert spec.constraints['balance'].dims == ('bus', 'snapshot'), 'the frame the reader states is the one read'
 
 
 def test_a_program_carries_the_expression_it_reads_apart_from_the_ones_it_defines():

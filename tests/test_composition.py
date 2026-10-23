@@ -409,7 +409,7 @@ FEASIBILITY = {k: v for k, v in DISPATCH_MODEL.items() if k != 'objective'}
 def test_a_patch_names_only_the_field_it_changes():
     laid = override(DISPATCH_MODEL, [{'variables': {'p': {'where': 'p_max > 0'}}}])
     p = laid.variables['p']
-    assert (p.dims, p.bounds.lower, p.bounds.upper, p.where) == (['generator', 'snapshot'], 0, 'p_max', 'p_max > 0'), (
+    assert (p.dims, p.bounds.lower, p.bounds.upper, p.where) == (('generator', 'snapshot'), 0, 'p_max', 'p_max > 0'), (
         'the fields the patch does not name are the ones the base declared'
     )
 
@@ -799,7 +799,7 @@ def test_a_patch_over_one_kind_of_given_leaves_the_other_alone():
     """`given:` is laid over a kind at a time, so patching the columns cannot drop the row families."""
     laid = override(GIVEN_BASE, [{'given': {'variables': {'p': {'domain': 'binary'}}}}])
     p = laid.given.variables['p']
-    assert (p.dims, p.domain) == (['g'], 'binary'), 'the given column is edited field by field like any entry'
+    assert (p.dims, p.domain) == (('g',), 'binary'), 'the given column is edited field by field like any entry'
     assert sorted(laid.given.constraints) == ['cap'], 'the kind the patch did not name is still there'
 
 
@@ -846,7 +846,7 @@ def test_a_loaded_spec_is_a_base_as_readily_as_a_mapping():
 def test_a_patch_creates_a_given_entry_of_every_kind(kind, entry):
     """`override` lays `given:` over by the kinds `merge` folds, so a kind added to one reaches the other."""
     laid = override(GIVEN_BASE, [{'given': {kind: {'r': entry}}}])
-    assert getattr(laid.given, kind)['r'].dims == ['g']
+    assert getattr(laid.given, kind)['r'].dims == ('g',)
     assert sorted(laid.given.variables) == ['p'], 'the kinds the patch did not name are still there'
 
 

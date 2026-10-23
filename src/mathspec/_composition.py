@@ -103,6 +103,7 @@ from typing import TYPE_CHECKING, cast, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
+from mathspec._frozen import Frozen
 from mathspec._validation import to_spec
 from mathspec._yaml import read_spec
 from mathspec.errors import LanguageError, SchemaError, did_you_mean, schema_error
@@ -124,7 +125,7 @@ SETTINGS: dict[str, frozenset[str]] = {'dimensions': frozenset({'ordered'}), 're
 OWNED_SECTIONS = tuple(
     name
     for name, field in Spec.model_fields.items()
-    if get_origin(field.annotation) is dict and name not in SHARED_SECTIONS
+    if get_origin(field.annotation) is Frozen and name not in SHARED_SECTIONS
 )
 
 GIVEN_KINDS = {

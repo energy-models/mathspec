@@ -27,7 +27,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Literal, assert_never
 
 from mathspec._expression_parser import Sense
-from mathspec._sealed import Sealed
+from mathspec._frozen import Frozen
 from mathspec.errors import did_you_mean
 
 if TYPE_CHECKING:
@@ -451,10 +451,11 @@ class ExpressionReference:
 #: that is ``in_math`` — affine but where a [`QuadraticPosition`][] admits a
 #: [`Multiply`][] of two variable-carrying operands. A
 #: [`NamedExpression`][] the math never reads is held to none of them.
-#: No node records which tree it stands in. Every node states ``dims``, the
-#: dimensions over which it is indexed, sorted by name, so a consumer reads a
-#: node's dims rather than deriving them. An
-#: [`ExpressionReference`][] states its body's dims.
+#: No node records which tree it stands in. Lowering states each node's
+#: ``dims``, the dimensions over which it is indexed, sorted by name, so a
+#: consumer reads a node's dims rather than deriving them; a node built by
+#: hand holds the dims it was given. An [`ExpressionReference`][] states its
+#: body's dims.
 Expression = (
     Constant
     | ParameterReference
@@ -764,24 +765,24 @@ class GivenTargets:
     """What a program reads and does not build, by kind.
 
     Every group is empty in a program built from one whole spec. Every group
-    is sealed at construction, like every group of [`Program`][].
+    is frozen at construction, like every group of [`Program`][].
     """
 
     #: Data another file declares, by name, with the dtype a condition compares against.
-    parameters: Mapping[str, Parameter] = Sealed({})
+    parameters: Mapping[str, Parameter] = Frozen({})
     #: Columns the host model provides, by name.
-    variables: Mapping[str, Given] = Sealed({})
+    variables: Mapping[str, Given] = Frozen({})
     #: Row families the host model provides, by name, read back after the solve.
-    constraints: Mapping[str, Given] = Sealed({})
+    constraints: Mapping[str, Given] = Frozen({})
     #: Named expressions the host model defines, by name.
-    expressions: Mapping[str, Given] = Sealed({})
+    expressions: Mapping[str, Given] = Frozen({})
     #: Named conditions the host model defines, by name. A condition reads one as the data it
     #: is: a [`ParameterDefined`][] of a boolean over its frame.
-    conditions: Mapping[str, Given] = Sealed({})
+    conditions: Mapping[str, Given] = Frozen({})
 
     def __post_init__(self) -> None:
         for f in fields(self):
-            object.__setattr__(self, f.name, Sealed(getattr(self, f.name)))
+            object.__setattr__(self, f.name, Frozen(getattr(self, f.name)))
 
     def __bool__(self) -> bool:
         """Whether the program reads anything it does not build."""
@@ -1078,38 +1079,38 @@ class Program:
     #: ``None`` where the file declares no objective. The solve then only asks
     #: whether the constraints can be met.
     objective: Objective | None
-    dimensions: Mapping[str, Dimension] = Sealed({})
-    relations: Mapping[str, Relation] = Sealed({})
-    sos: Mapping[str, Sos] = Sealed({})
+    dimensions: Mapping[str, Dimension] = Frozen({})
+    relations: Mapping[str, Relation] = Frozen({})
+    sos: Mapping[str, Sos] = Frozen({})
     #: Each ``piecewise:`` entry the spec still declares, as the curve it
     #: states; empty on a program of a spec whose curves are written out.
-    piecewise: Mapping[str, Piecewise] = Sealed({})
+    piecewise: Mapping[str, Piecewise] = Frozen({})
     #: What the data has to satisfy for the answer to mean anything, by the
     #: name a refusal quotes: every ``assumptions:`` entry the file wrote, then
     #: what each ``piecewise:`` entry's method assumes of its breakpoints. The
     #: language decides none of it, so the tool that attaches the data checks
     #: each and refuses with [`assumption_message`][].
-    assumptions: Mapping[str, Assumption] = Sealed({})
+    assumptions: Mapping[str, Assumption] = Frozen({})
     #: Declared ``expressions:``, each saying whether the math reads it. None
     #: builds a row of its own, and one the math reads stands as an [`ExpressionReference`][]
     #: where it is read. All are lowered with the program, so a file whose
     #: named expression is outside the language is refused by every verb that
     #: reads the file rather than only by the one that reads the expression.
-    expressions: Mapping[str, NamedExpression] = Sealed({})
+    expressions: Mapping[str, NamedExpression] = Frozen({})
     #: Declared ``conditions:``. Each use stands as a [`ConditionReference`][] where it is
     #: read, so a consumer building rows needs nothing from this group.
-    conditions: Mapping[str, NamedCondition] = Sealed({})
+    conditions: Mapping[str, NamedCondition] = Frozen({})
     #: What this program reads and does not build ([`GivenTargets`][]), for a host model to provide.
     given: GivenTargets = GivenTargets()
     #: What the file as a whole is, as its ``description:`` says.
     description: str | None = None
 
     def __post_init__(self) -> None:
-        """Seal every group, so a program handed out cannot be written to."""
+        """Freeze every group, so a program handed out cannot be written to."""
         for f in fields(self):
             group = getattr(self, f.name)
             if isinstance(group, Mapping):
-                object.__setattr__(self, f.name, Sealed(group))
+                object.__setattr__(self, f.name, Frozen(group))
 
     def _by_position(self) -> Iterator[tuple[QuadraticPosition, tuple[Expression, ...]]]:
         """The row-building expressions, grouped by the position they stand in."""
@@ -1118,7 +1119,7 @@ class Program:
 
     def relations_of(self, dimension: str) -> Mapping[str, Relation]:
         """The relations with a column over *dimension*, by name."""
-        return Sealed({n: lk for n, lk in self.relations.items() if dimension in lk.dims})
+        return Frozen({n: lk for n, lk in self.relations.items() if dimension in lk.dims})
 
     @property
     def roots(self) -> tuple[Expression, ...]:
@@ -1175,7 +1176,7 @@ class Program:
         """
         from mathspec._separability import separabilities
 
-        return Sealed(separabilities(self))
+        return Frozen(separabilities(self))
 
 
 # --------------------------------------------------------------------------
