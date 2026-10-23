@@ -150,12 +150,14 @@ class Subject:
     A comparison on a relation is split by the column it reads, because two
     columns of one row hold two values. The relation's own subject, with no
     column, is whether it has a row, and every comparison on it reads that too.
+    A comparison of two columns is split by both columns, in one order
+    whichever side each was written on.
     """
 
     kind: Literal['param', 'expression', 'dim', 'rank', 'relation', 'relation_pair', 'variable']
     name: str
     qualifier: str | None = None
-    #: A rank's group columns: two positions by one relation into different columns are two subjects.
+    #: A rank's group columns, or the two columns a pair compares, in the order of ``name`` and ``qualifier``.
     group: tuple[str, ...] = ()
 
     def __str__(self) -> str:
@@ -163,7 +165,8 @@ class Subject:
             within = f' within {self.qualifier}' if self.qualifier else ''
             return f'the position of {self.name}{within}'
         if self.kind == 'relation_pair':
-            return f'{self.name} vs {self.qualifier}'
+            column, other_column = self.group
+            return f'{self.name}[{column}] vs {self.qualifier}[{other_column}]'
         if self.kind == 'relation' and self.qualifier:
             return f'{self.name}[{self.qualifier}]'
         return self.name
@@ -338,8 +341,9 @@ def _subject_of(node: TypedCondition) -> Subject:
             return Subject('relation', name)
         case RelationComparison(name=name, column=column):
             return Subject('relation', name, column)
-        case RelationPairComparison(name=name, other=other):
-            return Subject('relation_pair', name, other)
+        case RelationPairComparison(name=name, column=column, other=other, other_column=other_column):
+            (first, first_column), (second, second_column) = sorted([(name, column), (other, other_column)])
+            return Subject('relation_pair', first, second, (first_column, second_column))
         case ExpressionComparison():
             return Subject('expression', 'a comparison of expressions')
         case CountComparison():

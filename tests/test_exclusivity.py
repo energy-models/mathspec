@@ -58,6 +58,9 @@ NETWORK: dict[str, Any] = {
     'constraints': {'c': {'dims': ['line'], 'expression': 'flow >= 0'}},
 }
 
+#: The same network with a third end, so two pairs of columns can share one.
+THREE_ENDS: dict[str, Any] = varied(NETWORK, **{'relations.ends.values': {'bus0': 'bus', 'bus1': 'bus', 'bus2': 'bus'}})
+
 
 @pytest.fixture(scope='module')
 def spec() -> Spec:
@@ -353,23 +356,29 @@ class TestSoundness:
         "ends[bus1] == 'south'",
         'ends[bus0] == ends[bus1]',
         'ends[bus0] != ends[bus1]',
+        'ends[bus0] != ends[bus2]',
+        'ends[bus2] == ends[bus1]',
     )
 
     @pytest.mark.parametrize('seed', [1, 7])
     def test_a_relation_proved_apart_stays_apart_on_every_row(self, seed: int):
         """The same walk over a relation: no row, or a row whose columns hold labels the masks name or never name."""
-        namespace = Namespace(to_spec(NETWORK))
+        namespace = Namespace(to_spec(THREE_ENDS))
         atoms = [_mask(text, namespace, 'a probe') for text in self.RELATION_ATOMS]
-        row, bus0, bus1 = (
-            Subject('relation', 'ends'),
-            Subject('relation', 'ends', 'bus0'),
-            Subject('relation', 'ends', 'bus1'),
-        )
-        pair = Subject('relation_pair', 'ends', 'ends')
-        labels = ['north', 'south', 'east', 'west']
-        grid = [{row: Special.NULL, bus0: 'north', bus1: 'north', pair: True}] + [
-            {row: True, bus0: first, bus1: second, pair: first == second}
-            for first, second in itertools.product(labels, repeat=2)
+        columns = ('bus0', 'bus1', 'bus2')
+        pairs = list(itertools.combinations(columns, 2))
+        grid = [
+            {
+                Subject('relation', 'ends'): row,
+                **{Subject('relation', 'ends', column): label for column, label in zip(columns, labels, strict=True)},
+                **{
+                    Subject('relation_pair', 'ends', 'ends', pair): labels[columns.index(pair[0])]
+                    == labels[columns.index(pair[1])]
+                    for pair in pairs
+                },
+            }
+            for row in (True, Special.NULL)
+            for labels in itertools.product(['north', 'south', 'east'], repeat=len(columns))
         ]
 
         rng = random.Random(seed)
@@ -457,7 +466,7 @@ class TestARelationWithNoRow:
         [
             pytest.param(
                 {'loop': 'ends[bus0] == ends[bus1]', 'north': "ends[bus0] == 'north'"},
-                "where ends vs ends is equal, ends[bus0] is 'north'.",
+                "where ends[bus0] vs ends[bus1] is equal, ends[bus0] is 'north'.",
                 id='a-column-value-says-the-row-exists',
             ),
             pytest.param({'listed': 'ends', 'again': 'ends'}, 'where ends has a row.', id='the-bare-name-says-it'),
@@ -467,3 +476,31 @@ class TestARelationWithNoRow:
         """The mirror: the row is there for both cases, and the witness says so once."""
         [refusal] = refusals(to_spec(NETWORK), cases)
         assert witness in refusal
+
+
+class TestTwoPairsOfColumns:
+    """Each pair of columns is its own fact: a line can have `bus0 == bus1` and `bus0 != bus2` at once."""
+
+    def test_two_pairs_that_share_a_relation_both_claim_a_line(self):
+        """Both cases claim a line whose `bus0` is its `bus1` but not its `bus2`.
+
+        The prover keyed a comparison of two columns by the two relation names
+        and dropped the columns, so `ends[bus0] == ends[bus1]` and
+        `ends[bus0] != ends[bus2]` read one fact and were proved apart.
+        """
+        [refusal] = refusals(to_spec(THREE_ENDS), {'a': 'ends[bus0] == ends[bus1]', 'b': 'ends[bus0] != ends[bus2]'})
+        assert 'ends[bus0] vs ends[bus1] is equal' in refusal, 'the witness names the columns of each pair'
+        assert 'ends[bus0] vs ends[bus2] is different' in refusal, 'the witness names the columns of each pair'
+
+    @pytest.mark.parametrize(
+        'swapped',
+        [
+            pytest.param('ends[bus1] != ends[bus0]', id='the-columns-swapped'),
+            pytest.param('not ends[bus1] == ends[bus0]', id='the-columns-swapped-and-negated'),
+        ],
+    )
+    def test_one_pair_written_either_way_round_is_one_fact(self, swapped: str):
+        """`ends[bus1] != ends[bus0]` is the negation of `ends[bus0] == ends[bus1]`, so the two are apart."""
+        assert refusals(to_spec(THREE_ENDS), {'same': 'ends[bus0] == ends[bus1]', 'other': swapped}) == [], (
+            'a line has its two columns equal or different, not both'
+        )
