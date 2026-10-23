@@ -2055,9 +2055,11 @@ def _cased(cases: dict[str, Any] | None = None, **entry: Any) -> dict[str, Any]:
 
 
 #: Every kind of thing a spec holds: an entry, a field two levels down, a list,
-#: a section, the given sections, and the cases of an expression.
+#: a section, the given sections, the cases of an expression, and a relation's
+#: columns written as a mapping.
 _PROBED = {
     **DISPATCH_MODEL,
+    'relations': {'pair': {'key': {'from_gen': 'generator', 'to_gen': 'generator'}}},
     'expressions': {
         'price': {
             'dims': ['generator'],
@@ -2079,6 +2081,7 @@ _PROBED = {
         pytest.param(lambda s: s.parameters.pop('cost'), id='an-entry-removed'),
         pytest.param(lambda s: s.given.parameters.__setitem__('extra', None), id='a-given-entry-added'),
         pytest.param(lambda s: s.expressions['price'].cases.pop('cheap'), id='a-case-removed'),
+        pytest.param(lambda s: s.relations['pair'].key.pop('to_gen'), id='a-relation-column-removed'),
     ],
 )
 def test_a_loaded_spec_cannot_be_written_to(write):
