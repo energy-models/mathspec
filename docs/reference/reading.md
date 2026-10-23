@@ -149,6 +149,12 @@ An engine must refuse a divisor that is `0` in a row it builds, whatever made it
 `0`: a missing row, a value or a constant
 ([zero divisors in the data](language/absence.md#zero-divisors-in-the-data)).
 
+A `RelationComparison` or a `RelationPairComparison` is false at a coordinate
+where a relation it reads has no row, whatever its operator: `!=` is false
+there too. A `Not` of it is then true. So `connection != 'input'` keeps no
+coordinate that `connection` leaves out, and `NOT connection == 'input'` keeps
+every one.
+
 ## Nodes and masks
 
 Import the node classes from `mathspec.program` to test a node with
