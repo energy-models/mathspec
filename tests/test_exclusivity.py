@@ -50,6 +50,15 @@ STORAGE: dict[str, Any] = {
 }
 
 
+#: A line has one row in `ends`, or none, and each comparison on `ends` reads that one row.
+NETWORK: dict[str, Any] = {
+    'dimensions': {'line': {}, 'bus': {}},
+    'relations': {'ends': {'key': 'line', 'values': {'bus0': 'bus', 'bus1': 'bus'}}},
+    'variables': {'flow': {'dims': ['line']}},
+    'constraints': {'c': {'dims': ['line'], 'expression': 'flow >= 0'}},
+}
+
+
 @pytest.fixture(scope='module')
 def spec() -> Spec:
     return to_spec(STORAGE)
@@ -337,6 +346,45 @@ class TestSoundness:
                 assert not both, f'both cases claim {point} — the cells hid a witness'
         assert proved > 150, f'only {proved} pairs proved apart; the fuzz is not exercising the check'
 
+    RELATION_ATOMS: ClassVar[tuple[str, ...]] = (
+        'ends',
+        "ends[bus0] == 'north'",
+        "ends[bus0] != 'north'",
+        "ends[bus1] == 'south'",
+        'ends[bus0] == ends[bus1]',
+        'ends[bus0] != ends[bus1]',
+    )
+
+    @pytest.mark.parametrize('seed', [1, 7])
+    def test_a_relation_proved_apart_stays_apart_on_every_row(self, seed: int):
+        """The same walk over a relation: no row, or a row whose columns hold labels the masks name or never name."""
+        namespace = Namespace(to_spec(NETWORK))
+        atoms = [_mask(text, namespace, 'a probe') for text in self.RELATION_ATOMS]
+        row, bus0, bus1 = (
+            Subject('relation', 'ends'),
+            Subject('relation', 'ends', 'bus0'),
+            Subject('relation', 'ends', 'bus1'),
+        )
+        pair = Subject('relation_pair', 'ends', 'ends')
+        labels = ['north', 'south', 'east', 'west']
+        grid = [{row: Special.NULL, bus0: 'north', bus1: 'north', pair: True}] + [
+            {row: True, bus0: first, bus1: second, pair: first == second}
+            for first, second in itertools.product(labels, repeat=2)
+        ]
+
+        rng = random.Random(seed)
+        proved = 0
+        for _ in range(2000):
+            first, second = self._random_mask(rng, atoms), self._random_mask(rng, atoms)
+            if list(overlapping({'a': first, 'b': second}, namespace.dtypes, namespace.defaults)):
+                continue
+            proved += 1
+            cells = _Grid.of([Mask(first), Mask(second)], namespace.dtypes, namespace.defaults)
+            for point in grid:
+                both = _evaluate(first, point, cells) and _evaluate(second, point, cells)
+                assert not both, f'both cases claim {point} — the cells hid a witness'
+        assert proved > 150, f'only {proved} pairs proved apart; the fuzz is not exercising the check'
+
 
 class TestAMissingRow:
     CASES: ClassVar[dict[str, str]] = {'lossless': 'efficiency == 1', 'not_given': 'not efficiency'}
@@ -358,3 +406,64 @@ class TestAMissingRow:
     def test_under_a_reading_a_missing_row_compares_false(self, reading: str):
         spec = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': reading}}))
         assert refusals(spec, self.CASES) == [], 'a missing row with no value is in neither case'
+
+
+class TestARelationWithNoRow:
+    """A comparison on a relation is false where the relation has no row, whatever its operator."""
+
+    @pytest.mark.parametrize(
+        'cases',
+        [
+            pytest.param(
+                {'same': 'not ends[bus0] == ends[bus1]', 'different': 'not ends[bus0] != ends[bus1]'},
+                id='two-columns',
+            ),
+            pytest.param(
+                {'north': "not ends[bus0] == 'north'", 'elsewhere': "not ends[bus0] != 'north'"},
+                id='a-column-and-a-label',
+            ),
+        ],
+    )
+    def test_the_negations_of_two_complements_both_claim_a_missing_row(self, cases: dict[str, str]):
+        """Both cases claim a line with no `ends` row: `==` and `!=` are both false there.
+
+        The prover read `ends[bus0] == ends[bus1]` as true or false on every
+        line, so it proved the two negations apart, and a line `ends` leaves
+        out had two values.
+        """
+        [refusal] = refusals(to_spec(NETWORK), cases)
+        assert 'ends has no row' in refusal, 'the witness is the missing row'
+        assert 'ends[bus0]' not in refusal, 'a column of a missing row holds no value to name'
+
+    @pytest.mark.parametrize(
+        ('cases', 'model'),
+        [
+            pytest.param({'kept': "ends[bus0] != 'north'", 'left_out': 'not ends'}, NETWORK, id='a-label'),
+            pytest.param({'kept': 'ends[bus0] != ends[bus1]', 'left_out': 'not ends'}, NETWORK, id='two-columns'),
+            pytest.param({'later': 'period_of != 2030', 'left_out': 'not period_of'}, STORAGE, id='a-number'),
+        ],
+    )
+    def test_a_comparison_and_the_missing_row_are_apart(self, cases: dict[str, str], model: dict[str, Any]):
+        """A comparison is true only where the relation has a row, so `not` of the bare name excludes it.
+
+        The prover read the row a comparison needs and the row the bare name
+        asks for as two facts, and refused the pair with a witness where the
+        relation has no row and its column still holds a value.
+        """
+        assert refusals(to_spec(model), cases) == [], 'no line both has a row and has none'
+
+    @pytest.mark.parametrize(
+        ('cases', 'witness'),
+        [
+            pytest.param(
+                {'loop': 'ends[bus0] == ends[bus1]', 'north': "ends[bus0] == 'north'"},
+                "where ends vs ends is equal, ends[bus0] is 'north'.",
+                id='a-column-value-says-the-row-exists',
+            ),
+            pytest.param({'listed': 'ends', 'again': 'ends'}, 'where ends has a row.', id='the-bare-name-says-it'),
+        ],
+    )
+    def test_a_row_both_cases_read_is_still_found(self, cases: dict[str, str], witness: str):
+        """The mirror: the row is there for both cases, and the witness says so once."""
+        [refusal] = refusals(to_spec(NETWORK), cases)
+        assert witness in refusal

@@ -148,7 +148,8 @@ class Subject:
     dimension's coordinates and its *rank* are two subjects over one name, and
     a rank is further split by the ``within=`` columns it is counted within.
     A comparison on a relation is split by the column it reads, because two
-    columns of one row hold two values.
+    columns of one row hold two values. The relation's own subject, with no
+    column, is whether it has a row, and every comparison on it reads that too.
     """
 
     kind: Literal['param', 'expression', 'dim', 'rank', 'relation', 'relation_pair', 'variable']
@@ -188,6 +189,8 @@ class _Grid:
         subjects: dict[int, Subject] = {}
         for mask in masks:
             for node in mask.atoms:
+                for relation in _rows_read(node):
+                    values.setdefault(Subject('relation', relation), set())
                 subject = _subject_of(node)
                 subjects[id(node)] = subject
                 _observe(node, subject, values.setdefault(subject, set()))
@@ -202,7 +205,14 @@ class _Grid:
             yield dict(zip(self.domains, combination, strict=True))
 
     def witness(self, cell: dict[Subject, Cell]) -> str:
-        return ', '.join(_clause(subject, value) for subject, value in cell.items())
+        """*cell* in words. A column names a value only where its row exists, and a value says the row exists."""
+        shown = [subject for subject in cell if all(_has_row(relation, cell) for relation in _columns_of(subject))]
+        read = {relation for subject in shown for relation in _columns_of(subject)}
+        return ', '.join(
+            _clause(subject, cell[subject])
+            for subject in shown
+            if not (subject.kind == 'relation' and subject.qualifier is None and subject.name in read)
+        )
 
 
 #: A comparator against its mirror, for a test written with its sides swapped.
@@ -288,6 +298,30 @@ def _observe(node: TypedCondition, subject: Subject, values: set[_Literal]) -> N
         values.add(node.value)
 
 
+def _rows_read(node: TypedCondition) -> tuple[str, ...]:
+    """The relations whose row *node* reads a column of, and so is false without."""
+    match node:
+        case RelationComparison(name=name):
+            return (name,)
+        case RelationPairComparison(name=name, other=other):
+            return (name, other)
+        case _:
+            return ()
+
+
+def _columns_of(subject: Subject) -> tuple[str, ...]:
+    """The relations whose row holds *subject*'s value, so a cell without that row gives it none."""
+    if subject.kind == 'relation_pair' and subject.qualifier is not None:
+        return (subject.name, subject.qualifier)
+    if subject.kind == 'relation' and subject.qualifier is not None:
+        return (subject.name,)
+    return ()
+
+
+def _has_row(relation: str, cell: dict[Subject, Cell]) -> bool:
+    return cell[Subject('relation', relation)] is not Special.NULL
+
+
 def _subject_of(node: TypedCondition) -> Subject:
     match node:
         case ParameterDefined(name=name) | ParameterComparison(name=name):
@@ -328,6 +362,8 @@ def _cells_for(subject: Subject, values: set[_Literal], dtypes: Mapping[str, Dec
         return _rank_cells(subject, {int(v) for v in _numbers(values)})
     if subject.kind in ('relation_pair', 'variable'):
         return [True, False]
+    if subject.kind == 'relation' and subject.qualifier is None:
+        return [True, Special.NULL]
     dtype = dtypes.get(subject.name)
     if dtype == 'bool':
         if values:
@@ -349,11 +385,12 @@ def _cells_for(subject: Subject, values: set[_Literal], dtypes: Mapping[str, Dec
 def _absence_cells(subject: Subject, *, numeric: bool) -> list[Cell]:
     """The regions where *subject* has no ordinary value.
 
-    A dimension's coordinates have no null. ``defined`` excludes an infinity,
-    so a magnitude needs a region where every comparison still reads normally
-    and the bare name is false.
+    A dimension's coordinates have no null, and nor has a relation's column:
+    whether the relation has a row is a subject of its own. ``defined``
+    excludes an infinity, so a magnitude needs a region where every comparison
+    still reads normally and the bare name is false.
     """
-    if subject.kind == 'dim':
+    if subject.kind in ('dim', 'relation'):
         return []
     return [Special.NULL, Special.NEG_INF, Special.POS_INF] if numeric else [Special.NULL]
 
@@ -460,6 +497,8 @@ def _clause(subject: Subject, value: Cell) -> str:
     """*subject* in one cell, in words. A null cell says the data has no row, never a ``missing:`` reading's name."""
     if value is Special.NULL:
         return f'{subject} has no value' if subject.kind == 'expression' else f'{subject} has no row'
+    if subject.kind == 'relation' and subject.qualifier is None:
+        return f'{subject} has a row'
     return f'{subject} is {_shown(subject, value)}'
 
 
@@ -500,6 +539,8 @@ def _evaluate(node: Condition, cell: dict[Subject, Cell], grid: _Grid) -> bool:
 
 
 def _atom(node: TypedCondition, cell: dict[Subject, Cell], grid: _Grid) -> bool:
+    if not all(_has_row(relation, cell) for relation in _rows_read(node)):
+        return False
     subject = grid.subjects[id(node)]
     value = _read(node, cell[subject], grid)
     match node:
