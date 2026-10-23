@@ -14,6 +14,9 @@ repository.
 - [Unit commitment](commitment.md) adds an on/off decision and a start-up ramp.
   One quantity has three cases, so a single inequality covers a running unit
   and a starting unit.
+- [Units with ports](connection.md) attaches each unit to buses through
+  numbered ports. One relation lists the ports, and it masks the parameter that
+  only output ports have.
 - [One construct per spec](operators.md) shows each operator in the smallest
   file that uses it, beside the equation it prints.
 - [A component library](library/index.md) is several files that compose into

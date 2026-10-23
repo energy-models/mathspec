@@ -17,6 +17,7 @@ CHANGELOG.md
 # carries no generated block.
 docs/examples/dispatch.md
 docs/examples/commitment.md
+docs/examples/connection.md
 docs/examples/operators.md
 docs/examples/pypsa.md
 docs/examples/pypsa_linearized_uc.md

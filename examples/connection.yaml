@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: Units that draw power from one bus and deliver it to others, through numbered ports.
+
+dimensions:
+  snapshot: { dtype: int, description: dispatch periods }
+  bus: { description: nodes of the network }
+  unit: { description: "converters, such as an electrolyser or a heat pump" }
+  port: { dtype: int, description: "an attachment of a unit, numbered as PyPSA's bus0, bus1, ..." }
+  role: { description: input or output }
+
+relations:
+  connection:
+    description: the bus each port of a unit attaches to, and whether the port draws or delivers
+    key: [unit, port]
+    values: [bus, role]
+    missing: absent
+
+parameters:
+  capacity: { dims: [unit], description: the most a unit can draw at its input }
+  efficiency:
+    description: share of the drawn power that an output port delivers
+    dims: [unit, port, snapshot]
+    where: "connection[role] == 'output'"
+    missing: 1
+  load: { dims: [bus, snapshot], description: demand to be met }
+  cost: { dims: [bus], description: price of power bought at a bus }
+
+variables:
+  flow:
+    description: power a unit draws at its input
+    dims: [unit, snapshot]
+    bounds: { lower: 0, upper: capacity }
+  supply:
+    description: power bought at a bus
+    dims: [bus, snapshot]
+    bounds: { lower: 0 }
+
+expressions:
+  injection:
+    description: what a port puts into its bus
+    dims: [unit, port, snapshot]
+    cases:
+      draws: { when: "connection[role] == 'input'", expression: -flow }
+    otherwise: efficiency * flow
+
+constraints:
+  balance:
+    dims: [bus, snapshot]
+    expression: supply + sum(injection, over=[unit, port], by=connection[bus]) == load
+
+objective:
+  sense: minimize
+  expression: sum(cost * supply)
