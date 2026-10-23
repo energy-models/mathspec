@@ -67,6 +67,7 @@ nav:
           - examples/index.md
           - Least-cost dispatch: examples/dispatch.md
           - Unit commitment: examples/commitment.md
+          - Units with ports: examples/connection.md
           - One construct per spec: examples/operators.md
           - A component library:
               - examples/library/index.md
