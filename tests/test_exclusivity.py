@@ -365,7 +365,7 @@ class TestSoundness:
             Subject('relation', 'ends', 'bus0'),
             Subject('relation', 'ends', 'bus1'),
         )
-        pair = Subject('relation_pair', 'ends', 'ends')
+        pair = Subject('relation_pair', 'ends', 'ends', ('bus0', 'bus1'))
         labels = ['north', 'south', 'east', 'west']
         grid = [{row: Special.NULL, bus0: 'north', bus1: 'north', pair: True}] + [
             {row: True, bus0: first, bus1: second, pair: first == second}
@@ -457,7 +457,7 @@ class TestARelationWithNoRow:
         [
             pytest.param(
                 {'loop': 'ends[bus0] == ends[bus1]', 'north': "ends[bus0] == 'north'"},
-                "where ends vs ends is equal, ends[bus0] is 'north'.",
+                "where ends[bus0] vs ends[bus1] is equal, ends[bus0] is 'north'.",
                 id='a-column-value-says-the-row-exists',
             ),
             pytest.param({'listed': 'ends', 'again': 'ends'}, 'where ends has a row.', id='the-bare-name-says-it'),
@@ -467,3 +467,27 @@ class TestARelationWithNoRow:
         """The mirror: the row is there for both cases, and the witness says so once."""
         [refusal] = refusals(to_spec(NETWORK), cases)
         assert witness in refusal
+
+
+class TestAPairOfColumns:
+    """A comparison of two columns is one fact per pair of columns, whichever side each is written on."""
+
+    #: `ends` with a third column, so one relation offers more than one pair of columns.
+    THREE_ENDS: ClassVar[dict[str, Any]] = varied(NETWORK, **{'relations.ends.values.bus2': 'bus'})
+
+    def test_two_pairs_of_columns_are_two_facts(self):
+        """Both cases claim a line whose `bus0` and `bus1` are equal and whose `bus2` is another bus.
+
+        The prover keyed a comparison of two columns by the two relation names
+        only. `ends[bus0] == ends[bus1]` and `ends[bus0] != ends[bus2]` read one
+        fact, so it proved the two cases apart.
+        """
+        [refusal] = refusals(
+            to_spec(self.THREE_ENDS), {'a': 'ends[bus0] == ends[bus1]', 'b': 'ends[bus0] != ends[bus2]'}
+        )
+        assert 'where ends[bus0] vs ends[bus1] is equal, ends[bus0] vs ends[bus2] is different.' in refusal
+
+    def test_one_pair_written_both_ways_is_one_fact(self):
+        assert refusals(to_spec(NETWORK), {'a': 'ends[bus0] == ends[bus1]', 'b': 'ends[bus1] != ends[bus0]'}) == [], (
+            'a pair of columns with its sides swapped is the same pair'
+        )
