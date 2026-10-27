@@ -3,7 +3,9 @@
   "projectOwner": "energy-models",
   "repoType": "github",
   "repoHost": "https://github.com",
-  "files": ["README.md"],
+  "files": [
+    "README.md"
+  ],
   "imageSize": 100,
   "commit": false,
   "commitConvention": "none",
@@ -13,11 +15,33 @@
       "name": "Bryn Pickering",
       "avatar_url": "https://github.com/brynpickering.png?v=4",
       "profile": "https://github.com/brynpickering",
-      "contributions": ["code", "doc", "ideas", "projectManagement", "maintenance"],
+      "contributions": [
+        "code",
+        "doc",
+        "ideas",
+        "projectManagement",
+        "maintenance"
+      ],
       "firstContribution": "2026-08-17"
+    },
+    {
+      "login": "FabianHofmann",
+      "name": "Fabian Hofmann",
+      "avatar_url": "https://avatars.githubusercontent.com/u/19226431?v=4",
+      "profile": "http://fabianhofmann.org",
+      "contributions": [
+        "code",
+        "doc",
+        "example",
+        "bug",
+        "ideas",
+        "review",
+        "maintenance"
+      ]
     }
   ],
   "contributorsPerLine": 7,
   "linkToUsage": false,
-  "contributorsSortAlphabetically": false
+  "contributorsSortAlphabetically": false,
+  "commitType": "docs"
 }
