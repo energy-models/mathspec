@@ -267,7 +267,7 @@ class Legend:
         return f'{self.format.upright(name)} {self._op("subset_of")} {product(lk.roles)}'
 
     def _coords(self, dim: str, noticed: Noticed) -> str:
-        """The dimension's carried structure: each relation with a column over it, as the map or relation it is, and each map that may leave a key out.
+        """The dimension's carried structure: the labels its ``one_of`` allows, each relation with a column over it, as the map or relation it is, and each map that may leave a key out.
 
         The dtype is named only where an equation compared the index against a
         number, the one place "position 3" and "the coordinate 3" are both
@@ -277,6 +277,8 @@ class Legend:
         clauses = []
         if dim in noticed.numeric_coordinates:
             clauses.append(f' ({self.format.mono(self.program.dimensions[dim].dtype)} coordinates)')
+        if (labels := self.program.dimensions[dim].one_of) is not None:
+            clauses.append(f' (labels {", ".join(self.format.mono(m) for m in labels)})')
         if carried:
             maps = self.format.joined([self._signature(c, lk) for c, lk in carried.items()], '')
             clauses.append(f' with {self.format.math(maps)}')

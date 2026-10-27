@@ -14,6 +14,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 - fix(language): the case check tells two pairs of columns of one relation apart ([#951](https://github.com/energy-models/mathspec/pull/951))
 - fix(language): the case check reads a comparison on a relation as false where the relation has no row ([#949](https://github.com/energy-models/mathspec/pull/949))
+- feat(language): a dimension may list the labels it allows, and a condition that names another label fails at load ([#915](https://github.com/energy-models/mathspec/pull/915))
 - docs(language): a comparison on a relation is false where the relation has no row, whatever its operator ([#947](https://github.com/energy-models/mathspec/pull/947))
 - docs(language): the relations page shows a variable masked by a bare relation, so it exists only at the pairs the relation lists ([#946](https://github.com/energy-models/mathspec/pull/946))
 
