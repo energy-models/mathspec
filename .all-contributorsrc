@@ -3,7 +3,9 @@
   "projectOwner": "energy-models",
   "repoType": "github",
   "repoHost": "https://github.com",
-  "files": ["README.md"],
+  "files": [
+    "README.md"
+  ],
   "imageSize": 100,
   "commit": false,
   "commitConvention": "none",
@@ -13,11 +15,29 @@
       "name": "Bryn Pickering",
       "avatar_url": "https://github.com/brynpickering.png?v=4",
       "profile": "https://github.com/brynpickering",
-      "contributions": ["code", "doc", "ideas", "projectManagement", "maintenance"],
+      "contributions": [
+        "code",
+        "doc",
+        "ideas",
+        "projectManagement",
+        "maintenance"
+      ],
       "firstContribution": "2026-08-17"
+    },
+    {
+      "login": "coroa",
+      "name": "Jonas Hörsch",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2552981?v=4",
+      "profile": "https://github.com/coroa",
+      "contributions": [
+        "code",
+        "ideas",
+        "review"
+      ]
     }
   ],
   "contributorsPerLine": 7,
   "linkToUsage": false,
-  "contributorsSortAlphabetically": false
+  "contributorsSortAlphabetically": false,
+  "commitType": "docs"
 }
