@@ -21,12 +21,48 @@ Every dimension named anywhere in the file is declared here.
 
 | Field         |                                                       |                 |
 | ------------- | ----------------------------------------------------- | --------------- |
-| `dtype`       | `float`, `int`, `str`, `datetime`                     | default `str`   |
+| `dtype`       | `float`, `int`, `str` or `datetime`                   | default `str`   |
+| `one_of`      | [the labels a `str` dimension allows](#one_of)        | default `null`  |
 | `ordered`     | whether the order of the members is part of the model | default `false` |
 | `description` | free text                                             | default `null`  |
 
 The members of a dimension arrive with the data, in the order the table gives
 them. Everything indexed by the dimension is matched to its members by label.
+
+## `one_of`
+
+`one_of: [...]` lists the labels a `str` dimension allows:
+
+```yaml
+dimensions:
+  carrier: { dtype: str, one_of: [ccgt, ocgt, wind] }
+  generator: { dtype: str }
+relations:
+  carrier_of: { key: generator, values: carrier }
+variables:
+  p: { dims: [generator], where: "carrier_of == 'wind'" }
+```
+
+The labels are strings. The list holds at least one label, and each label
+once. A number such as `2030` is refused, so quote it as `'2030'`. The
+`dtype` is `str` by default, so `carrier: { one_of: [ccgt, ocgt, wind] }` is the
+same dimension. A `one_of` with any other `dtype` is refused. The dimension is a
+`str` dimension in every other rule.
+
+A [condition](expressions.md#conditions) that compares the dimension, or a
+relation column over it, against a label that is not in the list is refused at
+load. `carrier_of == 'gnrtr'` above is refused:
+
+```text
+Variable 'p': 'gnrtr' is not a label of 'carrier', which allows only ['ccgt', 'ocgt', 'wind']. Write one of them, or add 'gnrtr' to the one_of of 'carrier'.
+```
+
+The tool that attaches the data refuses a coordinate that is not in the list,
+in the table of the dimension and in every relation column over it.
+
+Only a dimension takes `one_of`. To give a parameter a closed set of labels,
+declare a dimension with `one_of` and a relation into it, as `carrier_of` is
+above.
 
 ## Order
 
