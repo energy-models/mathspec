@@ -32,6 +32,92 @@
       "contributions": [
         "bug"
       ]
+    },
+      "login": "sstroemer",
+      "name": "Stefan Strömer",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8915976?v=4",
+      "profile": "https://github.com/sstroemer",
+      "contributions": [
+        "bug"
+      ]
+    },
+      "login": "FLomb",
+      "name": "Francesco Lombardi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26432077?v=4",
+      "profile": "http://www.flombardi.org",
+      "contributions": [
+        "bug"
+      ]
+    },
+      "login": "jmorrisnrel",
+      "name": "James Morris",
+      "avatar_url": "https://avatars.githubusercontent.com/u/90803675?v=4",
+      "profile": "https://github.com/jmorrisnrel",
+      "contributions": [
+        "bug"
+      ]
+    },
+      "login": "timtroendle",
+      "name": "Tim Tröndle",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3090386?v=4",
+      "profile": "https://cp.ethz.ch/people/person-detail.tim-troendle.html",
+      "contributions": [
+        "ideas"
+      ]
+    },
+      "login": "jnnr",
+      "name": "Jann Launer",
+      "avatar_url": "https://avatars.githubusercontent.com/u/32454596?v=4",
+      "profile": "https://github.com/jnnr",
+      "contributions": [
+        "ideas",
+        "bug"
+      ]
+    },
+      "login": "sjpfenninger",
+      "name": "Stefan Pfenninger-Lee",
+      "avatar_url": "https://avatars.githubusercontent.com/u/141709?v=4",
+      "profile": "http://www.pfenninger.org",
+      "contributions": [
+        "ideas",
+        "review"
+      ]
+    },
+      "login": "coroa",
+      "name": "Jonas Hörsch",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2552981?v=4",
+      "profile": "https://github.com/coroa",
+      "contributions": [
+        "code",
+      ]
+    },
+      "login": "FabianHofmann",
+      "name": "Fabian Hofmann",
+      "avatar_url": "https://avatars.githubusercontent.com/u/19226431?v=4",
+      "profile": "http://fabianhofmann.org",
+      "contributions": [
+        "code",
+        "doc",
+        "example",
+        "bug",
+        "ideas",
+        "review",
+        "maintenance"
+      ]
+    },
+      "login": "FBumann",
+      "name": "Felix",
+      "avatar_url": "https://avatars.githubusercontent.com/u/117816358?v=4",
+      "profile": "http://fxbumann.de",
+      "contributions": [
+        "code",
+        "doc",
+        "test",
+        "infra",
+        "maintenance",
+        "ideas",
+        "review"
+      ]
     }
   ],
   "contributorsPerLine": 7,
