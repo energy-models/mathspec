@@ -497,18 +497,27 @@ class ConditionResolver:
             return node
         column = None
         dtype: DeclaredDtype | None = None
+        labelled: str | None = None
         if kind == 'relation':
             column = self._relation_column(left_name, left_column or None, plain.name, plain.op)
             if column is None:
                 return node
-            dtype = ns.dtypes[ns.relations[left_name].dim(column)]
+            labelled = ns.relations[left_name].dim(column)
+            dtype = ns.dtypes[labelled]
         elif kind in ('parameter', 'dimension'):
             dtype = ns.dtypes[left_name]
+            labelled = left_name if kind == 'dimension' else None
         if dtype is not None:
             typed = self._typed_literal(plain, dtype)
             if typed is None:
                 return node
             value = typed
+        if labelled in ns.one_of and value not in ns.one_of[labelled]:
+            self.errors.append(
+                f"{context}: {value!r} is not a label of '{labelled}', which allows only "
+                f"{list(ns.one_of[labelled])}. Write one of them, or add {value!r} to the one_of of '{labelled}'."
+            )
+            return node
 
         match kind:
             case 'parameter':
