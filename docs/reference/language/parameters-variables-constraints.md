@@ -65,41 +65,42 @@ dimensions:
   generator: { dtype: str }
 parameters:
   cost: { dims: [generator] } # refused: every generator has a cost
-  start_up_cost: { dims: [generator], missing: neutral } # no row means no cost
+  start_up_cost: { dims: [generator], missing: 0 } # no row means no cost
   p_set: { dims: [generator], missing: absent } # no row, no fixing row
   efficiency: { dims: [generator], missing: 1 }
   p_nom_max: { dims: [generator], missing: .inf }
   active: { dims: [generator], dtype: bool, missing: true }
 ```
 
-| `missing:`            | A missing row                                                                                         |
-| --------------------- | ----------------------------------------------------------------------------------------------------- |
-| `refused`, by default | is refused when the data is attached, and the refusal names the coordinate                            |
-| `absent`              | is [absence](absence.md): it takes the row of a term that reads it, and is one summand fewer in a sum |
-| `neutral`             | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a condition         |
-| a value               | reads as that value, wherever a value is read                                                         |
+| `missing:`            | A missing row                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `refused`, by default | is refused when the data is attached, and the refusal names the coordinate                                 |
+| `absent`              | is [absence](absence.md): it takes the row of a term that reads it, and is one summand fewer in a sum      |
+| a value               | reads as that value, wherever a value is read ([what a missing row does](absence.md#what-creates-absence)) |
 
 A consumer does not build the model from data with a refused row, and each
 consumer decides how it reports this: it may raise at the first gap, or list
-every missing coordinate.
+every missing coordinate. A table with gaps on purpose is declared `absent`,
+and an [assumption](absence.md#a-table-with-gaps-on-purpose) says where it
+must have a row.
 
 A bare numeric name in a condition asks whether the data has a row, whatever the
 `missing:`, so `where: p_nom_max` selects the rows the data gives. Under
 `refused` every coordinate has a row, so a bare `float` name asks only "is it
 finite?", and a bare `int` or `str` name is a load error. A comparison reads the
 value, so `where: efficiency <= 1` is true at a missing row of `efficiency`
-above, which reads `1` there. Under `absent` and `neutral`, a comparison at a
-missing row is false. A bare `bool` name reads its value, so `where: active`
-reads `true` at a missing row.
+above, which reads `1` there. Under `absent`, a comparison at a missing row is
+false. A bare `bool` name reads its value, so `where: active` reads `true` at a
+missing row.
 
 A value has the parameter's dtype:
 
-| `dtype` | a value                                                  |
-| ------- | -------------------------------------------------------- |
-| `float` | a number. `.inf`, `inf`, `-.inf` and `-inf` are numbers  |
-| `int`   | an integer. An integer column cannot hold `inf`          |
-| `bool`  | `true` or `false`                                        |
-| `str`   | none. A label has no value to fill, and no `neutral` one |
+| `dtype` | a value                                                 |
+| ------- | ------------------------------------------------------- |
+| `float` | a number. `.inf`, `inf`, `-.inf` and `-inf` are numbers |
+| `int`   | an integer. An integer column cannot hold `inf`         |
+| `bool`  | `true` or `false`                                       |
+| `str`   | none. A label has no value to fill                      |
 
 A NaN, a quoted number and `missing: null` are refused. A `given:` parameter
 has no `missing:`, because the file that declares the parameter owns it. A
@@ -108,7 +109,7 @@ takes `missing:` too, and a values parameter of a curve with `points:` declares
 a `missing:` other than `refused`.
 
 The typeset legend prints what a missing row means beside the parameter, such
-as `` `neutral` where the data has no row ``, and prints nothing for `refused`.
+as `` `0` where the data has no row ``, and prints nothing for `refused`.
 
 ## `variables`
 
@@ -130,14 +131,14 @@ variables:
       upper: capacity
 ```
 
-| Field                           |                                                                                                                   |                      |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------- |
-| `dims`                          | required. The dimensions it is indexed by                                                                         |                      |
-| `where`                         | which coordinates exist ([absence](absence.md))                                                                   | default `null`       |
-| `bounds.lower` / `bounds.upper` | a finite number, or the name of a `float` or `int` parameter. `null` leaves that side open                        | default `null`       |
-| `domain`                        | `continuous`, `integer` or `binary`. `binary` carries fixed 0/1 bounds                                            | default `continuous` |
-| `missing`                       | `absent` or `neutral`: what a masked-out coordinate means ([absence](absence.md#what-a-missing-coordinate-means)) | default `absent`     |
-| `description`                   | free text                                                                                                         | default `null`       |
+| Field                           |                                                                                                                  |                      |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `dims`                          | required. The dimensions it is indexed by                                                                        |                      |
+| `where`                         | which coordinates exist ([absence](absence.md))                                                                  | default `null`       |
+| `bounds.lower` / `bounds.upper` | a finite number, or the name of a `float` or `int` parameter. `null` leaves that side open                       | default `null`       |
+| `domain`                        | `continuous`, `integer` or `binary`. `binary` carries fixed 0/1 bounds                                           | default `continuous` |
+| `missing`                       | `absent` or a number: what a masked-out coordinate means ([absence](absence.md#what-a-missing-coordinate-means)) | default `absent`     |
+| `description`                   | free text                                                                                                        | default `null`       |
 
 An open side is `null`, because a bound is never infinite: `.inf` and `-.inf`
 are refused, with `null` named as the rewrite.

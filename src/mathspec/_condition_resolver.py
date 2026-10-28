@@ -26,6 +26,7 @@ from mathspec._condition_parser import (
     UnresolvedCountNode,
 )
 from mathspec._dimensions import join_dims
+from mathspec._divisors import zero_divisor_refusals
 from mathspec._expansion import expand
 from mathspec._expression_parser import (
     ArithmeticNode,
@@ -156,7 +157,7 @@ class ConditionResolver:
                     rewrite = (
                         f'Declare `missing: absent`, or compare the label: where: "{node.name} == \'...\'".'
                         if declared.dtype == 'str'
-                        else f'Declare `missing: neutral` or `absent`, or compare the value: where: "{node.name} > 0".'
+                        else f'Declare `missing: absent` or a value, or compare the value: where: "{node.name} > 0".'
                     )
                     self.errors.append(
                         f"{context}: '{node.name}' is declared dtype: {declared.dtype} and missing: refused, so it "
@@ -411,6 +412,7 @@ class ConditionResolver:
                     dims |= set(side.dims)
                 except LanguageError as e:
                     self.errors.append(str(e))
+                self.errors.extend(zero_divisor_refusals(side, context, ns.spec.parameters, {}))
         if len(self.errors) > found:
             return node
         left, right = sides

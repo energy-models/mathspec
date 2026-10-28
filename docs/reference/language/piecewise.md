@@ -71,8 +71,8 @@ variables:
     where: committable # only some units have a commitment decision
 ```
 
-Where the gate does not exist, the curve is ungated. To have no curve there
-instead, put `missing: neutral` on the gate.
+Where the gate does not exist, the curve is ungated, as under `missing: 1`. To
+have no curve there instead, put `missing: 0` on the gate.
 
 ### `points`
 
@@ -92,11 +92,11 @@ piecewise:
       - [op_cost, bp_y]
 ```
 
-Each values parameter declares `missing: neutral`, because its table stops
-where the curve stops ([missing breakpoints](#missing-breakpoints)). A row
-missing from `bp_y` where `bp_x` has one is still refused. Where the length is
-its own data, name a boolean parameter instead, whose marked breakpoints must
-be one consecutive run, anywhere along the dimension.
+Each values parameter declares `missing: absent` or a value, because its table
+stops where the curve stops ([missing breakpoints](#missing-breakpoints)). A
+row missing from `bp_y` where `bp_x` has one is still refused. Where the length
+is its own data, name a boolean parameter instead, whose marked breakpoints
+must be one consecutive run, anywhere along the dimension.
 
 ### Missing breakpoints
 
@@ -109,17 +109,17 @@ and a mask that names the table marks every breakpoint. `to_spec` refuses the
 file:
 
 ```text
-parameter 'bp_y' is refused where a row is missing, and piecewise 'cost_curve' reads it under points: 'bp_x', which stops the curve where its rows stop. Declare missing: neutral, absent, or a value of its dtype.
+parameter 'bp_y' is refused where a row is missing, and piecewise 'cost_curve' reads it under points: 'bp_x', which stops the curve where its rows stop. Declare missing: absent, or a value of its dtype.
 ```
 
-Declare `missing: neutral` or `absent` on each values parameter of the entry.
-The two build the same curve, because the curve reads a table only inside the
+Declare `missing: absent` or a value on each values parameter of the entry.
+Both build the same curve, because the curve reads a table only inside the
 mask, and there the `<entry>_complete` assumption still refuses a missing row.
-They differ where an expression outside the curve reads the table: `neutral`
-reads `0` there, and `absent` removes the term. Use `absent` where no number
-stands for a breakpoint the curve does not have, and `neutral` where `0` does.
-A values parameter of a curve with no `points:`, and a boolean `points:` mask,
-read the default, `refused`.
+They differ where an expression outside the curve reads the table: `absent`
+removes the term, and a value such as `0` reads that value. Use `absent` where
+no number stands for a breakpoint the curve does not have, and a value where
+one does. A values parameter of a curve with no `points:`, and a boolean
+`points:` mask, read the default, `refused`.
 
 ### `method`
 
