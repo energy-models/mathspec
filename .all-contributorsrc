@@ -38,6 +38,20 @@
         "review",
         "maintenance"
       ]
+    },
+      "login": "FBumann",
+      "name": "Felix",
+      "avatar_url": "https://avatars.githubusercontent.com/u/117816358?v=4",
+      "profile": "http://fxbumann.de",
+      "contributions": [
+        "code",
+        "doc",
+        "test",
+        "infra",
+        "maintenance",
+        "ideas",
+        "review"
+      ]
     }
   ],
   "contributorsPerLine": 7,
