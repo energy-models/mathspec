@@ -31,6 +31,32 @@
       "profile": "https://github.com/coroa",
       "contributions": [
         "code",
+      ]
+    },
+      "login": "FabianHofmann",
+      "name": "Fabian Hofmann",
+      "avatar_url": "https://avatars.githubusercontent.com/u/19226431?v=4",
+      "profile": "http://fabianhofmann.org",
+      "contributions": [
+        "code",
+        "doc",
+        "example",
+        "bug",
+        "ideas",
+        "review",
+        "maintenance"
+      ]
+    },
+      "login": "FBumann",
+      "name": "Felix",
+      "avatar_url": "https://avatars.githubusercontent.com/u/117816358?v=4",
+      "profile": "http://fxbumann.de",
+      "contributions": [
+        "code",
+        "doc",
+        "test",
+        "infra",
+        "maintenance",
         "ideas",
         "review"
       ]
