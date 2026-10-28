@@ -235,6 +235,20 @@ mathspec accepts can still change.
 
 <!--- --8<-- [end:status] -->
 
+## Contributors
+
+Thanks go to these people
+([emoji key](https://allcontributors.org/docs/en/emoji-key)). The
+all-contributors bot keeps the table below. To add someone, comment
+`@all-contributors please add @login for code` on an issue.
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
 ## Licence
 
 The code is [MIT](https://github.com/energy-models/mathspec/blob/main/LICENSE), and the prose is
