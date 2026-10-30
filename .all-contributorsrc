@@ -16,13 +16,221 @@
       "avatar_url": "https://github.com/brynpickering.png?v=4",
       "profile": "https://github.com/brynpickering",
       "contributions": [
-        "code",
-        "doc",
-        "ideas",
-        "projectManagement",
-        "maintenance"
+        {
+          "type": "code",
+          "url": "https://github.com/search?type=pullrequests&q=is%3Apr+author%3Abrynpickering+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2023-01-01..2026-08-13%29%29&s=created&o=desc"
+        },
+        {
+          "type": "doc",
+          "url": "https://github.com/search?type=commits&q=author%3Abrynpickering+repo%3Aenergy-models%2Fmathspec&s=committer-date&o=desc"
+        },
+        {
+          "type": "ideas",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3Abrynpickering+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2018-04-16..2026-08-13%29%29&s=created&o=desc"
+        },
+        {
+          "type": "projectManagement",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3Abrynpickering+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2018-04-16..2026-08-13%29%29&s=created&o=desc"
+        },
+        {
+          "type": "maintenance",
+          "url": "https://github.com/search?type=pullrequests&q=is%3Apr+author%3Abrynpickering+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2018-04-16..2026-08-13%29%29&s=created&o=desc"
+        },
+        {
+          "type": "review",
+          "url": "https://github.com/search?type=pullrequests&q=is%3Apr+reviewed-by%3Abrynpickering+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2023-01-01..2026-08-13%29%29&s=created&o=desc"
+        },
+        {
+          "type": "infra",
+          "url": "https://github.com/search?type=commits&q=author%3Abrynpickering+repo%3Aenergy-models%2Fmathspec&s=committer-date&o=desc"
+        }
       ],
-      "firstContribution": "2026-08-17"
+      "firstContribution": "2018-04-16"
+    },
+    {
+      "login": "FBumann",
+      "name": "Felix Bumann",
+      "avatar_url": "https://avatars.githubusercontent.com/u/117816358?v=4",
+      "profile": "http://fxbumann.de",
+      "contributions": [
+        {
+          "type": "code",
+          "url": "https://github.com/search?type=commits&q=author%3AFBumann+repo%3Aenergy-models%2Fmathspec&s=committer-date&o=desc"
+        },
+        {
+          "type": "doc",
+          "url": "https://github.com/search?type=commits&q=author%3AFBumann+repo%3Aenergy-models%2Fmathspec&s=committer-date&o=desc"
+        },
+        {
+          "type": "test",
+          "url": "https://github.com/search?type=commits&q=author%3AFBumann+repo%3Aenergy-models%2Fmathspec&s=committer-date&o=desc"
+        },
+        {
+          "type": "infra",
+          "url": "https://github.com/search?type=commits&q=author%3AFBumann+repo%3Aenergy-models%2Fmathspec&s=committer-date&o=desc"
+        },
+        {
+          "type": "maintenance",
+          "url": "https://github.com/search?type=pullrequests&q=is%3Apr+author%3AFBumann+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Afluxopt%2Fspecsolve+created%3A%3C2026-08-21%29%29&s=created&o=desc"
+        },
+        {
+          "type": "ideas",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3AFBumann+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Afluxopt%2Fspecsolve+created%3A%3C2026-08-21%29%29&s=created&o=desc"
+        },
+        {
+          "type": "review",
+          "url": "https://github.com/search?type=pullrequests&q=is%3Apr+reviewed-by%3AFBumann+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Afluxopt%2Fspecsolve+created%3A%3C2026-08-21%29%29&s=created&o=desc"
+        }
+      ],
+      "firstContribution": "2026-03-10"
+    },
+    {
+      "login": "FabianHofmann",
+      "name": "Fabian Hofmann",
+      "avatar_url": "https://avatars.githubusercontent.com/u/19226431?v=4",
+      "profile": "http://fabianhofmann.org",
+      "contributions": [
+        {
+          "type": "code",
+          "url": "https://github.com/search?type=commits&q=author%3AFabianHofmann+repo%3Aenergy-models%2Fmathspec&s=committer-date&o=desc"
+        },
+        {
+          "type": "doc",
+          "url": "https://github.com/search?type=commits&q=author%3AFabianHofmann+repo%3Aenergy-models%2Fmathspec&s=committer-date&o=desc"
+        },
+        {
+          "type": "bug",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3AFabianHofmann+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Afluxopt%2Fspecsolve+created%3A%3C2026-08-21%29%29&s=created&o=desc"
+        },
+        {
+          "type": "ideas",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3AFabianHofmann+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Afluxopt%2Fspecsolve+created%3A%3C2026-08-21%29%29&s=created&o=desc"
+        },
+        {
+          "type": "review",
+          "url": "https://github.com/search?type=pullrequests&q=is%3Apr+reviewed-by%3AFabianHofmann+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Afluxopt%2Fspecsolve+created%3A%3C2026-08-21%29%29&s=created&o=desc"
+        },
+        {
+          "type": "maintenance",
+          "url": "https://github.com/search?type=pullrequests&q=is%3Apr+author%3AFabianHofmann+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Afluxopt%2Fspecsolve+created%3A%3C2026-08-21%29%29&s=created&o=desc"
+        }
+      ],
+      "firstContribution": "2026-08-21"
+    },
+    {
+      "login": "coroa",
+      "name": "Jonas Hörsch",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2552981?v=4",
+      "profile": "https://github.com/coroa",
+      "contributions": [
+        "code",
+        "ideas",
+        "review"
+      ],
+      "firstContribution": "2026-08-19"
+    },
+    {
+      "login": "sjpfenninger",
+      "name": "Stefan Pfenninger-Lee",
+      "avatar_url": "https://avatars.githubusercontent.com/u/141709?v=4",
+      "profile": "http://www.pfenninger.org",
+      "contributions": [
+        {
+          "type": "ideas",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3Asjpfenninger+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2018-04-16..2026-08-13%29%29&s=created&o=desc"
+        },
+        {
+          "type": "review",
+          "url": "https://github.com/search?type=pullrequests&q=is%3Apr+reviewed-by%3Asjpfenninger+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2023-01-01..2026-08-13%29%29&s=created&o=desc"
+        }
+      ],
+      "firstContribution": "2018-05-02"
+    },
+    {
+      "login": "irm-codebase",
+      "name": "Ivan Ruiz Manuel",
+      "avatar_url": "https://avatars.githubusercontent.com/u/72193617?v=4",
+      "profile": "https://orcid.org/0000-0003-2288-6423",
+      "contributions": [
+        {
+          "type": "ideas",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3Airm-codebase+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2018-04-16..2026-08-13%29%29&s=created&o=desc"
+        },
+        {
+          "type": "review",
+          "url": "https://github.com/search?type=pullrequests&q=is%3Apr+reviewed-by%3Airm-codebase+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2023-01-01..2026-08-13%29%29&s=created&o=desc"
+        }
+      ],
+      "firstContribution": "2024-02-05"
+    },
+    {
+      "login": "timtroendle",
+      "name": "Tim Tröndle",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3090386?v=4",
+      "profile": "https://cp.ethz.ch/people/person-detail.tim-troendle.html",
+      "contributions": [
+        {
+          "type": "ideas",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3Atimtroendle+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2018-04-16..2026-08-13%29%29&s=created&o=desc"
+        }
+      ],
+      "firstContribution": "2020-08-27"
+    },
+    {
+      "login": "jnnr",
+      "name": "Jann Launer",
+      "avatar_url": "https://avatars.githubusercontent.com/u/32454596?v=4",
+      "profile": "https://github.com/jnnr",
+      "contributions": [
+        {
+          "type": "ideas",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3Ajnnr+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2018-04-16..2026-08-13%29%29&s=created&o=desc"
+        },
+        {
+          "type": "bug",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3Ajnnr+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2018-04-16..2026-08-13%29%29&s=created&o=desc"
+        }
+      ],
+      "firstContribution": "2023-03-17"
+    },
+    {
+      "login": "FLomb",
+      "name": "Francesco Lombardi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26432077?v=4",
+      "profile": "http://www.flombardi.org",
+      "contributions": [
+        {
+          "type": "bug",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3AFLomb+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2018-04-16..2026-08-13%29%29&s=created&o=desc"
+        }
+      ],
+      "firstContribution": "2023-03-17"
+    },
+    {
+      "login": "jmorrisnrel",
+      "name": "James Morris",
+      "avatar_url": "https://avatars.githubusercontent.com/u/90803675?v=4",
+      "profile": "https://github.com/jmorrisnrel",
+      "contributions": [
+        {
+          "type": "bug",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3Ajmorrisnrel+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2018-04-16..2026-08-13%29%29&s=created&o=desc"
+        }
+      ],
+      "firstContribution": "2023-12-18"
+    },
+    {
+      "login": "sstroemer",
+      "name": "Stefan Strömer",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8915976?v=4",
+      "profile": "https://github.com/sstroemer",
+      "contributions": [
+        {
+          "type": "bug",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3Asstroemer+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2018-04-16..2026-08-13%29%29&s=created&o=desc"
+        }
+      ],
+      "firstContribution": "2024-07-26"
     },
     {
       "login": "LexPascal",
@@ -30,94 +238,12 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/79085248?v=4",
       "profile": "https://portalrecerca.uab.cat/en/persons/alexander-de-tom%C3%A1s-pascual",
       "contributions": [
-        "bug"
-      ]
-    },
-      "login": "sstroemer",
-      "name": "Stefan Strömer",
-      "avatar_url": "https://avatars.githubusercontent.com/u/8915976?v=4",
-      "profile": "https://github.com/sstroemer",
-      "contributions": [
-        "bug"
-      ]
-    },
-      "login": "FLomb",
-      "name": "Francesco Lombardi",
-      "avatar_url": "https://avatars.githubusercontent.com/u/26432077?v=4",
-      "profile": "http://www.flombardi.org",
-      "contributions": [
-        "bug"
-      ]
-    },
-      "login": "jmorrisnrel",
-      "name": "James Morris",
-      "avatar_url": "https://avatars.githubusercontent.com/u/90803675?v=4",
-      "profile": "https://github.com/jmorrisnrel",
-      "contributions": [
-        "bug"
-      ]
-    },
-      "login": "timtroendle",
-      "name": "Tim Tröndle",
-      "avatar_url": "https://avatars.githubusercontent.com/u/3090386?v=4",
-      "profile": "https://cp.ethz.ch/people/person-detail.tim-troendle.html",
-      "contributions": [
-        "ideas"
-      ]
-    },
-      "login": "jnnr",
-      "name": "Jann Launer",
-      "avatar_url": "https://avatars.githubusercontent.com/u/32454596?v=4",
-      "profile": "https://github.com/jnnr",
-      "contributions": [
-        "ideas",
-        "bug"
-      ]
-    },
-      "login": "sjpfenninger",
-      "name": "Stefan Pfenninger-Lee",
-      "avatar_url": "https://avatars.githubusercontent.com/u/141709?v=4",
-      "profile": "http://www.pfenninger.org",
-      "contributions": [
-        "ideas",
-        "review"
-      ]
-    },
-      "login": "coroa",
-      "name": "Jonas Hörsch",
-      "avatar_url": "https://avatars.githubusercontent.com/u/2552981?v=4",
-      "profile": "https://github.com/coroa",
-      "contributions": [
-        "code",
-      ]
-    },
-      "login": "FabianHofmann",
-      "name": "Fabian Hofmann",
-      "avatar_url": "https://avatars.githubusercontent.com/u/19226431?v=4",
-      "profile": "http://fabianhofmann.org",
-      "contributions": [
-        "code",
-        "doc",
-        "example",
-        "bug",
-        "ideas",
-        "review",
-        "maintenance"
-      ]
-    },
-      "login": "FBumann",
-      "name": "Felix",
-      "avatar_url": "https://avatars.githubusercontent.com/u/117816358?v=4",
-      "profile": "http://fxbumann.de",
-      "contributions": [
-        "code",
-        "doc",
-        "test",
-        "infra",
-        "maintenance",
-        "ideas",
-        "review"
-      ]
+        {
+          "type": "bug",
+          "url": "https://github.com/search?type=issues&q=is%3Aissue+author%3ALexPascal+%28repo%3Aenergy-models%2Fmathspec+OR+%28repo%3Acalliope-project%2Fcalliope+created%3A2018-04-16..2026-08-13%29%29&s=created&o=desc"
+        }
+      ],
+      "firstContribution": "2025-08-22"
     }
   ],
   "contributorsPerLine": 7,
