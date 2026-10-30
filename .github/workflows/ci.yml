@@ -12,7 +12,7 @@ name: CI
 # template's generated CI is deliberately not followed: it runs lint plus a
 # 3-interpreter by 3-OS pytest matrix, which is ten billed minutes a push.
 #
-# Every gate below is a pixi task, and `pixi run ci` runs the four of them in
+# Every gate below is a pixi task, and `pixi run ci` runs the five of them in
 # this order. They are separate steps here only so a red run names the gate
 # that broke; steps, unlike jobs, are free.
 
@@ -88,6 +88,13 @@ jobs:
 
       - name: Run pytest
         run: pixi run test --color=yes
+
+      # A thousand mutants of the examples, each compared with the findings
+      # tests/fuzz/baseline.json holds for its seed. A new finding fails, and
+      # so does a held one that no longer occurs, which a fix produces: write
+      # the baseline again in that pull request (the step prints how).
+      - name: Run the fuzzer against its baseline
+        run: pixi run fuzz
 
       # `--strict` turns every zensical warning into a failure, so this gate
       # catches a dead cross-link and an anchor that stopped resolving. A page
