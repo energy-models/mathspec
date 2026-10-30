@@ -18,7 +18,7 @@ from mathspec._typesetting import to_markdown
 from mathspec._validation import to_spec
 from mathspec.spec import PIECEWISE_METHODS
 from tests.fixtures import EXAMPLES
-from tools import expansion_math, gallery, home_math, notation, spec_math
+from tools import expansion_math, gallery, home_math, macros, notation, spec_math
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -263,6 +263,48 @@ def test_the_extension_rewrites_math_and_nothing_that_only_quotes_it(source: str
     explaining.
     """
     assert _rewrite()(source) == expected
+
+
+@pytest.mark.parametrize(
+    'page',
+    sorted(p for p in (ROOT / 'docs').rglob('*.md') if '{{ mathspec.' in p.read_text()),
+    ids=lambda p: p.stem,
+)
+def test_the_site_substitutes_every_version_placeholder(page: Path):
+    """A page that writes the release or the schema's ref gets the value, not the braces."""
+    text = re.sub(r'<[^>]+>', '', _site_markdown().convert(page.read_text()))
+    assert '{{ mathspec.' not in text, 'no placeholder reaches the reader, in prose or in a highlighted fence'
+
+
+@pytest.mark.parametrize('page', sorted((ROOT / 'docs').rglob('*.md')), ids=lambda p: p.stem)
+def test_prettier_has_not_split_a_version_placeholder(page: Path):
+    """Prettier formats a YAML fence and spaces `{{ x }}` into `{ { x } }`, which the macros plugin does not read.
+
+    Such a fence needs `<!-- prettier-ignore -->` above it, and this test fails before the reader sees the braces.
+    """
+    assert '{ { mathspec.' not in page.read_text(), (
+        'a placeholder split by prettier; put <!-- prettier-ignore --> above the fence'
+    )
+
+
+@pytest.mark.parametrize(
+    ('name', 'pattern'),
+    [
+        pytest.param('release', r'\d+\.\d+\.\d+', id='release'),
+        pytest.param('language_version', r'\d+', id='language-version'),
+    ],
+)
+def test_each_version_placeholder_has_the_shape_its_page_needs(name: str, pattern: str):
+    """The release is bare, so `v` and the release is the tag a raw.githubusercontent.com address resolves."""
+    value = macros.values()[name]
+    assert re.fullmatch(pattern, value), f'{name} is {value!r}, not {pattern}'
+
+
+def test_an_unknown_version_placeholder_fails_the_build():
+    """An unknown name raises instead of reaching the page as braces, which the shim does only with `on_error_fail`."""
+    jinja2 = pytest.importorskip('jinja2', reason='the docs feature; the bare test environment skips it')
+    with pytest.raises(jinja2.UndefinedError, match="has no attribute 'tag'"):
+        _site_markdown().convert('pin it {{ mathspec.tag }}')
 
 
 def _nav_pages(entries: list[dict]) -> Iterator[str]:

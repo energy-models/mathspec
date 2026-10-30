@@ -5,25 +5,42 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Examples
 
-Open a page here to see one whole spec as the YAML file and as the math that
-the typesetter prints from it. Every spec is a file under `examples/` in the
-repository.
+Each example page contains the specification of one optimisation model
+([a spec](../reference/glossary.md#spec)) twice. The page has the YAML file,
+and the math that [the typesetter](../reference/typeset.md) prints from the file.
+Every spec is a file under `examples/` in the repository, and the test suite
+loads each one. Open a page to see whether the language can state a problem
+like yours, and what each line of the file means.
 
-- [Least-cost dispatch](dispatch.md) is the smallest whole spec, with a balance,
-  a bound and a cost to minimise.
-- [Unit commitment](commitment.md) adds an on/off decision and a start-up ramp.
-  One quantity has three cases, so a single inequality covers a running unit
-  and a starting unit.
-- [One construct per spec](operators.md) shows each operator in the smallest
-  file that uses it, beside the equation it prints.
-- [A component library](library/index.md) is several files that compose into
-  one spec. Each file reads the shared entries of one surface file and
-  prints on its own. The composed page shows what `merge` returns.
+<div class="grid cards" markdown>
 
-The PyPSA pages start at [PyPSA in one file](pypsa.md). They state the model
-that PyPSA builds, as a proof of concept, and they sit in the Development
-section. [PyPSA in 24 files](pypsa/index.md) composes the same spec from
-fragments.
+<!-- prettier-ignore -->
+- **[Least-cost dispatch](dispatch.md)** is the smallest spec with a balance,
+    a bound and a cost to minimise.
+- **[Unit commitment](commitment.md)** states `previous_status` in three
+    [cases](../reference/language/named.md#cases), so one inequality covers a
+    running unit and a starting unit.
+- **[One construct per spec](operators.md)** contains the smallest file for
+    each form of the four [operators](../reference/language/operators.md) and
+    [`dual`](../reference/language/named.md#dual), each file beside its
+    typeset equation.
+- **[A component library](library/index.md)** is several files that
+    [`merge`](../reference/composition.md#merge) composes into one spec, each
+    written against one shared [fragment](../reference/glossary.md#fragment)
+    (the [surface](../reference/glossary.md#surface)).
 
-To print the math of your own spec, see
-[Typeset the math](../reference/typeset.md).
+</div>
+
+An open-source power system modelling framework
+([PyPSA](https://pypsa.org)) has its own pages in the Development section,
+which start at [PyPSA in one file](pypsa_ladder.md). They state the model that PyPSA
+builds, as a proof that the language can state it.
+[PyPSA in 24 files](pypsa/index.md) states the same spec in fragments
+that `merge` composes.
+
+!!! info "See also"
+
+    - [Typeset output](../reference/typeset.md), for the formats the typesetter
+      prints and their options
+    - [The language reference](../reference/language/index.md), for every key a
+      file accepts

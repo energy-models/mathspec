@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  Translation with no edge policy — the vacated position is absent, so the row
-  it would have fed is not built.
+  A shift with no `edge=`: the vacated position is absent, so the constraint
+  has no row there.
 
 dimensions:
   snapshot: { dtype: int, ordered: true }

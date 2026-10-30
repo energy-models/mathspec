@@ -5,34 +5,46 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Versions
 
-mathspec has two version numbers: the package version and the language
-version. Pin the one that matches what you build.
+mathspec numbers its releases and its file format separately, because most
+releases change the package and leave the file format alone.
 
-- The package version numbers a release. The release workflow reads it from
-  the [git tag](https://github.com/energy-models/mathspec/blob/main/RELEASING.md#the-version),
-  so the tag, the changelog heading and the wheel on PyPI carry the same number,
-  such as `0.0.0a127`.
-- The language version numbers the file format. A spec file declares it
-  in the top-level [`version:` key](../reference/language/file.md#version). It
-  changes only when what the loader accepts changes, and most releases do not
-  change that. Version `0` is unstable: any release can change what a
-  version-`0` file means.
+## The package version and the language version
 
-## How a release relates the two
+The **package version** numbers a release of mathspec, such as the latest,
+`{{ mathspec.release }}`. The release workflow reads it from the
+[git tag](https://github.com/energy-models/mathspec/blob/main/RELEASING.md#the-version).
+So the tag, the changelog heading and the package file (wheel) on the Python
+Package Index (PyPI) all have the same number.
 
-Each release reads a fixed set of language versions and refuses a file that
-declares any other:
+The **language version** numbers the file format. A file states a
+specification of an optimisation model ([a spec](../reference/glossary.md#spec))
+and declares its language version in the top-level
+[`version:` key](../reference/language/file.md#version). The language version
+changes only when what the language accepts changes. Language version `0` is unstable. Any release can change what a version-`0`
+file means, or stop loading it.
 
-```text
-version: the spec declares version 1, and mathspec 0.0.0a127 understands [0].
-Upgrade mathspec, or write the version this file targets.
-```
+## Why not one number
 
-A release that starts or stops reading a language version says so in the
-[changelog](../reference/changelog.md).
+With one number, a file would declare
+the release of mathspec it was written for. Suppose a release fixes how the
+[typesetter](../reference/typeset.md) prints a sum, and changes nothing that a
+file means. With one number, every file would have to declare the new
+release, or mathspec would need a list of the releases that changed the
+format. That list is the language version.
 
-## What to pin
+With two numbers, a file whose language version is 1 or above loads in every
+release of mathspec that reads that version. You change the `version:` line of a file only when the
+language version changes. At load, mathspec
+[refuses a language version](../reference/language/file.md#version) that the
+installed release does not read.
 
-A spec file declares a language version, and a tool built on the Python API,
-such as specsolve, pins a package version. While mathspec is in alpha, any release
-can change the API, so pin one exact release.
+You can now judge why a file declares the language version and not the
+release, and why most releases leave a file untouched.
+
+!!! info "See also"
+
+    - [pin the version](../howto/installation.md#pin-the-version), for how a spec
+      file and a tool each [pin](../reference/glossary.md#pin) a number
+    - [`version`](../reference/language/file.md#version), for what the key
+      accepts and the message for a version that a release does not read
+    - [the changelog](../reference/changelog.md), for what each release changed

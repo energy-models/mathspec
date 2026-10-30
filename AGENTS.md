@@ -61,11 +61,11 @@ To learn what the project _is_, read [docs/](docs/index.md), and
   ```
 
 - **The version comes from the git tag.** Never write it into a file.
-- **Triage a language construct before designing it**: primitive, macro, or
+- **Triage a language construct before designing it**: operator, macro, or
   refused, against [limits.md](docs/about/limits.md). Whatever the loader
   admits, the typesetter prints in all three formats.
 - **Everything decidable without data is decided at load**, and the error
-  names the rewrite. `tests/test_validation.py` holds messages to that.
+  suggests the rewrite. `tests/test_validation.py` holds messages to that.
 
 ## Environment and gates
 
@@ -186,8 +186,8 @@ closed and re-filed, not annotated.
 
 ## Prose
 
-Plain declarative sentences that aim for Simplified Technical English
-(ASD-STE100), in pages, issues, PRs, commits and conversation. All of them follow
-[the prose-writing skill](.claude/skills/prose-writing/SKILL.md).
+Plain declarative sentences in pages, issues, PRs, commits and conversation.
+All of them follow [the prose-writing skill](.claude/skills/prose-writing/SKILL.md),
+which names the published style guides that gate them.
 Documentation pages also follow
 [the docs-writing skill](.claude/skills/docs-writing/SKILL.md).

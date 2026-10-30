@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  A trailing window whose width is data — `within:` names an integer parameter,
-  so a unit stays up for its *own* minimum time rather than one the file fixed.
+  A trailing window whose width is data: `window=` is an integer parameter. A
+  unit stays up for its own minimum up time.
 
 dimensions:
   unit: { dtype: str }

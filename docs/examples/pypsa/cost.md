@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The cost
 
-This file states the expected operating cost and its tail, weighted by scenario. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to the sum `total_cost`. It reads `CVaR_omega`, `scenario_opex` and `scenario_weight`, which other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states the expected operating cost and its tail, weighted by scenario. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `total_cost`. `CVaR_excess` and `CVaR_def` state the conditional value at risk (CVaR) of the operating cost over the scenarios.
 
 <!-- gallery:begin -->
 ```yaml
@@ -23,13 +23,13 @@ dimensions:
 
 parameters:
   CVaR_alpha:
-    description: PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega`
+    description: PyPSA's `risk_preference['alpha']` — the confidence level. The tail is the other `1 - alpha` of the probability. `CVaR_alpha` has a value exactly where `CVaR_omega` has one
     dims: []
     missing: neutral
 
 variables:
   CVaR_a:
-    description: "`CVaR-a` — how far a scenario's operating cost exceeds the tail's start; nothing where it does not"
+    description: "`CVaR-a` — how far a scenario's operating cost exceeds the tail's start. It is nothing where it does not"
     dims: [scenario]
     where: CVaR_omega
     missing: neutral
@@ -53,7 +53,7 @@ expressions:
 
 constraints:
   CVaR_excess:
-    description: "`CVaR-excess-{s}` — a scenario's operating cost beyond the tail's start is its excess; PyPSA names one row per scenario"
+    description: "`CVaR-excess-{s}` — a scenario's operating cost beyond the tail's start is its excess. PyPSA names one row per scenario"
     dims: [scenario]
     where: CVaR_omega
     expression: CVaR_a - scenario_opex + CVaR_theta >= 0
@@ -83,13 +83,13 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\alpha`$ | `CVaR_alpha` (scalar), `neutral` where the data has no row — PyPSA's `risk_preference['alpha']` — the confidence level; the tail holds the other `1 - alpha` of the probability. Data prep writes a row where it writes `CVaR_omega` |
+| $`\alpha`$ | `CVaR_alpha` (scalar), `neutral` where the data has no row — PyPSA's `risk_preference['alpha']` — the confidence level. The tail is the other `1 - alpha` of the probability. `CVaR_alpha` has a value exactly where `CVaR_omega` has one |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`a`$ | `CVaR_a` over $`\Xi`$, `neutral` where the mask leaves it out — `CVaR-a` — how far a scenario's operating cost exceeds the tail's start; nothing where it does not |
+| $`a`$ | `CVaR_a` over $`\Xi`$, `neutral` where the mask leaves it out — `CVaR-a` — how far a scenario's operating cost exceeds the tail's start. It is nothing where it does not |
 | $`\theta`$ | `CVaR_theta` (scalar), `neutral` where the mask leaves it out — `CVaR-theta` — where the tail starts, the value at risk |
 | $`CVaR`$ | `CVaR` (scalar), `neutral` where the mask leaves it out — `CVaR` — the tail's average cost, what the objective prices at `omega` |
 
@@ -141,3 +141,8 @@ a_{\xi} - \mathit{scenario\_opex}_{\xi} + \theta \ge 0 \qquad \forall\, \xi \in 
 \theta + \frac{1}{1 - \alpha} \cdot \left( \sum_{\xi \in \Xi} \pi_{\xi} \cdot a_{\xi} \right) \le CVaR \qquad \text{where } \omega \text{ is defined}
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

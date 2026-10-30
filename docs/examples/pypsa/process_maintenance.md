@@ -3,9 +3,9 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Processes, the maintenance
+# Process maintenance
 
-This file states the maintenance rows of PyPSA's `Process`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Process_active`, `Process_committable`, `Process_p_nom_ext`, `Process_p_nom_extendable`, `Process_p_nom_max`, `Process_p_nom_min` and 3 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states the maintenance rows of PyPSA's `Process`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Process_maint_window` states that a unit is in maintenance exactly where an event it started covers the snapshot, through a [`sum`](../../reference/language/operators.md#sum) by a relation.
 
 <!-- gallery:begin -->
 ```yaml
@@ -32,48 +32,48 @@ dimensions:
     dtype: datetime
     ordered: true
   process:
-    description: generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate
+    description: generalised multi-port converters, each with an internal power that every port draws or delivers at its own rate
 
 relations:
   Process_maintenance_cover:
     description: >-
-      the snapshots a maintenance event covers, by the snapshot it starts in —
-      in a scenario, the start and the snapshots after it, until their
-      generator weightings reach that scenario's `maintenance_duration`, data prep; no
-      rows for a process that is
-      not maintainable
+      the snapshots a maintenance event covers, by the snapshot it starts in,
+      data prep. In a scenario, they are the start and the snapshots after it,
+      until their generator weightings reach that scenario's
+      `maintenance_duration`. A process that is not maintainable has no rows
     key: { scenario: scenario, process: process, start: snapshot, covered: snapshot }
     missing: absent
 
 parameters:
   Process_maintainable:
     description: >-
-      whether a process must be taken off for maintenance within the horizon — in
-      any scenario, as PyPSA takes the union over them (`components.py:1016-1019`)
+      whether a process must be taken off for maintenance within the horizon:
+      in any scenario, as PyPSA takes the union over them
+      (`components.py:1016-1019`)
     dims: [process]
     dtype: bool
   Process_maintenance_pu:
     description: the share of the build a maintenance event takes off
     dims: [scenario, process]
   Process_maintenance_events:
-    description: how many maintenance events the horizon holds
+    description: how many maintenance events occur within the horizon
     dims: [scenario, process]
     dtype: int
   Process_maintenance_duration:
     description: >-
-      the hours of generator weightings one maintenance event covers —
-      PyPSA's `maintenance_duration`; no value where the process is not
-      maintainable. No row reads it: data prep turns it into
-      `Process_maintenance_cover` and `Process_maintenance_start_blocked`, and the
-      assumptions hold it to the horizon
+      the hours of generator weightings one maintenance event covers, PyPSA's
+      `maintenance_duration`. It has no value where the process is not
+      maintainable. No row contains it. In data prep you turn it into
+      `Process_maintenance_cover` and `Process_maintenance_start_blocked`. The
+      assumptions state that it fits the horizon
     dims: [scenario, process]
     missing: neutral
   Process_maintenance_start_blocked:
     description: >-
-      true where no maintenance event may start, because the snapshots it
-      would cover run past the end of the horizon or into one the process does
-      not stand in — PyPSA's `active & ~valid`, from `maintenance_duration`
-      and the generator weightings, data prep
+      true where no maintenance event may start, data prep. The snapshots it
+      would cover there run past the end of the horizon or into one the
+      process is not active in. It is PyPSA's `active & ~valid`, from
+      `maintenance_duration` and the generator weightings
     dims: [scenario, snapshot, process]
     dtype: bool
 
@@ -96,8 +96,8 @@ variables:
     domain: binary
   Process_maintenance_capacity:
     description: >-
-      `Process-maintenance_capacity` — the chosen build while in maintenance, zero
-      otherwise: the product the `maintcap` rows linearize
+      `Process-maintenance_capacity` — the chosen build while in maintenance,
+      zero otherwise: the product the `maintcap` rows linearise
     dims: [scenario, snapshot, process]
     where: Process_maint_ext
     missing: neutral
@@ -106,7 +106,7 @@ variables:
   Process_maintenance_status:
     description: >-
       `Process-maintenance_status` — the status while in maintenance, zero
-      otherwise: the product the `maint-status` rows linearize, so a unit in
+      otherwise: the product the `maint-status` rows linearise, so a unit in
       maintenance may also be off
     dims: [scenario, snapshot, process]
     where: >-
@@ -120,8 +120,8 @@ variables:
 conditions:
   Process_maint_ext:
     description: >-
-      a maintainable process with an extendable build, unless it is
-      committable and modular, that stands in the snapshot's period — the
+      a maintainable process with an extendable build that is active in the
+      snapshot's period, unless it is committable and modular. These are the
       maintenance rows against the chosen build
     condition: >-
       Process_maintainable
@@ -137,9 +137,9 @@ constraints:
     expression: sum(Process_maintenance_start, over=snapshot) == Process_maintenance_events
   Process_maint_window:
     description: >-
-      `Process-maint-window` — a process is in maintenance exactly where an event it
-      started covers the snapshot; two events do not overlap, since the
-      maintenance status is at most one
+      `Process-maint-window` — a process is in maintenance exactly where an
+      event it started covers the snapshot. Two events do not overlap, since
+      the maintenance status is at most one
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_active
     expression: Process_maintenance == sum(Process_maintenance_start, over=start, by=Process_maintenance_cover[covered])
@@ -192,8 +192,8 @@ constraints:
     expression: Process_maintenance_status <= Process_status
   Process_maint_modstatus_le_maint:
     description: >-
-      `Process-maint-modstatus-le-maint` — out of maintenance, no module is on in
-      maintenance; in it, at most the modules the build cap holds
+      `Process-maint-modstatus-le-maint` — out of maintenance, no module is on
+      in maintenance. In it, at most the modules the build cap holds
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
     expression: Process_maintenance_status <= Process_p_nom_max / Process_p_nom_mod * Process_maintenance
@@ -208,43 +208,42 @@ assumptions:
     holds: "Process_maintenance_events > 0"
     where: "Process_maintainable"
     description: >-
-      a maintainable process with no event schedules no maintenance —
-      PyPSA refuses it (`consistency.py:1493`)
+      a maintainable process with no event schedules no maintenance. PyPSA
+      refuses it (`consistency.py:1493`)
   Process_maintenance_duration_positive:
     holds: "Process_maintenance_duration > 0"
     where: "Process_maintainable"
     description: >-
-      an event that covers no hours is no maintenance window — PyPSA
-      refuses it (`consistency.py:1483`)
+      an event that covers no hours is no maintenance window. PyPSA refuses it
+      (`consistency.py:1483`)
   Process_maintenance_duration_fits_the_horizon:
     holds: "Process_maintenance_duration <= sum(snapshot_weightings_generators, over=snapshot)"
     where: "Process_maintainable"
     description: >-
-      one event longer than the horizon, in generator weightings, blocks
-      every start and makes the event count infeasible — PyPSA refuses it
+      one event longer than the horizon, in generator weightings, blocks every
+      start and makes the event count infeasible. PyPSA refuses it
       (`consistency.py:1504`)
   Process_maintenance_events_fit_the_horizon:
     holds: "Process_maintenance_duration * Process_maintenance_events <= sum(snapshot_weightings_generators, over=snapshot)"
     where: "Process_maintainable"
     description: >-
-      the events together longer than the horizon, in generator
-      weightings, cannot all be scheduled — PyPSA refuses it
-      (`consistency.py:1516`)
+      the events together longer than the horizon, in generator weightings,
+      cannot all be scheduled. PyPSA refuses it (`consistency.py:1516`)
   Process_maintenance_build_cap_is_finite:
     holds: "Process_p_nom_max < inf"
     where: "Process_maintainable AND Process_p_nom_extendable"
     description: >-
-      the `maintcap` rows hold the chosen build in maintenance against
-      `p_nom_max`, so an infinite cap is an infinite coefficient — PyPSA
+      the `maintcap` rows bound the chosen build in maintenance by
+      `p_nom_max`, so an infinite cap is an infinite coefficient. PyPSA
       refuses it (`consistency.py:1528`)
   Process_maintenance_module_count_is_finite:
     holds: "Process_p_nom_max < inf"
     where: "Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_p_nom_mod > 0"
     description: >-
       the `maint-modstatus` rows bound the modules on in maintenance by
-      `p_nom_max / p_nom_mod`, so an infinite cap is an infinite
-      coefficient. PyPSA does not check it, and HiGHS refuses the model
-      (`constraints.py:504-507`)
+      `p_nom_max / p_nom_mod`, so an infinite cap is an infinite coefficient.
+      PyPSA does not check it, and the solver HiGHS refuses the model PyPSA
+      builds (`constraints.py:504-507`)
 ```
 
 #### Given
@@ -268,23 +267,23 @@ assumptions:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — dispatch periods |
-| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate |
+| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_maintenance\_cover} \subseteq \Xi \times \mathcal{J} \times \mathcal{T} \times \mathcal{T}`$, `Process_maintenance_cover` is `absent` where the data has no row — generalised multi-port converters, each with an internal power that every port draws or delivers at its own rate |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{mnt}^{z}`$ | `Process_maintainable` over $`\mathcal{J}`$ — whether a process must be taken off for maintenance within the horizon — in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
+| $`\mathrm{mnt}^{z}`$ | `Process_maintainable` over $`\mathcal{J}`$ — whether a process must be taken off for maintenance within the horizon: in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
 | $`\gamma^{z}`$ | `Process_maintenance_pu` over $`\Xi \times \mathcal{J}`$ — the share of the build a maintenance event takes off |
-| $`\mathrm{n}^{z,\mathrm{mnt}}`$ | `Process_maintenance_events` over $`\Xi \times \mathcal{J}`$ — how many maintenance events the horizon holds |
-| $`\tau^{z,\mathrm{mnt}}`$ | `Process_maintenance_duration` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers — PyPSA's `maintenance_duration`; no value where the process is not maintainable. No row reads it: data prep turns it into `Process_maintenance_cover` and `Process_maintenance_start_blocked`, and the assumptions hold it to the horizon |
-| $`\mathrm{blk}^{z}`$ | `Process_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true where no maintenance event may start, because the snapshots it would cover run past the end of the horizon or into one the process does not stand in — PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings, data prep |
+| $`\mathrm{n}^{z,\mathrm{mnt}}`$ | `Process_maintenance_events` over $`\Xi \times \mathcal{J}`$ — how many maintenance events occur within the horizon |
+| $`\tau^{z,\mathrm{mnt}}`$ | `Process_maintenance_duration` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers, PyPSA's `maintenance_duration`. It has no value where the process is not maintainable. No row contains it. In data prep you turn it into `Process_maintenance_cover` and `Process_maintenance_start_blocked`. The assumptions state that it fits the horizon |
+| $`\mathrm{blk}^{z}`$ | `Process_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true where no maintenance event may start, data prep. The snapshots it would cover there run past the end of the horizon or into one the process is not active in. It is PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings |
 
 #### Conditions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{on}^{z,\mathrm{mnt,ext}}`$ | `Process_maint_ext` over $`\mathcal{J} \times \mathcal{T}`$ — a maintainable process with an extendable build, unless it is committable and modular, that stands in the snapshot's period — the maintenance rows against the chosen build |
+| $`\mathrm{on}^{z,\mathrm{mnt,ext}}`$ | `Process_maint_ext` over $`\mathcal{J} \times \mathcal{T}`$ — a maintainable process with an extendable build that is active in the snapshot's period, unless it is committable and modular. These are the maintenance rows against the chosen build |
 
 #### Variables
 
@@ -292,8 +291,8 @@ assumptions:
 |---|---|
 | $`\mu^{z}`$ | `Process_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance` — whether a maintainable process is in maintenance: continuous, and one exactly where an event covers the snapshot |
 | $`\mu^{z,\mathrm{up}}`$ | `Process_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_start` — whether a maintenance event starts in this snapshot |
-| $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearize |
-| $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearize, so a unit in maintenance may also be off |
+| $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearise |
+| $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearise, so a unit in maintenance may also be off |
 
 #### Conditions
 
@@ -447,3 +446,8 @@ assumptions:
 \overline{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} < \infty \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

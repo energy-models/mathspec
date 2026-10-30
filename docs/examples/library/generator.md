@@ -5,38 +5,27 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generators
 
-This fragment states PyPSA's `Generator`, and owns its dimension, its relation
-into `port`, its parameters, its variable and its cost. It reads `Port_p` and
-`total_cost` from [the surface](surface.md) under
-[`given`](../../reference/language/parameters-variables-constraints.md#given), and adds its cost to
-`total_cost` as the term `Generator_cost`. `Generator_port` stands where PyPSA
-writes `Generator_bus`. The surface sets the objective, so this file on its own
-sets none.
-
-The constraint is what makes the library composable.
-`at(Port_p, by=Generator_port[port])` pins the flow at
-this component's own port rather than adding a term to the balance, so the
-balance does not grow.
-
-The file is cut to what a dispatch spec needs. PyPSA carries a fixed build, an
-availability profile and ramp limits, and this file states none of the three.
-[The PyPSA rungs](../pypsa.md) state them in full.
-
-The math below is what this file prints on its own, with `Port_p` under
-*Given* in the legend. When the file merges with the surface, `Port_p` is one
-entry again.
+This [fragment](../../reference/glossary.md#fragment) states `Generator` from
+an open-source power system framework ([PyPSA](https://pypsa.org)). The file declares its three dimensions, the
+relation `Generator_port`, two parameters and the variable `Generator_p`. The file
+lists `Port_p` and `total_cost` under [`given`](../../reference/language/parameters-variables-constraints.md#given), and
+[the surface](surface.md) declares them. `Generator_cost` is a
+[named expression](../../reference/language/named.md#expressions) that adds to
+`total_cost` (a [term](../../reference/glossary.md#term)). `Generator_injection` equates `Generator_p` with the flow at the port through
+[`at`](../../reference/language/operators.md#at), so the balance of the
+surface contains no generator variable.
 
 <!-- gallery:begin -->
 ```yaml
 description: >-
   PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut
-  to what a dispatch spec needs: a fixed build, no availability profile, no
+  to what a dispatch spec needs: a fixed capacity, no availability profile, no
   ramp limits.
 given:
   variables:
     Port_p:
       dims: [snapshot, port]
-      description: the surface introduces this flow, and this file pins it at its own ports
+      description: declared by the surface, and fixed at each generator's port by `Generator_injection`
   expressions:
     total_cost: { dims: [] }
 dimensions:
@@ -56,8 +45,8 @@ variables:
 constraints:
   Generator_injection:
     description: >-
-      what a generator produces is what its port injects. No PyPSA row stands
-      for this: PyPSA writes the generator into the balance instead
+      What a generator produces is what its port injects. PyPSA has no row for
+      this constraint, because PyPSA writes the generator into the balance.
     dims: [snapshot, generator]
     expression: at(Port_p, by=Generator_port[port]) == Generator_p
 expressions:
@@ -66,13 +55,13 @@ expressions:
     adds_to: total_cost
 ```
 
-PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to what a dispatch spec needs: a fixed build, no availability profile, no ramp limits.
+PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to what a dispatch spec needs: a fixed capacity, no availability profile, no ramp limits.
 
 #### Given
 
 | Symbol | Meaning |
 |---|---|
-| $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — the surface introduces this flow, and this file pins it at its own ports |
+| $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — declared by the surface, and fixed at each generator's port by `Generator_injection` |
 | $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Generator_cost` to |
 
 #### Sets
@@ -126,3 +115,12 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [The coupling surface](surface.md), for the entries this file lists under
+      `given`
+    - [The composed spec](composed.md), for the spec once `merge` joins this file
+      with the surface and the loads
+    - [PyPSA in one file](../pypsa_ladder.md), for the generator with every attribute
+      PyPSA has

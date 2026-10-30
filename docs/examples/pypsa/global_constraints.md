@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Global constraints
 
-This file states the five system totals that PyPSA caps. Each total is a sum that the components add to. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `operational_limit`, `primary_energy`, `scenario_weight`, `tech_capacity_expansion`, `transmission_expansion_cost` and `transmission_volume_expansion`, which other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states the five system totals that PyPSA caps. Each total is a sum that the components add to. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. Each total has an upper-bound, a lower-bound and an equality row, such as `GlobalConstraint_primary_energy_ub`.
 
 <!-- gallery:begin -->
 ```yaml
@@ -28,25 +28,23 @@ dimensions:
 parameters:
   GlobalConstraint_type:
     description: >-
-      which formula the row takes — `primary_energy`, `operational_limit`,
+      which formula the row takes: `primary_energy`, `operational_limit`,
       `transmission_volume_expansion_limit`,
-      `transmission_expansion_cost_limit` or
-      `tech_capacity_expansion_limit`
+      `transmission_expansion_cost_limit` or `tech_capacity_expansion_limit`
     dims: [global_constraint]
     dtype: str
   GlobalConstraint_sense:
     description: >-
-      which way the row binds in each scenario — `<=`, `>=` or `==`; PyPSA
-      reads a row's sense per scenario (`global_constraints.py:551`, `:749`,
-      `:829`)
+      the row's sense in each scenario: `<=`, `>=` or `==`. PyPSA reads a
+      row's sense per scenario (`global_constraints.py:551`, `:749`, `:829`)
     dims: [scenario, global_constraint]
     dtype: str
   GlobalConstraint_constant:
     description: >-
-      the constant the total is held against; what a variable cannot carry —
-      an initial charge, times its period's years for each counted period
-      where the storage reopens per period, or a non-extendable build — is
-      folded in here by data prep. PyPSA reads it per scenario
+      the constant the total is held against. What a variable cannot represent
+      is folded in here in data prep. That is an initial charge, times its
+      period's years for each counted period where the storage reopens per
+      period, or a non-extendable build. PyPSA reads it per scenario
       (`global_constraints.py:552`, `:750`, `:829`)
     dims: [scenario, global_constraint]
 
@@ -132,11 +130,10 @@ assumptions:
     holds: "GlobalConstraint_type != 'tech_capacity_expansion_limit'"
     where: "count(scenario_weight, over=scenario) > 1"
     description: >-
-      PyPSA does not build a `tech_capacity_expansion_limit` row on a
-      network with scenarios and refuses it
-      (`global_constraints.py:67-69`). The spec cannot tell a network with
-      one scenario from one with none, so it refuses only where there is
-      more than one scenario
+      PyPSA does not build a `tech_capacity_expansion_limit` row on a network
+      with scenarios and refuses it (`global_constraints.py:67-69`). The spec
+      cannot tell a network with one scenario from one with none. A tool thus
+      refuses the row only where there is more than one scenario
 ```
 
 #### Given
@@ -161,9 +158,9 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{type}`$ | `GlobalConstraint_type` over $`\mathcal{G}`$ — which formula the row takes — `primary_energy`, `operational_limit`, `transmission_volume_expansion_limit`, `transmission_expansion_cost_limit` or `tech_capacity_expansion_limit` |
-| $`\mathrm{sense}`$ | `GlobalConstraint_sense` over $`\Xi \times \mathcal{G}`$ — which way the row binds in each scenario — `<=`, `>=` or `==`; PyPSA reads a row's sense per scenario (`global_constraints.py:551`, `:749`, `:829`) |
-| $`\mathrm{K}`$ | `GlobalConstraint_constant` over $`\Xi \times \mathcal{G}`$ — the constant the total is held against; what a variable cannot carry — an initial charge, times its period's years for each counted period where the storage reopens per period, or a non-extendable build — is folded in here by data prep. PyPSA reads it per scenario (`global_constraints.py:552`, `:750`, `:829`) |
+| $`\mathrm{type}`$ | `GlobalConstraint_type` over $`\mathcal{G}`$ — which formula the row takes: `primary_energy`, `operational_limit`, `transmission_volume_expansion_limit`, `transmission_expansion_cost_limit` or `tech_capacity_expansion_limit` |
+| $`\mathrm{sense}`$ | `GlobalConstraint_sense` over $`\Xi \times \mathcal{G}`$ — the row's sense in each scenario: `<=`, `>=` or `==`. PyPSA reads a row's sense per scenario (`global_constraints.py:551`, `:749`, `:829`) |
+| $`\mathrm{K}`$ | `GlobalConstraint_constant` over $`\Xi \times \mathcal{G}`$ — the constant the total is held against. What a variable cannot represent is folded in here in data prep. That is an initial charge, times its period's years for each counted period where the storage reopens per period, or a non-extendable build. PyPSA reads it per scenario (`global_constraints.py:552`, `:750`, `:829`) |
 
 #### Subject to
 
@@ -265,3 +262,8 @@ assumptions:
 \mathrm{type}_{g} \neq \text{'}\mathrm{tech\_capacity\_expansion\_limit}\text{'} \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ \xi \in \Xi \,:\, \pi_{\xi} \text{ is defined} \} \rvert > 1
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

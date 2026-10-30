@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  The membership reduction — `sum(array, over=dim, by=relation[c])` groups the
-  result by the relation's column `c`, so the topology is data rather than
-  structure.
+  A sum by group: `sum(array, over=dim, by=relation[c])` groups the result by
+  the relation's column `c`. The relation's data, not the file, sets which
+  generator sits at which bus.
 
 dimensions:
   snapshot: { dtype: int }

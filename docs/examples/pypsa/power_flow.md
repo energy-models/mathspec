@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Power flow
 
-This file states Kirchhoff's voltage law around each cycle. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads the sum `Cycle_angle_sum` under `given:` and adds nothing to it. The lines and the transformers add their terms to it.
+This file states Kirchhoff's voltage law around each cycle. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It lists the sum `Cycle_angle_sum` under [`given`](../../reference/language/parameters-variables-constraints.md#given) and adds nothing to it. The lines and the transformers add their terms to it.
 
 <!-- gallery:begin -->
 ```yaml
@@ -26,23 +26,23 @@ dimensions:
     ordered: true
   cycle:
     description: >-
-      independent cycles of the passive network graph — the cycle basis, data
-      prep. Each period has its own basis, of the branches that stand in it;
-      a label is a position in that period's basis, so one label names a
-      different cycle in another period
+      independent cycles of the passive network graph, the cycle basis, data
+      prep. Each period has its own basis, of the branches that are active in it. A
+      label is a position in that period's basis, so one label is a different
+      cycle in another period
 
 constraints:
   Kirchhoff_Voltage_Law:
     description: >-
       `Kirchhoff-Voltage-Law` — around every independent cycle the
-      impedance-weighted flows sum to nothing, which is what makes the linear
-      power flow physical rather than transport. A transformer's flow weighs its
-      effective reactance, and its phase shift enters the cycle sum too: a
-      constant where the shift is fixed, or the shift decision times its cycle
-      weight where the shift is a phase-shifting transformer's to choose. A
-      snapshot reads the cycles of its own period, of the branches that stand
-      in it (`constraints.py:1622-1638`); a cycle label that period's basis
-      does not reach has no row
+      impedance-weighted flows sum to nothing. This makes the linear power
+      flow physical rather than transport. A transformer's flow weighs its
+      effective reactance, and its phase shift enters the cycle sum too. The
+      shift is a constant where it is fixed. Where a phase-shifting
+      transformer chooses its shift, it is the shift decision times its cycle
+      weight. A snapshot uses the cycles of its own period, of the branches
+      that are active in it (`constraints.py:1622-1638`). A cycle label that
+      period's basis does not reach has no row
     dims: [scenario, snapshot, cycle]
     expression: Cycle_angle_sum == 0
 ```
@@ -59,7 +59,7 @@ constraints:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep. Each period has its own basis, of the branches that stand in it; a label is a position in that period's basis, so one label names a different cycle in another period |
+| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph, the cycle basis, data prep. Each period has its own basis, of the branches that are active in it. A label is a position in that period's basis, so one label is a different cycle in another period |
 
 #### Subject to
 
@@ -69,3 +69,8 @@ constraints:
 \mathit{Cycle\_angle\_sum}_{\xi,t,c} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

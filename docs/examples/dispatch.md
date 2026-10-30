@@ -5,18 +5,20 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Least-cost dispatch
 
-This file is the smallest whole spec, and the one on the [home
-page](../index.md). It has generators with a capacity, an hourly load to meet,
-and a cost to minimise.
-
-The `where:` on `dispatch` deletes the rows where a generator has no capacity
-([absence](../reference/language/absence.md)). `sum(dispatch, over=generator)`
-names the dimension it sums over, so the `dims` of the constraint are the
-dimensions that remain.
+Least-cost dispatch is the smallest specification of an optimisation model
+([a spec](../reference/glossary.md#spec)) with a balance, a bound and a cost.
+The [home page](../index.md) has the same spec. Wherever a generator has no
+capacity, the [`where:`](../reference/language/absence.md#where) on `dispatch`
+leaves the [variable](../reference/language/parameters-variables-constraints.md#variables) with no row there
+([absent](../reference/language/absence.md)).
+[`sum(dispatch, over=generator)`](../reference/language/operators.md#sum) sums
+over `generator` and keeps `snapshot`, which is the one
+[dimension](../reference/language/dimensions.md) that
+`power_balance` declares.
 
 <!-- gallery:begin -->
 ```yaml
-description: Least-cost dispatch of a generator fleet against an hourly load.
+description: Least-cost dispatch of a generator fleet against a load in each dispatch period.
 
 dimensions:
   snapshot: { dtype: int, description: dispatch periods }
@@ -44,7 +46,7 @@ objective:
   expression: sum(dispatch * cost)
 ```
 
-Least-cost dispatch of a generator fleet against an hourly load.
+Least-cost dispatch of a generator fleet against a load in each dispatch period.
 
 #### Sets
 
@@ -90,4 +92,10 @@ Least-cost dispatch of a generator fleet against an hourly load.
 ```
 <!-- gallery:end -->
 
-Regenerate with `pixi run python -m tools.gallery`.
+!!! info "See also"
+
+    - [Absence](../reference/language/absence.md), for what an absent variable
+      does to the expressions that use it
+    - [`sum`](../reference/language/operators.md#sum), for every form of the call
+    - [Unit commitment](commitment.md), for the same dispatch with an on/off
+      decision for each unit
