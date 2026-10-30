@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-description: Least-cost dispatch of a generator fleet against an hourly load.
+description: Least-cost dispatch of a generator fleet against a load in each dispatch period.
 
 dimensions:
   snapshot: { dtype: int, description: dispatch periods }

@@ -5,22 +5,45 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Python API
 
-Look up the signature, the arguments and the errors of every name that
-`import mathspec` exports, grouped by task. The top level holds what you call,
-and three modules hold the rest:
+The `mathspec` package provides the functions that load, compose, print and
+check the specification of an optimisation model ([a spec](glossary.md#spec)).
+This page lists each of them with its signature, its arguments and the errors
+it raises, grouped by task. The functions you call are at the top level, and
+the classes, constants and errors are in three modules:
 
-| Module             | Holds                                                   | Documented on             |
-| ------------------ | ------------------------------------------------------- | ------------------------- |
-| `mathspec.spec`    | what the file says: `Spec` and its parts                | [Spec API](spec.md)       |
-| `mathspec.program` | what the file means: `Program`, its nodes, and `Advice` | [Program API](program.md) |
-| `mathspec.errors`  | what you catch: the error tree, and `did_you_mean`      | [Errors](#errors) below   |
+| What it is                                                                                                                                     | It lives in        | Such as                                        | Documented on             |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------------------- | ------------------------- |
+| a function you call                                                                                                                            | `mathspec`         | `to_spec`, `merge`, `typeset`, `advice`        | this page                 |
+| the `Spec` that `to_spec` returns, the entries of a `Spec`, and the operators an expression may call                                           | `mathspec.spec`    | `Spec`, `VariableSpec`, `BUILTIN_NAMES`        | [Spec API](spec.md)       |
+| the `Program` that `spec.program` returns, the nodes of a `Program`, and what mathspec reports without refusing ([advice](glossary.md#advice)) | `mathspec.program` | `Program`, `Sum`, `Mask`, `Advice`             | [Program API](program.md) |
+| an error you catch, and the helper that suggests a name                                                                                        | `mathspec.errors`  | `LanguageError`, `SchemaError`, `did_you_mean` | [Errors](#errors) below   |
 
-A module whose name starts with an underscore is not public API
-([where a name lives](../about/what-counts-as-public-api.md#where-a-name-lives)).
+`SymbolTable` and the type `FormatName` are also at the top level. You pass a
+`SymbolTable` as the `symbols` argument of a function that prints math
+([a typesetting function](typeset.md)). You pass a `FormatName`, such as
+`'latex'`, as the `fmt` argument of `typeset` or `typeset_line`.
+
+A module whose name starts with an underscore is private
+([what counts as public API](../about/what-counts-as-public-api.md)).
+
+## Guarantees
+
+Every public function keeps three guarantees:
+
+- A function keeps no state, and uses no registry, no plugin, and no setting
+  that changes what a spec means.
+- A function returns a value or raises an error, and nothing between.
+  `to_spec` either returns a `Spec`, or raises an error that suggests the
+  rewrite. `advice()` reports on a file that loads, and changes nothing.
+- A function writes out no entry that expands into ordinary entries
+  ([a formulation](glossary.md#formulation)) unless the caller asks. A
+  [`piecewise:`](language/piecewise.md) or [`sos:`](language/piecewise.md#sos)
+  entry stays one entry until the caller calls
+  [`spec.expand()`](spec.md#mathspec.spec.Spec.expand).
 
 <!-- prettier-ignore-start -->
 
-## Loading
+## `to_spec`
 
 ::: mathspec.to_spec
     options:
@@ -28,9 +51,11 @@ A module whose name starts with an underscore is not public API
       show_root_toc_entry: true
       heading_level: 3
 
-## Composing
+## `merge` and `override`
 
-[Compose a spec from several files](../howto/compose.md) shows both in use.
+[Composing specs](composition.md) describes what `merge` and `override` do
+with their files, and [compose a spec from several files](../howto/compose.md)
+lists the steps.
 
 ::: mathspec.merge
     options:
@@ -44,7 +69,8 @@ A module whose name starts with an underscore is not public API
       show_root_toc_entry: true
       heading_level: 3
 
-## Typesetting
+## The typesetting API
+
 
 ::: mathspec.to_latex
     options:
@@ -88,9 +114,10 @@ A module whose name starts with an underscore is not public API
       show_root_toc_entry: true
       heading_level: 3
 
-## Advice
+## `advice`
 
-`advice` returns a tuple of [`Advice`](program.md#mathspec.program.Advice).
+`advice` returns a tuple of [`Advice`](program.md#mathspec.program.Advice),
+one for each piece of [advice](glossary.md#advice).
 
 ::: mathspec.advice
     options:
@@ -108,3 +135,10 @@ A module whose name starts with an underscore is not public API
       members_order: source
 
 <!-- prettier-ignore-end -->
+
+!!! info "See also"
+
+    - [Spec API](spec.md)
+    - [Program API](program.md)
+    - [Typeset output](typeset.md)
+    - [Errors and advice](language/errors.md)

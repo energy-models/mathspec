@@ -75,7 +75,7 @@ COMPOSED = {
 #: equation it renders, headed by the name the other side gives it, read from
 #: the entry's own description.
 DECLARED = {
-    'pypsa.md': ROOT / 'examples' / 'pypsa.yaml',
+    'pypsa_ladder.md': ROOT / 'examples' / 'pypsa.yaml',
 }
 
 #: Page -> the base and the patch laid over it, shown one entry of the

@@ -3,11 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  Unit commitment with a start-up ramp, the formulation `cases:` exists for.
-  The state a unit carries into a snapshot has three regimes — a unit that is
-  never off, the first snapshot, and every later one — and writing them at the
-  constraint would fork `ramp_up` three ways. With the regimes named once, the
-  inequality is written once.
+  Unit commitment with a start-up ramp, in which one named expression sets the
+  commitment state of a unit at the start of a snapshot. That state has three cases:
+  a unit that is never off, the first snapshot, and every later one.
 
 dimensions:
   snapshot: { dtype: int, description: dispatch periods, ordered: true }
@@ -19,7 +17,7 @@ parameters:
   capacity: { dims: [generator], description: installed capacity }
   min_output: { dims: [generator], description: output floor while running }
   ramp_limit: { dims: [generator], description: how far output may move between snapshots while running }
-  start_up_limit: { dims: [generator], description: how far it may move in the snapshot it starts in }
+  start_up_limit: { dims: [generator], description: how far output may move in the snapshot a unit starts in }
   load: { dims: [snapshot], description: demand to be met }
   cost: { dims: [generator], description: marginal cost }
 
@@ -35,7 +33,7 @@ variables:
 
 expressions:
   previous_status:
-    description: the commitment state a unit carries into a snapshot
+    description: the commitment state of a unit at the start of a snapshot
     dims: [snapshot, generator]
     cases:
       always_on:
@@ -55,13 +53,13 @@ constraints:
     dims: [snapshot, generator]
     expression: dispatch <= status * capacity
   lower:
-    description: and one that is running produces at least its floor
+    description: a running unit produces at least its floor
     dims: [snapshot, generator]
     expression: dispatch >= status * min_output
   ramp_up:
     description: >-
-      one inequality for both regimes — a unit already running is held to
-      `ramp_limit`, a unit starting up to `start_up_limit`.
+      one inequality for a unit already running and a unit starting up: the
+      first is held to `ramp_limit`, and the second to `start_up_limit`.
     dims: [snapshot, generator]
     expression: >-
       dispatch - shift(dispatch, along=snapshot, offset=1, edge=0)
@@ -72,10 +70,9 @@ assumptions:
     holds: "min_output <= capacity"
     where: "committable"
     description: >-
-      `lower` and `upper` hold one dispatch between them, so a floor above the
-      cap makes a running unit infeasible rather than expensive. A unit that
-      cannot be switched off is held to its floor in every snapshot, so the
-      check is the committable ones'.
+      `lower` and `upper` bound one dispatch from both sides, so a floor above
+      the cap makes a running unit infeasible rather than expensive. A tool
+      checks the assumption only for committable units.
 
 objective:
   sense: minimize

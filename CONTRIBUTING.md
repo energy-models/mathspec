@@ -15,7 +15,8 @@ Some of the resources to look at if you're interested in contributing:
 ## Licensing
 
 Copyright (c) 2026 mathspec contributors.
-By contributing to mathspec, i.e. through opening a pull request, you represent that your contributions are your own original work and that you have the right to license them, and you agree that your contributions are licensed under the .
+By contributing to mathspec, such as by opening a pull request, you represent that your contributions are your own original work and that you have the right to license them.
+You also agree that your contributions are licensed under the MIT licence for code, and under the CC-BY-4.0 licence for documentation and prose.
 
 ## Reporting bugs and requesting features
 
@@ -38,46 +39,28 @@ Look at the [development guide in our documentation](https://mathspec.readthedoc
 <!--- the "--8<--" html comments define what part of this file to add to the index page of the documentation -->
 <!--- --8<-- [start:docs] -->
 
-To contribute changes:
+To contribute a change:
 
-1. Fork the project on GitHub.
-1. Create a feature branch to work on in your fork (`git checkout -b new-fix-or-feature`).
-1. Test your changes using `pixi run test`, or `pixi run ci` for everything CI will check.
-1. Commit your changes to the feature branch (you should have `pre-commit` installed to ensure your code is correctly formatted when you commit changes).
+1. Fork the repository and set up a development environment, as the [development guide](https://mathspec.readthedocs.io/en/latest/contributing/#setting-up-a-development-environment) describes.
+1. In your clone, create a feature branch (`git checkout -b new-fix-or-feature`).
+1. Commit your changes to the feature branch.
 1. Push the branch to GitHub (`git push origin new-fix-or-feature`).
-1. On GitHub, create a new [pull request](https://github.com/energy-models/mathspec/pull/new/main) from the feature branch.
+1. On GitHub, open a [pull request](https://github.com/energy-models/mathspec/pull/new/main) from the feature branch.
 
-When you contribute for the first time, ensure your reviewer [adds you as a contributor](https://allcontributors.org/en/bot/)!
+When you contribute for the first time, ask your reviewer to [add you as a contributor](https://allcontributors.org/en/bot/).
 
-### Pull requests
+### Open a pull request
 
-Before submitting a pull request, check whether you have:
+Before you open a pull request (PR), check that you have:
 
-- Written the PR title as a conventional commit subject (see below).
-- Added its line under `## Upcoming version` in `CHANGELOG.md` by hand, if the PR is a `feat`, `fix`, `perf`, `refactor`, `docs` or `revert` (see below).
-- Added or updated documentation for your changes (see [The docs](#the-docs)).
-- Added tests if you implemented new functionality.
+- Written the PR title as a conventional commit subject, as [Write the PR title](#write-the-pr-title) describes.
+- Added the PR's line to `CHANGELOG.md`, if the PR needs one.
+- Added or updated the documentation for your change.
+- Added tests for new functionality.
 
-When opening a pull request, please provide a clear summary of your changes!
+In the PR body, summarise what changed and why.
 
-### The docs
-
-`docs/` is both the site and what you read on GitHub. **What a page is for
-decides where it goes, in the nav and in the tree**: a tutorial (`docs/`), a
-how-to guide (`docs/howto/`), reference (`docs/reference/`, and the example pages
-in `docs/examples/`) or explanation (`docs/about/`) — the four kinds of
-[Diátaxis](https://diataxis.fr) — and one page is one kind. A page a spec
-writer does not need goes under Development in the nav: building on
-mathspec, contributing, or a proof of concept. The rules each kind has to meet are in
-[the docs-writing skill](https://github.com/energy-models/mathspec/blob/main/.claude/skills/docs-writing/SKILL.md).
-The sentence-level bar, for pages, issues and PRs, is in
-[the prose-writing skill](https://github.com/energy-models/mathspec/blob/main/.claude/skills/prose-writing/SKILL.md).
-Every page needs a `nav:` entry in `mkdocs.yml`, links inside `docs/` are
-relative, and a link outside it is the full GitHub URL. `pixi run docs-build`
-is `--strict` and refuses a dead link or a stale anchor; `pixi run test` is
-what refuses a page with no nav entry.
-
-### Commit messages
+### Write the PR title
 
 Merges are squashed, so the **PR title** becomes the commit on `main`. Write it
 so it also works as the line you add to `CHANGELOG.md` by hand. It must be a
@@ -86,9 +69,9 @@ so it also works as the line you add to `CHANGELOG.md` by hand. It must be a
 ```text
 <type>[(scope)]: <subject>
 
-feat: AST parsing for indexed constraints
-fix(parser): where clauses with a trailing comma
-docs: describe the two expression tiers
+feat(language): a coordinate may declare its own label space
+fix(parser): a where clause with a trailing comma loads
+docs(language): a comparison on a relation is false where the relation has no row
 ```
 
 A `feat`, `fix`, `perf`, `refactor`, `docs` or `revert` PR adds its title,
@@ -99,36 +82,31 @@ and the `Changelog line` check enforces the line. The label `no changelog`
 opts a PR out of the second.
 See [RELEASING.md](https://github.com/energy-models/mathspec/blob/main/RELEASING.md).
 
-Beyond the subject line, write whatever body the change deserves — a paragraph
-or bullet list covering what changed and its impact.
+Beyond the subject line, write the body that the change needs: what changed,
+and its impact.
 
-### Code conventions
+### Follow the code conventions
 
-Start reading our code and you'll get the hang of it.
+The code follows the [Style Guide for Python Code (PEP 8)](https://www.python.org/dev/peps/pep-0008/).
+The formatter and linter [`ruff`](https://docs.astral.sh/ruff/) applies the rules that `pyproject.toml` sets, such as the maximum line length.
+The commit hooks run `ruff` on every commit.
+You can also set up your editor to run `ruff` when you save a file, as the `ruff` documentation describes.
 
-We mostly follow the official [Style Guide for Python Code (PEP8)](https://www.python.org/dev/peps/pep-0008/).
+Write a docstring in the [Google docstring style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
+In `src/`, `ruff` checks the form of each docstring, but it does not require a docstring on every name.
 
-We have chosen to use the uncompromising code formatter and linter [`ruff`](https://beta.ruff.rs/docs/).
-When run from the root directory of this repo, `pyproject.toml` should ensure that formatting and linting fixes are in line with our custom preferences (e.g., maximum line length).
-To make this a smooth experience, you should run `pixi run pre-commit-install` after setting up your development environment.
-If you prefer, you can also set up your IDE to run these two tools whenever you save your files, and to have `ruff` highlight erroneous code directly as you type.
-Take a look at their documentation for more information on configuring this.
-
-We require all new contributions to have docstrings for all modules, classes and methods.
-When adding docstrings, we request you use the [Google docstring style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
+<!--- --8<-- [end:docs] -->
 
 ## Releases
 
 A release is a PR that renames `## Upcoming version` in `CHANGELOG.md` to the
-version and the day, such as `## 0.1.0 (2026-10-01)`, and edits the section
-into the release notes. Merging it tags the release, opens the GitHub release
-and publishes the package to PyPI.
+version and the day, such as `## 0.1.0 (2026-10-01)`. The PR also edits the
+section into the release notes. When the PR merges, the release workflow tags the
+release, opens the GitHub release and publishes the package to PyPI.
 
-The version is never written down in the source tree — it comes from the git
-tag at build time, and `mathspec.__version__` reads it back from the installed
-package metadata.
+The version comes from the git tag at build time and is never written in the
+source tree. `mathspec.__version__` returns it from the installed package
+metadata.
 
 See [RELEASING.md](https://github.com/energy-models/mathspec/blob/main/RELEASING.md) for the steps, what to do when one
 fails, and the one-time repository setup.
-
-<!--- --8<-- [end:docs] -->

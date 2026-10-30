@@ -57,7 +57,7 @@ ms.to_typst(spec)
 ms.to_markdown(spec)
 ```
 
-`symbols` gives every name its conventional spelling. Pass a dict, a YAML path
+`symbols` sets the symbol for each name. Pass a dict, a YAML path
 or a `SymbolTable`. It is optional: drop it and the same spec prints from the
 names in the file, as $\\mathrm{load}_t$ and $\\mathrm{capacity}_g$.
 
@@ -69,7 +69,7 @@ python -m mathspec latex dispatch.yaml --symbols dispatch.symbols.yaml
 python -m mathspec typst dispatch.yaml --standalone -o dispatch.typ
 ```
 
-[Typeset the math](reference/typeset.md) documents the three functions, their
+[Typeset output](reference/typeset.md) documents the three functions, their
 options and symbol tables. Each reads the same file every other page here
 loads."""
 

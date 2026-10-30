@@ -5,10 +5,13 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # One construct per spec
 
-Each built-in [operator](../reference/language/operators.md) has a section here,
-which shows the smallest spec that uses the operator and the equation that the
-typesetter prints from it. The reference page shows the same equations in one
-table, without the files.
+This page has a section for each call form of the four
+[operators](../reference/language/operators.md), `sum`, `at`, `shift` and
+`sum_back`, and of [`dual`](../reference/language/named.md#dual). Each section
+contains the smallest spec that uses the form, and the equation that
+[the typesetter](../reference/typeset.md) prints from that spec. The
+[operators page](../reference/language/operators.md#every-operator-as-math)
+lists the same equations in one table, without the files.
 
 <!-- gallery:begin -->
 ### `sum(array)`
@@ -16,7 +19,9 @@ table, without the files.
 `examples/operators/sum_all.yaml`
 
 ```yaml
-description: Every dimension at once — `sum(array)` names none of them and takes them all.
+description: >-
+  Every dimension at once: `sum(array)` lists no dimension and collapses every
+  one.
 
 dimensions:
   snapshot: { dtype: int }
@@ -45,7 +50,8 @@ $`\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \le \mathrm{budget}`$
 `examples/operators/sum.yaml`
 
 ```yaml
-description: The plain reduction — `sum(array, over=dim)` collapses one dimension.
+description: >-
+  The plain reduction: `sum(array, over=dim)` collapses one dimension.
 
 dimensions:
   snapshot: { dtype: int }
@@ -74,7 +80,9 @@ $`\sum_{g \in \mathcal{G}} p_{t,g} \le \mathrm{limit}_{t} \qquad \forall\, t \in
 `examples/operators/sum_list.yaml`
 
 ```yaml
-description: Several dimensions at once — `sum(array, over=[a, b])` collapses each one it names.
+description: >-
+  Several dimensions at once: `sum(array, over=[a, b])` collapses each
+  dimension in the list.
 
 dimensions:
   snapshot: { dtype: int }
@@ -105,9 +113,9 @@ $`\sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g,c} \le \mathrm{limit}_{c} 
 
 ```yaml
 description: >-
-  The membership reduction — `sum(array, over=dim, by=relation[c])` groups the
-  result by the relation's column `c`, so the topology is data rather than
-  structure.
+  A sum by group: `sum(array, over=dim, by=relation[c])` groups the result by
+  the relation's column `c`. The relation's data, not the file, sets which
+  generator sits at which bus.
 
 dimensions:
   snapshot: { dtype: int }
@@ -141,10 +149,10 @@ $`\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{t,g} \le \mathrm{li
 
 ```yaml
 description: >-
-  A sum that keeps a key column — `sum(array, over=dim, by=relation[c])` joins
+  A sum that keeps a key column: `sum(array, over=dim, by=relation[c])` joins
   on the column over `dim` and groups by column `c`. The sum also joins on the
-  key column that the call does not name, and keeps it, so each zone gets one
-  total per period.
+  key column that the call does not list. It keeps that column, so each zone
+  gets one total per period.
 
 dimensions:
   generator: { dtype: str }
@@ -178,8 +186,8 @@ $`\sum_{g \in \mathcal{G} \,:\, \mathrm{zone\_of}(g,\ e) = z} p_{g,e} \ge \mathr
 
 ```yaml
 description: >-
-  Several columns at each end — `sum(array, over=[dim, …], by=relation[c, …])`
-  joins on both key columns and groups by both value columns, all in one join.
+  Several key and value columns: `sum(array, over=[dim, …], by=relation[c, …])`
+  joins on both key columns and groups by both value columns.
 
 dimensions:
   generator: { dtype: str }
@@ -214,8 +222,8 @@ $`\sum_{g \in \mathcal{G},\ e \in \mathcal{E} \,:\, \mathrm{slot\_of.bus}(g,\ e)
 
 ```yaml
 description: >-
-  The join without a grouping — `at(array, by=relation[c])` reads one coarse
-  value once for each fine label that points at it.
+  The join without a grouping: `at(array, by=relation[c])` takes, for each
+  `snapshot`, the value at the `period` the relation lists for that snapshot.
 
 dimensions:
   snapshot: { dtype: int }
@@ -248,8 +256,9 @@ $`p_{t} \le \mathrm{cap}_{\mathrm{period\_of}(t)} \qquad \forall\, t \in \mathca
 
 ```yaml
 description: >-
-  One of two columns — where a table has two columns over one dimension,
-  `at(array, by=relation[c])` reads column `c`, here the sending end of a line.
+  One of two columns: where a relation has two columns over one dimension,
+  `at(array, by=relation[c])` takes the value at column `c`. Here `c` is `bus0`,
+  the sending end of a line.
 
 dimensions:
   line: { dtype: str }
@@ -282,8 +291,8 @@ $`f_{l} \le \mathrm{cap}_{\mathrm{ends.bus0}(l)} \qquad \forall\, l \in \mathcal
 
 ```yaml
 description: >-
-  Translation with no edge policy — the vacated position is absent, so the row
-  it would have fed is not built.
+  A shift with no `edge=`: the vacated position is absent, so the constraint
+  has no row there.
 
 dimensions:
   snapshot: { dtype: int, ordered: true }
@@ -309,8 +318,8 @@ $`p_{t} \le p_{t - 1} \qquad \forall\, t \in \mathcal{T}`$
 
 ```yaml
 description: >-
-  Cyclic translation — the horizon closed on itself, so the first position
-  reads the last and nothing is vacated.
+  A cyclic shift: the horizon wraps, so the first position takes the value of
+  the last and no position is vacated.
 
 dimensions:
   snapshot: { dtype: int, ordered: true }
@@ -336,8 +345,9 @@ $`p_{t} \le p_{t \ominus 1} \qquad \forall\, t \in \mathcal{T}`$
 
 ```yaml
 description: >-
-  Translation with a value at the edge — the vacated position contributes the
-  number instead of being absent, so the row survives.
+  A shift with a value at the edge: the vacated position contributes the
+  `edge=` value, here 0, instead of being absent. The constraint has a row
+  there.
 
 dimensions:
   snapshot: { dtype: int, ordered: true }
@@ -363,9 +373,8 @@ $`p_{t} \le p_{t \boxminus_{0} 1} \qquad \forall\, t \in \mathcal{T}`$
 
 ```yaml
 description: >-
-  Translation by an offset that differs per entity — `by:` names an integer
-  parameter, so each technology is reached by its own lead time rather than by
-  one the file had to fix.
+  A shift by an offset that differs per entity: `offset=` is an integer
+  parameter. Each technology is shifted by its own lead time.
 
 dimensions:
   technology: { dtype: str }
@@ -396,8 +405,9 @@ $`\mathit{order}_{t,m \boxminus_{0} \mathrm{lead}} \ge \mathrm{demand}_{t,m} \qq
 
 ```yaml
 description: >-
-  Translation inside a group — each season closed on itself, so a season's first
-  snapshot reads that season's last and no level crosses the boundary.
+  A shift inside a group: each season wraps on itself. A season's first
+  snapshot takes the value of that season's last, and no value crosses from one
+  season into the next.
 
 dimensions:
   snapshot: { dtype: int, ordered: true }
@@ -461,8 +471,8 @@ $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < 3} \mathit{started}_{u,h'} \le \
 
 ```yaml
 description: >-
-  A trailing window whose width is data — `within:` names an integer parameter,
-  so a unit stays up for its *own* minimum time rather than one the file fixed.
+  A trailing window whose width is data: `window=` is an integer parameter. A
+  unit stays up for its own minimum up time.
 
 dimensions:
   unit: { dtype: str }
@@ -495,8 +505,8 @@ $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < \mathrm{min\_up}} \mathit{starte
 
 ```yaml
 description: >-
-  A trailing window on a representative period that repeats, so the window at
-  the first hour reaches back into the last.
+  A trailing window on a day that repeats, so the window at the first hour
+  reaches back into the last.
 
 dimensions:
   unit: { dtype: str }
@@ -529,9 +539,7 @@ $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h \ominus h' < \mathrm{min\_up}} \mathit{
 
 ```yaml
 description: >-
-  A window that stops at each group's edge: representative days are separate
-  samples rather than consecutive hours, so a window must not reach across the
-  boundary between two of them.
+  A window inside a group: the window stops at the first hour of each day.
 
 dimensions:
   unit: { dtype: str }
@@ -564,7 +572,10 @@ $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h -^{\mathrm{day\_of}(h)} h' < 3} \mathit
 `examples/operators/dual.yaml`
 
 ```yaml
-description: The row dual — `dual(constraint)` reads a solved constraint's shadow price over its own frame.
+description: >-
+  After the solver runs, `dual(constraint)` has the constraint's dimensions,
+  and each value is the marginal value of the constraint at that
+  coordinate (its shadow price).
 
 dimensions:
   snapshot: { dtype: int }
@@ -591,4 +602,11 @@ objective: { sense: minimize, expression: sum(p) }
 $`\mathit{price}_{t} = \lambda_{\mathrm{balance},t} \qquad \forall\, t \in \mathcal{T}`$
 <!-- gallery:end -->
 
-Regenerate with `pixi run python -m tools.gallery`.
+!!! info "See also"
+
+    - [Operators](../reference/language/operators.md), for what each operator
+      accepts and what mathspec refuses
+    - [`dual`](../reference/language/named.md#dual), for the entries that may call
+      `dual`
+    - [Typeset output](../reference/typeset.md), for the three formats the
+      typesetter prints

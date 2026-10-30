@@ -3,11 +3,15 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# PyPSA, the relaxed commitment
+# Linearised unit commitment in PyPSA
 
-This page states the model that `n.optimize(linearized_unit_commitment=True)`
-builds, as a patch over [PyPSA in one file](pypsa.md). The patch is
-`examples/variants/pypsa_linearized_uc.yaml`. Lay it over the base file:
+This page states the spec of the model that
+`n.optimize(linearized_unit_commitment=True)` builds in PyPSA. The file
+`examples/variants/pypsa_linearized_uc.yaml` states only the change to a base
+spec (a [patch](../reference/glossary.md#patch)), and its base is
+[PyPSA in one file](pypsa_ladder.md).
+[`override`](../reference/composition.md#override) lays the patch over the
+base:
 
 ```python
 import mathspec as ms
@@ -15,29 +19,25 @@ import mathspec as ms
 spec = ms.override('examples/pypsa.yaml', ['examples/variants/pypsa_linearized_uc.yaml'])
 ```
 
-The patch changes only what the keyword changes:
+`spec` is the base with the patch laid over it.
 
-- The status, start and stop of a committable generator, link and process are
-  shares in [0, 1], not integers (`variables.py:81-90`, `:132-141`,
-  `:183-192`).
-- Four rows tighten the relaxation of a unit with a fixed build whose start
-  and stop cost the same in every snapshot and every scenario
-  (`constraints.py:599-699`).
-- A modular committable unit is refused, as PyPSA refuses it
-  (`optimize.py:783-784`).
+The patch relaxes the status (`variables.py:86-87`), the start (`:137-138`)
+and the stop (`:188-189`) of each committable unit. PyPSA refuses a modular
+committable unit under the keyword (`optimize.py:783-784`). The other rows of
+the integer run have their scenarios, periods and `active` conditions.
 
-Every other row is a row of the integer run, with its scenarios, periods and
-`active` masks. Rungs 12, 44, 47 and 67 solve the patched spec. A **rung** is
-one step of the PyPSA ladder, which is one `n.optimize()` keyword stated in
-full. Each network is the shared spine, `spine.py`, plus the additions of the
-rung script.
+Four steps of the PyPSA ladder ([rungs](../reference/glossary.md#rung)),
+numbered 12, 44, 47 and 67, run under the keyword. The four rungs on this page
+start from a shared two-bus network (the spine), in
+[`spine.py`](https://github.com/energy-models/math-spec/blob/main/examples/references/pypsa/spine.py),
+with the additions of the rung script.
 
-## Rung 12 — linearized unit commitment
+## Rung 12 — linearised unit commitment
 
 | PyPSA | status | note |
 | --- | --- | --- |
 | [`Generator-status`](#generator-status), [`-start_up`](#generator-start_up), [`-shut_down`](#generator-shut_down) | done | shares in [0, 1] |
-| [`Generator-com-p-before`](#generator-com-p-before) | done | where start and stop cost the same in every snapshot and scenario — a `count` over `snapshot`, then over `scenario` |
+| [`Generator-com-p-before`](#generator-com-p-before) | done | where start and stop cost the same in every snapshot and scenario, by a `count` over `snapshot`, then over `scenario` |
 | [`Generator-com-p-current`](#generator-com-p-current) | done | |
 | [`Generator-com-partly-start-up`](#generator-com-partly-start-up) | done | |
 | [`Generator-com-partly-shut-down`](#generator-com-partly-shut-down) | done | |
@@ -112,39 +112,44 @@ def build():
 </details>
 <!-- reference:rung_12_linearized_uc:end -->
 
-## Rung 44 — the integer file's commitment rows, relaxed
+## Rung 44 — relaxed integer commitment rows
 
-`n.optimize(linearized_unit_commitment=True)` builds the same commitment rows as
-the integer run, except the four tightening rows: the keyword only relaxes the
-status, start and stop to shares in [0, 1] (`variables.py:81-88`) and adds the
-tightening rows (`constraints.py:621`). So the patch leaves each of these rows
-to [PyPSA in one file](pypsa.md), and this rung checks them under the keyword:
+Under the keyword, PyPSA builds the commitment rows of the integer run and adds
+the four tightening rows (`constraints.py:599-699`). The keyword relaxes only the
+status, start and stop to shares in [0, 1] (`variables.py:86-87`). The patch
+leaves each of these rows to [PyPSA in one file](pypsa_ladder.md), and the rung's
+network contains them under the keyword:
 
 - A unit still serving the down time it brought in stays off
   (`constraints.py:591-597`).
-- A ramp row stands where a unit has a ramp limit or only a start-up or
-  shut-down ramp, and a missing limit reads as the full build
-  (`constraints.py:1018-1027`).
-- A maintainable unit is taken off for its events. The maintenance start stays
-  a binary under the keyword (`variables.py:234-259`), and the product of
-  status and maintenance enters the commitment rows through the `maint-status`
-  rows (`constraints.py:429-462`). A maintainable unit that is not committable
-  loses the same share of its fixed rows (`constraints.py:139-149`).
+- PyPSA builds a ramp row where a unit has a ramp limit, or only a start-up or
+  shut-down ramp (`constraints.py:1018-1027`). A missing limit is the full
+  build.
+- A maintainable unit is off for its events. The maintenance start stays a
+  binary under the keyword (`variables.py:234-259`). The product of status and
+  maintenance enters the commitment rows through the `maint-status` rows
+  (`constraints.py:429-462`). A maintainable unit that is not committable loses
+  the same share of its fixed rows (`constraints.py:139-149`).
 
-The rung adds five cheap units under a load that swings. A start costs more than
-a stop, so PyPSA builds no tightening rows for them, and the rung tests only
-these rows. Each row binds. PyPSA solves to `7400.0`, to `6540.0` without the
-down time brought in, and to `7164.0` without the start-up ramp. With the
-missing start-up and shut-down ramps read as `0`, it solves to `8060.0`. With
-the committable unit not maintainable, it solves to `7310.0`, and with the fixed
-unit not maintainable, to `7100.0`.
+The rung adds five cheap units under a load that swings. A start costs more
+than a stop, so PyPSA builds no tightening rows for them, and each row is
+tight at the optimum. PyPSA solves the rung and its variants to these objectives:
+
+| network | objective |
+| --- | --- |
+| the rung as built | `7400.0` |
+| without the down time brought in | `6540.0` |
+| without the start-up ramp | `7164.0` |
+| the missing start-up and shut-down ramps as `0` | `8060.0` |
+| the committable unit not maintainable | `7310.0` |
+| the fixed unit not maintainable | `7100.0` |
 
 | PyPSA | status | note |
 | --- | --- | --- |
-| [`Generator-com-status-min_down_time_must_stay_up`](pypsa.md#generator-com-status-min_down_time_must_stay_up) | done | |
-| [`Generator-p-ramp_limit_up`](pypsa.md#generator-p-ramp_limit_up), [`-down`](pypsa.md#generator-p-ramp_limit_down) for a start-up or shut-down ramp alone, and a missing limit | done | `Generator_ramp_up_rate` and the other three rates read a missing limit as `1` |
-| [`Generator-maint-*`](pypsa.md#generator-maint-event-count), [`Generator-maint-status-*`](pypsa.md#generator-maint-status-le-status) | done | fixed units |
-| [`Generator-com-p-lower`](pypsa.md#generator-com-p-lower), [`-upper`](pypsa.md#generator-com-p-upper), [`Generator-fix-p-lower`](pypsa.md#generator-fix-p-lower), [`-upper`](pypsa.md#generator-fix-p-upper) in maintenance | done | |
+| [`Generator-com-status-min_down_time_must_stay_up`](pypsa_ladder.md#generator-com-status-min_down_time_must_stay_up) | done | |
+| [`Generator-p-ramp_limit_up`](pypsa_ladder.md#generator-p-ramp_limit_up), [`-down`](pypsa_ladder.md#generator-p-ramp_limit_down) for a start-up or shut-down ramp alone, and a missing limit | done | `Generator_ramp_up_rate` and the other three rates are `1` where the limit is missing |
+| [`Generator-maint-*`](pypsa_ladder.md#generator-maint-event-count), [`Generator-maint-status-*`](pypsa_ladder.md#generator-maint-status-le-status) | done | fixed units |
+| [`Generator-com-p-lower`](pypsa_ladder.md#generator-com-p-lower), [`-upper`](pypsa_ladder.md#generator-com-p-upper), [`Generator-fix-p-lower`](pypsa_ladder.md#generator-fix-p-lower), [`-upper`](pypsa_ladder.md#generator-fix-p-upper) in maintenance | done | |
 
 <!-- reference:rung_44_linearized_commitment:begin -->
 > ✔ `pypsa 1.3.0.post1.dev41+g51986084b` solves this rung's network at objective `7400.0`, 191 rows.
@@ -215,46 +220,52 @@ def build():
 </details>
 <!-- reference:rung_44_linearized_commitment:end -->
 
-## Rung 47 — ramps and signs, as the integer file states them
+## Rung 47 — ramps and signs under the keyword
 
-This rung checks five rows under the keyword, each on fixed builds. The patch
-writes the first row, and [PyPSA in one file](pypsa.md) states the other four:
+Under the keyword, the rung's network contains five kinds of row, each on fixed
+builds. The patch states the first kind, the four tightening rows.
+[PyPSA in one file](pypsa_ladder.md) states the other four:
 
-- The four tightening rows read each ramp limit filled to the full build where
-  it is missing (`constraints.py:317-322`). They read `Generator_ramp_up_rate`
-  and the other three rates.
-- A ramp limit is given per snapshot and read at the later of the two
-  snapshots (`constraints.py:1012-1013`). A row is absent at a snapshot where
-  neither the limit nor the start-up or shut-down ramp has a value
-  (`constraints.py:1018-1019`, `1108`, `1126`).
+- In the four tightening rows, a missing ramp limit is the full build
+  (`constraints.py:317-322`). The rows contain `Generator_ramp_up_rate` and the
+  other three rates.
+- A ramp limit has a value per snapshot, and the ramp row uses its value at the
+  later of the two snapshots (`constraints.py:1012-1013`). A row is absent at a
+  snapshot where neither the limit nor the start-up or shut-down ramp has a
+  value (`constraints.py:1018-1019`, `1108`, `1126`).
 - A unit that came in running with a `p_init` ramps from it into the first
   snapshot (`constraints.py:1063-1066`, `1074-1076`). Where `p_init` has no
-  value, the unit carries no ramp row at the first snapshot.
-- A unit that is not committable carries ramp rows with its status fixed at
-  `1` (`constraints.py:1045-1051`). The assumption
-  `Generator_came_in_running_unless_committable` refuses such a unit that came
-  in off.
-- Each generator and load term enters the bus balance with its component's
+  value, the unit has no ramp row at the first snapshot.
+- A unit that is not committable has ramp rows with its status fixed at `1`
+  (`constraints.py:1045-1051`). A tool refuses such a unit that came in off,
+  through the assumption
+  [`Generator_came_in_running_unless_committable`](pypsa_ladder.md#generator_came_in_running_unless_committable).
+- Each generator's and load's part enters the bus balance with its component's
   `sign` (`constraints.py:1404-1405`, `:1514`).
 
 The rung adds a relax bus with a tightened unit that has only start-up and
-shut-down ramps, a committable unit whose ramp limit lifts at the third
-snapshot, a dear committable unit that came in running at `p_init=40`, a fixed
-unit with ramp limits, a unit of sign `-1`, a load of sign `1` and a dear
-backup. Each of them binds, and PyPSA solves to `12862.5`. With the missing
-limits read as `0` in the two partly rows, it solves to `14085.64`, and with the
-ramp limit at `0.25` in every snapshot, to `14554.75`. Without the `p_init`, it
-solves to `8437.5`, and without the fixed unit's ramp limits, to `12800.0`. With
-the unit's sign at `1`, it solves to `12592.5`, and with the load's sign at
-`-1`, to `13887.5`.
+shut-down ramps. One committable unit has a ramp limit that lifts at the third snapshot, and
+a dear committable unit came in running at `p_init=40`. A fixed unit with ramp limits, a unit of sign `-1`, a load of sign
+`1` and a dear backup complete the bus. The row of each unit is tight at
+the optimum, and PyPSA solves the rung and its variants to these objectives:
+
+| network | objective |
+| --- | --- |
+| the rung as built | `12862.5` |
+| the missing limits as `0` in the two partly rows | `14085.64` |
+| the ramp limit at `0.25` in every snapshot | `14554.75` |
+| without the `p_init` | `8437.5` |
+| without the fixed unit's ramp limits | `12800.0` |
+| the unit's sign at `1` | `12592.5` |
+| the load's sign at `-1` | `13887.5` |
 
 | PyPSA | status | note |
 | --- | --- | --- |
-| [`Generator-com-p-before`](#generator-com-p-before), [`-current`](#generator-com-p-current), [`-partly-start-up`](#generator-com-partly-start-up), [`-partly-shut-down`](#generator-com-partly-shut-down) with a missing ramp limit | done | the four rates read a missing limit as `1` |
-| [`Generator-p-ramp_limit_up`](pypsa.md#generator-p-ramp_limit_up), [`-down`](pypsa.md#generator-p-ramp_limit_down) per snapshot | done | `Generator_ramp_limit_up` and `-down` over `[scenario, snapshot, generator]` |
-| [`Generator-p-ramp_limit_up`](pypsa.md#generator-p-ramp_limit_up), [`-down`](pypsa.md#generator-p-ramp_limit_down) at the first snapshot from `p_init` | done | `Generator_previous_p` opens at `Generator_status_initial * Generator_p_init` |
-| [`Generator-p-ramp_limit_up`](pypsa.md#generator-p-ramp_limit_up), [`-down`](pypsa.md#generator-p-ramp_limit_down) for a unit that is not committable | done | `Generator_ramp_up_allowance` and `-down` read the status as `1` |
-| [`Bus-nodal_balance`](pypsa.md#bus-nodal_balance) with `sign` | done | `Generator_sign` and `Load_sign` |
+| [`Generator-com-p-before`](#generator-com-p-before), [`-current`](#generator-com-p-current), [`-partly-start-up`](#generator-com-partly-start-up), [`-partly-shut-down`](#generator-com-partly-shut-down) with a missing ramp limit | done | the four rates are `1` where the limit is missing |
+| [`Generator-p-ramp_limit_up`](pypsa_ladder.md#generator-p-ramp_limit_up), [`-down`](pypsa_ladder.md#generator-p-ramp_limit_down) per snapshot | done | `Generator_ramp_limit_up` and `-down` over `[scenario, snapshot, generator]` |
+| [`Generator-p-ramp_limit_up`](pypsa_ladder.md#generator-p-ramp_limit_up), [`-down`](pypsa_ladder.md#generator-p-ramp_limit_down) at the first snapshot from `p_init` | done | `Generator_previous_p` opens at `Generator_status_initial * Generator_p_init` |
+| [`Generator-p-ramp_limit_up`](pypsa_ladder.md#generator-p-ramp_limit_up), [`-down`](pypsa_ladder.md#generator-p-ramp_limit_down) for a unit that is not committable | done | `Generator_ramp_up_allowance` and `-down` have the status fixed at `1` |
+| [`Bus-nodal_balance`](pypsa_ladder.md#bus-nodal_balance) with `sign` | done | `Generator_sign` and `Load_sign` |
 
 <!-- reference:rung_47_linearized_ramps:begin -->
 > ✔ `pypsa 1.3.0.post1.dev41+g51986084b` solves this rung's network at objective `12862.5`, 179 rows.
@@ -334,21 +345,22 @@ def build():
 </details>
 <!-- reference:rung_47_linearized_ramps:end -->
 
-## Rung 67 — a committable link and process, relaxed
+## Rung 67 — relaxed link and process commitment
 
 The keyword relaxes Link and Process as it relaxes Generator
-(`optimize.py:817-821`), and builds the four tightening rows for each
-(`constraints.py:621-699`). The rung adds an east bus that three committable
-units serve from the north: a link and a process, each with a fixed build and
-the same start and stop cost, and an extendable link. PyPSA does not tighten
-the extendable link, since the rows read the build as data
-(`constraints.py:617-619`). A dear backup on the east bus keeps the bus
-balanced.
+(`optimize.py:817-821`), and PyPSA builds the four tightening rows for each
+(`constraints.py:599-699`). The rung adds an east bus that three committable
+units serve from the north. They are a link and a process, each with a fixed
+build and the same start and stop cost, and an extendable link. PyPSA does not
+tighten the extendable link, because the tightening rows contain the build as
+data (`constraints.py:617-619`). A dear backup on the east bus balances the
+bus.
 
-Each tightening row binds, and PyPSA solves to `47777.33`. When the stop of the
-link costs `1e-7` more than its start, PyPSA does not tighten the link, and it
-solves to `46554.0`. When the process is left untightened in the same way, PyPSA
-solves to `47465.70`. Without the keyword, it solves to `54013.13`.
+Each tightening row is tight at the optimum, and PyPSA solves to `47777.33`.
+When the stop of the link costs `1e-7` more than its start, PyPSA does not
+tighten the link, and it solves to `46554.0`. When the process is left
+untightened in the same way, PyPSA solves to `47465.70`. Without the keyword,
+it solves to `54013.13`.
 
 | PyPSA | status | note |
 | --- | --- | --- |
@@ -356,7 +368,7 @@ solves to `47465.70`. Without the keyword, it solves to `54013.13`.
 | [`Process-status`](#process-status), [`-start_up`](#process-start_up), [`-shut_down`](#process-shut_down) | done | shares in [0, 1] |
 | [`Link-com-p-before`](#link-com-p-before), [`-current`](#link-com-p-current), [`-partly-start-up`](#link-com-partly-start-up), [`-partly-shut-down`](#link-com-partly-shut-down) | done | a fixed build only |
 | [`Process-com-p-before`](#process-com-p-before), [`-current`](#process-com-p-current), [`-partly-start-up`](#process-com-partly-start-up), [`-partly-shut-down`](#process-com-partly-shut-down) | done | a fixed build only |
-| [`Link-com-ext-p-*`](pypsa.md#link-com-ext-p-upper-cap) under the keyword | done | no tightening for an extendable build |
+| [`Link-com-ext-p-*`](pypsa_ladder.md#link-com-ext-p-upper-cap) under the keyword | done | no tightening for an extendable build |
 
 <!-- reference:rung_67_linearized_link_process:begin -->
 > ✔ `pypsa 1.3.0.post1.dev41+g51986084b` solves this rung's network at objective `47777.33333333333`, 184 rows.
@@ -448,7 +460,7 @@ def build():
 ## The file
 
 <!-- gallery:begin -->
-`n.optimize(linearized_unit_commitment=True)`, as a patch over `examples/pypsa.yaml`. The status, its starts and its stops of a committable generator, link and process are shares in [0, 1] rather than integers, and four rows PyPSA adds only under the keyword tighten the relaxation of a unit with a fixed build whose start and stop cost the same in every snapshot and every scenario (`constraints.py:599-699`). A modular committable unit is refused, as PyPSA refuses it. Every other row is the integer run's.
+A committable generator, link or process has a status, starts and stops that are shares in [0, 1]. The patch states `n.optimize(linearized_unit_commitment=True)` over `examples/pypsa.yaml`, and the shares relax that file's integers (`variables.py:86-87`). Four rows PyPSA adds only under the keyword tighten the relaxation (`constraints.py:599-699`). PyPSA builds them only for a unit with a fixed build whose start and stop cost the same in every snapshot and every scenario. The patch states an assumption of no modular committable unit, which PyPSA refuses under the keyword and a tool refuses when data is attached. Every other row is the integer run's.
 
 ### `Generator-status`
 
@@ -610,10 +622,10 @@ Process_shut_down:
 ```yaml
 Generator_com_p_before:
   description: >-
-    `Generator-com-p-before` — the output a unit had entering this snapshot fits
-    the share of it still on, less the share it is shutting down at the
-    shut-down ramp (`constraints.py:635-649`). The translated terms vacate
-    the first snapshot, as PyPSA's `sns[1:]` does
+    `Generator-com-p-before` — the output a unit had entering this snapshot
+    fits the share of it still on (`constraints.py:635-649`). The share it
+    is shutting down counts only at the shut-down ramp. The translated terms
+    vacate the first snapshot, as PyPSA's `sns[1:]` does
   dims: [scenario, snapshot, generator]
   where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
   expression: >-
@@ -654,9 +666,9 @@ p_{\xi,t,g} - \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\
 ```yaml
 Generator_com_partly_start_up:
   description: >-
-    `Generator-com-partly-start-up` — raising output while a share is starting up
-    is bounded by the ramp of the share on and the start-up ramp of the
-    share coming on (`constraints.py:667-682`)
+    `Generator-com-partly-start-up` — raising output while a share is
+    starting up is bounded by two ramps (`constraints.py:667-682`). They are
+    the ramp of the share on and the start-up ramp of the share coming on
   dims: [scenario, snapshot, generator]
   where: Generator_committable AND NOT Generator_p_nom_extendable AND count(count(Generator_start_up_cost != Generator_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Generator_active
   expression: >-
@@ -702,9 +714,9 @@ p_{\xi,t - 1,g} - p_{\xi,t,g} - \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \c
 Link_com_p_before:
   description: >-
     `Link-com-p-before` — the output a link had entering this snapshot fits
-    the share of it still on, less the share it is shutting down at the
-    shut-down ramp (`constraints.py:635-649`). The translated terms vacate
-    the first snapshot, as PyPSA's `sns[1:]` does
+    the share of it still on (`constraints.py:635-649`). The share it is
+    shutting down counts only at the shut-down ramp. The translated terms
+    vacate the first snapshot, as PyPSA's `sns[1:]` does
   dims: [scenario, snapshot, link]
   where: Link_committable AND NOT Link_p_nom_extendable AND count(count(Link_start_up_cost != Link_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Link_active
   expression: >-
@@ -746,8 +758,8 @@ f_{\xi,t,l} - \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\
 Link_com_partly_start_up:
   description: >-
     `Link-com-partly-start-up` — raising output while a share is starting up
-    is bounded by the ramp of the share on and the start-up ramp of the
-    share coming on (`constraints.py:667-682`)
+    is bounded by two ramps (`constraints.py:667-682`). They are the ramp of
+    the share on and the start-up ramp of the share coming on
   dims: [scenario, snapshot, link]
   where: Link_committable AND NOT Link_p_nom_extendable AND count(count(Link_start_up_cost != Link_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Link_active
   expression: >-
@@ -792,10 +804,10 @@ f_{\xi,t - 1,l} - f_{\xi,t,l} - \widetilde{\mathrm{rd}}^{f,\mathrm{dn}}_{\xi,l} 
 ```yaml
 Process_com_p_before:
   description: >-
-    `Process-com-p-before` — the output a process had entering this snapshot fits
-    the share of it still on, less the share it is shutting down at the
-    shut-down ramp (`constraints.py:635-649`). The translated terms vacate
-    the first snapshot, as PyPSA's `sns[1:]` does
+    `Process-com-p-before` — the output a process had entering this snapshot
+    fits the share of it still on (`constraints.py:635-649`). The share it
+    is shutting down counts only at the shut-down ramp. The translated terms
+    vacate the first snapshot, as PyPSA's `sns[1:]` does
   dims: [scenario, snapshot, process]
   where: Process_committable AND NOT Process_p_nom_extendable AND count(count(Process_start_up_cost != Process_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Process_active
   expression: >-
@@ -836,9 +848,9 @@ z_{\xi,t,j} - \overline{\mathrm{z}}_{\xi,t,j} \cdot \mathrm{z}^{\mathrm{nom}}_{\
 ```yaml
 Process_com_partly_start_up:
   description: >-
-    `Process-com-partly-start-up` — raising output while a share is starting up
-    is bounded by the ramp of the share on and the start-up ramp of the
-    share coming on (`constraints.py:667-682`)
+    `Process-com-partly-start-up` — raising output while a share is starting
+    up is bounded by two ramps (`constraints.py:667-682`). They are the ramp
+    of the share on and the start-up ramp of the share coming on
   dims: [scenario, snapshot, process]
   where: Process_committable AND NOT Process_p_nom_extendable AND count(count(Process_start_up_cost != Process_shut_down_cost, over=snapshot) > 0, over=scenario) == 0 AND Process_active
   expression: >-
@@ -886,7 +898,7 @@ Generator_committable_is_not_modular:
   where: "Generator_committable AND count(Generator_active, over=snapshot) > 0"
   description: >-
     a modular committable unit counts its status in modules, which the
-    relaxation cannot share out — PyPSA refuses it under the keyword
+    relaxation cannot share out. PyPSA refuses it under the keyword
     (`optimize.py:783-784`, `consistency.py:1540-1581`)
 ```
 
@@ -904,7 +916,7 @@ Link_committable_is_not_modular:
   where: "Link_committable AND count(Link_active, over=snapshot) > 0"
   description: >-
     a modular committable unit counts its status in modules, which the
-    relaxation cannot share out — PyPSA refuses it under the keyword
+    relaxation cannot share out. PyPSA refuses it under the keyword
     (`optimize.py:783-784`, `consistency.py:1540-1581`)
 ```
 
@@ -922,7 +934,7 @@ Process_committable_is_not_modular:
   where: "Process_committable AND count(Process_active, over=snapshot) > 0"
   description: >-
     a modular committable unit counts its status in modules, which the
-    relaxation cannot share out — PyPSA refuses it under the keyword
+    relaxation cannot share out. PyPSA refuses it under the keyword
     (`optimize.py:783-784`, `consistency.py:1540-1581`)
 ```
 
@@ -931,4 +943,9 @@ Process_committable_is_not_modular:
 ```
 <!-- gallery:end -->
 
-Regenerate with `pixi run python -m tools.gallery`.
+!!! info "See also"
+
+    - [PyPSA in one file](pypsa_ladder.md), for the base spec and every rung
+    - [`override`](../reference/composition.md#override), for how a patch is laid
+      over its base
+    - [Patch](../reference/glossary.md#patch), for the term

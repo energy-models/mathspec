@@ -4,13 +4,13 @@
 
 description: >-
   PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut
-  to what a dispatch spec needs: a fixed build, no availability profile, no
+  to what a dispatch spec needs: a fixed capacity, no availability profile, no
   ramp limits.
 given:
   variables:
     Port_p:
       dims: [snapshot, port]
-      description: the surface introduces this flow, and this file pins it at its own ports
+      description: declared by the surface, and fixed at each generator's port by `Generator_injection`
   expressions:
     total_cost: { dims: [] }
 dimensions:
@@ -30,8 +30,8 @@ variables:
 constraints:
   Generator_injection:
     description: >-
-      what a generator produces is what its port injects. No PyPSA row stands
-      for this: PyPSA writes the generator into the balance instead
+      What a generator produces is what its port injects. PyPSA has no row for
+      this constraint, because PyPSA writes the generator into the balance.
     dims: [snapshot, generator]
     expression: at(Port_p, by=Generator_port[port]) == Generator_p
 expressions:

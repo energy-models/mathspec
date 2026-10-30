@@ -5,45 +5,51 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # PyPSA in 24 files
 
-You can read the PyPSA spec here one topic at a time.
-[PyPSA in one file](../pypsa.md) states it as `examples/pypsa.yaml`, one spec
-of about four thousand lines. The same spec is split into 24 **fragments**, one file
-per topic under `examples/pypsa/`. `merge` joins the 24 files back into the one
-file, and the two have the same [canonical form](../../howto/compare.md).
+This section states the PyPSA spec one topic at a time.
+[PyPSA in one file](../pypsa_ladder.md) states it as `examples/pypsa.yaml`, one spec of
+about 4,700 lines. Here the same spec is split into 24 whole specs of one topic
+each ([fragments](../../reference/glossary.md#fragment)), under
+`examples/pypsa/`. [`merge`](../../reference/composition.md#merge) composes the
+24 files into one spec, which has the same
+[canonical form](../../reference/reading.md#comparing-two-specs) as the one
+file.
 
 Each fragment loads and prints on its own, and
 [`advice`](../../reference/api.md#advice) runs on each fragment alone. A
-fragment lists each name that it reads but does not declare under
-[`given`](../../reference/language/parameters-variables-constraints.md#given). Some sums take a
-share from every component, such as the bus balance or the operating cost. A
-component names its share of such a sum as an expression of its own, a
-[term](../../reference/language/parameters-variables-constraints.md#terms), whose `adds_to:` key
-names the sum. For each sum, one fragment reads it and adds nothing to it, so
-the terms always have a reader. To add a component, you add one file, and the
-network file does not change.
+fragment lists each name that it uses but does not declare under
+[`given`](../../reference/language/parameters-variables-constraints.md#given).
 
-`tools/pypsa_split.py` writes the 24 files from the one file, and a check
-compares them to it, so the two always agree. The split is a proof of concept,
-and which of the two is the source is not decided yet.
+Some sums take a share from every component, such as the bus balance or the
+operating cost. A component states its share of such a sum as an expression of
+its own, a [term](../../reference/language/named.md#adds_to), whose `adds_to:`
+key is the sum. For each sum, one fragment lists it under `given:` and adds
+nothing to it, so every term adds to a sum that some fragment lists. A
+component is one file, and adding it leaves the network file unchanged.
 
-## What each file says
+`tools/pypsa_split.py` writes the 24 files from the one file, and a test
+compares them with it, so the two always agree.
 
-The fragments are of three kinds:
+## The four kinds of fragment
 
-- A **component** file owns the PyPSA class of that name: its dimension, its
+- A **component** file states the PyPSA class of that name: its dimension, its
   data, its variables, its rows and its share of each sum. The committable
-  classes are `Generator`, `Link` and `Process`. Each of them is cut by feature
-  into four files: the class, its commitment, its ramping and its maintenance.
-  The three sets of four files read alike, because PyPSA builds the same rows
-  for each class.
-- An **owner** file reads a sum with its description, and holds the row that
-  reads it. The network reads `Bus_injection`, and power flow reads
-  `Cycle_angle_sum`.
-- The **settings** file holds the weightings and the flags that every topic
-  reads. It also reads the totals whose own readers a spec may leave out: the
-  cost, the carriers and the global constraints. It sets the objective, which
-  reads `total_cost`. Each component adds its capital cost to `total_cost`, and
-  the cost file adds the operating cost at risk.
+  classes are `Generator`, `Link` and `Process`. Each of them is split by
+  feature into four files: the class, its commitment, its ramping and its
+  maintenance. The three sets of four files are alike, because PyPSA builds
+  the same rows for each class.
+- A file that describes a sum lists it under `given:` with its description,
+  and states the row that contains it. The network and power flow files are
+  of this kind.
+- A file of one feature states rows that span several classes. The cost,
+  carrier, global constraints and security files state the risk-weighted
+  operating cost, the growth limits, the five caps and the outage rows.
+- The **settings** file states the weightings and the flags that the other
+  fragments use. It also lists the totals that the cost, carrier and global
+  constraints files list, because a spec may leave those files out. Its
+  objective minimises `total_cost`. Each component adds its capital cost to
+  `total_cost`, and the cost file adds the risk-weighted operating cost.
+
+## Sums and fragments
 
 <!-- gallery:begin -->
 ### The sums
@@ -93,8 +99,18 @@ The fragments are of three kinds:
 
 ## Leaving a file out
 
-You may leave out a component family, the cost, the carriers, the global
-constraints or security. What is left is a whole spec, with nothing left under
-`given:`. You may not leave out the network or power flow while a component is
-in, because the terms of the component would then add to a sum that no fragment
-reads, and `merge` refuses the files.
+A spec may leave out a component family, the cost, the carriers, the global
+constraints or security. What remains is a whole spec, with nothing left
+under `given:`. Lines and transformers leave only together with security,
+because security lists `Line_s_nom` and four more line names, and the same for
+transformers, under `given:`. While a component is in, a spec may not leave
+out the network, power flow or settings. The terms of the component would then
+add to a sum that no fragment lists, and `merge` refuses the files.
+
+!!! info "See also"
+
+    - [Composition](../../reference/composition.md), for what `merge` refuses
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by
+      rung
+    - [`given`](../../reference/language/parameters-variables-constraints.md#given),
+      for the names a fragment uses but does not declare

@@ -3,9 +3,9 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Links, the ramping
+# Link ramping
 
-This file states the ramping rows of PyPSA's `Link`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads `Link_active`, `Link_big_m`, `Link_committable`, `Link_p`, `Link_p_nom_committed`, `Link_p_nom_effective` and 8 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states the ramping rows of PyPSA's `Link`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Link_previous_p` is the output carried into each snapshot, from `p_init` at the first where the unit came in running. `Link_ramp_up_allowance` adds the start-up ramp in the snapshot the unit turns on.
 
 <!-- gallery:begin -->
 ```yaml
@@ -40,7 +40,7 @@ dimensions:
   link:
     description: controllable connections, each from one bus to the buses it delivers to
   period:
-    description: investment periods — PyPSA's `investment_periods`
+    description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
     ordered: true
 
@@ -52,74 +52,76 @@ relations:
 
 parameters:
   Link_ramp_limit_up:
-    description: most a link may raise its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
+    description: most a link may raise its flow between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time
     dims: [scenario, snapshot, link]
     missing: neutral
   Link_ramp_limit_down:
-    description: most a link may lower its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time
+    description: most a link may lower its flow between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time
     dims: [scenario, snapshot, link]
     missing: neutral
   Link_ramp_limit_start_up:
-    description: most flow in the snapshot a link starts, per unit of nominal power; no value means no limit
+    description: most flow in the snapshot a link starts, per unit of nominal power. No value means no limit
     dims: [scenario, link]
     missing: neutral
   Link_ramp_limit_shut_down:
-    description: most flow in the snapshot before a link stops, per unit of nominal power; no value means no limit
+    description: most flow in the snapshot before a link stops, per unit of nominal power. No value means no limit
     dims: [scenario, link]
     missing: neutral
   Link_p_init:
     description: >-
-      the flow a link brought into the horizon — PyPSA's `p_init`, read
-      only where the link came in running; no value means it is unknown, so
-      the link carries no ramp row at the first snapshot
+      the flow a link brought into the horizon (PyPSA's `p_init`), read only
+      where the link came in running. No value means it is unknown, and the
+      link then has no ramp row at the first snapshot
     dims: [scenario, link]
     missing: neutral
 
 expressions:
   Link_previous_p:
     description: >-
-      the flow a link carries into a snapshot — at the first, the
-      `p_init` it brought in where it came in running and nothing where it
-      came in off; the previous snapshot's after that
+      the flow a link carries into a snapshot. At the first, it is the
+      `p_init` it brought in where it came in running, and nothing where it
+      came in off. After that, it is the previous snapshot's
     dims: [scenario, snapshot, link]
     cases:
       opening: { when: "position(snapshot) == 0", expression: Link_status_initial * Link_p_init }
     otherwise: shift(Link_p, along=snapshot, offset=1)
   Link_ramp_up_rate:
     description: >-
-      the ramp limit a link's up row reads — PyPSA's `ramp_limit_up`, or the
-      full build where it has none, since a start-up ramp alone builds the row
+      the ramp limit in a link's up row, PyPSA's `ramp_limit_up`. It is the
+      full build where PyPSA has none, since a start-up ramp alone builds the
+      row
     dims: [scenario, snapshot, link]
     cases:
       given: { when: Link_ramp_limit_up, expression: Link_ramp_limit_up }
     otherwise: 1
   Link_ramp_down_rate:
     description: >-
-      the ramp limit a link's down row reads — PyPSA's `ramp_limit_down`, or
-      the full build where it has none, since a shut-down ramp alone builds the row
+      the ramp limit in a link's down row, PyPSA's `ramp_limit_down`. It is
+      the full build where PyPSA has none, since a shut-down ramp alone builds
+      the row
     dims: [scenario, snapshot, link]
     cases:
       given: { when: Link_ramp_limit_down, expression: Link_ramp_limit_down }
     otherwise: 1
   Link_start_up_rate:
     description: >-
-      the start-up ramp a link's up row reads — PyPSA's `ramp_limit_start_up`,
-      or the full build where it has none
+      the start-up ramp in a link's up row (PyPSA's `ramp_limit_start_up`), or
+      the full build where it has none
     dims: [scenario, link]
     cases:
       given: { when: Link_ramp_limit_start_up, expression: Link_ramp_limit_start_up }
     otherwise: 1
   Link_shut_down_rate:
     description: >-
-      the shut-down ramp a link's down row reads — PyPSA's
-      `ramp_limit_shut_down`, or the full build where it has none
+      the shut-down ramp in a link's down row (PyPSA's
+      `ramp_limit_shut_down`), or the full build where it has none
     dims: [scenario, link]
     cases:
       given: { when: Link_ramp_limit_shut_down, expression: Link_ramp_limit_shut_down }
     otherwise: 1
   Link_ramp_up_allowance:
     description: >-
-      how far a link may raise flow between two snapshots — its ramp
+      how far a link may raise flow between two snapshots. It is its ramp
       limit of the build while it stays on, plus its start-up ramp in the
       snapshot it turns on
     dims: [scenario, snapshot, link]
@@ -133,7 +135,7 @@ expressions:
     otherwise: Link_ramp_up_rate * Link_p_nom_effective
   Link_ramp_down_allowance:
     description: >-
-      how far a link may lower flow between two snapshots — its ramp
+      how far a link may lower flow between two snapshots. It is its ramp
       limit of the build while it stays on, plus its shut-down ramp in the
       snapshot it turns off
     dims: [scenario, snapshot, link]
@@ -149,7 +151,7 @@ expressions:
 conditions:
   Link_ramps_from_previous:
     description: >-
-      a snapshot whose ramp reads a previous output — any snapshot but its
+      a snapshot whose ramp uses a previous output. It is any snapshot but its
       period's first, and the horizon's first where the link comes in off or
       carries an initial output
     condition: >-
@@ -159,9 +161,9 @@ conditions:
 constraints:
   Link_p_ramp_limit_up_run_big_m:
     description: >-
-      `Link-p-ramp_limit_up-run-bigM` — a committed extendable link
-      raises flow no faster than its limit of the chosen build; the big M
-      releases the row in the snapshot it turns on
+      `Link-p-ramp_limit_up-run-bigM` — a committed extendable link raises
+      flow no faster than its limit of the chosen build. The big M releases
+      the row in the snapshot it turns on
     dims: [scenario, snapshot, link]
     where: Link_com_ext AND (Link_ramp_limit_up OR Link_ramp_limit_start_up) AND Link_ramps_from_previous
     expression: >-
@@ -171,8 +173,8 @@ constraints:
   Link_p_ramp_limit_up_start_big_m:
     description: >-
       `Link-p-ramp_limit_up-start-bigM` — in the snapshot it turns on, a
-      committed extendable link ramps no further than its start-up ramp of
-      the chosen build; the big M releases the row everywhere else
+      committed extendable link ramps no further than its start-up ramp of the
+      chosen build. The big M releases the row everywhere else
     dims: [scenario, snapshot, link]
     where: Link_com_ext AND (Link_ramp_limit_up OR Link_ramp_limit_start_up) AND Link_ramps_from_previous
     expression: >-
@@ -181,9 +183,9 @@ constraints:
       + Link_big_m - Link_big_m * Link_start_up
   Link_p_ramp_limit_down_run_big_m:
     description: >-
-      `Link-p-ramp_limit_down-run-bigM` — a committed extendable link
-      lowers flow no faster than its limit of the chosen build; the big M
-      releases the row in the snapshot it turns off
+      `Link-p-ramp_limit_down-run-bigM` — a committed extendable link lowers
+      flow no faster than its limit of the chosen build. The big M releases
+      the row in the snapshot it turns off
     dims: [scenario, snapshot, link]
     where: Link_com_ext AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down) AND Link_ramps_from_previous
     expression: >-
@@ -192,9 +194,9 @@ constraints:
       + Link_big_m - Link_big_m * Link_status
   Link_p_ramp_limit_down_shut_big_m:
     description: >-
-      `Link-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off,
-      a committed extendable link ramps no further than its shut-down ramp of
-      the chosen build; the big M releases the row everywhere else
+      `Link-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off, a
+      committed extendable link ramps no further than its shut-down ramp of
+      the chosen build. The big M releases the row everywhere else
     dims: [scenario, snapshot, link]
     where: Link_com_ext AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down) AND Link_ramps_from_previous
     expression: >-
@@ -203,12 +205,12 @@ constraints:
       + Link_big_m - Link_big_m * Link_shut_down
   Link_p_ramp_limit_up:
     description: >-
-      `Link-p-ramp_limit_up` — a link raises flow no faster than
-      its ramp limit of the build, and a committed one no further than its
+      `Link-p-ramp_limit_up` — a link raises flow no faster than its ramp
+      limit of the build. A committed one raises it no further than its
       start-up ramp in the snapshot it turns on. A link that came into the
-      horizon running carries a row at the first snapshot only where its
-      `p_init` gives the flow it brought in, and no link carries one at
-      the start of a later investment period — nor does any link a big M releases instead
+      horizon running has a row at the first snapshot only where its `p_init`
+      gives the flow it brought in. No link has one at the start of a later
+      investment period, nor does any link a big M releases instead
     dims: [scenario, snapshot, link]
     where: >-
       (Link_ramp_limit_up OR Link_ramp_limit_start_up)
@@ -218,12 +220,12 @@ constraints:
     expression: Link_p - Link_previous_p <= Link_ramp_up_allowance
   Link_p_ramp_limit_down:
     description: >-
-      `Link-p-ramp_limit_down` — a link lowers flow no faster than
-      its ramp limit of the build, and a committed one no further than its
+      `Link-p-ramp_limit_down` — a link lowers flow no faster than its ramp
+      limit of the build. A committed one lowers it no further than its
       shut-down ramp in the snapshot it turns off. A link that came into the
-      horizon running carries a row at the first snapshot only where its
-      `p_init` gives the flow it brought in, and no link carries one at
-      the start of a later investment period — nor does any link a big M releases instead
+      horizon running has a row at the first snapshot only where its `p_init`
+      gives the flow it brought in. No link has one at the start of a later
+      investment period, nor does any link a big M releases instead
     dims: [scenario, snapshot, link]
     where: >-
       (Link_ramp_limit_down OR Link_ramp_limit_shut_down)
@@ -238,15 +240,15 @@ assumptions:
     where: "NOT Link_committable AND (Link_ramp_limit_up OR Link_ramp_limit_down OR Link_ramp_limit_start_up OR Link_ramp_limit_shut_down)"
     description: >-
       PyPSA reads `up_time_before` of a link that is not committable in its
-      ramp rows, which a ramp limit, a start-up ramp or a shut-down ramp
-      alone builds (`constraints.py:1018-1019`). Where it is zero, PyPSA
-      builds a row at the first snapshot with nothing carried in, and caps
-      the link there at zero, or at its start-up ramp where another link of
-      the component is committable with a fixed build
-      (`constraints.py:1063-1066`, `1082-1084`). PyPSA documents
-      the attribute as read only for a committable link and does not check
-      it. PyPSA has not decided which row is intended (PyPSA/PyPSA#1943). The
-      spec does not state that row, so it refuses the data
+      ramp rows (`constraints.py:1018-1019`). A ramp limit, a start-up ramp or
+      a shut-down ramp alone builds those rows. Where it is zero, PyPSA builds
+      a row at the first snapshot with nothing carried in
+      (`constraints.py:1063-1066`, `1082-1084`). It caps the link there at
+      zero, or at its start-up ramp where another link of the component is
+      committable with a fixed build. PyPSA documents the attribute as read
+      only for a committable link and does not check it. PyPSA has not decided
+      which row is intended (PyPSA/PyPSA#1943). The spec does not state that
+      row, and a tool refuses such data through this assumption
 ```
 
 #### Given
@@ -276,35 +278,35 @@ assumptions:
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 | $`\mathcal{L}`$ | index $`l`$ — `link` — controllable connections, each from one bus to the buses it delivers to |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{ru}^{f}`$ | `Link_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — most a link may raise its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{rd}^{f}`$ | `Link_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — most a link may lower its flow between snapshots, per unit of nominal power; no value means no limit — read at the later of the two snapshots, so the limit may change over time |
-| $`\mathrm{ru}^{f,\mathrm{up}}`$ | `Link_ramp_limit_start_up` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most flow in the snapshot a link starts, per unit of nominal power; no value means no limit |
-| $`\mathrm{rd}^{f,\mathrm{dn}}`$ | `Link_ramp_limit_shut_down` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most flow in the snapshot before a link stops, per unit of nominal power; no value means no limit |
-| $`\mathrm{f}^{0}`$ | `Link_p_init` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the flow a link brought into the horizon — PyPSA's `p_init`, read only where the link came in running; no value means it is unknown, so the link carries no ramp row at the first snapshot |
+| $`\mathrm{ru}^{f}`$ | `Link_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — most a link may raise its flow between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
+| $`\mathrm{rd}^{f}`$ | `Link_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — most a link may lower its flow between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
+| $`\mathrm{ru}^{f,\mathrm{up}}`$ | `Link_ramp_limit_start_up` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most flow in the snapshot a link starts, per unit of nominal power. No value means no limit |
+| $`\mathrm{rd}^{f,\mathrm{dn}}`$ | `Link_ramp_limit_shut_down` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most flow in the snapshot before a link stops, per unit of nominal power. No value means no limit |
+| $`\mathrm{f}^{0}`$ | `Link_p_init` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the flow a link brought into the horizon (PyPSA's `p_init`), read only where the link came in running. No value means it is unknown, and the link then has no ramp row at the first snapshot |
 
 #### Conditions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{prev}^{f}`$ | `Link_ramps_from_previous` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — a snapshot whose ramp reads a previous output — any snapshot but its period's first, and the horizon's first where the link comes in off or carries an initial output |
+| $`\mathrm{prev}^{f}`$ | `Link_ramps_from_previous` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — a snapshot whose ramp uses a previous output. It is any snapshot but its period's first, and the horizon's first where the link comes in off or carries an initial output |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{f}`$ | `Link_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the flow a link carries into a snapshot — at the first, the `p_init` it brought in where it came in running and nothing where it came in off; the previous snapshot's after that |
-| $`\widetilde{\mathrm{ru}}^{f}`$ | `Link_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the ramp limit a link's up row reads — PyPSA's `ramp_limit_up`, or the full build where it has none, since a start-up ramp alone builds the row |
-| $`\widetilde{\mathrm{rd}}^{f}`$ | `Link_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the ramp limit a link's down row reads — PyPSA's `ramp_limit_down`, or the full build where it has none, since a shut-down ramp alone builds the row |
-| $`\widetilde{\mathrm{ru}}^{f,\mathrm{up}}`$ | `Link_start_up_rate` over $`\Xi \times \mathcal{L}`$ — the start-up ramp a link's up row reads — PyPSA's `ramp_limit_start_up`, or the full build where it has none |
-| $`\widetilde{\mathrm{rd}}^{f,\mathrm{dn}}`$ | `Link_shut_down_rate` over $`\Xi \times \mathcal{L}`$ — the shut-down ramp a link's down row reads — PyPSA's `ramp_limit_shut_down`, or the full build where it has none |
-| $`\Delta^{f,+}`$ | `Link_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how far a link may raise flow between two snapshots — its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
-| $`\Delta^{f,-}`$ | `Link_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how far a link may lower flow between two snapshots — its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
+| $`\overleftarrow{f}`$ | `Link_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the flow a link carries into a snapshot. At the first, it is the `p_init` it brought in where it came in running, and nothing where it came in off. After that, it is the previous snapshot's |
+| $`\widetilde{\mathrm{ru}}^{f}`$ | `Link_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the ramp limit in a link's up row, PyPSA's `ramp_limit_up`. It is the full build where PyPSA has none, since a start-up ramp alone builds the row |
+| $`\widetilde{\mathrm{rd}}^{f}`$ | `Link_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the ramp limit in a link's down row, PyPSA's `ramp_limit_down`. It is the full build where PyPSA has none, since a shut-down ramp alone builds the row |
+| $`\widetilde{\mathrm{ru}}^{f,\mathrm{up}}`$ | `Link_start_up_rate` over $`\Xi \times \mathcal{L}`$ — the start-up ramp in a link's up row (PyPSA's `ramp_limit_start_up`), or the full build where it has none |
+| $`\widetilde{\mathrm{rd}}^{f,\mathrm{dn}}`$ | `Link_shut_down_rate` over $`\Xi \times \mathcal{L}`$ — the shut-down ramp in a link's down row (PyPSA's `ramp_limit_shut_down`), or the full build where it has none |
+| $`\Delta^{f,+}`$ | `Link_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how far a link may raise flow between two snapshots. It is its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
+| $`\Delta^{f,-}`$ | `Link_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how far a link may lower flow between two snapshots. It is its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 
 #### Notation
 
@@ -411,3 +413,8 @@ f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \Delta^{f,+}_{\xi,t,l} \qquad \for
 \mathrm{u}^{f,0}_{\xi,l} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \neg \mathrm{com}^{f}_{l} \wedge \left( \mathrm{ru}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{rd}^{f}_{\xi,t,l} \text{ is defined} \vee \mathrm{ru}^{f,\mathrm{up}}_{\xi,l} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{\xi,l} \text{ is defined} \right)
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung
