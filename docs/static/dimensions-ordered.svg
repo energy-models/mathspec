@@ -1,0 +1,76 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 222" width="760" height="222" style="max-width: 100%; height: auto" role="img" aria-labelledby="dor-t dor-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="dor-t">shift reads the label before along an ordered dimension</title>
+  <desc id="dor-d">The dimension snapshot is declared ordered, with labels 1, 2 and 3. The variable p is a table with three rows: snapshot 1, 2 and 3 for generator wind. shift of p along snapshot with offset 1 is a table with two rows: at snapshot 2 it holds p at snapshot 1, and at snapshot 3 it holds p at snapshot 2. Snapshot 1 has no label before it, so shift has no row there and is absent.</desc>
+  <defs>
+    <marker id="dor-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none" transform="translate(0,-54)">
+    <path d="M16,172 H196 V229 A3,3 0 0 1 193,232 H19 A3,3 0 0 1 16,229 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,172 V153 A3,3 0 0 1 19,150 H193 A3,3 0 0 1 196,153 V172 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M344,172 H612 V234 A3,3 0 0 1 609,237 H347 A3,3 0 0 1 344,234 Z M345,176 V196 H611 V176 Z" fill="#009E73" fill-opacity="0.08" fill-rule="evenodd"/>
+    <path d="M344,172 V153 A3,3 0 0 1 347,150 H609 A3,3 0 0 1 612,153 V172 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
+      <text x="16" y="28">dimensions:</text>
+      <text x="31" y="46">snapshot: { dtype: int, <tspan font-weight="bold">ordered: true</tspan> }</text>
+    </g>
+  </g>
+  <g transform="translate(0,-54)">
+  <g fill="currentColor">
+    <text x="16" y="140" font-weight="bold">p</text>
+    <text x="30" y="140" fill-opacity="0.7">a variable</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="164" font-weight="bold">snapshot</text>
+      <text x="104" y="164" font-weight="bold">generator</text>
+      <text x="24" y="188">1</text><text x="104" y="188">wind</text>
+      <text x="24" y="206">2</text><text x="104" y="206">wind</text>
+      <text x="24" y="224">3</text><text x="104" y="224">wind</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="150" width="180" height="82" rx="3"/>
+    <line x1="16" y1="172" x2="196" y2="172"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#dor-arrow)">
+    <path d="M202,184 C250,184 270,207 318,207 H336"/>
+    <path d="M202,202 C250,202 270,225 318,225 H336"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="214" y="164">offset=1</text>
+    <text x="214" y="252" fill-opacity="0.7">each label reads</text>
+    <text x="214" y="267" fill-opacity="0.7">the one before it</text>
+  </g>
+  <g fill="currentColor">
+    <text x="344" y="140" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">shift(p, along=snapshot, offset=1)</text>
+    <text x="600" y="140" fill-opacity="0.7">an expression</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="352" y="164" font-weight="bold">snapshot</text>
+      <text x="432" y="164" font-weight="bold">generator</text>
+      <text x="520" y="164" font-weight="bold">value</text>
+      <text x="352" y="211">2</text><text x="432" y="211">wind</text><text x="520" y="211">p[1, wind]</text>
+      <text x="352" y="229">3</text><text x="432" y="229">wind</text><text x="520" y="229">p[2, wind]</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="344" y="150" width="268" height="87" rx="3"/>
+    <line x1="344" y1="172" x2="612" y2="172"/>
+    <rect x="345" y="176" width="266" height="20" rx="2" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="352" y="190" fill-opacity="0.7" font-style="italic">no row for 1: no label before it</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="630" y="156" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="650" y="167">absent: no row</text>
+  </g>
+  </g>
+</svg>

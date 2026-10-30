@@ -1,0 +1,91 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 390" width="700" height="390" style="max-width: 100%; height: auto" role="img" aria-labelledby="pwp-t pwp-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="pwp-t">With points, each curve runs only over the breakpoints where its parameter has a row</title>
+  <desc id="pwp-d">The parameters bp_x and bp_y have rows for gas at the breakpoints 0, 1 and 2, and for coal at the breakpoints 0 and 1. Neither has a row for coal at breakpoint 2. The piecewise entry cost_curve, with points bp_x, has a curve for gas over three breakpoints, at the points 0 and 0, 50 and 40, and 100 and 110. Its curve for coal runs over two breakpoints, at the points 0 and 0, and 80 and 60, and stops at breakpoint 1.</desc>
+  <defs>
+    <marker id="pwp-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,60 H216 V153 A3,3 0 0 1 213,156 H19 A3,3 0 0 1 16,153 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,60 V41 A3,3 0 0 1 19,38 H213 A3,3 0 0 1 216,41 V60 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,250 H216 V343 A3,3 0 0 1 213,346 H19 A3,3 0 0 1 16,343 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,250 V231 A3,3 0 0 1 19,228 H213 A3,3 0 0 1 216,231 V250 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M380,152 H684 V245 A3,3 0 0 1 681,248 H383 A3,3 0 0 1 380,245 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M380,152 V133 A3,3 0 0 1 383,130 H681 A3,3 0 0 1 684,133 V152 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="28" font-weight="bold">bp_x</text>
+    <text x="52" y="28" fill-opacity="0.7">a parameter, missing: neutral</text>
+    <text x="16" y="218" font-weight="bold">bp_y</text>
+    <text x="52" y="218" fill-opacity="0.7">a parameter, missing: neutral</text>
+    <text x="380" y="120" font-weight="bold">cost_curve</text>
+    <text x="456" y="120" fill-opacity="0.7">a piecewise entry, points: bp_x</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="52" font-weight="bold">generator</text>
+      <text x="108" y="52" font-weight="bold">bp</text>
+      <text x="148" y="52" font-weight="bold">value</text>
+      <text x="24" y="76">gas</text><text x="108" y="76">0</text><text x="148" y="76">0</text>
+      <text x="24" y="94">gas</text><text x="108" y="94">1</text><text x="148" y="94">50</text>
+      <text x="24" y="112">gas</text><text x="108" y="112">2</text><text x="148" y="112">100</text>
+      <text x="24" y="130">coal</text><text x="108" y="130">0</text><text x="148" y="130">0</text>
+      <text x="24" y="148">coal</text><text x="108" y="148">1</text><text x="148" y="148">80</text>
+      <text x="24" y="242" font-weight="bold">generator</text>
+      <text x="108" y="242" font-weight="bold">bp</text>
+      <text x="148" y="242" font-weight="bold">value</text>
+      <text x="24" y="266">gas</text><text x="108" y="266">0</text><text x="148" y="266">0</text>
+      <text x="24" y="284">gas</text><text x="108" y="284">1</text><text x="148" y="284">40</text>
+      <text x="24" y="302">gas</text><text x="108" y="302">2</text><text x="148" y="302">110</text>
+      <text x="24" y="320">coal</text><text x="108" y="320">0</text><text x="148" y="320">0</text>
+      <text x="24" y="338">coal</text><text x="108" y="338">1</text><text x="148" y="338">60</text>
+      <text x="388" y="144" font-weight="bold">generator</text>
+      <text x="472" y="144" font-weight="bold">bp</text>
+      <text x="512" y="144" font-weight="bold">(p, op_cost)</text>
+      <text x="388" y="168">gas</text><text x="472" y="168">0</text><text x="512" y="168">(0, 0)</text>
+      <text x="388" y="186">gas</text><text x="472" y="186">1</text><text x="512" y="186">(50, 40)</text>
+      <text x="388" y="204">gas</text><text x="472" y="204">2</text><text x="512" y="204">(100, 110)</text>
+      <text x="388" y="222">coal</text><text x="472" y="222">0</text><text x="512" y="222">(0, 0)</text>
+      <text x="388" y="240">coal</text><text x="472" y="240">1</text><text x="512" y="240">(80, 60)</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="38" width="200" height="118" rx="3"/>
+    <line x1="16" y1="60" x2="216" y2="60"/>
+    <rect x="16" y="160" width="200" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+    <rect x="16" y="228" width="200" height="118" rx="3"/>
+    <line x1="16" y1="250" x2="216" y2="250"/>
+    <rect x="16" y="350" width="200" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+    <rect x="380" y="130" width="304" height="118" rx="3"/>
+    <line x1="380" y1="152" x2="684" y2="152"/>
+    <rect x="380" y="252" width="304" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12" font-style="italic" fill-opacity="0.7">
+    <text x="24" y="176">no row for coal at bp 2</text>
+    <text x="24" y="366">no row for coal at bp 2</text>
+    <text x="388" y="268">no bp 2 for coal: its curve stops at bp 1</text>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#pwp-arrow)">
+    <path d="M226,100 C300,100 300,180 350,180 H374"/>
+    <path d="M226,290 C300,290 300,216 350,216 H374"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="232" y="62">points: bp_x</text>
+    <text x="232" y="77" fill-opacity="0.7">the curve runs where</text>
+    <text x="232" y="92" fill-opacity="0.7">bp_x has a row</text>
+    <text x="232" y="310">link: op_cost</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="380" y="300" width="14" height="14" fill="#0072B2" fill-opacity="0.2"/>
+    <rect x="380" y="324" width="14" height="14" fill="#009E73" fill-opacity="0.2"/>
+    <rect x="380" y="348" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="400" y="311">data the file is given</text>
+    <text x="400" y="335">an entry that adds constraint rows</text>
+    <text x="400" y="359">absent: no row</text>
+  </g>
+</svg>

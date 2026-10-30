@@ -1,0 +1,77 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 745 186" width="745" height="186" style="max-width: 100%; height: auto" role="img" aria-labelledby="aq-t aq-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="aq-t">A quotient is absent where its divisor is zero</title>
+  <desc id="aq-d">The key is lcoe: cost / delivered. The solved expression delivered has three rows: wind 50, gas 20 and old 0. The reported quotient lcoe has rows for wind and gas. The row for old, where the divisor is zero, is absent.</desc>
+  <defs>
+    <pattern id="aq-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="aq-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="16" y="24" xml:space="preserve"><tspan>expressions:</tspan></text>
+    <text x="16" y="40" xml:space="preserve"><tspan>  </tspan><tspan font-weight="bold">lcoe</tspan><tspan>: cost / delivered</tspan></text>
+  </g>
+  <g stroke="none">
+    <path d="M16,102 H201.0 V161 A3,3 0 0 1 198.0,164 H19 A3,3 0 0 1 16,161 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M16,102 V83 A3,3 0 0 1 19,80 H198.0 A3,3 0 0 1 201.0,83 V102 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="70" font-weight="bold">delivered</text>
+    <text x="94" y="70" fill-opacity="0.7">an expression</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="94" font-weight="bold">generator</text>
+      <text x="112" y="94" font-weight="bold">value</text>
+      <text x="24" y="118">wind</text><text x="112" y="118">50</text>
+      <text x="24" y="136">gas</text><text x="112" y="136">20</text>
+      <text x="24" y="154">old</text><text x="112" y="154">0</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="80" width="185" height="84" rx="3"/>
+    <line x1="16" y1="102" x2="201" y2="102"/>
+    <rect x="17" y="141" width="183" height="19" fill="url(#aq-hatch)" stroke="none"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#aq-arrow)">
+    <path d="M211.0,133.0 L357.0,133.0"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="223" y="127">cost / delivered</text>
+    <text x="223" y="149" fill-opacity="0.7">absent where the</text>
+    <text x="223" y="164" fill-opacity="0.7">divisor is zero</text>
+  </g>
+  <g stroke="none">
+    <path d="M369.0,102 H583.0 V143 A3,3 0 0 1 580.0,146 H372.0 A3,3 0 0 1 369.0,143 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M369.0,102 V83 A3,3 0 0 1 372.0,80 H580.0 A3,3 0 0 1 583.0,83 V102 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="369.0" y="70" font-weight="bold">lcoe</text>
+    <text x="409" y="70" fill-opacity="0.7">a reported expression</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="377" y="94" font-weight="bold">generator</text>
+      <text x="377" y="118">wind</text>
+      <text x="377" y="136">gas</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="369.0" y="80" width="214" height="66" rx="3"/>
+    <line x1="369.0" y1="102" x2="583" y2="102"/>
+    <rect x="369.0" y="150" width="214" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="377.0" y="166" fill-opacity="0.7" font-style="italic">no row for old: lcoe is absent</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="609" y="86" width="14" height="14" fill="url(#aq-hatch)"/>
+    <rect x="609" y="110" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="629" y="97">divisor is zero</text>
+    <text x="629" y="121">absent: no row</text>
+  </g>
+</svg>

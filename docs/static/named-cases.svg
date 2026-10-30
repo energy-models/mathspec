@@ -1,0 +1,91 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 370" width="800" height="370" style="max-width: 100%; height: auto" role="img" aria-labelledby="ncs-t ncs-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="ncs-t">Each coordinate of a cased expression takes the value of the one case that claims it</title>
+  <desc id="ncs-d">Two generators: base is not committable, ccgt is committable. The parameter status_initial is 0 for base and 1 for ccgt. The variable status has a row at each snapshot, 0 and 1, and each generator. The cased expression previous_status has one row per snapshot and generator. At base, at both snapshots, the case always_on claims the row, and the value is 1. At snapshot 0 and ccgt, the case boundary claims the row, and the value is status_initial of ccgt. At snapshot 1 and ccgt, no case claims the row, so otherwise gives the value status at snapshot 0 and ccgt.</desc>
+  <defs>
+    <marker id="ncs-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,60 H196 V99 A3,3 0 0 1 193,102 H19 A3,3 0 0 1 16,99 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,60 V41 A3,3 0 0 1 19,38 H193 A3,3 0 0 1 196,41 V60 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,164 H216 V203 A3,3 0 0 1 213,206 H19 A3,3 0 0 1 16,203 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,164 V145 A3,3 0 0 1 19,142 H213 A3,3 0 0 1 216,145 V164 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,268 H286 V343 A3,3 0 0 1 283,346 H19 A3,3 0 0 1 16,343 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,268 V249 A3,3 0 0 1 19,246 H283 A3,3 0 0 1 286,249 V268 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M380,182 H780 V257 A3,3 0 0 1 777,260 H383 A3,3 0 0 1 380,257 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M380,182 V163 A3,3 0 0 1 383,160 H777 A3,3 0 0 1 780,163 V182 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="28" font-weight="bold">committable</text>
+    <text x="106" y="28" fill-opacity="0.7">a parameter</text>
+    <text x="16" y="132" font-weight="bold">status_initial</text>
+    <text x="114" y="132" fill-opacity="0.7">a parameter</text>
+    <text x="16" y="236" font-weight="bold">status</text>
+    <text x="64" y="236" fill-opacity="0.7">a variable</text>
+    <text x="380" y="150" font-weight="bold">previous_status</text>
+    <text x="494" y="150" fill-opacity="0.7">an expression with cases</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="52" font-weight="bold">generator</text>
+      <text x="110" y="52" font-weight="bold">value</text>
+      <text x="24" y="76">base</text><text x="110" y="76">false</text>
+      <text x="24" y="94">ccgt</text><text x="110" y="94">true</text>
+      <text x="24" y="156" font-weight="bold">generator</text>
+      <text x="110" y="156" font-weight="bold">value</text>
+      <text x="24" y="180">base</text><text x="110" y="180">0</text>
+      <text x="24" y="198">ccgt</text><text x="110" y="198">1</text>
+      <text x="24" y="260" font-weight="bold">snapshot</text>
+      <text x="96" y="260" font-weight="bold">generator</text>
+      <text x="176" y="260" font-weight="bold">value</text>
+      <text x="24" y="284">0</text><text x="96" y="284">base</text><text x="176" y="284">status[0,base]</text>
+      <text x="24" y="302">0</text><text x="96" y="302">ccgt</text><text x="176" y="302">status[0,ccgt]</text>
+      <text x="24" y="320">1</text><text x="96" y="320">base</text><text x="176" y="320">status[1,base]</text>
+      <text x="24" y="338">1</text><text x="96" y="338">ccgt</text><text x="176" y="338">status[1,ccgt]</text>
+      <text x="388" y="174" font-weight="bold">snapshot</text>
+      <text x="460" y="174" font-weight="bold">generator</text>
+      <text x="540" y="174" font-weight="bold">value</text>
+      <text x="708" y="174" font-weight="bold">case</text>
+      <text x="388" y="198">0</text><text x="460" y="198">base</text><text x="540" y="198">1</text><text x="708" y="198">always_on</text>
+      <text x="388" y="216">0</text><text x="460" y="216">ccgt</text><text x="540" y="216">status_initial[ccgt]</text><text x="708" y="216">boundary</text>
+      <text x="388" y="234">1</text><text x="460" y="234">base</text><text x="540" y="234">1</text><text x="708" y="234">always_on</text>
+      <text x="388" y="252">1</text><text x="460" y="252">ccgt</text><text x="540" y="252">status[0,ccgt]</text><text x="708" y="252" font-weight="bold">otherwise</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="38" width="180" height="64" rx="3"/>
+    <line x1="16" y1="60" x2="196" y2="60"/>
+    <rect x="16" y="142" width="200" height="64" rx="3"/>
+    <line x1="16" y1="164" x2="216" y2="164"/>
+    <rect x="16" y="246" width="270" height="100" rx="3"/>
+    <line x1="16" y1="268" x2="286" y2="268"/>
+    <rect x="380" y="160" width="400" height="100" rx="3"/>
+    <line x1="380" y1="182" x2="780" y2="182"/>
+    <line x1="700" y1="160" x2="700" y2="260" stroke-opacity="0.4"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#ncs-arrow)">
+    <path d="M206,70 C300,70 300,190 350,190 H374"/>
+    <path d="M226,174 C300,174 300,212 350,212 H374"/>
+    <path d="M296,292 C330,292 330,238 350,238 H374"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="212" y="62">when: picks the case</text>
+    <text x="228" y="194">boundary</text>
+    <text x="228" y="209">reads it</text>
+    <text x="300" y="316">otherwise: reads</text>
+    <text x="300" y="331">shift(status, …)</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="560" y="290" width="14" height="14" fill="#0072B2" fill-opacity="0.2"/>
+    <rect x="560" y="314" width="14" height="14" fill="#E69F00" fill-opacity="0.2"/>
+    <rect x="560" y="338" width="14" height="14" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="580" y="301">data the file is given</text>
+    <text x="580" y="325">a variable</text>
+    <text x="580" y="349">an expression</text>
+  </g>
+</svg>

@@ -352,6 +352,10 @@ objective:
 \left( \mathit{power}_{t,g},\ \mathit{fuel}_{t,g} \right) \in \begin{cases} \mathit{running}_{t,g} & \text{if } \mathrm{committable}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/piecewise-activity.svg"
+</figure>
+
 The curve is scaled by `running` where `committable` is true, and by 1
 elsewhere. With data for gas and wind, at each snapshot gas has the scale
 `running` and wind has the scale `1`.
@@ -399,6 +403,10 @@ objective:
 \left( p_{g},\ \mathit{op\_cost}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{g,b} \text{ is defined}}(\mathrm{bp\_x}_{g,b},\ \mathrm{bp\_y}_{g,b}) \qquad \forall\, g \in \mathcal{G}
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/piecewise-points.svg"
+</figure>
+
 The curve of each generator now runs over the breakpoints where `bp_x` is
 defined, and no further. Each values parameter declares
 [`missing: neutral`](#missing-breakpoints), because its table stops where the
@@ -440,6 +448,10 @@ Under `neutral` and under `absent`, the curve is the same, because the curve
 uses a table only inside the run of its breakpoints. With data attached, the
 tool that runs `<entry>_complete` still refuses a missing row there. The two differ where an expression
 outside the curve uses the table:
+
+<figure class="diagram">
+--8<-- "docs/static/piecewise-missing.svg"
+</figure>
 
 Under `neutral` the missing row of `bp_y` is `0`, and under `absent` `bp_y` has no row there, so a term that uses it is absent.
 

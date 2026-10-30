@@ -1,0 +1,107 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 370" width="800" height="370" style="max-width: 100%; height: auto" role="img" aria-labelledby="rsb-t rsb-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="rsb-t">A sum through a relation joins, then groups</title>
+  <desc id="rsb-d">The variable p is a table with three rows: wind, gas and solar. The relation gen_bus has three rows: wind on north, gas on north and solar on south. The sum of p over generator by gen_bus bus first joins p to gen_bus on generator, which gives each row of p its bus. It then adds up the rows of each bus. The result is a table with one row per bus: north holds p of wind plus p of gas, and south holds p of solar.</desc>
+  <defs>
+    <marker id="rsb-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,178 H126 V235 A3,3 0 0 1 123,238 H19 A3,3 0 0 1 16,235 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,178 V159 A3,3 0 0 1 19,156 H123 A3,3 0 0 1 126,159 V178 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M16,298 H176 V355 A3,3 0 0 1 173,358 H19 A3,3 0 0 1 16,355 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,298 V279 A3,3 0 0 1 19,276 H173 A3,3 0 0 1 176,279 V298 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M296,222 H456 V261 H296 Z" fill="#CC79A7" fill-opacity="0.25"/>
+    <path d="M296,261 H456 V279 A3,3 0 0 1 453,282 H299 A3,3 0 0 1 296,279 Z" fill="#56B4E9" fill-opacity="0.25"/>
+    <path d="M296,222 V203 A3,3 0 0 1 299,200 H453 A3,3 0 0 1 456,203 V222 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M588,222 H784 V246 H588 Z" fill="#CC79A7" fill-opacity="0.25"/>
+    <path d="M588,246 H784 V261 A3,3 0 0 1 781,264 H591 A3,3 0 0 1 588,261 Z" fill="#56B4E9" fill-opacity="0.25"/>
+    <path d="M588,222 V203 A3,3 0 0 1 591,200 H781 A3,3 0 0 1 784,203 V222 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
+      <text x="16" y="28">relations:</text>
+      <text x="31" y="46">gen_bus: { key: generator, values: bus }</text>
+      <text x="16" y="64">variables:</text>
+      <text x="31" y="82">p: { dims: [generator] }</text>
+      <text x="16" y="106" font-weight="bold">sum(p, over=generator, by=gen_bus[bus])</text>
+    </g>
+    <text x="16" y="146" font-weight="bold">p</text>
+    <text x="30" y="146" fill-opacity="0.7">a variable</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="170" font-weight="bold">generator</text>
+      <text x="24" y="194">wind</text>
+      <text x="24" y="212">gas</text>
+      <text x="24" y="230">solar</text>
+    </g>
+    <text x="16" y="266" font-weight="bold">gen_bus</text>
+    <text x="80" y="266" fill-opacity="0.7">a relation</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="290" font-weight="bold">generator</text>
+      <text x="110" y="290" font-weight="bold">bus</text>
+      <text x="24" y="314">wind</text><text x="110" y="314">north</text>
+      <text x="24" y="332">gas</text><text x="110" y="332">north</text>
+      <text x="24" y="350">solar</text><text x="110" y="350">south</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="156" width="110" height="82" rx="3"/>
+    <line x1="16" y1="178" x2="126" y2="178"/>
+    <rect x="16" y="276" width="160" height="82" rx="3"/>
+    <line x1="16" y1="298" x2="176" y2="298"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#rsb-arrow)">
+    <path d="M136,198 C200,198 220,236 270,236 H288"/>
+    <path d="M186,316 C230,316 230,252 270,252 H288"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="200" y="178">join on</text>
+    <text x="200" y="193">generator</text>
+  </g>
+  <g fill="currentColor">
+    <text x="296" y="190" font-weight="bold">the join</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="304" y="214" font-weight="bold">generator</text>
+      <text x="390" y="214" font-weight="bold">bus</text>
+      <text x="304" y="238">wind</text><text x="390" y="238">north</text>
+      <text x="304" y="256">gas</text><text x="390" y="256">north</text>
+      <text x="304" y="274">solar</text><text x="390" y="274">south</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="296" y="200" width="160" height="82" rx="3"/>
+    <line x1="296" y1="222" x2="456" y2="222"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#rsb-arrow)">
+    <path d="M466,244 L578,244"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="476" y="232">sum by bus:</text>
+    <text x="476" y="264" fill-opacity="0.7">adds up the</text>
+    <text x="476" y="279" fill-opacity="0.7">rows of each bus</text>
+  </g>
+  <g fill="currentColor">
+    <text x="588" y="190" font-weight="bold">the result</text>
+    <text x="662" y="190" fill-opacity="0.7">an expression</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="596" y="214" font-weight="bold">bus</text>
+      <text x="652" y="214" font-weight="bold">value</text>
+      <text x="596" y="238">north</text><text x="652" y="238">p[wind] + p[gas]</text>
+      <text x="596" y="256">south</text><text x="652" y="256">p[solar]</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="588" y="200" width="196" height="64" rx="3"/>
+    <line x1="588" y1="222" x2="784" y2="222"/>
+    <rect x="588" y="292" width="14" height="14" fill="#CC79A7" fill-opacity="0.25"/>
+    <rect x="588" y="316" width="14" height="14" fill="#56B4E9" fill-opacity="0.25"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="608" y="303">the group of bus north</text>
+    <text x="608" y="327">the group of bus south</text>
+  </g>
+</svg>

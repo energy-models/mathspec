@@ -1,0 +1,81 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 196" width="960" height="196" style="max-width: 100%; height: auto" role="img" aria-labelledby="ear-t ear-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="ear-t">A comparison of arithmetic over parameters keeps the snapshots where the load jumps</title>
+  <desc id="ear-d">The parameter load is 50 at snapshot 1, 90 at snapshot 2 and 95 at snapshot 3, and ramp is 20. The condition compares load minus its value at the previous snapshot, with edge 0, against ramp, and requires position of snapshot above 0. The jump is 50 at snapshot 1, where the position is 0, 40 at snapshot 2 and 5 at snapshot 3, so the condition is true only at snapshot 2. The constraint shed_when_load_jumps has one row, at snapshot 2, and no row at snapshots 1 and 3.</desc>
+  <defs>
+    <pattern id="ear-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="ear-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,62 V43 A3,3 0 0 1 19,40 H183 A3,3 0 0 1 186,43 V62 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,62 H186 V119 A3,3 0 0 1 183,122 H19 A3,3 0 0 1 16,119 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M380,62 V43 A3,3 0 0 1 383,40 H607 A3,3 0 0 1 610,43 V62 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M380,62 H610 V119 A3,3 0 0 1 607,122 H383 A3,3 0 0 1 380,119 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M730,62 V43 A3,3 0 0 1 733,40 H887 A3,3 0 0 1 890,43 V62 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M730,62 H890 V83 A3,3 0 0 1 887,86 H733 A3,3 0 0 1 730,83 Z" fill="#009E73" fill-opacity="0.08"/>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="40" width="170" height="82" rx="3"/>
+    <line x1="16" y1="62" x2="186" y2="62"/>
+    <rect x="380" y="40" width="230" height="82" rx="3"/>
+    <line x1="380" y1="62" x2="610" y2="62"/>
+    <rect x="381" y="67" width="228" height="18" fill="url(#ear-hatch)" stroke="none"/>
+    <rect x="381" y="103" width="228" height="18" fill="url(#ear-hatch)" stroke="none"/>
+    <rect x="730" y="40" width="160" height="46" rx="3"/>
+    <line x1="730" y1="62" x2="890" y2="62"/>
+    <rect x="730" y="90" width="160" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+    <rect x="380" y="150" width="14" height="14" fill="url(#ear-hatch)"/>
+    <rect x="380" y="174" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#ear-arrow)">
+    <path d="M196,90 L370,90"/>
+    <path d="M620,90 L720,90"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">load</text>
+    <text x="53" y="30" font-size="12" fill-opacity="0.7">a parameter</text>
+    <text x="24" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">snapshot</text>
+    <text x="112" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">value</text>
+    <text x="24" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">1</text>
+    <text x="112" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">50</text>
+    <text x="24" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2</text>
+    <text x="112" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">90</text>
+    <text x="24" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">3</text>
+    <text x="112" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">95</text>
+    <text x="16" y="150" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12"><tspan font-weight="bold">ramp</tspan> = 20</text>
+    <text x="380" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">the condition</text>
+    <text x="482" y="30" font-size="12" fill-opacity="0.7">per snapshot</text>
+    <text x="388" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">snapshot</text>
+    <text x="468" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">jump</text>
+    <text x="520" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">position</text>
+    <text x="388" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">1</text>
+    <text x="468" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">50</text>
+    <text x="520" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">0</text>
+    <text x="388" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2</text>
+    <text x="468" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">40</text>
+    <text x="520" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">1</text>
+    <text x="388" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">3</text>
+    <text x="468" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">5</text>
+    <text x="520" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2</text>
+    <text x="730" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">shed_when_load_jumps</text>
+    <text x="884" y="30" font-size="12" fill-opacity="0.7">a constraint</text>
+    <text x="738" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">snapshot</text>
+    <text x="738" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2</text>
+    <text x="738" y="106" font-size="12" font-style="italic" fill-opacity="0.7">no row for 1 and 3</text>
+    <text x="206" y="63" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">load - shift(load, …,</text>
+    <text x="206" y="78" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">edge=0) &gt; ramp</text>
+    <text x="206" y="110" font-size="12" fill-opacity="0.7">the jump from the</text>
+    <text x="206" y="125" font-size="12" fill-opacity="0.7">snapshot before</text>
+    <text x="630" y="63" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">AND</text>
+    <text x="630" y="78" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">position &gt; 0</text>
+    <text x="400" y="161" font-size="12">condition is false</text>
+    <text x="400" y="185" font-size="12">absent: no row</text>
+  </g>
+</svg>

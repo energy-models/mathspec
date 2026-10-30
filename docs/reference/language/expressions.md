@@ -270,6 +270,10 @@ to the coordinates where the condition is true, and leaves the others
 [absent](absence.md). A tool checks a [`holds:`](assumptions.md) condition
 against the data.
 
+<figure class="diagram">
+--8<-- "docs/static/absence-where-variable.svg"
+</figure>
+
 With `where: capacity > 0` on the variable `dispatch`, `dispatch` has rows for
 `wind` and `gas`, and no row for `old`.
 
@@ -374,6 +378,13 @@ objective:
 p_{g} \ge 0 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{points}_{g,b} \} \rvert \ge 2
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/expressions-count.svg"
+</figure>
+
+With the data in the figure, `gas` has one marked breakpoint, so `p` has no row
+for `gas`.
+
 A count removes the dimension it counts over, as `sum(over=)` does. So the
 condition above has one count per generator, and the condition is over
 `generator` alone.
@@ -430,6 +441,15 @@ where: "count(points AND NOT shift(points, along=bp, offset=1), over=bp) == 1"
 p_{g} \ge 0 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{points}_{g,b} \wedge \neg \mathrm{points}_{g,b - 1} \} \rvert = 1
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/expressions-shift-condition.svg"
+</figure>
+
+With the data of the previous figure, a run starts at breakpoint `0` of each
+generator. The shift is false at breakpoint `0`, which has no breakpoint before
+it, so a marked first breakpoint starts a run. Each generator has one start,
+so `p` has a row for both.
+
 This form of `shift` takes neither `within=` nor `edge=`, which only the
 arithmetic `shift` takes.
 
@@ -466,6 +486,10 @@ objective:
 ```math
 0 \le \mathit{rate}_{f} \le \mathrm{cap}_{f} \qquad \forall\, f \in \mathcal{F} \,:\, \mathrm{has\_curve}_{\mathrm{converter\_of}(f)}
 ```
+
+<figure class="diagram">
+--8<-- "docs/static/expressions-at-condition.svg"
+</figure>
 
 The converter of `f3` has no curve, so `rate` has no row for `f3`.
 
@@ -584,6 +608,16 @@ constraints:
 \mathit{shed}_{t} \ge \mathrm{load}_{t} - \mathrm{ramp} \qquad \forall\, t \in \mathcal{T} \,:\, \mathrm{load}_{t} - \mathrm{load}_{t \boxminus_{0} 1} > \mathrm{ramp} \wedge \mathrm{pos}(t) > 0
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/expressions-arithmetic.svg"
+</figure>
+
+With the data in the figure, the shift with `edge=0` is `0` at the first
+snapshot, so the left side has a value everywhere. The jump at snapshot
+`1` is the whole load, and the `position()` test removes that row. The jump at
+snapshot `3` is `5`, below `ramp`, so `shed_when_load_jumps` has one row, at
+snapshot `2`.
+
 A comparison with a number on both sides is refused everywhere, and mathspec
 prints this message for `2 < 1`:
 
@@ -652,6 +686,14 @@ constraints:
 ```math
 \mathit{soc}_{t} = \mathrm{soc}^{\mathrm{initial}}_{\mathrm{period\_of}(t)} \qquad \forall\, t \in \mathcal{T} \,:\, \mathrm{pos}_{\mathrm{period\_of}(t)}(t) = 0
 ```
+
+<figure class="diagram">
+--8<-- "docs/static/expressions-position.svg"
+</figure>
+
+With the data in the figure, `soc_start` has rows at snapshots `1` and `3`,
+which are the first snapshots of the two periods. Through `period_of`, each row uses the
+starting value of its period.
 
 !!! info "See also"
 

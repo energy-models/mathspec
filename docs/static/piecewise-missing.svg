@@ -1,0 +1,110 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 769 406" width="769" height="406" style="max-width: 100%; height: auto" role="img" aria-labelledby="pm-t pm-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="pm-t">neutral and absent differ outside the curve</title>
+  <desc id="pm-d">The keys are bp_y with missing neutral or missing absent. The parameter bp_y has rows for gas at the breakpoints 0, 1 and 2, and for coal at the breakpoints 0 and 1. It has no row for coal at breakpoint 2. Read outside the curve with missing neutral, bp_y is 0 for coal at breakpoint 2. With missing absent, bp_y has no row there, and a term that uses it is absent.</desc>
+  <defs>
+    <pattern id="pm-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="pm-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="16" y="24" xml:space="preserve"><tspan>bp_y: { dims: [generator, bp], </tspan><tspan font-weight="bold">missing</tspan><tspan>: neutral | absent }</tspan></text>
+  </g>
+  <g stroke="none">
+    <path d="M16,86 H198.8 V199 A3,3 0 0 1 195.8,202 H19 A3,3 0 0 1 16,199 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,86 V67 A3,3 0 0 1 19,64 H195.8 A3,3 0 0 1 198.8,67 V86 Z" fill="#0072B2" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="54" font-weight="bold">bp_y</text>
+    <text x="56" y="54" fill-opacity="0.7">a parameter</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="78" font-weight="bold">generator</text>
+      <text x="112" y="78" font-weight="bold">bp</text>
+      <text x="148" y="78" font-weight="bold">value</text>
+      <text x="24" y="102">gas</text><text x="112" y="102">0</text><text x="148" y="102">0</text>
+      <text x="24" y="120">gas</text><text x="112" y="120">1</text><text x="148" y="120">40</text>
+      <text x="24" y="138">gas</text><text x="112" y="138">2</text><text x="148" y="138">110</text>
+      <text x="24" y="156">coal</text><text x="112" y="156">0</text><text x="148" y="156">0</text>
+      <text x="24" y="174">coal</text><text x="112" y="174">1</text><text x="148" y="174">60</text>
+      <text x="24" y="192">coal</text><text x="112" y="192">2</text><text x="148" y="192">—</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="64" width="183" height="138" rx="3"/>
+    <line x1="16" y1="86" x2="199" y2="86"/>
+    <rect x="17" y="179" width="181" height="19" fill="url(#pm-hatch)" stroke="none"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#pm-arrow)">
+    <path d="M208.8,144.0 H220.8 V75 H361.8"/>
+    <path d="M208.8,144.0 H220.8 V257 H361.8"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="231" y="69">missing: neutral</text>
+    <text x="231" y="91" fill-opacity="0.7">outside the curve</text>
+    <text x="231" y="251">missing: absent</text>
+    <text x="231" y="273" fill-opacity="0.7">outside the curve</text>
+  </g>
+  <g stroke="none">
+    <path d="M373.8,86 H566.3 V199 A3,3 0 0 1 563.3,202 H376.8 A3,3 0 0 1 373.8,199 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M373.8,86 V67 A3,3 0 0 1 376.8,64 H563.3 A3,3 0 0 1 566.3,67 V86 Z" fill="#0072B2" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="373.8" y="54" font-weight="bold">bp_y as used</text>
+    <text x="475" y="54" fill-opacity="0.7">a parameter</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="382" y="78" font-weight="bold">generator</text>
+      <text x="470" y="78" font-weight="bold">bp</text>
+      <text x="506" y="78" font-weight="bold">value</text>
+      <text x="382" y="102">gas</text><text x="470" y="102">0</text><text x="506" y="102">0</text>
+      <text x="382" y="120">gas</text><text x="470" y="120">1</text><text x="506" y="120">40</text>
+      <text x="382" y="138">gas</text><text x="470" y="138">2</text><text x="506" y="138">110</text>
+      <text x="382" y="156">coal</text><text x="470" y="156">0</text><text x="506" y="156">0</text>
+      <text x="382" y="174">coal</text><text x="470" y="174">1</text><text x="506" y="174">60</text>
+      <text x="382" y="192">coal</text><text x="470" y="192">2</text><text x="506" y="192">0</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="373.8" y="64" width="192" height="138" rx="3"/>
+    <line x1="373.8" y1="86" x2="566" y2="86"/>
+  </g>
+  <g stroke="none">
+    <path d="M373.8,268 H614.2 V363 A3,3 0 0 1 611.2,366 H376.8 A3,3 0 0 1 373.8,363 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M373.8,268 V249 A3,3 0 0 1 376.8,246 H611.2 A3,3 0 0 1 614.2,249 V268 Z" fill="#0072B2" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="373.8" y="236" font-weight="bold">bp_y as used</text>
+    <text x="475" y="236" fill-opacity="0.7">a parameter</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="382" y="260" font-weight="bold">generator</text>
+      <text x="470" y="260" font-weight="bold">bp</text>
+      <text x="506" y="260" font-weight="bold">value</text>
+      <text x="382" y="284">gas</text><text x="470" y="284">0</text><text x="506" y="284">0</text>
+      <text x="382" y="302">gas</text><text x="470" y="302">1</text><text x="506" y="302">40</text>
+      <text x="382" y="320">gas</text><text x="470" y="320">2</text><text x="506" y="320">110</text>
+      <text x="382" y="338">coal</text><text x="470" y="338">0</text><text x="506" y="338">0</text>
+      <text x="382" y="356">coal</text><text x="470" y="356">1</text><text x="506" y="356">60</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="373.8" y="246" width="240" height="120" rx="3"/>
+    <line x1="373.8" y1="268" x2="614" y2="268"/>
+    <rect x="373.8" y="370" width="240" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="381.8" y="386" fill-opacity="0.7" font-style="italic">no row for coal, 2: bp_y is absent</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="640" y="70" width="14" height="14" fill="url(#pm-hatch)"/>
+    <rect x="640" y="94" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="660" y="81">no data</text>
+    <text x="660" y="105">absent: no row</text>
+  </g>
+</svg>

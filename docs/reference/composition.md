@@ -165,6 +165,10 @@ constraints:
     expression: Bus_injection == 0
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/composition-merge-terms.svg"
+</figure>
+
 The merged spec has no `given:` section, because `merge` builds each sum that
 a fragment lists under `given:` from its terms. `Bus_injection` is the sum of
 the two terms, and each term stays a named expression without its `adds_to:`.
@@ -405,19 +409,20 @@ constraints:
     expression: sum(dispatch * emission_rate) <= 1000
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/composition-override-where.svg"
+</figure>
+
 `override` keeps the dimensions and bounds of `dispatch`, and adds the `where:`
 that `operate.yaml` writes. With `capacity = {wind: 10, gas: 5, old: 0}`, the
 patched `dispatch` has no row at `old`.
 
 ### `null` in a patch
 
-A patch may write `null` on an entry, a field or a section:
-
 - On an entry, `override` removes the entry. For
   `constraints: {emission_cap: null}`, `override` removes that constraint.
 - On a field, `override` restores the default of that field and keeps the
   entry. For `dispatch: {where: null}`, `override` gives the variable no
-  condition, and for `dispatch: {bounds: {upper: null}}` no upper bound.
 - On the section `objective`, `override` removes the objective.
 - On any other section, `override` refuses `null`.
 

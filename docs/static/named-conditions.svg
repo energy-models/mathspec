@@ -1,0 +1,77 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 799 158" width="799" height="158" style="max-width: 100%; height: auto" role="img" aria-labelledby="nc-t nc-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="nc-t">A named condition in a where removes rows</title>
+  <desc id="nc-d">The named condition stands is a table with four rows over period and generator. It is true at 2030 and a, false at 2030 and b, true at 2040 and a, and true at 2040 and b. The variable p, declared with where stands, has rows at 2030 and a, 2040 and a, and 2040 and b. The row for 2030 and b, where stands is false, is absent.</desc>
+  <defs>
+    <pattern id="nc-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="nc-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,56 H228.0 V133 A3,3 0 0 1 225.0,136 H19 A3,3 0 0 1 16,133 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M16,56 V37 A3,3 0 0 1 19,34 H225.0 A3,3 0 0 1 228.0,37 V56 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="24" font-weight="bold">stands</text>
+    <text x="72" y="24" fill-opacity="0.7">a named condition</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="48" font-weight="bold">period</text>
+      <text x="90" y="48" font-weight="bold">generator</text>
+      <text x="178" y="48" font-weight="bold">value</text>
+      <text x="24" y="72">2030</text><text x="90" y="72">a</text><text x="178" y="72">true</text>
+      <text x="24" y="90">2030</text><text x="90" y="90">b</text><text x="178" y="90">false</text>
+      <text x="24" y="108">2040</text><text x="90" y="108">a</text><text x="178" y="108">true</text>
+      <text x="24" y="126">2040</text><text x="90" y="126">b</text><text x="178" y="126">true</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="34" width="212" height="102" rx="3"/>
+    <line x1="16" y1="56" x2="228" y2="56"/>
+    <rect x="17" y="77" width="210" height="19" fill="url(#nc-hatch)" stroke="none"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#nc-arrow)">
+    <path d="M238.0,96.0 L384.0,96.0"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="250" y="90">where: stands</text>
+    <text x="250" y="112" fill-opacity="0.7">keeps a row only</text>
+    <text x="250" y="127" fill-opacity="0.7">where it is true</text>
+  </g>
+  <g stroke="none">
+    <path d="M396.0,56 H616.6 V115 A3,3 0 0 1 613.6,118 H399.0 A3,3 0 0 1 396.0,115 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M396.0,56 V37 A3,3 0 0 1 399.0,34 H613.6 A3,3 0 0 1 616.6,37 V56 Z" fill="#E69F00" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="396.0" y="24" font-weight="bold">p</text>
+    <text x="414" y="24" fill-opacity="0.7">a variable</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="404" y="48" font-weight="bold">period</text>
+      <text x="470" y="48" font-weight="bold">generator</text>
+      <text x="404" y="72">2030</text><text x="470" y="72">a</text>
+      <text x="404" y="90">2040</text><text x="470" y="90">a</text>
+      <text x="404" y="108">2040</text><text x="470" y="108">b</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="396.0" y="34" width="221" height="84" rx="3"/>
+    <line x1="396.0" y1="56" x2="617" y2="56"/>
+    <rect x="396.0" y="122" width="221" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="404.0" y="138" fill-opacity="0.7" font-style="italic">no row for 2030, b: p is absent</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="643" y="40" width="14" height="14" fill="url(#nc-hatch)"/>
+    <rect x="643" y="64" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="663" y="51">condition is false</text>
+    <text x="663" y="75">absent: no row</text>
+  </g>
+</svg>
