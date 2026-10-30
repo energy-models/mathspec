@@ -178,6 +178,10 @@ is in the How tab.
 
 --8<-- "README.md:engines"
 
+## Background
+
+--8<-- "README.md:background"
+
 ## Where to next
 
 <div class="grid cards" markdown>

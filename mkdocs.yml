@@ -82,7 +82,7 @@ nav:
               - The composed spec: examples/library/composed.md
   - About:
       - about/index.md
-      - The limits: about/limits.md
+      - Background and history: about/history.md
       - How mathspec works: about/overview.md
       - The limits of the language: about/limits.md
       - Versions: about/versions.md
