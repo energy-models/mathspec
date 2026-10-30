@@ -133,6 +133,10 @@ constraints:
 Constraint 'ramp': shift(along=snapshot) reads the order of 'snapshot', which is not declared ordered, so the order would come from the row order of the data. Declare 'snapshot: {ordered: true}' under dimensions:.
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/dimensions-ordered.svg"
+</figure>
+
 The file loads once `snapshot` is declared `{ dtype: int, ordered: true }`.
 With snapshots `1`, `2` and `3` attached, `shift` has a row at snapshots `2`
 and `3` and none at `1`.

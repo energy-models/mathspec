@@ -84,6 +84,14 @@ call lists in `over=`:
 y_{t,z} = \sum_{g} \mathbf{1}_R(g, t, z) \cdot p_{t,g} = \sum_{g \,:\, f(g,\,t) = z} p_{t,g}
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/linear-maps-join.svg"
+</figure>
+
+With the data in the figure, the join pairs each row of `p` with the row of
+`gen_zone` that has the same generator and snapshot. The group-by adds the two
+pairs in zone `north` at snapshot `0`, so the result `y` has three rows.
+
 The typesetter [prints](../reference/notation.md) the right-hand form. The left-hand form is a sum over an index that two factors share (a
 **tensor contraction**). The relations page describes each column of the
 relation by two properties. Each pair of properties is a position that an
@@ -126,6 +134,14 @@ other index:
 ```math
 w_{t,g} = \sum_{z} \mathbf{1}_R(g, t, z) \cdot \mathrm{zone\_cap}_{t,z} = \mathrm{zone\_cap}_{t,\, f(g,\,t)}
 ```
+
+<figure class="diagram">
+--8<-- "docs/static/linear-maps-at.svg"
+</figure>
+
+With the data in the figure, each row of `gen_zone` takes the value of
+`zone_cap` at its snapshot and zone. So at snapshot `0`, wind and gas both
+take the value at `north`, and no row takes the value at `south`.
 
 The indicator and the contraction are the same as for the sum, so the same
 free-index rule sets the dimensions of the result. As a matrix, `at` is
@@ -205,6 +221,14 @@ At two kinds of position the matrix product has no term.
   declares the domain of $`f`$ in the spec, so a reader sees which rows exist
   without opening the data.
 
+<figure class="diagram">
+--8<-- "docs/static/linear-maps-empty.svg"
+</figure>
+
+With the data in the figure, no generator maps to `south`, so both rows of
+`zonal` at `south` are empty groups with no variable. `gen_zone` has no row for
+`gas` at snapshot `1`, so the lookup has no row there either.
+
 ## Partitions and tests
 
 The other two uses of a relation, a
@@ -215,6 +239,10 @@ members that $`f`$ sends to one value (a fibre). The dimensions of the result
 do not change. With `season_of: { key: snapshot, values: season }`,
 `shift(soc, along=snapshot, offset=1, edge='wrap', within=season_of[season])`
 steps back within each season:
+
+<figure class="diagram">
+--8<-- "docs/static/relations-partition.svg"
+</figure>
 
 Each season is one fibre of `season_of`, so no value crosses from winter to
 summer.

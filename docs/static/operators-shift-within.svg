@@ -1,0 +1,87 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 330" width="720" height="330" style="max-width: 100%; height: auto" role="img" aria-labelledby="osw-t osw-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="osw-t">shift with within= wraps inside each season</title>
+  <desc id="osw-d">The variable soc has four rows, snapshots 1 to 4. The relation season_of puts snapshots 1 and 2 in winter and snapshots 3 and 4 in summer. shift of soc along snapshot, offset 1, edge wrap, within season_of season, has one row per snapshot. Snapshot 2 reads soc at 1 and snapshot 4 reads soc at 3. Snapshot 1, the first of winter, wraps to soc at 2, the last of winter, and snapshot 3, the first of summer, wraps to soc at 4.</desc>
+  <defs>
+    <marker id="osw-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,94 V75 A3,3 0 0 1 19,72 H123 A3,3 0 0 1 126,75 V94 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M16,94 H126 V169 A3,3 0 0 1 123,172 H19 A3,3 0 0 1 16,169 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,234 V215 A3,3 0 0 1 19,212 H173 A3,3 0 0 1 176,215 V234 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,234 H176 V309 A3,3 0 0 1 173,312 H19 A3,3 0 0 1 16,309 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M340,154 V135 A3,3 0 0 1 343,132 H477 A3,3 0 0 1 480,135 V154 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M340,154 H480 V175 H340 Z" fill="#CC79A7" fill-opacity="0.25"/>
+    <path d="M340,175 H480 V193 H340 Z" fill="#CC79A7" fill-opacity="0.25"/>
+    <path d="M340,193 H480 V211 H340 Z" fill="#56B4E9" fill-opacity="0.25"/>
+    <path d="M340,211 H480 V229 A3,3 0 0 1 477,232 H343 A3,3 0 0 1 340,229 Z" fill="#56B4E9" fill-opacity="0.25"/>
+  </g>
+  <text x="16" y="24" fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5" font-weight="bold">shift(soc, along=snapshot, offset=1, edge='wrap', within=season_of[season])</text>
+  <text x="16" y="62" font-weight="bold" fill="currentColor">soc</text>
+  <text x="45" y="62" fill="currentColor" fill-opacity="0.7">a variable</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="24" y="86" font-weight="bold">snapshot</text>
+    <text x="24" y="110">1</text>
+    <text x="24" y="128">2</text>
+    <text x="24" y="146">3</text>
+    <text x="24" y="164">4</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="72" width="110" height="100" rx="3"/>
+    <line x1="16" y1="94" x2="126" y2="94"/>
+  </g>
+  <text x="16" y="202" font-weight="bold" fill="currentColor">season_of</text>
+  <text x="88" y="202" fill="currentColor" fill-opacity="0.7">a relation</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="24" y="226" font-weight="bold">snapshot</text>
+    <text x="104" y="226" font-weight="bold">season</text>
+    <text x="24" y="250">1</text>
+    <text x="104" y="250">winter</text>
+    <text x="24" y="268">2</text>
+    <text x="104" y="268">winter</text>
+    <text x="24" y="286">3</text>
+    <text x="104" y="286">summer</text>
+    <text x="24" y="304">4</text>
+    <text x="104" y="304">summer</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="212" width="160" height="100" rx="3"/>
+    <line x1="16" y1="234" x2="176" y2="234"/>
+  </g>
+  <text x="340" y="122" font-weight="bold" fill="currentColor">the result</text>
+  <text x="419" y="122" fill="currentColor" fill-opacity="0.7">an expression</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="348" y="146" font-weight="bold">snapshot</text>
+    <text x="420" y="146" font-weight="bold">value</text>
+    <text x="348" y="170">1</text>
+    <text x="420" y="170" font-weight="bold">soc[2]</text>
+    <text x="348" y="188">2</text>
+    <text x="420" y="188">soc[1]</text>
+    <text x="348" y="206">3</text>
+    <text x="420" y="206" font-weight="bold">soc[4]</text>
+    <text x="348" y="224">4</text>
+    <text x="420" y="224">soc[3]</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="340" y="132" width="140" height="100" rx="3"/>
+    <line x1="340" y1="154" x2="480" y2="154"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#osw-arrow)">
+    <path d="M136,122 C230,122 240,172 310,172 H332"/>
+    <path d="M186,262 C250,262 260,206 310,206 H332"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="196" y="118">one back</text>
+    <text x="196" y="286">group by season</text>
+  </g>
+  <text x="340" y="256" fill="currentColor" font-size="12" font-style="italic" fill-opacity="0.7">1 and 3 wrap inside their season</text>
+  <rect x="520" y="156" width="14" height="14" fill="#CC79A7" fill-opacity="0.25" stroke="currentColor" stroke-width="1"/>
+  <text x="540" y="167" fill="currentColor" font-size="12">the group of season winter</text>
+  <rect x="520" y="180" width="14" height="14" fill="#56B4E9" fill-opacity="0.25" stroke="currentColor" stroke-width="1"/>
+  <text x="540" y="191" fill="currentColor" font-size="12">the group of season summer</text>
+</svg>

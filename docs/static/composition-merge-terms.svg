@@ -1,0 +1,80 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" width="760" height="330" style="max-width: 100%; height: auto" role="img" aria-labelledby="cmt-t cmt-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="cmt-t">merge adds each term to the sum it names</title>
+  <desc id="cmt-d">network.yaml lists Bus_injection under given. generator.yaml has the term Generator_injection, and load.yaml has the term Load_injection, and each term has adds_to Bus_injection. merge joins the three files. In the merged spec, Bus_injection is a sum with two terms, Generator_injection from generator.yaml and Load_injection from load.yaml, so its expression is Generator_injection plus Load_injection. The merged spec has no given section, and each term stays a named expression without adds_to.</desc>
+  <defs>
+    <marker id="cmt-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,42 H256 V117 A3,3 0 0 1 253,120 H19 A3,3 0 0 1 16,117 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,42 V19 A3,3 0 0 1 19,16 H253 A3,3 0 0 1 256,19 V42 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,158 H256 V215 A3,3 0 0 1 253,218 H19 A3,3 0 0 1 16,215 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,158 V135 A3,3 0 0 1 19,132 H253 A3,3 0 0 1 256,135 V158 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,256 H256 V315 A3,3 0 0 1 253,318 H19 A3,3 0 0 1 16,315 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,256 V233 A3,3 0 0 1 19,230 H253 A3,3 0 0 1 256,233 V256 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M400,132 H690 V171 A3,3 0 0 1 687,174 H403 A3,3 0 0 1 400,171 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M400,132 V113 A3,3 0 0 1 403,110 H687 A3,3 0 0 1 690,113 V132 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="24" y="34" font-weight="bold">network.yaml</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
+      <text x="24" y="56">given:</text>
+      <text x="39" y="74">expressions:</text>
+      <text x="54" y="92" font-weight="bold">Bus_injection:</text>
+      <text x="69" y="110">dims: [snapshot, bus]</text>
+    </g>
+    <text x="24" y="150" font-weight="bold">generator.yaml</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
+      <text x="24" y="172">expressions:</text>
+      <text x="39" y="190">Generator_injection:</text>
+      <text x="54" y="208" font-weight="bold">adds_to: Bus_injection</text>
+    </g>
+    <text x="24" y="248" font-weight="bold">load.yaml</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
+      <text x="24" y="270">expressions:</text>
+      <text x="39" y="288">Load_injection:</text>
+      <text x="54" y="306" font-weight="bold">adds_to: Bus_injection</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="16" width="240" height="104" rx="3"/>
+    <rect x="16" y="132" width="240" height="86" rx="3"/>
+    <rect x="16" y="230" width="240" height="88" rx="3"/>
+    <line x1="16" y1="42" x2="256" y2="42"/>
+    <line x1="16" y1="158" x2="256" y2="158"/>
+    <line x1="16" y1="256" x2="256" y2="256"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#cmt-arrow)">
+    <path d="M266,68 C330,68 320,140 370,140 H390"/>
+    <path d="M266,175 C330,175 320,155 370,155 H390"/>
+    <path d="M266,272 C330,272 320,170 370,170 H390"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="292" y="156">merge</text>
+  </g>
+  <g fill="currentColor">
+    <text x="400" y="100" font-weight="bold">Bus_injection</text>
+    <text x="500" y="100" fill-opacity="0.7">an expression in the merged spec</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="408" y="124" font-weight="bold">term</text>
+      <text x="566" y="124" font-weight="bold">from</text>
+      <text x="408" y="148">Generator_injection</text><text x="566" y="148">generator.yaml</text>
+      <text x="408" y="166">Load_injection</text><text x="566" y="166">load.yaml</text>
+      <text x="400" y="204">expression: <tspan font-weight="bold">Generator_injection + Load_injection</tspan></text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="400" y="110" width="290" height="64" rx="3"/>
+    <line x1="400" y1="132" x2="690" y2="132"/>
+  </g>
+  <g fill="currentColor" font-size="12" fill-opacity="0.7">
+    <text x="400" y="234">each term stays a named expression,</text>
+    <text x="400" y="249">without its adds_to:</text>
+    <text x="400" y="272">the merged spec has no given: section</text>
+  </g>
+</svg>

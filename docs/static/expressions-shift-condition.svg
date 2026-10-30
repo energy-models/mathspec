@@ -1,0 +1,106 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 214" width="920" height="214" style="max-width: 100%; height: auto" role="img" aria-labelledby="esc-t esc-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="esc-t">shift in a condition finds where a run of marked breakpoints starts</title>
+  <desc id="esc-d">The parameter points is a table with six rows. Wind is true at breakpoints 0 and 1 and false at 2. Gas is true at 0 and false at 1 and 2. The condition points AND NOT shift of points along bp with offset 1 is true only at breakpoint 0 of each generator, because breakpoint 0 has no breakpoint before it and breakpoint 1 follows a marked one. Each generator has exactly one start, so the count of starts is 1 and p has a row for both wind and gas.</desc>
+  <defs>
+    <pattern id="esc-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="esc-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,62 V43 A3,3 0 0 1 19,40 H213 A3,3 0 0 1 216,43 V62 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,62 H216 V173 A3,3 0 0 1 213,176 H19 A3,3 0 0 1 16,173 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M410,78 V59 A3,3 0 0 1 413,56 H607 A3,3 0 0 1 610,59 V78 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M410,78 H610 V189 A3,3 0 0 1 607,192 H413 A3,3 0 0 1 410,189 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M760,62 V43 A3,3 0 0 1 763,40 H897 A3,3 0 0 1 900,43 V62 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M760,62 H900 V101 A3,3 0 0 1 897,104 H763 A3,3 0 0 1 760,101 Z" fill="#E69F00" fill-opacity="0.08"/>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="40" width="200" height="136" rx="3"/>
+    <line x1="16" y1="62" x2="216" y2="62"/>
+    <rect x="17" y="103" width="198" height="18" fill="url(#esc-hatch)" stroke="none"/>
+    <rect x="17" y="139" width="198" height="18" fill="url(#esc-hatch)" stroke="none"/>
+    <rect x="17" y="157" width="198" height="18" fill="url(#esc-hatch)" stroke="none"/>
+    <rect x="410" y="56" width="200" height="136" rx="3"/>
+    <line x1="410" y1="78" x2="610" y2="78"/>
+    <rect x="411" y="101" width="198" height="18" fill="url(#esc-hatch)" stroke="none"/>
+    <rect x="411" y="119" width="198" height="18" fill="url(#esc-hatch)" stroke="none"/>
+    <rect x="411" y="155" width="198" height="18" fill="url(#esc-hatch)" stroke="none"/>
+    <rect x="411" y="173" width="198" height="18" fill="url(#esc-hatch)" stroke="none"/>
+    <rect x="760" y="40" width="140" height="64" rx="3"/>
+    <line x1="760" y1="62" x2="900" y2="62"/>
+    <rect x="760" y="140" width="14" height="14" fill="url(#esc-hatch)"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#esc-arrow)">
+    <path d="M226,110 L400,110"/>
+    <path d="M620,110 L750,110"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">points</text>
+    <text x="67" y="30" font-size="12" fill-opacity="0.7">a parameter</text>
+    <text x="24" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">generator</text>
+    <text x="112" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">bp</text>
+    <text x="152" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">value</text>
+    <text x="24" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">wind</text>
+    <text x="112" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">0</text>
+    <text x="152" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">true</text>
+    <text x="24" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">wind</text>
+    <text x="112" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">1</text>
+    <text x="152" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">true</text>
+    <text x="24" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">wind</text>
+    <text x="112" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2</text>
+    <text x="152" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">false</text>
+    <text x="24" y="134" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">gas</text>
+    <text x="112" y="134" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">0</text>
+    <text x="152" y="134" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">true</text>
+    <text x="24" y="152" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">gas</text>
+    <text x="112" y="152" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">1</text>
+    <text x="152" y="152" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">false</text>
+    <text x="24" y="170" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">gas</text>
+    <text x="112" y="170" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2</text>
+    <text x="152" y="170" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">false</text>
+    <text x="410" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">start of a run</text>
+    <text x="520" y="30" font-size="12" fill-opacity="0.7">a condition</text>
+    <text x="410" y="46" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill-opacity="0.8">points AND NOT shift(points, …)</text>
+    <text x="418" y="71" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">generator</text>
+    <text x="506" y="71" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">bp</text>
+    <text x="546" y="71" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">value</text>
+    <text x="418" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">wind</text>
+    <text x="506" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">0</text>
+    <text x="546" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">true</text>
+    <text x="418" y="114" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">wind</text>
+    <text x="506" y="114" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">1</text>
+    <text x="546" y="114" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">false</text>
+    <text x="418" y="132" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">wind</text>
+    <text x="506" y="132" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2</text>
+    <text x="546" y="132" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">false</text>
+    <text x="418" y="150" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">gas</text>
+    <text x="506" y="150" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">0</text>
+    <text x="546" y="150" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">true</text>
+    <text x="418" y="168" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">gas</text>
+    <text x="506" y="168" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">1</text>
+    <text x="546" y="168" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">false</text>
+    <text x="418" y="186" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">gas</text>
+    <text x="506" y="186" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2</text>
+    <text x="546" y="186" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">false</text>
+    <text x="760" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">p</text>
+    <text x="775" y="30" font-size="12" fill-opacity="0.7">a variable</text>
+    <text x="768" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">generator</text>
+    <text x="768" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">wind</text>
+    <text x="768" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">gas</text>
+    <text x="236" y="83" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">NOT shift(points,</text>
+    <text x="236" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">along=bp, offset=1)</text>
+    <text x="236" y="130" font-size="12" fill-opacity="0.7">true where points is true</text>
+    <text x="236" y="145" font-size="12" fill-opacity="0.7">and the bp before is not</text>
+    <text x="630" y="83" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">count(…, over=bp)</text>
+    <text x="630" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">== 1</text>
+    <text x="630" y="130" font-size="12" fill-opacity="0.7">one start each</text>
+    <text x="780" y="151" font-size="12">condition is false</text>
+  </g>
+</svg>

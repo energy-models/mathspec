@@ -1,0 +1,77 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 260" width="760" height="260" style="max-width: 100%; height: auto" role="img" aria-labelledby="amc-t amc-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="amc-t">A neutral variable is zero outside its condition, an absent one has no row</title>
+  <desc id="amc-d">Three storages: dam has inflow and a store, tank has a store and no inflow, river has inflow and no store. The variable spill, with where has_inflow and missing neutral, has a row at every storage, and its row at tank is 0. The variable soc, with where has_store, has rows at dam and tank and no row at river. The constraint balance has a row at dam, inflow minus spill minus soc equals 0, and a row at tank, inflow minus soc equals 0. It has no row at river, because soc is absent there.</desc>
+  <defs>
+    <marker id="amc-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g transform="translate(0,-180)">
+  <g stroke="none">
+    <path d="M16,234 H256 V291 A3,3 0 0 1 253,294 H19 A3,3 0 0 1 16,291 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,234 V215 A3,3 0 0 1 19,212 H253 A3,3 0 0 1 256,215 V234 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M16,354 H256 V393 A3,3 0 0 1 253,396 H19 A3,3 0 0 1 16,393 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,354 V335 A3,3 0 0 1 19,332 H253 A3,3 0 0 1 256,335 V354 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M340,294 H744 V333 A3,3 0 0 1 741,336 H343 A3,3 0 0 1 340,333 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M340,294 V275 A3,3 0 0 1 343,272 H741 A3,3 0 0 1 744,275 V294 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="202" font-weight="bold">spill</text>
+    <text x="54" y="202" fill-opacity="0.7">a variable, missing: neutral</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="226" font-weight="bold">storage</text>
+      <text x="96" y="226" font-weight="bold">value</text>
+      <text x="24" y="250">dam</text><text x="96" y="250">spill[dam]</text>
+      <text x="24" y="268">tank</text><text x="96" y="268" font-weight="bold">0</text>
+      <text x="24" y="286">river</text><text x="96" y="286">spill[river]</text>
+    </g>
+    <text x="112" y="268" font-size="11.5" font-style="italic" fill-opacity="0.7">outside the condition</text>
+    <text x="16" y="322" font-weight="bold">soc</text>
+    <text x="44" y="322" fill-opacity="0.7">a variable, missing: absent</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="346" font-weight="bold">storage</text>
+      <text x="96" y="346" font-weight="bold">value</text>
+      <text x="24" y="370">dam</text><text x="96" y="370">soc[dam]</text>
+      <text x="24" y="388">tank</text><text x="96" y="388">soc[tank]</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="212" width="240" height="82" rx="3"/>
+    <line x1="16" y1="234" x2="256" y2="234"/>
+    <rect x="16" y="332" width="240" height="64" rx="3"/>
+    <line x1="16" y1="354" x2="256" y2="354"/>
+    <rect x="16" y="400" width="240" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="24" y="416" fill-opacity="0.7" font-style="italic">no row for river: soc is absent</text>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#amc-arrow)">
+    <path d="M266,262 C306,262 294,302 316,302 H334"/>
+    <path d="M266,370 C306,370 294,318 316,318 H334"/>
+  </g>
+  <g fill="currentColor">
+    <text x="340" y="262" font-weight="bold">balance</text>
+    <text x="400" y="262" fill-opacity="0.7">a constraint</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="348" y="286" font-weight="bold">storage</text>
+      <text x="412" y="286" font-weight="bold">row</text>
+      <text x="348" y="310">dam</text><text x="412" y="310">inflow[dam] - spill[dam] - soc[dam] == 0</text>
+      <text x="348" y="328">tank</text><text x="412" y="328">inflow[tank] - soc[tank] == 0</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="340" y="272" width="404" height="64" rx="3"/>
+    <line x1="340" y1="294" x2="744" y2="294"/>
+    <rect x="340" y="340" width="404" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+    <rect x="560" y="380" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="348" y="356" fill-opacity="0.7" font-style="italic">no row for river: soc[river] is absent</text>
+    <text x="580" y="391">absent: no row</text>
+  </g>
+  </g>
+</svg>

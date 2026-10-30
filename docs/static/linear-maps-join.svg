@@ -1,0 +1,102 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 490" width="820" height="490" style="max-width: 100%; height: auto" role="img" aria-labelledby="lmj-t lmj-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="lmj-t">A sum through a relation is a join, then a group-by with a sum</title>
+  <desc id="lmj-d">The variable p has a row at each snapshot, 0 and 1, and each generator, wind and gas. The relation gen_zone, keyed by generator and snapshot, puts wind in zone north at both snapshots, and gas in zone north at snapshot 0 and in zone south at snapshot 1. The join pairs each row of p with the row of gen_zone that has the same generator and snapshot, and each pair takes the zone of that row. The group-by adds the pairs that have the same snapshot and zone. The result y has three rows: at snapshot 0 and zone north, p of 0 and wind plus p of 0 and gas. At snapshot 1 and zone north, p of 1 and wind. At snapshot 1 and zone south, p of 1 and gas.</desc>
+  <defs>
+    <marker id="lmj-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,178 H176 V253 A3,3 0 0 1 173,256 H19 A3,3 0 0 1 16,253 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,178 V159 A3,3 0 0 1 19,156 H173 A3,3 0 0 1 176,159 V178 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M16,318 H226 V393 A3,3 0 0 1 223,396 H19 A3,3 0 0 1 16,393 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,318 V299 A3,3 0 0 1 19,296 H223 A3,3 0 0 1 226,299 V318 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M330,222 H630 V283 H330 Z" fill="#CC79A7" fill-opacity="0.25"/>
+    <path d="M330,283 H630 V297 A3,3 0 0 1 627,300 H333 A3,3 0 0 1 330,297 Z" fill="#56B4E9" fill-opacity="0.25"/>
+    <path d="M330,222 V203 A3,3 0 0 1 333,200 H627 A3,3 0 0 1 630,203 V222 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M330,382 H630 V425 H330 Z" fill="#CC79A7" fill-opacity="0.25"/>
+    <path d="M330,425 H630 V439 A3,3 0 0 1 627,442 H333 A3,3 0 0 1 330,439 Z" fill="#56B4E9" fill-opacity="0.25"/>
+    <path d="M330,382 V363 A3,3 0 0 1 333,360 H627 A3,3 0 0 1 630,363 V382 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
+      <text x="16" y="28">relations:</text>
+      <text x="31" y="46">gen_zone: { key: [generator, snapshot], values: zone, missing: absent }</text>
+      <text x="16" y="64">variables:</text>
+      <text x="31" y="82">p: { dims: [snapshot, generator] }</text>
+      <text x="16" y="106" font-weight="bold">sum(p, over=generator, by=gen_zone[zone])</text>
+    </g>
+    <text x="16" y="146" font-weight="bold">p</text>
+    <text x="30" y="146" fill-opacity="0.7">a variable</text>
+    <text x="16" y="286" font-weight="bold">gen_zone</text>
+    <text x="84" y="286" fill-opacity="0.7">a relation</text>
+    <text x="330" y="190" font-weight="bold">the join</text>
+    <text x="392" y="190" fill-opacity="0.7">one pair per matching row</text>
+    <text x="330" y="350" font-weight="bold">the result</text>
+    <text x="404" y="350" fill-opacity="0.7">an expression</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="170" font-weight="bold">snapshot</text>
+      <text x="96" y="170" font-weight="bold">generator</text>
+      <text x="24" y="194">0</text><text x="96" y="194">wind</text>
+      <text x="24" y="212">0</text><text x="96" y="212">gas</text>
+      <text x="24" y="230">1</text><text x="96" y="230">wind</text>
+      <text x="24" y="248">1</text><text x="96" y="248">gas</text>
+      <text x="24" y="310" font-weight="bold">generator</text>
+      <text x="104" y="310" font-weight="bold">snapshot</text>
+      <text x="176" y="310" font-weight="bold">zone</text>
+      <text x="24" y="334">wind</text><text x="104" y="334">0</text><text x="176" y="334">north</text>
+      <text x="24" y="352">gas</text><text x="104" y="352">0</text><text x="176" y="352">north</text>
+      <text x="24" y="370">wind</text><text x="104" y="370">1</text><text x="176" y="370">north</text>
+      <text x="24" y="388">gas</text><text x="104" y="388">1</text><text x="176" y="388">south</text>
+      <text x="338" y="214" font-weight="bold">snapshot</text>
+      <text x="410" y="214" font-weight="bold">generator</text>
+      <text x="490" y="214" font-weight="bold">zone</text>
+      <text x="542" y="214" font-weight="bold">term</text>
+      <text x="338" y="238">0</text><text x="410" y="238">wind</text><text x="490" y="238">north</text><text x="542" y="238">p[0,wind]</text>
+      <text x="338" y="256">0</text><text x="410" y="256">gas</text><text x="490" y="256">north</text><text x="542" y="256">p[0,gas]</text>
+      <text x="338" y="274">1</text><text x="410" y="274">wind</text><text x="490" y="274">north</text><text x="542" y="274">p[1,wind]</text>
+      <text x="338" y="292">1</text><text x="410" y="292">gas</text><text x="490" y="292">south</text><text x="542" y="292">p[1,gas]</text>
+      <text x="338" y="374" font-weight="bold">snapshot</text>
+      <text x="410" y="374" font-weight="bold">zone</text>
+      <text x="466" y="374" font-weight="bold">value</text>
+      <text x="338" y="398">0</text><text x="410" y="398">north</text><text x="466" y="398">p[0,wind] + p[0,gas]</text>
+      <text x="338" y="416">1</text><text x="410" y="416">north</text><text x="466" y="416">p[1,wind]</text>
+      <text x="338" y="434">1</text><text x="410" y="434">south</text><text x="466" y="434">p[1,gas]</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="156" width="160" height="100" rx="3"/>
+    <line x1="16" y1="178" x2="176" y2="178"/>
+    <rect x="16" y="296" width="210" height="100" rx="3"/>
+    <line x1="16" y1="318" x2="226" y2="318"/>
+    <rect x="330" y="200" width="300" height="100" rx="3"/>
+    <line x1="330" y1="222" x2="630" y2="222"/>
+    <rect x="330" y="360" width="300" height="82" rx="3"/>
+    <line x1="330" y1="382" x2="630" y2="382"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#lmj-arrow)">
+    <path d="M186,206 C250,206 250,240 300,240 H324"/>
+    <path d="M236,346 C290,346 270,264 300,264 H324"/>
+    <path d="M640,250 H676 V410 H636"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="196" y="182">join on generator</text>
+    <text x="196" y="197">and snapshot</text>
+    <text x="686" y="316">sum by</text>
+    <text x="686" y="331">snapshot, zone:</text>
+    <text x="686" y="350" fill-opacity="0.7">adds the pairs</text>
+    <text x="686" y="365" fill-opacity="0.7">that agree on both</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="436" width="14" height="14" fill="#CC79A7" fill-opacity="0.25"/>
+    <rect x="16" y="460" width="14" height="14" fill="#56B4E9" fill-opacity="0.25"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="36" y="447">pairs in zone north</text>
+    <text x="36" y="471">pairs in zone south</text>
+  </g>
+</svg>

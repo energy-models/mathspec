@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs: added figures throughout docs to support descriptions of operations applied with the math language ([#970](https://github.com/energy-models/mathspec/pull/970)).
 - docs: rewritten with updated language and structure to more closely follow best practice set out by [Diátaxis](https://diataxis.fr/), the [Google developer documentation style guide](https://developers.google.com/style), and others ([#968](https://github.com/energy-models/mathspec/pull/968)).
 - docs: the README credits each contributor in an all-contributors table, linking work on the YAML math in Calliope and lpspec from before mathspec began ([#955](https://github.com/energy-models/mathspec/pull/955), [#956](https://github.com/energy-models/mathspec/pull/956) to [#965](https://github.com/energy-models/mathspec/pull/965), [#966](https://github.com/energy-models/mathspec/pull/966), [#967](https://github.com/energy-models/mathspec/pull/967))
 - fix(language): the case check tells two pairs of columns of one relation apart ([#951](https://github.com/energy-models/mathspec/pull/951))

@@ -1,0 +1,80 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 168" width="760" height="168" style="max-width: 100%; height: auto" role="img" aria-labelledby="cow-t cow-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="cow-t">A patch adds a where condition to a variable of the base</title>
+  <desc id="cow-d">The parameter capacity is a table with three rows: wind 10, gas 5 and old 0. The variable dispatch in base.yaml is a table over snapshot and generator with three rows: 1 wind, 1 gas and 1 old. The patch operate.yaml adds where capacity greater than zero. After override, dispatch has two rows, 1 wind and 1 gas. The row for old, where capacity is zero, is absent.</desc>
+  <defs>
+    <pattern id="cow-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="cow-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,56 H146 V113 A3,3 0 0 1 143,116 H19 A3,3 0 0 1 16,113 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,56 V37 A3,3 0 0 1 19,34 H143 A3,3 0 0 1 146,37 V56 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M170,56 H350 V113 A3,3 0 0 1 347,116 H173 A3,3 0 0 1 170,113 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M170,56 V37 A3,3 0 0 1 173,34 H347 A3,3 0 0 1 350,37 V56 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M524,56 H744 V95 A3,3 0 0 1 741,98 H527 A3,3 0 0 1 524,95 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M524,56 V37 A3,3 0 0 1 527,34 H741 A3,3 0 0 1 744,37 V56 Z" fill="#E69F00" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="24" font-weight="bold">capacity</text>
+    <text x="80" y="24" fill-opacity="0.7">a parameter</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="48" font-weight="bold">generator</text>
+      <text x="100" y="48" font-weight="bold">value</text>
+      <text x="24" y="72">wind</text><text x="100" y="72">10</text>
+      <text x="24" y="90">gas</text><text x="100" y="90">5</text>
+      <text x="24" y="108">old</text><text x="100" y="108">0</text>
+    </g>
+    <text x="170" y="24" font-weight="bold">dispatch</text>
+    <text x="236" y="24" fill-opacity="0.7">a variable in base.yaml</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="178" y="48" font-weight="bold">snapshot</text>
+      <text x="250" y="48" font-weight="bold">generator</text>
+      <text x="178" y="72">1</text><text x="250" y="72">wind</text>
+      <text x="178" y="90">1</text><text x="250" y="90">gas</text>
+      <text x="178" y="108">1</text><text x="250" y="108">old</text>
+    </g>
+    <text x="524" y="24" font-weight="bold">dispatch</text>
+    <text x="590" y="24" fill-opacity="0.7">a variable, patched</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="532" y="48" font-weight="bold">snapshot</text>
+      <text x="604" y="48" font-weight="bold">generator</text>
+      <text x="532" y="72">1</text><text x="604" y="72">wind</text>
+      <text x="532" y="90">1</text><text x="604" y="90">gas</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="34" width="130" height="82" rx="3"/>
+    <line x1="16" y1="56" x2="146" y2="56"/>
+    <rect x="17" y="95" width="128" height="20" fill="url(#cow-hatch)" stroke="none"/>
+    <rect x="170" y="34" width="180" height="82" rx="3"/>
+    <line x1="170" y1="56" x2="350" y2="56"/>
+    <rect x="524" y="34" width="220" height="64" rx="3"/>
+    <line x1="524" y1="56" x2="744" y2="56"/>
+    <rect x="524" y="102" width="220" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#cow-arrow)">
+    <path d="M360,75 L512,75"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="368" y="48">operate.yaml</text>
+    <text x="368" y="66" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">where: capacity &gt; 0</text>
+    <text x="368" y="94" fill-opacity="0.7">keeps a row only</text>
+    <text x="368" y="109" fill-opacity="0.7">where it is true</text>
+    <text x="532" y="118" fill-opacity="0.7" font-style="italic">no row for old: dispatch is absent</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="140" width="14" height="14" fill="url(#cow-hatch)"/>
+    <rect x="170" y="140" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="36" y="151">condition is false</text>
+    <text x="190" y="151">absent: no row</text>
+  </g>
+</svg>

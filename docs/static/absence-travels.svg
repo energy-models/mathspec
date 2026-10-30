@@ -1,0 +1,98 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 348" width="760" height="348" style="max-width: 100%; height: auto" role="img" aria-labelledby="atr-t atr-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="atr-t">Absence travels through arithmetic and is left out of a sum</title>
+  <desc id="atr-d">The variable x has rows for wind, gas and old. The variable y, declared with where capacity greater than zero, has rows for wind and gas, and no row for old. The constraint each, x plus y at least 1, has rows at wind and gas and no row at old. The constraint total has one row, x of wind plus y of wind plus x of gas plus y of gas at least 1: the term x of old plus y of old is left out. The constraint split has one row, x of wind plus x of gas plus x of old plus y of wind plus y of gas at least 1: x of old is in the first sum, and y of old is left out.</desc>
+  <defs>
+    <marker id="atr-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g transform="translate(0,-208)">
+  <g stroke="none">
+    <path d="M16,262 H156 V319 A3,3 0 0 1 153,322 H19 A3,3 0 0 1 16,319 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,262 V243 A3,3 0 0 1 19,240 H153 A3,3 0 0 1 156,243 V262 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M16,394 H156 V433 A3,3 0 0 1 153,436 H19 A3,3 0 0 1 16,433 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,394 V375 A3,3 0 0 1 19,372 H153 A3,3 0 0 1 156,375 V394 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M290,262 H746 V301 A3,3 0 0 1 743,304 H293 A3,3 0 0 1 290,301 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M290,262 V243 A3,3 0 0 1 293,240 H743 A3,3 0 0 1 746,243 V262 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M290,394 H746 V415 A3,3 0 0 1 743,418 H293 A3,3 0 0 1 290,415 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M290,394 V375 A3,3 0 0 1 293,372 H743 A3,3 0 0 1 746,375 V394 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M290,498 H746 V519 A3,3 0 0 1 743,522 H293 A3,3 0 0 1 290,519 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M290,498 V479 A3,3 0 0 1 293,476 H743 A3,3 0 0 1 746,479 V498 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="230" font-weight="bold">x</text>
+    <text x="30" y="230" fill-opacity="0.7">a variable</text>
+    <text x="16" y="362" font-weight="bold">y</text>
+    <text x="30" y="362" fill-opacity="0.7">a variable</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="254" font-weight="bold">generator</text>
+      <text x="24" y="278">wind</text>
+      <text x="24" y="296">gas</text>
+      <text x="24" y="314">old</text>
+      <text x="24" y="386" font-weight="bold">generator</text>
+      <text x="24" y="410">wind</text>
+      <text x="24" y="428">gas</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="240" width="140" height="82" rx="3"/>
+    <line x1="16" y1="262" x2="156" y2="262"/>
+    <rect x="16" y="372" width="140" height="64" rx="3"/>
+    <line x1="16" y1="394" x2="156" y2="394"/>
+    <rect x="16" y="440" width="140" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="24" y="456" fill-opacity="0.7" font-style="italic">no row for old</text>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#atr-arrow)">
+    <path d="M166,360 L278,360"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="178" y="348" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">x, y</text>
+    <text x="178" y="378" fill-opacity="0.7">in three</text>
+    <text x="178" y="393" fill-opacity="0.7">constraints</text>
+  </g>
+  <g fill="currentColor">
+    <text x="290" y="230" font-weight="bold">each</text>
+    <text x="326" y="230" fill-opacity="0.7">a constraint</text>
+    <text x="290" y="362" font-weight="bold">total</text>
+    <text x="330" y="362" fill-opacity="0.7">a constraint</text>
+    <text x="290" y="466" font-weight="bold">split</text>
+    <text x="328" y="466" fill-opacity="0.7">a constraint</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="298" y="254" font-weight="bold">generator</text>
+      <text x="384" y="254" font-weight="bold">row</text>
+      <text x="298" y="278">wind</text><text x="384" y="278">x[wind] + y[wind] &gt;= 1</text>
+      <text x="298" y="296">gas</text><text x="384" y="296">x[gas] + y[gas] &gt;= 1</text>
+      <text x="298" y="386" font-weight="bold">row</text>
+      <text x="298" y="410">x[wind] + y[wind] + x[gas] + y[gas] &gt;= 1</text>
+      <text x="298" y="490" font-weight="bold">row</text>
+      <text x="298" y="514">x[wind] + x[gas] + <tspan font-weight="bold">x[old]</tspan> + y[wind] + y[gas] &gt;= 1</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="290" y="240" width="456" height="64" rx="3"/>
+    <line x1="290" y1="262" x2="746" y2="262"/>
+    <rect x="290" y="308" width="456" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+    <rect x="290" y="372" width="456" height="46" rx="3"/>
+    <line x1="290" y1="394" x2="746" y2="394"/>
+    <rect x="290" y="476" width="456" height="46" rx="3"/>
+    <line x1="290" y1="498" x2="746" y2="498"/>
+  </g>
+  <g fill="currentColor" font-size="12" fill-opacity="0.7" font-style="italic">
+    <text x="298" y="324">no row for old: y[old] is absent</text>
+    <text x="298" y="436">the term x[old] + y[old] is absent and left out</text>
+    <text x="298" y="540">x[old] is in the first sum; y[old] is left out</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="480" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="36" y="491">absent: no row</text>
+  </g>
+  </g>
+</svg>
