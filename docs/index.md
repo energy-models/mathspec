@@ -207,4 +207,8 @@ is in the How tab.
 
     --8<-- "README.md:status"
 
+## Contributors
+
+--8<-- "README.md:contributors"
+
 </div>

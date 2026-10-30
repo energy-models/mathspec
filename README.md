@@ -270,6 +270,7 @@ Thanks go to these people
 all-contributors bot keeps the table below. To add someone, comment
 `@all-contributors please add @login for code` on an issue.
 
+<!--- --8<-- [start:contributors] -->
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
@@ -298,6 +299,7 @@ all-contributors bot keeps the table below. To add someone, comment
 <!-- prettier-ignore-end -->
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
+<!--- --8<-- [end:contributors] -->
 
 ## Licence
 

@@ -45,6 +45,8 @@ Calliope is developed in the [calliope-project](https://github.com/calliope-proj
 specsolve is developed by [@FBumann](https://github.com/FBumann) in the [fluxopt](https://github.com/fluxopt) organisation.
 mathspec is developed in the framework-agnostic [energy-models](https://github.com/energy-models) organisation ([contributors](https://github.com/energy-models/mathspec/graphs/contributors)).
 
+--8<-- "README.md:contributors"
+
 !!! info "See also"
 
     - [versions](versions.md), for how the package version and the language
