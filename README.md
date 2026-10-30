@@ -239,7 +239,7 @@ from PyPI with pip, uv or pixi. To work on mathspec itself, set up a
 <!--- --8<-- [start:background] -->
 
 mathspec started life as YAML math in the energy system modelling framework [Calliope](https://github.com/calliope-project/calliope).
-The Calliope maintainers developed many of the elements of the mathspec language uses today, from [initial concepts in 2020](https://github.com/calliope-project/calliope/issues/100#issuecomment-682017208) to their [first stable release](https://github.com/calliope-project/calliope/releases/tag/v0.7.0) using 100% YAML math in September 2026.
+The Calliope maintainers developed many of the language elements mathspec uses today, from [initial concepts in 2020](https://github.com/calliope-project/calliope/issues/100#issuecomment-682017208) to their [first stable release](https://github.com/calliope-project/calliope/releases/tag/v0.7.0) using 100% YAML math in September 2026.
 
 mathspec is an evolution of the initial Calliope work, ported to a framework-agnostic organisation and now developed as a cross-framework initiative.
 This initiative has proven a success, with improvements in syntax, performance, and features realised already in the first months.
