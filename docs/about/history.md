@@ -15,7 +15,7 @@ This evolution has moved the math further out of code and into a file that any p
 
 ## The problem
 
-In most energy system modelling frameworks, the math lives in the source code as calls to a library such as [Pyomo](https://github.com/Pyomo/pyomo) or [linopy](https://github.com/PyPSA/linopy).
+In most open-source energy system modelling frameworks, the math lives in the source code as calls to a library such as [Pyomo](https://github.com/Pyomo/pyomo) or [linopy](https://github.com/PyPSA/linopy). In some other modelling frameworks, algebraic modelling languages. These are programming languages built especially for writing out the maths of an optimisation problem. While their syntax is close to the maths, they don't offer the flexibility of more popular programming languages such as Python.
 A reader who wants the equations has to read that code or hand-written duplications of that math.
 A user cannot add a constraint without writing code and the documentation and the code can easily drift apart.
 A constraint can also only be validated by building a model with data.
