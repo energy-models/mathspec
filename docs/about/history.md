@@ -15,13 +15,19 @@ This evolution has moved the math further out of code and into a file that any p
 
 ## The problem
 
-In most open-source energy system modelling frameworks, the math lives in the source code as calls to a library such as [Pyomo](https://github.com/Pyomo/pyomo) or [linopy](https://github.com/PyPSA/linopy). In some other modelling frameworks, algebraic modelling languages. These are programming languages built especially for writing out the maths of an optimisation problem. While their syntax is close to the maths, they don't offer the flexibility of more popular programming languages such as Python.
+In many open-source energy system modelling frameworks, the math lives in the source code as calls to a library such as [Pyomo](https://github.com/Pyomo/pyomo) or [linopy](https://github.com/PyPSA/linopy). 
 A reader who wants the equations has to read that code or hand-written duplications of that math.
 A user cannot add a constraint without writing code and the documentation and the code can easily drift apart.
 A constraint can also only be validated by building a model with data.
 
 Calliope set out to solve all four problems by moving the math into a human-readable YAML file.
 mathspec has continued that mission and has gone beyond what was achieved in Calliope, introducing even more features to make it easier to write and validate your math.
+
+!!! note
+
+    Some modelling frameworks use algebraic modelling languages instead, which are programming languages built especially for writing out the math of an optimisation problem (e.g. [AMPL](https://ampl.com/) or [GAMS](https://www.gams.com/)). 
+    While their syntax is close to the math, they don't offer the flexibility of more popular programming languages such as Python or Julia.
+    Those which have widespread usage are also proprietary; few viable open-source alternatives exist.
 
 ## Initial development record
 
