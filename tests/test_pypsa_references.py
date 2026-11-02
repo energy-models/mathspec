@@ -35,7 +35,7 @@ SPECS = {
     **{page: override(base, [patch]) for page, (base, patch) in PATCHED.items()},
 }
 MODELS = list(SPECS.values())
-BASE = SPECS['pypsa.md']
+BASE = SPECS['pypsa_ladder.md']
 ROWS_DECLARED = {
     n for m in MODELS for name, entry in m.constraints.items() for n in _names_for(name, entry.description)
 }

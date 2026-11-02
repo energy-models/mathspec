@@ -5,21 +5,20 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Loads
 
-This fragment states PyPSA's `Load`, and shows what a file may leave out: it
-declares no variable and no objective. `Load_p_set` is data, and the file states
-only what the port of the load withdraws.
-
-The minus sign is the only link to the sign convention, under which a withdrawal
-is a negative injection.
+This [fragment](../../reference/glossary.md#fragment) states `Load` from an open-source power system framework ([PyPSA](https://pypsa.org)).
+The file declares the relation `Load_port`, the parameter `Load_p_set` and the
+constraint `Load_withdrawal`. The minus sign in front of `Load_p_set` is the
+only place where the file uses the sign convention of
+[the surface](surface.md).
 
 <!-- gallery:begin -->
 ```yaml
-description: PyPSA's `Load`, wired to a port rather than straight to a bus. What it takes is data, so it decides nothing.
+description: PyPSA's `Load`, wired to a port rather than straight to a bus. What a load takes is data, so the file declares no variable.
 given:
   variables:
     Port_p:
       dims: [snapshot, port]
-      description: the surface introduces this flow, and this file pins it at its own ports
+      description: declared by the surface, and fixed at each load's port by `Load_withdrawal`
 dimensions:
   snapshot: { dtype: datetime, description: dispatch periods }
   port: { dtype: str, description: "the connections components make, one label per connection" }
@@ -31,19 +30,19 @@ parameters:
 constraints:
   Load_withdrawal:
     description: >-
-      what a load takes is what its port withdraws. No PyPSA row stands for
-      this: PyPSA writes the load into the balance instead
+      What a load takes is what its port withdraws. PyPSA has no row for this
+      constraint, because PyPSA writes the load into the balance.
     dims: [snapshot, load]
     expression: at(Port_p, by=Load_port[port]) == -Load_p_set
 ```
 
-PyPSA's `Load`, wired to a port rather than straight to a bus. What it takes is data, so it decides nothing.
+PyPSA's `Load`, wired to a port rather than straight to a bus. What a load takes is data, so the file declares no variable.
 
 #### Given
 
 | Symbol | Meaning |
 |---|---|
-| $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — the surface introduces this flow, and this file pins it at its own ports |
+| $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — declared by the surface, and fixed at each load's port by `Load_withdrawal` |
 
 #### Sets
 
@@ -67,3 +66,11 @@ PyPSA's `Load`, wired to a port rather than straight to a bus. What it takes is 
 f_{t,\mathrm{Load\_port}(d)} = -\mathrm{load}_{t,d} \qquad \forall\, t \in \mathcal{T},\ d \in \mathcal{D}
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [The coupling surface](surface.md), for the sign convention
+    - [Generators](generator.md), for the component file that has a variable and a
+      cost
+    - [The composed spec](composed.md), for the spec once `merge` joins this file
+      with the others

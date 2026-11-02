@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The network
 
-This file states the buses and the balance at each bus. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It reads the sum `Bus_injection` under `given:`, and every component adds its injection to that sum.
+This file states the buses and the balance at each bus. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It lists the sum `Bus_injection` under [`given`](../../reference/language/parameters-variables-constraints.md#given) and adds nothing to it. Every component adds its injection to that sum. `Bus_nodal_balance` is the row `Bus_injection == 0`.
 
 <!-- gallery:begin -->
 ```yaml
@@ -14,7 +14,7 @@ given:
     Bus_injection:
       dims: [scenario, snapshot, bus]
       description: >-
-        what every component puts into a bus, less what it takes out of it;
+        what every component puts into a bus, less what it takes out of it.
         PyPSA writes each term into the balance, and a load on its right-hand
         side
 
@@ -31,16 +31,17 @@ dimensions:
 constraints:
   Bus_nodal_balance:
     description: >-
-      `Bus-nodal_balance` — what is generated at a bus, storage dispatch and
-      stores included, less what the links take away, plus what arrives over
-      them after losses and any delay at every port they deliver to, each
-      process port drawing or delivering at its own rate and each passive branch
-      carrying its flow, meets the load there, less half of every incident
-      line's and transformer's loss — PyPSA dissipates a branch's loss half at
-      either end. Each generator, storage unit, store and load term enters
-      with its component's `sign` (`constraints.py:1404-1405`, `:1514`), and
-      an inactive load not at all. A bus nothing is attached to has no row; PyPSA refuses one that
-      carries load, and this file does not yet.
+      `Bus-nodal_balance` — what is generated at a bus meets the load there,
+      less half of every incident line's and transformer's loss. What is
+      generated includes storage dispatch and stores. It is net of what the
+      links take away, plus what arrives over them after losses and any delay
+      at every port they deliver to. Each process port draws or delivers at
+      its own rate, and each passive branch carries its flow. PyPSA dissipates
+      a branch's loss half at either end. Each generator, storage unit, store
+      and load term enters with its component's `sign`
+      (`constraints.py:1404-1405`, `:1514`), and an inactive load not at all.
+      A bus nothing is attached to has no row. PyPSA refuses one that carries
+      load. The file states no assumption for it.
     dims: [scenario, snapshot, bus]
     expression: Bus_injection == 0
 ```
@@ -49,7 +50,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression another file defines — what every component puts into a bus, less what it takes out of it; PyPSA writes each term into the balance, and a load on its right-hand side |
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression another file defines — what every component puts into a bus, less what it takes out of it. PyPSA writes each term into the balance, and a load on its right-hand side |
 
 #### Sets
 
@@ -67,3 +68,8 @@ constraints:
 \mathit{Bus\_injection}_{\xi,t,n} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

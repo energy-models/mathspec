@@ -5,145 +5,240 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Absence and `where`
 
-A `where:` does not set a variable to zero. It leaves the variable **unbuilt**
-at the masked coordinates: no column, and no value.
+This page lists the constructs that remove a row from an entry, and how
+absence travels through an expression. Every entry is a table with at most one
+row for each combination of labels of its dimensions (a
+[coordinate](../glossary.md#coordinate)). An entry is **absent** at a
+coordinate when it has no row there. For a variable, absent means that the
+solver never sees it at that coordinate, and for a constraint, nothing is
+required there. Absent is different from zero, because zero is a value in a
+row.
+
+## `where`
+
+Where its condition is false, a `where:` on a variable leaves the variable absent, not zero.
 
 ```yaml
 dimensions:
-  g: { dtype: str }
+  generator: { dtype: str }
 parameters:
-  capacity: { dims: [g] }
+  capacity: { dims: [generator] }
 variables:
   dispatch:
-    dims: [g]
+    dims: [generator]
     where: "capacity > 0"
 ```
 
-With `capacity = {wind: 10, gas: 5, old: 0}`, the model has `dispatch[wind]` and
-`dispatch[gas]`, but no `dispatch[old]`.
+With `capacity = {wind: 10, gas: 5, old: 0}`, the model has `dispatch[wind]`
+and `dispatch[gas]`, and no `dispatch[old]`.
 
-The [condition grammar](expressions.md#conditions) says what a `where:` may
-hold.
+Where its condition is false, a `where:` on a constraint removes the row, so
+the constraint requires nothing there:
+
+With the same capacities, `min_out` has rows at `wind` and `gas`, and none at
+`old`.
+
+The [condition grammar](expressions.md#conditions) defines what a `where:` may
+contain.
 
 ## What creates absence
 
-| Construct                                                     | What is absent                                                                     |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `where:` on a variable                                        | the variable, at the masked coordinates                                            |
-| `where:` on a constraint                                      | the row                                                                            |
-| `shift(x, along=d, offset=n)` without `edge=`                 | the vacated edge coordinate ([shift](operators.md#shift))                          |
-| a key combination a `missing: absent` relation has no row for | that combination's place in the relation ([relations](relations.md#a-missing-row)) |
-| a missing row of a `missing: absent` parameter                | the parameter, at that coordinate                                                  |
+Seven constructs make a coordinate absent:
 
-Nothing else creates absence. A missing row is the only gap a parameter can
-have, because a null or NaN value is [refused](parameters-variables-constraints.md#parameters) when
-the data is attached. The parameter's [`missing:`](parameters-variables-constraints.md#a-missing-row)
-key says what a missing row is:
+| Construct                                         | What is absent                                                              |
+| ------------------------------------------------- | --------------------------------------------------------------------------- |
+| `where:` on a variable                            | the variable, at the coordinates the condition excludes ([`where`](#where)) |
+| `where:` on a constraint                          | the row ([`where`](#where))                                                 |
+| `shift(x, along=d, offset=n)` without `edge=`     | the expression, at the edge coordinate ([shift](operators.md#shift))        |
+| a key with no row in a `missing: absent` relation | the relation, at that key ([relations](relations.md#missing))               |
+| a missing row of a `missing: absent` parameter    | the parameter, at that coordinate ([`missing`](#missing))                   |
+| `within=` at a coordinate in no group             | the expression, at that coordinate ([`within=`](operators.md#within))       |
+| a quotient whose divisor is zero                  | the quotient, at that coordinate ([reported values](#reported-values))      |
 
-| `missing:`            | A missing row                                                                                 |
-| --------------------- | --------------------------------------------------------------------------------------------- |
-| `refused`, by default | is refused when the data is attached                                                          |
-| `absent`              | is absence, by the rules on this page                                                         |
-| `neutral`             | reads as the value that contributes nothing: `0` as a coefficient, and `false` in a condition |
-| a value               | reads as that value                                                                           |
+No value shifts in at the edge, so a `shift` without `edge=` has no row there:
 
-Three positions have no neutral value, so a missing `neutral` row there is
-refused when the data is attached: a divisor, a `bounds:` entry, and the whole
-constant side of a comparison. Under `absent`, a missing divisor or constant
-side is absence and removes the row, and a missing bound leaves that side of
-the variable open. A curve needs a row at each breakpoint its `points:` admits,
-and [missing breakpoints](piecewise.md#missing-breakpoints) says what a missing
-row of a table that a curve reads means. For a bound only where the data has
-one, declare the parameter `missing: absent` or `missing: .inf`, or mask the
-variable.
+`shift(x, along=snapshot, offset=1)` has no row at snapshot 1, so the expression is absent there.
 
-## How absence travels
+A relation with `missing: absent` is absent at a key that has no row in the
+data:
 
-An absent term in arithmetic removes the whole row. An absent term inside a
-summing operator is only one summand fewer, so the row stays.
+`line_to` has no row for `l3`, so the relation is absent at `l3`.
 
-```yaml
-variables:
-  x: { dims: [g] }
-  y: { dims: [g], where: "capacity > 0" } # no y[old]
-constraints:
-  each:
-    dims: [g]
-    expression: x + y >= 1 # rows at wind and gas; no row at old
-  total:
-    dims: []
-    expression: sum(x + y, over=g) >= 1 # x[wind] + y[wind] + x[gas] + y[gas] >= 1
-  split:
-    dims: []
-    expression: sum(x, over=g) + sum(y, over=g) >= 1 # x[old] is back in
-```
+## `missing`
 
-`total` sums the summand wherever the summand exists, but `split` sums each
-operand over its own domain, so the two are different constraints.
+On a parameter and on a variable, the `missing:` key sets what a coordinate
+with no row means.
 
-A parameter with a missing row works the other way:
+### `missing` on a parameter
 
-```yaml
-constraints:
-  cap:
-    dims: [g]
-    expression: x - rel_max * y <= 0
-```
+The [`missing:`](parameters-variables-constraints.md#missing) key of a
+parameter takes one of four values:
 
-Where the variable `y` is masked, the row is gone. Where a `missing: neutral`
-parameter `rel_max` has no row, it reads as `0`, and the row stands as
-`x <= 0`. To drop the row there instead, declare `rel_max` `missing: absent`, or
-write `where: rel_max` on the constraint.
+| `missing:`            | Result                                                                                                                                        |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `refused`, by default | a tool refuses the parameter if any row of its data is missing, and names the coordinate                                                      |
+| `absent`              | a missing row is absent: a term that uses the row is absent, and a sum leaves the term out                                                    |
+| `neutral`             | a missing row takes the value that adds nothing to the expression or condition that uses it: `0` as a coefficient, and `false` in a condition |
+| a value               | a missing row takes that value                                                                                                                |
 
-| Operator                         | An output slot reads            | An absent input                      |
-| -------------------------------- | ------------------------------- | ------------------------------------ |
-| `sum(x, over=d)`                 | every position along `d`        | is one summand fewer; the row stands |
-| `sum(x, over=d, by=relation[c])` | every member of the group       | is one summand fewer; the row stands |
-| `sum_back(x, along=d, window=w)` | the positions the window covers | is one summand fewer; the row stands |
-| `shift(x, along=d, offset=n)`    | one position, `n` back          | _is_ the output, so it spreads       |
-| `at(x, by=relation[c])`          | one position, through the map   | _is_ the output, so it spreads       |
+At `old`, where `rel_max` has no row, a tool refuses the data, or `rel_max` is
+absent, `0` or `1`.
 
-## What a missing coordinate means
+Three positions have no neutral value: a divisor, a `bounds:` entry, and the
+whole constant side of a comparison. With data attached, a missing row of a
+`neutral` parameter in one of them is refused. Under `absent`, a missing
+divisor or constant side is absent, and the row is absent with it.
 
-By default a masked coordinate has **no value**, and a row that needs it is not
-built. Some quantities are **zero** outside their mask, and the `missing:` key
-of the variable says which reading applies:
+Three declarations set a bound only where the data has one: `missing: absent`,
+`missing: .inf` or `-.inf` on the parameter, or a `where:` on the variable.
+Elsewhere, that side of the variable is open.
+
+A curve requires a row at each breakpoint within its `points:`, and [missing breakpoints](piecewise.md#missing-breakpoints) describes a missing row in its table.
+
+### `missing` on a variable
+
+The `missing:` key of a variable sets whether a coordinate that its `where:`
+excludes is absent (`absent`, the default) or zero (`neutral`). Under
+`absent`, a row that needs that coordinate is absent. Some quantities are zero
+outside their condition, and declare `missing: neutral`:
 
 ```yaml
+dimensions:
+  storage: { dtype: str }
+parameters:
+  inflow: { dims: [storage] }
+  has_inflow: { dims: [storage], dtype: bool }
+  has_store: { dims: [storage], dtype: bool }
 variables:
   spill:
     dims: [storage]
     where: has_inflow
-    missing: neutral # outside the mask spill is 0 and the row stands
+    missing: neutral # outside the condition spill is 0, and the row exists
   soc:
     dims: [storage]
-    where: has_store # the default, missing: absent — no row
+    where: has_store # the default, missing: absent, so no row
 constraints:
   balance:
     dims: [storage]
     expression: inflow - spill - soc == 0
 ```
 
-At a storage with a store and no inflow, `balance` reads `inflow - soc == 0`. At
-a storage with inflow and no store, there is no row.
+At a storage with a store and no inflow, `balance` is `inflow - soc == 0`, and at a storage with inflow and no store `balance` has no row.
 
-`missing: neutral` needs a `where:`, and it changes nothing inside a summing
-operator. The typeset legend prints `` `neutral` where the mask leaves it out ``
-beside the variable.
+`missing: neutral` requires a `where:`, because a variable with no condition
+exists at every coordinate, and at load mathspec refuses the variable without one:
 
-## Rows with no variable terms
+```text
+variables.p: missing: neutral needs a `where:`. A variable with no mask exists at every coordinate of its dims, so nothing is missing. Add a `where:`, or delete `missing:`.
+```
 
-A `neutral` parameter row can leave a row with nothing to decide, such as
-`0 == load` at a bus with no generator, and such a row is not built. `to_spec`
-refuses an expression that names no variable _in the file_.
+`p` has no `where:`, so no coordinate of `p` is missing.
+
+Inside a sum, `missing: neutral` has no effect, because an absent term
+already adds nothing there.
+
+In the legend, beside the variable, the [typesetter](../typeset.md) prints
+`` `neutral` where the mask leaves it out ``.
+
+## How absence travels
+
+In arithmetic, an absent term makes the whole row absent, but inside a sum, an absent term is left out and the row stays.
+
+```yaml
+dimensions:
+  generator: { dtype: str }
+parameters:
+  capacity: { dims: [generator] }
+variables:
+  x: { dims: [generator] }
+  y: { dims: [generator], where: "capacity > 0" } # no y[old]
+constraints:
+  each:
+    dims: [generator]
+    expression: x + y >= 1 # rows at wind and gas, no row at old
+  total:
+    dims: []
+    expression: sum(x + y, over=generator) >= 1 # x[wind] + y[wind] + x[gas] + y[gas] >= 1
+  split:
+    dims: []
+    expression: sum(x, over=generator) + sum(y, over=generator) >= 1 # x[old] is back in
+```
+
+With the capacities above, `y[old]` is absent, and because `x + y` is arithmetic, `each` has no row at `old`. In `total`, the term `x + y` is
+absent at `old`, so the sum leaves out both `x[old]` and `y[old]`. In `split`, each sum runs over the coordinates of its own operand, so `x[old]` is in the first sum, and `total` and `split` differ.
+
+A parameter with a missing row and an absent variable have different effects:
+
+```yaml
+dimensions:
+  generator: { dtype: str }
+parameters:
+  capacity: { dims: [generator] }
+  rel_max: { dims: [generator], missing: neutral }
+variables:
+  x: { dims: [generator] }
+  y: { dims: [generator], where: "capacity > 0" }
+constraints:
+  cap:
+    dims: [generator]
+    expression: x - rel_max * y <= 0
+```
+
+With data attached, `y` is absent at `old`, so `cap` has no row there. At `gas`,
+where `rel_max` has no row, the row is `x[gas] <= 0`. With `missing: absent` on
+`rel_max`, or with `where: rel_max` on the constraint, `cap` has no row there
+either.
+
+An operator has one of two results for an absent input:
+
+| Operator                         | Inputs to one output          | At an absent input                               |
+| -------------------------------- | ----------------------------- | ------------------------------------------------ |
+| `sum(x, over=d)`                 | every position along `d`      | the sum leaves it out, and the row stays         |
+| `sum(x, over=d, by=relation[c])` | every member of the group     | the sum leaves it out, and the row stays         |
+| `sum_back(x, along=d, window=w)` | the positions in the window   | the sum leaves it out, and the row stays         |
+| `shift(x, along=d, offset=n)`    | one position, `n` back        | that input is the only one, so the row is absent |
+| `at(x, by=relation[c])`          | one position, through the map | that input is the only one, so the row is absent |
+
+With data attached, a `neutral` coefficient can leave a constraint row with no
+variable in it. In a constraint `rel_max * y <= capacity`, the row where
+`rel_max` has no row is `0 <= capacity`. Before any data is attached,
+mathspec [refuses](parameters-variables-constraints.md#constraints) only a
+constraint whose expression has no variable. So that
+constraint loads, because its expression has the variable `y`, and the row
+`0 <= capacity` exists only once the data is attached.
 
 ## Reported values
 
-A [reported expression](named.md#reported-expressions) inherits the absence of
-the solved numbers it reads, by the rules above. A quotient is absent where its
-divisor is absent, and where its divisor is exactly zero, whether a solve or the
-data gave that zero. A solved value is read as the engine reads it back, so
-an engine may read a value within its solver's tolerance of zero as zero. A
-divisor parameter with a missing row where the quotient is read is refused,
-unless the parameter is `missing: absent` or names a value. A deleted row has
-[no dual](named.md#reading-a-constraints-dual).
+A [reported expression](named.md#reported-expressions) is computed from solved values, and is absent wherever a value that it uses is absent.
+
+A quotient is also absent where its divisor is zero, and the zero may come
+from the data or from a solved value. Here `lcoe` is a reported expression
+over `generator`:
+
+```yaml
+dimensions:
+  snapshot: { dtype: int }
+  generator: { dtype: str }
+parameters:
+  marginal_cost: { dims: [generator] }
+variables:
+  p: { dims: [snapshot, generator], bounds: { lower: 0 } }
+expressions:
+  cost: sum(p * marginal_cost, over=snapshot)
+  delivered: sum(p, over=snapshot)
+  lcoe: cost / delivered
+objective:
+  sense: minimize
+  expression: sum(cost)
+```
+
+With `delivered` zero at `old`, `lcoe` has rows at `wind` and `gas`, and none
+at `old`.
+
+A missing row of a parameter that divides follows the rule for a divisor. Under
+`neutral` a tool refuses the data, and under `absent` the quotient is absent.
+
+!!! info "See also"
+
+    - [`dual`](named.md#dual) for the dual of an absent constraint row.
+    - [Operators](operators.md) and [conditions](expressions.md#conditions) for the operators and the `where:` grammar that this page uses.

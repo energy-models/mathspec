@@ -22,14 +22,15 @@ Two questions decide it, and they work on a paragraph as well as a page:
 
 | Kind        | Informs   | Serves  | Answers                                               | Section · folder                                                 |
 | ----------- | --------- | ------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
-| Tutorial    | action    | acquire | "Get me a first file that loads and prints"           | Tutorials · `docs/`                                              |
+| Tutorial    | action    | acquire | "Get me a first file that loads and prints"           | Tutorials · `docs/tutorials/`                                    |
 | How-to      | action    | apply   | "I have this task"                                    | How-to guides · `docs/howto/`                                    |
 | Reference   | cognition | apply   | "What exactly does X accept, and what does it print?" | Reference · `docs/reference/`, example pages in `docs/examples/` |
 | Explanation | cognition | acquire | "Why is it like this?"                                | About · `docs/about/`                                            |
 
 The nav and the tree are both arranged by kind, for someone who writes a
 spec. A new page goes in the folder of its kind and under the nav section of
-the same name. The example pages sit at the end of the Reference section, after
+the same name. Each section opens with an `index.md` that lists its pages in
+one line each; a new page adds its line there. The example pages sit at the end of the Reference section, after
 the pages a reader looks things up in. A worked example is neither a tutorial
 nor a how-to: it teaches no path and names no task, it shows that the language
 says a spec.
@@ -50,15 +51,24 @@ Each kind has one job, and one thing it must not do:
 
 - **A tutorial is a lesson.** One path, every step shows a result, and the
   reader finishes with a file that loads and prints. It explains nothing and
-  offers no choice: a choice is a how-to leaking in.
+  offers no choice: a choice is a how-to leaking in. Where a step needs a
+  reason, one clause and a link to the explanation page carry it. The last
+  section, before "Where to next", says what the reader has built.
 - **A how-to is a recipe.** The title names the goal, the body is the steps,
-  and the reader is assumed competent. It neither teaches nor explains.
+  and the reader is assumed competent. It neither teaches nor explains: a
+  term is linked to the reference, never defined; a rule is linked, never
+  restated; a consequence is one sentence, never a section.
 - **Reference describes, and only describes.** One consistent format, and a
   structure that mirrors what it describes: the language pages follow the
-  file's keys, the typeset page follows the three formats and their options.
-  No rationale, no instruction.
+  file's keys, in the file's order, and the typeset page follows the three
+  formats and their options. No rationale, no instruction. An example
+  illustrates an entry and never turns into a recipe; a recipe is a link to
+  the how-to.
 - **Explanation is the one place for why.** Context, alternatives and opinion
-  live here and nowhere else, within what `AGENTS.md` sends to the PR.
+  live here and nowhere else. An explanation page names the alternative it
+  rejects and says why the choice is better here. It holds no table of keys,
+  no checklist and no instruction; those link to the reference or the
+  how-to.
 
 **An example page is reference in its own form.** It answers "can the language
 say my model, and what does the file mean?", and its shape is a witness rather
@@ -83,8 +93,19 @@ module gets a page: an internal module is read in the source.
 
 Mixing kinds is the most common failure. Rationale inside a reference section
 makes the rules unskimmable, and rules inside an explanation page make the
-argument unreadable. Most rationale belongs in the PR, per `AGENTS.md`; what
-survives into an explanation page is the part a user needs to make decisions.
+argument unreadable. Rationale about the code, its internals and its measured
+numbers belongs in the PR, per `AGENTS.md`. Rationale about the language, its
+shape and the alternatives it rejects belongs on an explanation page, where a
+user can read it before relying on a rule.
+
+Each kind has its own sentence patterns, from [Diátaxis](https://diataxis.fr):
+
+| Kind        | Opens with                                                                            | Sentences                                                                                                                                        | Closes with                              |
+| ----------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| Tutorial    | "In this tutorial you build …", and how long it takes                                 | "Make a file … Check it:", then the output, then one sentence that reads it. "If the output shows x, then …"                                     | "You have built …", then "Where to next" |
+| How-to      | "This guide shows how to …", and what you need before                                 | "To get x, do y." "If you want w, write z." "The [reference](…) lists every option."                                                             | The result, checked                      |
+| Reference   | What the thing is, in one sentence, then its shape                                    | Facts. "x accepts …", "x refuses …", "x must …". Never "to get x, do y".                                                                         | a "See also" admonition                  |
+| Explanation | The decision, as one statement; or what the page covers, when it has several (see §2) | "Here x is better than y. The reason is …", "x is like w in z", "the rule exists because …", "what you write instead" with the reader as subject | What the reader can now judge            |
 
 The language is documented here and only here. A page says what a file may
 contain, what it means, what the loader refuses, and what the typesetter
@@ -100,8 +121,24 @@ two sections with two headings, or two pages.
 ## 2. Open with what the reader can do
 
 The first sentence, above the first rule, says what the reader can do once
-they have read the page. Do not restate the title, and do not describe the
-page: "in this section we will" and "this page holds" are frames.
+they have read the page. Do not restate the title. A page with one point
+opens with that point, as a definition or a decision: "A dimension is a set
+of labels that entries are indexed over", "mathspec numbers its releases
+and its file format separately". A page with several points, which no one
+sentence covers, opens with what it covers instead, as the pandas
+documentation does ("This page describes every key a file accepts"). The
+strain decides: a one-sentence claim that needs a metaphor, a second clause
+or a word the body has not defined yet is the sign of several points. Never
+open with a question or an aphorism. A coverage sentence is allowed at the
+top of a page and nowhere else: "in this section we will" and "this page
+holds" further down are frames.
+
+The prose is the prose of the pandas documentation: a concept in a sentence
+or two, then the example, then one sentence that reads the result. An
+example is never left for the reader to interpret. A section that has a
+sibling elsewhere ends with a `!!! info "See also"` admonition that links it. An aside that
+would break the flow of a section goes in a `!!! note` or `!!! warning`
+admonition, at most two per section.
 
 Then the shape a reader needs, in this order:
 
@@ -126,17 +163,27 @@ The obvious rule gets one sentence.
   `pixi run python -m mathspec check spec.yaml`. Write the fragment as a
   whole spec where the page allows it; a fragment that cannot stand alone is
   one the reader cannot run either.
-- **Quote error messages whole.** This language's messages name the rewrite,
-  and a truncated quote drops exactly the half that teaches.
+- **Quote error messages whole.** mathspec suggests the rewrite at the end of
+  each message, and a truncated quote drops exactly the half that teaches.
 - **Prefer the smallest example that still shows the point.** A spec with two
   dimensions and one variable teaches; a realistic one hides the rule in
   scenery.
 - **Show the refused form too**, where the refusal is the lesson, with the
   message it produces.
 
-## 4. Headings are the table of contents
+## 5. Headings are the table of contents
 
-- **A heading names the subject, or the question the section answers.**
+- **A heading takes the form of its kind.** On a how-to page, the title and
+  every `##` are imperatives that name the task: "Check every spec in CI",
+  "Choose between a dimension, a relation and a parameter". Not a gerund
+  ("Checking every spec in CI") and not a noun ("CI checks"), which Diátaxis
+  grades bad and very bad, because a reader searches for the task. On a
+  tutorial page, a `##` names what the step adds: "The state of charge",
+  "Closing the day on itself". On a reference page, a heading names the
+  construct, in the order the file has it: "`dimensions`", "`one_of`". On an
+  explanation page, a heading names the subject or the question: "The limits
+  of the language", "What the language decides".
+- **Elsewhere a heading names the subject, or the question the section answers.**
   "Quadratic expressions", "How a new construct enters". The test: a reader
   who types the subject into the search box lands on this heading.
 - **A heading never states a conclusion.** A heading is read before the
@@ -149,7 +196,7 @@ The obvious rule gets one sentence.
 - **One `##` per idea.** A section that needs a paragraph of preamble before
   its first rule is two sections.
 
-## 5. Bold is for terms and permissions
+## 6. Bold is for terms and permissions
 
 On a page, bold marks a term where the page defines it, and a short phrase
 that changes what a sentence permits, as the prose-writing skill says. A page
@@ -166,13 +213,14 @@ not
 - **Arithmetic.** ...
 ```
 
-## 6. Vocabulary
+## 7. Vocabulary
 
 The prose-writing skill holds the word lists and the project words. On a page,
 two more rules hold:
 
-- **Gloss where the term is used**, and link the reference page that owns it
-  rather than redefine it. The ten-rules table on the
+- **Gloss where the term is used**, explanation in the sentence and the term
+  in parentheses, and link the reference page that owns it rather than
+  redefine it. The eleven-rules table on the
   [language index](../../../docs/reference/language/index.md) says which page
   owns which rule; a second definition drifts.
 - **Link the reference section at a construct's first mention** on the page.
@@ -180,7 +228,7 @@ two more rules hold:
   such as `to_spec` or `to_latex`, links to `docs/reference/typeset.md` or the
   API page.
 
-## 7. A reference entry
+## 8. A reference entry
 
 An entry in `docs/reference/` has three parts, in this order.
 
@@ -195,10 +243,12 @@ An entry in `docs/reference/` has three parts, in this order.
    `edge=` argument handles values shifted beyond the array bounds". The list
    of its values follows, or lives in the section that owns it.
 
-## 8. What does not go on the page
+## 9. What does not go on the page
 
 - **History.** "Previously this used to…", "renamed from…" — that is git.
-- **Argument for a settled decision.** That is the PR.
+- **Argument on a tutorial, how-to or reference page.** The argument for a
+  rule of the language goes on an explanation page; the argument for a change
+  to the code goes in the PR.
 - **A promise about the future.** "Will support…" ages into a lie.
 - **Anything that duplicates another page.** One fact, one home; link instead.
   A second copy drifts silently. The README is pulled into `docs/index.md` as
@@ -215,7 +265,14 @@ An entry in `docs/reference/` has three parts, in this order.
   Change the generator, then read the diff. `tests/test_docs.py`'s
   `GENERATED` table is the list.
 
-## 9. Mechanics
+## 10. Mechanics
+
+- **A list item with a second paragraph or a fence needs four spaces and a
+  `<!-- prettier-ignore -->` line above the list.** Python-Markdown needs
+  four spaces for the continuation, and prettier rewrites them to two, so
+  without the ignore line the content renders outside the list (#87).
+  `tests/test_docs.py` enforces this inside grid cards. Elsewhere, prefer
+  one paragraph per item and put the fence after the list.
 
 - **A new page needs a nav entry in `mkdocs.yml`.** The docs build is
   `--strict`, so a dead cross-link and a stale anchor fail it. A page with no
@@ -235,11 +292,36 @@ An entry in `docs/reference/` has three parts, in this order.
 - **A generated block lands with its plumbing**: the page in
   `.prettierignore`, with a comment naming the tool, and the tool in
   `tests/test_docs.py`'s `GENERATED` table.
-- **A diagram carries alt text**, and no rule is stated in colour alone.
+- **Write the version as a placeholder, never as a number.**
+  `{{ mathspec.release }}` is the latest release and
+  `{{ mathspec.language_version }}` the highest language version. An address
+  of the schema takes the release tag, `v{{ mathspec.release }}`, never
+  `main`. The macros plugin in `mkdocs.yml` renders them from
+  `tools/macros.py`, fences included, and an unknown one fails the build.
 - **Tables for what varies along one axis** — accepted keys, the operators,
   the formats. Prose for what has an order or a reason.
 
-## 10. Gates
+## 11. The structure gate
+
+Before any sentence is checked, read the heading tree alone and answer these
+five questions. Structure is fixed first, because moving a section moves
+its sentences.
+
+1. Does each section sit under the heading that names its subject? A
+   section about refusals under "How a new construct enters" is misfiled.
+2. Does the argument for a thing sit beside the thing? An explanation
+   weighs the alternative where it introduces the subject, not three
+   paragraphs later.
+3. Is every section the page's own kind? A catalogue of operators inside
+   an explanation is reference, and belongs on the language page it
+   duplicates, with a link here.
+4. Does a topic appear in one place? Two tables that say the same thing, or
+   a section wedged between the two halves of another, are one topic split.
+5. Does the page close as its kind closes? An explanation ends with what the
+   reader can now judge, a tutorial with what they built, a reference with
+   a "See also" admonition, a how-to with the result checked.
+
+## 12. Gates
 
 ```bash
 pixi run docs-build                                               # --strict, so a dead anchor is a failure

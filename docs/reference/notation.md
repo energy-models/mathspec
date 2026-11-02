@@ -5,21 +5,20 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Every construct, as math
 
-Look up any construct of the language to see the math that
-[the typesetter](typeset.md) prints for it. You can also start from a symbol and
-find the construct that printed it.
+This page lists each construct of the language beside the math that
+[the typesetter](typeset.md) prints for it. Each section has the math of one
+kind of construct, and the legend lists the symbol of each dimension, relation and parameter.
 
-Each section shows the YAML of one construct, then its equation. Most fragments
-come from one test spec,
+Each construct is printed as its YAML and then its equation. Most of the YAML
+comes from one test spec,
 [`tests/typesetting/golden/model.yaml`](https://github.com/energy-models/mathspec/blob/main/tests/typesetting/golden/model.yaml),
-which holds every construct and does not make sense as an optimisation
-problem. The curves come from the example specs that their section names.
-[Operators](language/operators.md) says what each operator does.
+which contains every construct and is not a meaningful optimisation problem.
+The curves come from the example specs named in each section.
 
-The symbols are **derived** from the names in the file, so you see
-$\mathrm{load}_{t}$ rather than $\ell_t$. A
-[symbol table](typeset.md#symbol-tables) replaces the symbols and changes
-nothing else.
+The typesetter derives each symbol from the name in the file, so the
+symbol is $\mathrm{load}_{t}$ rather than $\ell_t$. A
+[symbol table](typeset.md#symbol-tables) sets other symbols, and the
+typesetter changes nothing else.
 
 <!-- notation:begin -->
 ### Legend
@@ -1656,3 +1655,9 @@ constraints:
 \theta_{b} \le \mathrm{budget} \qquad \forall\, b \in \mathcal{B} \,:\, \mathrm{zone\_cap}_{\mathrm{zone\_of}(b)} \text{ is defined}
 ```
 <!-- notation:end -->
+
+!!! info "See also"
+
+    - [typeset output](typeset.md), for the three formats and their options
+    - [operators](language/operators.md), for what each operator does
+    - [symbol tables](typeset.md#symbol-tables), to set other symbols

@@ -5,8 +5,8 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The composed spec
 
-This page shows the spec that [the surface](surface.md),
-[generators](generator.md) and [loads](load.md) make together:
+[`merge`](../../reference/composition.md#merge) composes [the surface](surface.md),
+[generators](generator.md) and [loads](load.md) into one spec:
 
 ```python
 import mathspec as ms
@@ -14,28 +14,34 @@ import mathspec as ms
 spec = ms.merge(['surface.yaml', 'generator.yaml', 'load.yaml'])
 ```
 
-The file below is `spec`, the spec that `merge` returns, written as YAML with
-every default spelled out. No fragment holds this file, and the repository does
-not commit it. Each component fragment read `Port_p` under `given:`, and `merge`
-folded those readings into the entry of the surface, so `Port_p` is one
-entry here.
+The file below is `spec` written as YAML, with every default spelled out. The
+file is not one of the files under `examples/library/`.
 
-The objective comes from the surface, and it reads `total_cost`. The generator
-is the only fragment with a cost, so `Generator_cost` is the only term of that
-sum. A second fragment with a cost would add its own term to `total_cost`.
+Each component fragment lists `Port_p` under
+[`given:`](../../reference/glossary.md#given), and `merge` folds each given
+`Port_p` into the entry the surface declares. So `Port_p` is one entry here.
 
-The math under the file has a tab per formulation: **As composed** is the spec
-above, and **With commitment** lays `variants/commitment.yaml` over it with
-[`override`](../../howto/compose.md#a-base-and-its-patches), which makes the
-generator a committed unit:
+The surface sets the objective, which is to minimise `total_cost`. The
+generator file is the only fragment with a cost, so `merge` builds
+`total_cost` from the one [term](../../reference/glossary.md#term) `Generator_cost`. A second fragment with a cost
+would add its own term to `total_cost`.
+
+Under the file, the "As composed" tab has the spec above. The "With
+commitment" tab has that spec with the
+[patch](../../reference/glossary.md#patch) `variants/commitment.yaml` laid over
+it by [`override`](../../reference/composition.md#override):
 
 ```python
 committed = ms.override(spec, ['variants/commitment.yaml'])
 ```
 
-`to_spec` refuses a patch on its own, because the patch edits entries that
-it does not declare. So the patch has math only on the spec it lands on, and
-the tab prints the patch beside that math.
+The patch makes the
+generator a unit that is on or off in each dispatch period (a
+[committed unit](../commitment.md)).
+[`to_spec`](../../reference/api.md#to_spec) refuses the patch on its own,
+because the patch sets only the bounds of `Generator_p`, whose dimensions only
+`generator.yaml` declares. So the patch has math only on the spec it is laid
+over, and the tab has the patch beside that math.
 
 <!-- gallery:begin -->
 ```yaml
@@ -86,17 +92,17 @@ constraints:
   Bus_nodal_balance:
     dims: [snapshot, bus]
     expression: sum(Port_p, over=port, by=Port_bus[bus]) == 0
-    description: '`Bus-nodal_balance` — what the ports on a bus put in nets to nothing'
+    description: '`Bus-nodal_balance` — what the ports on a bus put in sums to zero'
   Generator_injection:
     dims: [snapshot, generator]
     expression: at(Port_p, by=Generator_port[port]) == Generator_p
-    description: 'what a generator produces is what its port injects. No PyPSA row stands for this: PyPSA
-      writes the generator into the balance instead'
+    description: What a generator produces is what its port injects. PyPSA has no row for this constraint,
+      because PyPSA writes the generator into the balance.
   Load_withdrawal:
     dims: [snapshot, load]
     expression: at(Port_p, by=Load_port[port]) == -Load_p_set
-    description: 'what a load takes is what its port withdraws. No PyPSA row stands for this: PyPSA writes
-      the load into the balance instead'
+    description: What a load takes is what its port withdraws. PyPSA has no row for this constraint, because
+      PyPSA writes the load into the balance.
 ```
 
 === "As composed"
@@ -200,11 +206,11 @@ constraints:
       Generator_p: { bounds: { upper: null } }
     constraints:
       Generator_com_p_upper:
-        description: "`Generator-com-p-upper` — a committed unit outputs at most its nominal power; off, at most nothing"
+        description: "`Generator-com-p-upper` — a committed unit outputs at most its nominal power, and an off unit outputs nothing"
         dims: [snapshot, generator]
         expression: Generator_p <= Generator_p_nom * Generator_status
       Generator_com_p_lower:
-        description: "`Generator-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing"
+        description: "`Generator-com-p-lower` — a committed unit outputs at least its minimum, and an off unit has no floor"
         dims: [snapshot, generator]
         expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * Generator_status
     ```
@@ -315,3 +321,10 @@ constraints:
     p_{t,g} \ge \underline{\mathrm{p}}_{g} \cdot \mathrm{p}^{\mathrm{nom}}_{g} \cdot u_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
     ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [`merge`](../../reference/composition.md#merge) and [`override`](../../reference/composition.md#override), for what each function
+      accepts and what mathspec refuses
+    - [Given](../../reference/glossary.md#given), [term](../../reference/glossary.md#term) and [patch](../../reference/glossary.md#patch) in the glossary
+    - [Unit commitment](../commitment.md), for commitment stated in one file

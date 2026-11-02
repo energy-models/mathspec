@@ -15,29 +15,44 @@ SPDX-License-Identifier: CC-BY-4.0
 
 <!--- --8<-- [end:badges] -->
 
+<!--- --8<-- [start:tagline] -->
+
 **Write the specification (spec) of an optimisation model as a YAML file. Check it and print it
 as math, with no data and no solver.**
 
-A spec declares four things: the dimensions it runs over, such as `snapshot`
-and `generator`; the data it expects, such as `load` and `cost`; the decisions
-the solver makes, such as `dispatch`; and the rules those decisions obey, such
-as `sum(dispatch, over=generator) == load`. The file [below](#example) is a
-complete spec.
+<!--- --8<-- [end:tagline] -->
+
+<!--- --8<-- [start:spec] -->
+
+A spec declares four things:
+
+- the dimensions it is indexed over, such as `snapshot` and `generator`
+- the parameters it takes as data, such as `load` and `cost`
+- the decisions a solver makes, such as `dispatch`
+- the rules those decisions obey, such as `sum(dispatch, over=generator) == load`
+
+A spec contains no data. A tool that builds the model (an
+[engine](https://mathspec.readthedocs.io/en/latest/reference/glossary/#tool))
+attaches the data to the spec. The file below is a complete spec.
+
+<!--- --8<-- [end:spec] -->
 
 <!--- --8<-- [start:benefits] -->
 
-- **Check specs in CI, with no data.** A wrong name or
-  dimension fails when the file loads, and the error names the fix.
+- **Check a spec with no data.** mathspec refuses a misspelt name or a
+  dimension mismatch at load, so a spec is checked in continuous integration
+  (CI) like code.
   [Errors →](https://mathspec.readthedocs.io/en/latest/reference/language/errors/)
-- **Publish the math you solve.** The equations in the paper
-  print from the file the solver reads.
+- **Publish the math you solve.** One file states the spec. An engine builds
+  the model from it, and mathspec prints its equations for a paper.
   [Typeset →](https://mathspec.readthedocs.io/en/latest/reference/typeset/)
-- **One spec, many tools.** Engines, renderers and analysers read the spec
-  through one public API, so no two of them can read the file differently.
+- **One spec, many tools.** Engines, renderers (tools that print a spec) and
+  checkers read a spec through one interface, so no two read a file differently.
   [Program API →](https://mathspec.readthedocs.io/en/latest/reference/program/)
-- **Write full-size specs.** The spec of PyPSA's `n.optimize()` model is
-  one file, with stochastic, multi-period and quadratic variants.
-  [PyPSA in one file →](https://mathspec.readthedocs.io/en/latest/examples/pypsa/)
+- **Write full-size specs.** The model that `n.optimize()` builds in the power
+  system framework PyPSA is one spec file, with its stochastic, multi-period
+  and quadratic classes.
+  [PyPSA in one file →](https://mathspec.readthedocs.io/en/latest/examples/pypsa_ladder/)
 
 <!--- --8<-- [end:benefits] -->
 
@@ -46,7 +61,7 @@ complete spec.
 <!--- --8<-- [start:model] -->
 
 ```yaml title="dispatch.yaml"
-description: Least-cost dispatch of a generator fleet against an hourly load.
+description: Least-cost dispatch of a generator fleet against a load in each dispatch period.
 
 dimensions:
   snapshot: { dtype: int, description: dispatch periods }
@@ -78,8 +93,8 @@ objective:
 
 ### The math it prints
 
-The typesetter prints the file above as math, with no data and no solver.
-Markdown is one of three formats, and GitHub renders it here.
+mathspec prints the file above as math. Markdown is one of the three formats
+of mathspec, and GitHub renders the Markdown below.
 
 <!-- Prettier pads the legend tables that the generator emits unpadded, so the
      two would rewrite each other forever. The range keeps this file formatted
@@ -87,7 +102,7 @@ Markdown is one of three formats, and GitHub renders it here.
 <!-- prettier-ignore-start -->
 <!-- readme-math:begin -->
 
-Least-cost dispatch of a generator fleet against an hourly load.
+Least-cost dispatch of a generator fleet against a load in each dispatch period.
 
 #### Variable domains
 
@@ -114,7 +129,7 @@ Least-cost dispatch of a generator fleet against an hourly load.
 <details>
 <summary>The whole document: a symbol table, and the legend it prints</summary>
 
-Least-cost dispatch of a generator fleet against an hourly load.
+Least-cost dispatch of a generator fleet against a load in each dispatch period.
 
 #### Sets
 
@@ -158,7 +173,7 @@ $`\sum_{g \in \mathcal{G}} \mathit{dispatch}_{s,g} = \ell_{s} \qquad \forall\, s
 <!-- readme-math:end -->
 <!-- prettier-ignore-end -->
 
-Each format is one call:
+Each format is one call in Python:
 
 ```python
 import mathspec as ms
@@ -170,31 +185,35 @@ ms.to_latex(spec)
 ms.to_typst(spec)
 ```
 
-A [symbol table](https://mathspec.readthedocs.io/en/latest/reference/typeset/#symbol-tables) gives the names their
-conventional spelling, as in the folded block.
-[Print a spec as math](https://mathspec.readthedocs.io/en/latest/howto/print/) does the same from a shell.
+`to_spec` loads and checks the file, and each of the three calls returns the
+spec as text in one format. A
+[symbol table](https://mathspec.readthedocs.io/en/latest/reference/typeset/#symbol-tables)
+sets the symbol for each name, as in the folded block, where `load` prints as
+$`\ell`$. The same calls run as shell commands, as
+[Print a spec as math](https://mathspec.readthedocs.io/en/latest/howto/print/)
+lists them.
 
 ## Engines and other tools
 
 <!--- --8<-- [start:engines] -->
 
-mathspec builds nothing and solves nothing itself. Instead,
-[specsolve](https://github.com/fluxopt/specsolve) and
-[linopy](https://github.com/PyPSA/linopy) build a model from a spec and its
-data, and solve it. Support in both is work in progress. Any other tool can
-read the same spec through the
+An engine, such as [specsolve](https://github.com/fluxopt/specsolve), attaches
+data to a spec, builds the model and hands it to a solver. mathspec itself
+builds no model. Any other tool, such as a renderer or a checker, reads the
+same spec through the
 [Program API](https://mathspec.readthedocs.io/en/latest/reference/program/).
-The solid boxes are mathspec; the dashed boxes are outside it.
+In the diagram, the solid boxes are mathspec and the dashed boxes are outside
+it.
 
 ```mermaid
 flowchart LR
     accTitle: What mathspec does, and what other tools do with a spec
-    accDescr: A YAML file loads into a Spec and the Program it lowers to. mathspec checks the spec and prints it as math, with no data. Outside mathspec, drawn dashed, an engine such as specsolve or linopy reads the same spec, takes your data and returns your answers, and any other tool, such as a renderer or an analyser, reads the same spec through the Program API.
-    Y(["your spec<br/>one YAML file"]) --> SPEC["<b>Spec</b> and the <b>Program</b> it lowers to<br/><i>checked before any data exists</i>"]
+    accDescr: A YAML file loads into a Spec and the Program it compiles to. mathspec checks the spec and prints it as math, with no data. Outside mathspec, drawn dashed, an engine such as specsolve reads the same spec, takes your data and returns your answers, and any other tool, such as a renderer or a checker, reads the same spec through the Program API.
+    Y(["your spec<br/>one YAML file"]) --> SPEC["<b>Spec</b> and the <b>Program</b> it compiles to<br/><i>checked before any data exists</i>"]
     SPEC --> CHECK["<b>check it</b><br/>python -m mathspec check"]
     SPEC --> SHOW["<b>print it as math</b><br/>LaTeX · Typst · Markdown"]
-    SPEC -.-> OTHER["<b>your own tool</b><br/>a renderer · an analyser · …<br/>reads the Program API"]
-    SPEC -.-> ENGINE["<b>an engine</b><br/>specsolve · linopy<br/>builds and solves the model"]
+    SPEC -.-> OTHER["<b>your own tool</b><br/>a renderer · a checker · …<br/>reads the Program API"]
+    SPEC -.-> ENGINE["<b>an engine</b><br/>specsolve<br/>builds the model for a solver"]
     DATA[("your data")] -.-> ENGINE
     ENGINE -.-> ANS(["your answers"])
     classDef outside stroke-dasharray:5 4
@@ -205,12 +224,15 @@ flowchart LR
 
 ## Documentation
 
-The documentation is at <https://mathspec.readthedocs.io>.
+The documentation is at <https://mathspec.readthedocs.io>. In
+[the first tutorial](https://mathspec.readthedocs.io/en/latest/tutorials/first-spec/)
+you build the file above one section at a time.
 
 ## Installation
 
-See [installation](https://mathspec.readthedocs.io/en/latest/howto/installation/). To work on mathspec, see
-[contributing](https://mathspec.readthedocs.io/en/latest/contributing/#setting-up-a-development-environment).
+[Install mathspec](https://mathspec.readthedocs.io/en/latest/howto/installation/)
+from PyPI with pip, uv or pixi. To work on mathspec itself, set up a
+[development environment](https://mathspec.readthedocs.io/en/latest/contributing/#setting-up-a-development-environment).
 
 ## Prior art
 
@@ -222,16 +244,14 @@ dimension rules take their names from [linopy](https://github.com/PyPSA/linopy).
 
 ## Status
 
-Alpha, pre-1.0.
-
 <!--- --8<-- [start:status] -->
 
-**Breaking changes land without a deprecation cycle.** Pin an exact version if
-you depend on this, and read the
+mathspec is alpha software and makes no compatibility promise yet.
+**Breaking changes land without a deprecation cycle.** If you depend on
+mathspec, pin an exact version, and read the
 [changelog](https://github.com/energy-models/mathspec/blob/main/CHANGELOG.md)
-before upgrading. The test suite passes every construct through the schema,
-the parsers and all three typeset formats, and compiles the LaTeX. The YAML that
-mathspec accepts can still change.
+before you upgrade. The test suite passes every construct through the schema,
+the parsers and all three typeset formats, and compiles the LaTeX.
 
 <!--- --8<-- [end:status] -->
 

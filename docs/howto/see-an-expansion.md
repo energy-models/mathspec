@@ -3,148 +3,31 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# See what a curve or a set expands to
+# See what a piecewise curve or an SOS expands to
 
-A [`piecewise:`](../reference/language/piecewise.md) entry and an `sos:` entry
-(a special ordered set) each stand for plain variables and constraints. Write
-them out to review a formulation, to teach one, or to hand the spec to an
-engine that cannot read an `sos:` entry.
+This guide shows how to write a piecewise curve (a
+[`piecewise:`](../reference/language/piecewise.md) entry) or a special ordered
+set (an [SOS](../reference/glossary.md#special-ordered-set-sos)) out as plain
+entries. You can then hand the expanded file to software that builds the model
+([an engine](../reference/glossary.md#tool)) but cannot read an
+[`sos:`](../reference/language/piecewise.md#sos) entry.
 
-## 1. Write the formulation out
+You need mathspec [installed](installation.md) and the specification of an
+optimisation model ([a spec](../reference/glossary.md#spec)) that loads.
 
-`expand()` writes each formulation out as plain entries, and `to_yaml()`
-prints the result as a file.
+## Write a piecewise curve out
 
-=== "Python"
+Save the spec in the "Before" tab below as `before.yaml`, and load it. Its
+curve has `method: sos2`:
 
-    ```python
-    from mathspec import to_spec
+```python
+import mathspec as ms
 
-    spec = to_spec('before.yaml')
-    print(spec.expand().to_yaml())
-    ```
+spec = ms.to_spec('before.yaml')
+```
 
-=== "Command line"
-
-    ```bash
-    python -m mathspec markdown before.yaml --expand
-    ```
-
-The command line prints the expansion as math rather than as YAML. Pass
-`'piecewise'` or `'sos'` to `expand()` to write out one kind and keep the
-other.
-
-## 2. Read a set
-
-Compare the tabs. The `sos:` entry below says that at most one `p` is nonzero.
-[What a set is written out as](../reference/language/piecewise.md#what-a-set-is-written-out-as)
-names each row the expansion adds.
-
-<!-- prettier-ignore-start -->
-<!-- expansion:set:begin -->
-
-=== "Before"
-
-    === "YAML"
-
-        ```yaml
-        dimensions:
-          g: { dtype: str }
-
-        variables:
-          p:
-            dims: [g]
-            bounds: { lower: 0, upper: 10 }
-
-        sos:
-          pick:
-            variable: p
-            along: g
-            type: 1
-        ```
-
-    === "Math"
-
-        _Variable domains_
-
-        **`p`**
-
-        ```math
-        0 \le p_{g} \le 10 \qquad \forall\, g \in \mathcal{G}
-        ```
-
-        _Subject to_
-
-        **`pick`**
-
-        ```math
-        \left( p_{g} \right)_{g \in \mathcal{G}} \in \mathrm{SOS}1
-        ```
-
-=== "`expand()`"
-
-    === "YAML"
-
-        ```yaml
-        dimensions:
-          g: { dtype: str }
-
-        variables:
-          p:
-            dims: [g]
-            bounds: { lower: 0, upper: 10 }
-          pick_seg:
-            dims: [g]
-            domain: binary
-            description: a binary per member, 1 where that member may be nonzero
-
-        constraints:
-          pick_pick:
-            dims: []
-            expression: sum(pick_seg, over=g) <= 1
-          pick_nonzero:
-            dims: [g]
-            expression: p <= 10.0 * (pick_seg)
-        ```
-
-    === "Math"
-
-        _Variable domains_
-
-        **`p`**
-
-        ```math
-        0 \le p_{g} \le 10 \qquad \forall\, g \in \mathcal{G}
-        ```
-
-        **`pick_seg`**
-
-        ```math
-        \mathit{pick\_seg}_{g} \in \{0, 1\} \qquad \forall\, g \in \mathcal{G}
-        ```
-
-        _Subject to_
-
-        **`pick_pick`**
-
-        ```math
-        \sum_{g \in \mathcal{G}} \mathit{pick\_seg}_{g} \le 1
-        ```
-
-        **`pick_nonzero`**
-
-        ```math
-        p_{g} \le 10 \cdot \mathit{pick\_seg}_{g} \qquad \forall\, g \in \mathcal{G}
-        ```
-
-<!-- expansion:set:end -->
-<!-- prettier-ignore-end -->
-
-## 3. Read a curve
-
-Compare the tabs from left to right. `expand('piecewise')` writes the
-`method: sos2` curve below out and leaves the set it states. `expand()` writes
-the set out too.
+Write out only the piecewise curve with `spec.expand('piecewise')`, which keeps
+every `sos:` entry. Then write out both with `spec.expand()`:
 
 <!-- prettier-ignore-start -->
 <!-- expansion:curve:begin -->
@@ -429,7 +312,165 @@ the set out too.
 <!-- expansion:curve:end -->
 <!-- prettier-ignore-end -->
 
-[`Spec.expand()`](../reference/spec.md#mathspec.spec.Spec.expand) lists what
-the call accepts, and
-[writing a formulation out](../reference/language/piecewise.md#writing-a-formulation-out)
-says what each entry emits.
+`expand('piecewise')` writes the curve out as the weights `curve_lam`, the row
+that makes them sum to one and one row per entry of `links:`. The call keeps the SOS that the curve states as an `sos:` entry,
+and `expand()` writes that SOS out too. `curve_complete`, a statement about the data
+([an assumption](../reference/language/assumptions.md)), stays in the spec
+after either call writes the curve out.
+
+Keep this Python session open, because later steps use `spec` and `ms`.
+
+## Print the expansion as math
+
+Print `before.yaml` with each entry that expands
+([formulation](../reference/glossary.md#formulation)) written out as plain
+entries:
+
+=== "Command line"
+
+    ```bash
+    python -m mathspec markdown before.yaml --expand
+    ```
+
+=== "Python"
+
+    ```python
+    print(ms.to_markdown(spec.expand()))
+    ```
+
+The command and the Python call print the symbol tables of the spec, then the
+math. The "Math" tab under `expand()` in the section above contains the same
+math without the symbol tables.
+
+## Write an SOS out
+
+Save the spec in the "Before" tab below as `sos.yaml`, and write it out with
+`ms.to_spec('sos.yaml').expand()`. In this spec, the `sos:` entry `pick`
+requires at most one member of `p` to be non-zero:
+
+<!-- prettier-ignore-start -->
+<!-- expansion:set:begin -->
+
+=== "Before"
+
+    === "YAML"
+
+        ```yaml
+        dimensions:
+          g: { dtype: str }
+
+        variables:
+          p:
+            dims: [g]
+            bounds: { lower: 0, upper: 10 }
+
+        sos:
+          pick:
+            variable: p
+            along: g
+            type: 1
+        ```
+
+    === "Math"
+
+        _Variable domains_
+
+        **`p`**
+
+        ```math
+        0 \le p_{g} \le 10 \qquad \forall\, g \in \mathcal{G}
+        ```
+
+        _Subject to_
+
+        **`pick`**
+
+        ```math
+        \left( p_{g} \right)_{g \in \mathcal{G}} \in \mathrm{SOS}1
+        ```
+
+=== "`expand()`"
+
+    === "YAML"
+
+        ```yaml
+        dimensions:
+          g: { dtype: str }
+
+        variables:
+          p:
+            dims: [g]
+            bounds: { lower: 0, upper: 10 }
+          pick_seg:
+            dims: [g]
+            domain: binary
+            description: a binary per member, 1 where that member may be nonzero
+
+        constraints:
+          pick_pick:
+            dims: []
+            expression: sum(pick_seg, over=g) <= 1
+          pick_nonzero:
+            dims: [g]
+            expression: p <= 10.0 * (pick_seg)
+        ```
+
+    === "Math"
+
+        _Variable domains_
+
+        **`p`**
+
+        ```math
+        0 \le p_{g} \le 10 \qquad \forall\, g \in \mathcal{G}
+        ```
+
+        **`pick_seg`**
+
+        ```math
+        \mathit{pick\_seg}_{g} \in \{0, 1\} \qquad \forall\, g \in \mathcal{G}
+        ```
+
+        _Subject to_
+
+        **`pick_pick`**
+
+        ```math
+        \sum_{g \in \mathcal{G}} \mathit{pick\_seg}_{g} \le 1
+        ```
+
+        **`pick_nonzero`**
+
+        ```math
+        p_{g} \le 10 \cdot \mathit{pick\_seg}_{g} \qquad \forall\, g \in \mathcal{G}
+        ```
+
+<!-- expansion:set:end -->
+<!-- prettier-ignore-end -->
+
+`expand()` replaces `pick` with the binary variable `pick_seg` and two
+constraints.
+
+## Check the expanded spec
+
+Load the expanded spec again, to check that mathspec accepts it as a spec of
+its own:
+
+```python
+ms.to_spec(spec.expand().to_yaml())
+```
+
+The call returns a `Spec` without an error. Save the YAML text that `to_yaml()`
+returns as a file, and hand the file to an engine that reads only plain
+entries.
+
+!!! info "See also"
+
+    - [`Spec.expand()`](../reference/spec.md#mathspec.spec.Spec.expand), for every
+      argument the call accepts and what it returns
+    - [the rows of an SOS written out](../reference/language/piecewise.md#what-a-set-is-written-out-as),
+      for the rows of each constraint that `expand()` writes for an SOS
+    - [writing a formulation out](../reference/language/piecewise.md),
+      for the entries that each formulation adds
+    - [write a piecewise curve out by hand](curve-by-hand.md), for a curve whose
+      number of flows is data

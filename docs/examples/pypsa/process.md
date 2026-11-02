@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Processes
 
-This file states PyPSA's `Process`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to each of these sums: `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions` and `Bus_injection`. It reads `CVaR_omega`, `Process_committable`, `Process_maintenance`, `Process_maintenance_capacity`, `Process_maintenance_pu`, `period_weight_objective` and 2 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states PyPSA's `Process`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to each of these sums: `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions` and `Bus_injection`. `Process_output_arrival` is what a process transfers at a port: its internal power, delayed by the port's `delay` within its investment period.
 
 <!-- gallery:begin -->
 ```yaml
@@ -38,16 +38,16 @@ dimensions:
   bus:
     description: network nodes
   process:
-    description: generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate
+    description: generalised multi-port converters, each with an internal power that every port draws or delivers at its own rate
   process_output:
     description: >-
-      a process's ports, one label per port a process declares — PyPSA's
-      `bus0`, `bus1`, … each carry a signed `rate`, so a process of any number
-      of ports is one term in the balance, data prep
+      a process's ports, one label per port a process declares. The labels are
+      PyPSA's `bus0`, `bus1`, …, each with a signed `rate`, data prep. A
+      process of any number of ports is then one term in the balance
   global_constraint:
     description: PyPSA's `GlobalConstraint` rows, one label per declared limit
   period:
-    description: investment periods — PyPSA's `investment_periods`
+    description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
     ordered: true
   carrier:
@@ -68,8 +68,8 @@ relations:
     values: process
   Process_output_bus:
     description: >-
-      the bus a port draws from or delivers to — PyPSA's `bus0`, `bus1`, …
-      columns. A process of three ports is three labels here rather than a
+      the bus a port draws from or delivers to. It is PyPSA's `bus0`, `bus1`,
+      … columns. A process of three ports is three labels here rather than a
       third relation, so the file states any number of them
     key: process_output
     values: bus
@@ -83,33 +83,33 @@ parameters:
     dims: [process]
     dtype: bool
   Process_p_min_pu:
-    description: least internal power, per unit of nominal power — negative for a process that runs both ways
+    description: "least internal power, per unit of nominal power: negative for a process that runs both ways"
     dims: [scenario, snapshot, process]
   Process_p_max_pu:
     description: most internal power, per unit of nominal power
     dims: [scenario, snapshot, process]
   Process_rate:
     description: >-
-      the energy a port draws or delivers per unit of internal power, PyPSA's
-      `rate0`, `rate1`, … read long — negative where the port withdraws,
-      positive where it injects; a link is a process whose `bus0` rate is minus
-      one and whose output rates are its efficiencies. Read at the snapshot the
-      transfer arrives, so a delayed port transfers at its arrival snapshot's
-      rate (`constraints.py:1498`)
+      the energy a port draws or delivers per unit of internal power (PyPSA's
+      `rate0`, `rate1`, … read long). It is negative where the port withdraws
+      and positive where it injects. A link is a process whose `bus0` rate is
+      minus one and whose output rates are its efficiencies. The rate at the
+      snapshot the transfer arrives applies, so a delayed port transfers at
+      its arrival snapshot's rate (`constraints.py:1498`)
     dims: [scenario, snapshot, process_output]
   Process_output_delay:
     description: >-
-      snapshots a port's transfer lags its process's internal power — PyPSA's
-      `delay0`, `delay1`, … read long, divided by the
-      `snapshot_weightings.generators` value and rounded up in data prep; zero
-      for a port that transfers at once. A port has the same delay in every
+      snapshots a port's transfer lags its process's internal power (PyPSA's
+      `delay0`, `delay1`, … read long). In data prep you divide it by the
+      `snapshot_weightings.generators` value and round it up. It is zero for a
+      port that transfers at once. A port has the same delay in every
       scenario, as a link's port has
     dims: [process_output]
     dtype: int
   Process_output_cyclic_delay:
     description: >-
       whether a delayed port's transfer wraps from the end of its investment
-      period — PyPSA's `cyclic_delay0`, `cyclic_delay1`, …; where it does not,
+      period (PyPSA's `cyclic_delay0`, `cyclic_delay1`, …). Where it does not,
       the energy still in transit at each period's first snapshots is lost.
       The flag is the same in every scenario, as the delay is
     dims: [process_output]
@@ -121,7 +121,7 @@ parameters:
     description: cost of the square of one unit of internal power
     dims: [scenario, snapshot, process]
   Process_p_set:
-    description: a given internal power schedule; a process without one has no row here
+    description: a given internal power schedule. A process without one has no row here
     dims: [scenario, snapshot, process]
     missing: neutral
   Process_p_nom_min:
@@ -132,71 +132,72 @@ parameters:
     dims: [scenario, process]
   Process_capital_cost:
     description: >-
-      cost of one unit of nominal power for the modelled horizon —
-      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
-      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
-      `capital_cost` where it is not, plus `fom_cost`
-      (`components.py:1126-1147`, `costs.py:102-203`), data prep
+      cost of one unit of nominal power for the modelled horizon (PyPSA's
+      `periodized_cost`), data prep. It is `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is
+      given, and `capital_cost` where it is not. Both add `fom_cost`
+      (`components.py:1126-1147`, `costs.py:102-203`)
     dims: [scenario, process]
   Process_p_nom_set:
-    description: a given nominal power for an extendable process; one without a value has no row here
+    description: a given nominal power for an extendable process. One without a value has no row here
     dims: [process]
     missing: neutral
   Process_p_nom_mod:
-    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    description: the module size a build comes in whole numbers of. No value means the build is continuous
     dims: [process]
     missing: neutral
   Process_modules_installed:
     description: >-
-      how many whole modules a committable build has in place: `Process_p_nom
-      / Process_p_nom_mod` where a fixed build is modular, one where it is
-      not, data prep. PyPSA refuses a fixed modular build whose nominal power
-      is not a whole number of modules
+      how many whole modules a committable build has in place, data prep. It
+      is `Process_p_nom / Process_p_nom_mod` where a fixed build is modular,
+      and one where it is not. PyPSA refuses a fixed modular build whose
+      nominal power is not a whole number of modules
     dims: [scenario, process]
   Process_p_min_pu_nonneg:
     description: >-
-      true where none of the process's own minimums-per-unit is negative —
-      PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and scenario, data prep
+      true where none of the process's own minimums-per-unit is negative. It
+      is PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and
+      scenario, data prep
     dims: [process]
     dtype: bool
   Process_active:
-    description: whether a process stands in a snapshot's period — PyPSA's `active`, data prep
+    description: whether a process is active in a snapshot's period. It is PyPSA's `active`, data prep
     dims: [snapshot, process]
     dtype: bool
   Process_active_asset:
     description: >-
-      whether a process is one of PyPSA's `active_assets` — its `active` flag
-      alone, without build year and lifetime, so a unit that stands in no
-      snapshot of the horizon still counts. PyPSA refuses one that differs
-      by scenario (`constants.py:51`)
+      whether a process is one of PyPSA's `active_assets`, by its `active`
+      flag alone, without build year and lifetime. A unit that is active in no
+      snapshot of the horizon still counts. PyPSA refuses one that differs by
+      scenario (`constants.py:51`)
     dims: [process]
     dtype: bool
   Process_capital_weight:
-    description: the sum of period weights a process stands in — PyPSA's `active * period_weighting`, summed, data prep
+    description: the sum of period weights a process is active in. It is PyPSA's `active * period_weighting`, summed, data prep
     dims: [process]
   Process_first_active:
     description: >-
-      one in the first period a process stands in, zero elsewhere, data prep.
+      one in the first period a process is active in, zero elsewhere, data prep.
       PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
     dims: [period, process]
   Process_tech_capacity_weight:
     description: >-
-      one where the process is in the row's carrier-and-bus set — data prep; one
-      outside it, or one that does not stand in the row's `investment_period`,
-      has no row
+      one where the process is in the row's carrier-and-bus set, data prep.
+      One outside it, or one that is not active in the row's
+      `investment_period`, has no row
     dims: [global_constraint, process]
     missing: neutral
 
 variables:
   Process_p:
     description: >-
-      `Process-p` — PyPSA's internal power `p`: a positive value drives every
-      port at its own rate, withdrawing where the rate is negative and injecting
-      where it is positive
+      `Process-p` — PyPSA's internal power `p`. A positive value drives every
+      port at its own rate, withdrawing where the rate is negative and
+      injecting where it is positive
     dims: [scenario, snapshot, process]
     where: Process_active
   Process_n_mod:
-    description: "`Process-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
+    description: "`Process-n_mod` — how many modules of an extendable modular build. A unit that is not active has none"
     dims: [process]
     where: Process_p_nom_extendable AND Process_p_nom_mod > 0 AND Process_active_asset
     domain: integer
@@ -205,21 +206,21 @@ variables:
   Process_p_nom_ext:
     description: >-
       `Process-p_nom` — nominal internal power where it is a decision, for a
-      process that is active; the parameter of the same PyPSA name carries
-      the fixed regime
+      process that is active. A fixed build is the parameter of the same PyPSA
+      name
     dims: [process]
     where: Process_p_nom_extendable AND Process_active_asset
 
 expressions:
   Process_p_nom_effective:
-    description: the build a process's limits are taken against — the chosen one where it is extendable, the given one otherwise
+    description: "the build a process's limits are taken against: the chosen one where it is extendable, the given one otherwise"
     dims: [scenario, process]
     cases:
       extendable: { when: Process_p_nom_extendable, expression: Process_p_nom_ext }
     otherwise: Process_p_nom
   Process_p_nom_committed:
     description: >-
-      the build a committed process's ramp rows are taken against — one module
+      the build a committed process's ramp rows are taken against: one module
       where the build is extendable and modular, the given build otherwise
     dims: [scenario, process]
     cases:
@@ -227,13 +228,13 @@ expressions:
     otherwise: Process_p_nom
   Process_output_arrival:
     description: >-
-      what a process transfers at a port at a snapshot — its internal power
-      delayed by the port's `delay` within its investment period, times the
-      port's rate at the snapshot the transfer arrives; where the port is
-      `cyclic_delay` the delayed transfer wraps from the period's end, and
-      where it is not the energy still in transit at the period's first
-      snapshots is lost. A port that does not
-      delay (`delay` zero) transfers at once, cyclic or not
+      what a process transfers at a port at a snapshot. It is its internal
+      power delayed by the port's `delay` within its investment period. It is
+      multiplied by the port's rate at the snapshot the transfer arrives.
+      Where the port is `cyclic_delay`, the delayed transfer wraps from the
+      period's end. Where it is not, the energy still in transit at the
+      period's first snapshots is lost. A port that does not delay (`delay`
+      zero) transfers at once, cyclic or not
     dims: [scenario, snapshot, process_output]
     cases:
       wrapping:
@@ -263,7 +264,7 @@ expressions:
 conditions:
   Process_committed:
     description: >-
-      a committable process that stands in the snapshot's period — every
+      a committable process that is active in the snapshot's period: every
       unit-commitment row's set
     condition: Process_committable AND Process_active
 
@@ -294,7 +295,7 @@ constraints:
     where: Process_p_nom_extendable AND Process_active_asset
     expression: Process_p_nom_ext >= Process_p_nom_min
   Process_ext_p_nom_upper:
-    description: "`Process-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Process-ext-p_nom-upper` — the chosen build is at most its cap in every scenario. A cap of infinity is no row"
     dims: [scenario, process]
     where: Process_p_nom_extendable AND Process_active_asset AND Process_p_nom_max
     expression: Process_p_nom_ext <= Process_p_nom_max
@@ -324,10 +325,10 @@ assumptions:
     holds: "Process_marginal_cost_quadratic == 0"
     where: "CVaR_omega"
     description: >-
-      a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
-      refuses quadratic costs under any risk preference
-      (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
-      `CVaR_omega` row only where a risk preference is set
+      a quadratic cost puts a square into every `CVaR-excess` row. PyPSA
+      refuses quadratic costs under any risk preference, `omega = 0` included
+      (`optimize.py:470-477`). In data prep you write a `CVaR_omega` row only
+      where a risk preference is set
 ```
 
 #### Given
@@ -356,10 +357,10 @@ assumptions:
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N}`$ — network nodes |
-| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J}`$ — generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate |
-| $`\mathcal{R}`$ | index $`r`$ — `process_output` with $`\mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J},\ \mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N}`$ — a process's ports, one label per port a process declares — PyPSA's `bus0`, `bus1`, … each carry a signed `rate`, so a process of any number of ports is one term in the balance, data prep |
+| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J}`$ — generalised multi-port converters, each with an internal power that every port draws or delivers at its own rate |
+| $`\mathcal{R}`$ | index $`r`$ — `process_output` with $`\mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J},\ \mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N}`$ — a process's ports, one label per port a process declares. The labels are PyPSA's `bus0`, `bus1`, …, each with a signed `rate`, data prep. A process of any number of ports is then one term in the balance |
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
 | $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
 
 #### Parameters
@@ -368,48 +369,48 @@ assumptions:
 |---|---|
 | $`\mathrm{z}^{\mathrm{nom}}`$ | `Process_p_nom` over $`\Xi \times \mathcal{J}`$ — nominal internal power |
 | $`\mathrm{ext}^{z}`$ | `Process_p_nom_extendable` over $`\mathcal{J}`$ — whether the nominal internal power is a decision |
-| $`\underline{\mathrm{z}}`$ | `Process_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — least internal power, per unit of nominal power — negative for a process that runs both ways |
+| $`\underline{\mathrm{z}}`$ | `Process_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — least internal power, per unit of nominal power: negative for a process that runs both ways |
 | $`\overline{\mathrm{z}}`$ | `Process_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — most internal power, per unit of nominal power |
-| $`\alpha`$ | `Process_rate` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — the energy a port draws or delivers per unit of internal power, PyPSA's `rate0`, `rate1`, … read long — negative where the port withdraws, positive where it injects; a link is a process whose `bus0` rate is minus one and whose output rates are its efficiencies. Read at the snapshot the transfer arrives, so a delayed port transfers at its arrival snapshot's rate (`constraints.py:1498`) |
-| $`\mathrm{d}^{z}`$ | `Process_output_delay` over $`\mathcal{R}`$ — snapshots a port's transfer lags its process's internal power — PyPSA's `delay0`, `delay1`, … read long, divided by the `snapshot_weightings.generators` value and rounded up in data prep; zero for a port that transfers at once. A port has the same delay in every scenario, as a link's port has |
-| $`\mathrm{cyc}^{z}`$ | `Process_output_cyclic_delay` over $`\mathcal{R}`$ — whether a delayed port's transfer wraps from the end of its investment period — PyPSA's `cyclic_delay0`, `cyclic_delay1`, …; where it does not, the energy still in transit at each period's first snapshots is lost. The flag is the same in every scenario, as the delay is |
+| $`\alpha`$ | `Process_rate` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — the energy a port draws or delivers per unit of internal power (PyPSA's `rate0`, `rate1`, … read long). It is negative where the port withdraws and positive where it injects. A link is a process whose `bus0` rate is minus one and whose output rates are its efficiencies. The rate at the snapshot the transfer arrives applies, so a delayed port transfers at its arrival snapshot's rate (`constraints.py:1498`) |
+| $`\mathrm{d}^{z}`$ | `Process_output_delay` over $`\mathcal{R}`$ — snapshots a port's transfer lags its process's internal power (PyPSA's `delay0`, `delay1`, … read long). In data prep you divide it by the `snapshot_weightings.generators` value and round it up. It is zero for a port that transfers at once. A port has the same delay in every scenario, as a link's port has |
+| $`\mathrm{cyc}^{z}`$ | `Process_output_cyclic_delay` over $`\mathcal{R}`$ — whether a delayed port's transfer wraps from the end of its investment period (PyPSA's `cyclic_delay0`, `cyclic_delay1`, …). Where it does not, the energy still in transit at each period's first snapshots is lost. The flag is the same in every scenario, as the delay is |
 | $`\mathrm{c}^{z}`$ | `Process_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one unit of internal power |
 | $`\mathrm{c}^{z,(2)}`$ | `Process_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of the square of one unit of internal power |
-| $`\mathrm{z}^{\mathrm{set}}`$ | `Process_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — a given internal power schedule; a process without one has no row here |
+| $`\mathrm{z}^{\mathrm{set}}`$ | `Process_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — a given internal power schedule. A process without one has no row here |
 | $`\underline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_min` over $`\Xi \times \mathcal{J}`$ — least nominal power an extendable process may be built at |
 | $`\overline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_max` over $`\Xi \times \mathcal{J}`$ — most nominal power an extendable process may be built at |
-| $`\mathrm{c}^{\mathrm{cap},z}`$ | `Process_capital_cost` over $`\Xi \times \mathcal{J}`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
-| $`\mathrm{z}^{\mathrm{nom,set}}`$ | `Process_p_nom_set` over $`\mathcal{J}`$, `neutral` where the data has no row — a given nominal power for an extendable process; one without a value has no row here |
-| $`\mathrm{z}^{\mathrm{mod}}`$ | `Process_p_nom_mod` over $`\mathcal{J}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of; no value means the build is continuous |
-| $`\mathrm{N}^{z,\mathrm{fix}}`$ | `Process_modules_installed` over $`\Xi \times \mathcal{J}`$ — how many whole modules a committable build has in place: `Process_p_nom / Process_p_nom_mod` where a fixed build is modular, one where it is not, data prep. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
-| $`\mathrm{nonneg}^{z}`$ | `Process_p_min_pu_nonneg` over $`\mathcal{J}`$ — true where none of the process's own minimums-per-unit is negative — PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and scenario, data prep |
-| $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{T} \times \mathcal{J}`$ — whether a process stands in a snapshot's period — PyPSA's `active`, data prep |
-| $`\mathrm{act}^{z}`$ | `Process_active_asset` over $`\mathcal{J}`$ — whether a process is one of PyPSA's `active_assets` — its `active` flag alone, without build year and lifetime, so a unit that stands in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:51`) |
-| $`\mathrm{W}^{z}`$ | `Process_capital_weight` over $`\mathcal{J}`$ — the sum of period weights a process stands in — PyPSA's `active * period_weighting`, summed, data prep |
-| $`\mathrm{new}^{z}`$ | `Process_first_active` over $`\mathcal{Y} \times \mathcal{J}`$ — one in the first period a process stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
-| $`\mathrm{m}^{z}`$ | `Process_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{J}`$, `neutral` where the data has no row — one where the process is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
+| $`\mathrm{c}^{\mathrm{cap},z}`$ | `Process_capital_cost` over $`\Xi \times \mathcal{J}`$ — cost of one unit of nominal power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`) |
+| $`\mathrm{z}^{\mathrm{nom,set}}`$ | `Process_p_nom_set` over $`\mathcal{J}`$, `neutral` where the data has no row — a given nominal power for an extendable process. One without a value has no row here |
+| $`\mathrm{z}^{\mathrm{mod}}`$ | `Process_p_nom_mod` over $`\mathcal{J}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of. No value means the build is continuous |
+| $`\mathrm{N}^{z,\mathrm{fix}}`$ | `Process_modules_installed` over $`\Xi \times \mathcal{J}`$ — how many whole modules a committable build has in place, data prep. It is `Process_p_nom / Process_p_nom_mod` where a fixed build is modular, and one where it is not. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
+| $`\mathrm{nonneg}^{z}`$ | `Process_p_min_pu_nonneg` over $`\mathcal{J}`$ — true where none of the process's own minimums-per-unit is negative. It is PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and scenario, data prep |
+| $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{T} \times \mathcal{J}`$ — whether a process is active in a snapshot's period. It is PyPSA's `active`, data prep |
+| $`\mathrm{act}^{z}`$ | `Process_active_asset` over $`\mathcal{J}`$ — whether a process is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:51`) |
+| $`\mathrm{W}^{z}`$ | `Process_capital_weight` over $`\mathcal{J}`$ — the sum of period weights a process is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
+| $`\mathrm{new}^{z}`$ | `Process_first_active` over $`\mathcal{Y} \times \mathcal{J}`$ — one in the first period a process is active in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
+| $`\mathrm{m}^{z}`$ | `Process_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{J}`$, `neutral` where the data has no row — one where the process is in the row's carrier-and-bus set, data prep. One outside it, or one that is not active in the row's `investment_period`, has no row |
 
 #### Conditions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{J} \times \mathcal{T}`$ — a committable process that stands in the snapshot's period — every unit-commitment row's set |
+| $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{J} \times \mathcal{T}`$ — a committable process that is active in the snapshot's period: every unit-commitment row's set |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`z`$ | `Process_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-p` — PyPSA's internal power `p`: a positive value drives every port at its own rate, withdrawing where the rate is negative and injecting where it is positive |
-| $`N^{z}`$ | `Process_n_mod` over $`\mathcal{J}`$ — `Process-n_mod` — how many modules of an extendable modular build; none for a unit that is not active |
-| $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ — `Process-p_nom` — nominal internal power where it is a decision, for a process that is active; the parameter of the same PyPSA name carries the fixed regime |
+| $`z`$ | `Process_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — `Process-p` — PyPSA's internal power `p`. A positive value drives every port at its own rate, withdrawing where the rate is negative and injecting where it is positive |
+| $`N^{z}`$ | `Process_n_mod` over $`\mathcal{J}`$ — `Process-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
+| $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ — `Process-p_nom` — nominal internal power where it is a decision, for a process that is active. A fixed build is the parameter of the same PyPSA name |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\widetilde{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_effective` over $`\Xi \times \mathcal{J}`$ — the build a process's limits are taken against — the chosen one where it is extendable, the given one otherwise |
-| $`\widehat{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_committed` over $`\Xi \times \mathcal{J}`$ — the build a committed process's ramp rows are taken against — one module where the build is extendable and modular, the given build otherwise |
-| $`\overrightarrow{z}`$ | `Process_output_arrival` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — what a process transfers at a port at a snapshot — its internal power delayed by the port's `delay` within its investment period, times the port's rate at the snapshot the transfer arrives; where the port is `cyclic_delay` the delayed transfer wraps from the period's end, and where it is not the energy still in transit at the period's first snapshots is lost. A port that does not delay (`delay` zero) transfers at once, cyclic or not |
+| $`\widetilde{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_effective` over $`\Xi \times \mathcal{J}`$ — the build a process's limits are taken against: the chosen one where it is extendable, the given one otherwise |
+| $`\widehat{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_committed` over $`\Xi \times \mathcal{J}`$ — the build a committed process's ramp rows are taken against: one module where the build is extendable and modular, the given build otherwise |
+| $`\overrightarrow{z}`$ | `Process_output_arrival` over $`\Xi \times \mathcal{T} \times \mathcal{R}`$ — what a process transfers at a port at a snapshot. It is its internal power delayed by the port's `delay` within its investment period. It is multiplied by the port's rate at the snapshot the transfer arrives. Where the port is `cyclic_delay`, the delayed transfer wraps from the period's end. Where it is not, the energy still in transit at the period's first snapshots is lost. A port that does not delay (`delay` zero) transfers at once, cyclic or not |
 | $`\mathit{Process\_tech\_capacity\_expansion}`$ | `Process_tech_capacity_expansion` over $`\mathcal{G}`$ |
 | $`\mathit{Process\_opex}`$ | `Process_opex` over $`\Xi`$ |
 | $`\mathit{Process\_capex}`$ | `Process_capex` (scalar) |
@@ -572,3 +573,8 @@ z_{\xi,t,j} = \mathrm{z}^{\mathrm{set}}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\
 \mathrm{c}^{z,(2)}_{\xi,t,j} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \omega \text{ is defined}
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung
