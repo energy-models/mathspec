@@ -234,13 +234,21 @@ you build the file above one section at a time.
 from PyPI with pip, uv or pixi. To work on mathspec itself, set up a
 [development environment](https://mathspec.readthedocs.io/en/latest/contributing/#setting-up-a-development-environment).
 
-## Prior art
+## Background
 
-Every file under `src/` was written in [specsolve](https://github.com/fluxopt/specsolve)
-and extracted here. The keys come from
-[Calliope](https://github.com/calliope-project/calliope): math in YAML, one
-block per component, `dims:` and a `where:` string. `sum(over=)` and the
-dimension rules take their names from [linopy](https://github.com/PyPSA/linopy).
+<!--- --8<-- [start:background] -->
+
+mathspec started life as YAML math in the energy system modelling framework [Calliope](https://github.com/calliope-project/calliope).
+The Calliope maintainers developed many of the language elements mathspec uses today, from [initial concepts in 2020](https://github.com/calliope-project/calliope/issues/100#issuecomment-682017208) to their [first stable release](https://github.com/calliope-project/calliope/releases/tag/v0.7.0) using 100% YAML math in September 2026.
+
+mathspec is an evolution of the initial Calliope work, ported to a framework-agnostic organisation and now developed as a cross-framework initiative.
+This initiative has proven a success, with improvements in syntax, performance, and features realised already in the first months.
+Our aim is to develop a human-readable math language that can be used across the energy modelling community (and beyond!) to increase transparency, shareability, and readability of our math.
+
+For more information see our
+[Background and history page](https://mathspec.readthedocs.io/en/latest/about/history/).
+
+<!--- --8<-- [end:background] -->
 
 ## Status
 
@@ -262,6 +270,7 @@ Thanks go to these people
 all-contributors bot keeps the table below. To add someone, comment
 `@all-contributors please add @login for code` on an issue.
 
+<!--- --8<-- [start:contributors] -->
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
@@ -290,6 +299,7 @@ all-contributors bot keeps the table below. To add someone, comment
 <!-- prettier-ignore-end -->
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
+<!--- --8<-- [end:contributors] -->
 
 ## Licence
 

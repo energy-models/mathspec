@@ -13,6 +13,9 @@ understand a rule before you rely on it.
 <div class="grid cards" markdown>
 
 <!-- prettier-ignore -->
+- **[Background and history](history.md)** describes where mathspec comes from,
+    from the YAML math of the energy system framework
+    [Calliope](https://github.com/calliope-project/calliope) to the releases of mathspec itself.
 - **[How mathspec works](overview.md)** describes what
     mathspec decides about the specification of an optimisation model
     ([a spec](../reference/glossary.md#spec)) before any data exists.

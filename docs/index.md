@@ -178,6 +178,10 @@ is in the How tab.
 
 --8<-- "README.md:engines"
 
+## Background
+
+--8<-- "README.md:background"
+
 ## Where to next
 
 <div class="grid cards" markdown>
@@ -202,5 +206,9 @@ is in the How tab.
 !!! warning "Alpha software"
 
     --8<-- "README.md:status"
+
+## Contributors
+
+--8<-- "README.md:contributors"
 
 </div>
