@@ -109,6 +109,10 @@ relations:
   connection: { key: [generator, bus], missing: absent } # most pairs are not connected
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/relations-missing.svg"
+</figure>
+
 At `l3`, the data of `line_to` has no row, so `line_to` is absent there.
 
 | `missing:`            | Result                                                                                                                              |
@@ -173,6 +177,10 @@ the columns in `by=`. As in `sum(x, over=d)`, `over=` lists what the result lose
 what it gains, and either one may be a list. A sum through a relation adds
 each row of `x` only to the groups that the relation lists for it. A row that
 the relation does not list is left out.
+
+<figure class="diagram">
+--8<-- "docs/static/relations-sum-by.svg"
+</figure>
 
 `north` adds up `wind` and `gas`, and `south` is `solar` alone.
 
@@ -244,6 +252,10 @@ the value of `x` at one coordinate. With `line_bus: { key: line, values: bus }`
 and a variable `build` over `[bus]`, `at(build, by=line_bus[bus])` has one row
 per line:
 
+<figure class="diagram">
+--8<-- "docs/static/relations-at.svg"
+</figure>
+
 Lines `l1` and `l2` both take the value of `build` at `north`, and `l3` takes
 it at `south`.
 
@@ -269,6 +281,10 @@ coordinate that the relation maps to [no group](operators.md#within). With
 `season_of: { key: snapshot, values: season }`,
 `shift(soc, along=snapshot, offset=1, edge='wrap', within=season_of[season])`
 steps back within each season:
+
+<figure class="diagram">
+--8<-- "docs/static/relations-partition.svg"
+</figure>
 
 The first snapshot of each season takes the value of the last snapshot of the
 same season, and no value crosses from winter to summer.
@@ -321,6 +337,10 @@ constraints:
     dims: [bus, snapshot]
     expression: sum(flow, over=generator) == load
 ```
+
+<figure class="diagram">
+--8<-- "docs/static/relations-where-bare.svg"
+</figure>
 
 `flow` exists at the pairs that `connection` lists and is [absent](absence.md)
 at every other pair, so `balance` adds up the generators wired to each bus.

@@ -1,0 +1,96 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 914 294" width="914" height="294" style="max-width: 100%; height: auto" role="img" aria-labelledby="pa-t pa-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="pa-t">An absent gate leaves the curve ungated</title>
+  <desc id="pa-d">The variable running, declared with where committable, has rows for gas at snapshots 0 and 1, and no row for wind, because wind is not committable. The scale of the curve fuel_use is running for gas at each snapshot. For wind, where running is absent, the scale is 1, so the curve is ungated. With missing neutral on running, the scale for wind is 0, and wind has no curve.</desc>
+  <defs>
+    <pattern id="pa-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="pa-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,56 H256.4 V97 A3,3 0 0 1 253.39999999999998,100 H19 A3,3 0 0 1 16,97 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,56 V37 A3,3 0 0 1 19,34 H253.39999999999998 A3,3 0 0 1 256.4,37 V56 Z" fill="#E69F00" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="24" font-weight="bold">running</text>
+    <text x="79" y="24" fill-opacity="0.7">a variable</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="48" font-weight="bold">snapshot</text>
+      <text x="104" y="48" font-weight="bold">generator</text>
+      <text x="24" y="72">0</text><text x="104" y="72">gas</text>
+      <text x="24" y="90">1</text><text x="104" y="90">gas</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="34" width="240" height="66" rx="3"/>
+    <line x1="16" y1="56" x2="256" y2="56"/>
+    <rect x="16" y="104" width="240" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="24" y="120" fill-opacity="0.7" font-style="italic">no row for wind: running is absent</text>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#pa-arrow)">
+    <path d="M266.4,78.0 H278.4 V45 H447.4"/>
+    <path d="M266.4,78.0 H278.4 V191 H447.4"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="288" y="39">activity: running</text>
+    <text x="288" y="61" fill-opacity="0.7">the default</text>
+    <text x="288" y="185">activity: running</text>
+    <text x="288" y="207" fill-opacity="0.7">with missing: neutral</text>
+  </g>
+  <g stroke="none">
+    <path d="M459.4,56 H759.0 V133 A3,3 0 0 1 756.0,136 H462.4 A3,3 0 0 1 459.4,133 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M459.4,56 V37 A3,3 0 0 1 462.4,34 H756.0 A3,3 0 0 1 759.0,37 V56 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="459.4" y="24" font-weight="bold">scale of fuel_use</text>
+    <text x="599" y="24" fill-opacity="0.7">an expression</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="467" y="48" font-weight="bold">snapshot</text>
+      <text x="548" y="48" font-weight="bold">generator</text>
+      <text x="636" y="48" font-weight="bold">value</text>
+      <text x="467" y="72">0</text><text x="548" y="72">gas</text><text x="636" y="72">running[0, gas]</text>
+      <text x="467" y="90">0</text><text x="548" y="90">wind</text><text x="636" y="90">1</text>
+      <text x="467" y="108">1</text><text x="548" y="108">gas</text><text x="636" y="108">running[1, gas]</text>
+      <text x="467" y="126">1</text><text x="548" y="126">wind</text><text x="636" y="126">1</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="459.4" y="34" width="300" height="102" rx="3"/>
+    <line x1="459.4" y1="56" x2="759" y2="56"/>
+  </g>
+  <g stroke="none">
+    <path d="M459.4,202 H759.0 V279 A3,3 0 0 1 756.0,282 H462.4 A3,3 0 0 1 459.4,279 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M459.4,202 V183 A3,3 0 0 1 462.4,180 H756.0 A3,3 0 0 1 759.0,183 V202 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="459.4" y="170" font-weight="bold">scale of fuel_use</text>
+    <text x="599" y="170" fill-opacity="0.7">an expression</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="467" y="194" font-weight="bold">snapshot</text>
+      <text x="548" y="194" font-weight="bold">generator</text>
+      <text x="636" y="194" font-weight="bold">value</text>
+      <text x="467" y="218">0</text><text x="548" y="218">gas</text><text x="636" y="218">running[0, gas]</text>
+      <text x="467" y="236">0</text><text x="548" y="236">wind</text><text x="636" y="236">0</text>
+      <text x="467" y="254">1</text><text x="548" y="254">gas</text><text x="636" y="254">running[1, gas]</text>
+      <text x="467" y="272">1</text><text x="548" y="272">wind</text><text x="636" y="272">0</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="459.4" y="180" width="300" height="102" rx="3"/>
+    <line x1="459.4" y1="202" x2="759" y2="202"/>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="785" y="40" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="805" y="51">absent: no row</text>
+  </g>
+</svg>

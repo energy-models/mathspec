@@ -88,6 +88,15 @@ objective: { sense: minimize, expression: "sum(p * cost, over=generator)" }
 \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{g} + \sum_{l \in \mathcal{L} \,:\, \mathrm{line\_to}(l) = b} f_{l} - \left( \sum_{l \in \mathcal{L} \,:\, \mathrm{line\_from}(l) = b} f_{l} \right) = \mathrm{load}_{b} \qquad \forall\, b \in \mathcal{B}
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/operators-sum.svg"
+</figure>
+
+With the data in the figure, the sum through `gen_bus` adds `p` of `wind` and
+`gas` at bus `north`. The line `l1` leaves `north` and enters `south`. Each sum
+removes `generator` or `line` and adds `bus`, so the constraint is indexed over
+`bus` alone.
+
 At load, mathspec refuses `sum(x)` over an expression that has no dimension. With a
 parameter `total: { dims: [] }` added to the spec above, and the constraint
 `r: { dims: [], expression: "sum(p) <= sum(total)" }`, mathspec prints:
@@ -135,6 +144,10 @@ objective: { sense: minimize, expression: "sum(build, over=bus)" }
 f_{l} \le \mathrm{cap}_{l} \cdot \mathit{build}_{\mathrm{line\_bus}(l)} \qquad \forall\, l \in \mathcal{L}
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/operators-at.svg"
+</figure>
+
 `at` removes the column in `by=`, `bus`, and adds the key, `line`, so `build`
 is read once per line.
 
@@ -167,6 +180,10 @@ objective: { sense: minimize, expression: sum(charge) }
 ```math
 \mathit{soc}_{t,s} = \mathit{soc}_{t \ominus 1,s} + \mathit{charge}_{t,s} \cdot \mathrm{eta}_{s} - \mathit{discharge}_{t,s} \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S}
 ```
+
+<figure class="diagram">
+--8<-- "docs/static/operators-shift.svg"
+</figure>
 
 With three snapshots of data, snapshot 0 of the storage `battery` takes the value of the last snapshot. Each later snapshot takes the value of the one before it. The legend of the typeset
 document defines $`t \ominus k`$ as $`t-k`$, counted cyclically.
@@ -235,6 +252,10 @@ objective: { sense: minimize, expression: sum(soc) }
 \mathit{soc}_{t} = \mathit{soc}_{t \ominus^{\mathrm{season\_of}(t)} 1} + \mathrm{inflow}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/operators-shift-within.svg"
+</figure>
+
 The first snapshot of each season takes the value of the last snapshot of the
 same season. Every `edge=` setting applies one group at a time, and a
 coordinate in no group is absent under every `edge=`.
@@ -265,6 +286,10 @@ objective: { sense: minimize, expression: sum(order) }
 ```math
 \mathit{order}_{t,m \boxminus_{0} \mathrm{lead}} \ge \mathrm{demand}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}
 ```
+
+<figure class="diagram">
+--8<-- "docs/static/operators-shift-offset.svg"
+</figure>
 
 For each technology, the shift takes `order` `lead` months back, and
 $`m \boxminus_{0} k`$ is $`m-k`$ with `0` past the edge.
@@ -337,6 +362,10 @@ objective: { sense: minimize, expression: sum(on) }
 ```math
 \sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < \mathrm{min\_up}} \mathit{started}_{u,h'} \le \mathit{on}_{u,h} \qquad \forall\, u \in \mathcal{U},\ h \in \mathcal{H}
 ```
+
+<figure class="diagram">
+--8<-- "docs/static/operators-sum-back.svg"
+</figure>
 
 A unit that started in any of the last `min_up` hours must be on, and each unit
 has its own window length.

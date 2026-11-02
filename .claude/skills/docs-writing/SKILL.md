@@ -171,6 +171,76 @@ The obvious rule gets one sentence.
 - **Show the refused form too**, where the refusal is the lesson, with the
   message it produces.
 
+## 4. A rule about rows carries a figure
+
+A section of a reference or explanation page that says what a construct does
+to the rows of an entry carries a figure. That covers absence, `where:`,
+`missing:`, `shift` and the other operators, a join or a sum through a
+relation, `ordered`, and composition with `merge` or `override`. A tutorial or
+a how-to links to the figure and draws none of its own.
+`docs/static/absence-where-variable.svg` is the model; copy its structure.
+
+- **Every entry is a table, one row per coordinate.** An absent coordinate has
+  no row. A dashed rounded box with an italic note stands where the row would
+  be: "no row for old: dispatch is absent". This is a table view, not a grid
+  of dimensions.
+- **A second dimension is a second key column.** Use one only where it
+  changes the result, such as a per-entity `offset=` or the dimension a `sum`
+  keeps. A figure holds at most two result panels to the right of its input;
+  more go on a row below.
+- **The figure uses the data of the section's example.** Where the page has no
+  data, invent the smallest set and say so in the PR.
+- **YAML appears once.** A figure that follows a YAML fence holds no YAML.
+  A figure with no fence above it opens with the few keys it is about, and
+  the key in question is in bold.
+- **One mark, one meaning, on every page.**
+
+  | Mark                                         | Means                                                                       |
+  | -------------------------------------------- | --------------------------------------------------------------------------- |
+  | vermilion `#D55E00` hatch                    | a row the condition removes, or has no data                                 |
+  | dashed outline, no fill                      | absent: no row                                                              |
+  | blue `#0072B2` tint                          | data the file is given: a parameter, a relation, a dimension, an input file |
+  | orange `#E69F00` tint                        | a variable                                                                  |
+  | bluish green `#009E73` tint                  | a constraint, an expression, an operator's result                           |
+  | reddish purple `#CC79A7`, sky blue `#56B4E9` | the groups of a sum through a relation                                      |
+
+  The hatch never highlights. A tint fills the header band at
+  `fill-opacity="0.2"` and the body at `0.08`, under the text. Text, outlines
+  and arrows stay `currentColor`, so the figure reads in light and dark mode.
+
+- **No rule is stated in colour alone.** Each coloured table carries a text
+  label for its kind, such as "a parameter" or "an expression". A legend lists
+  the marks the figure uses, and no others.
+- **An arrow meets its target at a right angle.** Draw it as a curve that ends
+  in a short straight run, or as an elbow. A fan from one table to several is
+  an elbow tree. The arrow carries a short label: the key or call, then what it
+  does.
+- **The words are the page's words**: a term, a condition, absent, left out.
+- **The file** is `docs/static/<page>-<topic>.svg`. It opens with the SPDX
+  header as an XML comment, then `<svg>` with `width`, `height`,
+  `style="max-width: 100%; height: auto"`, `role="img"`, and a `<title>` and
+  `<desc>` that `aria-labelledby` names. Every `id` takes a prefix of the
+  figure's own, because one page holds several figures. Colours are
+  attributes: a `<style>` element in an inline SVG styles the whole page. The
+  file has no blank line, because a blank line ends the raw HTML block.
+- **Embed it inline**, after the fence and before the sentence that reads the
+  result, so `currentColor` follows the theme:
+
+  ```markdown
+  <figure class="diagram">
+  --8<-- "docs/static/absence-where-variable.svg"
+  </figure>
+  ```
+
+- **Look at it in both themes** before the page is done:
+
+  ```bash
+  rsvg-convert -w 1520 -b white x.svg -o light.png
+  sed 's/currentColor/#ddd/g' x.svg | rsvg-convert -w 1520 -b '#1e2129' -o dark.png
+  ```
+
+  Text over the strongest tint keeps a contrast of 4.5:1 in both.
+
 ## 5. Headings are the table of contents
 
 - **A heading takes the form of its kind.** On a how-to page, the title and

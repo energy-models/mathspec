@@ -29,11 +29,19 @@ variables:
     where: "capacity > 0"
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/absence-where-variable.svg"
+</figure>
+
 With `capacity = {wind: 10, gas: 5, old: 0}`, the model has `dispatch[wind]`
 and `dispatch[gas]`, and no `dispatch[old]`.
 
 Where its condition is false, a `where:` on a constraint removes the row, so
 the constraint requires nothing there:
+
+<figure class="diagram">
+--8<-- "docs/static/absence-where-constraint.svg"
+</figure>
 
 With the same capacities, `min_out` has rows at `wind` and `gas`, and none at
 `old`.
@@ -57,10 +65,18 @@ Seven constructs make a coordinate absent:
 
 No value shifts in at the edge, so a `shift` without `edge=` has no row there:
 
+<figure class="diagram">
+--8<-- "docs/static/absence-shift.svg"
+</figure>
+
 `shift(x, along=snapshot, offset=1)` has no row at snapshot 1, so the expression is absent there.
 
 A relation with `missing: absent` is absent at a key that has no row in the
 data:
+
+<figure class="diagram">
+--8<-- "docs/static/absence-relation-missing.svg"
+</figure>
 
 `line_to` has no row for `l3`, so the relation is absent at `l3`.
 
@@ -80,6 +96,10 @@ parameter takes one of four values:
 | `absent`              | a missing row is absent: a term that uses the row is absent, and a sum leaves the term out                                                    |
 | `neutral`             | a missing row takes the value that adds nothing to the expression or condition that uses it: `0` as a coefficient, and `false` in a condition |
 | a value               | a missing row takes that value                                                                                                                |
+
+<figure class="diagram">
+--8<-- "docs/static/absence-missing-parameter.svg"
+</figure>
 
 At `old`, where `rel_max` has no row, a tool refuses the data, or `rel_max` is
 absent, `0` or `1`.
@@ -123,6 +143,10 @@ constraints:
     expression: inflow - spill - soc == 0
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/absence-missing-variable.svg"
+</figure>
+
 At a storage with a store and no inflow, `balance` is `inflow - soc == 0`, and at a storage with inflow and no store `balance` has no row.
 
 `missing: neutral` requires a `where:`, because a variable with no condition
@@ -164,6 +188,10 @@ constraints:
     expression: sum(x, over=generator) + sum(y, over=generator) >= 1 # x[old] is back in
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/absence-travels.svg"
+</figure>
+
 With the capacities above, `y[old]` is absent, and because `x + y` is arithmetic, `each` has no row at `old`. In `total`, the term `x + y` is
 absent at `old`, so the sum leaves out both `x[old]` and `y[old]`. In `split`, each sum runs over the coordinates of its own operand, so `x[old]` is in the first sum, and `total` and `split` differ.
 
@@ -183,6 +211,10 @@ constraints:
     dims: [generator]
     expression: x - rel_max * y <= 0
 ```
+
+<figure class="diagram">
+--8<-- "docs/static/absence-cap.svg"
+</figure>
 
 With data attached, `y` is absent at `old`, so `cap` has no row there. At `gas`,
 where `rel_max` has no row, the row is `x[gas] <= 0`. With `missing: absent` on
@@ -231,6 +263,10 @@ objective:
   sense: minimize
   expression: sum(cost)
 ```
+
+<figure class="diagram">
+--8<-- "docs/static/absence-quotient.svg"
+</figure>
 
 With `delivered` zero at `old`, `lcoe` has rows at `wind` and `gas`, and none
 at `old`.

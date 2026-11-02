@@ -1,0 +1,114 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 426" width="1000" height="426" style="max-width: 100%; height: auto" role="img" aria-labelledby="hst-t hst-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">
+  <title id="hst-t">From Calliope to mathspec</title>
+  <desc id="hst-d">A timeline in four rows, one per project: Calliope, specsolve, mathspec and fluxopt. The time axis shows one step per year from 2018 to 2025, then one step per month in 2026. In the Calliope row: in April 2018, Calliope 0.6.0 removes custom constraints in YAML; in March 2021, foreach and where move into a YAML file; in May 2021, the goal is set to state every constraint in YAML; in February 2023, the parser lands; in 2023, users can replace the math with their own file and the math documentation is generated; in January 2024, 0.7.0.dev2 ships with the whole formulation in YAML; in 2024, piecewise constraints arrive; in September 2026, Calliope 0.7.0 is released. In March 2026, specsolve starts, with a language that keeps Calliope's shape. In August 2026, the language and the typesetter are extracted from specsolve into mathspec, and the PyPSA ladder starts. In September 2026, mathspec 0.1 is on PyPI and 0.2 follows, specsolve depends on mathspec 0.1 and then 0.2, and a port of the math of Calliope 0.7.0 opens in mathspec. Also in September 2026, fluxopt states its model as a spec. In October 2026, mathspec 0.2.1 composes files, 0.3 adds relations and 0.4 adds conditions, and fluxopt installs mathspec 0.2.1, with a spec per system that holds only the fragments its elements use. The rows overlap: specsolve starts six months before Calliope 0.7.0 is released, and mathspec's first releases, specsolve's dependency on them and fluxopt's spec come in the same month as Calliope 0.7.0.</desc>
+  <defs>
+    <marker id="hst-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g fill="none" stroke-width="2">
+    <path d="M104.6,92 H490 M510,92 H836.2" stroke="#0072B2"/>
+    <path d="M603.5,162 H884" stroke="#D55E00"/>
+    <path d="M790.5,232 H884" stroke="#009E73"/>
+    <path d="M820.2,310 H884" stroke="#E69F00"/>
+  </g>
+  <g fill="currentColor" font-size="13" font-weight="bold" text-anchor="end">
+    <text x="84" y="96">Calliope</text>
+    <text x="595.5" y="166">specsolve</text>
+    <text x="782.5" y="236">mathspec</text>
+    <text x="812.2" y="314">fluxopt</text>
+  </g>
+  <g stroke="currentColor" stroke-opacity="0.5" stroke-width="0.75">
+    <line x1="104.6" y1="87" x2="104.6" y2="38"/>
+    <line x1="250.4" y1="97" x2="250.4" y2="110"/>
+    <line x1="258.8" y1="87" x2="258.8" y2="52"/>
+    <line x1="346.2" y1="87" x2="346.2" y2="66"/>
+    <line x1="367.1" y1="97" x2="367.1" y2="128"/>
+    <line x1="392.1" y1="87" x2="392.1" y2="80"/>
+    <line x1="417.1" y1="97" x2="417.1" y2="110"/>
+    <line x1="836.2" y1="87" x2="836.2" y2="80"/>
+    <line x1="820.2" y1="157" x2="820.2" y2="150"/>
+    <line x1="790.5" y1="237" x2="790.5" y2="250"/>
+    <line x1="820.2" y1="315" x2="820.2" y2="328"/>
+    <line x1="865.3" y1="315" x2="865.3" y2="346"/>
+  </g>
+  <g fill="currentColor">
+    <text x="108.6" y="34">custom constraints removed</text>
+    <text x="254.4" y="114">foreach in YAML</text>
+    <text x="262.8" y="48">goal: all math in YAML</text>
+    <text x="350.2" y="62">parser lands</text>
+    <text x="371.1" y="132">user math, generated docs</text>
+    <text x="396.1" y="76">0.7.0.dev2</text>
+    <text x="421.1" y="114">piecewise constraints</text>
+    <text x="832.2" y="76" text-anchor="end">0.7.0 released</text>
+    <text x="609.5" y="180">starts</text>
+    <text x="816.2" y="146" text-anchor="end">depends on mathspec 0.1, 0.2</text>
+    <text x="786.5" y="254" text-anchor="end">PyPSA ladder starts</text>
+    <text x="816.2" y="272" text-anchor="end">0.1 on PyPI, 0.2</text>
+    <text x="872.3" y="254">0.2.1 composes files</text>
+    <text x="872.3" y="268">0.3 relations</text>
+    <text x="872.3" y="282">0.4 conditions</text>
+    <text x="816.2" y="332" text-anchor="end">model stated as a spec</text>
+    <text x="861.3" y="350" text-anchor="end">mathspec 0.2.1, spec per system</text>
+  </g>
+  <circle cx="104.6" cy="92" r="3.5" fill="#0072B2" stroke="currentColor" stroke-width="1"/>
+  <circle cx="250.4" cy="92" r="3.5" fill="#0072B2" stroke="currentColor" stroke-width="1"/>
+  <circle cx="258.8" cy="92" r="3.5" fill="#0072B2" stroke="currentColor" stroke-width="1"/>
+  <circle cx="346.2" cy="92" r="3.5" fill="#0072B2" stroke="currentColor" stroke-width="1"/>
+  <circle cx="367.1" cy="92" r="3.5" fill="#0072B2" stroke="currentColor" stroke-width="1"/>
+  <circle cx="392.1" cy="92" r="3.5" fill="#0072B2" stroke="currentColor" stroke-width="1"/>
+  <circle cx="417.1" cy="92" r="3.5" fill="#0072B2" stroke="currentColor" stroke-width="1"/>
+  <circle cx="836.2" cy="92" r="3.5" fill="#0072B2" stroke="currentColor" stroke-width="1"/>
+  <circle cx="603.5" cy="162" r="3.5" fill="#D55E00" stroke="currentColor" stroke-width="1"/>
+  <circle cx="820.2" cy="162" r="3.5" fill="#D55E00" stroke="currentColor" stroke-width="1"/>
+  <circle cx="790.5" cy="232" r="3.5" fill="#009E73" stroke="currentColor" stroke-width="1"/>
+  <circle cx="820.2" cy="232" r="3.5" fill="#009E73" stroke="currentColor" stroke-width="1"/>
+  <circle cx="836.2" cy="232" r="3.5" fill="#009E73" stroke="currentColor" stroke-width="1"/>
+  <circle cx="865.3" cy="232" r="3.5" fill="#009E73" stroke="currentColor" stroke-width="1"/>
+  <circle cx="820.2" cy="310" r="3.5" fill="#E69F00" stroke="currentColor" stroke-width="1"/>
+  <circle cx="865.3" cy="310" r="3.5" fill="#E69F00" stroke="currentColor" stroke-width="1"/>
+  <g stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#hst-arrow)">
+    <path d="M603.5,96 V157"/>
+    <path d="M790.5,166 V227"/>
+    <path d="M836.2,97 V227"/>
+    <path d="M820.2,227 V167"/>
+    <path d="M820.2,237 V305"/>
+    <path d="M865.3,237 V305"/>
+  </g>
+  <g fill="currentColor" fill-opacity="0.75" font-style="italic">
+    <text x="609.5" y="123">keeps Calliope's shape</text>
+    <text x="842.2" y="123">ported</text>
+    <text x="784.5" y="201" text-anchor="end">extracted</text>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1">
+    <path d="M90,384 H490 M510,384 H884"/>
+    <path d="M90,384 v4 M140,384 v4 M190,384 v4 M240,384 v4 M290,384 v4 M340,384 v4 M390,384 v4 M440,384 v4 M490,384 v4 M510,384 v4 M547.4,384 v4 M584.8,384 v4 M622.2,384 v4 M659.6,384 v4 M697,384 v4 M734.4,384 v4 M771.8,384 v4 M809.2,384 v4 M846.6,384 v4 M884,384 v4"/>
+    <path d="M493,390 l5,-12 M499,390 l5,-12"/>
+  </g>
+  <g fill="currentColor" font-size="11" text-anchor="middle">
+    <text x="115" y="400">2018</text>
+    <text x="165" y="400">2019</text>
+    <text x="215" y="400">2020</text>
+    <text x="265" y="400">2021</text>
+    <text x="315" y="400">2022</text>
+    <text x="365" y="400">2023</text>
+    <text x="415" y="400">2024</text>
+    <text x="465" y="400">2025</text>
+    <text x="528.7" y="400">Jan</text>
+    <text x="566.1" y="400">Feb</text>
+    <text x="603.5" y="400">Mar</text>
+    <text x="640.9" y="400">Apr</text>
+    <text x="678.3" y="400">May</text>
+    <text x="715.7" y="400">Jun</text>
+    <text x="753.1" y="400">Jul</text>
+    <text x="790.5" y="400">Aug</text>
+    <text x="827.9" y="400">Sep</text>
+    <text x="865.3" y="400">Oct</text>
+    <text x="290" y="418" fill-opacity="0.75">2018 to 2025: one step per year</text>
+    <text x="697" y="418" fill-opacity="0.75">2026: one step per month</text>
+  </g>
+</svg>

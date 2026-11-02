@@ -52,6 +52,10 @@ symbol of data, is upright:
 p_{e,g} - p_{e - 1,g} \le 0.5 \cdot \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, e \in \mathcal{E},\ g \in \mathcal{G} \,:\, \mathrm{stands}_{g,e} \wedge \mathrm{stands}_{g,e - 1}
 ```
 
+<figure class="diagram">
+--8<-- "docs/static/named-conditions.svg"
+</figure>
+
 With data in which generator `b` exists only from 2040, `p` has no row at 2030
 and `b`. The constraint `ramp_up` has a row only where the generator stands in
 this period and in the period before it.
@@ -257,6 +261,10 @@ The typesetter prints each case as one row of the definition, and
 ```math
 \mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \\ \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \\ \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
+
+<figure class="diagram">
+--8<-- "docs/static/named-cases.svg"
+</figure>
 
 The constraint `ramp_up` refers to `previous_status` by name, and at each
 snapshot each unit takes the value of its case.
