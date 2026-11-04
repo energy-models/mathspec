@@ -95,7 +95,7 @@ parameters:
       (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an
       annuity over `lifetime` at `discount_rate`, times `nyears`, where
       `overnight_cost` is given, and `capital_cost` where it is not. Both add
-      `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`)
+      `fom_cost` (`components.py:1128-1149`, `costs.py:102-203`)
     dims: [scenario, transformer]
   Transformer_s_nom_set:
     description: a given nominal apparent power for an extendable transformer. One without a value has no row here
@@ -141,8 +141,8 @@ parameters:
       whether a transformer's phase shift is a decision (PyPSA's
       `phase_shift_min < phase_shift_max`, read as a flag in data prep). False
       is a fixed shift, set by `phase_shift`. The shift parameters have no
-      scenario, but PyPSA reads them per scenario (`variables.py:433-443`,
-      `constraints.py:1652`, `:1735`). The spec and PyPSA differ here (#783)
+      scenario, but PyPSA reads them per scenario (`variables.py:447-457`,
+      `constraints.py:1645`, `:1728`). The spec and PyPSA differ here (#783)
     dims: [transformer]
     dtype: bool
   Transformer_phase_shift_min:

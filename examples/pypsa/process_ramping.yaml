@@ -8,6 +8,7 @@ given:
     Process_committable: { dims: [process], dtype: bool }
     Process_status_initial: { dims: [scenario, process], dtype: int }
     Process_p_nom_mod: { dims: [process] }
+    Process_modules_installed: { dims: [scenario, process] }
     Process_big_m: { dims: [scenario, process] }
     Process_active: { dims: [snapshot, process], dtype: bool }
   variables:
@@ -72,9 +73,19 @@ parameters:
 expressions:
   Process_previous_p:
     description: >-
-      the internal power a process carries into a snapshot. At the first, it
-      is the `p_init` it brought in where it came in running, and nothing
-      where it came in off. After that, it is the previous snapshot's
+      the output a process carries into a snapshot. It is nothing at the first
+      snapshot it is active in past the first of the horizon: PyPSA fills an
+      output it did not build with zero (`constraints.py:665`). It is the
+      output carried over otherwise
+    dims: [scenario, snapshot, process]
+    cases:
+      opening_late: { when: "position(snapshot) > 0 AND NOT shift(Process_active, along=snapshot, offset=1)", expression: 0 }
+    otherwise: Process_p_carried_over
+  Process_p_carried_over:
+    description: >-
+      the output a process carries over into a snapshot. At the first, it is
+      the `p_init` it brought in where it came in running, and nothing where
+      it came in off. After that, it is the previous snapshot's
     dims: [scenario, snapshot, process]
     cases:
       opening: { when: "position(snapshot) == 0", expression: Process_status_initial * Process_p_init }
@@ -113,6 +124,18 @@ expressions:
     cases:
       given: { when: Process_ramp_limit_shut_down, expression: Process_ramp_limit_shut_down }
     otherwise: 1
+  Process_ramp_previous_status:
+    description: >-
+      the status a committed process's ramp rows carry into a snapshot. At the
+      first snapshot, a fixed modular process that came in running has every
+      module on, since the state it brought in is on or off
+      (`constraints.py:1078-1083`). It is the state carried in otherwise
+    dims: [scenario, snapshot, process]
+    cases:
+      opening_modules:
+        when: "position(snapshot) == 0 AND NOT Process_p_nom_extendable AND Process_p_nom_mod > 0"
+        expression: Process_status_initial * Process_modules_installed
+    otherwise: Process_previous_status
   Process_ramp_up_allowance:
     description: >-
       how far a process may raise internal power between two snapshots. It is
@@ -123,9 +146,9 @@ expressions:
       committed:
         when: Process_committable
         expression: >-
-          Process_ramp_up_rate * Process_p_nom_committed * Process_previous_status
+          Process_ramp_up_rate * Process_p_nom_committed * Process_ramp_previous_status
           + Process_start_up_rate * Process_p_nom_committed
-          * (Process_status - Process_previous_status)
+          * (Process_status - Process_ramp_previous_status)
     otherwise: Process_ramp_up_rate * Process_p_nom_effective
   Process_ramp_down_allowance:
     description: >-
@@ -139,7 +162,7 @@ expressions:
         expression: >-
           Process_ramp_down_rate * Process_p_nom_committed * Process_status
           + Process_shut_down_rate * Process_p_nom_committed
-          * (Process_previous_status - Process_status)
+          * (Process_ramp_previous_status - Process_status)
     otherwise: Process_ramp_down_rate * Process_p_nom_effective
 
 conditions:
@@ -235,19 +258,3 @@ constraints:
       AND Process_ramps_from_previous
       AND Process_active
     expression: Process_previous_p - Process_p <= Process_ramp_down_allowance
-
-assumptions:
-  Process_came_in_running_unless_committable:
-    holds: "Process_status_initial == 1"
-    where: "NOT Process_committable AND (Process_ramp_limit_up OR Process_ramp_limit_down OR Process_ramp_limit_start_up OR Process_ramp_limit_shut_down)"
-    description: >-
-      PyPSA reads `up_time_before` of a process that is not committable in its
-      ramp rows (`constraints.py:1018-1019`). A ramp limit, a start-up ramp or
-      a shut-down ramp alone builds those rows. Where it is zero, PyPSA builds
-      a row at the first snapshot with nothing carried in
-      (`constraints.py:1063-1066`, `1082-1084`). It caps the process there at
-      zero, or at its start-up ramp where another process of the component is
-      committable with a fixed build. PyPSA documents the attribute as read
-      only for a committable process and does not check it. PyPSA has not
-      decided which row is intended (PyPSA/PyPSA#1943). The spec does not
-      state that row, and a tool refuses such data through this assumption
