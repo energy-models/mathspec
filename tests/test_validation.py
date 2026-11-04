@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from pydantic import ValidationError
 
 from mathspec._resolution import Namespace
 from mathspec._typesetting import FORMATS, to_markdown, typeset, typeset_line
@@ -19,6 +20,7 @@ from mathspec._validation import to_spec
 from mathspec._yaml import parse_yaml, read_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
 from mathspec.program import DimensionPosition
+from mathspec.spec import DimensionSpec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SMALL_MODEL, spec_of, varied, where_of
 
 if TYPE_CHECKING:
@@ -461,6 +463,119 @@ class TestDimensionKwargs:
         message = _refusal(SMALL_MODEL, **patch)
         for fragment in fragments:
             assert fragment in message, message
+
+
+_ONE_OF = {'dimensions.h': {'one_of': ['north', 'south']}}
+
+
+class TestADimensionWithOneOf:
+    """A dimension that lists its labels under ``one_of`` refuses a condition naming another (#519).
+
+    Before, ``carrier == 'gnrtr'`` loaded and compared equal to nothing, so a
+    misspelt label emptied the mask without a word.
+    """
+
+    @pytest.mark.parametrize(
+        'patch',
+        [
+            pytest.param({'variables.r.where': "h == 'west'"}, id='a-dimension-equal-to-a-label'),
+            pytest.param({'variables.r.where': "h != 'west'"}, id='a-dimension-not-equal-to-a-label'),
+            pytest.param({'variables.r.where': 'h == west'}, id='an-unquoted-label'),
+            pytest.param({'variables.p.where': "lk == 'west'"}, id='a-relation-column-over-the-dimension'),
+            pytest.param({'variables.p.where': "lk[h] != 'west'"}, id='a-named-relation-column'),
+            pytest.param({'conditions.west': "h == 'west'"}, id='a-named-condition'),
+            pytest.param({'assumptions.west': {'holds': "lk != 'west'"}}, id='an-assumption'),
+        ],
+    )
+    def test_a_label_not_in_one_of_is_refused(self, patch):
+        message = _refusal(**_ONE_OF, **patch)
+        assert "'west' is not a label of 'h', which allows only ['north', 'south']" in message, message
+        assert "add 'west' to the one_of of 'h'" in message, message
+
+    @pytest.mark.parametrize(
+        'patch',
+        [
+            pytest.param({'variables.r.where': "h == 'north'"}, id='a-dimension'),
+            pytest.param({'variables.p.where': 'lk != south'}, id='a-relation-column'),
+        ],
+    )
+    def test_a_label_in_one_of_is_admitted(self, patch):
+        _spec(**_ONE_OF, **patch)
+
+    @pytest.mark.parametrize(
+        ('entry', 'refusal'),
+        [
+            pytest.param(
+                {'one_of': []},
+                'dimensions.h.one_of: lists no label. List at least one, or leave one_of out.',
+                id='no-label',
+            ),
+            pytest.param(
+                {'one_of': ['north', 'north']},
+                "dimensions.h.one_of: lists 'north' twice. List each label once.",
+                id='a-duplicate',
+            ),
+            pytest.param(
+                {'one_of': [2030, 'north']},
+                "dimensions.h.one_of: takes only strings, and 2030 is not one. Quote it: '2030'.",
+                id='a-number',
+            ),
+            pytest.param(
+                {'dtype': 'int', 'one_of': ['north']},
+                'dimensions.h.one_of: is on a dimension of dtype int, and one_of takes only str labels. '
+                'Write dtype: str, or leave one_of out.',
+                id='a-dtype-other-than-str',
+            ),
+            pytest.param(
+                {'dtype': 'int', 'one_of': [2030, 2040]},
+                'dimensions.h.one_of: is on a dimension of dtype int, and one_of takes only str labels. '
+                'Write dtype: str, or leave one_of out.',
+                id='int-labels-on-an-int-dimension',
+            ),
+        ],
+    )
+    def test_a_mistake_in_one_of_is_refused(self, entry, refusal):
+        assert _refusal(**{'dimensions.h': entry}) == refusal
+
+    @pytest.mark.parametrize(
+        ('labels', 'refusal'),
+        [
+            pytest.param(('north', 'north'), "lists 'north' twice", id='a-duplicate'),
+            pytest.param((), 'lists no label', id='no-label'),
+        ],
+    )
+    def test_a_one_of_built_in_python_is_held_to_the_same_rules(self, labels, refusal):
+        """A tuple passed to ``DimensionSpec`` skipped the checks that a YAML list gets, so a duplicate loaded."""
+        with pytest.raises(ValidationError, match=refusal):
+            DimensionSpec(one_of=labels)
+
+    def test_the_program_carries_one_of_and_the_dtype_str(self):
+        dimension = _spec(**_ONE_OF).program.dimensions['h']
+        assert (dimension.dtype, dimension.one_of) == ('str', ('north', 'south')), (
+            'the labels in file order, and str wherever a dtype is read'
+        )
+
+    @pytest.mark.parametrize(
+        ('where', 'refusal'),
+        [
+            pytest.param('h == 3', 'matches no label', id='a-number'),
+            pytest.param("h > 'north'", 'on which > is not defined', id='an-inequality'),
+        ],
+    )
+    def test_a_dimension_with_one_of_keeps_every_str_rule(self, where, refusal):
+        assert refusal in _refusal(**_ONE_OF, **{'variables.r.where': where})
+
+    @pytest.mark.parametrize(
+        'entry',
+        [
+            pytest.param({'one_of': ['north', 'south']}, id='a-one-of'),
+            pytest.param({'dtype': 'str'}, id='no-one-of'),
+        ],
+    )
+    def test_the_spec_written_back_out_reads_as_itself(self, entry):
+        spec = _spec(**{'dimensions.h': entry})
+        assert to_spec(parse_yaml(spec.to_yaml())) == spec
+        assert ('one_of' in spec.to_yaml()) == ('one_of' in entry), 'one_of is written only where the file lists one'
 
 
 class TestAnUndeclaredKeywordIsRefusedOnce:
@@ -2828,7 +2943,7 @@ def test_a_divisor_that_reads_a_missing_row_as_zero_is_refused(section):
     `c` loaded and divided by zero all the same.
     """
     message = _refusal(**{'parameters.c.missing': 0, **section})
-    assert "reads 'c', which is declared missing: 0, so a missing row of 'c' makes the divisor 0" in message
+    assert "contains 'c', which is declared missing: 0, so a missing row of 'c' makes the divisor 0" in message
     assert 'Declare missing: refused, absent, or a value other than 0' in message, 'the refusal names the rewrite'
 
 
@@ -2990,7 +3105,7 @@ def test_a_divisor_guarded_against_a_missing_row_loads(section):
 )
 def test_a_guard_that_leaves_a_missing_row_in_does_not_spare_the_divisor(section):
     message = _refusal(**{'parameters.c.missing': 0, **section})
-    assert "reads 'c', which is declared missing: 0, so a missing row of 'c' makes the divisor 0" in message
+    assert "contains 'c', which is declared missing: 0, so a missing row of 'c' makes the divisor 0" in message
 
 
 #: One dimension every construct below reads the order of, and a breakpoint
@@ -3129,3 +3244,60 @@ _ROW = {'dims': ['snapshot'], 'expression': 'sum(dispatch, over=generator) >= lo
 def test_a_row_a_set_a_curve_and_an_assumption_sit_outside_the_flat_namespace(patch):
     """What the language reference states under name resolution: none of these four is read by a bare name."""
     spec_of(EXAMPLES / 'sos.yaml', **patch)
+
+
+#: The shift a divisor below is 0 at the edge of, wherever it stands in the divisor.
+EDGE_ZERO = 'shift(c, along=g, offset=1, edge=0)'
+
+
+@pytest.mark.parametrize(
+    ('divisor', 'patch'),
+    [
+        pytest.param(EDGE_ZERO, {}, id='the-shift'),
+        pytest.param('shift(c, along=g, offset=-1, edge=0)', {}, id='a-shift-ahead'),
+        pytest.param(f'2 * {EDGE_ZERO}', {}, id='a-factor'),
+        pytest.param(f'-{EDGE_ZERO}', {}, id='negated'),
+        pytest.param(f'{EDGE_ZERO} / 2', {}, id='a-numerator'),
+        pytest.param(f'{EDGE_ZERO} ** 2', {}, id='a-base'),
+        pytest.param(f'sum({EDGE_ZERO}, over=g)', {}, id='summed'),
+        pytest.param(f'shift({EDGE_ZERO}, along=g, offset=1, edge=1)', {}, id='shifted-again'),
+        pytest.param(f'{EDGE_ZERO} + {EDGE_ZERO}', {}, id='every-addend'),
+        pytest.param('e', {'expressions.e': EDGE_ZERO}, id='a-named-expression'),
+        pytest.param(
+            'e',
+            {
+                'expressions.e': {
+                    'dims': ['g'],
+                    'cases': {'on': {'when': 'flag', 'expression': EDGE_ZERO}},
+                    'otherwise': '1',
+                }
+            },
+            id='a-case',
+        ),
+        pytest.param(
+            'at(shift(d, along=h, offset=1, edge=0), by=lk[h])', {'parameters.d': {'dims': ['h']}}, id='a-lookup'
+        ),
+    ],
+)
+def test_a_divisor_a_shift_fills_with_zero_is_refused(divisor, patch):
+    """`shift(c, edge=0)` loaded as a divisor, so the row at the edge divided by the 0 that `edge=0` stands for."""
+    message = _refusal(**patch, **{'constraints.cap': {'dims': ['g'], 'expression': f'p / ({divisor}) <= 1'}})
+    vacates = (
+        'the divisor is 0 where shift(along=g, edge=0) vacates',
+        'the divisor is 0 where shift(along=h, edge=0) vacates',
+    )
+    assert any(v in message for v in vacates), message
+    assert "Write edge='wrap', or an edge= value other than 0" in message, 'the refusal names the rewrite'
+
+
+@pytest.mark.parametrize(
+    'divisor',
+    [
+        pytest.param('shift(c, along=g, offset=1, edge=1)', id='another-edge'),
+        pytest.param("shift(c, along=g, offset=1, edge='wrap')", id='a-wrap'),
+        pytest.param('shift(c, along=g, offset=1, edge=0) + 1', id='an-addend-the-edge-does-not-zero'),
+    ],
+)
+def test_a_divisor_a_shift_fills_with_another_value_loads(divisor):
+    spec = to_spec(varied(SMALL_MODEL, **{'constraints.cap': {'dims': ['g'], 'expression': f'p / ({divisor}) <= 1'}}))
+    assert 'cap' in spec.program.constraints

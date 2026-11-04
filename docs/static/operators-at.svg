@@ -1,0 +1,72 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 250" width="520" height="250" style="max-width: 100%; height: auto" role="img" aria-labelledby="oat-t oat-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="oat-t">at reads one bus value once for each line at that bus</title>
+  <desc id="oat-d">The variable build has one row per bus, north and south. The relation line_bus puts lines l1 and l2 on bus north and line l3 on bus south. at of build by line_bus bus has one row per line: l1 and l2 both read build at north, and l3 reads build at south.</desc>
+  <defs>
+    <marker id="oat-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,62 V43 A3,3 0 0 1 19,40 H123 A3,3 0 0 1 126,43 V62 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M16,62 H126 V101 A3,3 0 0 1 123,104 H19 A3,3 0 0 1 16,101 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,172 V153 A3,3 0 0 1 19,150 H163 A3,3 0 0 1 166,153 V172 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,172 H166 V229 A3,3 0 0 1 163,232 H19 A3,3 0 0 1 16,229 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M320,132 V113 A3,3 0 0 1 323,110 H487 A3,3 0 0 1 490,113 V132 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M320,132 H490 V189 A3,3 0 0 1 487,192 H323 A3,3 0 0 1 320,189 Z" fill="#009E73" fill-opacity="0.08"/>
+  </g>
+  <text x="16" y="30" font-weight="bold" fill="currentColor">build</text>
+  <text x="60" y="30" fill="currentColor" fill-opacity="0.7">a variable</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="24" y="54" font-weight="bold">bus</text>
+    <text x="24" y="78">north</text>
+    <text x="24" y="96">south</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="40" width="110" height="64" rx="3"/>
+    <line x1="16" y1="62" x2="126" y2="62"/>
+  </g>
+  <text x="16" y="140" font-weight="bold" fill="currentColor">line_bus</text>
+  <text x="81" y="140" fill="currentColor" fill-opacity="0.7">a relation</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="24" y="164" font-weight="bold">line</text>
+    <text x="80" y="164" font-weight="bold">bus</text>
+    <text x="24" y="188">l1</text>
+    <text x="80" y="188">north</text>
+    <text x="24" y="206">l2</text>
+    <text x="80" y="206">north</text>
+    <text x="24" y="224">l3</text>
+    <text x="80" y="224">south</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="150" width="150" height="82" rx="3"/>
+    <line x1="16" y1="172" x2="166" y2="172"/>
+  </g>
+  <text x="320" y="84" fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">at(build, by=line_bus[bus])</text>
+  <text x="320" y="100" fill="currentColor" font-size="12" fill-opacity="0.7">an expression, one row per line</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="328" y="124" font-weight="bold">line</text>
+    <text x="384" y="124" font-weight="bold">value</text>
+    <text x="328" y="148">l1</text>
+    <text x="384" y="148">build[north]</text>
+    <text x="328" y="166">l2</text>
+    <text x="384" y="166">build[north]</text>
+    <text x="328" y="184">l3</text>
+    <text x="384" y="184">build[south]</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="320" y="110" width="170" height="82" rx="3"/>
+    <line x1="320" y1="132" x2="490" y2="132"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#oat-arrow)">
+    <path d="M136,74 C220,74 230,142 290,142 H312"/>
+    <path d="M176,191 C240,191 250,166 290,166 H312"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="176" y="70">read at bus</text>
+    <text x="190" y="214">one row per line</text>
+  </g>
+</svg>

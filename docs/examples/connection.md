@@ -12,7 +12,7 @@ may attach to the same bus.
 
 `efficiency` is declared over every unit, port and snapshot, but its `where:`
 keeps only the output ports, and `missing: 1` fills only those
-([a parameter's mask](../reference/language/parameters-variables-constraints.md#a-parameters-mask)).
+([a parameter's mask](../reference/language/parameters-variables-constraints.md#where)).
 Outside `connection`, `injection` is absent, so `balance` adds up only the ports
 that attach to each bus.
 

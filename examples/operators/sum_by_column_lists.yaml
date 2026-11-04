@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  Several columns at each end — `sum(array, over=[dim, …], by=relation[c, …])`
-  joins on both key columns and groups by both value columns, all in one join.
+  Several key and value columns: `sum(array, over=[dim, …], by=relation[c, …])`
+  joins on both key columns and groups by both value columns.
 
 dimensions:
   generator: { dtype: str }
