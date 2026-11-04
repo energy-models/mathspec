@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  Cyclic translation — the horizon closed on itself, so the first position
-  reads the last and nothing is vacated.
+  A cyclic shift: the horizon wraps, so the first position takes the value of
+  the last and no position is vacated.
 
 dimensions:
   snapshot: { dtype: int, ordered: true }

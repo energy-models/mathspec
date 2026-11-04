@@ -18,7 +18,7 @@ CHANGELOG.md
 docs/examples/dispatch.md
 docs/examples/commitment.md
 docs/examples/operators.md
-docs/examples/pypsa.md
+docs/examples/pypsa_ladder.md
 docs/examples/pypsa_linearized_uc.md
 docs/examples/library/surface.md
 docs/examples/library/generator.md
@@ -50,3 +50,8 @@ docs/reference/notation.md
 # generated part is a block among hand-written prose wants — the pages above
 # are generated nearly end to end, so listing them is the shorter answer.
 docs/reference/language/operators.md
+
+# The all-contributors bot rewrites this file in its own layout on every
+# contributor it adds, and prettier would collapse the arrays back. The bot
+# owns the file, so prettier leaves it alone.
+.all-contributorsrc

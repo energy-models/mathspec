@@ -5,112 +5,161 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The limits of the language
 
-A spec can only say what the language has words for. This page says which words
-can be added, and which cannot. Read it before you ask for a new operator, section
-or keyword. For the rules a spec itself has to obey, read
-[the eleven rules](../reference/language/index.md#the-eleven-rules).
+This page describes which constructs can be added to the language and who
+adds each, which requests mathspec refuses, and what you write instead. The
+[language index](../reference/language/index.md#the-eleven-rules) lists the rules that the specification of an optimisation model
+([a spec](../reference/glossary.md#spec)) must obey.
 
-## Adding a new construct
+## New constructs
 
-New constructs can be added, although the overhead to do so varies by kind.
+A new construct is one of four kinds, and mathspec refuses a construct of any
+other kind. The kinds differ in who must do the work. It falls on the author of a file,
+the developers of mathspec, or the developers of each piece of software that builds
+models ([an engine](../reference/glossary.md#tool)).
 
-- **A macro** is a template with arguments, written in the file under `macros:`.
-  Adding one costs nothing: it uses only operators that exist, so no engine has
-  to change ([macros](../reference/language/named.md#macros)).
-- **A primitive** is an operator built into the language: `sum`, `sum_back`,
-  `at`, `shift`, and the comparisons in a condition. Adding one is the most work:
-  every engine that builds models has to implement it, and the typesetter has
-  to print it in LaTeX, Typst and Markdown.
-- **A formulation** is an entry that expands into ordinary variables and
-  constraints before the model is built. `piecewise:` and `sos:` are the two
-  formulations. A formulation is as much work to build as a primitive, but a
-  file combines it with other constructs as freely as a macro. It emits
-  variables, constraints and assumptions, and no parameter, so
-  [`spec.expand()`](../reference/language/piecewise.md#writing-a-formulation-out)
-  writes it out with the data the spec already expects.
-- **A section** is a top-level key that holds entries of one kind, such as
-  `variables:` or `given:`. A new section enters when all three of these are
-  true: it states something no other section states, a file decides it without
-  data, and the typesetter prints it. `given:` met all three. It is the only
-  section that says a parameter, a column, a named expression or a row family
-  belongs to another file, which lets a component file load and print on its
-  own.
+An [**operator**](../reference/language/operators.md), such as `sum` or
+`shift`, is built into the language, and no file can add one. Only the
+developers of mathspec add one, and a new operator is the most work. Every
+engine must implement it, and the [typesetter](../reference/typeset.md) must
+print it in LaTeX, in the typesetting system [Typst](https://typst.app), and
+in Markdown.
 
-No other constructs are possible.
-See our [table of refusals](#requests-the-language-refuses) for our justification for this decision.
+A closed set of operators is better here than a set that a file or a plugin
+can extend. With a closed set, every piece of software that reads a spec
+([a tool](../reference/glossary.md#tool)) can read every file. Suppose that a modeller writes a `roll` operator as a
+Python function. The engine that has the function builds the model, but the
+typesetter cannot print `roll`. Software that reads a spec without data
+([a checker](../reference/glossary.md#tool)) cannot load the file either. A template substituted into an expression
+([a macro](../reference/language/named.md#macros)) does most of what such a
+function would do.
 
-### What a new primitive has to satisfy
+A new operator must meet the conditions that the
+[contributing guide](../contributing.md#what-a-new-operator-has-to-satisfy)
+lists. The first two exist so that a macro can call every operator, and so
+that an engine can build every model in chunks. A macro passes on what a
+modeller writes only as the value of a keyword argument. So an operator that
+takes everything in that form is one that a macro can call.
 
-A macro must be able to call a new primitive, so everything a modeller can pass
-in goes in the value of a keyword argument, such as `over=snapshot`.
+An engine builds the model one chunk of rows at a time. For each row of its
+result, `sum(p, over=g)` reads one row per generator, and
+`shift(p, along=t, offset=1)` reads the row before. Chunks work only because
+every operator reads a bounded number of rows for each row of its result.
 
-An operator must say how many rows it reads for each output row.
-`sum(p, over=g)` reads one row per generator, and `shift(p, along=t, offset=1)`
-reads the row before. Each reads a bounded number of rows per output row, so an
-engine builds the model one chunk of rows at a time. An operator that calls itself is refused, because
-nothing bounds how far it expands.
+mathspec refuses a macro that calls itself, because nothing bounds how far it
+expands. A new operator must not call itself, for the same reason.
 
-| The operator                                     | Allowed?                                        |
-| ------------------------------------------------ | ----------------------------------------------- |
-| filters rows on a column they already carry      | yes                                             |
-| joins each row against a parameter or a relation | yes                                             |
-| reads a fixed number of neighbouring rows        | yes                                             |
-| reads only the coordinate labels                 | yes                                             |
-| reads every row                                  | yes, at one full pass before any chunk builds   |
-| calls itself                                     | no, and the message names what to write instead |
+mathspec accepts a new operator whatever the highest power of a variable in
+its result ([its degree](../reference/language/expressions.md#division-and-powers)),
+because the [product rule](../reference/language/expressions.md#where-a-product-of-two-variables-is-allowed)
+applies to every operator.
 
-The degree of the result does not decide whether a new primitive is allowed,
-because the
-[product rule](../reference/language/expressions.md#where-a-product-of-two-variables-is-allowed)
-holds for every operator.
+A macro, a formulation and a section are the other three kinds:
 
-A new primitive is finished when the loader lowers it into the program, the
-typesetter prints it in all three formats, and an engine's build of a spec that uses it matches
-its build of the same spec written out by hand.
+- A file declares a macro under
+  [`macros:`](../reference/language/named.md#macros). A new macro
+  needs no change to any engine, because a macro uses only operators that
+  exist.
+- A [**formulation**](../reference/language/piecewise.md) is an entry that
+  expands into ordinary variables and constraints before the model is built.
+  Only the developers of mathspec add one, and the work falls on mathspec. An
+  engine that cannot accept a formulation may build from its
+  [expansion](../reference/reading.md#formulations-written-out) instead. In a file, you can
+  combine a formulation with other constructs as you can a macro. When mathspec expands a formulation, it adds no parameter, so
+  [`spec.expand()`](../reference/spec.md#mathspec.spec.Spec.expand) needs no
+  data beyond the tables that the spec already declares.
+- A **section** is a top-level key of a spec file, such as `variables:`. Only the developers of mathspec add one. A new section must
+  meet three conditions. It states something that no other section states,
+  mathspec can check its entries without data, and the typesetter prints
+  them. The
+  [`given:`](../reference/language/parameters-variables-constraints.md#given)
+  section, which lists entries that another file of the spec
+  ([a fragment](../reference/glossary.md#fragment)) declares, meets all three.
 
-### Three kinds of refusal
+## What mathspec refuses
 
-| The language refuses it because…           | Examples                                                                                                                          | Can it change?                             |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| **one solver cannot take it**              | indicator constraints; a quadratic constraint ([solver capability](what-counts-as-language.md#what-each-tool-decides-for-itself)) | yes, solver by solver                      |
-| **the file would stop being the artifact** | arbitrary Python, whose content no loader can check and no typesetter can print                                                   | no                                         |
-| **this project puts the work elsewhere**   | data preparation such as resampling; helpers for one domain; Python that decides which entries exist                              | it could; this project does not want it to |
+mathspec refuses a request for one of four reasons. They are solver
+capability, meaning that needs data or code, a construct the language already
+has, and a computation on the data.
 
-## What counts as data preparation
+### Solver capability
 
-Once attached, a column computed in pandas looks the same as a column the
-language could derive. One rule tells them apart:
+mathspec refuses a construct that only some solvers take, or that no solver
+takes, so that every engine can build every file. This limit changes as
+solvers change.
 
-> Data preparation computes what the spec cannot state. The language derives
-> what it can from the data the spec already expects.
+| Request                                                             | Why refused                                                                                    | What you write instead                                                            |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Indicator constraints, which apply only when a binary variable is 1 | Only some solvers take them.                                                                   | A linear constraint. Every solver takes one.                                      |
+| Normalisation, `x / sum(x)`                                         | A quotient with a variable divisor is not linear, and no linear or quadratic solver takes one. | A constraint on the ratio, or a parameter as the divisor. Both are linear in `x`. |
 
-A cycle basis is the first kind, because it needs the network's topology and
-only the data has that. So `cycle_incidence` arrives as a parameter. A minimum
-up time is the second kind, because `min_up_time` is a column the spec already
-expects. So `sum_back(window=min_up_time)` reads the width from the column, and
-you supply no window mask.
+### Meaning that needs data or code
 
-Checking a column is neither kind. Two tools that read the spec must not
-answer `p_min <= p_max` differently, so the file states the check as
-[an assumption](../reference/language/assumptions.md), and the tool that
-attaches the numbers runs it.
+mathspec refuses a request when [`to_spec`](../reference/api.md#mathspec.to_spec)
+could no longer read the file without data or without running code. This
+limit does not depend on what solvers take.
 
-## Requests the language refuses
+| Request                                                      | Why refused                                                                                                                            | What you write instead                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Arbitrary Python                                             | mathspec cannot check it, and the typesetter cannot print it.                                                                          | A [macro](../reference/language/named.md#macros), or [data preparation](#data-preparation). You compute in data preparation what the language cannot state.                                                                                                                                                                        |
+| `**` with a variable in the base or the exponent             | mathspec reads [the degree](../reference/language/expressions.md#division-and-powers) only from a product written out.                 | A product written out, such as `x * x` for a square. `**` over parameters and numbers loads.                                                                                                                                                                                                                                       |
+| An `if`, a loop, or entries that depend on the data          | The rows of an entry would depend on values known only when the data is attached.                                                      | The dimensions under `dims:` and a [`where:`](../reference/language/absence.md#where) condition. Together they set which rows an entry has, and a tool may loop over specs.                                                                                                                                                        |
+| A `count(...)` compared against a parameter or an expression | Only a tool with the data attached can check a bound that a [`count`](../reference/language/expressions.md#count) takes from a column. | A parameter from data preparation. The [example for the energy system framework PyPSA](../examples/pypsa_ladder.md) declares `StorageUnit_inactive_snapshots` and `Store_inactive_snapshots`, and has no assumption that compares them with `count(NOT {c}_active, over=snapshot)`. A count compared against a whole number loads. |
 
-Each row is a request the language refuses, with the reason and what to write
-instead.
+### Constructs the language already has
 
-| Request                                                                                      | Why refused                                                                                                                                                                                               | Instead                                                                                                                                                                                                                                                                                                                                                |
-| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Resampling, clustering, file IO, unit conversion                                             | not math                                                                                                                                                                                                  | do it in data preparation, and pass a parameter                                                                                                                                                                                                                                                                                                        |
-| Unit checking at load                                                                        | a `unit: MW` on a parameter is a claim that nothing checks against the column, and it needs a grammar of units the language then maintains                                                                | convert to one unit system in data preparation, and name it in the `description:`. A range the data has to meet is an [`assumptions:`](../reference/language/assumptions.md) entry                                                                                                                                                                     |
-| Array operations such as `merge` and `reindex`                                               | there is no end to them                                                                                                                                                                                   | data preparation                                                                                                                                                                                                                                                                                                                                       |
-| Helpers for one domain, such as `reduce_carrier_dim`                                         | writes one field's vocabulary into the language                                                                                                                                                           | a component library of macros over the operators that exist                                                                                                                                                                                                                                                                                            |
-| A vocabulary for tracked metrics: `impacts:`, `effects:`, a `costs` axis                     | a named expression already does this                                                                                                                                                                      | an `impact` dimension and one named expression. Cap it with a constraint, weight it in the objective, read it back after the solve                                                                                                                                                                                                                     |
-| `**` with a variable in the base or the exponent                                             | the exponent would decide the degree, and `to_spec` reads no data                                                                                                                                         | `x * x` for a square. `**` over parameters and numbers is allowed                                                                                                                                                                                                                                                                                      |
-| Normalisation, `x / sum(x)`                                                                  | dividing by a variable is not a polynomial, and no solver takes it                                                                                                                                        | write the ratio as a constraint, or fix the denominator                                                                                                                                                                                                                                                                                                |
-| An `if`, a loop, or entries that depend on the data                                          | `to_spec` could no longer read the file without the data                                                                                                                                                  | `where:` masks and `dims:` dimensions. A tool may loop over specs                                                                                                                                                                                                                                                                                      |
-| A Python API for building specs                                                              | the spec is the file you review and diff                                                                                                                                                                  | YAML, or a `dict` with the same keys, merged before `to_spec`                                                                                                                                                                                                                                                                                          |
-| A `where` comparing a relation column against the dimension it maps into                     | the relation already pairs the two, and a mask over the pair is the same fact in a bigger shape                                                                                                           | place the quantity with `sum(by=)`, or read it with `at(by=)` ([operators](../reference/language/operators.md#sum))                                                                                                                                                                                                                                    |
-| A `join` operator apart from `sum` and `at`, such as `sum(join(p, gen_bus), over=generator)` | a join adds an axis for each column that the sum then removes. That axis is not a dimension, so no entry can carry it. One call adds the axis and removes it again, so no file can leave an axis in place | `sum(p, over=generator, by=gen_bus[bus])` adds up each group, and `at(x, by=gen_bus[bus])` reads one row ([relations](../reference/language/relations.md#how-a-relation-is-used))                                                                                                                                                                      |
-| A `count(...)` compared against a parameter or an expression                                 | a count is a whole number of coordinates, and the loader decides it without data. A bound read from a column can only be decided when the data is attached                                                | data preparation supplies the number, and the spec trusts it. The PyPSA example does this for `StorageUnit_inactive_snapshots` and `Store_inactive_snapshots`: no assumption checks them against `count(NOT {c}_active, over=snapshot)`. Compare against a literal ([counting](../reference/language/expressions.md#counting-what-a-condition-admits)) |
+mathspec refuses a request when a construct that exists already states the
+same thing.
+
+| Request                                                                                                                                         | Why refused                                                                                                         | What you write instead                                                                                                                                                                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A `where` comparing a column of a table that pairs labels ([a relation](../reference/language/relations.md)) against the dimension it maps into | Two dimensions cannot be compared, so mathspec refuses the comparison. The relation already lists each pair.        | A sum or a lookup through the relation. `sum(x, over=d, by=relation[c])` adds each value of `x` to the coordinate that the relation lists for it, and `at(x, by=relation[c])` takes the value at that coordinate ([operators](../reference/language/operators.md#sum)). |
+| A vocabulary for tracked metrics: `impacts:`, `effects:`, a `costs` dimension                                                                   | A tracked metric is already a [named expression](../reference/language/named.md#expressions).                       | An `impact` dimension and one named expression. A constraint can cap the expression, the objective can weight it, and a tool reads it back after the solver runs.                                                                                                       |
+| Helpers for one domain, such as `reduce_carrier_dim`                                                                                            | A macro already states a helper.                                                                                    | A [component library](../examples/library/index.md) of macros. Its macros use only the operators that exist.                                                                                                                                                            |
+| A Python application programming interface (API) for building specs                                                                             | The file is already the API, and the file is what you review and diff.                                              | YAML, or a `dict` with the same keys. A tool can combine dicts before it calls `to_spec`.                                                                                                                                                                               |
+| A `join` operator apart from `sum` and `at`, such as `sum(join(p, gen_bus), over=generator)`                                                    | [`sum(by=)` and `at(by=)` already state a join](relations-as-linear-maps.md#why-the-language-has-no-join-operator). | A sum or a lookup with `by=`, as in the first row.                                                                                                                                                                                                                      |
+
+### Data preparation
+
+mathspec refuses a request that changes the tables themselves, such as
+resampling a time series. You make that change before the data is attached, in
+the work that turns raw data into the tables a spec declares
+([data preparation](../reference/glossary.md#data-preparation)).
+
+Once the data is attached, a column computed with the data-analysis library
+[pandas](https://pandas.pydata.org) and a column computed by an expression look
+the same. So mathspec sets one rule for where a quantity is computed. A
+quantity that an expression can compute from other parameters belongs in the
+spec. A quantity that no expression can compute, such as the result of a search
+over a network, comes from data preparation.
+
+The set of independent loops in a network (a cycle basis) belongs in data
+preparation. A cycle basis requires the topology of the network, and only the
+data contains the topology. So the spec declares `cycle_incidence` as a
+parameter.
+
+The window of the shortest time a unit stays on (its minimum up time) belongs
+in the spec.
+The spec already declares the parameter `min_up_time`. So
+[`sum_back(window=min_up_time)`](../reference/language/operators.md#sum_back)
+takes the width of each window from that parameter, and you write no `where:` to fix the width.
+
+A check on a column, such as `p_min <= p_max`, is a condition on the data
+([an assumption](../reference/language/assumptions.md)). Every tool that reads
+the spec must get the same result from the check. So the spec states the check as an
+assumption, and the engine that attaches the data runs it.
+
+| Request                                                                                         | Why refused                                                                                                  | What you write instead                                                                                                                                                                   |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Resampling, clustering, file input and output, unit conversion, combining and reindexing tables | Each one changes the tables themselves, which the spec only declares. The list has no end.                   | Data preparation. The spec declares the result as a parameter.                                                                                                                           |
+| Unit checking at load                                                                           | mathspec would need a grammar of units to check them. You already apply the units when you convert the data. | One unit system from data preparation. The `description:` states the system, and an [`assumptions:`](../reference/language/assumptions.md) entry states a range that the data must meet. |
+
+You can now judge whether a request is a macro, a change to mathspec, a parameter from data preparation, or a refused request.
+
+!!! info "See also"
+
+    - [what counts as language](what-counts-as-language.md), for the meanings
+      that the language defines once for every tool
+    - [why the language has no join operator](relations-as-linear-maps.md#why-the-language-has-no-join-operator),
+      for the refused `join` operator
+    - [what each tool decides for itself](what-counts-as-language.md#what-each-tool-decides-for-itself),
+      for the refusals that a tool makes for its own solver

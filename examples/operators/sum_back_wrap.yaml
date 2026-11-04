@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  A trailing window on a representative period that repeats, so the window at
-  the first hour reaches back into the last.
+  A trailing window on a day that repeats, so the window at the first hour
+  reaches back into the last.
 
 dimensions:
   unit: { dtype: str }

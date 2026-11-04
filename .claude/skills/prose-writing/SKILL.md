@@ -1,6 +1,6 @@
 ---
 name: prose-writing
-description: House rules for any prose written in this project, aiming at Simplified Technical English (ASD-STE100) — the reader, concrete sentences, and the words to use. Use when writing or editing a Markdown page, AGENTS.md, a PR title or body, an issue, a review comment, a commit message, or an exception, warning or log message in the code.
+description: House rules for any prose written in this project — who reads it, which published style guides gate it, and the few words this project owns. Use when writing or editing a Markdown page, AGENTS.md, a PR title or body, an issue, a review comment, a commit message, or an exception, warning or log message in the code.
 ---
 
 # Writing prose here
@@ -9,254 +9,246 @@ These rules apply to every Markdown page, to `AGENTS.md` and
 [CONTRIBUTING.md](../../../CONTRIBUTING.md), to PR titles and bodies, issues,
 comments and commit messages, and to every exception, warning, advice and log
 message in `src/` and `tools/`. A documentation page also follows
-[the docs-writing skill](../docs-writing/SKILL.md). The layout of a PR body, a
-PR title and an issue is in `AGENTS.md`; this skill sets how their sentences
-read.
+[the docs-writing skill](../docs-writing/SKILL.md), which sets the shape of
+each kind of page. The layout of a PR body, a PR title and an issue is in
+`AGENTS.md`.
 
-Write the way the Python packages that NumFOCUS sponsors write their docs:
-plain declarative sentences that answer a question. Aim for Simplified
-Technical English (ASD-STE100) in the words: short common words, one meaning
-per word, and the active voice. Do not follow it so strictly that the text
-loses the words that join one idea to the next. A reader follows "because",
-"so" and "which", and stalls on a list of bare claims. In conversation, keep
-the same plainness, and put the emphasis on explaining technical subjects and mathematics so that the user
-understands them.
+This skill does not define a style of its own. It names the published guides
+that gate the prose, says which one wins where they differ, and adds the few
+facts about this project that no guide can know.
 
 ## The reader
 
-The reader of a page is a modeller who writes YAML, and who has read no other
-page in this repository. They came to find out what the language accepts, and
-what happens if they write X. A sentence that does not move that answer forward
-is cut, however true it is.
+The reader of a page is a modeller who writes YAML and has read no other page
+in this repository. They came to find out what the language accepts and what
+happens if they write X. The reader of a PR or an issue is a reviewer who has
+not seen the conversation. The reader of a PR title is a changelog reader
+with no diff. The reader of a message in the code has the file open in a
+terminal and no docs at hand.
 
-The reader of a PR or an issue is a reviewer who has not seen the conversation.
-The reader of a PR title is a changelog reader, who has no diff and none of our
-vocabulary. The same rules hold for both.
+Read the text back as that reader before you call it done. A sentence that
+does not move their answer forward is cut, however true it is.
 
-**Read the text back as that reader before you call it done.** Every sentence
-either tells them something they can act on, or goes. Text that only a
-maintainer can follow has failed, whatever rule it obeys.
+## The guides that gate the prose
 
-## The voice
+Check a page against these, in this order. Where two differ, the earlier one
+wins.
 
-Plain, direct, professional. Explain to a smart adult who does not work on
-this project. They are not stupid, they are unfamiliar.
+1. **Google developer documentation style guide**,
+   <https://developers.google.com/style>. This is the primary guide for voice,
+   tone, grammar and formatting. The parts that matter most here: write in
+   the second person and the present tense; prefer the active voice but use
+   the passive where the actor is unknown or does not matter; use sentence
+   case for headings; do not attribute human qualities to software or to
+   files, which is its rule against anthropomorphism; put conditions before
+   instructions; keep sentences and paragraphs short; use its word list for
+   contested words.
+2. **GOV.UK content design guidance**,
+   <https://www.gov.uk/guidance/content-design/writing-for-gov-uk>, and its
+   [A to Z of style](https://www.gov.uk/guidance/style-guide/a-to-z-of-gov-uk-style),
+   for plain English in British spelling: short common words, the fact
+   first, no sentence that needs reading twice, and sentence length judged
+   by the reader and not by a word count. Where the Google guide and GOV.UK
+   differ on spelling or punctuation, GOV.UK wins, because the pages are
+   British.
+3. **Diátaxis**, <https://diataxis.fr>, for the language of each kind of
+   page: imperatives in a how-to, results after every step in a tutorial,
+   neutral description in reference, argument and comparison in explanation.
+   The docs-writing skill holds the per-kind table.
+4. **The pandas documentation**, <https://pandas.pydata.org/docs>, as the
+   model of register for a Python library's docs: a concept in a sentence or
+   two, then an example, then a sentence that reads the result. Its
+   contributing guide,
+   <https://pandas.pydata.org/docs/development/contributing_documentation.html>,
+   and the numpydoc standard it follows set the shape of a docstring.
+5. **The US federal plain language guidelines**,
+   <https://www.plainlanguage.gov/guidelines>, where the Google guide is
+   silent: organise for the reader, one idea per paragraph, say it once.
 
-- **Short words.** "Use" not "utilise", "before" not "prior to", "so" not "in
-  order that". A term the language owns, such as `piecewise`, a coordinate, a
-  `where` or a macro, is never swapped for a plainer word. Everything around it
-  is.
-- **Confident and flat.** State the rule. Do not hedge with "generally",
-  "typically" or "in most cases" unless the exception is real. Then name the
-  exception instead.
-- **Never grade the language.** "Says what it means", "reads naturally", "just
-  works", "as you would expect", "powerful", "seamless", "elegant": the reader
-  can neither check nor act on any of them. They argue for a decision the text
-  has already made.
-- **No filler that blames the reader.** "Simply", "just", "of course", "as you
-  can see" and "note that" tell the reader their confusion is their fault, or
-  say nothing.
-- **Never say that something is subtle, important or the crux.** Say the thing.
-  "That boundary behaviour is the whole subtlety of the operator" asks a
-  question and leaves the reader holding it.
-- **No jokes and no asides.** A reader who hits this text is stuck, and reads it
-  in a hurry.
-- **No apology and no warning voice.** For "unfortunately", "be careful" and
-  "beware", say what happens and what to write instead.
-- **One spelling convention per page.** The tree is mixed and this skill does
-  not settle it. Match the page you are on.
+When unsure how to write a sentence, find the construct in the Google guide
+and follow it. Do not invent a house rule in its place.
 
-## Concrete before abstract
+## What this project adds
 
-A sentence can obey every rule below and still say nothing the reader can
-picture. This one does:
+A handful of facts the guides cannot know.
 
-> Where two different answers would mean the file says two different things, the
-> question belongs to the language, and one answer is allowed.
+- **Describe things with flat verbs.** A file, key, entry, table, page or
+  message does not say, read, hold, carry, own, name or stand. It is, has,
+  contains, specifies, lists, sets, states, declares, defines, describes or
+  requires. The acting verbs, such as reads, prints, builds, refuses and
+  returns, belong to real actors: mathspec, a tool, a function, a solver, or
+  the reader. A design decision is also mathspec's: "mathspec refuses
+  arbitrary Python", never "this project refuses" or "the language refuses". The language, a grammar or a page may define, describe or list
+  something, since that is what a text does. "Decides" belongs to mathspec
+  and to a tool. The language defines; a file or an entry sets; and what the
+  data settles "is known only when the data is attached".
+  Data preparation is work, not an actor: "you compute it in data
+  preparation", never "data preparation computes it". This is the Google guide's rule
+  against anthropomorphism, and it is listed here because an earlier version
+  of this skill caused the opposite habit.
+- **Define by category first.** "A term is a named expression that adds to a
+  sum another file declares." Then say what it does. A reference entry is a
+  definition, then behaviour, then its keys.
+- **Vary the joiner, and the length.** Two sentences that depend on each
+  other may share a sentence through "because", "so", "which" or "when". A
+  paragraph in which every sentence does so reads as one voice, and a
+  paragraph of eight-word sentences reads as a list. Aim for a page average
+  between 14 and 18 words, with some sentences under 10 and some near 25,
+  and treat 25 as the point past which a sentence is read twice, so 25 is
+  in and 26 is out. Link text counts as words. Judge the sentence by the
+  reader first, as GOV.UK asks, and use the numbers as a check afterwards. Where one idea per
+  sentence and the six-sentence paragraph pull against each other, keep the
+  joined sentence.
+- **One word, one meaning across the whole set of documents.** This is the
+  one rule borrowed from ASD-STE100 Simplified Technical English. The word
+  table below applies it to the words this project owns.
+- **Spelling is British** on documentation pages, because the README is, and
+  one spelling holds per page. Code, keys and quoted messages keep their own
+  spelling. No semicolons: write two sentences, or a list.
+- **A file states a spec, and a model is a spec with data.** Write "model" only
+  for what an engine builds and a solver takes, never for the file or the
+  `Spec` in hand ([glossary](../../../docs/reference/glossary.md)).
+- **Gloss every acronym and domain term at first use** on a page. The
+  explanation, in six words or fewer, runs in the sentence, and the term
+  follows it in parentheses, as the Google guide spells out an acronym before
+  it: "the specification of an optimisation model (a spec)", not "a spec (the
+  specification of an optimisation model)". Link the term to the page that
+  owns it where one exists. The
+  eleven-rules table on the
+  [language index](../../../docs/reference/language/index.md) lists which page
+  owns which rule, so a term is defined once and linked elsewhere.
+- **No history and no promises on a page.** "Previously", "renamed from" and
+  "will support" belong in git, the changelog and the history page.
+- **A number on a page is a measurement**, with the PR that measured it, as
+  `AGENTS.md` asks for numbers in the tree.
 
-Its subjects are "answers", "the question" and "one answer". Nobody in it does
-anything. The reader has to supply the engine, the renderer, the file and the
-disagreement themselves, and most will not. The same fact, written so that it
-can be pictured:
+### Words this project owns
 
-> Suppose the engine sums `p` over `generator` and the renderer prints a sum
-> over `snapshot`. The file now has two meanings, and that is a bug. The rule
-> that stops it belongs to the language.
-
-Four rules make the difference, and they come before every rule under
-[Sentences](#sentences):
-
-- **The subject of a sentence is a person, a tool or the file.** "You",
-  "the engine", "the renderer", "the solver", "`to_spec`", "the file", "the
-  table". Not "the question", "the rule", "the answer", "the construct", "the
-  limit" or "the difference". Where an abstract noun is the subject, ask who is
-  acting, and name them.
-- **Every general statement is followed by its instance, or replaced by it.** A
-  principle without an example is a sentence the reader has to trust. "Absence
-  spreads through arithmetic" is followed by `x + y` losing its row at `old`.
-  If no instance exists, the statement is cut.
-- **Write the common word.** "Decided by", not "belongs to". "Tool", not
-  "consumer", except where the term is being defined. "Is wrong", not "is a
-  bug in the contract". "Reads", "prints", "builds", "refuses". A reader who
-  knows YAML and a solver, and nothing about this project, has to follow every
-  sentence without looking anything up.
-- **Read each sentence back and ask: could the reader draw it?** A sentence
-  about a file, a table, a row or a tool, doing one thing, can be drawn. A
-  sentence about a rule owning a question cannot. Rewrite until it can.
-
-A paragraph of short abstract sentences is not plain. It is the same
-abstraction cut into pieces, and it is harder to read than one long concrete
-sentence. A run of short sentences with no joining words is hard to read for
-the same reason: the reader has to work out how each one follows from the
-last.
-
-## Sentences
-
-- **Put the fact first**, with no build-up to it. A section that builds to its
-  point makes the reader hold everything until the end.
-- **One main thought per sentence.** The em dash that carries a turn, the
-  appositive that carries a second thought and the tail that qualifies the
-  claim each read as one sentence and parse as three, so split them. Two ideas
-  that depend on each other stay in one sentence, joined by "because", "so",
-  "which" or "when": "`to_spec` refuses the file, because it reads no data" is
-  one sentence, not two. See also
-  [Concrete before abstract](#concrete-before-abstract).
-- **Every sentence has a subject and a finite verb.** A paragraph never opens
-  on a title-like fragment. "Grammar first, which is usually free because
-  `f(x, k=v)` already parses" is a caption. Write "Start with the grammar,
-  which is usually free".
-- **A colon or a dash does not excuse a missing verb.** "The probes: for each
-  operator, the smallest spec that declares it, beside the equation it
-  renders" is three noun phrases and no claim. Say who does what: "Each probe
-  declares one operator in the smallest spec that can, and prints the equation
-  beside it."
-- **Active voice, with a real subject.** "The loader refuses it before any data
-  is attached", not "the refusal comes before any data is attached".
-- **Say what happens, not what kind of thing something is.** "A model is a
-  declaration, so it prints the way a paper prints it" gives the reader nothing
-  to do. "`to_latex` prints the spec as LaTeX equations, from the file alone"
-  does. Cut any sentence that would stay true of another tool, another
-  language, or nothing at all.
-- **Do not describe the text.** "This page holds the argument in between", "Two
-  things this page is not" and "The point of putting them together is" are all
-  frames around a sentence. Write the sentence and delete the frame.
-- **Bold marks what the reader must not miss.** That is a term where the text
-  defines it, and a short phrase that changes what the sentence permits:
-  **exactly one** of two keys, **at most once** per coordinate, the vacated
-  edge is **absent**. It is never a whole sentence, and never a claim that reads
-  better written out. In `AGENTS.md`, `CONTRIBUTING.md` and the skills it also
-  names the rule that opens a list item or a paragraph.
-- **A heading names the subject, or the question the section answers.** "How a
-  new construct enters", not "Two tiers, and the limit". "Renaming and
-  deleting", not "Breaking changes are free".
-- **No metaphor the reader has to decode**: a tax, a seam, a fence, a front
-  door, a tier. Name the thing. Where a metaphor is a defined term of this
-  project with a page behind it, such as a **rung** of the examples ladder, keep
-  it, define it at first use, and do not grow a new one beside it.
-- **"When both of these are true", not "if and only if".**
-- **No fronted participles** that suspend the subject: "Having no mask to
-  narrow its frame, it is the one that…".
-- **No elided possessives**: "The dimensions of a cased one cannot", not "A
-  cased one's cannot".
-- **A pronoun names its subject again** once a clause has intervened.
-- **No double negatives, no stacked metaphors, and no relative clauses stacked
-  without _that_.**
-- **An example is the statement, so the paragraph ends on it.**
-- **`So …`, `In other words …` and `That is to say …`** earn their place only
-  where the second sentence adds the mechanism, the reason or the refusal.
-- **Say it once.** The same claim in three paragraphs is load-bearing in none.
-- **The test is subtraction.** Cover a clause and ask what the reader can no
-  longer do. No answer means cut it, and the shorter paragraph ships.
-- **A clause that points at a missing rule is replaced, not deleted.** It was
-  standing where the rule belongs.
-
-## Words
-
-**A word the reader would have to look up is either replaced, or defined in the
-sentence that first uses it.** Check it against the vocabulary that the
-NumFOCUS packages already use. Gloss every acronym and domain term at first
-use, in parentheses, in six words or fewer.
-
-**One word, one meaning across the docs.** A word that already names an
-operator cannot also name a concept: `ceiling` rounds up, so the limit of what
-the language can express is **the limit**. _dims_, _dimensions_ and _axis_ are
-three words, and a reader counts three ideas, so vary nothing for rhythm. A
-word that stands in for three ordinary words is replaced by them: `sayable` is
-_allowed_, or _written_, or _the language can express it_.
-
-| Not this              | This                                                                  |
-| --------------------- | --------------------------------------------------------------------- |
-| idempotent            | calling it again returns the same object unchanged                    |
-| the seam              | the boundary between a spec file and an engine, or name the functions |
-| the export surface    | the public API                                                        |
-| a verb                | a function, or a public function                                      |
-| the ceiling           | the limit of what the language can express, then the limit            |
-| sayable, unsayable    | allowed, written, or the language cannot express it                   |
-| a restriction lifts   | a restriction no longer applies                                       |
-| arity                 | the number of arguments                                               |
-| memoised              | cached                                                                |
-| the two-backend tax   | implemented twice, once for each backend                              |
-| the closure           | the set of constructs the language admits                             |
-| streamability         | what a build that streams its terms can carry                         |
-| a lane                | a backend                                                             |
-| affine COO rows       | rows of coefficients                                                  |
-| a differential oracle | a second implementation whose answer the test compares against        |
-| a surface             | the keys the language accepts, or name them                           |
-
-Domain terms stay, because replacing one costs the reader more than it saves:
-affine, degree, dimension, coordinate, broadcast, entry, invariant,
-agnostic, and PyPSA's own names such as `p_nom`. A cardinality constraint keeps
-its name and gains a clause that says it counts how many things are non-zero.
-
-**A word this project owns is defined where the text first uses it.** Link to
-the page that owns the term where one exists, and give the defining clause
-anyway. Shorten a clause to fit the sentence, and never drop it:
+A word that names an operator cannot also name a
+concept, so `ceiling` rounds up and the limit of what the language can express
+is _the limit_. _dims_ is a key; in prose the word is _dimensions_.
 
 | Project word  | Define it at first use as                                                                                                                        |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| a consumer    | a tool that reads a spec, such as an engine, a renderer or a checker                                                                             |
 | a tool        | a piece of software that reads a spec: an engine, a renderer, a checker. Never "a program", because `Program` is the object `to_program` returns |
-| a sink        | whatever a built model is handed to, which is a solver's API or a file format                                                                    |
-| a backend     | one of the two implementations that build a model from the same syntax tree                                                                      |
-| a primitive   | an operator built into the language, which no file can add to                                                                                    |
+| an engine     | a tool that attaches data to a spec, builds the model and hands it to a solver                                                                   |
+| an operator   | a construct built into the language, which no file can add; never "primitive"                                                                    |
 | a macro       | a template that takes arguments and is substituted into an expression before anything reads it                                                   |
 | a formulation | an entry that expands into ordinary entries before the model is built                                                                            |
-| a frame       | the dimensions an entry ranges over                                                                                                              |
-| bounded-halo  | reads a fixed number of neighbouring positions, and no more                                                                                      |
+| to load       | to run `to_spec` on a file. "Refused at load" means `to_spec` raises before any data exists                                                      |
+| to compile    | to turn a spec into its program, which `to_spec` does in the same call. Never "lower" in prose                                                   |
+| a fragment    | one file of a spec that `merge` composes                                                                                                         |
+| a patch       | a file that `override` lays over a base                                                                                                          |
+| advice        | what `check` prints about a spec without refusing it                                                                                             |
 | a rung        | one step of the PyPSA ladder, which is one `n.optimize()` keyword stated in full                                                                 |
 
-**A file states a spec; a model is a spec with data.** Write "model" only for
-what an engine builds and a solver takes, never for the file or the `Spec` in
-hand ([glossary](../../../docs/reference/glossary.md)).
+Words to avoid, and what to write instead: consumer (a tool), bind data
+(attach data), mask or predicate (a condition), reject or error out (refuse),
+normal form (the canonical form), unbuilt or masked out (absent), summand
+(a term of a sum), seam,
+surface, lane, tax, closure, sayable (say the plain thing). The coupling
+surface of a component library is a glossary term and is not this fault.
 
 ## Messages in the code
 
 The reader of a message is the modeller whose file did not load, or the
 person who ran a tool. They see the message in a terminal, with the file open
-and no docs at hand. Every rule above applies, and these are added:
+and no docs at hand. The Google guide's page on error messages applies, and
+these are added:
 
 - **Say what is wrong, where, and what to write instead**, in that order.
   "`bounds.lower` is nan, which no value compares to. Write a number, or omit
-  the bound." names the key, the fault and the rewrite. A message that only
-  says what is wrong leaves the reader to guess the fix.
-- **Name the thing as the file spells it.** Quote the key, the entry
-  name and the value the reader wrote, so that they can search the file for
-  it. Keep the quoting the module already uses.
+  the bound." has the key, the fault and the suggested rewrite, in that order.
+- **Name the thing as the file spells it.** Quote the key, the entry name and
+  the value the reader wrote, so that they can search the file for it. Keep
+  the quoting the module already uses.
 - **No "invalid", "illegal", "failed" or "error" on their own.** Say which
-  rule the file breaks. No exclamation marks, and no "you must".
+  rule the file breaks. No exclamation marks.
 - **A message after a context prefix**, such as `Named expression 'x': …`,
   starts in lower case and continues the sentence the prefix began.
 - **Change a message together with what quotes it.** A test that matches the
   text and a page that quotes the message change in the same commit, because
   the docs quote error messages whole.
 
-## Measure it
+## The gate
 
-Aim for a median near 20 words per sentence, and few over 25, which is where
-a newcomer re-reads. Run this on a page, or on a PR body
-saved to a file, and put the numbers in the commit body or the PR's
-`<details>`. The number is evidence, not a target or a limit. A list-shaped sentence may
-be long and clear, and a run of short abstract sentences is not plain.
+Before a page, a PR body or an issue is done, read it once against this
+list. Each item points at the guide that owns it. Items 1 to 11 are read on
+every prose line, item 12 on every sentence, and item 13 on every table.
+
+1. Could a reader who has only the Google guide find a rule this text
+   breaks? Fix it.
+2. Does any inanimate subject say, read, hold, carry, own or name something?
+   Rewrite with a flat verb, or give the sentence a real actor.
+3. Does every "that", "this", "it" or "so" point at a noun or verb the text
+   states? A pronoun after a negation ("builds nothing. Other tools do that")
+   points at nothing. Name the thing.
+4. Is the subject of each sentence a thing the reader can picture, and is its
+   verb within a few words of it? "The alternative, which a framework that
+   writes its math as code uses, is to check …" fails twice: the subject is an
+   abstraction, and ten words sit between it and "is". Write "A framework that
+   writes its math as code checks …". Use one verb for one action across the
+   paragraph: not decide, answer and check for the same thing. A verb turned
+   into a noun hides the actor the same way: "after the solve", "the
+   attachment of data" and "the evaluation of a condition" are "after the
+   solver runs", "when data is attached" and "when a tool evaluates the
+   condition". A project word in the table below, such as advice or
+   formulation, is not a fault.
+5. Does each definition say what the thing is before what it is not, with at
+   most one negation, and in nouns the page has already used? "A coordinate
+   is absent when the model has no variable or no row there. It has no
+   column and no value, and it is not a zero" is five holes and four nouns for
+   two things. Write "An absent variable does not exist at that coordinate.
+   Absent is different from zero, because zero is a value."
+6. When a paragraph moves between situations, such as the file and the data,
+   or load time and build time, does the sentence name the situation first?
+   "With data attached, …", "Before any data is attached, …". An italic
+   phrase is not a marker, and a place such as "in the file" is not a
+   situation.
+7. Does every term the reader might not know have a gloss and a link at first
+   use?
+8. Does every example end with a sentence that reads the result?
+9. Is any sentence over 25 words, link text included, without being a list?
+   Is any paragraph over six sentences, or about more than one subject? Five
+   rules about five things are five paragraphs, a list, or a table. Does the
+   paragraph open with the sentence that states its claim and close with the
+   sentence that states what follows from it? A claim that arrives in the
+   middle, or a paragraph that ends on a cross-reference or a detail, is read
+   twice. The opening paragraph of a page is exempt, because item 10 sets its
+   first sentence.
+10. Does any sentence describe the text instead of the subject? "Two cases
+    look alike and are treated differently", "this section covers" and "the
+    point of this is" announce a sentence instead of being one. Delete the
+    frame and keep the sentence it announced. An opening sentence says what the
+    reader can do after the page, or states the claim the page supports. It
+    is never an aphorism such as "a spec can state only what the language
+    has words for", and never a question. A rule set off in a blockquote is
+    the same aphorism with a frame around it; state the rule in a sentence
+    that names the test it applies.
+11. Is any claim stated twice on the page, or stated here and owned by another
+    page? A paragraph that walks a table's rows or columns in prose is the
+    table said twice. Keep the table. A clause that restates its own main
+    clause is a sentence said twice: "decides every rule that it can decide
+    from the file alone" is "decides" with its definition hung on the end.
+12. Does the point of each sentence sit at its end? A reader weights the last
+    words of a sentence, which Gopen and Swan call the stress position. "A
+    `where:` on a variable leaves the variable absent, not zero, at every
+    coordinate where the condition is false" ends on the condition, which the
+    reader already holds. "Where its condition is false, a `where:` on a
+    variable leaves the variable absent, not zero" ends on the point. A
+    trailing qualifier, a link back to a known term or an aside after the
+    point is the fault. A gloss parenthesis, "(a spec)", is the term's name
+    and not a fault. Item 6 is a case of this rule: the situation opens the
+    sentence because the reader holds it.
+13. Do the table cells pass items 2, 7, 11 and 12, and the word lists? A cell
+    that states a result is a full sentence with its actor: "a tool refuses
+    the parameter if any row of its data is missing", not "is refused when
+    the data is attached". A cell that names a thing is a fragment, and every
+    cell in a column takes the same form. A cell the body restates in prose is
+    the table said twice: keep one.
+
+The sentence-length script below is an instrument for item 9, not a target.
+Put its numbers in the PR's `<details>` when the PR changes prose.
 
 ````bash
 pixi run python - docs/reference/language/absence.md <<'PY'
@@ -268,14 +260,7 @@ ABBREV = re.compile(r'(?:\b[A-Za-z]|\d|\be\.g|\bi\.e|\betc|\bcf|\bFig|\bvs)\.$')
 
 
 def blocks(path: str) -> list[str]:
-    """Prose blocks: one per paragraph and one per list item, code stripped.
-
-    Inline code is stripped per line, so a code span reflowed across a line
-    break cannot pair backticks across the whole page and eat the prose
-    between them. Its stand-in is a word, not a letter, so a sentence that
-    ends on code is not read as an initial. A generated block is skipped,
-    because nobody writes its prose by hand.
-    """
+    """Prose blocks: one per paragraph and one per list item, code stripped."""
     out, buf, incode, incomment, ingen = [], [], False, False, False
     for line in open(path).read().split('\n'):
         if GENERATED.match(line):

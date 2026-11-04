@@ -3,9 +3,15 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Installation
+# Install mathspec
 
-`mathspec` needs Python 3.12 or above. Install it from PyPI:
+This guide shows how to install mathspec, pin its version and set up your editor to complete the keys of a specification file
+([spec](../reference/glossary.md#spec)). You need Python 3.12 or above.
+
+## Install the package
+
+Install the released package from the Python Package Index (PyPI) with the
+tool that manages your environment:
 
 === "pip"
 
@@ -25,47 +31,67 @@ SPDX-License-Identifier: CC-BY-4.0
     pixi add --pypi mathspec
     ```
 
-The version on `main` installs from git:
+The package is now installed in that environment, and you can
+[check that it runs](#check-that-mathspec-runs) before you write a spec.
+
+To work on mathspec itself from a clone, instead follow
+[setting up a development environment](../contributing.md#setting-up-a-development-environment).
+
+## Pin the version
+
+The current language version is {{ mathspec.language_version }}, and the current release is {{ mathspec.release }}.
+To pin what a spec file means, set its
+[`version:` key](../reference/language/file.md#version) to the language
+version you wrote it for. If you build software that reads a spec
+([a tool](../reference/glossary.md#tool)) on the Python API, such as
+specsolve, pin one exact mathspec release:
 
 ```bash
-pip install git+https://github.com/energy-models/mathspec
+pip install mathspec=={{ mathspec.release }}
 ```
 
-To develop against a clone instead, follow
-[contributing](../contributing.md#setting-up-a-development-environment).
+## Set up editor completion
 
-## Editor completion and offline checking
+mathspec ships the file
+[`schema/mathspec.schema.json`](https://github.com/energy-models/mathspec/blob/v{{ mathspec.release }}/schema/mathspec.schema.json),
+which lists the keys of a spec file in a machine-readable format description
+(a [JSON Schema](https://json-schema.org)).
+Your editor reads the schema to complete keys as you type. In VS Code:
 
-The YAML keys ship as a JSON Schema,
-[`schema/mathspec.schema.json`](https://github.com/energy-models/mathspec/blob/main/schema/mathspec.schema.json).
-An editor reads it for key completion, and a job with no Python reads it for a
-structure check.
+<!-- prettier-ignore -->
+1. Install the
+    [Red Hat YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml).
+2. In `.vscode/settings.json`, map the schema to your spec files for the whole
+    workspace:
 
-### Map the schema in VS Code
+    ```jsonc
+    // .vscode/settings.json
+    "yaml.schemas": { "https://raw.githubusercontent.com/energy-models/mathspec/v{{ mathspec.release }}/schema/mathspec.schema.json": ["specs/*.yaml"] }
+    ```
 
-Install the
-[Red Hat YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml),
-then map the schema per workspace:
+    To map the schema for one file only, instead put a comment with the schema
+    address (a modeline) on the first line of that file:
 
-```jsonc
-// .vscode/settings.json
-"yaml.schemas": { "https://raw.githubusercontent.com/energy-models/mathspec/main/schema/mathspec.schema.json": ["*.spec.yaml"] }
-```
+    ```yaml
+    # yaml-language-server: $schema=https://raw.githubusercontent.com/energy-models/mathspec/v{{ mathspec.release }}/schema/mathspec.schema.json
+    ```
 
-or per file, with a modeline on its first line:
+The editor now completes the keys of a spec file, and marks a key that the
+schema does not list.
 
-```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/energy-models/mathspec/main/schema/mathspec.schema.json
-```
+## Check that mathspec runs
 
-### Check a file without Python
-
-For a pre-commit hook or a non-Python CI job:
+Run the command line:
 
 ```bash
-uvx check-jsonschema --schemafile https://raw.githubusercontent.com/energy-models/mathspec/main/schema/mathspec.schema.json spec.yaml
+python -m mathspec --help
 ```
 
-The schema checks only the structure, and
-[`to_spec`](../reference/language/errors.md#what-to_spec-checks) checks the
-math inside `expression:` and `where:`.
+The command prints the six commands that mathspec has.
+
+!!! info "See also"
+
+    - [The command line reference](../reference/cli.md), for each command with its
+      options.
+    - [Versions](../about/versions.md), for why the language version and the
+      release differ.
