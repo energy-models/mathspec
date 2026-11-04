@@ -5147,7 +5147,7 @@ snapshot of the 2030 period, and their start-up costs take that period's weight
 of `0.5`. With their start-up rows dropped there, PyPSA solves to `9035.0`, the
 three weighted start-up costs less. The uncapped unit builds `70`, below its M
 of `3000`. With `committable_big_m=50`, PyPSA solves to `11640.0`, and the unit
-builds `50` (#817, #PRNUM).
+builds `50` (#817, #975).
 
 | PyPSA                                                                                                  | status | note                                                                                                        |
 | ------------------------------------------------------------------------------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------- |
