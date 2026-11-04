@@ -1,0 +1,140 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 380" width="820" height="380" style="max-width: 100%; height: auto" role="img" aria-labelledby="osb-t osb-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="osb-t">sum_back with a window per unit, short at the start or wrapped</title>
+  <desc id="osb-d">The variable started has eight rows, units u1 and u2 at hours 1 to 4. The parameter min_up is 1 for u1 and 2 for u2. With window min_up, each row of u1 is started at that hour alone. Each row of u2 sums started at that hour and the hour before, except hour 1, whose window is short: it holds started of u2 at hour 1 alone, and no row is lost. With edge wrap, hour 1 of u2 reaches around to hour 4, so it holds started of u2 at hour 4 plus started of u2 at hour 1.</desc>
+  <defs>
+    <marker id="osb-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,94 V75 A3,3 0 0 1 19,72 H109 A3,3 0 0 1 112,75 V94 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M16,94 H112 V241 A3,3 0 0 1 109,244 H19 A3,3 0 0 1 16,241 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,312 V293 A3,3 0 0 1 19,290 H109 A3,3 0 0 1 112,293 V312 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,312 H112 V351 A3,3 0 0 1 109,354 H19 A3,3 0 0 1 16,351 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M172,132 V113 A3,3 0 0 1 175,110 H477 A3,3 0 0 1 480,113 V132 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M172,132 H480 V279 A3,3 0 0 1 477,282 H175 A3,3 0 0 1 172,279 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M496,132 V113 A3,3 0 0 1 499,110 H801 A3,3 0 0 1 804,113 V132 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M496,132 H804 V279 A3,3 0 0 1 801,282 H499 A3,3 0 0 1 496,279 Z" fill="#009E73" fill-opacity="0.08"/>
+  </g>
+  <text x="16" y="24" fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5" font-weight="bold">sum_back(started, along=hour, window=min_up, …)</text>
+  <text x="16" y="62" font-weight="bold" fill="currentColor">started</text>
+  <text x="74" y="62" fill="currentColor" fill-opacity="0.7">a variable</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="24" y="86" font-weight="bold">unit</text>
+    <text x="64" y="86" font-weight="bold">hour</text>
+    <text x="24" y="110">u1</text>
+    <text x="64" y="110">1</text>
+    <text x="24" y="128">u1</text>
+    <text x="64" y="128">2</text>
+    <text x="24" y="146">u1</text>
+    <text x="64" y="146">3</text>
+    <text x="24" y="164">u1</text>
+    <text x="64" y="164">4</text>
+    <text x="24" y="182">u2</text>
+    <text x="64" y="182">1</text>
+    <text x="24" y="200">u2</text>
+    <text x="64" y="200">2</text>
+    <text x="24" y="218">u2</text>
+    <text x="64" y="218">3</text>
+    <text x="24" y="236">u2</text>
+    <text x="64" y="236">4</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="72" width="96" height="172" rx="3"/>
+    <line x1="16" y1="94" x2="112" y2="94"/>
+  </g>
+  <text x="16" y="280" font-weight="bold" fill="currentColor">min_up</text>
+  <text x="74" y="280" fill="currentColor" fill-opacity="0.7">a parameter</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="24" y="304" font-weight="bold">unit</text>
+    <text x="64" y="304" font-weight="bold">value</text>
+    <text x="24" y="328">u1</text>
+    <text x="64" y="328">1</text>
+    <text x="24" y="346">u2</text>
+    <text x="64" y="346">2</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="290" width="96" height="64" rx="3"/>
+    <line x1="16" y1="312" x2="112" y2="312"/>
+  </g>
+  <text x="172" y="84" fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">window=min_up</text>
+  <text x="172" y="100" fill="currentColor" font-size="12" fill-opacity="0.7">an expression, no edge=</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="180" y="124" font-weight="bold">unit</text>
+    <text x="220" y="124" font-weight="bold">hour</text>
+    <text x="260" y="124" font-weight="bold">value</text>
+    <text x="180" y="148">u1</text>
+    <text x="220" y="148">1</text>
+    <text x="260" y="148">started[u1,1]</text>
+    <text x="180" y="166">u1</text>
+    <text x="220" y="166">2</text>
+    <text x="260" y="166">started[u1,2]</text>
+    <text x="180" y="184">u1</text>
+    <text x="220" y="184">3</text>
+    <text x="260" y="184">started[u1,3]</text>
+    <text x="180" y="202">u1</text>
+    <text x="220" y="202">4</text>
+    <text x="260" y="202">started[u1,4]</text>
+    <text x="180" y="220">u2</text>
+    <text x="220" y="220">1</text>
+    <text x="260" y="220" font-weight="bold">started[u2,1]</text>
+    <text x="180" y="238">u2</text>
+    <text x="220" y="238">2</text>
+    <text x="260" y="238">started[u2,1] + started[u2,2]</text>
+    <text x="180" y="256">u2</text>
+    <text x="220" y="256">3</text>
+    <text x="260" y="256">started[u2,2] + started[u2,3]</text>
+    <text x="180" y="274">u2</text>
+    <text x="220" y="274">4</text>
+    <text x="260" y="274">started[u2,3] + started[u2,4]</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="172" y="110" width="308" height="172" rx="3"/>
+    <line x1="172" y1="132" x2="480" y2="132"/>
+  </g>
+  <text x="172" y="304" fill="currentColor" font-size="12" font-style="italic" fill-opacity="0.7">hour 1 of u2: a short window, no row lost</text>
+  <text x="496" y="84" fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">window=min_up, edge='wrap'</text>
+  <text x="496" y="100" fill="currentColor" font-size="12" fill-opacity="0.7">an expression, the window reaches around</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="504" y="124" font-weight="bold">unit</text>
+    <text x="544" y="124" font-weight="bold">hour</text>
+    <text x="584" y="124" font-weight="bold">value</text>
+    <text x="504" y="148">u1</text>
+    <text x="544" y="148">1</text>
+    <text x="584" y="148">started[u1,1]</text>
+    <text x="504" y="166">u1</text>
+    <text x="544" y="166">2</text>
+    <text x="584" y="166">started[u1,2]</text>
+    <text x="504" y="184">u1</text>
+    <text x="544" y="184">3</text>
+    <text x="584" y="184">started[u1,3]</text>
+    <text x="504" y="202">u1</text>
+    <text x="544" y="202">4</text>
+    <text x="584" y="202">started[u1,4]</text>
+    <text x="504" y="220">u2</text>
+    <text x="544" y="220">1</text>
+    <text x="584" y="220"><tspan font-weight="bold">started[u2,4]</tspan> + started[u2,1]</text>
+    <text x="504" y="238">u2</text>
+    <text x="544" y="238">2</text>
+    <text x="584" y="238">started[u2,1] + started[u2,2]</text>
+    <text x="504" y="256">u2</text>
+    <text x="544" y="256">3</text>
+    <text x="584" y="256">started[u2,2] + started[u2,3]</text>
+    <text x="504" y="274">u2</text>
+    <text x="544" y="274">4</text>
+    <text x="584" y="274">started[u2,3] + started[u2,4]</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="496" y="110" width="308" height="172" rx="3"/>
+    <line x1="496" y1="132" x2="804" y2="132"/>
+  </g>
+  <text x="496" y="304" fill="currentColor" font-size="12" font-style="italic" fill-opacity="0.7">hour 1 of u2 reaches around to hour 4</text>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#osb-arrow)">
+    <path d="M122,160 H146 V50 H326 V66"/>
+    <path d="M122,160 H146 V50 H650 V66"/>
+  </g>
+</svg>
