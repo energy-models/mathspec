@@ -479,8 +479,8 @@ class VariableSpec(_StrictSpec):
             return self
         if self.where is None:
             msg = (
-                f'missing: {_as_yaml(v)} needs a `where:`. A variable with no mask exists at every '
-                f'coordinate of its dims, so nothing is missing. Add a `where:`, or delete `missing:`.'
+                f'missing: {_as_yaml(v)} needs a `where:`. A variable with no `where:` exists at every '
+                f'coordinate of its dimensions, so no coordinate is missing. Add a `where:`, or delete `missing:`.'
             )
         elif self.domain == 'binary' and v not in (0, 1):
             msg = f'missing: {_as_yaml(v)} on a binary variable, which takes 0 or 1.'

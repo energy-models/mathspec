@@ -408,9 +408,8 @@ objective:
 </figure>
 
 The curve of each generator now runs over the breakpoints where `bp_x` is
-defined, and no further. Each values parameter declares
-[`missing: 0`](#missing-breakpoints), because its table stops
-where the curve stops.
+defined, and no further. The file declares [`missing: 0`](#missing-breakpoints) on each values
+parameter, because its table stops where the curve stops.
 
 With data attached, the software that runs the `cost_curve_complete`
 [assumption](assumptions.md#what-a-curve-assumes) ([a tool](../glossary.md#tool))
@@ -453,7 +452,8 @@ outside the curve uses the table:
 --8<-- "docs/static/piecewise-missing.svg"
 </figure>
 
-Under `missing: 0` the missing row of `bp_y` is `0`, and under `absent` `bp_y` has no row there, so a term that uses it is absent.
+Under `missing: 0`, the missing row of `bp_y` is `0`. Under `absent`, `bp_y`
+has no row there, so a term that uses it is absent.
 
 !!! info "See also"
 

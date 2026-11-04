@@ -153,8 +153,9 @@ It is
 
 A [given](language/parameters-variables-constraints.md#given) parameter is a
 `GivenParameter` under `program.given.parameters`, and not under
-`program.parameters`. It has its `dims` and its `dtype` and no `missing`,
-because the file that declares the parameter sets `missing:`.
+`program.parameters`. It has its `dims`, `dtype` and `description`, and no
+`missing`, because `missing:` is set in the fragment that declares the
+parameter.
 
 With data attached, an engine refuses a parameter under `'refused'` that has a
 missing row, and reports the coordinate. Each engine decides whether
@@ -165,8 +166,13 @@ comparison in a condition. Under `'absent'`, a tool leaves a bound open where
 the parameter has no row.
 
 With data attached, an engine must refuse a divisor that is `0` in a row it
-builds, whether a missing row, a value or a constant makes it `0`
+builds, and name the divisor. The same applies to a term of a sum that it
+adds. The `0` can come from a missing row, from the data, or from constants
+that cancel
 ([zero divisors in the data](language/absence.md#zero-divisors-in-the-data)).
+Where a `where:`, a case or an absent variable leaves the row out, an engine
+refuses nothing, because no row exists. A reported quotient is absent where its
+divisor is `0`, and is not refused.
 
 A bare parameter name in a condition is a `ParameterDefined` node. The page on
 [conditions](language/expressions.md#conditions) defines where it is true.

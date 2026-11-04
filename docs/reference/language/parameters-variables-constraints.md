@@ -312,8 +312,8 @@ A `str` parameter takes any label. A dimension with
 ### `missing`
 
 `missing:` sets the meaning of a coordinate of the `dims` at which the data has
-no row. It takes one of three values: `refused`, the default, `absent`, or a
-value of the `dtype` of the parameter.
+no row. It takes `refused` (the default), `absent`, or a value of the `dtype`
+of the parameter.
 
 ```yaml
 dimensions:
@@ -341,13 +341,11 @@ objective:
 ```
 
 `cost` takes the default, `refused`. `p_set` takes `absent`, and
-`start_up_cost`, `efficiency`, `p_nom_max` and `active` each take a value. The
-[absence page](absence.md#missing-on-a-parameter) lists what a missing row does
-in each position of an expression.
-
-Data with gaps on purpose is declared `absent`, and an
-[assumption](absence.md#a-table-with-gaps-on-purpose) states where the data
-must have a row.
+`start_up_cost`, `efficiency`, `p_nom_max` and `active` each take a value.
+[`missing` on a parameter](absence.md#missing-on-a-parameter) lists what a
+missing row means in each position of an expression. An
+[assumption](absence.md#required-rows-in-an-absent-table) can require a row of
+an `absent` parameter wherever its `where:` is true.
 
 A condition treats a missing row in one of three ways:
 
@@ -412,13 +410,13 @@ A [`where:`](absence.md#where) leaves `dispatch` only at the generators whose
 capacity is above zero. The solver keeps each value between `0` and the
 capacity of its generator.
 
-| Key                             | What it sets                                                                                                     | Default      |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------ |
-| `dims`                          | required. The dimensions it is indexed over                                                                      |              |
-| `where`                         | which coordinates exist ([absence](absence.md))                                                                  | `null`       |
-| `bounds.lower` / `bounds.upper` | a finite number, or the name of a `float` or `int` parameter. `null` leaves that side open                       | `null`       |
-| `domain`                        | `continuous`, `integer` or `binary`. `binary` has fixed bounds of 0 and 1                                        | `continuous` |
-| `missing`                       | `absent` or a number: what a coordinate outside the `where:` means ([absence](absence.md#missing-on-a-variable)) | `absent`     |
+| Key                             | What it sets                                                                                                            | Default      |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `dims`                          | required. The dimensions it is indexed over                                                                             |              |
+| `where`                         | which coordinates exist ([absence](absence.md))                                                                         | `null`       |
+| `bounds.lower` / `bounds.upper` | a finite number, or the name of a `float` or `int` parameter. `null` leaves that side open                              | `null`       |
+| `domain`                        | `continuous`, `integer` or `binary`. `binary` has fixed bounds of 0 and 1                                               | `continuous` |
+| `missing`                       | `absent` or a finite number: what a coordinate outside the `where:` means ([absence](absence.md#missing-on-a-variable)) | `absent`     |
 
 A bound is never infinite, so an open side is `null`. mathspec refuses `.inf`
 and `-.inf` at load, and gives `null` as the rewrite:

@@ -2851,7 +2851,7 @@ def test_a_divisor_that_reads_a_missing_row_as_zero_is_refused(section):
     `c` loaded and divided by zero all the same.
     """
     message = _refusal(**{'parameters.c.missing': 0, **section})
-    assert "reads 'c', which is declared missing: 0, so a missing row of 'c' makes the divisor 0" in message
+    assert "contains 'c', which is declared missing: 0, so a missing row of 'c' makes the divisor 0" in message
     assert 'Declare missing: refused, absent, or a value other than 0' in message, 'the refusal names the rewrite'
 
 
@@ -3013,7 +3013,7 @@ def test_a_divisor_guarded_against_a_missing_row_loads(section):
 )
 def test_a_guard_that_leaves_a_missing_row_in_does_not_spare_the_divisor(section):
     message = _refusal(**{'parameters.c.missing': 0, **section})
-    assert "reads 'c', which is declared missing: 0, so a missing row of 'c' makes the divisor 0" in message
+    assert "contains 'c', which is declared missing: 0, so a missing row of 'c' makes the divisor 0" in message
 
 
 #: One dimension every construct below reads the order of, and a breakpoint
@@ -3195,7 +3195,6 @@ def test_a_divisor_a_shift_fills_with_zero_is_refused(divisor, patch):
         'the divisor is 0 where shift(along=h, edge=0) vacates',
     )
     assert any(v in message for v in vacates), message
-    assert 'which no number divides by' in message
     assert "Write edge='wrap', or an edge= value other than 0" in message, 'the refusal names the rewrite'
 
 

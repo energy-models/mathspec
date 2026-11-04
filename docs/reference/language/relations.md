@@ -121,9 +121,9 @@ At `l3`, the data of `line_to` has no row, so `line_to` is absent there.
 | `absent`              | a key combination with no row is not in the relation, so a line with no `line_to` row ends at no bus, which is [absent](absence.md) |
 
 `missing:` applies only to the key. The values cannot be missing, because a
-null is refused and every value must be a label of its dimension. A label is
-data, so no value fills a gap in a relation, and at load mathspec refuses a
-value such as `missing: 0`:
+null is refused and every value must be a label of its dimension. No number can
+replace a missing label, so at load mathspec refuses a value such as
+`missing: 0`:
 
 ```text
 relations.gen_bus.missing: missing: 0 on a relation, which takes refused or absent. A key combination with no row is refused, or is not in the relation.

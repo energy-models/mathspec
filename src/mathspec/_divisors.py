@@ -67,18 +67,15 @@ def zero_divisor_refusals(
 def _missing_zero(name: str) -> str:
     """Why a missing row of *name* makes the divisor 0, and the three rewrites that remove it."""
     return (
-        f"reads '{name}', which is declared missing: 0, so a missing row of '{name}' makes the divisor 0, which "
-        f'no number divides by. Declare missing: refused, absent, or a value other than 0, or guard the quotient '
+        f"contains '{name}', which is declared missing: 0, so a missing row of '{name}' makes the divisor 0. "
+        f'Declare missing: refused, absent, or a value other than 0, or guard the quotient '
         f'with a where such as "{name} > 0".'
     )
 
 
 def _edge_zero(along: str) -> str:
     """Why the edge of an ``edge=0`` shift makes the divisor 0. No guard spares it, so the rewrite is the edge."""
-    return (
-        f'is 0 where shift(along={along}, edge=0) vacates, which no number divides by. '
-        f"Write edge='wrap', or an edge= value other than 0."
-    )
+    return f"is 0 where shift(along={along}, edge=0) vacates. Write edge='wrap', or an edge= value other than 0."
 
 
 def _zero_divisors(
