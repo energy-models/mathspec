@@ -5,16 +5,21 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Units with ports
 
-This file connects units to buses through numbered ports, as PyPSA's `bus0`,
-`bus1`, … columns do. One relation, `connection`, says which bus each port of a
-unit attaches to and whether the port draws or delivers. Two ports of one unit
-may attach to the same bus.
+Units with ports is a specification of an optimisation model
+([a spec](../reference/glossary.md#spec)) in which each unit attaches to buses
+through numbered ports. Each port number matches one of the `bus0`, `bus1`, …
+columns of an open-source power system modelling framework
+([PyPSA](https://pypsa.org)). The [relation](../reference/language/relations.md)
+`connection` lists the bus and the role of each port. Its key is the unit and
+the port, not the bus, so two ports of one unit may attach to the same bus.
 
-`efficiency` is declared over every unit, port and snapshot, but its `where:`
-keeps only the output ports, and `missing: 1` fills only those
-([a parameter's mask](../reference/language/parameters-variables-constraints.md#where)).
-Outside `connection`, `injection` is absent, so `balance` adds up only the ports
-that attach to each bus.
+`efficiency` is declared over every unit, port and snapshot. Its
+[`where:`](../reference/language/parameters-variables-constraints.md#where)
+keeps only the output ports, and `missing: 1` applies only there. Where
+`connection` has no row, no case of `injection` applies and `efficiency` is
+[absent](../reference/language/absence.md), so `injection` is absent too. The
+sum in `balance` therefore has a term only for the ports that attach to each
+bus.
 
 <!-- gallery:begin -->
 ```yaml
