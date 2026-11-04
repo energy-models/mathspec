@@ -389,7 +389,7 @@ def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterRefe
 def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, Mask | None]:
     """Each parameter's ``where:`` typed, a refusal appended for each mask that reads what it may not.
 
-    A consumer evaluates a parameter's mask from the data alone, before any
+    A tool evaluates a parameter's mask from the data alone, before any
     variable has a value and before any mask has been applied. So a mask reads
     dimensions, relations and unmasked parameters, and no masks can wait on
     one another.
@@ -402,16 +402,16 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
         if mask is None:
             continue
         errors.extend(
-            f"{context}: its `where:` reads variable '{v}', and a parameter's mask is evaluated from the data "
-            f'alone, before any variable has a value. Test a parameter or a relation instead.'
+            f"{context}: its `where:` contains variable '{v}', and a tool evaluates the `where:` of a parameter "
+            f'from the data alone, before any variable has a value. Test a parameter or a relation instead.'
             for v in sorted(mask.names_read & {*spec.variables, *spec.given.variables})
         )
         errors.extend(
-            f"{context}: its `where:` reads '{pname}' itself, and whether a row is there is what the mask "
-            f'decides. Test a relation or another parameter.'
+            f"{context}: its `where:` contains '{pname}' itself, and a tool evaluates that `where:` before it "
+            f"reads '{pname}'. Test a relation or another parameter."
             if read == pname
-            else f"{context}: its `where:` reads '{read}', which has a mask of its own. Test what the mask of "
-            f"'{read}' tests, or a relation."
+            else f"{context}: its `where:` contains '{read}', which has a `where:` of its own. Test the "
+            f"condition in the `where:` of '{read}', or a relation."
             for read in sorted(mask.names_read & masked)
         )
     return masks

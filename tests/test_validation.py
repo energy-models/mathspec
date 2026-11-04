@@ -2702,7 +2702,7 @@ _MASKED = {
 
 
 def test_a_parameter_mask_is_part_of_the_program():
-    """A consumer reads where a parameter has coordinates off the program, and the file writes the mask back."""
+    """A tool reads where a parameter has coordinates off the program, and the file writes the mask back."""
     spec = _spec(**_MASKED)
     assert spec.program.parameters['w'].where is not None, 'the mask reaches the program'
     assert spec.program.parameters['w'].where.names_read == {'pair'}, 'the mask reads the relation and nothing else'
@@ -2715,33 +2715,33 @@ def test_a_parameter_mask_is_part_of_the_program():
     [
         pytest.param(
             {'parameters.c.where': 'p'},
-            "Parameter 'c': its `where:` reads variable 'p', and a parameter's mask is evaluated from the data alone",
+            "Parameter 'c': its `where:` contains variable 'p', and a tool evaluates the `where:` of a parameter from the data alone",
             id='a-mask-that-reads-a-variable',
         ),
         pytest.param(
             {'parameters.c.where': 'on', 'conditions.on': 'p'},
-            "Parameter 'c': its `where:` reads variable 'p'",
+            "Parameter 'c': its `where:` contains variable 'p'",
             id='a-mask-that-reads-a-variable-through-a-named-condition',
         ),
         pytest.param(
             {'parameters.c.where': 'c > 0'},
-            "Parameter 'c': its `where:` reads 'c' itself",
+            "Parameter 'c': its `where:` contains 'c' itself",
             id='a-mask-that-reads-its-own-parameter',
         ),
         pytest.param(
             {'parameters.c.where': 'big', 'conditions.big': 'c > 0'},
-            "Parameter 'c': its `where:` reads 'c' itself",
+            "Parameter 'c': its `where:` contains 'c' itself",
             id='a-mask-that-reads-its-own-parameter-through-a-named-condition',
         ),
         pytest.param(
             {'parameters.c.where': 'flag', 'parameters.flag.where': "lk == 'x'"},
-            "Parameter 'c': its `where:` reads 'flag', which has a mask of its own. Test what the mask of 'flag' "
-            'tests, or a relation.',
+            "Parameter 'c': its `where:` contains 'flag', which has a `where:` of its own. Test the condition in "
+            "the `where:` of 'flag', or a relation.",
             id='a-mask-that-reads-a-masked-parameter',
         ),
         pytest.param(
             {'parameters.c.where': 'flag', 'parameters.flag.where': 'c > 0'},
-            "Parameter 'c': its `where:` reads 'flag', which has a mask of its own",
+            "Parameter 'c': its `where:` contains 'flag', which has a `where:` of its own",
             id='two-masks-that-read-each-other',
         ),
         pytest.param(
