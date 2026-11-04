@@ -22,7 +22,7 @@
 \begin{description}
 \item[{$\mathrm{p}^{\mathrm{max}}$}] \texttt{p\_max} over $\mathcal{G}$, $\infty$ where the data has no row
 \item[{$\mathrm{p}^{\mathrm{min}}$}] \texttt{p\_min} over $\mathcal{G}$
-\item[{$\mathrm{cost}$}] \texttt{cost} over $\mathcal{G}$, \texttt{neutral} where the data has no row
+\item[{$\mathrm{cost}$}] \texttt{cost} over $\mathcal{G}$, $0$ where the data has no row
 \item[{$\mathrm{load}$}] \texttt{load} over $\mathcal{T} \times \mathcal{B}$
 \item[{$\mathrm{is\_flexible}$}] \texttt{is\_flexible} over $\mathcal{G}$, \texttt{false} where the data has no row
 \item[{$\mathrm{zone\_cap}$}] \texttt{zone\_cap} over $\mathcal{Z}$
@@ -32,8 +32,8 @@
 \item[{$\mathrm{lead}$}] \texttt{lead} over $\mathcal{G}$
 \item[{$\mathrm{budget}$}] \texttt{budget} (scalar)
 \item[{$\mathrm{growth}$}] \texttt{growth} (scalar)
-\item[{$\mathrm{bp\_x}$}] \texttt{bp\_x} over $\mathcal{G} \times \mathcal{A}$, \texttt{neutral} where the data has no row
-\item[{$\mathrm{bp\_y}$}] \texttt{bp\_y} over $\mathcal{G} \times \mathcal{A}$, \texttt{neutral} where the data has no row
+\item[{$\mathrm{bp\_x}$}] \texttt{bp\_x} over $\mathcal{G} \times \mathcal{A}$, $0$ where the data has no row
+\item[{$\mathrm{bp\_y}$}] \texttt{bp\_y} over $\mathcal{G} \times \mathcal{A}$, $0$ where the data has no row
 \item[{$\mathrm{bp\_heat}$}] \texttt{bp\_heat} over $\mathcal{G} \times \mathcal{A}$
 \item[{$\mathrm{bp\_run}$}] \texttt{bp\_run} over $\mathcal{G} \times \mathcal{A}$
 \end{description}
@@ -54,7 +54,7 @@
 \item[{$\mathit{units}$}] \texttt{units} over $\mathcal{G}$
 \item[{$\mathit{spare}$}] \texttt{spare} over $\mathcal{G}$
 \item[{$\mathit{reserve}$}] \texttt{reserve} (scalar)
-\item[{$\mathit{headroom}$}] \texttt{headroom} (scalar), \texttt{neutral} where the mask leaves it out
+\item[{$\mathit{headroom}$}] \texttt{headroom} (scalar), $0$ where the mask leaves it out
 \item[{$\mathit{weight}$}] \texttt{weight} over $\mathcal{T} \times \mathcal{G}$
 \item[{$\mathit{fuel}$}] \texttt{fuel} over $\mathcal{T} \times \mathcal{G}$
 \item[{$\mathit{heat}$}] \texttt{heat} over $\mathcal{T} \times \mathcal{G}$

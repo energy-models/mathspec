@@ -3,8 +3,8 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 260" width="760" height="260" style="max-width: 100%; height: auto" role="img" aria-labelledby="amc-t amc-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
-  <title id="amc-t">A neutral variable is zero outside its condition, an absent one has no row</title>
-  <desc id="amc-d">Three storages: dam has inflow and a store, tank has a store and no inflow, river has inflow and no store. The variable spill, with where has_inflow and missing neutral, has a row at every storage, and its row at tank is 0. The variable soc, with where has_store, has rows at dam and tank and no row at river. The constraint balance has a row at dam, inflow minus spill minus soc equals 0, and a row at tank, inflow minus soc equals 0. It has no row at river, because soc is absent there.</desc>
+  <title id="amc-t">A variable with missing 0 is zero outside its condition, an absent one has no row</title>
+  <desc id="amc-d">Three storages: dam has inflow and a store, tank has a store and no inflow, river has inflow and no store. The variable spill, with where has_inflow and missing 0, has a row at every storage, and its row at tank is 0. The variable soc, with where has_store, has rows at dam and tank and no row at river. The constraint balance has a row at dam, inflow minus spill minus soc equals 0, and a row at tank, inflow minus soc equals 0. It has no row at river, because soc is absent there.</desc>
   <defs>
     <marker id="amc-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
@@ -21,7 +21,7 @@ SPDX-License-Identifier: CC-BY-4.0
   </g>
   <g fill="currentColor">
     <text x="16" y="202" font-weight="bold">spill</text>
-    <text x="54" y="202" fill-opacity="0.7">a variable, missing: neutral</text>
+    <text x="54" y="202" fill-opacity="0.7">a variable, missing: 0</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
       <text x="24" y="226" font-weight="bold">storage</text>
       <text x="96" y="226" font-weight="bold">value</text>

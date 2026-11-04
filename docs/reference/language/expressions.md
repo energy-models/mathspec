@@ -181,6 +181,28 @@ The objective: the divisor contains variables, which is not affine. Divide by a 
 mathspec suggests two rewrites: a parameter as the divisor, or the
 reciprocal as a parameter.
 
+At load, mathspec refuses a divisor that a `shift` with `edge=0` can make `0`,
+because the file itself sets that `0`. For
+`p / shift(c, along=t, offset=1, edge=0)` it prints:
+
+```text
+Constraint 'cap': the divisor is 0 where shift(along=t, edge=0) vacates. Write edge='wrap', or an edge= value other than 0.
+```
+
+mathspec suggests two rewrites: `edge='wrap'`, or another `edge=` value.
+Unlike a `0` from a [missing row](absence.md#a-guarded-divisor), this divisor
+has no guard, so no `where:` and no case lets it load.
+
+The check follows the shift into each of these parts of the divisor:
+
+- a factor, a numerator or a base
+- the operand of a negation
+- a `sum`, a `sum_back`, another `shift` or an `at`
+- a named expression, or a case
+
+An addition is `0` only where every term can be, so
+`shift(c, along=t, offset=1, edge=0) + 1` loads.
+
 ## Name resolution
 
 Every name a spec declares is in one flat set of names (a namespace). That

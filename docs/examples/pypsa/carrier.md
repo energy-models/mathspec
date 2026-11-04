@@ -30,7 +30,7 @@ parameters:
       `multi_investment_periods` (`global_constraints.py:220-221`). Otherwise
       you feed no value in data prep
     dims: [carrier]
-    missing: neutral
+    missing: absent
   Carrier_max_relative_growth:
     description: >-
       share of the previous period's additions that may be added on top: the
@@ -81,7 +81,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overline{\Delta}`$ | `Carrier_max_growth` over $`\mathcal{I}`$, `neutral` where the data has no row — most capacity of a carrier that may be added in a period. No value means no limit. It is the least over the scenarios, as PyPSA takes it (`global_constraints.py:227-231`), data prep. PyPSA reads it only under `multi_investment_periods` (`global_constraints.py:220-221`). Otherwise you feed no value in data prep |
+| $`\overline{\Delta}`$ | `Carrier_max_growth` over $`\mathcal{I}`$, `absent` where the data has no row — most capacity of a carrier that may be added in a period. No value means no limit. It is the least over the scenarios, as PyPSA takes it (`global_constraints.py:227-231`), data prep. PyPSA reads it only under `multi_investment_periods` (`global_constraints.py:220-221`). Otherwise you feed no value in data prep |
 | $`\mathrm{r}`$ | `Carrier_max_relative_growth` over $`\mathcal{I}`$ — share of the previous period's additions that may be added on top: the least over the scenarios, as PyPSA takes it, data prep |
 
 #### Definitions

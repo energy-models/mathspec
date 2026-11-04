@@ -312,15 +312,15 @@ A `str` parameter takes any label. A dimension with
 ### `missing`
 
 `missing:` sets the meaning of a coordinate of the `dims` at which the data has
-no row. It takes one of four values: `refused`, the default, `absent`,
-`neutral`, or a value of the `dtype` of the parameter.
+no row. It takes `refused` (the default), `absent`, or a value of the `dtype`
+of the parameter.
 
 ```yaml
 dimensions:
   generator: { dtype: str }
 parameters:
   cost: { dims: [generator] } # refused: every generator has a cost
-  start_up_cost: { dims: [generator], missing: neutral } # no row means no cost
+  start_up_cost: { dims: [generator], missing: 0 } # no row means no cost
   p_set: { dims: [generator], missing: absent } # no row, no fixing row
   efficiency: { dims: [generator], missing: 1 }
   p_nom_max: { dims: [generator], missing: .inf }
@@ -340,9 +340,12 @@ objective:
   expression: sum(p * cost) + sum(start * start_up_cost)
 ```
 
-`cost` takes the default, `refused`. `start_up_cost` takes `neutral` and
-`p_set` takes `absent`, and `efficiency`, `p_nom_max` and `active` each take a
-value.
+`cost` takes the default, `refused`. `p_set` takes `absent`, and
+`start_up_cost`, `efficiency`, `p_nom_max` and `active` each take a value.
+[`missing` on a parameter](absence.md#missing-on-a-parameter) lists what a
+missing row means in each position of an expression. An
+[assumption](absence.md#required-rows-in-an-absent-table) can require a row of
+an `absent` parameter wherever its `where:` is true.
 
 A condition treats a missing row in one of three ways:
 
@@ -352,19 +355,19 @@ A condition treats a missing row in one of three ways:
   `where: p_nom_max` selects the rows that the data contains. mathspec refuses a bare `int` or `str` name under `refused` at load, because
   the condition would be true everywhere.
 - A comparison uses the value. So `where: efficiency <= 1` is true at a
-  missing row of `efficiency` above, which is `1` there. Under `absent` and
-  `neutral`, a comparison at a missing row is false.
+  missing row of `efficiency` above, which is `1` there. Under `absent`, a
+  comparison at a missing row is false.
 - A bare `bool` name is its value. So `where: active` is true at a missing row
   of `active` above.
 
 A value has the `dtype` of the parameter:
 
-| `dtype` | A value                                                  |
-| ------- | -------------------------------------------------------- |
-| `float` | a number. `.inf`, `inf`, `-.inf` and `-inf` are numbers  |
-| `int`   | an integer. An integer column has no `inf`               |
-| `bool`  | `true` or `false`                                        |
-| `str`   | none. A label has no value to fill, and no `neutral` one |
+| `dtype` | A value                                                 |
+| ------- | ------------------------------------------------------- |
+| `float` | a number. `.inf`, `inf`, `-.inf` and `-inf` are numbers |
+| `int`   | an integer. An integer column has no `inf`              |
+| `bool`  | `true` or `false`                                       |
+| `str`   | none. A label has no value to fill                      |
 
 mathspec refuses a NaN, a quoted number and `missing: null` at load, and in
 each message mathspec suggests what to write. For `missing: null` it prints:
@@ -382,7 +385,7 @@ A values parameter of a curve with `points:` must declare a
 [`missing:` other than `refused`](piecewise.md#missing-breakpoints).
 
 The typeset legend lists what a missing row means beside the parameter, such
-as `` `neutral` where the data has no row ``. It lists nothing for `refused`.
+as `` `0` where the data has no row ``. It lists nothing for `refused`.
 
 ## `variables`
 
@@ -407,13 +410,13 @@ A [`where:`](absence.md#where) leaves `dispatch` only at the generators whose
 capacity is above zero. The solver keeps each value between `0` and the
 capacity of its generator.
 
-| Key                             | What it sets                                                                                                      | Default      |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------ |
-| `dims`                          | required. The dimensions it is indexed over                                                                       |              |
-| `where`                         | which coordinates exist ([absence](absence.md))                                                                   | `null`       |
-| `bounds.lower` / `bounds.upper` | a finite number, or the name of a `float` or `int` parameter. `null` leaves that side open                        | `null`       |
-| `domain`                        | `continuous`, `integer` or `binary`. `binary` has fixed bounds of 0 and 1                                         | `continuous` |
-| `missing`                       | `absent` or `neutral`: what a coordinate outside the `where:` means ([absence](absence.md#missing-on-a-variable)) | `absent`     |
+| Key                             | What it sets                                                                                                            | Default      |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `dims`                          | required. The dimensions it is indexed over                                                                             |              |
+| `where`                         | which coordinates exist ([absence](absence.md))                                                                         | `null`       |
+| `bounds.lower` / `bounds.upper` | a finite number, or the name of a `float` or `int` parameter. `null` leaves that side open                              | `null`       |
+| `domain`                        | `continuous`, `integer` or `binary`. `binary` has fixed bounds of 0 and 1                                               | `continuous` |
+| `missing`                       | `absent` or a finite number: what a coordinate outside the `where:` means ([absence](absence.md#missing-on-a-variable)) | `absent`     |
 
 A bound is never infinite, so an open side is `null`. mathspec refuses `.inf`
 and `-.inf` at load, and gives `null` as the rewrite:

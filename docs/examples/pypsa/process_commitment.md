@@ -103,7 +103,7 @@ parameters:
       `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below
       the internal power a solve wants, it caps that internal power
     dims: [scenario, process]
-    missing: neutral
+    missing: absent
 
 variables:
   Process_status:
@@ -305,6 +305,15 @@ constraints:
     dims: [scenario, snapshot, process]
     where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
     expression: Process_shut_down <= Process_n_mod
+
+assumptions:
+  Process_big_m_where_committed_and_extendable:
+    holds: "Process_big_m"
+    where: "Process_com_ext"
+    description: >-
+      a committable process with an extendable, non-modular build has
+      the big-M its rows release it by — PyPSA computes one for each
+      (`get_committable_big_m_values`)
 ```
 
 #### Given
@@ -352,7 +361,7 @@ constraints:
 | $`\mathrm{c}^{z,\mathrm{up}}`$ | `Process_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{z,\mathrm{dn}}`$ | `Process_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{z,\mathrm{on}}`$ | `Process_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the bound a committed extendable process's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1050-1121`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the internal power a solve wants, it caps that internal power |
+| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$, `absent` where the data has no row — the bound a committed extendable process's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1050-1121`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the internal power a solve wants, it caps that internal power |
 
 #### Conditions
 
@@ -550,6 +559,14 @@ u^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\
 
 ```math
 \mathit{dn}^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+```
+
+#### Assumptions
+
+**`Process_big_m_where_committed_and_extendable`**
+
+```math
+\mathrm{M}^{z}_{\xi,j} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t}
 ```
 <!-- gallery:end -->
 

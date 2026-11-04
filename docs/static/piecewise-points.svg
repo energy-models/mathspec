@@ -20,9 +20,9 @@ SPDX-License-Identifier: CC-BY-4.0
   </g>
   <g fill="currentColor">
     <text x="16" y="28" font-weight="bold">bp_x</text>
-    <text x="52" y="28" fill-opacity="0.7">a parameter, missing: neutral</text>
+    <text x="52" y="28" fill-opacity="0.7">a parameter, missing: 0</text>
     <text x="16" y="218" font-weight="bold">bp_y</text>
-    <text x="52" y="218" fill-opacity="0.7">a parameter, missing: neutral</text>
+    <text x="52" y="218" fill-opacity="0.7">a parameter, missing: 0</text>
     <text x="380" y="120" font-weight="bold">cost_curve</text>
     <text x="456" y="120" fill-opacity="0.7">a piecewise entry, points: bp_x</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">

@@ -103,7 +103,7 @@ parameters:
       `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below
       the output a solve wants, it caps that output
     dims: [scenario, generator]
-    missing: neutral
+    missing: absent
 
 variables:
   Generator_status:
@@ -305,6 +305,15 @@ constraints:
     dims: [scenario, snapshot, generator]
     where: Generator_committed AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0
     expression: Generator_shut_down <= Generator_n_mod
+
+assumptions:
+  Generator_big_m_where_committed_and_extendable:
+    holds: "Generator_big_m"
+    where: "Generator_com_ext"
+    description: >-
+      a committable generator with an extendable, non-modular build has
+      the big-M its rows release it by — PyPSA computes one for each
+      (`get_committable_big_m_values`)
 ```
 
 #### Given
@@ -352,7 +361,7 @@ constraints:
 | $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, `neutral` where the data has no row — the bound a committed extendable generator's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1050-1121`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the output a solve wants, it caps that output |
+| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, `absent` where the data has no row — the bound a committed extendable generator's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1050-1121`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the output a solve wants, it caps that output |
 
 #### Conditions
 
@@ -550,6 +559,14 @@ u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \
 
 ```math
 \mathit{dn}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+```
+
+#### Assumptions
+
+**`Generator_big_m_where_committed_and_extendable`**
+
+```math
+\mathrm{M}_{\xi,g} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
 ```
 <!-- gallery:end -->
 

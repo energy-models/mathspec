@@ -4,7 +4,7 @@ SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 861 268" width="861" height="268" style="max-width: 100%; height: auto" role="img" aria-labelledby="acap-t acap-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
   <title id="acap-t">A missing parameter row and an absent variable affect a row differently</title>
-  <desc id="acap-d">The variable y has rows for wind and gas, and no row for old, where capacity is 0. The parameter rel_max, with missing neutral, is 0.5 for wind and 0.9 for old, and has no row for gas. The constraint cap has a row for wind, x of wind minus 0.5 times y of wind at most 0, and a row for gas, x of gas at most 0. It has no row for old, because y is absent there.</desc>
+  <desc id="acap-d">The variable y has rows for wind and gas, and no row for old, where capacity is 0. The parameter rel_max, with missing 0, is 0.5 for wind and 0.9 for old, and has no row for gas. The constraint cap has a row for wind, x of wind minus 0.5 times y of wind at most 0, and a row for gas, x of gas at most 0. It has no row for old, because y is absent there.</desc>
   <defs>
     <pattern id="acap-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>

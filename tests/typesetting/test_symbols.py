@@ -104,7 +104,7 @@ DEFAULTED = varied(
         'relations.gen_bus': {'key': 'generator', 'values': 'bus', 'missing': 'absent'},
         'parameters.p_max.missing': 'inf',
         'parameters.cost.missing': 1,
-        'parameters.load.missing': 'neutral',
+        'parameters.load.missing': 0,
         'parameters.floor': {'dims': [], 'missing': '-inf'},
         'parameters.online': {'dims': ['generator'], 'dtype': 'bool', 'missing': True},
         'parameters.p_set': {'dims': ['generator'], 'missing': 'absent'},
@@ -115,14 +115,14 @@ DEFAULTED = varied(
 
 @EVERY_FORMAT
 def test_the_legend_prints_what_a_missing_row_means(name: FormatName, fmt: Format):
-    """The legend printed a value and left out a reading, so `absent`, `neutral` and a partial map looked complete."""
+    """The legend printed a value and left out a reading, so `absent`, `0` and a partial map looked complete."""
     out = typeset(DEFAULTED, name)
     for shown in (
         fmt.math(number(math.inf, fmt)),
         fmt.math(number(-math.inf, fmt)),
         fmt.math('1'),
         fmt.mono('true'),
-        fmt.mono('neutral'),
+        fmt.math(number(0, fmt)),
         fmt.mono('absent'),
         f'{fmt.mono("gen_bus")} is {fmt.mono("absent")}',
     ):
@@ -137,8 +137,8 @@ def test_the_legend_prints_what_a_missing_row_means(name: FormatName, fmt: Forma
 MASKED = varied(
     DISPATCH_MODEL,
     **{
-        'parameters.on': {'dims': ['generator'], 'dtype': 'bool', 'missing': 'neutral'},
-        'variables.spill': {'dims': ['snapshot', 'generator'], 'where': 'on', 'missing': 'neutral'},
+        'parameters.on': {'dims': ['generator'], 'dtype': 'bool', 'missing': False},
+        'variables.spill': {'dims': ['snapshot', 'generator'], 'where': 'on', 'missing': 0},
         'variables.store': {'dims': ['snapshot', 'generator'], 'where': 'on'},
     },
 )
@@ -146,10 +146,12 @@ MASKED = varied(
 
 @EVERY_FORMAT
 def test_the_legend_prints_what_a_masked_out_variable_means(name: FormatName, fmt: Format):
-    """The legend printed a parameter's reading and not a variable's, so `missing: neutral` on a variable was unseen."""
+    """The legend printed a parameter's reading and not a variable's, so `missing: 0` on a variable was unseen."""
     out = typeset(MASKED, name)
     [row] = [line for line in out.splitlines() if fmt.mono('spill') in line and ' over ' in line]
-    assert f'{fmt.mono("spill")} over ' in row and f', {fmt.mono("neutral")} where the mask leaves it out' in row, row
+    assert (
+        f'{fmt.mono("spill")} over ' in row and f', {fmt.math(number(0, fmt))} where the mask leaves it out' in row
+    ), row
     assert out.count('where the mask leaves it out') == 1, '`store` keeps the default, absent, and says nothing'
 
 

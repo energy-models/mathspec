@@ -23,7 +23,7 @@ parameters:
       `multi_investment_periods` (`global_constraints.py:220-221`). Otherwise
       you feed no value in data prep
     dims: [carrier]
-    missing: neutral
+    missing: absent
   Carrier_max_relative_growth:
     description: >-
       share of the previous period's additions that may be added on top: the

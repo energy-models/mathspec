@@ -67,7 +67,7 @@ parameters:
       `Process_maintenance_cover` and `Process_maintenance_start_blocked`. The
       assumptions state that it fits the horizon
     dims: [scenario, process]
-    missing: neutral
+    missing: absent
   Process_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, data prep. The snapshots it
@@ -84,7 +84,7 @@ variables:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_active
-    missing: neutral
+    missing: 0
     bounds:
       lower: 0
       upper: 1
@@ -92,7 +92,7 @@ variables:
     description: "`Process-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_active
-    missing: neutral
+    missing: 0
     domain: binary
   Process_maintenance_capacity:
     description: >-
@@ -100,7 +100,7 @@ variables:
       zero otherwise: the product the `maintcap` rows linearise
     dims: [scenario, snapshot, process]
     where: Process_maint_ext
-    missing: neutral
+    missing: 0
     bounds:
       lower: 0
   Process_maintenance_status:
@@ -113,7 +113,7 @@ variables:
       Process_maintainable
       AND Process_committed
       AND NOT (Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0))
-    missing: neutral
+    missing: 0
     bounds:
       lower: 0
 
@@ -276,7 +276,7 @@ assumptions:
 | $`\mathrm{mnt}^{z}`$ | `Process_maintainable` over $`\mathcal{J}`$ — whether a process must be taken off for maintenance within the horizon: in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
 | $`\gamma^{z}`$ | `Process_maintenance_pu` over $`\Xi \times \mathcal{J}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{z,\mathrm{mnt}}`$ | `Process_maintenance_events` over $`\Xi \times \mathcal{J}`$ — how many maintenance events occur within the horizon |
-| $`\tau^{z,\mathrm{mnt}}`$ | `Process_maintenance_duration` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers, PyPSA's `maintenance_duration`. It has no value where the process is not maintainable. No row contains it. In data prep you turn it into `Process_maintenance_cover` and `Process_maintenance_start_blocked`. The assumptions state that it fits the horizon |
+| $`\tau^{z,\mathrm{mnt}}`$ | `Process_maintenance_duration` over $`\Xi \times \mathcal{J}`$, `absent` where the data has no row — the hours of generator weightings one maintenance event covers, PyPSA's `maintenance_duration`. It has no value where the process is not maintainable. No row contains it. In data prep you turn it into `Process_maintenance_cover` and `Process_maintenance_start_blocked`. The assumptions state that it fits the horizon |
 | $`\mathrm{blk}^{z}`$ | `Process_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — true where no maintenance event may start, data prep. The snapshots it would cover there run past the end of the horizon or into one the process is not active in. It is PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings |
 
 #### Conditions
@@ -289,10 +289,10 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mu^{z}`$ | `Process_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance` — whether a maintainable process is in maintenance: continuous, and one exactly where an event covers the snapshot |
-| $`\mu^{z,\mathrm{up}}`$ | `Process_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_start` — whether a maintenance event starts in this snapshot |
-| $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearise |
-| $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the mask leaves it out — `Process-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearise, so a unit in maintenance may also be off |
+| $`\mu^{z}`$ | `Process_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, $`0`$ where the mask leaves it out — `Process-maintenance` — whether a maintainable process is in maintenance: continuous, and one exactly where an event covers the snapshot |
+| $`\mu^{z,\mathrm{up}}`$ | `Process_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, $`0`$ where the mask leaves it out — `Process-maintenance_start` — whether a maintenance event starts in this snapshot |
+| $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, $`0`$ where the mask leaves it out — `Process-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearise |
+| $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, $`0`$ where the mask leaves it out — `Process-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearise, so a unit in maintenance may also be off |
 
 #### Conditions
 

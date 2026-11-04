@@ -95,7 +95,7 @@ def assumptions_of(name: str, pw: Piecewise) -> dict[str, AssumptionSpec]:
     Every curve assumes its breakpoints are there, because a missing row does
     not shorten a curve. Under ``points:`` its tables are not ``refused``, so
     a breakpoint missing inside the mask would read as their ``missing:`` and,
-    under ``neutral``, sit the curve on the origin. A curve has an x-axis only where two
+    under ``missing: 0``, sit the curve on the origin. A curve has an x-axis only where two
     links tie it, so the increasing condition — and the shape it is checked
     with — exist only there; ``lp`` alone needs a segment to state a line for;
     a mask must be one run.
@@ -298,9 +298,9 @@ def leaves_ungated(gate: VariableSpec | Variable | None) -> bool:
     """Whether a curve gated by *gate* runs ungated where the gate does not exist, which takes a second convexity row.
 
     A masked gate is absent off its mask, and there the curve sums to 1;
-    ``missing: neutral`` reads the gate as 0 there instead, which one row states.
+    ``missing: 0`` reads the gate as 0 there instead, which one row states.
     """
-    return gate is not None and gate.where is not None and gate.missing != 'neutral'
+    return gate is not None and gate.where is not None and gate.missing != 0
 
 
 def curve_frame(spec: Spec, name: str, pw: PiecewiseSpec, links: Iterable[Expression]) -> tuple[str, ...]:
@@ -433,7 +433,7 @@ class _Expansion:
         reduction, so the right-hand side would take the row with it and leave the
         weights without the convexity that makes them a curve at all (#1158).
 
-        ``missing: neutral`` is the other reading and stays one row — the gate is 0
+        ``missing: 0`` is the other reading and stays one row — the gate is 0
         where it does not exist, so the curve is pinned off there.
         """
         activity = self.pw.activity
@@ -488,8 +488,8 @@ def refused_under_points(spec: Spec) -> Iterator[str]:
             if spec.parameters[name].missing == 'refused':
                 yield (
                     f"parameter '{name}' is refused where a row is missing, and piecewise '{entry_name}' reads it under "
-                    f"points: '{pw.points}', which stops the curve where its rows stop. Declare missing: neutral, "
-                    f'absent, or a value of its dtype.'
+                    f"points: '{pw.points}', which stops the curve where its rows stop. Declare missing: absent, "
+                    f'or a value of its dtype.'
                 )
 
 

@@ -54,19 +54,19 @@ parameters:
   Process_ramp_limit_up:
     description: most a process may raise its internal power between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time
     dims: [scenario, snapshot, process]
-    missing: neutral
+    missing: absent
   Process_ramp_limit_down:
     description: most a process may lower its internal power between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time
     dims: [scenario, snapshot, process]
-    missing: neutral
+    missing: absent
   Process_ramp_limit_start_up:
     description: most internal power in the snapshot a process starts, per unit of nominal power. No value means no limit
     dims: [scenario, process]
-    missing: neutral
+    missing: absent
   Process_ramp_limit_shut_down:
     description: most internal power in the snapshot before a process stops, per unit of nominal power. No value means no limit
     dims: [scenario, process]
-    missing: neutral
+    missing: absent
   Process_p_init:
     description: >-
       the internal power a process brought into the horizon (PyPSA's
@@ -74,7 +74,7 @@ parameters:
       it is unknown, and the process then has no ramp row at the first
       snapshot
     dims: [scenario, process]
-    missing: neutral
+    missing: 0
 
 expressions:
   Process_previous_p:
@@ -293,11 +293,11 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{ru}^{z}`$ | `Process_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — most a process may raise its internal power between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
-| $`\mathrm{rd}^{z}`$ | `Process_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `neutral` where the data has no row — most a process may lower its internal power between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
-| $`\mathrm{ru}^{z,\mathrm{up}}`$ | `Process_ramp_limit_start_up` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — most internal power in the snapshot a process starts, per unit of nominal power. No value means no limit |
-| $`\mathrm{rd}^{z,\mathrm{dn}}`$ | `Process_ramp_limit_shut_down` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — most internal power in the snapshot before a process stops, per unit of nominal power. No value means no limit |
-| $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\Xi \times \mathcal{J}`$, `neutral` where the data has no row — the internal power a process brought into the horizon (PyPSA's `p_init`), read only where the process came in running. No value means it is unknown, and the process then has no ramp row at the first snapshot |
+| $`\mathrm{ru}^{z}`$ | `Process_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `absent` where the data has no row — most a process may raise its internal power between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
+| $`\mathrm{rd}^{z}`$ | `Process_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$, `absent` where the data has no row — most a process may lower its internal power between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
+| $`\mathrm{ru}^{z,\mathrm{up}}`$ | `Process_ramp_limit_start_up` over $`\Xi \times \mathcal{J}`$, `absent` where the data has no row — most internal power in the snapshot a process starts, per unit of nominal power. No value means no limit |
+| $`\mathrm{rd}^{z,\mathrm{dn}}`$ | `Process_ramp_limit_shut_down` over $`\Xi \times \mathcal{J}`$, `absent` where the data has no row — most internal power in the snapshot before a process stops, per unit of nominal power. No value means no limit |
+| $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\Xi \times \mathcal{J}`$, $`0`$ where the data has no row — the internal power a process brought into the horizon (PyPSA's `p_init`), read only where the process came in running. No value means it is unknown, and the process then has no ramp row at the first snapshot |
 
 #### Conditions
 

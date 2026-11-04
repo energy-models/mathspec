@@ -86,7 +86,7 @@ parameters:
   CVaR_omega:
     description: PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. `CVaR_omega` has a value only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one
     dims: []
-    missing: neutral
+    missing: 0
   period_weight_objective:
     description: >-
       PyPSA's `investment_period_weightings.objective` — what a period's cost
@@ -130,7 +130,7 @@ parameters:
       without it (`global_constraints.py:364-369`)
     dims: [scenario, global_constraint, snapshot]
     dtype: bool
-    missing: neutral
+    missing: false
 
 expressions:
   GlobalConstraint_energy_weight:

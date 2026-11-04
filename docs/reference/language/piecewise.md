@@ -360,11 +360,11 @@ The curve is scaled by `running` where `committable` is true, and by 1
 elsewhere. With data for gas and wind, at each snapshot gas has the scale
 `running` and wind has the scale `1`.
 
-Where the gate is [absent](absence.md), the curve is ungated. With
-`missing: neutral` on the gate, the absent gate is `0`, so the curve is
-switched off there.
+Where the gate is [absent](absence.md), the curve is ungated, as under
+`missing: 1`. With `missing: 0` on the gate, the gate is `0` outside its
+`where:`, so the curve is switched off there.
 
-With `missing: neutral` on the gate, the typesetter prints the curve scaled by
+With `missing: 0` on the gate, the typesetter prints the curve scaled by
 `running` alone.
 
 ### `points`
@@ -378,8 +378,8 @@ dimensions:
   generator: { dtype: str }
   bp: { dtype: int, ordered: true }
 parameters:
-  bp_x: { dims: [generator, bp], missing: neutral }
-  bp_y: { dims: [generator, bp], missing: neutral }
+  bp_x: { dims: [generator, bp], missing: 0 }
+  bp_y: { dims: [generator, bp], missing: 0 }
 variables:
   p: { dims: [generator], bounds: { lower: 0 } }
   op_cost: { dims: [generator] }
@@ -408,9 +408,8 @@ objective:
 </figure>
 
 The curve of each generator now runs over the breakpoints where `bp_x` is
-defined, and no further. Each values parameter declares
-[`missing: neutral`](#missing-breakpoints), because its table stops where the
-curve stops.
+defined, and no further. The file declares [`missing: 0`](#missing-breakpoints) on each values
+parameter, because its table stops where the curve stops.
 
 With data attached, the software that runs the `cost_curve_complete`
 [assumption](assumptions.md#what-a-curve-assumes) ([a tool](../glossary.md#tool))
@@ -438,13 +437,13 @@ stop, so the table has no rows past that point, and
 refuses the file at load:
 
 ```text
-parameter 'bp_y' is refused where a row is missing, and piecewise 'cost_curve' reads it under points: 'bp_x', which stops the curve where its rows stop. Declare missing: neutral, absent, or a value of its dtype.
+parameter 'bp_y' is refused where a row is missing, and piecewise 'cost_curve' reads it under points: 'bp_x', which stops the curve where its rows stop. Declare missing: absent, or a value of its dtype.
 ```
 
-mathspec lists the `missing:` values that it accepts: `neutral`, `absent`,
-or a value of the dtype.
+mathspec lists the `missing:` values that it accepts: `absent`, or a value of
+the dtype.
 
-Under `neutral` and under `absent`, the curve is the same, because the curve
+Under `absent` and under a value, the curve is the same, because the curve
 uses a table only inside the run of its breakpoints. With data attached, the
 tool that runs `<entry>_complete` still refuses a missing row there. The two differ where an expression
 outside the curve uses the table:
@@ -453,7 +452,8 @@ outside the curve uses the table:
 --8<-- "docs/static/piecewise-missing.svg"
 </figure>
 
-Under `neutral` the missing row of `bp_y` is `0`, and under `absent` `bp_y` has no row there, so a term that uses it is absent.
+Under `missing: 0`, the missing row of `bp_y` is `0`. Under `absent`, `bp_y`
+has no row there, so a term that uses it is absent.
 
 !!! info "See also"
 

@@ -86,7 +86,7 @@ parameters:
   Transformer_s_nom_mod:
     description: the module size a build comes in whole numbers of. No value means the build is continuous
     dims: [transformer]
-    missing: neutral
+    missing: absent
   Transformer_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, transformer]
@@ -107,11 +107,11 @@ parameters:
   Transformer_s_nom_set:
     description: a given nominal apparent power for an extendable transformer. One without a value has no row here
     dims: [transformer]
-    missing: neutral
+    missing: absent
   Transformer_s_set:
     description: a given flow schedule. A transformer without one has no row here
     dims: [scenario, snapshot, transformer]
-    missing: neutral
+    missing: absent
   Transformer_v_ang_max:
     description: >-
       the most the voltage angle difference across a transformer, its phase
@@ -119,7 +119,7 @@ parameters:
       `v_ang_max`. Infinite, and so no row, by default. The deprecated
       `v_ang_min` is ignored, as a line's
     dims: [scenario, transformer]
-    missing: neutral
+    missing: absent
   Transformer_x_pu_eff:
     description: >-
       the transformer's effective series reactance. It is PyPSA's `x_pu_eff`,
@@ -132,7 +132,7 @@ parameters:
       cycle basis, data prep. A transformer in no cycle has no row. From the
       first scenario only, as a line's
     dims: [period, transformer, cycle]
-    missing: neutral
+    missing: absent
   Transformer_phase_shift_weight:
     description: >-
       a fixed transformer's phase shift in radians at each snapshot, signed by
@@ -142,7 +142,7 @@ parameters:
       count a shift. A transformer with no shift or in no cycle of its
       snapshot's period has no row
     dims: [snapshot, transformer, cycle]
-    missing: neutral
+    missing: absent
   Transformer_phase_shift_varying:
     description: >-
       whether a transformer's phase shift is a decision (PyPSA's
@@ -210,7 +210,7 @@ variables:
       lossless
     dims: [scenario, snapshot, transformer]
     where: Transformer_lossy
-    missing: neutral
+    missing: 0
     bounds:
       lower: 0
   Transformer_phase_shift:
@@ -221,7 +221,7 @@ variables:
       sum, where the shift is fixed
     dims: [scenario, snapshot, transformer]
     where: Transformer_phase_shift_varying AND Transformer_active
-    missing: neutral
+    missing: 0
     bounds:
       lower: Transformer_phase_shift_min
       upper: Transformer_phase_shift_max
@@ -402,17 +402,17 @@ constraints:
 | $`\mathrm{W}^{\sigma}`$ | `Transformer_capital_weight` over $`\mathcal{M}`$ — the sum of period weights a transformer is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
 | $`\sigma^{\mathrm{nom}}`$ | `Transformer_s_nom` over $`\Xi \times \mathcal{M}`$ — nominal apparent power |
 | $`\mathrm{ext}^{\sigma}`$ | `Transformer_s_nom_extendable` over $`\mathcal{M}`$ — whether the nominal apparent power is a decision |
-| $`\sigma^{\mathrm{mod}}`$ | `Transformer_s_nom_mod` over $`\mathcal{M}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of. No value means the build is continuous |
+| $`\sigma^{\mathrm{mod}}`$ | `Transformer_s_nom_mod` over $`\mathcal{M}`$, `absent` where the data has no row — the module size a build comes in whole numbers of. No value means the build is continuous |
 | $`\overline{\sigma}`$ | `Transformer_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — most flow either way, per unit of nominal apparent power |
 | $`\underline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_min` over $`\Xi \times \mathcal{M}`$ — least nominal apparent power an extendable transformer may be built at |
 | $`\overline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_max` over $`\Xi \times \mathcal{M}`$ — most nominal apparent power an extendable transformer may be built at |
 | $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`) |
-| $`\sigma^{\mathrm{nom,set}}`$ | `Transformer_s_nom_set` over $`\mathcal{M}`$, `neutral` where the data has no row — a given nominal apparent power for an extendable transformer. One without a value has no row here |
-| $`\sigma^{\mathrm{set}}`$ | `Transformer_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, `neutral` where the data has no row — a given flow schedule. A transformer without one has no row here |
-| $`\overline{\delta}^{\sigma}`$ | `Transformer_v_ang_max` over $`\Xi \times \mathcal{M}`$, `neutral` where the data has no row — the most the voltage angle difference across a transformer, its phase shift included, may be either way, in degrees. It is PyPSA's `v_ang_max`. Infinite, and so no row, by default. The deprecated `v_ang_min` is ignored, as a line's |
+| $`\sigma^{\mathrm{nom,set}}`$ | `Transformer_s_nom_set` over $`\mathcal{M}`$, `absent` where the data has no row — a given nominal apparent power for an extendable transformer. One without a value has no row here |
+| $`\sigma^{\mathrm{set}}`$ | `Transformer_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, `absent` where the data has no row — a given flow schedule. A transformer without one has no row here |
+| $`\overline{\delta}^{\sigma}`$ | `Transformer_v_ang_max` over $`\Xi \times \mathcal{M}`$, `absent` where the data has no row — the most the voltage angle difference across a transformer, its phase shift included, may be either way, in degrees. It is PyPSA's `v_ang_max`. Infinite, and so no row, by default. The deprecated `v_ang_min` is ignored, as a line's |
 | $`\mathrm{x}^{\mathrm{eff},\sigma}`$ | `Transformer_x_pu_eff` over $`\Xi \times \mathcal{M}`$ — the transformer's effective series reactance. It is PyPSA's `x_pu_eff`, `x` over its `s_nom` times its tap ratio, data prep |
-| $`\mathrm{x}^{\sigma}`$ | `Transformer_cycle_weight` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{C}`$, `neutral` where the data has no row — the transformer's effective series reactance, `x` times its tap ratio, signed by its orientation in the cycle. It is PyPSA's `x_pu_eff`, the cycle basis, data prep. A transformer in no cycle has no row. From the first scenario only, as a line's |
-| $`\vartheta`$ | `Transformer_phase_shift_weight` over $`\mathcal{T} \times \mathcal{M} \times \mathcal{C}`$, `neutral` where the data has no row — a fixed transformer's phase shift in radians at each snapshot, signed by its orientation in the cycle, data prep. It is a constant added to the cycle sum. It is zero for a varying transformer, whose shift is a decision instead. The constant and the variable term thus never both count a shift. A transformer with no shift or in no cycle of its snapshot's period has no row |
+| $`\mathrm{x}^{\sigma}`$ | `Transformer_cycle_weight` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{C}`$, `absent` where the data has no row — the transformer's effective series reactance, `x` times its tap ratio, signed by its orientation in the cycle. It is PyPSA's `x_pu_eff`, the cycle basis, data prep. A transformer in no cycle has no row. From the first scenario only, as a line's |
+| $`\vartheta`$ | `Transformer_phase_shift_weight` over $`\mathcal{T} \times \mathcal{M} \times \mathcal{C}`$, `absent` where the data has no row — a fixed transformer's phase shift in radians at each snapshot, signed by its orientation in the cycle, data prep. It is a constant added to the cycle sum. It is zero for a varying transformer, whose shift is a decision instead. The constant and the variable term thus never both count a shift. A transformer with no shift or in no cycle of its snapshot's period has no row |
 | $`\mathrm{Transformer\_phase\_shift\_varying}`$ | `Transformer_phase_shift_varying` over $`\mathcal{M}`$ — whether a transformer's phase shift is a decision (PyPSA's `phase_shift_min < phase_shift_max`, read as a flag in data prep). False is a fixed shift, set by `phase_shift`. The shift parameters have no scenario, but PyPSA reads them per scenario (`variables.py:433-443`, `constraints.py:1652`, `:1735`). The spec and PyPSA differ here (\#783) |
 | $`\mathrm{Transformer\_phase\_shift\_min}`$ | `Transformer_phase_shift_min` over $`\mathcal{M}`$ — the least a varying transformer's phase shift may take, in degrees. It is PyPSA's `phase_shift_min`. Where it is below `phase_shift_max` the shift is a decision, otherwise the transformer keeps its fixed `phase_shift` |
 | $`\mathrm{Transformer\_phase\_shift\_max}`$ | `Transformer_phase_shift_max` over $`\mathcal{M}`$ — the most a varying transformer's phase shift may take, in degrees. It is PyPSA's `phase_shift_max`. Equal to `phase_shift_min` for a fixed transformer |
@@ -433,8 +433,8 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\sigma`$ | `Transformer_s` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — `Transformer-s` — PyPSA's `p0`, the flow measured at the `Transformer_bus0` end: a positive value withdraws there and injects at `Transformer_bus1`, lossless |
-| $`\ell^{\sigma}`$ | `Transformer_loss` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, `neutral` where the mask leaves it out — `Transformer-loss` — what a transformer dissipates carrying its flow, as a line does. Absent, and zero in the balance, where the network is lossless |
-| $`\mathit{Transformer\_phase\_shift}`$ | `Transformer_phase_shift` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, `neutral` where the mask leaves it out — `Transformer-phase_shift` — a phase-shifting transformer's voltage angle shift in degrees, chosen per snapshot to redistribute the flows around its cycles without moving active power. Absent, and zero in the cycle sum, where the shift is fixed |
+| $`\ell^{\sigma}`$ | `Transformer_loss` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, $`0`$ where the mask leaves it out — `Transformer-loss` — what a transformer dissipates carrying its flow, as a line does. Absent, and zero in the balance, where the network is lossless |
+| $`\mathit{Transformer\_phase\_shift}`$ | `Transformer_phase_shift` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, $`0`$ where the mask leaves it out — `Transformer-phase_shift` — a phase-shifting transformer's voltage angle shift in degrees, chosen per snapshot to redistribute the flows around its cycles without moving active power. Absent, and zero in the cycle sum, where the shift is fixed |
 | $`\Sigma`$ | `Transformer_s_nom_ext` over $`\mathcal{M}`$ — `Transformer-s_nom` — nominal apparent power where it is a decision, for a transformer that is active. A fixed build is the parameter of the same PyPSA name |
 | $`N^{\sigma}`$ | `Transformer_n_mod` over $`\mathcal{M}`$ — `Transformer-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 

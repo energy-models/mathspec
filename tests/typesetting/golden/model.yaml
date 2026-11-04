@@ -34,7 +34,7 @@ relations:
 parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
-  cost: { dims: [generator], missing: neutral } # a reading: the legend names it
+  cost: { dims: [generator], missing: 0 } # a reading: the legend names it
   load: { dims: [snapshot, bus] }
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
@@ -44,8 +44,8 @@ parameters:
   lead: { dims: [generator], dtype: int }
   budget: { dims: [] } # scalar: the legend says so rather than printing an empty product
   growth: { dims: [] } # the base of a power; the exponent is `lead`, a column
-  bp_x: { dims: [generator, bp], missing: neutral } # the x-axis of every curve below, and what a derived mask is read from
-  bp_y: { dims: [generator, bp], missing: neutral }
+  bp_x: { dims: [generator, bp], missing: 0 } # the x-axis of every curve below, and what a derived mask is read from
+  bp_y: { dims: [generator, bp], missing: 0 }
   bp_heat: { dims: [generator, bp] }
   bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a piecewise entry has a mask to print
 
@@ -75,10 +75,10 @@ variables:
   reserve: # an empty dims: a scalar entry, whose line carries no quantifier
     dims: []
     bounds: { lower: 0 }
-  headroom: # scalar too, but masked, so the condition stands with no set beside it; neutral, so the legend names the reading
+  headroom: # scalar too, but masked, so the condition stands with no set beside it; 0, so the legend names the value
     dims: []
     where: "budget"
-    missing: neutral
+    missing: 0
     bounds: { lower: 0 }
   weight: # the family a sos runs along
     dims: [snapshot, generator]

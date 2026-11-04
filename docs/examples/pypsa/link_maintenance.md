@@ -67,7 +67,7 @@ parameters:
       `Link_maintenance_cover` and `Link_maintenance_start_blocked`. The
       assumptions state that it fits the horizon
     dims: [scenario, link]
-    missing: neutral
+    missing: absent
   Link_maintenance_start_blocked:
     description: >-
       true where no maintenance event may start, data prep. The snapshots it
@@ -84,7 +84,7 @@ variables:
       continuous, and one exactly where an event covers the snapshot
     dims: [scenario, snapshot, link]
     where: Link_maintainable AND Link_active
-    missing: neutral
+    missing: 0
     bounds:
       lower: 0
       upper: 1
@@ -92,7 +92,7 @@ variables:
     description: "`Link-maintenance_start` — whether a maintenance event starts in this snapshot"
     dims: [scenario, snapshot, link]
     where: Link_maintainable AND Link_active
-    missing: neutral
+    missing: 0
     domain: binary
   Link_maintenance_capacity:
     description: >-
@@ -100,7 +100,7 @@ variables:
       zero otherwise: the product the `maintcap` rows linearise
     dims: [scenario, snapshot, link]
     where: Link_maint_ext
-    missing: neutral
+    missing: 0
     bounds:
       lower: 0
   Link_maintenance_status:
@@ -110,7 +110,7 @@ variables:
       maintenance may also be off
     dims: [scenario, snapshot, link]
     where: Link_maintainable AND Link_committed AND NOT (Link_p_nom_extendable AND NOT (Link_p_nom_mod > 0))
-    missing: neutral
+    missing: 0
     bounds:
       lower: 0
 
@@ -273,7 +273,7 @@ assumptions:
 | $`\mathrm{mnt}^{f}`$ | `Link_maintainable` over $`\mathcal{L}`$ — whether a link must be taken off for maintenance within the horizon: in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
 | $`\gamma^{f}`$ | `Link_maintenance_pu` over $`\Xi \times \mathcal{L}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{f,\mathrm{mnt}}`$ | `Link_maintenance_events` over $`\Xi \times \mathcal{L}`$ — how many maintenance events occur within the horizon |
-| $`\tau^{f,\mathrm{mnt}}`$ | `Link_maintenance_duration` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the hours of generator weightings one maintenance event covers, PyPSA's `maintenance_duration`. It has no value where the link is not maintainable. No row contains it. In data prep you turn it into `Link_maintenance_cover` and `Link_maintenance_start_blocked`. The assumptions state that it fits the horizon |
+| $`\tau^{f,\mathrm{mnt}}`$ | `Link_maintenance_duration` over $`\Xi \times \mathcal{L}`$, `absent` where the data has no row — the hours of generator weightings one maintenance event covers, PyPSA's `maintenance_duration`. It has no value where the link is not maintainable. No row contains it. In data prep you turn it into `Link_maintenance_cover` and `Link_maintenance_start_blocked`. The assumptions state that it fits the horizon |
 | $`\mathrm{blk}^{f}`$ | `Link_maintenance_start_blocked` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true where no maintenance event may start, data prep. The snapshots it would cover there run past the end of the horizon or into one the link is not active in. It is PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings |
 
 #### Conditions
@@ -286,10 +286,10 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mu^{f}`$ | `Link_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `Link-maintenance` — whether a maintainable link is in maintenance: continuous, and one exactly where an event covers the snapshot |
-| $`\mu^{f,\mathrm{up}}`$ | `Link_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `Link-maintenance_start` — whether a maintenance event starts in this snapshot |
-| $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `Link-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearise |
-| $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the mask leaves it out — `Link-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearise, so a unit in maintenance may also be off |
+| $`\mu^{f}`$ | `Link_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, $`0`$ where the mask leaves it out — `Link-maintenance` — whether a maintainable link is in maintenance: continuous, and one exactly where an event covers the snapshot |
+| $`\mu^{f,\mathrm{up}}`$ | `Link_maintenance_start` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, $`0`$ where the mask leaves it out — `Link-maintenance_start` — whether a maintenance event starts in this snapshot |
+| $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, $`0`$ where the mask leaves it out — `Link-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearise |
+| $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, $`0`$ where the mask leaves it out — `Link-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearise, so a unit in maintenance may also be off |
 
 #### Conditions
 

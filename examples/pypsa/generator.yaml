@@ -87,7 +87,7 @@ parameters:
   Generator_p_nom_mod:
     description: the module size a build comes in whole numbers of. No value means the build is continuous
     dims: [generator]
-    missing: neutral
+    missing: absent
   Generator_modules_installed:
     description: >-
       how many whole modules a committable build has in place, data prep. It
@@ -125,7 +125,7 @@ parameters:
   Generator_p_set:
     description: a given output schedule. A generator without one has no row here
     dims: [scenario, snapshot, generator]
-    missing: neutral
+    missing: absent
   Generator_p_nom_min:
     description: least nominal power an extendable generator may be built at
     dims: [scenario, generator]
@@ -143,7 +143,7 @@ parameters:
   Generator_p_nom_set:
     description: a given nominal power for an extendable generator. One without a value has no row here
     dims: [generator]
-    missing: neutral
+    missing: absent
   Generator_e_sum_min:
     description: least energy over the horizon. It is minus infinity where no floor is meant
     dims: [scenario, generator]
@@ -156,18 +156,18 @@ parameters:
       `co2_emissions` over the generator's efficiency at the snapshot, data
       prep. A generator of an unweighted carrier has no row
     dims: [scenario, global_constraint, snapshot, generator]
-    missing: neutral
+    missing: absent
   Generator_operational_limit_weight:
     description: one where the generator is in the row's set, data prep. One outside it has no row
     dims: [scenario, global_constraint, generator]
-    missing: neutral
+    missing: absent
   Generator_tech_capacity_weight:
     description: >-
       one where the generator is in the row's carrier-and-bus set, data prep.
       One outside it, or one that is not active in the row's
       `investment_period`, has no row
     dims: [global_constraint, generator]
-    missing: neutral
+    missing: absent
 
 variables:
   Generator_p:

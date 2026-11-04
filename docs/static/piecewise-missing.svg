@@ -3,8 +3,8 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 769 406" width="769" height="406" style="max-width: 100%; height: auto" role="img" aria-labelledby="pm-t pm-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
-  <title id="pm-t">neutral and absent differ outside the curve</title>
-  <desc id="pm-d">The keys are bp_y with missing neutral or missing absent. The parameter bp_y has rows for gas at the breakpoints 0, 1 and 2, and for coal at the breakpoints 0 and 1. It has no row for coal at breakpoint 2. Read outside the curve with missing neutral, bp_y is 0 for coal at breakpoint 2. With missing absent, bp_y has no row there, and a term that uses it is absent.</desc>
+  <title id="pm-t">0 and absent differ outside the curve</title>
+  <desc id="pm-d">The keys are bp_y with missing 0 or missing absent. The parameter bp_y has rows for gas at the breakpoints 0, 1 and 2, and for coal at the breakpoints 0 and 1. It has no row for coal at breakpoint 2. Read outside the curve with missing 0, bp_y is 0 for coal at breakpoint 2. With missing absent, bp_y has no row there, and a term that uses it is absent.</desc>
   <defs>
     <pattern id="pm-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
@@ -14,7 +14,7 @@ SPDX-License-Identifier: CC-BY-4.0
     </marker>
   </defs>
   <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
-    <text x="16" y="24" xml:space="preserve"><tspan>bp_y: { dims: [generator, bp], </tspan><tspan font-weight="bold">missing</tspan><tspan>: neutral | absent }</tspan></text>
+    <text x="16" y="24" xml:space="preserve"><tspan>bp_y: { dims: [generator, bp], </tspan><tspan font-weight="bold">missing</tspan><tspan>: 0 | absent }</tspan></text>
   </g>
   <g stroke="none">
     <path d="M16,86 H198.8 V199 A3,3 0 0 1 195.8,202 H19 A3,3 0 0 1 16,199 Z" fill="#0072B2" fill-opacity="0.08"/>
@@ -45,7 +45,7 @@ SPDX-License-Identifier: CC-BY-4.0
     <path d="M208.8,144.0 H220.8 V257 H361.8"/>
   </g>
   <g fill="currentColor" font-size="12">
-    <text x="231" y="69">missing: neutral</text>
+    <text x="231" y="69">missing: 0</text>
     <text x="231" y="91" fill-opacity="0.7">outside the curve</text>
     <text x="231" y="251">missing: absent</text>
     <text x="231" y="273" fill-opacity="0.7">outside the curve</text>

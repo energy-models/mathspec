@@ -54,26 +54,26 @@ parameters:
   Link_ramp_limit_up:
     description: most a link may raise its flow between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time
     dims: [scenario, snapshot, link]
-    missing: neutral
+    missing: absent
   Link_ramp_limit_down:
     description: most a link may lower its flow between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time
     dims: [scenario, snapshot, link]
-    missing: neutral
+    missing: absent
   Link_ramp_limit_start_up:
     description: most flow in the snapshot a link starts, per unit of nominal power. No value means no limit
     dims: [scenario, link]
-    missing: neutral
+    missing: absent
   Link_ramp_limit_shut_down:
     description: most flow in the snapshot before a link stops, per unit of nominal power. No value means no limit
     dims: [scenario, link]
-    missing: neutral
+    missing: absent
   Link_p_init:
     description: >-
       the flow a link brought into the horizon (PyPSA's `p_init`), read only
       where the link came in running. No value means it is unknown, and the
       link then has no ramp row at the first snapshot
     dims: [scenario, link]
-    missing: neutral
+    missing: 0
 
 expressions:
   Link_previous_p:
@@ -284,11 +284,11 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{ru}^{f}`$ | `Link_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — most a link may raise its flow between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
-| $`\mathrm{rd}^{f}`$ | `Link_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `neutral` where the data has no row — most a link may lower its flow between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
-| $`\mathrm{ru}^{f,\mathrm{up}}`$ | `Link_ramp_limit_start_up` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most flow in the snapshot a link starts, per unit of nominal power. No value means no limit |
-| $`\mathrm{rd}^{f,\mathrm{dn}}`$ | `Link_ramp_limit_shut_down` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — most flow in the snapshot before a link stops, per unit of nominal power. No value means no limit |
-| $`\mathrm{f}^{0}`$ | `Link_p_init` over $`\Xi \times \mathcal{L}`$, `neutral` where the data has no row — the flow a link brought into the horizon (PyPSA's `p_init`), read only where the link came in running. No value means it is unknown, and the link then has no ramp row at the first snapshot |
+| $`\mathrm{ru}^{f}`$ | `Link_ramp_limit_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `absent` where the data has no row — most a link may raise its flow between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
+| $`\mathrm{rd}^{f}`$ | `Link_ramp_limit_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `absent` where the data has no row — most a link may lower its flow between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
+| $`\mathrm{ru}^{f,\mathrm{up}}`$ | `Link_ramp_limit_start_up` over $`\Xi \times \mathcal{L}`$, `absent` where the data has no row — most flow in the snapshot a link starts, per unit of nominal power. No value means no limit |
+| $`\mathrm{rd}^{f,\mathrm{dn}}`$ | `Link_ramp_limit_shut_down` over $`\Xi \times \mathcal{L}`$, `absent` where the data has no row — most flow in the snapshot before a link stops, per unit of nominal power. No value means no limit |
+| $`\mathrm{f}^{0}`$ | `Link_p_init` over $`\Xi \times \mathcal{L}`$, $`0`$ where the data has no row — the flow a link brought into the horizon (PyPSA's `p_init`), read only where the link came in running. No value means it is unknown, and the link then has no ramp row at the first snapshot |
 
 #### Conditions
 

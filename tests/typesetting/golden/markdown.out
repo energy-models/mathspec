@@ -20,7 +20,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 |---|---|
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
-| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, `neutral` where the data has no row |
+| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{T} \times \mathcal{B}`$ |
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
@@ -30,8 +30,8 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
 | $`\mathrm{budget}`$ | `budget` (scalar) |
 | $`\mathrm{growth}`$ | `growth` (scalar) |
-| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{G} \times \mathcal{A}`$, `neutral` where the data has no row |
-| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{G} \times \mathcal{A}`$, `neutral` where the data has no row |
+| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{G} \times \mathcal{A}`$, $`0`$ where the data has no row |
+| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{G} \times \mathcal{A}`$, $`0`$ where the data has no row |
 | $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{G} \times \mathcal{A}`$ |
 | $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{G} \times \mathcal{A}`$ |
 
@@ -54,7 +54,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathit{units}`$ | `units` over $`\mathcal{G}`$ |
 | $`\mathit{spare}`$ | `spare` over $`\mathcal{G}`$ |
 | $`\mathit{reserve}`$ | `reserve` (scalar) |
-| $`\mathit{headroom}`$ | `headroom` (scalar), `neutral` where the mask leaves it out |
+| $`\mathit{headroom}`$ | `headroom` (scalar), $`0`$ where the mask leaves it out |
 | $`\mathit{weight}`$ | `weight` over $`\mathcal{T} \times \mathcal{G}`$ |
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{T} \times \mathcal{G}`$ |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{T} \times \mathcal{G}`$ |

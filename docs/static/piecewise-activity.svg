@@ -4,7 +4,7 @@ SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 914 294" width="914" height="294" style="max-width: 100%; height: auto" role="img" aria-labelledby="pa-t pa-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
   <title id="pa-t">An absent gate leaves the curve ungated</title>
-  <desc id="pa-d">The variable running, declared with where committable, has rows for gas at snapshots 0 and 1, and no row for wind, because wind is not committable. The scale of the curve fuel_use is running for gas at each snapshot. For wind, where running is absent, the scale is 1, so the curve is ungated. With missing neutral on running, the scale for wind is 0, and wind has no curve.</desc>
+  <desc id="pa-d">The variable running, declared with where committable, has rows for gas at snapshots 0 and 1, and no row for wind, because wind is not committable. The scale of the curve fuel_use is running for gas at each snapshot. For wind, where running is absent, the scale is 1, so the curve is ungated. With missing 0 on running, the scale for wind is 0, and wind has no curve.</desc>
   <defs>
     <pattern id="pa-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
@@ -43,7 +43,7 @@ SPDX-License-Identifier: CC-BY-4.0
     <text x="288" y="39">activity: running</text>
     <text x="288" y="61" fill-opacity="0.7">the default</text>
     <text x="288" y="185">activity: running</text>
-    <text x="288" y="207" fill-opacity="0.7">with missing: neutral</text>
+    <text x="288" y="207" fill-opacity="0.7">with missing: 0</text>
   </g>
   <g stroke="none">
     <path d="M459.4,56 H759.0 V133 A3,3 0 0 1 756.0,136 H462.4 A3,3 0 0 1 459.4,133 Z" fill="#009E73" fill-opacity="0.08"/>

@@ -94,7 +94,7 @@ parameters:
   Generator_p_nom_mod:
     description: the module size a build comes in whole numbers of. No value means the build is continuous
     dims: [generator]
-    missing: neutral
+    missing: absent
   Generator_modules_installed:
     description: >-
       how many whole modules a committable build has in place, data prep. It
@@ -132,7 +132,7 @@ parameters:
   Generator_p_set:
     description: a given output schedule. A generator without one has no row here
     dims: [scenario, snapshot, generator]
-    missing: neutral
+    missing: absent
   Generator_p_nom_min:
     description: least nominal power an extendable generator may be built at
     dims: [scenario, generator]
@@ -150,7 +150,7 @@ parameters:
   Generator_p_nom_set:
     description: a given nominal power for an extendable generator. One without a value has no row here
     dims: [generator]
-    missing: neutral
+    missing: absent
   Generator_e_sum_min:
     description: least energy over the horizon. It is minus infinity where no floor is meant
     dims: [scenario, generator]
@@ -163,18 +163,18 @@ parameters:
       `co2_emissions` over the generator's efficiency at the snapshot, data
       prep. A generator of an unweighted carrier has no row
     dims: [scenario, global_constraint, snapshot, generator]
-    missing: neutral
+    missing: absent
   Generator_operational_limit_weight:
     description: one where the generator is in the row's set, data prep. One outside it has no row
     dims: [scenario, global_constraint, generator]
-    missing: neutral
+    missing: absent
   Generator_tech_capacity_weight:
     description: >-
       one where the generator is in the row's carrier-and-bus set, data prep.
       One outside it, or one that is not active in the row's
       `investment_period`, has no row
     dims: [global_constraint, generator]
-    missing: neutral
+    missing: absent
 
 variables:
   Generator_p:
@@ -358,23 +358,23 @@ assumptions:
 | $`\mathrm{c}`$ | `Generator_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one unit of output |
 | $`\mathrm{c}^{(2)}`$ | `Generator_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of the square of one unit of output |
 | $`\mathrm{sgn}`$ | `Generator_sign` over $`\mathcal{G}`$ — the sign output enters its bus's balance with. It is PyPSA's `sign`, `1` unless given, `-1` for a unit that draws power. PyPSA refuses one that differs by scenario (`constants.py:43`) |
-| $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of. No value means the build is continuous |
+| $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$, `absent` where the data has no row — the module size a build comes in whole numbers of. No value means the build is continuous |
 | $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\Xi \times \mathcal{G}`$ — how many whole modules a committable build has in place, data prep. It is `Generator_p_nom / Generator_p_nom_mod` where a fixed build is modular, and one where it is not. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
 | $`\mathrm{nonneg}`$ | `Generator_p_min_pu_nonneg` over $`\mathcal{G}`$ — true where none of the generator's own minimums-per-unit is negative. It is PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and scenario, data prep |
 | $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{T} \times \mathcal{G}`$ — whether a generator is active in a snapshot's period. It is PyPSA's `active`, from build year and lifetime, data prep |
 | $`\mathrm{act}`$ | `Generator_active_asset` over $`\mathcal{G}`$ — whether a generator is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:51`) |
 | $`\mathrm{W}`$ | `Generator_capital_weight` over $`\mathcal{G}`$ — the sum of period weights a generator is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{new}`$ | `Generator_first_active` over $`\mathcal{Y} \times \mathcal{G}`$ — one in the first period a generator is active in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
-| $`\mathrm{p}^{\mathrm{set}}`$ | `Generator_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — a given output schedule. A generator without one has no row here |
+| $`\mathrm{p}^{\mathrm{set}}`$ | `Generator_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `absent` where the data has no row — a given output schedule. A generator without one has no row here |
 | $`\underline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_min` over $`\Xi \times \mathcal{G}`$ — least nominal power an extendable generator may be built at |
 | $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\Xi \times \mathcal{G}`$ — most nominal power an extendable generator may be built at |
 | $`\mathrm{c}^{\mathrm{cap}}`$ | `Generator_capital_cost` over $`\Xi \times \mathcal{G}`$ — cost of one unit of nominal power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`) |
-| $`\mathrm{p}^{\mathrm{nom,set}}`$ | `Generator_p_nom_set` over $`\mathcal{G}`$, `neutral` where the data has no row — a given nominal power for an extendable generator. One without a value has no row here |
+| $`\mathrm{p}^{\mathrm{nom,set}}`$ | `Generator_p_nom_set` over $`\mathcal{G}`$, `absent` where the data has no row — a given nominal power for an extendable generator. One without a value has no row here |
 | $`\underline{\mathrm{E}}`$ | `Generator_e_sum_min` over $`\Xi \times \mathcal{G}`$ — least energy over the horizon. It is minus infinity where no floor is meant |
 | $`\overline{\mathrm{E}}`$ | `Generator_e_sum_max` over $`\Xi \times \mathcal{G}`$ — most energy over the horizon: a fuel or emission budget in energy terms. It is infinity where no cap is meant |
-| $`\mathrm{a}`$ | `Generator_primary_energy_weight` over $`\Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{G}`$, `neutral` where the data has no row — the constrained attribute per unit of energy at the bus: the carrier's `co2_emissions` over the generator's efficiency at the snapshot, data prep. A generator of an unweighted carrier has no row |
-| $`\mathrm{b}`$ | `Generator_operational_limit_weight` over $`\Xi \times \mathcal{L} \times \mathcal{G}`$, `neutral` where the data has no row — one where the generator is in the row's set, data prep. One outside it has no row |
-| $`\mathrm{m}`$ | `Generator_tech_capacity_weight` over $`\mathcal{L} \times \mathcal{G}`$, `neutral` where the data has no row — one where the generator is in the row's carrier-and-bus set, data prep. One outside it, or one that is not active in the row's `investment_period`, has no row |
+| $`\mathrm{a}`$ | `Generator_primary_energy_weight` over $`\Xi \times \mathcal{L} \times \mathcal{T} \times \mathcal{G}`$, `absent` where the data has no row — the constrained attribute per unit of energy at the bus: the carrier's `co2_emissions` over the generator's efficiency at the snapshot, data prep. A generator of an unweighted carrier has no row |
+| $`\mathrm{b}`$ | `Generator_operational_limit_weight` over $`\Xi \times \mathcal{L} \times \mathcal{G}`$, `absent` where the data has no row — one where the generator is in the row's set, data prep. One outside it has no row |
+| $`\mathrm{m}`$ | `Generator_tech_capacity_weight` over $`\mathcal{L} \times \mathcal{G}`$, `absent` where the data has no row — one where the generator is in the row's carrier-and-bus set, data prep. One outside it, or one that is not active in the row's `investment_period`, has no row |
 
 #### Conditions
 
