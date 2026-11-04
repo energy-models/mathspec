@@ -416,9 +416,15 @@ constraints:
 
 $$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{e,b,t} \cdot p_{e,t} = 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}$$
 
-`efficiency` has coordinates only at the pairs that `connection` lists. In
-`balance`, `efficiency * p` is absent at an entity that is not wired to the
-bus, so the sum adds only the wired entities.
+<figure class="diagram">
+--8<-- "docs/static/parameters-where.svg"
+</figure>
+
+With the data in the figure, `efficiency` has rows only at the pairs that
+`connection` lists. A tool drops the data row for `boiler` at `el`, and
+`missing: 1` gives `chp` at `heat` the value `1`. In `balance`,
+`efficiency * p` is absent at an entity that is not wired to the bus, so the
+sum adds only the wired entities.
 
 With data attached, a tool decides the coordinates of a parameter in two
 steps:
@@ -430,12 +436,11 @@ steps:
    A missing row there is refused, absent or a value, as
    [`missing:`](#missing) sets.
 
-So `missing: 1` above applies only at the wired pairs. Under `refused`, a tool
-would require a row at each wired pair and snapshot, and nowhere else.
+Under `refused`, a tool would instead require a row at each wired pair and
+snapshot, and nowhere else.
 
-A row of the data where the condition is false is not an error. To refuse
-such a row, state an [assumption](absence.md#required-rows-in-an-absent-table):
-`{holds: "connection", where: "efficiency"}`.
+A dropped row is not an error. An [assumption](assumptions.md) on the
+parameter cannot see that row either, because the parameter has no row there.
 
 A tool evaluates the condition from the data alone, before it reads the
 parameter. So the condition may contain [dimensions](dimensions.md),
