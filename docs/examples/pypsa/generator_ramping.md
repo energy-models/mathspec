@@ -15,6 +15,7 @@ given:
     Generator_committable: { dims: [generator], dtype: bool }
     Generator_status_initial: { dims: [scenario, generator], dtype: int }
     Generator_p_nom_mod: { dims: [generator] }
+    Generator_modules_installed: { dims: [scenario, generator] }
     Generator_big_m: { dims: [scenario, generator] }
     Generator_active: { dims: [snapshot, generator], dtype: bool }
   variables:
@@ -78,9 +79,19 @@ parameters:
 expressions:
   Generator_previous_p:
     description: >-
-      the output a generator carries into a snapshot. At the first, it is the
-      `p_init` it brought in where it came in running, and nothing where it
-      came in off. After that, it is the previous snapshot's
+      the output a generator carries into a snapshot. It is nothing at the
+      first snapshot it is active in past the first of the horizon: PyPSA
+      fills an output it did not build with zero (`constraints.py:665`).
+      It is the output carried over otherwise
+    dims: [scenario, snapshot, generator]
+    cases:
+      opening_late: { when: "position(snapshot) > 0 AND NOT shift(Generator_active, along=snapshot, offset=1)", expression: 0 }
+    otherwise: Generator_p_carried_over
+  Generator_p_carried_over:
+    description: >-
+      the output a generator carries over into a snapshot. At the first, it is
+      the `p_init` it brought in where it came in running, and nothing where
+      it came in off. After that, it is the previous snapshot's
     dims: [scenario, snapshot, generator]
     cases:
       opening: { when: "position(snapshot) == 0", expression: Generator_status_initial * Generator_p_init }
@@ -119,6 +130,18 @@ expressions:
     cases:
       given: { when: Generator_ramp_limit_shut_down, expression: Generator_ramp_limit_shut_down }
     otherwise: 1
+  Generator_ramp_previous_status:
+    description: >-
+      the status a committed unit's ramp rows carry into a snapshot. At the
+      first snapshot, a fixed modular unit that came in running has every
+      module on, since the state it brought in is on or off
+      (`constraints.py:1078-1083`). It is the state carried in otherwise
+    dims: [scenario, snapshot, generator]
+    cases:
+      opening_modules:
+        when: "position(snapshot) == 0 AND NOT Generator_p_nom_extendable AND Generator_p_nom_mod > 0"
+        expression: Generator_status_initial * Generator_modules_installed
+    otherwise: Generator_previous_status
   Generator_ramp_up_allowance:
     description: >-
       how far a generator may raise output between two snapshots. It is its
@@ -129,9 +152,9 @@ expressions:
       committed:
         when: Generator_committable
         expression: >-
-          Generator_ramp_up_rate * Generator_p_nom_committed * Generator_previous_status
+          Generator_ramp_up_rate * Generator_p_nom_committed * Generator_ramp_previous_status
           + Generator_start_up_rate * Generator_p_nom_committed
-          * (Generator_status - Generator_previous_status)
+          * (Generator_status - Generator_ramp_previous_status)
     otherwise: Generator_ramp_up_rate * Generator_p_nom_effective
   Generator_ramp_down_allowance:
     description: >-
@@ -145,7 +168,7 @@ expressions:
         expression: >-
           Generator_ramp_down_rate * Generator_p_nom_committed * Generator_status
           + Generator_shut_down_rate * Generator_p_nom_committed
-          * (Generator_previous_status - Generator_status)
+          * (Generator_ramp_previous_status - Generator_status)
     otherwise: Generator_ramp_down_rate * Generator_p_nom_effective
 
 conditions:
@@ -245,22 +268,6 @@ constraints:
       AND Generator_ramps_from_previous
       AND Generator_active
     expression: Generator_previous_p - Generator_p <= Generator_ramp_down_allowance
-
-assumptions:
-  Generator_came_in_running_unless_committable:
-    holds: "Generator_status_initial == 1"
-    where: "NOT Generator_committable AND (Generator_ramp_limit_up OR Generator_ramp_limit_down OR Generator_ramp_limit_start_up OR Generator_ramp_limit_shut_down)"
-    description: >-
-      PyPSA reads `up_time_before` of a unit that is not committable in its
-      ramp rows (`constraints.py:1018-1019`). A ramp limit, a start-up ramp or
-      a shut-down ramp alone builds those rows. Where it is zero, PyPSA builds
-      a row at the first snapshot with nothing carried in
-      (`constraints.py:1063-1066`, `1082-1084`). It caps the unit there at
-      zero, or at its start-up ramp where another unit of the component is
-      committable with a fixed build. PyPSA documents the attribute as read
-      only for a committable unit and does not check it. PyPSA has not decided
-      which row is intended (PyPSA/PyPSA#1943). The spec does not state that
-      row, and a tool refuses such data through this assumption
 ```
 
 #### Given
@@ -271,6 +278,7 @@ assumptions:
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$, data another file declares |
 | $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$, data another file declares |
 | $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$, data another file declares |
+| $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\Xi \times \mathcal{G}`$, data another file declares |
 | $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, data another file declares |
 | $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{T} \times \mathcal{G}`$, data another file declares |
 | $`p`$ | `Generator_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
@@ -312,11 +320,13 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{p}`$ | `Generator_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the output a generator carries into a snapshot. At the first, it is the `p_init` it brought in where it came in running, and nothing where it came in off. After that, it is the previous snapshot's |
+| $`\overleftarrow{p}`$ | `Generator_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the output a generator carries into a snapshot. It is nothing at the first snapshot it is active in past the first of the horizon: PyPSA fills an output it did not build with zero (`constraints.py:665`). It is the output carried over otherwise |
+| $`\overleftarrow{p}^{\circ}`$ | `Generator_p_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the output a generator carries over into a snapshot. At the first, it is the `p_init` it brought in where it came in running, and nothing where it came in off. After that, it is the previous snapshot's |
 | $`\widetilde{\mathrm{ru}}`$ | `Generator_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the ramp limit in a unit's up row, PyPSA's `ramp_limit_up`. It is the full build where PyPSA has none, since a start-up ramp alone builds the row |
 | $`\widetilde{\mathrm{rd}}`$ | `Generator_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the ramp limit in a unit's down row, PyPSA's `ramp_limit_down`. It is the full build where PyPSA has none, since a shut-down ramp alone builds the row |
 | $`\widetilde{\mathrm{ru}}^{\mathrm{up}}`$ | `Generator_start_up_rate` over $`\Xi \times \mathcal{G}`$ — the start-up ramp in a unit's up row (PyPSA's `ramp_limit_start_up`), or the full build where it has none |
 | $`\widetilde{\mathrm{rd}}^{\mathrm{dn}}`$ | `Generator_shut_down_rate` over $`\Xi \times \mathcal{G}`$ — the shut-down ramp in a unit's down row (PyPSA's `ramp_limit_shut_down`), or the full build where it has none |
+| $`\overleftarrow{\bar u}`$ | `Generator_ramp_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the status a committed unit's ramp rows carry into a snapshot. At the first snapshot, a fixed modular unit that came in running has every module on, since the state it brought in is on or off (`constraints.py:1078-1083`). It is the state carried in otherwise |
 | $`\Delta^{+}`$ | `Generator_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how far a generator may raise output between two snapshots. It is its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
 | $`\Delta^{-}`$ | `Generator_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how far a generator may lower output between two snapshots. It is its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 
@@ -340,7 +350,13 @@ assumptions:
 **`Generator_previous_p`**
 
 ```math
-\overleftarrow{p}_{\xi,t,g} = \begin{cases} \mathrm{u}^{0}_{\xi,g} \cdot \mathrm{p}^{0}_{\xi,g} & \text{if } \mathrm{pos}(t) = 0 \\ p_{\xi,t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+\overleftarrow{p}_{\xi,t,g} = \begin{cases} 0 & \text{if } \mathrm{pos}(t) > 0 \wedge \neg \mathrm{on}_{t - 1,g} \\ \overleftarrow{p}^{\circ}_{\xi,t,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+**`Generator_p_carried_over`**
+
+```math
+\overleftarrow{p}^{\circ}_{\xi,t,g} = \begin{cases} \mathrm{u}^{0}_{\xi,g} \cdot \mathrm{p}^{0}_{\xi,g} & \text{if } \mathrm{pos}(t) = 0 \\ p_{\xi,t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 **`Generator_ramp_up_rate`**
@@ -367,16 +383,22 @@ assumptions:
 \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} = \begin{cases} \mathrm{rd}^{\mathrm{dn}}_{\xi,g} & \text{if } \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
 ```
 
+**`Generator_ramp_previous_status`**
+
+```math
+\overleftarrow{\bar u}_{\xi,t,g} = \begin{cases} \mathrm{u}^{0}_{\xi,g} \cdot \mathrm{N}^{\mathrm{fix}}_{\xi,g} & \text{if } \mathrm{pos}(t) = 0 \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \\ \overleftarrow{u}_{\xi,t,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
 **`Generator_ramp_up_allowance`**
 
 ```math
-\Delta^{+}_{\xi,t,g} = \begin{cases} \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot \widehat{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \overleftarrow{u}_{\xi,t,g} + \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot \widehat{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \overleftarrow{u}_{\xi,t,g} \right) & \text{if } \mathrm{com}_{g} \\ \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot \widetilde{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+\Delta^{+}_{\xi,t,g} = \begin{cases} \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot \widehat{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \overleftarrow{\bar u}_{\xi,t,g} + \widetilde{\mathrm{ru}}^{\mathrm{up}}_{\xi,g} \cdot \widehat{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \overleftarrow{\bar u}_{\xi,t,g} \right) & \text{if } \mathrm{com}_{g} \\ \widetilde{\mathrm{ru}}_{\xi,t,g} \cdot \widetilde{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 **`Generator_ramp_down_allowance`**
 
 ```math
-\Delta^{-}_{\xi,t,g} = \begin{cases} \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot \widehat{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot u_{\xi,t,g} + \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \widehat{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( \overleftarrow{u}_{\xi,t,g} - u_{\xi,t,g} \right) & \text{if } \mathrm{com}_{g} \\ \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot \widetilde{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+\Delta^{-}_{\xi,t,g} = \begin{cases} \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot \widehat{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot u_{\xi,t,g} + \widetilde{\mathrm{rd}}^{\mathrm{dn}}_{\xi,g} \cdot \widehat{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} \cdot \left( \overleftarrow{\bar u}_{\xi,t,g} - u_{\xi,t,g} \right) & \text{if } \mathrm{com}_{g} \\ \widetilde{\mathrm{rd}}_{\xi,t,g} \cdot \widetilde{\mathrm{p}}^{\mathrm{nom}}_{\xi,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 #### Subject to
@@ -415,14 +437,6 @@ p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \Delta^{+}_{\xi,t,g} \qquad \foral
 
 ```math
 \overleftarrow{p}_{\xi,t,g} - p_{\xi,t,g} \le \Delta^{-}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \left( \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right) \wedge \mathrm{prev}_{g,\xi,t} \wedge \mathrm{on}_{t,g}
-```
-
-#### Assumptions
-
-**`Generator_came_in_running_unless_committable`**
-
-```math
-\mathrm{u}^{0}_{\xi,g} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \neg \mathrm{com}_{g} \wedge \left( \mathrm{ru}_{\xi,t,g} \text{ is defined} \vee \mathrm{rd}_{\xi,t,g} \text{ is defined} \vee \mathrm{ru}^{\mathrm{up}}_{\xi,g} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{\xi,g} \text{ is defined} \right)
 ```
 <!-- gallery:end -->
 

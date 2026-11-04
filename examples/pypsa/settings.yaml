@@ -39,7 +39,7 @@ given:
         what a future costs to run: every operating term, weighted by the
         snapshot's hours and its period, before the scenario's own weight. A
         start and a stop cost what they cost, unweighted, as PyPSA adds them
-        (`optimize.py:415-432`)
+        (`optimize.py:419-439`)
     total_cost:
       dims: []
       description: >-
@@ -92,7 +92,7 @@ parameters:
       PyPSA's `investment_period_weightings.objective` — what a period's cost
       weighs. PyPSA reads it only under `multi_investment_periods`. Otherwise
       you feed one in data prep, whatever the column contains
-      (`optimize.py:205-207`, `:264-266`)
+      (`optimize.py:207-209`, `:266-270`)
     dims: [period]
   period_weight_years:
     description: >-
@@ -115,7 +115,7 @@ parameters:
       the same. False with no segments is a lossless run. A
       security-constrained run over a network with passive branches builds no
       loss. PyPSA hands the keyword not to `create_model`
-      (`abstract.py:528-532`) but to the solver (`:548`), so you feed false
+      (`abstract.py:630-634`) but to the solver (`:548`), so you feed false
       there in data prep
     dims: []
     dtype: bool

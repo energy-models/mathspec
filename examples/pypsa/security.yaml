@@ -63,7 +63,7 @@ parameters:
       the line and the outage are active in the period and share a
       sub-network. It is -1 at the outaged line itself. The factors are the
       same in every scenario, because PyPSA takes those of the first scenario
-      (`abstract.py:534`)
+      (`abstract.py:636`)
     dims: [period, line, outage]
     missing: absent
   Transformer_BODF:
