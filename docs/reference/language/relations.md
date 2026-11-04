@@ -93,14 +93,12 @@ a spec ([a tool](../glossary.md#tool)) requires five things of the table:
 - The order of the rows has no meaning, because the order comes from the
   [dimension](dimensions.md#ordered).
 
-These checks read only the labels of the dimensions of the relation. A
-relation has no `where:`, and nothing else decides its rows. So a relation
-comes before the entries that read it: the
-[mask of a parameter](parameters-variables-constraints.md#where), the `where:`
-of a variable or a constraint, and an assumption. To state that a relation
-must have certain rows, write an [assumption](assumptions.md). For `line_to`
-[below](#missing), `{holds: "line_to", where: "closed"}` says that every
-closed line has an end, where `closed` is a `bool` parameter over `line`.
+A relation has no `where:`, so its rows come from the data alone. A tool
+therefore knows the rows of a relation before it evaluates any condition,
+such as the [`where:` of a parameter](parameters-variables-constraints.md#where).
+An [assumption](assumptions.md) can require rows of a relation. For `line_to`
+[below](#missing), `{holds: "line_to", where: "closed"}` requires an end for
+every closed line, where `closed` is a `bool` parameter over `line`.
 
 ### `missing`
 

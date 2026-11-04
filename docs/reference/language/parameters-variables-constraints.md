@@ -279,7 +279,7 @@ because `dims: []` declares a scalar.
 | --------- | ---------------------------------------------------------------- | --------- |
 | `dims`    | required. The dimensions it is indexed over. `[]` means a scalar |           |
 | `dtype`   | `float`, `int`, `bool` or `str`                                  | `float`   |
-| `where`   | the coordinates it has ([`where`](#where))                       | `null`    |
+| `where`   | the condition that limits its coordinates ([`where`](#where))    | `null`    |
 | `missing` | what a missing row of the data means ([`missing`](#missing))     | `refused` |
 
 With data attached, a tool requires the column to match the `dtype`:
@@ -313,8 +313,9 @@ A `str` parameter takes any label. A dimension with
 ### `missing`
 
 `missing:` sets the meaning of a coordinate of the `dims` at which the data has
-no row, inside the parameter's [mask](#where) if it has one. It takes `refused` (the default), `absent`, or a value of the `dtype`
-of the parameter.
+no row. It takes `refused` (the default), `absent`, or a value of the `dtype`
+of the parameter. On a parameter with a [`where:`](#where), `missing:` applies
+only where the condition is true.
 
 ```yaml
 dimensions:
@@ -353,9 +354,9 @@ A condition treats a missing row in one of three ways:
 - Whatever the `missing:`, a bare numeric name is true where the data has a
   row. A bare `float` name is true only where its value is also
   finite. So
-  `where: p_nom_max` selects the rows that the data contains. mathspec refuses a bare `int` or `str` name under `refused` at load, because
-  the condition would be true everywhere, unless the parameter has a
-  [mask](#where).
+  `where: p_nom_max` selects the rows that the data contains. Unless the
+  parameter has a [`where:`](#where), mathspec refuses a bare `int` or `str`
+  name under `refused` at load, because the condition would be true everywhere.
 - A comparison uses the value. So `where: efficiency <= 1` is true at a
   missing row of `efficiency` above, which is `1` there. Under `absent`, a
   comparison at a missing row is false.
@@ -392,8 +393,8 @@ as `` `0` where the data has no row ``. It lists nothing for `refused`.
 ### `where`
 
 `where:` limits a parameter to the coordinates where a
-[condition](expressions.md#conditions) is true. It fits a table that is
-declared over several dimensions but has meaning only at some combinations of
+[condition](expressions.md#conditions) is true. It suits a table that is
+declared over several dimensions but has values only at some combinations of
 their labels:
 
 ```yaml
@@ -415,47 +416,48 @@ constraints:
 
 $$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{e,b,t} \cdot p_{e,t} = 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}$$
 
-A tool decides the coordinates of a parameter in two steps, in this order:
+`efficiency` has coordinates only at the pairs that `connection` lists. In
+`balance`, `efficiency * p` is absent at an entity that is not wired to the
+bus, so the sum adds only the wired entities.
 
-1. `where:` is a mask on the `dims`. It keeps the coordinates where its
-   condition is true. At every other coordinate the parameter is
-   [absent](absence.md), wherever it is read, and a tool drops a row of the
-   data there when the data is attached.
-2. At each coordinate the mask keeps, the data has a row or it does not. A row
-   is read as it is. A missing row follows the parameter's
-   [`missing:`](#missing): it is refused, absent, or the value `missing:`
-   names.
+With data attached, a tool decides the coordinates of a parameter in two
+steps:
 
-`missing:` never reaches a coordinate that the mask leaves out. So
-`missing: 1` above fills only the wired pairs, and under `refused` the data
-needs a row at each wired pair and snapshot, and nowhere else. In `balance`,
-`efficiency * p` is absent at an entity that is not wired to the bus, so the sum
-adds up only the wired entities.
+1. Where the condition is false, the parameter is [absent](absence.md) in
+   every expression that uses it, and the tool drops any row of the data
+   there.
+2. Where the condition is true, the tool uses each row of the data as it is.
+   A missing row there is refused, absent or a value, as
+   [`missing:`](#missing) sets.
 
-A row outside the mask is not an error. To refuse such a row, state it as an
-[assumption](absence.md#required-rows-in-an-absent-table):
+So `missing: 1` above applies only at the wired pairs. Under `refused`, a tool
+would require a row at each wired pair and snapshot, and nowhere else.
+
+A row of the data where the condition is false is not an error. To refuse
+such a row, state an [assumption](absence.md#required-rows-in-an-absent-table):
 `{holds: "connection", where: "efficiency"}`.
 
-A mask reads what comes before the parameters. [Dimensions](dimensions.md)
-say which labels exist, and [relations](relations.md) say which combinations of
-labels exist. A relation has no `where:`, so a mask can read any relation. A
-parameter that has no mask comes before the masked ones too. So a tool reads the
-mask from the data alone, before the parameter itself, and mathspec refuses four
-masks at load:
+A tool evaluates the condition from the data alone, before it reads the
+parameter. So the condition may contain [dimensions](dimensions.md),
+[relations](relations.md) and parameters without a `where:`. mathspec refuses
+four conditions at load:
 
-- a mask that reads a variable;
-- a mask that reads its own parameter;
-- a mask that reads a parameter that has a mask of its own;
-- a mask over a dimension that the parameter does not have.
+- a condition that contains a variable
+- a condition that contains the parameter itself
+- a condition that contains a parameter with a `where:` of its own
+- a condition over a dimension that the parameter does not have
 
-For a mask on `efficiency` that reads the variable `p`, the message is:
+For a `where:` on `efficiency` that contains the variable `p`, the message
+is:
 
 ```text
-Parameter 'efficiency': its `where:` reads variable 'p', and a parameter's mask is evaluated from the data alone, before any variable has a value. Test a parameter or a relation instead.
+Parameter 'efficiency': its `where:` contains variable 'p', and a tool evaluates the `where:` of a parameter from the data alone, before any variable has a value. Test a parameter or a relation instead.
 ```
 
-The typeset legend lists the mask beside the dimensions, as `only where` and
-the condition. For `efficiency` it lists only where
+mathspec suggests a parameter or a relation as the rewrite.
+
+The typeset legend lists the condition beside the dimensions, after
+`only where`. For `efficiency` it lists only where
 $(e, b) \in \mathrm{connection}$.
 
 ## `variables`

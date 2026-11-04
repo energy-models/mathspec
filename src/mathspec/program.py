@@ -727,7 +727,7 @@ class Parameter:
     description: str | None = None
     #: The coordinates the parameter has, or ``None`` for every coordinate of
     #: its dims. The mask comes first: outside it the parameter is absent, and
-    #: a consumer drops the rows of its data there. ``missing`` then applies
+    #: a tool drops the rows of its data there. ``missing`` then applies
     #: to the coordinates the mask keeps.
     where: Mask | None = None
 

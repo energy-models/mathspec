@@ -165,14 +165,15 @@ A tool reads the value of a row in an expression, in a bound, and in a
 comparison in a condition. Under `'absent'`, a tool leaves a bound open where
 the parameter has no row.
 
-`program.parameters[name].where` is the mask of the parameter, or `None` where
-it has every coordinate of its `dims`. An engine applies the mask first:
-outside it the parameter is absent wherever it is read, and the engine drops
-the rows of the data there when it attaches. Then it applies `missing:` to the
-coordinates the mask keeps: a value fills a missing row there, and `'refused'`
-asks for a row only there. A mask reads no variable and no masked parameter,
-so the engine can evaluate each mask from the dimensions, the relations and
-the unmasked parameters, before it reads any masked parameter
+`program.parameters[name].where` is a [`Mask`](#nodes-and-conditions) for the
+`where:` of the parameter, or `None` where the parameter has every coordinate
+of its `dims`. With data attached, an engine applies the condition first.
+Where it is false, the parameter is absent in every expression that uses it,
+and the engine drops the rows of the data there. Where it is true, the engine
+applies `missing:`: a value fills a missing row, and `'refused'` requires a
+row. The condition contains no variable and no parameter with a `where:` of
+its own. So an engine can evaluate every such condition before it reads any
+parameter that has a `where:`
 ([`where` on a parameter](language/parameters-variables-constraints.md#where)).
 
 With data attached, an engine must refuse a divisor that is `0` in a row it
