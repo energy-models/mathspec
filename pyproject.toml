@@ -123,6 +123,7 @@ extend-fixable = ["B", "SIM", "RUF", "C4", "UP"]
   "T20",
   "D",
 ] # an out-of-band script says what it stamped
+"tests/fuzz/run.py" = ["T20", "D"] # a campaign reports what it found
 "tests/typesetting/golden/__main__.py" = [
   "T20",
   "D",
