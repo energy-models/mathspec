@@ -112,7 +112,7 @@ parameters:
       (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an
       annuity over `lifetime` at `discount_rate`, times `nyears`, where
       `overnight_cost` is given, and `capital_cost` where it is not. Both add
-      `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`)
+      `fom_cost` (`components.py:1128-1149`, `costs.py:102-203`)
     dims: [scenario, line]
   Line_s_nom_set:
     description: a given nominal apparent power for an extendable line. One without a value has no row here
@@ -128,7 +128,7 @@ parameters:
       in degrees. It is PyPSA's `v_ang_max`. Infinite, and so no row, by
       default. A line whose carrier is not AC has no row either. The
       deprecated `v_ang_min` is ignored, as PyPSA ignores it with a
-      `DeprecationWarning` (`constraints.py:1702-1709`)
+      `DeprecationWarning` (`constraints.py:1695-1702`)
     dims: [scenario, line]
     missing: absent
   Line_x_pu_eff:
@@ -172,7 +172,7 @@ parameters:
       periods the line is active in. A line outside the set, or one that is not
       active in the row's period, has no row. The capital cost is PyPSA's
       `capital_cost` property, which is `Line_capital_cost` without `fom_cost`
-      (`components.py:1151-1169`, `global_constraints.py:870-879`)
+      (`components.py:1153-1171`, `global_constraints.py:870-879`)
     dims: [scenario, global_constraint, line]
     missing: absent
   Line_tech_capacity_weight:

@@ -8,6 +8,7 @@ given:
     Link_committable: { dims: [link], dtype: bool }
     Link_status_initial: { dims: [scenario, link], dtype: int }
     Link_p_nom_mod: { dims: [link] }
+    Link_modules_installed: { dims: [scenario, link] }
     Link_big_m: { dims: [scenario, link] }
     Link_active: { dims: [snapshot, link], dtype: bool }
   variables:
@@ -71,7 +72,17 @@ parameters:
 expressions:
   Link_previous_p:
     description: >-
-      the flow a link carries into a snapshot. At the first, it is the
+      the output a link carries into a snapshot. It is nothing at the first
+      snapshot it is active in past the first of the horizon: PyPSA fills an
+      output it did not build with zero (`constraints.py:665`). It is the
+      output carried over otherwise
+    dims: [scenario, snapshot, link]
+    cases:
+      opening_late: { when: "position(snapshot) > 0 AND NOT shift(Link_active, along=snapshot, offset=1)", expression: 0 }
+    otherwise: Link_p_carried_over
+  Link_p_carried_over:
+    description: >-
+      the output a link carries over into a snapshot. At the first, it is the
       `p_init` it brought in where it came in running, and nothing where it
       came in off. After that, it is the previous snapshot's
     dims: [scenario, snapshot, link]
@@ -112,6 +123,18 @@ expressions:
     cases:
       given: { when: Link_ramp_limit_shut_down, expression: Link_ramp_limit_shut_down }
     otherwise: 1
+  Link_ramp_previous_status:
+    description: >-
+      the status a committed link's ramp rows carry into a snapshot. At the
+      first snapshot, a fixed modular link that came in running has every
+      module on, since the state it brought in is on or off
+      (`constraints.py:1078-1083`). It is the state carried in otherwise
+    dims: [scenario, snapshot, link]
+    cases:
+      opening_modules:
+        when: "position(snapshot) == 0 AND NOT Link_p_nom_extendable AND Link_p_nom_mod > 0"
+        expression: Link_status_initial * Link_modules_installed
+    otherwise: Link_previous_status
   Link_ramp_up_allowance:
     description: >-
       how far a link may raise flow between two snapshots. It is its ramp
@@ -122,9 +145,9 @@ expressions:
       committed:
         when: Link_committable
         expression: >-
-          Link_ramp_up_rate * Link_p_nom_committed * Link_previous_status
+          Link_ramp_up_rate * Link_p_nom_committed * Link_ramp_previous_status
           + Link_start_up_rate * Link_p_nom_committed
-          * (Link_status - Link_previous_status)
+          * (Link_status - Link_ramp_previous_status)
     otherwise: Link_ramp_up_rate * Link_p_nom_effective
   Link_ramp_down_allowance:
     description: >-
@@ -138,7 +161,7 @@ expressions:
         expression: >-
           Link_ramp_down_rate * Link_p_nom_committed * Link_status
           + Link_shut_down_rate * Link_p_nom_committed
-          * (Link_previous_status - Link_status)
+          * (Link_ramp_previous_status - Link_status)
     otherwise: Link_ramp_down_rate * Link_p_nom_effective
 
 conditions:
@@ -226,19 +249,3 @@ constraints:
       AND Link_ramps_from_previous
       AND Link_active
     expression: Link_previous_p - Link_p <= Link_ramp_down_allowance
-
-assumptions:
-  Link_came_in_running_unless_committable:
-    holds: "Link_status_initial == 1"
-    where: "NOT Link_committable AND (Link_ramp_limit_up OR Link_ramp_limit_down OR Link_ramp_limit_start_up OR Link_ramp_limit_shut_down)"
-    description: >-
-      PyPSA reads `up_time_before` of a link that is not committable in its
-      ramp rows (`constraints.py:1018-1019`). A ramp limit, a start-up ramp or
-      a shut-down ramp alone builds those rows. Where it is zero, PyPSA builds
-      a row at the first snapshot with nothing carried in
-      (`constraints.py:1063-1066`, `1082-1084`). It caps the link there at
-      zero, or at its start-up ramp where another link of the component is
-      committable with a fixed build. PyPSA documents the attribute as read
-      only for a committable link and does not check it. PyPSA has not decided
-      which row is intended (PyPSA/PyPSA#1943). The spec does not state that
-      row, and a tool refuses such data through this assumption

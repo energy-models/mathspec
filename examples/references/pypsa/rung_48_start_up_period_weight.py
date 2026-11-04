@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Rung 48: a start and a stop cost what they cost — no snapshot weight and no period weight on them, over two weighted periods."""
+"""Rung 48: a start and a stop take their period's weight and no snapshot weight, over two weighted periods."""
 
 from __future__ import annotations
 
