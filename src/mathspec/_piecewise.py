@@ -32,7 +32,6 @@ from mathspec.spec import AssumptionSpec, Curvature, PiecewiseLinkSpec, Piecewis
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
 
-    from mathspec._expression_parser import ArithmeticNode
     from mathspec._resolution import Namespace
     from mathspec.program import Expression, JoinColumns, Mask, Program, Relation
 
@@ -449,8 +448,8 @@ def leaves_ungated(gate: VariableSpec | Variable, relation: Relation | None = No
     return absent or (gate.where is not None and gate.missing != 0)
 
 
-def gate_of(text: str) -> tuple[str, ArithmeticNode | None] | None:
-    """An ``activity:`` as its variable and the ``by=`` it is read through, or ``None`` where it is neither shape.
+def gate_of(text: str) -> str | None:
+    """The variable an ``activity:`` names, or ``None`` where it is neither a bare name nor ``at(<name>, by=...)``.
 
     The weights sum to the gate, so it is a binary as written, or read
     through a relation as ``at`` reads it. What the ``by=`` names is
@@ -462,9 +461,9 @@ def gate_of(text: str) -> tuple[str, ArithmeticNode | None] | None:
         return None
     match node:
         case NameNode(name):
-            return name, None
+            return name
         case FunctionCallNode('at', (NameNode(name),), kwargs) if set(kwargs) == {'by'}:
-            return name, kwargs['by']
+            return name
         case _:
             return None
 
@@ -559,19 +558,19 @@ def resolve_gate(
     its relation. Each refusal is appended to *errors*.
     """
     assert pw.activity is not None
-    parts = gate_of(pw.activity)
-    assert parts is not None, 'reference_errors refuses a gate of any other shape'
-    declared = variables[parts[0]]
+    variable = gate_of(pw.activity)
+    assert variable is not None, 'reference_errors refuses a gate of any other shape'
+    declared = variables[variable]
     context = f"piecewise '{name}' activity"
     if (read := resolve_expression_text(pw.activity, ns, context, errors, ceiling=1)) is None:
         return None
     _, exists_text = gate_text(pw.activity, declared, read)
     if exists_text is None:
-        return Gate(parts[0], read)
+        return Gate(variable, read)
     if not isinstance(read, Join):
-        return Gate(parts[0], read, declared.where)
+        return Gate(variable, read, declared.where)
     exists = mask_of(resolve_condition_text(exists_text, ns, context, errors))
-    return None if exists is None else Gate(parts[0], read, exists)
+    return None if exists is None else Gate(variable, read, exists)
 
 
 def lp_domain_refusal(name: str, pw: PiecewiseSpec, links: tuple[Expression, ...]) -> str | None:

@@ -342,13 +342,12 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             yield from _piecewise_link_shape(spec, name, pw, key, link)
         if pw.activity is None:
             continue
-        if (gate := gate_of(pw.activity)) is None:
+        if (activity := gate_of(pw.activity)) is None:
             yield (
                 f'{context}: activity: {pw.activity!r} is neither a binary variable nor one read through a '
                 f'relation. Write activity: <variable>, or activity: at(<variable>, by=<relation>[<column>]).'
             )
             continue
-        activity, by = gate
         if activity not in spec.variables:
             yield (
                 f"{context}: activity '{activity}' is not a declared variable. Declare it as a binary "
