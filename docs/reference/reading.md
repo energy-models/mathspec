@@ -155,7 +155,7 @@ It is
 A [given](language/parameters-variables-constraints.md#given) parameter is a
 `GivenParameter` under `program.given.parameters`, and not under
 `program.parameters`. It has its `dims`, `dtype` and `description`, and no
-`missing`, because `missing:` is set in the fragment that declares the
+`missing` or `where`, because both are set in the fragment that declares the
 parameter.
 
 With data attached, an engine refuses a parameter under `'refused'` that has a
@@ -165,6 +165,15 @@ it raises at the first gap or lists every gap.
 A tool reads the value of a row in an expression, in a bound, and in a
 comparison in a condition. Under `'absent'`, a tool leaves a bound open where
 the parameter has no row.
+
+`program.parameters[name].where` is a [`Mask`](#nodes-and-conditions) for the
+`where:` of the parameter, or `None` when the parameter has every coordinate
+of its `dims`. With data attached, an engine applies the condition before
+`missing:`, as
+[`where` on a parameter](language/parameters-variables-constraints.md#where)
+describes. The condition contains no variable and no parameter with a `where:`
+of its own. So an engine can evaluate every such condition before it reads any
+parameter that has a `where:`.
 
 With data attached, an engine must refuse a divisor that is `0` in a row it
 builds, and name the divisor. The same applies to a term of a sum that it

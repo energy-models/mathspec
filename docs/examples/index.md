@@ -20,6 +20,11 @@ like yours, and what each line of the file means.
 - **[Unit commitment](commitment.md)** states `previous_status` in three
     [cases](../reference/language/named.md#cases), so one inequality covers a
     running unit and a starting unit.
+- **[Units with ports](connection.md)** is a spec with one
+    [relation](../reference/language/relations.md) for the ports of each unit,
+    and a parameter whose
+    [`where:`](../reference/language/parameters-variables-constraints.md#where)
+    keeps only the output ports.
 - **[One construct per spec](operators.md)** contains the smallest file for
     each form of the four [operators](../reference/language/operators.md) and
     [`dual`](../reference/language/named.md#dual), each file beside its

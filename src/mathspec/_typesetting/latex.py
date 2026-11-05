@@ -45,7 +45,6 @@ class LatexFormat:
     """See [`mathspec._typesetting.format.Format`][]."""
 
     notation: ClassVar[Notation] = 'latex'
-    #: TeX's own em-dash ligature.
     dash: ClassVar[str] = '---'
 
     operators: ClassVar[Mapping[OperatorName, str]] = {name: latex for name, (latex, _) in OPERATOR_SPELLINGS.items()}

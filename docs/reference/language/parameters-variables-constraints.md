@@ -280,6 +280,7 @@ because `dims: []` declares a scalar.
 | `dims`    | required. The dimensions it is indexed over. `[]` means a scalar |           |
 | `dtype`   | `float`, `int`, `bool` or `str`                                  | `float`   |
 | `missing` | what a missing row of the data means ([`missing`](#missing))     | `refused` |
+| `where`   | the condition that limits its coordinates ([`where`](#where))    | `null`    |
 
 With data attached, a tool requires the column to match the `dtype`:
 
@@ -313,7 +314,8 @@ A `str` parameter takes any label. A dimension with
 
 `missing:` sets the meaning of a coordinate of the `dims` at which the data has
 no row. It takes `refused` (the default), `absent`, or a value of the `dtype`
-of the parameter.
+of the parameter. On a parameter with a [`where:`](#where), `missing:` applies
+only where the condition is true.
 
 ```yaml
 dimensions:
@@ -352,8 +354,9 @@ A condition treats a missing row in one of three ways:
 - Whatever the `missing:`, a bare numeric name is true where the data has a
   row. A bare `float` name is true only where its value is also
   finite. So
-  `where: p_nom_max` selects the rows that the data contains. mathspec refuses a bare `int` or `str` name under `refused` at load, because
-  the condition would be true everywhere.
+  `where: p_nom_max` selects the rows that the data contains. Unless the
+  parameter has a [`where:`](#where), mathspec refuses a bare `int` or `str`
+  name under `refused` at load, because the condition would be true everywhere.
 - A comparison uses the value. So `where: efficiency <= 1` is true at a
   missing row of `efficiency` above, which is `1` there. Under `absent`, a
   comparison at a missing row is false.
@@ -378,14 +381,91 @@ parameters.v.missing: missing: null on a parameter names no reading. Write absen
 
 mathspec suggests two rewrites, `absent` and `refused`.
 
-A `given:` parameter has no `missing:`, because the file that declares the
-parameter sets it.
+A `given:` parameter has no `missing:` and no `where:`, because the file that
+declares the parameter sets both.
 
 A values parameter of a curve with a `where:` over its breakpoints must declare a
 [`missing:` other than `refused`](piecewise.md#missing-breakpoints).
 
 The typeset legend lists what a missing row means beside the parameter, such
 as `` `0` where the data has no row ``. It lists nothing for `refused`.
+
+### `where`
+
+`where:` limits a parameter to the coordinates where a
+[condition](expressions.md#conditions) is true. The dimensions keep every
+label, and only the parameter loses coordinates. In this example, `efficiency`
+has a value only at the pairs of an entity and a bus that are wired:
+
+```yaml
+dimensions:
+  entity: { dtype: str }
+  bus: { dtype: str }
+  snapshot: { dtype: int }
+relations:
+  connection: { key: [entity, bus], missing: absent }
+parameters:
+  efficiency: { dims: [entity, bus, snapshot], where: connection, missing: 1 }
+variables:
+  p: { dims: [entity, snapshot] }
+constraints:
+  balance:
+    dims: [bus, snapshot]
+    expression: sum(efficiency * p, over=entity) == 0
+```
+
+$$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{e,b,t} \cdot p_{e,t} = 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}$$
+
+<figure class="diagram">
+--8<-- "docs/static/parameters-where.svg"
+</figure>
+
+With the data in the figure, `efficiency` has rows only at the pairs that
+`connection` lists. A tool drops the data row for `boiler` at `el`, and
+`missing: 1` gives `chp` at `heat` the value `1`. In `balance`,
+`efficiency * p` is absent at an entity that is not wired to the bus, so the
+sum adds only the wired entities.
+
+With data attached, a tool decides the coordinates of a parameter in two
+steps:
+
+1. Where the condition is false, the parameter is [absent](absence.md) in
+   every expression that uses it, and the tool drops any row of the data
+   there.
+2. Where the condition is true, the tool uses each row of the data as it is.
+   A missing row there is refused, absent or a value, as
+   [`missing:`](#missing) sets.
+
+Under `missing: refused`, a tool requires a row at each wired pair and
+snapshot of the example, and drops every other row.
+
+A tool drops a row of the data outside the condition without refusing the
+data. An [assumption](assumptions.md) on the parameter does not test that row
+either, because the parameter has no row there.
+
+A tool evaluates the condition from the data alone, before it reads the
+parameter. So the condition may contain [dimensions](dimensions.md),
+[relations](relations.md) and parameters without a `where:`.
+
+mathspec refuses four conditions at load:
+
+- a condition that contains a variable
+- a condition that contains the parameter itself
+- a condition that contains a parameter with a `where:` of its own
+- a condition over a dimension that the parameter does not have
+
+For a `where:` on `efficiency` that contains the variable `p`, the message
+is:
+
+```text
+Parameter 'efficiency': its `where:` contains variable 'p', and a tool evaluates the `where:` of a parameter from the data alone, before any variable has a value. Test a parameter or a relation instead.
+```
+
+mathspec suggests a parameter or a relation as the rewrite.
+
+The typeset legend lists the condition beside the dimensions, after
+`only where`. For `efficiency`, the legend entry ends in
+`only where` $(e, b) \in \mathrm{connection}$.
 
 ## `variables`
 

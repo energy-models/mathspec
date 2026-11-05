@@ -1,0 +1,77 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 252" width="760" height="252" style="max-width: 100%; height: auto" role="img" aria-labelledby="pwh-t pwh-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="pwh-t">A where condition on a parameter drops rows of its data</title>
+  <desc id="pwh-d">At one snapshot, the relation connection has three rows: chp to el, chp to heat and boiler to heat. The data of efficiency has three rows: chp el 0.4, boiler heat 0.9 and boiler el 0.5. With where connection and missing 1, the parameter efficiency has three rows: chp el 0.4, chp heat 1 and boiler heat 0.9. The data row for boiler el, which connection does not list, is dropped, so efficiency is absent there. The row for chp heat, which the data does not have, takes the value 1.</desc>
+  <defs>
+    <pattern id="pwh-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="pwh-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,52 H236 V109 A3,3 0 0 1 233,112 H19 A3,3 0 0 1 16,109 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,52 V33 A3,3 0 0 1 19,30 H233 A3,3 0 0 1 236,33 V52 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,172 H236 V229 A3,3 0 0 1 233,232 H19 A3,3 0 0 1 16,229 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,172 V153 A3,3 0 0 1 19,150 H233 A3,3 0 0 1 236,153 V172 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M500,112 H744 V169 A3,3 0 0 1 741,172 H503 A3,3 0 0 1 500,169 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M500,112 V93 A3,3 0 0 1 503,90 H741 A3,3 0 0 1 744,93 V112 Z" fill="#0072B2" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="20" font-weight="bold">connection</text>
+    <text x="96" y="20" fill-opacity="0.7">a relation</text>
+    <text x="16" y="140" font-weight="bold">efficiency</text>
+    <text x="90" y="140" fill-opacity="0.7">the data, at one snapshot</text>
+    <text x="500" y="80" font-weight="bold">efficiency</text>
+    <text x="574" y="80" fill-opacity="0.7">a parameter, at one snapshot</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="44" font-weight="bold">entity</text><text x="96" y="44" font-weight="bold">bus</text>
+      <text x="24" y="68">chp</text><text x="96" y="68">el</text>
+      <text x="24" y="86">chp</text><text x="96" y="86">heat</text>
+      <text x="24" y="104">boiler</text><text x="96" y="104">heat</text>
+      <text x="24" y="164" font-weight="bold">entity</text><text x="96" y="164" font-weight="bold">bus</text><text x="166" y="164" font-weight="bold">value</text>
+      <text x="24" y="188">chp</text><text x="96" y="188">el</text><text x="166" y="188">0.4</text>
+      <text x="24" y="206">boiler</text><text x="96" y="206">heat</text><text x="166" y="206">0.9</text>
+      <text x="24" y="224">boiler</text><text x="96" y="224">el</text><text x="166" y="224">0.5</text>
+      <text x="508" y="104" font-weight="bold">entity</text><text x="580" y="104" font-weight="bold">bus</text><text x="650" y="104" font-weight="bold">value</text>
+      <text x="508" y="128">chp</text><text x="580" y="128">el</text><text x="650" y="128">0.4</text>
+      <text x="508" y="146">chp</text><text x="580" y="146">heat</text><text x="650" y="146">1</text>
+      <text x="508" y="164">boiler</text><text x="580" y="164">heat</text><text x="650" y="164">0.9</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="30" width="220" height="82" rx="3"/>
+    <line x1="16" y1="52" x2="236" y2="52"/>
+    <rect x="16" y="150" width="220" height="82" rx="3"/>
+    <line x1="16" y1="172" x2="236" y2="172"/>
+    <rect x="17" y="211" width="218" height="20" fill="url(#pwh-hatch)" stroke="none"/>
+    <rect x="500" y="90" width="244" height="82" rx="3"/>
+    <line x1="500" y1="112" x2="744" y2="112"/>
+    <rect x="500" y="176" width="244" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2">
+    <path d="M246,71 H290 V191 H246"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#pwh-arrow)">
+    <path d="M290,131 H488"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="306" y="104">where: connection</text>
+    <text x="306" y="119" fill-opacity="0.7">drops a data row where it is false</text>
+    <text x="306" y="153">missing: 1</text>
+    <text x="306" y="168" fill-opacity="0.7">fills a pair the data lacks</text>
+    <text x="508" y="192" fill-opacity="0.7" font-style="italic">no row for boiler, el: efficiency is absent</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="500" y="214" width="14" height="14" fill="url(#pwh-hatch)"/>
+    <rect x="648" y="214" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="520" y="225">condition is false</text>
+    <text x="668" y="225">absent: no row</text>
+  </g>
+</svg>

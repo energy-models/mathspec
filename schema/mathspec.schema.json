@@ -638,7 +638,7 @@
     },
     "ParameterSpec": {
       "additionalProperties": false,
-      "description": "A declared parameter with dims and dtype, and what a missing row of its data means.",
+      "description": "A declared parameter with dims and dtype, the coordinates it has, and what a missing row of its data means.",
       "properties": {
         "description": {
           "anyOf": [
@@ -693,6 +693,18 @@
           ],
           "default": "refused",
           "title": "Missing"
+        },
+        "where": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Where"
         }
       },
       "required": [
