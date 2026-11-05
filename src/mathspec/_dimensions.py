@@ -133,7 +133,6 @@ def joined(columns: JoinColumns, inner: Iterable[str]) -> frozenset[str]:
     return (frozenset(inner) - set(columns.joined_dims)) | set(columns.grouped_dims)
 
 
-#: The operator name a file writes for each translation, which its refusals quote.
 _VERBS: dict[type[Translate | WindowSum], str] = {Translate: 'shift', WindowSum: 'sum_back'}
 
 

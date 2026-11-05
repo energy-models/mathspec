@@ -59,9 +59,6 @@ if TYPE_CHECKING:
     from mathspec.spec import ConditionSpec, ExpressionSpec, Spec
 
 
-#: What a name a file may write turns out to be. Answered by
-#: [`Namespace.kind`][], so a pass reading a name switches over this rather
-#: than over the stores it would otherwise have to try in order.
 NameKind = Literal['variable', 'parameter', 'dimension', 'relation']
 
 
@@ -93,73 +90,41 @@ class Namespace:
     )
 
     def __init__(self, spec: Spec) -> None:
-        #: The spec the names come from. Expressions are expanded and
-        #: dim-checked against it, because macros, named expressions and the dim
-        #: rules read entries that the flat listing below does not carry.
         self.spec = spec
         variables = {**spec.variables, **spec.given.variables, **spec.given.expressions}
         parameters = {**spec.parameters, **spec.given.parameters}
         self.variables = frozenset(variables)
         self.bodies = frozenset(spec.expressions)
-        #: The declared named conditions, read by name in any condition.
         self.conditions = frozenset(spec.conditions)
-        #: The named conditions this file reads under ``given:``. A condition reads each as
-        #: the boolean data it is to this file, so each is a parameter here too.
         self.given_conditions = frozenset(spec.given.conditions)
         self.parameters = frozenset(parameters) | self.given_conditions
         self.dimensions = frozenset(spec.dimensions)
-        #: The declared constraint names, off the flat namespace: a bare name
-        #: never reaches them, so a spec may name a constraint after a variable.
-        #: Consulted only in ``dual()``'s argument position.
         self.constraints = frozenset({**spec.constraints, **spec.given.constraints})
-        #: name -> declared dtype, for dimensions, parameters and relations alike;
-        #: what a comparison in a condition checks its literal against.
         self.dtypes: dict[str, DeclaredDtype] = {
             **{p: pd.dtype for p, pd in parameters.items()},
             **{m: cast('DeclaredDtype', 'bool') for m in spec.given.conditions},
             **{d: dd.dtype for d, dd in spec.dimensions.items()},
         }
-        #: dimension name -> the labels its ``one_of`` allows, for the dimensions
-        #: that list them; what a label compared against one of them must be.
         self.one_of: dict[str, tuple[str, ...]] = {
             d: dd.one_of for d, dd in spec.dimensions.items() if dd.one_of is not None
         }
-        #: relation name -> its columns and key, as declared.
         self.relations: dict[str, Relation] = {
             n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()
         }
-        #: parameter name -> the value its ``missing:`` reads a missing row as,
-        #: for the parameters that name one and have every coordinate; what a
-        #: comparison in a condition reads there. A masked or confined parameter
-        #: is absent outside its mask or its relation, so its missing row may
-        #: also compare false, and none is assumed.
         self.defaults: dict[str, bool | float] = {
             p: pd.missing
             for p, pd in spec.parameters.items()
             if not isinstance(pd.missing, str) and pd.where is None and not self.confining(pd.dims)
         }
-        #: parameter or variable name -> the ``dims`` it is read through. Stamped onto
-        #: each leaf a condition names, the way a relation leaf carries ``over``.
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: tuple(pd.dims) for p, pd in parameters.items()},
             **{m: tuple(md.dims) for m, md in spec.given.conditions.items()},
             **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
         }
-        #: named expression -> its resolved node, or ``None``, and its refusals;
-        #: filled the first time anything reads the name.
         self._named: dict[str, tuple[ExpressionReference | None, tuple[str, ...]]] = {}
-        #: The named expressions and named conditions waiting to be resolved, the first one
-        #: asked for at the bottom. Each sits above the entries it reads, so the
-        #: list is a cycle's chain.
         self._loading: list[str] = []
-        #: mask -> its resolved node, or ``None``, and its refusals; filled
-        #: the first time anything reads the name.
         self._conditions: dict[str, tuple[ConditionReference | None, tuple[str, ...]]] = {}
-        #: The refusals a dim rule wrote, which [`error`][] reports as a
-        #: ``DimensionError`` when nothing else is wrong.
         self.dimension_refusals: set[str] = set()
-        #: The refusals that only point at an entry's own, which leave the
-        #: class of the error to that entry's.
         self.follow_ons: set[str] = set()
 
     def confining(self, dims: Iterable[str]) -> list[str]:

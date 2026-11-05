@@ -43,12 +43,7 @@ class Builtin:
     column_kwargs: tuple[str, ...] = ()
     edge_kwargs: tuple[str, ...] = ()
     required_value_kwargs: tuple[str, ...] = ()
-    #: Keyword arguments the call may omit. Their *kind* still comes from the
-    #: tuples above. This says only that the operator has a result without them.
     optional_kwargs: tuple[str, ...] = ()
-    #: Kwargs required exactly when the call names columns. A sum through a
-    #: relation names the columns that leave, so the key columns it keeps are
-    #: the ones it does not name.
     with_columns: tuple[str, ...] = ()
 
     @property
@@ -71,12 +66,6 @@ class Builtin:
         return None
 
 
-#: The closed operator set. ``relation[column, …]`` is the one form that
-#: addresses a relation, and a relation carries its own dimensions, so no
-#: sibling kwarg restates them. ``by=`` on ``sum`` names the columns a sum
-#: groups by, and on ``at`` the columns a lookup reads. ``within=`` on
-#: ``shift`` and ``sum_back`` partitions the axis the operator steps along: it
-#: says which rows are neighbours, not which group a term is added to.
 BUILTINS: dict[str, Builtin] = {
     'sum': Builtin(
         'sum(<expr>), sum(<expr>, over=<dim>) or sum(<expr>, over=<column>, by=<relation>[<column>])',
@@ -114,17 +103,12 @@ BUILTIN_NAMES = frozenset(BUILTINS)
 class Amount(NamedTuple):
     """What the errors of an operator that steps along an axis say about the amount it takes."""
 
-    #: The word for the amount.
     noun: str
-    #: What to write instead of negating a named one at the call site.
     negated: str
-    #: The least whole number a literal may be.
     minimum: float
-    #: What a literal must be written as, after ``operator(kwarg=...)``.
     form: str
 
 
-#: The amount each operator that steps along a dimension takes, by operator name.
 AMOUNTS: dict[str, Amount] = {
     'shift': Amount(
         'offset',
@@ -140,8 +124,6 @@ AMOUNTS: dict[str, Amount] = {
     ),
 }
 
-#: The one closed keyword an ``edge=`` accepts. Everything else in that
-#: position is a number: the value the vacated positions contribute.
 EDGE_WRAP = 'wrap'
 
 

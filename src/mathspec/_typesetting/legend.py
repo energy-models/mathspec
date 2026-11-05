@@ -34,11 +34,8 @@ if TYPE_CHECKING:
     from mathspec._typesetting.symbols import Symbols
     from mathspec.program import Expression, Mask, ParameterMissing, Program, Relation
 
-#: What a translation does with the row the shift vacates. Three policies get
-#: three spellings because they are three different equations at the boundary.
 TranslationPolicy = Literal['plain', 'wrap', 'edge']
 
-#: The positional forms an equation can print, each of which the legend explains once.
 PositionForm = Literal['plain', 'grouped', 'from_end']
 
 
@@ -123,10 +120,8 @@ def notice(program: Program) -> Noticed:
     return Noticed(frozenset(policies), grouped, frozenset(positions), frozenset(numeric))
 
 
-#: Where a parameter's or a relation's ``missing:`` applies, as the legend says it.
 _NO_ROW = 'where the data has no row'
 
-#: Where a variable's ``missing:`` applies, as the legend says it.
 _MASKED_OUT = 'where the mask leaves it out'
 
 
@@ -137,8 +132,6 @@ class Legend:
     program: Program
     symbols: Symbols
     format: Format
-    #: Each masked parameter's mask, printed: the walk prints conditions, so it
-    #: hands them over rather than the legend printing a second way.
     parameter_masks: Mapping[str, str] = field(default_factory=dict)
 
     def _op(self, name: OperatorName) -> str:
