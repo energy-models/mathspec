@@ -28,14 +28,9 @@ if TYPE_CHECKING:
 
 __all__ = ['SymbolTable', 'Symbols', 'symbols_for']
 
-#: Dimensions whose conventional index letter is not their own initial, which
-#: is what anything unlisted falls back to.
 _INDEX_ALIASES = {'snapshot': 't', 'snapshots': 't', 'time': 't', 'timestep': 't', 'timesteps': 't'}
 
 
-#: Names that are a Greek letter written out. Lower case only, because every
-#: lower-case letter has a symbol in LaTeX and in Typst and the capitals do not.
-#: ``omicron`` is left out because LaTeX spells it ``o``.
 _GREEK = frozenset(
     {
         'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta',

@@ -35,7 +35,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
-#: The public names of ``mathspec.program``, sorted.
 __all__ = [
     'Add',
     'Advice',

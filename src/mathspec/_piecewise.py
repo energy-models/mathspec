@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from mathspec.program import Expression
 
 
-#: The suffix on the second gate row, where the gate variable does not exist.
 _UNGATED = '_ungated'
 
 
@@ -144,7 +143,6 @@ def assumptions_of(name: str, pw: Piecewise) -> dict[str, AssumptionSpec]:
     return assumed
 
 
-#: Why a gap in ``points:`` breaks each method, in the rows that method writes.
 _GAP: dict[PiecewiseMethod, str] = {
     'adjacency': 'the weights are nonzero only on two neighbouring breakpoints, and a gap leaves no neighbour across it',
     'sos2': 'the weights are nonzero only on two neighbouring breakpoints, and a gap leaves no neighbour across it',
@@ -356,9 +354,7 @@ class _Expansion:
         self.spec = spec
         self.raw = raw
         self.name = name
-        #: The entry as the file wrote it, for the link text the rows repeat.
         self.pw = pw
-        #: The entry as the program carries it, for its frame and the names it writes.
         self.curve = curve
         self.emitted = Emitted.of(name, curve)
         self.mask = pw.points

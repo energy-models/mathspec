@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from pydantic import ValidationError
 
 
-#: What ``mathspec.errors`` promises a consumer.
 __all__ = ['DimensionError', 'LanguageError', 'MathSpecError', 'SchemaError', 'did_you_mean']
 
 
