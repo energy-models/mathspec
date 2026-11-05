@@ -12,8 +12,8 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(language): a piecewise gate reads its binary through a relation, as a link walks one ([#784](https://github.com/energy-models/mathspec/pull/784))
-- feat(language)!: a piecewise entry states its dims and names its links, its where reaches links that walk a relation, and `method: incremental` fills its curve segment by segment ([#630](https://github.com/energy-models/mathspec/pull/630))
+- feat(language): the gate of a piecewise entry may walk a relation, as a link may ([#784](https://github.com/energy-models/mathspec/pull/784))
+- feat(language)!: a piecewise entry declares its dimensions and its links by name, a link may walk a relation, and `method: incremental` fills a curve segment by segment ([#630](https://github.com/energy-models/mathspec/pull/630))
 - docs(pypsa): the PyPSA reference targets master at d21e028, where starts and stops take the period weight and the commitment rows start at the first snapshot ([#976](https://github.com/energy-models/mathspec/pull/976))
 - fix(language): under `missing: 0`, a divisor that a `where:`, a case or an absent variable guards loads, and so does a variable number outside its bounds ([#942](https://github.com/energy-models/mathspec/pull/942))
 - docs(pypsa): a PyPSA schedule, weight or limit that the data leaves out is absent rather than zero, and a committable extendable unit is assumed to have its big-M ([#912](https://github.com/energy-models/mathspec/pull/912))

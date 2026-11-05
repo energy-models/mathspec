@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  A piecewise-linear cost curve stated as a special-ordered set, so the solver
-  is handed the adjacency restriction rather than binaries that encode it.
+  A piecewise-linear cost curve whose weights form a special ordered set, so
+  the solver handles the adjacency restriction itself, without binaries.
 
 dimensions:
   snapshot:

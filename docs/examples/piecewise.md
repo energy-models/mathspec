@@ -5,22 +5,23 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # A curve by convex combination
 
-A generator's cost curve, tied to its dispatch through one weight per
-breakpoint. This is the floor of the [`piecewise`](../reference/language/piecewise.md)
-family: the three pages after it are this same model with the weights
-restricted a different way.
+A generator's cost curve, tied to its dispatch by a
+[`piecewise`](../reference/language/piecewise.md) entry under
+`method: convex`. The three pages after it state the same dispatch with
+another method.
 
-Read the math for what the block expands to. The file declares no weight, and
-`cost_curve_lam` appears below because the block emits it. One row makes the
-weights sum to 1, and one row per link ties that link's expression to the
-weighted breakpoints. `method: convex` adds nothing further. A convex curve
-under a minimised cost settles on one segment without being held there.
+The typesetter prints the curve as the convex hull of its breakpoints,
+$`\mathrm{conv}`$, and lists the assumptions under which the hull is the
+curve. Dispatch increases along `bp`, and the cost curve bends one way only. A
+minimised cost on a convex curve then lies on the curve without a binary.
+[See what a piecewise curve expands to](../howto/see-an-expansion.md) shows
+the weights `cost_curve_lam` and the rows that `expand()` writes.
 
 <!-- gallery:begin -->
 ```yaml
 description: >-
   Least-cost dispatch where each generator's cost curve is piecewise-linear in
-  its output, expanded into a lambda formulation.
+  its output, and the curve is the convex hull of its breakpoints.
 
 dimensions:
   snapshot:
@@ -84,7 +85,7 @@ objective:
   expression: sum(op_cost)
 ```
 
-Least-cost dispatch where each generator's cost curve is piecewise-linear in its output, expanded into a lambda formulation.
+Least-cost dispatch where each generator's cost curve is piecewise-linear in its output, and the curve is the convex hull of its breakpoints.
 
 #### Sets
 

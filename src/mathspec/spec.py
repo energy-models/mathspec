@@ -982,8 +982,8 @@ PIECEWISE_METHODS = {
 _TWO_LINKS = {
     'lp': 'It states the curve as its segment lines, and a line is one quantity against another.',
     'convex': (
-        'It relaxes the weights onto the hull, which is exact only in the direction the sign on the bounded '
-        'link names, and past two links there is no single direction to check.'
+        'It relaxes the weights onto the hull, which is exact only in the direction of the sign on the '
+        'bounded link, and with more than two links there is no single direction to check.'
     ),
 }
 
@@ -991,8 +991,8 @@ _TWO_LINKS = {
 #: walked row is its abscissa, and ``convex`` has no pair of values
 #: parameters on one frame to read a shape from.
 _NO_WALK = {
-    'lp': 'Its segment line needs one abscissa, and a walked link is one quantity at many coordinates.',
-    'convex': 'It checks one values parameter against another, and a walk puts them on different frames.',
+    'lp': 'A segment line has one x quantity, and a walked link is one quantity at many coordinates.',
+    'convex': 'It checks one values parameter against another, and a walk puts them over different dimensions.',
 }
 
 
@@ -1047,9 +1047,9 @@ class PiecewiseSpec(_StrictSpec):
     def _check_dims(cls, data: object) -> object:
         if isinstance(data, dict) and data.get('dims') is None:
             msg = (
-                'a piecewise entry states dims:, the dimensions it builds one curve per coordinate of, as a '
-                'variable states its own. Write the dims its links are over, less any a link walks into: '
-                'dims: [generator, snapshot] for a link on p over [generator, snapshot].'
+                'a piecewise entry declares dims:, the dimensions with one curve per coordinate, as a variable '
+                'declares its own. Write the dimensions its links are over, without any that a link adds through '
+                'a relation: dims: [generator, snapshot] for a link on p over [generator, snapshot].'
             )
             raise ValueError(msg)
         return data
@@ -1070,13 +1070,13 @@ class PiecewiseSpec(_StrictSpec):
         if walked and self.method in ('convex', 'lp'):
             msg = (
                 f"method: {self.method} does not take a link that walks a relation (link '{walked[0]}'). "
-                f'{_NO_WALK[self.method]} Use method: adjacency or sos2.'
+                f'{_NO_WALK[self.method]} Use method: adjacency, sos2 or incremental.'
             )
             raise ValueError(msg)
         if self.method in ('convex', 'lp') and len(self.links) != 2:
             msg = (
                 f'method: {self.method} takes exactly two links. {_TWO_LINKS[self.method]} Write two links, or use '
-                f'method: adjacency or sos2.'
+                f'method: adjacency, sos2 or incremental.'
             )
             raise ValueError(msg)
         if self.method == 'lp' and sum(link.sign != '==' for link in self.links.values()) != 1:
@@ -1092,9 +1092,9 @@ class PiecewiseSpec(_StrictSpec):
     def _check_links(cls, v: dict[str, PiecewiseLinkSpec]) -> dict[str, PiecewiseLinkSpec]:
         if unnamed := [key for key in v if not re.fullmatch(NAME, key)]:
             msg = (
-                f'links: {unnamed} {"is" if len(unnamed) == 1 else "are"} not a name. A link names the row it '
-                f'writes, <entry>_<link>, so it starts with a letter or an underscore, followed by letters, digits '
-                f'or underscores.'
+                f'links: {unnamed} {"is" if len(unnamed) == 1 else "are"} not a name. The name of a link is part of '
+                f'the name of its row, <entry>_<link>, so it starts with a letter or an underscore, followed by '
+                f'letters, digits or underscores.'
             )
             raise ValueError(msg)
         if len(v) < 2 and not any(link.walks for link in v.values()):

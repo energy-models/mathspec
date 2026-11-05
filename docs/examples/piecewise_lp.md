@@ -5,25 +5,23 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # A curve as segment lines
 
-The same curve again, stated as the lines its segments lie on rather than as
-breakpoints to interpolate between. The `>=` on the second link says which side
-of the lines the cost sits on.
+The dispatch of [the convex page](piecewise.md), with each cost curve stated as
+the lines that its segments lie on. The `>=` on the cost link holds the cost
+above every line. The expansion declares no variable, so the model stays a
+linear program.
 
-This is the one method that declares no auxiliary variable. No weights appear in
-the math below, so nothing has to be restricted and the model stays a linear
-program. `cost_curve_chord` is one inequality per segment, and the two domain
-rows hold dispatch between the curve's ends. The form reads correctly only where
-the curvature matches the sign. Lines that envelope a convex curve would cut a
-concave one, and the solve comes back optimal either way.
+The assumptions are the point of this page. The lines bound the cost exactly
+only where dispatch increases along `bp` and the cost curve is convex. On a
+concave curve the lines cut below it, and the solver still reports an optimal
+solution. A tool checks `cost_curve_curvature` when the data is attached.
 
 <!-- gallery:begin -->
 ```yaml
 description: >-
   The same least-cost dispatch as `piecewise.yaml`, with each generator's cost
-  curve stated as the lines its segments lie on rather than interpolated
-  between its breakpoints. The curve is convex and the objective pushes the
-  cost down, so a cost above every segment line settles on the curve — which
-  needs no interpolation weights, and so declares no auxiliary variable at all.
+  curve stated as the lines its segments lie on. The curve is convex and the
+  objective pushes the cost down, so a cost above every segment line lies on
+  the curve, and the expansion declares no variable.
 
 dimensions:
   snapshot:
@@ -89,7 +87,7 @@ objective:
   expression: sum(op_cost)
 ```
 
-The same least-cost dispatch as `piecewise.yaml`, with each generator's cost curve stated as the lines its segments lie on rather than interpolated between its breakpoints. The curve is convex and the objective pushes the cost down, so a cost above every segment line settles on the curve — which needs no interpolation weights, and so declares no auxiliary variable at all.
+The same least-cost dispatch as `piecewise.yaml`, with each generator's cost curve stated as the lines its segments lie on. The curve is convex and the objective pushes the cost down, so a cost above every segment line lies on the curve, and the expansion declares no variable.
 
 #### Sets
 

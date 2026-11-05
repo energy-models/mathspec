@@ -4,7 +4,7 @@
 
 description: >-
   Least-cost dispatch where each generator's cost curve is piecewise-linear in
-  its output, expanded into a lambda formulation.
+  its output, and the curve is the convex hull of its breakpoints.
 
 dimensions:
   snapshot:

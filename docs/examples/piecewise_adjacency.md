@@ -5,23 +5,23 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # A curve that is not convex
 
-The same dispatch model, with a curve that bends both ways. Nothing about the
-objective now keeps the weights on one segment, so the method builds the
-restriction out of binaries. `adjacency` is the default, and this is what it
-costs.
+The dispatch of [the convex page](piecewise.md), with a cost curve that is not
+convex. A minimised cost no longer keeps the weights on one segment, so the
+entry takes the default method, `adjacency`, which holds them there with
+binaries.
 
-Compare the math with [the convex page](piecewise.md). A second variable
-appears, `cost_curve_seg`, one binary per segment. Two rows come with it:
-`cost_curve_pick` picks exactly one segment, and `cost_curve_adjacency` holds
-each weight under the segments it borders. The link rows and the convexity row
-are unchanged.
+The typesetter prints the curve as a piecewise-linear function,
+$`\mathrm{pwl}`$, with no assumption about its shape. When the spec is
+expanded, `cost_curve_seg` is one binary per segment and `cost_curve_pick`
+picks one segment. `cost_curve_adjacency` then holds each weight at zero
+unless a segment next to it is picked.
 
 <!-- gallery:begin -->
 ```yaml
 description: >-
   The same least-cost dispatch as `piecewise.yaml`, with a cost curve that is
-  not convex. The weights need binaries to hold them on one segment, which is
-  what the default method builds.
+  not convex. Under the default method, the expansion holds the weights on one
+  segment with binaries.
 
 dimensions:
   snapshot:
@@ -86,7 +86,7 @@ objective:
   expression: sum(op_cost)
 ```
 
-The same least-cost dispatch as `piecewise.yaml`, with a cost curve that is not convex. The weights need binaries to hold them on one segment, which is what the default method builds.
+The same least-cost dispatch as `piecewise.yaml`, with a cost curve that is not convex. Under the default method, the expansion holds the weights on one segment with binaries.
 
 #### Sets
 

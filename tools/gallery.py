@@ -104,7 +104,7 @@ def model_block(path: Path) -> str:
     """One spec, then the whole document the typesetter prints from it.
 
     Under the spec's own symbol table where it has one, as
-    [`declared_block`][] is: a weight named after the block that declared it
+    [`declared_block`][] is: a weight named after the entry that declared it
     is right in the file and unreadable in the equation that names it six
     times.
     """

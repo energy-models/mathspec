@@ -5,10 +5,10 @@
 description: >-
   A heat and power system whose converters mix. A CHP unit runs on one
   piecewise curve that ties all of its flows, and a boiler turns gas into heat
-  at a fixed ratio. The curve reads `has_curve` through `converter_of`, so a
-  boiler flow has no row on it, and the fixed-ratio row reads the same mask
-  negated. How many flows a converter ties is a row in `converter_of`, not a
-  line here.
+  at a fixed ratio. The curve looks `has_curve` up through `converter_of`, so a
+  boiler flow has no row on it, and the fixed-ratio row tests the same
+  condition negated. The rows of `converter_of` set how many flows a converter
+  has, and the file stays the same.
 
 dimensions:
   snapshot:

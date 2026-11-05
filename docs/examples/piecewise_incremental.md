@@ -5,18 +5,18 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # A curve filled segment by segment
 
-A cost curve on some generators, stated incrementally. Each segment of a curve
-has a fraction filled, `cost_curve_delta`, and a binary, `cost_curve_order`,
-that lets a segment fill only once the one before it is full. A link is its
-value at the first breakpoint, plus every filled fraction of each segment's
-rise. linopy builds these rows under these names for a curve that a gate
-switches, or that is not convex.
+Dispatch where some generators pay along a cost curve under
+`method: incremental`. When the spec is expanded, each segment has a filled
+fraction, `cost_curve_delta`, and a binary, `cost_curve_order`. A segment
+fills only once the one before it is full. The modelling library
+[linopy](https://linopy.readthedocs.io) writes the same rows for a curve that
+a gate switches or that is not convex.
 
-The curves have different lengths, so `where: on_curve` reads `bp`, and a
+The curves have different lengths, so `where: on_curve` is over `bp`, and a
 generator with no curve has none. `activity: status` switches the curve of a
-committable generator. The other generators have no status, and their curve
-runs ungated, so each link row is written twice: once where the status exists,
-and once where it does not.
+committable generator. The other generators have no status, so their curves
+run ungated. The expansion writes each link row twice: `cost_curve_p` where
+the status exists, and `cost_curve_p_ungated` where it is absent.
 
 <!-- gallery:begin -->
 ```yaml

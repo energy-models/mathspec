@@ -4,10 +4,9 @@
 
 description: >-
   The same least-cost dispatch as `piecewise.yaml`, with each generator's cost
-  curve stated as the lines its segments lie on rather than interpolated
-  between its breakpoints. The curve is convex and the objective pushes the
-  cost down, so a cost above every segment line settles on the curve — which
-  needs no interpolation weights, and so declares no auxiliary variable at all.
+  curve stated as the lines its segments lie on. The curve is convex and the
+  objective pushes the cost down, so a cost above every segment line lies on
+  the curve, and the expansion declares no variable.
 
 dimensions:
   snapshot:

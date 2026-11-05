@@ -75,7 +75,7 @@ nav:
           - One construct per spec: examples/operators.md
           - A curve by convex combination: examples/piecewise.md
           - A curve that is not convex: examples/piecewise_adjacency.md
-          - A curve as a special-ordered set: examples/sos.md
+          - A curve as a special ordered set: examples/sos.md
           - A curve as segment lines: examples/piecewise_lp.md
           - A curve filled segment by segment: examples/piecewise_incremental.md
           - A component library:

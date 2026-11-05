@@ -5,9 +5,9 @@
 description: >-
   The same least-cost dispatch as `piecewise_lp.yaml`, with curves of different
   lengths. A large unit is metered at every breakpoint and a small one at the
-  first few, so the breakpoint table is ragged. A `where:` reading `bp` is what
-  says how far each curve runs: without it every curve claims the whole axis,
-  and the data is refused at a breakpoint with no row.
+  first few, so the breakpoint table is ragged. A `where:` over `bp` sets how
+  far each curve runs. Without it, every curve runs over every breakpoint, and
+  a tool refuses the data at a breakpoint with no row.
 
 dimensions:
   snapshot:
