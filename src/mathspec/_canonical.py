@@ -195,9 +195,17 @@ def _canonical_entry(entry: object) -> object:
     return entry
 
 
-def _canonical_links(links: list[list[object]]) -> list[list[object]]:
-    """A piecewise entry's links, whose expression is the first position of the list the file wrote."""
-    return [[canonical_text(cast('str', link[0])), *link[1:]] for link in links]
+def _canonical_links(links: dict[str, object]) -> dict[str, object]:
+    """A piecewise entry's links by name, in the order the file wrote them.
+
+    A link in the list form carries its expression in the first position. A
+    walk is written as a mapping, whose ``expression`` is already in the normal
+    form.
+    """
+    return {
+        name: [canonical_text(cast('str', link[0])), *link[1:]] if isinstance(link, list) else link
+        for name, link in links.items()
+    }
 
 
 def _sorted_entries(section: dict[str, object], *, bare_is_expression: bool = False) -> dict[str, object]:

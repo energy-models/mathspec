@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language)!: piecewise links are named and may walk ([#630](https://github.com/energy-models/mathspec/pull/630))
 - fix(api): the API pages describe every public attribute of a spec and a program ([#978](https://github.com/energy-models/mathspec/pull/978))
 - docs(examples): units connect to buses through numbered ports that one relation lists, and only the output ports have an efficiency ([#948](https://github.com/energy-models/mathspec/pull/948))
 - feat(language): a parameter may declare the coordinates it has with `where:`, and outside them it is absent ([#945](https://github.com/energy-models/mathspec/pull/945))

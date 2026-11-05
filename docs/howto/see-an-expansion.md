@@ -50,11 +50,12 @@ every `sos:` entry. Then write out both with `spec.expand()`:
 
         piecewise:
           curve:
-            over: bp
+            along: bp
+            dims: []
             method: sos2
             links:
-              - [x, x_bp]
-              - [y, y_bp]
+              x: [x, x_bp]
+              y: [y, y_bp]
         ```
 
     === "Math"
@@ -113,10 +114,10 @@ every `sos:` entry. Then write out both with `spec.expand()`:
           curve_convexity:
             dims: []
             expression: sum(curve_lam, over=bp) == 1
-          curve_link0:
+          curve_x:
             dims: []
             expression: (x) == sum(curve_lam * x_bp, over=bp)
-          curve_link1:
+          curve_y:
             dims: []
             expression: (y) == sum(curve_lam * y_bp, over=bp)
 
@@ -131,8 +132,8 @@ every `sos:` entry. Then write out both with `spec.expand()`:
             holds: x_bp AND y_bp
             description: >-
               piecewise 'curve': every breakpoint the curve runs through needs a row in
-              'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows, or declare points: to say how far the curve
-              runs.
+              'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows,
+              or declare a where: that sets how far the curve runs.
         ```
 
     === "Math"
@@ -165,13 +166,13 @@ every `sos:` entry. Then write out both with `spec.expand()`:
         \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} = 1
         ```
 
-        **`curve_link0`**
+        **`curve_x`**
 
         ```math
         x = \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} \cdot \mathrm{x}^{\mathrm{bp}}_{b}
         ```
 
-        **`curve_link1`**
+        **`curve_y`**
 
         ```math
         y = \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} \cdot \mathrm{y}^{\mathrm{bp}}_{b}
@@ -219,10 +220,10 @@ every `sos:` entry. Then write out both with `spec.expand()`:
           curve_convexity:
             dims: []
             expression: sum(curve_lam, over=bp) == 1
-          curve_link0:
+          curve_x:
             dims: []
             expression: (x) == sum(curve_lam * x_bp, over=bp)
-          curve_link1:
+          curve_y:
             dims: []
             expression: (y) == sum(curve_lam * y_bp, over=bp)
           curve_pick:
@@ -237,8 +238,8 @@ every `sos:` entry. Then write out both with `spec.expand()`:
             holds: x_bp AND y_bp
             description: >-
               piecewise 'curve': every breakpoint the curve runs through needs a row in
-              'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows, or declare points: to say how far the curve
-              runs.
+              'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows,
+              or declare a where: that sets how far the curve runs.
         ```
 
     === "Math"
@@ -277,13 +278,13 @@ every `sos:` entry. Then write out both with `spec.expand()`:
         \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} = 1
         ```
 
-        **`curve_link0`**
+        **`curve_x`**
 
         ```math
         x = \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} \cdot \mathrm{x}^{\mathrm{bp}}_{b}
         ```
 
-        **`curve_link1`**
+        **`curve_y`**
 
         ```math
         y = \sum_{b \in \mathcal{B}} \mathit{curve\_lam}_{b} \cdot \mathrm{y}^{\mathrm{bp}}_{b}
@@ -472,5 +473,3 @@ entries.
       for the rows of each constraint that `expand()` writes for an SOS
     - [writing a formulation out](../reference/language/piecewise.md),
       for the entries that each formulation adds
-    - [write a piecewise curve out by hand](curve-by-hand.md), for a curve whose
-      number of flows is data

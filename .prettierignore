@@ -19,6 +19,11 @@ docs/examples/dispatch.md
 docs/examples/commitment.md
 docs/examples/connection.md
 docs/examples/operators.md
+docs/examples/piecewise.md
+docs/examples/piecewise_adjacency.md
+docs/examples/sos.md
+docs/examples/piecewise_lp.md
+docs/examples/piecewise_incremental.md
 docs/examples/pypsa_ladder.md
 docs/examples/pypsa_linearized_uc.md
 docs/examples/library/surface.md
