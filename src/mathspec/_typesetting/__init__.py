@@ -154,7 +154,7 @@ def typeset(
 
     blocks = [format_.note(format_.escape(program.description))] if program.description else []
     if legend:
-        explained, noticed = Legend(program, walk.symbols, format_), notice(program)
+        explained, noticed = Legend(program, walk.symbols, format_, walk.parameter_masks()), notice(program)
         blocks += [
             format_.section(title, format_.glossary(items))
             for title, items in explained.glossaries(noticed, walk.defined())

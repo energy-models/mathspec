@@ -27,6 +27,7 @@
 \item[{$\mathrm{is\_flexible}$}] \texttt{is\_flexible} over $\mathcal{G}$, \texttt{false} where the data has no row
 \item[{$\mathrm{zone\_cap}$}] \texttt{zone\_cap} over $\mathcal{Z}$
 \item[{$\mathrm{tech\_cap}$}] \texttt{tech\_cap} over $\mathcal{B} \times \mathcal{E}$, \texttt{absent} where the data has no row
+\item[{$\mathrm{link\_eff}$}] \texttt{link\_eff} over $\mathcal{G} \times \mathcal{B}$, only where $\left( g,\ b \right) \in \mathrm{connection}$, $1$ where the data has no row
 \item[{$\mathrm{min\_up}$}] \texttt{min\_up} over $\mathcal{G}$
 \item[{$\mathrm{eta}$}] \texttt{eta} over $\mathcal{G}$
 \item[{$\mathrm{lead}$}] \texttt{lead} over $\mathcal{G}$
