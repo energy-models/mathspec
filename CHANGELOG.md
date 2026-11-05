@@ -12,7 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(language): the gate of a piecewise entry may walk a relation, as a link may ([#784](https://github.com/energy-models/mathspec/pull/784))
+- feat(language)!: a piecewise gate may be read through a relation as `at(<variable>, by=<relation>[<column>])`, and `program.Piecewise.activity` is a `Gate` rather than a variable name ([#784](https://github.com/energy-models/mathspec/pull/784))
 - feat(language)!: a piecewise entry declares its dimensions and its links by name, a link may walk a relation, and `method: incremental` fills a curve segment by segment ([#630](https://github.com/energy-models/mathspec/pull/630))
 - docs(pypsa): the PyPSA reference targets master at 061974e3, where a Store charges, spills and is rated like a StorageUnit, and the spec states energy limits on every dispatching component, a Store's cycle limit and flow-based market coupling ([#977](https://github.com/energy-models/mathspec/pull/977))
 - docs(pypsa): the PyPSA reference targets master at d21e028, where starts and stops take the period weight and the commitment rows start at the first snapshot ([#976](https://github.com/energy-models/mathspec/pull/976))
