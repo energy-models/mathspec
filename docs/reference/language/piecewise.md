@@ -231,8 +231,9 @@ piecewise 'chp': along: bp reads the order of 'bp', which is not declared ordere
 
 mathspec suggests the rewrite: `ordered: true` on `bp`.
 
-A link must not take the name of a row or variable that the expansion adds
-for the entry, such as `convexity` or `lam`. For a link named `lam`, mathspec prints:
+A link must not take the name of a row, variable or assumption that the
+expansion adds for the entry, such as `convexity`, `lam` or `complete`. For a
+link named `lam`, mathspec prints:
 
 ```text
 piecewise 'chp': link 'lam' has the row 'chp_lam', which the expansion of the entry already writes. Rename the link.

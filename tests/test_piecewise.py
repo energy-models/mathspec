@@ -1116,6 +1116,13 @@ def test_a_link_named_after_a_row_the_block_writes_is_refused(link, match):
         spec_of(WALKED, **{f'piecewise.coupling.links.{link}': ['fuel', 'bp_fuel']})
 
 
+@pytest.mark.parametrize('link', ['complete', 'increasing', 'curvature', 'breakpoints', 'contiguous', 'power_complete'])
+def test_a_link_named_after_a_condition_the_block_writes_is_refused(link):
+    """A link `complete` wrote the row `coupling_complete` beside the assumption of that name, and the file loaded."""
+    with pytest.raises(LanguageError, match=f"link '{link}' has the row 'coupling_{link}'"):
+        spec_of(WALKED, **{f'piecewise.coupling.links.{link}': ['fuel', 'bp_fuel']})
+
+
 #: A second curve whose name extends the first's, so a link of the first can spell one of its rows.
 BESIDE = varied(
     WALKED,

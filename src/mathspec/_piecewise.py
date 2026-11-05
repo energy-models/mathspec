@@ -395,8 +395,8 @@ class Emitted:
 
     @property
     def reused(self) -> tuple[str, ...]:
-        """Each link row whose name the entry's own rows or variables already take."""
-        own = {self.lam, self.set.seg, self.delta, self.order, *self.rows}
+        """Each link row whose name the entry's own rows, variables or assumptions already take."""
+        own = {self.lam, self.set.seg, self.delta, self.order, *self.rows, *self.assumptions}
         return tuple(row for row in self.links if row in own)
 
     @property
