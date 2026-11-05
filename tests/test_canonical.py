@@ -291,6 +291,13 @@ def test_the_order_a_macro_lists_its_keywords_in_is_no_difference():
             id='an-assumption-and-its-where',
         ),
         pytest.param(
+            DISPATCH_MODEL,
+            'parameters.cost.where',
+            'p_max > 0 and p_max < 9',
+            '(p_max<9) AND p_max > 0',
+            id='the-where-of-a-parameter',
+        ),
+        pytest.param(
             raw_of(EXAMPLES / 'commitment.yaml'),
             'expressions.previous_status.cases.boundary.when',
             'committable and position(snapshot) == 0',

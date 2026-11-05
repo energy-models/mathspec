@@ -2124,16 +2124,22 @@ class TestTheFrontDoor:
     def test_a_spec_writes_the_fields_its_file_wrote_and_its_version(self):
         """A spec wrote back some defaults its file left out, such as `domain: continuous`, and dropped
         others its file wrote, such as `ordered: false`."""
+        parameters = {'c': {'dims': ['g'], 'missing': 'refused'}, 'w': {'dims': ['g'], 'where': 'c > 0'}}
         written = to_spec(
             {
                 'dimensions': {'g': {}, 't': {'dtype': 'int', 'ordered': False}},
-                'variables': {'p': {'dims': ['g'], 'domain': 'continuous'}, 'q': {'dims': ['g'], 'where': None}},
+                'parameters': parameters,
+                'variables': {
+                    'p': {'dims': ['g'], 'domain': 'continuous', 'missing': 'absent'},
+                    'q': {'dims': ['g'], 'where': None},
+                },
             }
         ).to_dict()
         assert written == {
             'version': 0,
             'dimensions': {'g': {}, 't': {'dtype': 'int', 'ordered': False}},
-            'variables': {'p': {'dims': ['g'], 'domain': 'continuous'}, 'q': {'dims': ['g']}},
+            'parameters': parameters,
+            'variables': {'p': {'dims': ['g'], 'domain': 'continuous', 'missing': 'absent'}, 'q': {'dims': ['g']}},
         }, 'every field the file wrote, a default included, no field it left out, no null, and the version'
 
 
