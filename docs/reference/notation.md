@@ -53,7 +53,7 @@ parameters:
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
-  link_eff: { dims: [generator, bus], where: connection, missing: 1 } # the legend lists where it has coordinates, then what a missing row inside them means
+  link_eff: { dims: [generator, bus], where: connection, missing: 1 }
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }

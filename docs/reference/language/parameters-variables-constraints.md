@@ -403,7 +403,7 @@ dimensions:
   bus: { dtype: str }
   snapshot: { dtype: int }
 relations:
-  connection: { key: [entity, bus], missing: absent } # the pairs that are wired
+  connection: { key: [entity, bus], missing: absent }
 parameters:
   efficiency: { dims: [entity, bus, snapshot], where: connection, missing: 1 }
 variables:
