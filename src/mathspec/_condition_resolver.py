@@ -79,9 +79,6 @@ if TYPE_CHECKING:
     from mathspec._resolution import Namespace
     from mathspec.program import DeclaredDtype
 
-#: Why a mask may not read a given expression. The namespace stores a given
-#: expression with the variables, because it is read as a column, so this
-#: refusal names it separately.
 GIVEN_IN_A_CONDITION = (
     'A given expression may hold a variable, and a condition is read before variables exist — it may test '
     'parameters and dimension coordinates only.'
@@ -673,11 +670,8 @@ class ConditionResolver:
         return value
 
 
-#: An ISO literal carrying a time-of-day, which decides date vs datetime.
 _HAS_TIME = re.compile(r'[T ]\d')
 
-#: The dtypes on which a condition may use an inequality: <, <=, > or >=. A
-#: ``str`` or ``bool`` compares only with == and !=.
 _INEQUALITY_DTYPES: tuple[DeclaredDtype, ...] = ('float', 'int', 'datetime')
 
 

@@ -14,6 +14,8 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 - feat(language): an assumption may require that a variable or constraint row exists, and a gap the `where:` conditions leave is refused at load ([#982](https://github.com/energy-models/mathspec/pull/982))
 - feat(language): under `missing: excluded`, a relation confines every parameter over its key, and a data row outside it is refused ([#980](https://github.com/energy-models/mathspec/pull/980))
+- fix(api): the API pages describe every public attribute of a spec and a program ([#978](https://github.com/energy-models/mathspec/pull/978))
+- docs(examples): units connect to buses through numbered ports that one relation lists, and only the output ports have an efficiency ([#948](https://github.com/energy-models/mathspec/pull/948))
 - feat(language): a parameter may declare the coordinates it has with `where:`, and outside them it is absent ([#945](https://github.com/energy-models/mathspec/pull/945))
 - docs(pypsa): the PyPSA reference targets master at 061974e3, where a Store charges, spills and is rated like a StorageUnit, and the spec states energy limits on every dispatching component, a Store's cycle limit and flow-based market coupling ([#977](https://github.com/energy-models/mathspec/pull/977))
 - docs(pypsa): the PyPSA reference targets master at d21e028, where starts and stops take the period weight and the commitment rows start at the first snapshot ([#976](https://github.com/energy-models/mathspec/pull/976))

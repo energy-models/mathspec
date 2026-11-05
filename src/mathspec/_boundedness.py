@@ -40,12 +40,8 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from mathspec.program import Program, Variable
 
-#: The sign a term carries into the objective, or ``None`` where the file does
-#: not decide it: a parameter coefficient (which may be zero), a variable
-#: appearing with both signs (which may cancel), a divisor carrying one.
 Sign = Literal['+', '-'] | None
 
-#: Which of a variable's two bounds a term drives it toward.
 BoundSide = Literal['lower', 'upper']
 
 
