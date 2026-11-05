@@ -211,34 +211,6 @@ def test_the_order_of_the_regions_under_cases_is_no_difference():
     assert ms.to_latex(reordered) == ms.to_latex(written), 'the rows print sorted by name, otherwise last'
 
 
-@pytest.mark.parametrize(
-    ('path', 'key', 'written', 'reordered'),
-    [
-        pytest.param(
-            EXAMPLES / 'operators' / 'sum_list.yaml',
-            'constraints.carrier_total.expression',
-            'sum(p, over=[snapshot, generator]) <= limit',
-            'sum(p, over=[generator, snapshot]) <= limit',
-            id='the-names-in-over',
-        ),
-        pytest.param(
-            EXAMPLES / 'operators' / 'sum_by_column_lists.yaml',
-            'constraints.slot_cap.expression',
-            'sum(p, over=[generator, period], by=slot_of[bus, technology]) <= cap',
-            'sum(p, over=[generator, period], by=slot_of[technology, bus]) <= cap',
-            id='the-columns-of-a-relation',
-        ),
-    ],
-)
-def test_the_order_of_a_list_in_a_call_is_no_difference(path, key, written, reordered):
-    """A list of names and the columns of a relation in a call name a set: a repeat is refused, and the
-    program reads them sorted. The form printed them as written, so two files that state one spec wrote two
-    texts."""
-    raw = raw_of(path)
-    texts = {ms.to_spec(varied(raw, **{key: text})).to_yaml(canonical=True) for text in (written, reordered)}
-    assert len(texts) == 1, 'one canonical text for both orders of the list'
-
-
 def test_the_order_a_macro_lists_its_keywords_in_is_no_difference():
     """A call passes a keyword formal by name, so the order of `kwargs:` means nothing. A spec held it as
     the file wrote it, so two files that state one spec were unequal and wrote two texts."""
@@ -253,8 +225,22 @@ def test_the_order_a_macro_lists_its_keywords_in_is_no_difference():
 
 
 @pytest.mark.parametrize(
-    ('source', 'key', 'written', 'reordered'),
+    ('source', 'key', 'written', 'respelled'),
     [
+        pytest.param(
+            raw_of(EXAMPLES / 'operators' / 'sum_list.yaml'),
+            'constraints.carrier_total.expression',
+            'sum(p, over=[snapshot, generator]) <= limit',
+            'sum(p, over=[generator, snapshot]) <= limit',
+            id='the-names-in-over',
+        ),
+        pytest.param(
+            raw_of(EXAMPLES / 'operators' / 'sum_by_column_lists.yaml'),
+            'constraints.slot_cap.expression',
+            'sum(p, over=[generator, period], by=slot_of[bus, technology]) <= cap',
+            'sum(p, over=[generator, period], by=slot_of[technology, bus]) <= cap',
+            id='the-columns-of-a-relation',
+        ),
         pytest.param(
             DISPATCH_MODEL,
             'variables.p.where',
@@ -306,12 +292,13 @@ def test_the_order_a_macro_lists_its_keywords_in_is_no_difference():
         ),
     ],
 )
-def test_a_condition_is_written_one_way(source, key, written, reordered):
-    """A condition is read by its own grammar, and the form printed it as the file wrote it. Two files whose
-    conditions differ only in the order of AND or OR, the case of a keyword, a bracket or a space stated one
-    spec and wrote two texts."""
-    texts = {ms.to_spec(varied(source, **{key: text})).to_yaml(canonical=True) for text in (written, reordered)}
-    assert len(texts) == 1, 'one canonical text for both spellings of the condition'
+def test_two_spellings_of_one_spec_write_one_canonical_text(source, key, written, respelled):
+    """A list of names and the columns of a relation in a call name a set, and the program reads them sorted. A
+    condition is read by its own grammar. The form printed each as the file wrote it, so two files whose lists
+    differ in order, or whose conditions differ in the order of AND or OR, the case of a keyword, a bracket or a
+    space, stated one spec and wrote two texts."""
+    texts = {ms.to_spec(varied(source, **{key: text})).to_yaml(canonical=True) for text in (written, respelled)}
+    assert len(texts) == 1, 'one canonical text for both spellings'
 
 
 @pytest.mark.parametrize(
