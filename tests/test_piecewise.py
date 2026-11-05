@@ -342,6 +342,12 @@ def test_any_affine_expression_is_a_legal_link(link):
             r"where 'reach' tests \['generator'\], which is not in dims: \['snapshot'\]",
             id='a-where-adding-a-coordinate-the-curve-does-not-have',
         ),
+        pytest.param(
+            NONCONVEX_YAML,
+            {'piecewise.cost_curve.dims': ['snapshot', 'snapshot']},
+            r"dims repeats a dimension: \['snapshot', 'snapshot'\]",
+            id='dims-naming-a-dimension-twice',
+        ),
     ],
 )
 def test_a_malformed_entry_is_refused(model, patch, match):
@@ -389,10 +395,20 @@ def test_an_entry_is_refused_on_the_link_the_file_wrote_and_not_on_a_row_it_woul
     assert 'cost_curve_' not in str(exc.value), 'the refusal names the block, not a declaration the expansion writes'
 
 
-def test_an_undeclared_breakpoint_dimension_is_refused_once():
-    """`along: nope` also said, per link, that the values parameter must carry `nope` — lines that follow from the first."""
+@pytest.mark.parametrize(
+    'patch',
+    [
+        pytest.param({'piecewise.cost_curve.along': 'nope'}, id='along'),
+        pytest.param({'piecewise.cost_curve.dims': ['snapshot', 'nope']}, id='dims'),
+    ],
+)
+def test_an_undeclared_dimension_is_refused_once(patch):
+    """`along: nope` also said, per link, that the values parameter must carry `nope` — lines that follow from the first.
+
+    Without its own check, `dims: [nope]` was refused as a link expression not over `['nope']`.
+    """
     with pytest.raises(SchemaError) as exc:
-        spec_of(NONCONVEX_YAML, **{'piecewise.cost_curve.along': 'nope'})
+        spec_of(NONCONVEX_YAML, **patch)
     assert str(exc.value).splitlines() == [
         "piecewise 'cost_curve' references undeclared dimension 'nope'. Declare it under 'dimensions:'."
     ]
