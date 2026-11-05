@@ -1164,6 +1164,38 @@ def test_a_block_mask_reaches_a_walked_link_through_its_relation():
     )
 
 
+#: The relation of the walk with a flow that belongs to no generator.
+PARTIAL = {'relations.generator_of': {'key': 'flow', 'values': 'generator', 'missing': 'absent'}}
+
+
+@pytest.mark.parametrize(
+    ('patch', 'where'),
+    [
+        pytest.param({}, None, id='every-flow-has-a-generator'),
+        pytest.param(PARTIAL | {'piecewise.coupling.method': 'adjacency'}, 'generator_of', id='adjacency'),
+        pytest.param(PARTIAL | {'piecewise.coupling.method': 'sos2'}, 'generator_of', id='sos2'),
+        pytest.param(
+            PARTIAL | {'piecewise.coupling.method': 'incremental'},
+            '(generator_of) AND (position(bp) == 0)',
+            id='incremental',
+        ),
+        pytest.param(
+            PARTIAL | {'parameters.curved': CURVED['parameters']['curved'], 'piecewise.coupling.where': 'curved'},
+            'at(curved, by=generator_of[generator])',
+            id='a-mask-read-through-the-relation',
+        ),
+    ],
+)
+def test_a_walked_row_exists_only_where_its_relation_has_a_row(patch, where):
+    """A flow with no generator read no weights, and its row pinned `power` to an empty sum, or to the first breakpoint.
+
+    Under the default `missing: refused` every flow has a row, and the row
+    is written as before.
+    """
+    expanded = spec_of(WALKED, **patch).expand()
+    assert expanded.constraints['coupling_power'].where == where
+
+
 #: fluxopt's investment cost curve (fluxopt/fluxopt#26): each effect of a sized flow is read off its curve.
 INVESTED = {
     'dimensions': {name: {'dtype': 'str'} for name in ('cost_curve', 'effect', 'flow')}

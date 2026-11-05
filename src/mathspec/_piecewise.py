@@ -235,6 +235,20 @@ def through(text: str | None, link: Link) -> str | None:
     return f'at({text}, by={link.by})'
 
 
+def _on_walk(text: str | None, link: Link) -> str | None:
+    """*text* as *link*'s row reads it, admitted only at the keys its relation has a row for.
+
+    A relation declared ``missing: absent`` may lack a key, and there the
+    walked read of the curve is absent, so the row would pin the link's
+    expression to an empty sum, or to the first breakpoint under
+    ``incremental``. A where read through the relation is already false
+    there, and under ``missing: refused`` every key has a row.
+    """
+    if link.walk is None or link.reads or link.walk.relation.missing == 'refused':
+        return through(text, link)
+    return _all_of(link.walk.name, text)
+
+
 def _quoted(names: Iterable[str]) -> str:
     """Parameter names as a refusal lists them, in link order and without repeats."""
     return ', '.join(f"'{name}'" for name in dict.fromkeys(names))
@@ -781,7 +795,7 @@ class _Expansion:
                 cname,
                 link.dims,
                 f'({written.expression}) {link.sign} sum({self._weights_read(link)} * {link.values}, over={d})',
-                through(self.exists, link),
+                _on_walk(self.exists, link),
             )
         if pw.method in ('sos2', 'adjacency'):
             sos.section(self.raw, 'sos')[self.name] = {'variable': emitted.lam, 'along': d, 'type': 2}
@@ -828,7 +842,7 @@ class _Expansion:
                     cname + suffix,
                     [*link.dims, d],
                     f'({written.expression}) {link.sign} {start} + {filled}',
-                    _all_of(through(first, link), self._read(gate, link, gated)),
+                    _all_of(_on_walk(first, link), self._read(gate, link, gated)),
                 )
 
     @staticmethod
