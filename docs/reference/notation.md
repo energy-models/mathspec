@@ -44,6 +44,7 @@ relations:
   rep_of: { key: snapshot, values: { rep: snapshot } } # a map into its own dimension: the representative snapshot
   connection: { key: [generator, bus], missing: absent } # a bare relation, with no value columns: many-to-many, read only by sum with both ends named
   gen_bt: { key: generator, values: [bus, technology] } # one table with two value columns, read to both at once
+  bus_zone: { key: [bus, zone], missing: absent, confines: true } # the pairs that exist: every parameter over bus and zone has coordinates only here
 
 parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
@@ -54,6 +55,7 @@ parameters:
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
   link_eff: { dims: [generator, bus], where: connection, missing: 1 }
+  zone_share: { dims: [bus, zone], missing: 1 } # confined by bus_zone with no `where:` of its own
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }
@@ -71,8 +73,8 @@ parameters:
 |---|---|
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T}`$ |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `connection` is `absent` where the data has no row |
-| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
-| $`\mathcal{Z}`$ | index $`z`$ — `zone` (labels `north`, `south`) with $`\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
+| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E},\ \mathrm{bus\_zone} \subseteq \mathcal{B} \times \mathcal{Z}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row, `bus_zone` is `absent` where the data has no row, every parameter over the key of `bus_zone` has data only where `bus_zone` has a row |
+| $`\mathcal{Z}`$ | index $`z`$ — `zone` (labels `north`, `south`) with $`\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{bus\_zone} \subseteq \mathcal{B} \times \mathcal{Z}`$, `area_of` is `absent` where the data has no row, `bus_zone` is `absent` where the data has no row, every parameter over the key of `bus_zone` has data only where `bus_zone` has a row |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$ |
 | $`\mathcal{A}`$ | index $`a`$ — `bp` |
@@ -89,6 +91,7 @@ parameters:
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{B} \times \mathcal{E}`$, `absent` where the data has no row |
 | $`\mathrm{link\_eff}`$ | `link_eff` over $`\mathcal{G} \times \mathcal{B}`$, only where $`\left( g,\ b \right) \in \mathrm{connection}`$, $`1`$ where the data has no row |
+| $`\mathrm{zone\_share}`$ | `zone_share` over $`\mathcal{B} \times \mathcal{Z}`$, a row of data refused unless $`\left( b,\ z \right) \in \mathrm{bus\_zone}`$, $`1`$ where the data has no row |
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{eta}`$ | `eta` over $`\mathcal{G}`$ |
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |

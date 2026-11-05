@@ -231,6 +231,10 @@ class RelationSpec(_StrictSpec):
     """Whether every combination of the dimensions of the key needs a row. Under ``refused``, a tool refuses data that
     leaves one out. Under ``absent``, that combination has no row.
     """
+    confines: bool = False
+    """Whether each parameter over all the dimensions of the key has coordinates only at the relation's rows. A tool refuses
+    a row of that parameter's data at a key combination the relation has no row for.
+    """
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -251,8 +255,11 @@ class RelationSpec(_StrictSpec):
 
     @model_serializer(mode='wrap')
     def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``missing`` is written where it is not ``refused``: refused is what leaving it out says."""
-        return _without_refused(cast('dict[str, object]', handler(self)))
+        """``missing`` is written where it is not ``refused``, and ``confines`` where it is true: leaving either out says the default."""
+        written = _without_refused(cast('dict[str, object]', handler(self)))
+        if not self.confines:
+            written.pop('confines', None)
+        return written
 
     @property
     def pairs(self) -> tuple[tuple[str, str], ...]:
@@ -349,8 +356,9 @@ class ParameterSpec(_StrictSpec):
     dims: list[str]
     dtype: ParameterDtype = 'float'
     where: str | None = None
-    """The condition that limits the coordinates of the parameter, in the condition grammar. Where it is false, the
-    parameter is absent and a tool drops its rows of data there. ``missing:`` applies where it is true.
+    """The condition that limits the coordinates of the parameter, in the condition grammar, inside each relation under
+    ``confines: true`` over its dimensions. Where it is false, the parameter is absent and a tool drops its rows of data
+    there. ``missing:`` applies where it is true.
     """
     missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None

@@ -33,8 +33,10 @@ from mathspec._resolution import (
 from mathspec._validation import emitted_name_errors, reference_errors
 from mathspec.errors import SchemaError, did_you_mean, prefixed
 from mathspec.program import (
+    And,
     Assumption,
     BooleanLiteral,
+    ConditionReference,
     Constant,
     Constraint,
     Dimension,
@@ -46,11 +48,14 @@ from mathspec.program import (
     Mask,
     NamedCondition,
     NamedExpression,
+    Not,
     Objective,
+    Or,
     Parameter,
     ParameterReference,
     Piecewise,
     Program,
+    RelationDefined,
     Sos,
     Variable,
     VariableDefined,
@@ -61,7 +66,7 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
-    from mathspec.program import Expression
+    from mathspec.program import Condition, Expression
     from mathspec.spec import AssumptionSpec, Spec
 
 
@@ -220,7 +225,14 @@ def lower(spec: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: Parameter(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description, parameter_masks.get(name))
+            name: Parameter(
+                tuple(pdef.dims),
+                pdef.dtype,
+                pdef.missing,
+                pdef.description,
+                parameter_masks.get(name),
+                tuple(ns.confining(pdef.dims)),
+            )
             for name, pdef in spec.parameters.items()
         },
         variables=variables,
@@ -401,6 +413,14 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
         mask = masks[pname] = mask_of(resolve_condition_text(spec.parameters[pname].where, ns, context, errors))
         if mask is None:
             continue
+        if (
+            (confining := ns.confining(spec.parameters[pname].dims))
+            and (decided := Mask(_inside(mask.root, frozenset(confining))).root) != mask.root
+            and isinstance(decided, BooleanLiteral)
+        ):
+            errors.append(
+                _decided_by_relations(context, pname, spec.parameters[pname].where, confining, value=decided.value)
+            )
         errors.extend(
             f"{context}: its `where:` contains variable '{v}', and a tool evaluates the `where:` of a parameter "
             f'from the data alone, before any variable has a value. Test a parameter or a relation instead.'
@@ -415,6 +435,35 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
             for read in sorted(mask.names_read & masked)
         )
     return masks
+
+
+def _inside(node: Condition, confining: frozenset[str]) -> Condition:
+    """*node* with each of the *confining* relations read as true, since a confined parameter has no coordinate outside them."""
+    match node:
+        case RelationDefined(name=name) if name in confining:
+            return BooleanLiteral(value=True)
+        case Not(operand=operand):
+            return Not(_inside(operand, confining))
+        case And(left=left, right=right):
+            return And(_inside(left, confining), _inside(right, confining))
+        case Or(left=left, right=right):
+            return Or(_inside(left, confining), _inside(right, confining))
+        case ConditionReference(body=body):
+            return _inside(body, confining)
+        case _:
+            return node
+
+
+def _decided_by_relations(context: str, pname: str, text: str | None, confining: list[str], *, value: bool) -> str:
+    """The refusal for a parameter's ``where:`` that the relations confining the parameter already decide."""
+    named = ' and '.join(f"'{r}'" for r in confining)
+    head = (
+        f"{context}: '{pname}' has coordinates only where {named} {'has' if len(confining) == 1 else 'have'} a row, "
+        f'under confines: true, so `where: {text}`'
+    )
+    if value:
+        return f'{head} narrows nothing. Delete the `where:`, or the relation from it.'
+    return f"{head} leaves '{pname}' no coordinate. Write a `where:` that holds somewhere inside the relation."
 
 
 def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:

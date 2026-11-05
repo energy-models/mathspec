@@ -12,6 +12,7 @@ of it is about syntax, so none is duplicated per format.
 
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, assert_never
 
@@ -710,6 +711,28 @@ class Walk:
             name: self._condition(entry.where.root, self._context(entry.dims))
             for name, entry in self.program.parameters.items()
             if entry.where is not None
+        }
+
+    def parameter_confinements(self) -> dict[str, str]:
+        """Each confined parameter's relation rows, printed over its own indices for its legend row.
+
+        They print apart from the mask, because a tool refuses a row of data
+        outside a relation and drops one outside the mask.
+        """
+        relations = self.program.relations
+        return {
+            name: self._condition(
+                functools.reduce(
+                    And,
+                    [
+                        RelationDefined(r, tuple(relations[r].dim(role) for role in relations[r].key))
+                        for r in entry.confined_by
+                    ],
+                ),
+                self._context(entry.dims),
+            )
+            for name, entry in self.program.parameters.items()
+            if entry.confined_by
         }
 
     def defined(self) -> list[str]:

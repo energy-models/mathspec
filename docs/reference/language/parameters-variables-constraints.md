@@ -315,7 +315,9 @@ A `str` parameter takes any label. A dimension with
 `missing:` sets the meaning of a coordinate of the `dims` at which the data has
 no row. It takes `refused` (the default), `absent`, or a value of the `dtype`
 of the parameter. On a parameter with a [`where:`](#where), `missing:` applies
-only where the condition is true.
+only where the condition is true. On a parameter that a relation confines
+([`confines`](relations.md#confines)), it applies only where the relation has
+a row.
 
 ```yaml
 dimensions:
@@ -441,7 +443,11 @@ snapshot of the example, and drops every other row.
 
 A tool drops a row of the data outside the condition without refusing the
 data. An [assumption](assumptions.md) on the parameter does not test that row
-either, because the parameter has no row there.
+either, because the parameter has no row there. To have a tool refuse a row at
+a pair that is not wired, declare
+[`confines: true`](relations.md#confines) on the relation instead. It then
+confines `efficiency`, and every other parameter over `entity` and `bus`, and
+the parameter needs no `where:`.
 
 A tool evaluates the condition from the data alone, before it reads the
 parameter. So the condition may contain [dimensions](dimensions.md),
