@@ -680,8 +680,8 @@ class MacroSpec(_StrictSpec):
     @model_validator(mode='after')
     def _check_formals(self) -> MacroSpec:
         formals = [*self.args, *self.kwargs]
-        if len(set(formals)) != len(formals):
-            msg = f'formal names repeat in {formals}. Give each formal its own name.'
+        if twice := sorted({formal for formal in formals if formals.count(formal) > 1}):
+            msg = f'formal {twice[0]!r} is named twice. Give each formal its own name.'
             raise ValueError(msg)
         return self
 
