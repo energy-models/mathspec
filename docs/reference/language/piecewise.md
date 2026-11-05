@@ -780,6 +780,11 @@ have no row in it. That generator has no gate, so its curve is ungated. With
 is switched off there. Only a generator with no row in `unit_of` then stays
 ungated.
 
+Under the default `missing: refused`, every generator has a row in `unit_of`.
+A curve is then ungated only where `running` is absent, as for a gate over
+`dims:`. Where `running` has no `where:`, every curve reads the gate, and the
+typesetter prints the gate alone.
+
 After the lookup, the gate must be over dimensions of `dims:` only. With
 `running` over `[snapshot, unit, period]`, mathspec refuses the file at load:
 

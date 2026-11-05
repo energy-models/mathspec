@@ -918,9 +918,10 @@ class Gate:
     a relation, as ``at(..., by=)`` reads it. ``exists`` is where a curve reads
     the gate, and the curve is ungated elsewhere, its weights summing to 1; it
     is ``None`` where every curve reads it. A masked variable exists only on
-    its mask, and a relation has no row at some coordinates, so both leave
-    curves ungated; ``missing: 0`` reads the variable as 0 off its mask
-    instead, which pins those curves off.
+    its mask, and a relation declared ``missing: absent`` may have no row for
+    a curve, so both leave curves ungated; ``missing: 0`` reads the variable
+    as 0 off its mask instead, which pins those curves off. Under the
+    relation's ``missing: refused`` every curve has a row.
     """
 
     variable: str

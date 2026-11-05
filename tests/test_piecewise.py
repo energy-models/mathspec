@@ -1235,11 +1235,13 @@ objective:
 @pytest.mark.parametrize(
     ('patch', 'convexity'),
     [
+        pytest.param(REFUSED, {'curve_convexity': None}, id='every-row-without-a-where'),
         pytest.param(
             REFUSED | STATUS_MASKED,
             {'curve_convexity': RUNNING, 'curve_convexity_ungated': f'NOT ({RUNNING})'},
             id='every-row-with-a-where',
         ),
+        pytest.param(REFUSED | COMMITTABLE, {'curve_convexity': None}, id='every-row-with-a-where-under-missing-0'),
         pytest.param(
             {}, {'curve_convexity': RUNNING, 'curve_convexity_ungated': f'NOT ({RUNNING})'}, id='a-row-may-be-absent'
         ),
@@ -1256,7 +1258,12 @@ objective:
     ],
 )
 def test_a_gate_read_through_a_relation_is_ungated_only_where_its_read_may_be_absent(patch, convexity):
-    """A gate read through a relation has a second, ungated row, and the typesetter prints its `1 otherwise` branch."""
+    """A walked gate always wrote the `_ungated` row, and the typesetter printed its `1 otherwise` branch.
+
+    Under the relation's default `missing: refused` every curve has a row,
+    so a gate with no `where:`, or one read as 0 off it, is read at every
+    curve, and the second row stood for no coordinate.
+    """
     spec = spec_of(COMMITTED, **patch)
     rows = expand_piecewise(spec).constraints
     assert {name: rows[name].where for name in rows if name.startswith('curve_convexity')} == convexity
@@ -1868,9 +1875,25 @@ UNIT_STATUS = 'at(at(status, by=unit_of[unit]), by=generator_of[generator])'
             INCREMENTAL,
             UNITS,
             'coupling_power',
-            f'({FIRST}) AND ({UNIT_STATUS})',
+            FIRST,
             f'bp_power * ({UNIT_STATUS})',
             id='a-walked-link-reads-the-read-through-its-own-relation',
+        ),
+        pytest.param(
+            INCREMENTAL,
+            UNITS | {'relations.unit_of': {'key': 'generator', 'values': 'unit', 'missing': 'absent'}},
+            'coupling_power',
+            f'({FIRST}) AND ({UNIT_STATUS})',
+            f'bp_power * ({UNIT_STATUS})',
+            id='a-walked-link-reads-the-read-through-its-own-relation-where-it-may-be-absent',
+        ),
+        pytest.param(
+            INCREMENTAL,
+            UNITS | {'relations.generator_of.missing': 'absent'},
+            'coupling_power',
+            f'(generator_of) AND ({FIRST})',
+            f'bp_power * ({UNIT_STATUS})',
+            id='a-walked-link-with-no-row-of-its-own-is-absent-whole',
         ),
         pytest.param(
             INCREMENTAL,
@@ -1903,7 +1926,9 @@ def test_an_incremental_link_reads_a_gate_read_through_a_relation(raw, patch, ro
 
     The walked link reads the gate through its own relation only where the gate
     carries a dim the walk drops: a status over `snapshot` alone was read at
-    `generator`, which it does not carry, and the expansion was refused.
+    `generator`, which it does not carry, and the expansion was refused. A
+    gate whose relation has a row for every generator also wrote an ungated
+    row, which stood for no coordinate.
     """
     spec = spec_of(raw, **patch)
     built = expand_piecewise(spec).constraints[row]

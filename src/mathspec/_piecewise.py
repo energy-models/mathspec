@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from mathspec._expression_parser import ArithmeticNode
     from mathspec._resolution import Namespace
-    from mathspec.program import Expression, JoinColumns, Mask, Program
+    from mathspec.program import Expression, JoinColumns, Mask, Program, Relation
 
 
 # ---------------------------------------------------------------------------
@@ -386,7 +386,7 @@ class Emitted:
         """The variables and constraints [`expand`][mathspec.spec.Spec.expand] declares for an entry of *method*.
 
         *gated* is whether the entry names an ``activity:``, and *ungated*
-        [`leaves_ungated`][] of that gate. The set a
+        whether some curve does not read it, as [`leaves_ungated`][] says. The set a
         ``sos2`` or ``adjacency`` entry states is written out too, since
         ``expand()`` writes every set.
         """
@@ -436,13 +436,17 @@ class Emitted:
         )
 
 
-def leaves_ungated(gate: VariableSpec | Variable) -> bool:
-    """Whether a curve gated by *gate* runs ungated where the gate does not exist, which takes a second convexity row.
+def leaves_ungated(gate: VariableSpec | Variable, relation: Relation | None = None) -> bool:
+    """Whether a curve gated by *gate*, read through *relation* if any, can run ungated, which takes a second row.
 
     A masked gate is absent off its mask, and there the curve sums to 1;
     ``missing: 0`` reads the gate as 0 there instead, which one row states.
+    A relation declared ``missing: absent`` may have no row for a curve, and
+    there the read is absent whatever the gate's ``missing:``. Under
+    ``missing: refused`` every curve has a row.
     """
-    return gate.where is not None and gate.missing != 0
+    absent = relation is not None and relation.missing == 'absent'
+    return absent or (gate.where is not None and gate.missing != 0)
 
 
 def gate_of(text: str) -> tuple[str, ArithmeticNode | None] | None:
@@ -469,15 +473,15 @@ def gate_text(text: str, gate: VariableSpec | Variable, read: Expression) -> tup
     """The gate as a curve reads it, and the where a curve reads it under, or ``None`` where every curve does.
 
     *text* is the ``activity:`` the file wrote, and *read* the expression it
-    resolved to. A gate on the entry's own dims is ungated where it does not
-    exist, as [`leaves_ungated`][] says. A walked gate is also ungated where
-    the relation has no row, so it always has a where: the read itself,
-    which exists where both do, or, under ``missing: 0``, the relation alone,
-    since the variable then reads 0 off its mask.
+    resolved to. Where [`leaves_ungated`][] says a curve can run ungated,
+    the where is the read itself, which exists where the gate and the row of
+    its relation both do. Under ``missing: 0`` a walked gate reads 0 off its
+    mask, so the relation alone decides, and its name is the where.
     """
-    if not isinstance(read, Join):
-        return text, text if leaves_ungated(gate) else None
-    return text, text if gate.missing != 0 else read.columns.name
+    walk = read.columns if isinstance(read, Join) else None
+    if not leaves_ungated(gate, None if walk is None else walk.relation):
+        return text, None
+    return text, text if walk is None or gate.missing != 0 else walk.name
 
 
 # ---------------------------------------------------------------------------
@@ -934,8 +938,8 @@ class _Expansion:
 
         ``missing: 0`` is the other reading and stays one row — the gate is 0
         where it does not exist, so the curve is pinned off there. A gate read
-        through a relation always takes two, since the relation may have no
-        row for a curve.
+        through a relation declared ``missing: absent`` takes two whatever its
+        ``missing:``, since the relation may have no row for a curve.
 
         *link* reads the gate and its where as its row does: through its
         relation where either carries a dim the walk drops.
