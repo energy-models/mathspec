@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Lines
 
-This file states PyPSA's `Line`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to each of these sums: `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection` and `Cycle_angle_sum`. `Line_loss_tangents_forward` states PyPSA's tangent and secant loss rows over one segment dimension. `Line_s_monitored` is the flow that the security rows contain.
+This file states PyPSA's `Line`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to each of these sums: `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection` and `Cycle_angle_sum`. `Line_loss_tangents_forward` states PyPSA's tangent and secant loss rows over one segment dimension. `Line_s_monitored` is the flow that the security rows contain.
 
 <!-- gallery:begin -->
 ```yaml
@@ -82,7 +82,7 @@ parameters:
       whether a line is one of PyPSA's `active_assets`, by its `active` flag
       alone, without build year and lifetime. A unit that is active in no
       snapshot of the horizon still counts. PyPSA refuses one that differs by
-      scenario (`constants.py:51`)
+      scenario (`constants.py:54`)
     dims: [line]
     dtype: bool
   Line_capital_weight:
@@ -135,7 +135,7 @@ parameters:
       in degrees. It is PyPSA's `v_ang_max`. Infinite, and so no row, by
       default. A line whose carrier is not AC has no row either. The
       deprecated `v_ang_min` is ignored, as PyPSA ignores it with a
-      `DeprecationWarning` (`constraints.py:1695-1702`)
+      `DeprecationWarning` (`constraints.py:1710-1717`)
     dims: [scenario, line]
     missing: absent
   Line_x_pu_eff:
@@ -147,7 +147,9 @@ parameters:
     description: >-
       the line's series impedance, signed by its orientation in the cycle: the
       cycle basis, data prep. A line in no cycle has no row. PyPSA builds the
-      cycle basis from the first scenario only (`networks.py:1430-1437`)
+      cycle basis from the first scenario (`networks.py:1430-1437`), and
+      refuses a `v_nom`, `x_pu_eff` or `r_pu_eff` that differs by scenario
+      (`constants.py:33-35`). So the weight is the same in every scenario
     dims: [period, line, cycle]
     missing: absent
   Line_loss_max:
@@ -167,7 +169,7 @@ parameters:
   Line_volume_weight:
     description: >-
       the line's length in each scenario where its carrier is in the row's set
-      (`global_constraints.py:847-848`), data prep. A line outside it, or one
+      (`global_constraints.py:849-850`), data prep. A line outside it, or one
       that is not active in the row's `investment_period`, has no row
     dims: [scenario, global_constraint, line]
     missing: absent
@@ -179,7 +181,7 @@ parameters:
       periods the line is active in. A line outside the set, or one that is not
       active in the row's period, has no row. The capital cost is PyPSA's
       `capital_cost` property, which is `Line_capital_cost` without `fom_cost`
-      (`components.py:1153-1171`, `global_constraints.py:870-879`)
+      (`components.py:1153-1171`, `global_constraints.py:872-881`)
     dims: [scenario, global_constraint, line]
     missing: absent
   Line_tech_capacity_weight:
@@ -382,7 +384,7 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{s}`$ | `Line_active` over $`\mathcal{T} \times \mathcal{K}`$ — whether a line is active in a snapshot's period. It is PyPSA's `active`, data prep |
-| $`\mathrm{act}^{s}`$ | `Line_active_asset` over $`\mathcal{K}`$ — whether a line is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:51`) |
+| $`\mathrm{act}^{s}`$ | `Line_active_asset` over $`\mathcal{K}`$ — whether a line is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:54`) |
 | $`\mathrm{W}^{s}`$ | `Line_capital_weight` over $`\mathcal{K}`$ — the sum of period weights a line is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{new}^{s}`$ | `Line_first_active` over $`\mathcal{Y} \times \mathcal{K}`$ — one in the first period a line is active in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\mathrm{s}^{\mathrm{nom}}`$ | `Line_s_nom` over $`\Xi \times \mathcal{K}`$ — nominal apparent power |
@@ -394,14 +396,14 @@ constraints:
 | $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\Xi \times \mathcal{K}`$ — cost of one unit of nominal apparent power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1128-1149`, `costs.py:102-203`) |
 | $`\mathrm{s}^{\mathrm{nom,set}}`$ | `Line_s_nom_set` over $`\mathcal{K}`$, `absent` where the data has no row — a given nominal apparent power for an extendable line. One without a value has no row here |
 | $`\mathrm{s}^{\mathrm{set}}`$ | `Line_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$, `absent` where the data has no row — a given flow schedule. A line without one has no row here |
-| $`\overline{\delta}`$ | `Line_v_ang_max` over $`\Xi \times \mathcal{K}`$, `absent` where the data has no row — the most the voltage angle difference across a line may be either way, in degrees. It is PyPSA's `v_ang_max`. Infinite, and so no row, by default. A line whose carrier is not AC has no row either. The deprecated `v_ang_min` is ignored, as PyPSA ignores it with a `DeprecationWarning` (`constraints.py:1695-1702`) |
+| $`\overline{\delta}`$ | `Line_v_ang_max` over $`\Xi \times \mathcal{K}`$, `absent` where the data has no row — the most the voltage angle difference across a line may be either way, in degrees. It is PyPSA's `v_ang_max`. Infinite, and so no row, by default. A line whose carrier is not AC has no row either. The deprecated `v_ang_min` is ignored, as PyPSA ignores it with a `DeprecationWarning` (`constraints.py:1710-1717`) |
 | $`\mathrm{x}^{\mathrm{eff}}`$ | `Line_x_pu_eff` over $`\Xi \times \mathcal{K}`$ — the line's effective series reactance. It is PyPSA's `x_pu_eff`, `x` over the square of its bus's nominal voltage, data prep |
-| $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{Y} \times \mathcal{K} \times \mathcal{C}`$, `absent` where the data has no row — the line's series impedance, signed by its orientation in the cycle: the cycle basis, data prep. A line in no cycle has no row. PyPSA builds the cycle basis from the first scenario only (`networks.py:1430-1437`) |
+| $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{Y} \times \mathcal{K} \times \mathcal{C}`$, `absent` where the data has no row — the line's series impedance, signed by its orientation in the cycle: the cycle basis, data prep. A line in no cycle has no row. PyPSA builds the cycle basis from the first scenario (`networks.py:1430-1437`), and refuses a `v_nom`, `x_pu_eff` or `r_pu_eff` that differs by scenario (`constants.py:33-35`). So the weight is the same in every scenario |
 | $`\overline{\ell}`$ | `Line_loss_max` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the loss at a line's rating. It is PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep |
 | $`\mathrm{a}`$ | `Line_loss_slope` over $`\Xi \times \mathcal{T} \times \mathcal{K} \times \mathcal{E}`$ — the slope of a cut to the loss curve, data prep. It is a tangent's `2 * r_pu_eff * p_k` at its segment's flow, or a secant's `r_pu_eff * (p_k + p_k+1)` between consecutive breakpoints |
 | $`\mathrm{b}`$ | `Line_loss_offset` over $`\Xi \times \mathcal{T} \times \mathcal{K} \times \mathcal{E}`$ — where that cut meets the loss axis: a tangent's `loss_k - slope_k * p_k`, a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep |
-| $`\mathrm{len}`$ | `Line_volume_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$, `absent` where the data has no row — the line's length in each scenario where its carrier is in the row's set (`global_constraints.py:847-848`), data prep. A line outside it, or one that is not active in the row's `investment_period`, has no row |
-| $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$, `absent` where the data has no row — the line's capital cost where its carrier is in the row's set, data prep. Where the row states no `investment_period` under `multi_investment_periods`, it is times the objective weights of the periods the line is active in. A line outside the set, or one that is not active in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Line_capital_cost` without `fom_cost` (`components.py:1153-1171`, `global_constraints.py:870-879`) |
+| $`\mathrm{len}`$ | `Line_volume_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$, `absent` where the data has no row — the line's length in each scenario where its carrier is in the row's set (`global_constraints.py:849-850`), data prep. A line outside it, or one that is not active in the row's `investment_period`, has no row |
+| $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$, `absent` where the data has no row — the line's capital cost where its carrier is in the row's set, data prep. Where the row states no `investment_period` under `multi_investment_periods`, it is times the objective weights of the periods the line is active in. A line outside the set, or one that is not active in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Line_capital_cost` without `fom_cost` (`components.py:1153-1171`, `global_constraints.py:872-881`) |
 | $`\mathrm{m}^{l}`$ | `Line_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{K}`$, `absent` where the data has no row — one where the line is in the row's carrier-and-bus set, data prep. One outside it, or one that is not active in the row's `investment_period`, has no row |
 
 #### Conditions
@@ -605,5 +607,5 @@ s_{\xi,t,k} \le \frac{\overline{\delta}_{\xi,k} \cdot \frac{3.141592653589793}{1
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

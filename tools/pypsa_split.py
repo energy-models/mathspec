@@ -79,6 +79,7 @@ PREFIX_TOPIC = {
     'Carrier': 'carrier',
     'GlobalConstraint': 'global_constraints',
     'Outage': 'security',
+    'FlowBased': 'flow_based',
 }
 
 #: The system totals, whose names carry no component, and the data every
@@ -94,6 +95,13 @@ NAME_TOPIC = {
     'transmission_volume_expansion': 'global_constraints',
     'transmission_expansion_cost': 'global_constraints',
     'tech_capacity_expansion': 'global_constraints',
+    'Bus_flow_based_zone': 'flow_based',
+    'Bus_flow_based_domain': 'flow_based',
+    'GlobalConstraint_ram': 'flow_based',
+    'GlobalConstraint_zonal_ptdf': 'flow_based',
+    'GlobalConstraint_link_ptdf': 'flow_based',
+    'GlobalConstraint_flow_based_ub': 'flow_based',
+    'GlobalConstraint_flow_based_sense_is_le': 'flow_based',
 }
 
 #: The hubs: the named expressions the one file writes as the sum of one term

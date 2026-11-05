@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Storage units
 
-This file states PyPSA's `StorageUnit`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to each of these sums: `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions` and `Bus_injection`. `StorageUnit_charge_carried_in` is the charge a unit opens each snapshot with, for a cyclic unit, an opening charge and a later build alike.
+This file states PyPSA's `StorageUnit`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to each of these sums: `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions` and `Bus_injection`. `StorageUnit_charge_carried_in` is the charge a unit opens each snapshot with, for a cyclic unit, an opening charge and a later build alike.
 
 <!-- gallery:begin -->
 ```yaml
@@ -71,7 +71,7 @@ parameters:
       whether a storage unit is one of PyPSA's `active_assets`, by its
       `active` flag alone, without build year and lifetime. A unit that is active
       in no snapshot of the horizon still counts. PyPSA refuses one that
-      differs by scenario (`constants.py:51`)
+      differs by scenario (`constants.py:54`)
     dims: [storage_unit]
     dtype: bool
   StorageUnit_capital_weight:
@@ -130,7 +130,7 @@ parameters:
     description: >-
       the sign net dispatch enters its bus's balance with. It is PyPSA's
       `sign`, `1` unless given. PyPSA refuses one that differs by scenario
-      (`constants.py:43`)
+      (`constants.py:46`)
     dims: [storage_unit]
   StorageUnit_retention:
     description: share of charge kept over a snapshot. It is PyPSA's `(1 - standing_loss) ** elapsed hours`, data prep
@@ -300,7 +300,7 @@ expressions:
       one at the last snapshot a row counts where a unit is active, and zero
       elsewhere. A unit that retires before the last counted snapshot closes
       on its last active level. PyPSA forward-fills the level over the counted
-      snapshots (`global_constraints.py:455-458`)
+      snapshots (`global_constraints.py:457-460`)
     dims: [scenario, global_constraint, snapshot, storage_unit]
     cases:
       last:
@@ -507,13 +507,15 @@ assumptions:
       a storage unit that opens past the first snapshot of the horizon opens
       on its initial level, or its last level where it is cyclic. This holds
       only where `StorageUnit_opens_late` is true at the snapshot
-  StorageUnit_primary_energy_per_period_closes_over_the_horizon:
-    holds: "count(NOT GlobalConstraint_counts_snapshot, over=snapshot) == 0"
-    where: "StorageUnit_primary_energy_weight AND StorageUnit_state_of_charge_initial_per_period"
+  StorageUnit_primary_energy_per_period_without_scenarios:
+    holds: "NOT StorageUnit_state_of_charge_initial_per_period"
+    where: "StorageUnit_primary_energy_weight AND count(scenario_weight, over=scenario) > 1"
     description: >-
-      PyPSA reads the closing charge of a unit that reopens per period at the
-      last snapshot of every period. It fails on a `primary_energy` row that
-      states an `investment_period` (`global_constraints.py:469`)
+      PyPSA reads the closing charge of a unit that reopens per period by
+      snapshot alone, and fails on a network with scenarios
+      (`global_constraints.py:471`). It fails with or without an
+      `investment_period`. A tool refuses the unit only where there is more
+      than one scenario, since the spec cannot tell one scenario from none
   StorageUnit_primary_energy_carried_over_has_unit_years:
     holds: "period_weight_years == 1"
     where: "StorageUnit_primary_energy_weight AND NOT StorageUnit_state_of_charge_initial_per_period"
@@ -521,20 +523,20 @@ assumptions:
       a unit that carries its charge from one period to the next closes once,
       at the last counted snapshot. No period's years weighs that level. PyPSA
       refuses it where any period's years is not one
-      (`global_constraints.py:443`)
+      (`global_constraints.py:445`)
   StorageUnit_operational_limit_carried_over_has_unit_years:
     holds: "at(period_weight_years == 1, by=snapshot_period[period])"
     where: "StorageUnit_operational_limit_weight AND NOT StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot"
     description: >-
       the same for an `operational_limit` row, over the periods it counts.
-      PyPSA refuses it (`global_constraints.py:648`)
+      PyPSA refuses it (`global_constraints.py:650`)
   StorageUnit_marginal_cost_quadratic_without_risk_preference:
     holds: "StorageUnit_marginal_cost_quadratic == 0"
     where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row. PyPSA
       refuses quadratic costs under any risk preference, `omega = 0` included
-      (`optimize.py:477-484`). In data prep you write a `CVaR_omega` row only
+      (`optimize.py:501-508`). In data prep you write a `CVaR_omega` row only
       where a risk preference is set
 ```
 
@@ -574,7 +576,7 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{h}`$ | `StorageUnit_active` over $`\mathcal{T} \times \mathcal{S}`$ — whether a storage unit is active in a snapshot's period. It is PyPSA's `active`, data prep |
-| $`\mathrm{act}^{h}`$ | `StorageUnit_active_asset` over $`\mathcal{S}`$ — whether a storage unit is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:51`) |
+| $`\mathrm{act}^{h}`$ | `StorageUnit_active_asset` over $`\mathcal{S}`$ — whether a storage unit is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:54`) |
 | $`\mathrm{W}^{h}`$ | `StorageUnit_capital_weight` over $`\mathcal{S}`$ — the sum of period weights a storage unit is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{new}^{h}`$ | `StorageUnit_first_active` over $`\mathcal{Y} \times \mathcal{S}`$ — one in the first period a storage unit is active in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\underline{\mathrm{h}}^{\mathrm{nom}}`$ | `StorageUnit_p_nom_min` over $`\Xi \times \mathcal{S}`$ — least nominal power an extendable storage unit may be built at |
@@ -589,7 +591,7 @@ assumptions:
 | $`\mathrm{T}^{h}`$ | `StorageUnit_max_hours` over $`\Xi \times \mathcal{S}`$ — energy capacity, as hours of dispatch at nominal power |
 | $`\eta^{-}`$ | `StorageUnit_efficiency_store` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — share of the power drawn from the bus that becomes charge |
 | $`\eta^{+}`$ | `StorageUnit_efficiency_dispatch` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — share of the charge drawn down that reaches the bus |
-| $`\mathrm{sgn}^{h}`$ | `StorageUnit_sign` over $`\mathcal{S}`$ — the sign net dispatch enters its bus's balance with. It is PyPSA's `sign`, `1` unless given. PyPSA refuses one that differs by scenario (`constants.py:43`) |
+| $`\mathrm{sgn}^{h}`$ | `StorageUnit_sign` over $`\mathcal{S}`$ — the sign net dispatch enters its bus's balance with. It is PyPSA's `sign`, `1` unless given. PyPSA refuses one that differs by scenario (`constants.py:46`) |
 | $`\rho`$ | `StorageUnit_retention` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — share of charge kept over a snapshot. It is PyPSA's `(1 - standing_loss) ** elapsed hours`, data prep |
 | $`\mathrm{inflow}`$ | `StorageUnit_inflow` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — energy arriving per hour, a river into a reservoir |
 | $`\mathrm{soc}^{0}`$ | `StorageUnit_state_of_charge_initial` over $`\Xi \times \mathcal{S}`$ — charge held before the first snapshot |
@@ -633,7 +635,7 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\overleftarrow{\mathit{soc}}`$ | `StorageUnit_charge_carried_in` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — the charge a unit opens a snapshot with. At the first snapshot it is active in, it is its last such snapshot's less standing loss where it is cyclic. Where it is not, it is the given initial charge, which no standing loss has touched yet. Otherwise it is the previous snapshot's less standing loss. A unit built in a later period opens in that period, and a cyclic one that retires closes on its own last snapshot. Per period, the same holds with each investment period as the horizon |
-| $`\mathit{last}^{h}`$ | `StorageUnit_last_counted_active` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{S}`$ — one at the last snapshot a row counts where a unit is active, and zero elsewhere. A unit that retires before the last counted snapshot closes on its last active level. PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:455-458`) |
+| $`\mathit{last}^{h}`$ | `StorageUnit_last_counted_active` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{S}`$ — one at the last snapshot a row counts where a unit is active, and zero elsewhere. A unit that retires before the last counted snapshot closes on its last active level. PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:457-460`) |
 | $`\mathit{w}^{h}`$ | `StorageUnit_closing_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{S}`$ — what the charge a unit holds at a snapshot counts for in a row as its closing level. Where the unit reopens per period, it is the years of the period at the last snapshot of each counted period. Where it does not, it is one at the last counted snapshot it is active in. It is nothing elsewhere |
 | $`\mathit{StorageUnit\_primary\_energy}`$ | `StorageUnit_primary_energy` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{StorageUnit\_operational\_limit}`$ | `StorageUnit_operational_limit` over $`\mathcal{G} \times \Xi`$ |
@@ -915,10 +917,10 @@ h^{-}_{\xi,t,s} = \mathrm{h}^{-,\mathrm{set}}_{\xi,t,s} \qquad \forall\, \xi \in
 \mathrm{open}_{t,s} \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h}_{t,s} \wedge \neg \mathrm{on}^{h}_{t - 1,s} \wedge \mathrm{pos}(t) > 0
 ```
 
-**`StorageUnit_primary_energy_per_period_closes_over_the_horizon`**
+**`StorageUnit_primary_energy_per_period_without_scenarios`**
 
 ```math
-\lvert \{ t \in \mathcal{T} \,:\, \neg \mathrm{in}_{\xi,g,t} \} \rvert = 0 \qquad \forall\, \xi \in \Xi,\ s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \mathrm{a}^{h}_{\xi,g,s} \text{ is defined} \wedge \mathrm{reset}_{\xi,s}
+\neg \mathrm{reset}_{\xi,s} \qquad \forall\, \xi \in \Xi,\ s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \mathrm{a}^{h}_{\xi,g,s} \text{ is defined} \wedge \lvert \{ \xi' \in \Xi \,:\, \pi_{\xi'} \text{ is defined} \} \rvert > 1
 ```
 
 **`StorageUnit_primary_energy_carried_over_has_unit_years`**
@@ -942,5 +944,5 @@ h^{-}_{\xi,t,s} = \mathrm{h}^{-,\mathrm{set}}_{\xi,t,s} \qquad \forall\, \xi \in
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

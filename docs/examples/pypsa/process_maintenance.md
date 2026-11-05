@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Process maintenance
 
-This file states the maintenance rows of PyPSA's `Process`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Process_maint_window` states that a unit is in maintenance exactly where an event it started covers the snapshot, through a [`sum`](../../reference/language/operators.md#sum) by a relation.
+This file states the maintenance rows of PyPSA's `Process`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Process_maint_window` states that a unit is in maintenance exactly where an event it started covers the snapshot, through a [`sum`](../../reference/language/operators.md#sum) by a relation.
 
 <!-- gallery:begin -->
 ```yaml
@@ -209,33 +209,33 @@ assumptions:
     where: "Process_maintainable"
     description: >-
       a maintainable process with no event schedules no maintenance. PyPSA
-      refuses it (`consistency.py:1516`)
+      refuses it (`consistency.py:1541`)
   Process_maintenance_duration_positive:
     holds: "Process_maintenance_duration > 0"
     where: "Process_maintainable"
     description: >-
       an event that covers no hours is no maintenance window. PyPSA refuses it
-      (`consistency.py:1506`)
+      (`consistency.py:1531`)
   Process_maintenance_duration_fits_the_horizon:
     holds: "Process_maintenance_duration <= sum(snapshot_weightings_generators, over=snapshot)"
     where: "Process_maintainable"
     description: >-
       one event longer than the horizon, in generator weightings, blocks every
       start and makes the event count infeasible. PyPSA refuses it
-      (`consistency.py:1527`)
+      (`consistency.py:1552`)
   Process_maintenance_events_fit_the_horizon:
     holds: "Process_maintenance_duration * Process_maintenance_events <= sum(snapshot_weightings_generators, over=snapshot)"
     where: "Process_maintainable"
     description: >-
       the events together longer than the horizon, in generator weightings,
-      cannot all be scheduled. PyPSA refuses it (`consistency.py:1539`)
+      cannot all be scheduled. PyPSA refuses it (`consistency.py:1564`)
   Process_maintenance_build_cap_is_finite:
     holds: "Process_p_nom_max < inf"
     where: "Process_maintainable AND Process_p_nom_extendable"
     description: >-
       the `maintcap` rows bound the chosen build in maintenance by
       `p_nom_max`, so an infinite cap is an infinite coefficient. PyPSA
-      refuses it (`consistency.py:1551`)
+      refuses it (`consistency.py:1576`)
   Process_maintenance_module_count_is_finite:
     holds: "Process_p_nom_max < inf"
     where: "Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_p_nom_mod > 0"
@@ -243,7 +243,7 @@ assumptions:
       the `maint-modstatus` rows bound the modules on in maintenance by
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite coefficient.
       PyPSA does not check it, and the solver HiGHS refuses the model PyPSA
-      builds (`constraints.py:543-546`)
+      builds (`constraints.py:557-560`)
 ```
 
 #### Given
@@ -449,5 +449,5 @@ assumptions:
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung
