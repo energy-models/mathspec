@@ -882,7 +882,7 @@ class _Expansion:
             self._constraint(emitted.active_bound, dims, f'{emitted.delta} <= {gate}')
         first = _all_of(self.frame_mask, _edge(d, self.mask, 'first'))
         for cname, written, link in zip(emitted.links, pw.links.values(), self.curve.links, strict=True):
-            filled = f'sum({self._read(emitted.delta, link)} * ({_back(link.values, d, -1)} - {link.values}), over={d})'
+            filled = f'sum({_walked(emitted.delta, self.frame, link)} * ({_back(link.values, d, -1)} - {link.values}), over={d})'
             for suffix, where, gate in self._gate_rows(link):
                 start = link.values if gate is None else f'{link.values} * ({gate})'
                 self._constraint(
@@ -891,12 +891,6 @@ class _Expansion:
                     f'({written.expression}) {link.sign} {start} + {filled}',
                     _all_of(through(first, link), where),
                 )
-
-    def _read(self, text: str | None, link: Link) -> str | None:
-        """*text*, over the curve's own dims, as *link*'s row reads it: through the link's relation where it walks one."""
-        if text is None or link.walk is None:
-            return text
-        return f'at({text}, by={link.by})'
 
     def _weights_read(self, link: Link) -> str:
         """How one link reads the curve's weights: by name, or through the relation that refines its frame.

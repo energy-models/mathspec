@@ -211,14 +211,14 @@ A link that [walks a relation](#a-link-that-walks-a-relation) is a mapping
 instead, with the keys `expression`, `values`, `by` and, where it has one,
 `sign`.
 
-| Key        | Required | Default     | What it does                                                                                      |
-| ---------- | -------- | ----------- | ------------------------------------------------------------------------------------------------- |
-| `along`    | yes      |             | Sets the breakpoint dimension.                                                                    |
-| `dims`     | yes      |             | Sets the dimensions of the curves. The entry states one curve per coordinate ([`dims`](#dims)).   |
-| `links`    | yes      |             | Maps a name to a link. Takes two or more links, or one link that walks a relation.                |
-| `where`    | no       | `null`      | Selects the curves that exist, and how far each one runs ([`where`](#where)).                     |
-| `method`   | no       | `adjacency` | Sets how the weights are restricted: `adjacency`, `sos2`, `convex` or `lp` ([`method`](#method)). |
-| `activity` | no       | `null`      | Sets a binary variable that switches the curve on and off ([`activity`](#activity)).              |
+| Key        | Required | Default     | What it does                                                                                                                |
+| ---------- | -------- | ----------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `along`    | yes      |             | Sets the breakpoint dimension.                                                                                              |
+| `dims`     | yes      |             | Sets the dimensions of the curves. The entry states one curve per coordinate ([`dims`](#dims)).                             |
+| `links`    | yes      |             | Maps a name to a link. Takes two or more links, or one link that walks a relation.                                          |
+| `where`    | no       | `null`      | Selects the curves that exist, and how far each one runs ([`where`](#where)).                                               |
+| `method`   | no       | `adjacency` | Sets how the weights are restricted: `adjacency`, `sos2`, `convex` or `lp` ([`method`](#method)).                           |
+| `activity` | no       | `null`      | Sets a binary variable that switches the curve on and off, on `dims:` or read through a relation ([`activity`](#activity)). |
 
 The breakpoints follow the order of the `along` dimension, so that dimension
 must be declared [ordered](dimensions.md#ordered). Without `ordered: true`,
@@ -649,16 +649,16 @@ mathspec suggests the rewrite: a sign on one of the two links.
 switches, or that is not convex. For an entry `e`, each segment sits at its
 lower breakpoint:
 
-| Written out        | What it states                                                                      |
-| ------------------ | ----------------------------------------------------------------------------------- |
-| `e_delta`          | the filled fraction of a segment, in [0, 1]                                         |
-| `e_order`          | a binary per segment                                                                |
-| `e_delta_bound`    | `e_delta <= e_order`                                                                |
-| `e_fill_order`     | a segment is filled no further than the one before it                               |
-| `e_binary_order`   | a segment is ordered only once the one before it is full                            |
-| `e_active_bound`   | `e_delta <= ` the gate, written only with `activity:`                               |
-| `e_<link>`         | the link equals its value at the first breakpoint, plus each segment's filled rise  |
-| `e_<link>_ungated` | the same row where the gate does not exist, written only for a gate with a `where:` |
+| Written out        | What it states                                                                                            |
+| ------------------ | --------------------------------------------------------------------------------------------------------- |
+| `e_delta`          | the filled fraction of a segment, in [0, 1]                                                               |
+| `e_order`          | a binary per segment                                                                                      |
+| `e_delta_bound`    | `e_delta <= e_order`                                                                                      |
+| `e_fill_order`     | a segment is filled no further than the one before it                                                     |
+| `e_binary_order`   | a segment is ordered only once the one before it is full                                                  |
+| `e_active_bound`   | `e_delta <= ` the gate, written only with `activity:`                                                     |
+| `e_<link>`         | the link equals its value at the first breakpoint, plus each segment's filled rise                        |
+| `e_<link>_ungated` | the same row where the gate does not exist, written for a gate with a `where:` or read through a relation |
 
 `incremental` takes any number of links and a walked link. The
 [example](../../examples/piecewise_incremental.md) shows the rows written out.

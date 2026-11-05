@@ -1758,3 +1758,10 @@ def test_an_incremental_segment_stands_where_the_curve_reaches_its_next_breakpoi
 def test_an_incremental_curve_written_out_loads_back_to_the_same_program():
     expanded = spec_of(INCREMENTAL).expand()
     assert to_spec(expanded.to_yaml()).program == expanded.program, 'the rows it writes load again'
+
+
+def test_an_incremental_gate_over_dims_a_walk_keeps_is_read_as_written():
+    """The gate was read through the link's relation whatever it carried, so a status over `snapshot` alone
+    loaded and then failed to expand: the lookup had no `generator` to join on."""
+    spec = spec_of(INCREMENTAL, **{'variables.status': {'dims': ['snapshot'], 'domain': 'binary'}})
+    assert spec.expand().constraints['coupling_power'].expression.startswith('(power) == bp_power * (status) + ')
