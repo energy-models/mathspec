@@ -26,6 +26,7 @@ from mathspec.program import (
     BooleanLiteral,
     ConditionReference,
     Constant,
+    ConstraintDefined,
     CountComparison,
     DimensionComparison,
     DimensionPosition,
@@ -91,6 +92,64 @@ def overlapping(
                 f'Narrow one of the two `when:` strings by the negation of the other, or drop the wider one '
                 f'and let `otherwise:` cover that region.'
             )
+
+
+@dataclass(frozen=True)
+class Existence:
+    """The ``where`` each of the file's own variables and constraints exists under, ``None`` for everywhere."""
+
+    variables: Mapping[str, Mask | None]
+    constraints: Mapping[str, Mask | None]
+
+
+def left_out(
+    holds: Condition,
+    where: Condition | None,
+    entries: Existence,
+    dtypes: Mapping[str, DeclaredDtype],
+    defaults: Mapping[str, bool | float],
+) -> str | None:
+    """A region where the ``where:`` of the model's entries alone make an assumption fail, rendered.
+
+    Each bare variable name reads as the ``where`` the variable exists under,
+    and each bare constraint name as the ``where`` of the constraint. A row
+    exists only inside its ``where``, so data with a row in the region fails
+    the assumption. A constraint row can still be absent inside its ``where``,
+    which only the data decides, so ``None`` proves nothing about the data.
+
+    Raises:
+        Undecidable: A name whose ``where`` another file declares, or an atom
+            the cells do not decide, or more cells than [`CELL_BUDGET`][].
+    """
+    written = _written_out(holds, entries)
+    within = BooleanLiteral(value=True) if where is None else _written_out(where, entries)
+    return _witness(within, Not(written), dtypes, defaults)
+
+
+def _written_out(node: Condition, entries: Existence) -> Condition:
+    """*node* with each bare variable or constraint name replaced by the ``where`` it exists under, recursively.
+
+    A variable's ``where`` may name another variable, and a constraint's a
+    variable. Neither names itself, so the replacement ends.
+    """
+    match node:
+        case VariableDefined(name=name) | ConstraintDefined(name=name):
+            declared = entries.variables if isinstance(node, VariableDefined) else entries.constraints
+            if name not in declared:
+                msg = f"the `where:` of '{name}' is declared in another file"
+                raise Undecidable(msg)
+            mask = declared[name]
+            return BooleanLiteral(value=True) if mask is None else _written_out(mask.root, entries)
+        case Not(operand=operand):
+            return Not(_written_out(operand, entries))
+        case And(left=left, right=right):
+            return And(_written_out(left, entries), _written_out(right, entries))
+        case Or(left=left, right=right):
+            return Or(_written_out(left, entries), _written_out(right, entries))
+        case ConditionReference(body=body):
+            return _written_out(body, entries)
+        case _:
+            return node
 
 
 def _witness(
@@ -329,7 +388,7 @@ def _subject_of(node: TypedCondition) -> Subject:
     match node:
         case ParameterDefined(name=name) | ParameterComparison(name=name):
             return Subject('param', name)
-        case VariableDefined(name=name):
+        case VariableDefined(name=name) | ConstraintDefined(name=name):
             return Subject('variable', name)
         case DimensionComparison(name=name):
             return Subject('dim', name)
@@ -552,7 +611,7 @@ def _atom(node: TypedCondition, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             if isinstance(value, bool):
                 return value
             return value not in (Special.NULL, Special.POS_INF, Special.NEG_INF)
-        case VariableDefined():
+        case VariableDefined() | ConstraintDefined():
             return bool(value)
         case RelationPairComparison(op=op):
             return bool(value) if op == '==' else not value

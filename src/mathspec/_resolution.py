@@ -406,8 +406,13 @@ def resolve_condition(
     context: str,
     errors: list[str],
     self_variable: str | None = None,
+    *,
+    rows: bool = False,
 ) -> Condition | None:
     """Rewrite a parsed where AST into typed conditions, folded as [`Mask`][] folds.
+
+    *rows* is set for an assumption, where a bare constraint name asks whether
+    the constraint has a row.
 
     Returns:
         The typed tree — a mask admitting every row or none comes back as the
@@ -415,7 +420,7 @@ def resolve_condition(
         problems appended to *errors*.
     """
     before = len(errors)
-    resolved = ConditionResolver(ns, context, errors, self_variable).build(node)
+    resolved = ConditionResolver(ns, context, errors, self_variable, rows).build(node)
     return None if len(errors) > before else Mask(cast('Condition', resolved)).root
 
 
@@ -425,6 +430,8 @@ def resolve_condition_text(
     context: str,
     errors: list[str],
     self_variable: str | None = None,
+    *,
+    rows: bool = False,
 ) -> Condition | None:
     """Parse and resolve one condition as [`resolve_condition`][] does, a parse failure appended to *errors*.
 
@@ -438,7 +445,7 @@ def resolve_condition_text(
     except ValueError as e:
         errors.append(f'{context}: {e}')
         return None
-    return resolve_condition(node, ns, context, errors, self_variable)
+    return resolve_condition(node, ns, context, errors, self_variable, rows=rows)
 
 
 def resolve_expression_text(

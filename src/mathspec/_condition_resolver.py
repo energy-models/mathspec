@@ -46,6 +46,7 @@ from mathspec.program import (
     Condition,
     ConditionReference,
     Constant,
+    ConstraintDefined,
     CountComparison,
     DimensionComparison,
     DimensionPosition,
@@ -94,15 +95,17 @@ class ConditionResolver:
     A node that cannot be typed comes back unresolved with its refusal
     appended to ``errors``; every sibling is still read, so a mask with two
     faults reports both. ``self_variable`` is the variable whose own
-    ``where`` is being read, which may not ask whether it exists. A side
-    that is an expression is built by an [`ExpressionResolver`][] over
-    the same namespace.
+    ``where`` is being read, which may not ask whether it exists. ``rows``
+    is set for an assumption, the one place a bare constraint name asks
+    whether the constraint has a row. A side that is an expression is built
+    by an [`ExpressionResolver`][] over the same namespace.
     """
 
     ns: Namespace
     context: str
     errors: list[str]
     self_variable: str | None = None
+    rows: bool = False
 
     @property
     def _expressions(self) -> ExpressionResolver:
@@ -138,8 +141,13 @@ class ConditionResolver:
         return cast('Condition', self.build(node))
 
     def _bare_name(self, node: NameNode) -> Condition | UnresolvedConditionNode:
-        """A bare name: a named condition's body, a parameter's or relation's definedness, or a variable's existence."""
+        """A bare name: a named condition's body, a parameter's or relation's definedness, or a variable's existence.
+
+        In an assumption, a constraint's name asks whether the constraint has a row.
+        """
         ns, context = self.ns, self.context
+        if self.rows and node.name in ns.constraints:
+            return self._constraint_row(node)
         if node.name in ns.conditions:
             try:
                 return ns.condition(node.name, context)
@@ -198,6 +206,19 @@ class ConditionResolver:
                 else:
                     return VariableDefined(node.name, ns.leaf_dims[node.name])
         return node
+
+    def _constraint_row(self, node: NameNode) -> Condition | UnresolvedConditionNode:
+        """Whether constraint *node* has a row. Constraints have a namespace of their own, so a shared name is refused."""
+        ns = self.ns
+        other = 'named condition' if node.name in self.conditions else ns.kind(node.name)
+        if other is not None:
+            self.errors.append(
+                f"{self.context}: '{node.name}' names a constraint and a {other}, so the bare name is ambiguous. "
+                f'Rename one of the two.'
+            )
+            return node
+        declared = ns.spec.constraints.get(node.name) or ns.spec.given.constraints[node.name]
+        return ConstraintDefined(node.name, tuple(declared.dims))
 
     def _condition_call(self, node: UnresolvedConditionCallNode) -> Condition | UnresolvedConditionNode:
         """``shift(<condition>, along=, offset=)`` or ``at(<condition>, by=relation[column])`` — the two operators that read a condition and answer one.

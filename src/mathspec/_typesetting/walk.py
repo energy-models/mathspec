@@ -28,6 +28,7 @@ from mathspec.program import (
     Condition,
     ConditionReference,
     Constant,
+    ConstraintDefined,
     CountComparison,
     DimensionComparison,
     DimensionPosition,
@@ -551,6 +552,12 @@ class Walk:
         if isinstance(node, VariableDefined):
             return (
                 f'{ctx.indexed(self.symbols.name[node.name], list(node.dims))} {self.format.prose(" exists")}',
+                comparison,
+            )
+
+        if isinstance(node, ConstraintDefined):
+            return (
+                f'{ctx.indexed(self.symbols.constraint[node.name], list(node.dims))} {self.format.prose(" has a row")}',
                 comparison,
             )
 

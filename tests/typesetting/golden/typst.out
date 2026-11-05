@@ -173,6 +173,7 @@ $ upright("bounds_do_not_cross") & upright("p")^(upright("min"))_(g) & <= uprigh
   upright("ramps_are_gentle") & upright("load")_(t,b) - upright("load")_(t minus.square_(0) 1,b) & <= upright("budget") & forall t in cal(T), b in cal(B) colon upright("pos")(t) > 0 \
   upright("flexible_units_have_headroom") & upright("p")^(upright("min"))_(g) & < upright("p")^(upright("max"))_(g) & forall g in cal(G) colon upright("is_flexible")_(g) \
   upright("northern_demand_is_real") & upright("load")_(t,b) & >= 0 & forall t in cal(T), b in cal(B) colon upright("zone_of")(b) = upright("'north'") \
+  upright("every_dispatch_has_a_start_row") & upright("starts")_(t,g) upright(" has a row") &  & forall t in cal(T), g in cal(G) colon p_(t,g) upright(" exists") \
   upright("fuel_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_y")_(g,a) upright(" is defined") and upright("bp_heat")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) \
   upright("cost_curve_complete") & upright("bp_x")_(g,a) upright(" is defined") and upright("bp_y")_(g,a) upright(" is defined") &  & forall g in cal(G), a in cal(A) colon upright("bp_run")_(g,a) \
   upright("cost_curve_contiguous") & abs({a in cal(A) colon upright("bp_run")_(g,a) and not upright("bp_run")_(g,a - 1)}) & = 1 & forall g in cal(G) \

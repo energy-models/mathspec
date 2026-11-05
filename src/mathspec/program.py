@@ -52,6 +52,7 @@ __all__ = [
     'Connective',
     'Constant',
     'Constraint',
+    'ConstraintDefined',
     'ConstraintSense',
     'CountComparison',
     'DeclaredDtype',
@@ -1332,6 +1333,18 @@ class VariableDefined:
 
 
 @dataclass(frozen=True)
+class ConstraintDefined:
+    """True at the coordinates where the named constraint has a row. Only an assumption reads one.
+
+    A row exists where the constraint's ``where`` holds and every term outside
+    a sum is present, which the data alone decides, before any solve.
+    """
+
+    name: str
+    dims: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ParameterComparison:
     """Compare a parameter against a literal, element-wise."""
 
@@ -1513,6 +1526,7 @@ TypedCondition = (
     | ExpressionComparison
     | ParameterDefined
     | VariableDefined
+    | ConstraintDefined
     | DimensionComparison
     | DimensionPosition
     | RelationComparison
@@ -1587,6 +1601,7 @@ def _atom_dims(atom: TypedCondition) -> frozenset[str]:
             | ExpressionComparison()
             | ParameterDefined()
             | VariableDefined()
+            | ConstraintDefined()
             | CountComparison()
             | TranslatedCondition()
             | RelationComparison()
@@ -1615,7 +1630,14 @@ def _atom_names(atom: TypedCondition) -> frozenset[str]:
     than a name silently dropped at the first spec to use it.
     """
     match atom:
-        case ParameterComparison() | ParameterDefined() | VariableDefined() | RelationComparison() | RelationDefined():
+        case (
+            ParameterComparison()
+            | ParameterDefined()
+            | VariableDefined()
+            | ConstraintDefined()
+            | RelationComparison()
+            | RelationDefined()
+        ):
             return frozenset({atom.name})
         case RelationPairComparison():
             return frozenset({atom.name, atom.other})

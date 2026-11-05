@@ -1969,13 +1969,20 @@ class TestRulesDecidedWithoutData:
         _spec(**{'variables.p.where': where.replace('lk', named.group(1), 1)}, **patch)
 
 
+#: A bound on `p` written as two constraints, one for each value of `flag`.
+_SPLIT = {
+    'constraints.on': {'dims': ['g'], 'where': 'flag', 'expression': 'p <= c'},
+    'constraints.off': {'dims': ['g'], 'where': 'NOT flag', 'expression': 'p <= k'},
+}
+
+
 class TestAssumptions:
     """What an ``assumptions:`` entry may state, and what the load refuses.
 
-    Everything here is about the data, so nothing in it is decided at load but
-    the shape of the condition: the entry is refused where the connectives
-    already settle it, and where it names a variable, which is what the solver
-    decides rather than what the caller attaches.
+    Everything here is about the data, so little in it is decided at load: the
+    entry is refused where the connectives already settle it, where it reads a
+    variable's value, which is what the solver decides, and where the `where:`
+    of the variables and constraints it names already leave a row out.
     """
 
     @pytest.mark.parametrize(
@@ -1992,14 +1999,14 @@ class TestAssumptions:
                 id='a-condition-that-is-always-false',
             ),
             pytest.param(
-                'p',
-                ("variable 'p' appears in 'holds:'",),
-                id='a-variable-in-the-condition',
+                'p > 0',
+                ("where references variable 'p'", 'Test only parameters and dimension coordinates'),
+                id='a-variable-value-in-the-condition',
             ),
             pytest.param(
-                {'holds': 'c > 0', 'where': 'p'},
-                ("variable 'p' appears in 'where:'",),
-                id='a-variable-in-the-where',
+                {'holds': 'c > 0', 'where': 'p > 1'},
+                ("where references variable 'p'",),
+                id='a-variable-value-in-the-where',
             ),
             pytest.param(
                 {'holds': 'c > 0', 'where': 'false'},
@@ -2044,6 +2051,83 @@ class TestAssumptions:
     def test_an_entry_the_language_admits(self, entry):
         spec = _spec(assumptions={'sound': entry})
         assert set(spec.assumptions) == {'sound'}, 'the entry loads under the name the file wrote'
+
+    @pytest.mark.parametrize(
+        ('patch', 'entry'),
+        [
+            pytest.param(_SPLIT, {'holds': 'on OR off', 'where': 'p'}, id='two-constraints-that-cover-a-variable'),
+            pytest.param(
+                {**_SPLIT, 'variables.p.where': 'flag'},
+                {'holds': 'on', 'where': 'p'},
+                id='one-constraint-where-it-applies',
+            ),
+            pytest.param({}, {'holds': 'c > 0', 'where': 'p'}, id='a-variable-in-the-where'),
+            pytest.param({'variables.p.where': 'flag'}, {'holds': 'p', 'where': 'flag'}, id='a-variable-in-the-holds'),
+            pytest.param(
+                {'given.constraints.far': {'dims': ['g']}},
+                {'holds': 'far', 'where': 'p'},
+                id='a-given-constraint-whose-where-another-file-sets',
+            ),
+            pytest.param(
+                {'constraints.on': _SPLIT['constraints.on']},
+                {'holds': 'on', 'where': 'p AND c > 0'},
+                id='a-gap-beside-a-value-test-is-left-to-the-tool',
+            ),
+            pytest.param(
+                {'variables.p.where': 'flag', 'variables.q.where': 'p'},
+                {'holds': 'p', 'where': 'q'},
+                id='a-variable-whose-where-names-another',
+            ),
+            pytest.param(
+                {'variables.p.where': 'flag', 'variables.q.where': 'flag', 'conditions.dispatched': 'p'},
+                {'holds': 'dispatched', 'where': 'q'},
+                id='a-named-condition-that-names-a-variable',
+            ),
+        ],
+    )
+    def test_an_assumption_on_rows_the_conditions_cannot_fault_loads(self, patch, entry):
+        """A bare variable or constraint name asks whether a row exists, which the data decides before any solve.
+
+        Where the assumption also tests a value, it is about the data, and a gap
+        the conditions leave is the tool's to find.
+        """
+        spec = _spec(**patch, assumptions={'covered': entry})
+        assert 'covered' in spec.program.assumptions, 'the tool still checks it, where a term can leave a row out'
+
+    @pytest.mark.parametrize(
+        ('patch', 'entry', 'fragment'),
+        [
+            pytest.param(
+                {'constraints.on': _SPLIT['constraints.on']},
+                {'holds': 'on', 'where': 'p'},
+                "Assumption 'gap': the `where:` conditions of the entries it names leave a gap where flag is false. "
+                'There its `where:` holds and its `holds:` does not, so data with a row there fails it. Add a '
+                'constraint whose `where:` holds there, or widen the `where:` of an entry that `holds:` names.',
+                id='a-case-no-constraint-covers',
+            ),
+            pytest.param(
+                {'variables.p.where': 'flag'},
+                {'holds': 'p', 'where': 'q'},
+                'leave a gap where flag is false.',
+                id='a-variable-whose-where-is-narrower',
+            ),
+            pytest.param(
+                {'variables.p.where': 'flag', 'variables.q.where': 'tag == "x"'},
+                {'holds': 'p', 'where': 'q'},
+                "leave a gap where tag is 'x', flag is false.",
+                id='a-gap-through-two-conditions',
+            ),
+            pytest.param(
+                {'constraints.c': {'dims': ['g'], 'expression': 'p <= k'}},
+                {'holds': 'c', 'where': 'p'},
+                "Assumption 'gap': 'c' names a constraint and a parameter, so the bare name is ambiguous. "
+                'Rename one of the two.',
+                id='a-constraint-that-shares-a-name',
+            ),
+        ],
+    )
+    def test_an_assumption_the_conditions_already_fail_is_refused(self, patch, entry, fragment):
+        assert fragment in _refusal(**patch, assumptions={'gap': entry})
 
     def test_an_entry_round_trips_as_the_form_it_was_written_in(self):
         """A bare string stays one, and a mapping keeps only the keys it carried."""
