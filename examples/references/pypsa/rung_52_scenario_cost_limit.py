@@ -4,16 +4,13 @@
 
 """Rung 52: a `transmission_expansion_cost_limit` row holds in every scenario.
 
-PyPSA 1.3.0 builds no such row on a network with scenarios (PyPSA/PyPSA#1939).
-The two futures are identical, so the oracle is the same network without
-scenarios, which PyPSA solves with the row.
+The two futures are identical, so the expected cost is the cost of the same
+network without scenarios.
 """
 
 from __future__ import annotations
 
 import spine
-
-ISSUE = 1939
 
 
 def network():
@@ -47,8 +44,3 @@ def build():
     n = network()
     n.set_scenarios({'calm': 0.6, 'stormy': 0.4})
     return n
-
-
-def oracle():
-    """The network without scenarios: the futures are identical, so the expected cost is its cost."""
-    return [(1.0, network())]

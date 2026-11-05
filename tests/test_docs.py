@@ -14,8 +14,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from mathspec._typesetting import to_markdown
+from mathspec._validation import to_spec
 from mathspec.spec import PIECEWISE_METHODS
-from tools import expansion_math, gallery, home_math, notation, spec_math
+from tests.fixtures import EXAMPLES
+from tools import expansion_math, gallery, home_math, macros, notation, spec_math
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -80,6 +83,35 @@ def test_every_piecewise_method_has_a_model_on_the_notation_page():
     )
 
 
+def test_a_named_condition_and_a_constraint_of_one_name_are_refused_rather_than_merged_into_one_line():
+    """`notation.equations` keyed every line by its label, so a constraint sharing a mask's name replaced the mask's line (#848)."""
+    spec = to_spec(EXAMPLES / 'sos.yaml')
+    shared = to_spec(
+        {
+            **spec.to_dict(),
+            'conditions': {'busy': {'condition': 'load > 0'}},
+            'constraints': {'busy': {'dims': ['snapshot'], 'expression': 'sum(dispatch, over=generator) >= load'}},
+        }
+    )
+    with pytest.raises(ValueError, match="two lines print under the label 'busy'"):
+        notation.equations(to_markdown(shared, numbered=False))
+
+
+def test_a_declared_page_prints_every_set_and_curve_beside_its_line(tmp_path: Path):
+    """A set and a curve moved from Variable domains to Subject to, and the declared page read only the constraints there (#848)."""
+    text = (
+        (EXAMPLES / 'sos.yaml')
+        .read_text()
+        .replace('  balance:\n', '  balance:\n    description: "`balance` — demand met"\n')
+    )
+    spec = tmp_path / 'declared.yaml'
+    spec.write_text(f'{text}\nsos:\n  one_unit:\n    variable: dispatch\n    along: generator\n    type: 1\n')
+    block = gallery.declared_block(spec)
+    for name in ('one_unit', 'cost_curve'):
+        assert f'### `{name}`\n\n```yaml\n{name}:' in block, f'{name} prints under its own heading'
+    assert r'\mathrm{SOS}1' in block and r'\mathrm{pwl}' in block, 'the set and the curve print as math'
+
+
 def _card_bodies(page: Path) -> list[tuple[int, str]]:
     """Every line inside a `grid cards` block that continues a card, numbered from one.
 
@@ -123,7 +155,7 @@ def test_the_published_grammar_spells_a_name_the_way_the_code_reads_one():
 
     The EBNF on that page is the language's published definition, and
     `expression_parser.NAME` is the one the loader and the schema both apply —
-    `spec.py` validates every declaration name against it. A page that refuses
+    `spec.py` validates every entry name against it. A page that refuses
     what the language accepts is the drift this asks about; it went unnoticed
     because nothing compared the two.
     """
@@ -233,6 +265,48 @@ def test_the_extension_rewrites_math_and_nothing_that_only_quotes_it(source: str
     assert _rewrite()(source) == expected
 
 
+@pytest.mark.parametrize(
+    'page',
+    sorted(p for p in (ROOT / 'docs').rglob('*.md') if '{{ mathspec.' in p.read_text()),
+    ids=lambda p: p.stem,
+)
+def test_the_site_substitutes_every_version_placeholder(page: Path):
+    """A page that writes the release or the schema's ref gets the value, not the braces."""
+    text = re.sub(r'<[^>]+>', '', _site_markdown().convert(page.read_text()))
+    assert '{{ mathspec.' not in text, 'no placeholder reaches the reader, in prose or in a highlighted fence'
+
+
+@pytest.mark.parametrize('page', sorted((ROOT / 'docs').rglob('*.md')), ids=lambda p: p.stem)
+def test_prettier_has_not_split_a_version_placeholder(page: Path):
+    """Prettier formats a YAML fence and spaces `{{ x }}` into `{ { x } }`, which the macros plugin does not read.
+
+    Such a fence needs `<!-- prettier-ignore -->` above it, and this test fails before the reader sees the braces.
+    """
+    assert '{ { mathspec.' not in page.read_text(), (
+        'a placeholder split by prettier; put <!-- prettier-ignore --> above the fence'
+    )
+
+
+@pytest.mark.parametrize(
+    ('name', 'pattern'),
+    [
+        pytest.param('release', r'\d+\.\d+\.\d+', id='release'),
+        pytest.param('language_version', r'\d+', id='language-version'),
+    ],
+)
+def test_each_version_placeholder_has_the_shape_its_page_needs(name: str, pattern: str):
+    """The release is bare, so `v` and the release is the tag a raw.githubusercontent.com address resolves."""
+    value = macros.values()[name]
+    assert re.fullmatch(pattern, value), f'{name} is {value!r}, not {pattern}'
+
+
+def test_an_unknown_version_placeholder_fails_the_build():
+    """An unknown name raises instead of reaching the page as braces, which the shim does only with `on_error_fail`."""
+    jinja2 = pytest.importorskip('jinja2', reason='the docs feature; the bare test environment skips it')
+    with pytest.raises(jinja2.UndefinedError, match="has no attribute 'tag'"):
+        _site_markdown().convert('pin it {{ mathspec.tag }}')
+
+
 def _nav_pages(entries: list[dict]) -> Iterator[str]:
     """Every page the nav points at, depth first, as the site resolves the URL.
 
@@ -262,10 +336,11 @@ def test_every_page_under_docs_has_a_nav_entry():
     )
 
 
-#: The API pages, by the module each renders. `mathspec.typesetting` has no
+#: The API pages, by the module each renders. `mathspec._typesetting` has no
 #: page of its own: `mathspec` re-exports what a consumer calls from it.
 API_PAGES = {
     'mathspec': Path('docs') / 'reference' / 'api.md',
+    'mathspec.spec': Path('docs') / 'reference' / 'spec.md',
     'mathspec.program': Path('docs') / 'reference' / 'program.md',
 }
 

@@ -11,18 +11,18 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from mathspec._typesetting import FORMATS, SymbolTable, to_latex, to_markdown, typeset, typeset_line
+from mathspec._typesetting.format import OPERATOR_NAMES
+from mathspec._typesetting.symbols import _derive_name_symbol, chosen_expressions, symbols_for
+from mathspec._validation import to_spec
 from mathspec.errors import LanguageError
-from mathspec.typesetting import FORMATS, SymbolTable, to_latex, to_markdown, typeset, typeset_declaration
-from mathspec.typesetting.format import OPERATOR_NAMES
-from mathspec.typesetting.symbols import _derive_name_symbol, chosen_expressions, symbols_for
-from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, varied
 from tests.typesetting import golden
 from tests.typesetting.fixtures import EVERY_FORMAT, LATEX
 
 if TYPE_CHECKING:
-    from mathspec.typesetting import FormatName
-    from mathspec.typesetting.format import Format
+    from mathspec._typesetting import FormatName
+    from mathspec._typesetting.format import Format
 
 
 @EVERY_FORMAT
@@ -42,7 +42,7 @@ def test_a_dimension_index_never_steals_a_letter_a_variable_owns(name: FormatNam
     """With `plant` -> `p` and a variable `p`, the output was `p_{t,p}` and no
     reader could tell which `p` was which."""
     model = {
-        'dimensions': {'plant': {'dtype': 'str'}, 'snapshot': {'dtype': 'int'}},
+        'dimensions': {'plant': {'dtype': 'str'}, 'snapshot': {'dtype': 'int', 'ordered': True}},
         'parameters': {'cost': {'dims': ['plant']}},
         'variables': {'p': {'dims': ['snapshot', 'plant'], 'bounds': {'lower': 0}}},
         'objective': {'expression': 'sum(p * cost)'},
@@ -59,14 +59,14 @@ def test_a_where_lands_on_the_quantifier_not_in_the_equation(name: FormatName, f
     text = typeset(model, name, legend=False)
     forall, such_that = fmt.operators['forall'], fmt.operators['such_that']
     masked = [line for line in text.splitlines() if such_that in line]
-    assert len(masked) == 1, 'one declaration carries a mask, so exactly one line says so'
+    assert len(masked) == 1, 'one entry carries a mask, so exactly one line says so'
     assert masked[0].index(forall) < masked[0].index(such_that), 'the mask follows the quantifier, not the equation'
 
 
 def _masked(dtype: str) -> dict[str, object]:
     """One model per mask dtype: a bare parameter atom is the whole `where`."""
     return {
-        'dimensions': {'g': {'dtype': 'str'}},
+        'dimensions': {'g': {'dtype': 'str', 'ordered': True}},
         'parameters': {'flag': {'dims': ['g'], 'dtype': dtype}},
         'variables': {
             'keep': {'dims': ['g'], 'where': 'flag', 'bounds': {'lower': 0, 'upper': 1}},
@@ -80,7 +80,7 @@ def _masked(dtype: str) -> dict[str, object]:
 @pytest.mark.parametrize(
     ('dtype', 'defined'),
     [
-        pytest.param('bool', False, id='a-boolean-is-the-predicate'),
+        pytest.param('bool', False, id='a-boolean-is-the-condition'),
         pytest.param('float', True, id='any-other-dtype-is-definedness'),
     ],
 )
@@ -100,7 +100,7 @@ def test_a_mask_reads_as_definedness_unless_its_parameter_is_boolean(
     text = typeset(_masked(dtype), name, legend=False)
     negated = f'{fmt.operators["not"]} {fmt.subscript(fmt.upright("flag"), ["g"])}'
     assert (fmt.prose(' is defined') in text) is defined, 'a boolean mask filters on truth, any other on presence'
-    assert (negated in text) is not defined, 'the negation sits on the bare predicate only where that is the whole mask'
+    assert (negated in text) is not defined, 'the negation sits on the bare condition only where that is the whole mask'
     assert f'{negated} {fmt.prose(" is defined")}' not in text, (
         'the negation must not scope over prose it cannot bracket'
     )
@@ -112,7 +112,7 @@ def _storage(shift: str) -> dict[str, object]:
     No parameter, so it is also the model the "given" convention has nothing to say about.
     """
     return {
-        'dimensions': {'snapshot': {'dtype': 'int'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}},
         'variables': {'soc': {'dims': ['snapshot'], 'bounds': {'lower': 0, 'upper': 100}}},
         'constraints': {'balance': {'dims': ['snapshot'], 'expression': f'soc == shift(soc, along=snapshot, {shift})'}},
     }
@@ -154,13 +154,13 @@ def test_a_fill_and_a_group_take_the_operators_two_slots(name: FormatName, fmt: 
     group the translation stays inside.
     """
     model = {
-        'dimensions': {'snapshot': {'dtype': 'int'}, 'season': {'dtype': 'str'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
         'relations': {'season_of': {'key': 'snapshot', 'values': 'season'}},
         'variables': {'p': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
             'held': {
                 'dims': ['snapshot'],
-                'expression': 'p <= shift(p, along=snapshot, offset=1, edge=0, by=season_of, within=season)',
+                'expression': 'p <= shift(p, along=snapshot, offset=1, edge=0, within=season_of[season])',
             }
         },
         'objective': {'sense': 'minimize', 'expression': 'sum(p)'},
@@ -175,39 +175,39 @@ def test_a_fill_and_a_group_take_the_operators_two_slots(name: FormatName, fmt: 
 
 
 @pytest.mark.parametrize('name', ['latex', 'typst', 'markdown'])
-def test_a_translation_by_nothing_takes_no_legend_note(name: FormatName):
+def test_a_translation_by_nothing_takes_no_legend_row(name: FormatName):
     """A shift by 0 prints no operator, but the legend read every partitioned
     translation as printed and explained a grouped operator the page never shows."""
     model = {
-        'dimensions': {'snapshot': {'dtype': 'int'}, 'season': {'dtype': 'str'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
         'relations': {'season_of': {'key': 'snapshot', 'values': 'season'}},
         'variables': {'p': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
             'held': {
                 'dims': ['snapshot'],
-                'expression': 'p <= shift(p, along=snapshot, offset=0, edge=0, by=season_of, within=season)',
+                'expression': 'p <= shift(p, along=snapshot, offset=0, edge=0, within=season_of[season])',
             }
         },
         'objective': {'sense': 'minimize', 'expression': 'sum(p)'},
     }
     text = typeset(model, name)
-    assert 'denotes a translation counted inside the group' not in text
-    assert 'denotes translation with' not in text, 'no fill note for a translation that vacates nothing'
+    assert 'inside the group of' not in text, 'no group row for a translation that moves nothing'
+    assert 'past the edge' not in text, 'no fill row for a translation that vacates nothing'
 
 
 @EVERY_FORMAT
-def test_a_translation_under_a_pullback_survives_it(name: FormatName, fmt: Format):
+def test_a_translation_under_a_lookup_survives_it(name: FormatName, fmt: Format):
     """``at`` and ``shift`` both re-index at the leaf, and the leaf has one subscript.
 
     Whoever wrote it last used to win: ``at(shift(cap, along=period, offset=1,
-    edge=0), by=period_of, over=period, into=snapshot)`` printed `cap_{period_of(t)}`, dropping a
+    edge=0), by=period_of[period])`` printed `cap_{period_of(t)}`, dropping a
     translation the plan builds. The subscript is a composition, so it renders
     as one.
     """
     model = {
         'dimensions': {
-            'snapshot': {'dtype': 'int'},
-            'period': {'dtype': 'int'},
+            'snapshot': {'dtype': 'int', 'ordered': True},
+            'period': {'dtype': 'int', 'ordered': True},
         },
         'relations': {'period_of': {'key': 'snapshot', 'values': 'period'}},
         'parameters': {'cap': {'dims': ['period']}},
@@ -215,13 +215,13 @@ def test_a_translation_under_a_pullback_survives_it(name: FormatName, fmt: Forma
         'constraints': {
             'within': {
                 'dims': ['snapshot'],
-                'expression': 'p <= at(shift(cap, along=period, offset=1, edge=0), by=period_of, over=period, into=snapshot)',
+                'expression': 'p <= at(shift(cap, along=period, offset=1, edge=0), by=period_of[period])',
             }
         },
     }
     text = typeset(model, name, legend=False)
     assert fmt.operators['edge_minus'] in text, 'the shift under the at was dropped from the subscript'
-    assert fmt.apply(fmt.upright('period_of'), 't') in text, 'the pullback itself was dropped'
+    assert fmt.apply(fmt.upright('period_of'), 't') in text, 'the lookup itself was dropped'
 
 
 @EVERY_FORMAT
@@ -234,7 +234,7 @@ def test_translations_that_disagree_at_the_edge_do_not_merge(name: FormatName, f
     composition; only identical policies add.
     """
     model = {
-        'dimensions': {'snapshot': {'dtype': 'int'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}},
         'variables': {'soc': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
             'b': {
@@ -306,7 +306,7 @@ def test_a_negative_fill_prints(name: FormatName, fmt: Format):
     lowering did, the walk's step did not.
     """
     model = {
-        'dimensions': {'g': {}},
+        'dimensions': {'g': {'ordered': True}},
         'parameters': {'cap': {'dims': ['g']}},
         'variables': {'p': {'dims': ['g']}},
         'constraints': {'k': {'dims': ['g'], 'expression': 'p <= shift(cap, along=g, offset=1, edge=-1)'}},
@@ -317,7 +317,7 @@ def test_a_negative_fill_prints(name: FormatName, fmt: Format):
 def _selected(mask: str) -> dict[str, Any]:
     """One constraint carrying *mask*, over a dimension a relation groups."""
     return {
-        'dimensions': {'snapshot': {'dtype': 'int'}, 'season': {'dtype': 'str'}},
+        'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
         'relations': {'season_of': {'key': 'snapshot', 'values': 'season'}},
         'variables': {'soc': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {'seed': {'dims': ['snapshot'], 'where': mask, 'expression': 'soc == 0'}},
@@ -342,7 +342,7 @@ def test_a_grouped_position_rides_a_subscript_rather_than_a_second_argument(name
     As ``pos(t, season_of(t))`` the second argument sits where a reader of the
     first one expects an integer, and nothing says it means "within".
     """
-    text = typeset(_selected('position(snapshot, by=season_of, within=season) == 0'), name)
+    text = typeset(_selected('position(snapshot, within=season_of[season]) == 0'), name)
     applied = fmt.apply(fmt.upright('season_of'), 't')
     assert fmt.apply(fmt.subscript(fmt.operators['position'], [applied]), 't') in text
 
@@ -361,18 +361,18 @@ def test_a_dimension_compared_against_a_number_says_what_its_coordinates_are(nam
 
 @EVERY_FORMAT
 @pytest.mark.parametrize(
-    ('note', 'printing', 'silent'),
+    ('row', 'printing', 'silent'),
     [
-        pytest.param('cyclic translation', _storage("offset=1, edge='wrap'"), DISPATCH_MODEL, id='wraparound'),
-        pytest.param('against positions', _selected('position(snapshot) == 0'), DISPATCH_MODEL, id='a-position'),
+        pytest.param('cyclic', _storage("offset=1, edge='wrap'"), DISPATCH_MODEL, id='wraparound'),
+        pytest.param('counted from', _selected('position(snapshot) == 0'), DISPATCH_MODEL, id='a-position'),
         pytest.param(
-            'counts within the group',
-            _selected('position(snapshot, by=season_of, within=season) == 0'),
+            'inside its group',
+            _selected('position(snapshot, within=season_of[season]) == 0'),
             _selected('position(snapshot) == 0'),
             id='a-grouped-position',
         ),
         pytest.param(
-            'counted from the end',
+            'is the last position',
             _selected('position(snapshot) == -1'),
             _selected('position(snapshot) == 0'),
             id='a-position-from-the-end',
@@ -380,23 +380,20 @@ def test_a_dimension_compared_against_a_number_says_what_its_coordinates_are(nam
         pytest.param(
             'coordinates)', _selected('snapshot >= 3'), _selected('position(snapshot) == 0'), id='numeric-coordinates'
         ),
-        pytest.param(
-            'Upright is what the data supplies', DISPATCH_MODEL, _storage('offset=1'), id='the-upright-convention'
-        ),
     ],
 )
-def test_a_legend_note_prints_only_where_its_symbol_does(
-    name: FormatName, fmt: Format, note: str, printing: dict, silent: dict
+def test_a_legend_row_prints_only_where_its_symbol_does(
+    name: FormatName, fmt: Format, row: str, printing: dict, silent: dict
 ):
-    """Each note is introduced where its symbol is used, and nowhere else.
+    """Each row is introduced where its symbol is used, and nowhere else.
 
-    The position note is the one the page cannot go without: a reader arrives
+    The position row is the one the page cannot go without: a reader arrives
     from papers whose index *is* the ordinal, so a page printing both
     ``pos(t) = 0`` and ``t >= 3`` has to say once which of the two is the
     coordinate.
     """
-    assert note in typeset(printing, name), 'the symbol prints, so the legend explains it'
-    assert note not in typeset(silent, name), 'a note explaining a contrast the page does not draw is a dead end'
+    assert row in typeset(printing, name), 'the symbol prints, so the legend explains it'
+    assert row not in typeset(silent, name), 'a row explaining a contrast the page does not draw is a dead end'
 
 
 @EVERY_FORMAT
@@ -556,36 +553,19 @@ def test_a_parameter_is_upright_and_a_variable_is_italic(name: FormatName, fmt: 
 def test_nothing_the_model_is_given_prints_italic():
     """The convention as a property of the whole document, not of a fragment: a
     rendering path added later reaches the page through its own call."""
-    schema = to_spec(golden.MODEL)
-    computed = set(schema.variables) | chosen_expressions(schema.program)
+    spec = to_spec(golden.MODEL)
+    computed = set(spec.variables) | chosen_expressions(spec.program)
     italic = {m.replace(r'\_', '_') for m in re.findall(r'\\mathit\{([^}]*)\}', to_latex(golden.MODEL))}
     assert italic <= computed, (
         f'{sorted(italic - computed)} print italic and are neither chosen by the solver nor read off its '
         f'solution — upright is what the model is given, italic what it computes'
     )
 
-    symbols = symbols_for(schema.program, LATEX, SymbolTable('latex'))
-    given = {name: symbols.name[name] for name in schema.parameters}
+    symbols = symbols_for(spec.program, LATEX, SymbolTable('latex'))
+    given = {name: symbols.name[name] for name in spec.parameters}
     assert all(symbol.startswith(r'\mathrm{') for symbol in given.values()), (
         f'derived upright for every parameter, but got {sorted(s for s in given.values() if "mathrm" not in s)}'
     )
-
-
-@EVERY_FORMAT
-def test_the_convention_note_quotes_only_what_the_derivation_chose(name: FormatName, fmt: Format):
-    """A table is printed verbatim and is the author's to write, so a symbol it
-    supplies is not one the note governs.
-
-    `examples/symbols/dispatch.yaml` maps three parameters to italic symbols,
-    and the homepage renders through it — so the note quoting one of those said
-    "a parameter such as $\\bar p$" under a sentence claiming a parameter is
-    upright, contradicting itself on the page a reader arrives at first.
-    """
-    table = {'notation': fmt.notation, 'names': {'load': 'x', 'cost': 'c', 'p_max': 'm'}}
-    assert 'Upright is what the data supplies' not in typeset(DISPATCH_MODEL, name, symbols=table), (
-        'a symbol the table supplies is not one the note governs'
-    )
-    assert 'Upright is what the data supplies' in typeset(DISPATCH_MODEL, name), 'derived, so the note applies'
 
 
 @EVERY_FORMAT
@@ -616,7 +596,7 @@ def test_a_dimension_is_not_a_head_a_qualifier_hangs_off(name: FormatName, fmt: 
 #: and a capital cost over (g) alone. No constraints, so every summation in the
 #: rendered document is one the objective asked for.
 MIXED = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'generator': {'dtype': 'str'}},
+    'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'generator': {'dtype': 'str', 'ordered': True}},
     'parameters': {'cost': {'dims': ['generator']}, 'capex': {'dims': ['generator']}},
     'variables': {
         'p': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}},
@@ -683,8 +663,8 @@ def test_every_operator_probe_renders(path, name: FormatName, fmt: Format):
 #: consumes one of `gen_bt`'s two value columns leaves the other one.
 UNREAD = {
     'dimensions': {
-        'snapshot': {'dtype': 'int'},
-        'generator': {'dtype': 'str'},
+        'snapshot': {'dtype': 'int', 'ordered': True},
+        'generator': {'dtype': 'str', 'ordered': True},
         'zone': {'dtype': 'str'},
         'bus': {'dtype': 'str'},
         'technology': {'dtype': 'str'},
@@ -710,21 +690,21 @@ def _grouped(dims: list[str], expression: str) -> str:
 
 
 def test_a_sum_that_reads_no_value_column_asks_only_that_the_key_has_a_row():
-    """`sum(u, by=gen_zone, over=generator, into=snapshot)` died with `KeyError: 'zone'`.
+    """`sum(u, over=generator, by=gen_zone[snapshot])` died with `KeyError: 'zone'`.
 
     The domain was written as a whole row of the table, which needs an index
     for every column, and this sum goes between the two key columns: it reads
     no value column, so there is no index to write in `zone`'s place. What the
     sum asks of the table is that the key it reads between has a row at all.
     """
-    row = _grouped(['snapshot'], 'sum(u, by=gen_zone, over=generator, into=snapshot) <= cap')
+    row = _grouped(['snapshot'], 'sum(u, over=generator, by=gen_zone[snapshot]) <= cap')
     assert r'\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_zone}(g,\ t) \text{ is defined}}' in row, (
         'the condition is that the row exists, and the unread value column is written nowhere'
     )
 
 
 def test_a_value_column_the_call_consumes_is_a_condition_like_a_produced_one():
-    """`sum(f, by=gen_bt, over=[generator, bus], into=technology)` bound `b` and then
+    """`sum(f, over=[generator, bus], by=gen_bt[technology])` bound `b` and then
     said nothing about it, so the sum ran over every bus rather than over the
     one the table puts each generator on.
 
@@ -732,7 +712,7 @@ def test_a_value_column_the_call_consumes_is_a_condition_like_a_produced_one():
     column by consuming it too, and either way the column is one lookup at the
     key.
     """
-    row = _grouped(['technology'], 'sum(f, by=gen_bt, over=[generator, bus], into=technology) <= cap')
+    row = _grouped(['technology'], 'sum(f, over=[generator, bus], by=gen_bt[technology]) <= cap')
     assert (
         r'\sum_{g \in \mathcal{G},\ b \in \mathcal{B} \,:\, '
         r'\mathrm{gen\_bt.bus}(g) = b \wedge \mathrm{gen\_bt.technology}(g) = e}'
@@ -747,7 +727,11 @@ def test_a_value_column_the_call_consumes_is_a_condition_like_a_produced_one():
 #: Two frames over generators, a relation onto buses and a boolean mask — what the
 #: scope and bracketing cases are written against.
 BUSES = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'generator': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
+    'dimensions': {
+        'snapshot': {'dtype': 'int', 'ordered': True},
+        'generator': {'dtype': 'str', 'ordered': True},
+        'bus': {'dtype': 'str'},
+    },
     'relations': {'bus_of': {'key': 'generator', 'values': 'bus'}},
     'parameters': {'load': {'dims': ['snapshot']}, 'k': {'dims': []}, 'flag': {'dims': ['snapshot'], 'dtype': 'bool'}},
     'variables': {'p': {'dims': ['snapshot', 'generator']}, 'q': {'dims': ['snapshot', 'generator']}},
@@ -767,7 +751,7 @@ def _row(expression: str, where: str | None = None, **patch: object) -> str:
     ('expression', 'expected'),
     [
         pytest.param(
-            'p == at(sum(q, by=bus_of, over=generator, into=bus), by=bus_of, over=bus, into=generator)',
+            'p == at(sum(q, over=generator, by=bus_of[bus]), by=bus_of[bus])',
             r"\sum_{g' \in \mathcal{G} \,:\, \mathrm{bus\_of}(g') = \mathrm{bus\_of}(g)} q_{t,g'}",
             id='grouped-by-a-relation',
         ),
@@ -802,9 +786,9 @@ def test_a_reduction_under_its_own_dimension_takes_a_fresh_dummy(expression: str
         ),
     ],
 )
-def test_a_predicate_is_bracketed_exactly_where_it_could_read_otherwise(where: str, expected: str, forbidden: str):
+def test_a_condition_is_bracketed_exactly_where_it_could_read_otherwise(where: str, expected: str, forbidden: str):
     tex = _row('p <= q', where=where)
-    assert expected in tex, 'the predicate is bracketed where its scope could read otherwise'
+    assert expected in tex, 'the condition is bracketed where its scope could read otherwise'
     assert forbidden not in tex, 'a bracket a reader needs is missing, or one is there for nothing'
 
 
@@ -880,7 +864,7 @@ def test_a_comparison_of_expressions_prints_as_the_arithmetic_it_is(name: Format
 
 
 @EVERY_FORMAT
-def test_a_count_prints_as_the_size_of_the_set_the_predicate_admits(name: FormatName, fmt: Format):
+def test_a_count_prints_as_the_size_of_the_set_the_condition_admits(name: FormatName, fmt: Format):
     """A count is a cardinality over a set by comprehension, which is how a paper writes one."""
     model = varied(DISPATCH_MODEL, **{'constraints.balance.where': 'count(p_max > 0, over=generator) >= 2'})
     text = typeset(model, name, legend=False)
@@ -893,7 +877,7 @@ def test_a_count_prints_as_the_size_of_the_set_the_predicate_admits(name: Format
 
 
 @EVERY_FORMAT
-def test_a_translated_predicate_prints_at_the_index_it_reads(name: FormatName, fmt: Format):
+def test_a_translated_condition_prints_at_the_index_it_reads(name: FormatName, fmt: Format):
     """The translation shows at the leaf, as it does for arithmetic — it emits no operator of its own."""
     model = varied(
         DISPATCH_MODEL, **{'constraints.balance.where': 'load AND NOT shift(load, along=snapshot, offset=1)'}
@@ -916,7 +900,7 @@ def test_a_count_along_a_dim_the_frame_carries_takes_a_primed_dummy():
             }
         },
     )
-    line = typeset_declaration(model, 'balance', 'latex')
+    line = typeset_line(model, 'balance', 'latex')
     assert r"g' \in \mathcal{G}" in line, 'the counted dimension is quantified already, so the set takes a fresh index'
 
 
@@ -937,7 +921,7 @@ def test_an_assumption_prints_under_its_own_heading(name: FormatName, fmt: Forma
 def test_a_curve_prints_what_its_method_assumes_of_the_breakpoints(name: FormatName, fmt: Format):
     """The conditions a method implies are the data's too, so they print where the written ones do.
 
-    They are predicates rather than prose: the x-axis increases between
+    They are conditions rather than prose: the x-axis increases between
     neighbours, and ``convex`` — exact for a curve that bends once either
     way — counts the bends going each way and asks that one direction has
     none, which is what "convex or concave" says of a whole axis.
@@ -945,16 +929,16 @@ def test_a_curve_prints_what_its_method_assumes_of_the_breakpoints(name: FormatN
     text = typeset(EXAMPLES / 'piecewise.yaml', name, legend=False)
     section = text[text.index('Assumptions') :]
     assert 'cost_curve_increasing' in section.replace(r'\_', '_'), (
-        'a condition is named after the block whose method implies it'
+        'a condition is named after the entry whose method implies it'
     )
     assert fmt.operators['lt'] in section, 'the x-axis is strictly increasing between neighbours'
     assert fmt.operators['or'] in section, 'the either-way bend is two counts joined by or, one per direction'
 
 
-def test_an_assumption_is_a_declaration_a_line_may_be_asked_for():
-    """`typeset_declaration` prints one line for a name; an assumption is now one of the names it takes."""
+def test_an_assumption_is_an_entry_a_line_may_be_asked_for():
+    """`typeset_line` prints one line for a name; an assumption is now one of the names it takes."""
     model = varied(DISPATCH_MODEL, assumptions={'costs_are_positive': 'cost > 0'})
-    assert typeset_declaration(model, 'costs_are_positive', 'latex') == (
+    assert typeset_line(model, 'costs_are_positive', 'latex') == (
         r'\mathrm{cost}_{g} > 0 \qquad \forall\, g \in \mathcal{G}'
     )
 
@@ -967,17 +951,17 @@ def test_a_condition_a_method_states_is_a_line_that_may_be_asked_for_before_it_i
     there, and the page shows a line no caller can reach.
     """
     curve = to_spec(EXAMPLES / 'piecewise_lp.yaml')
-    line = typeset_declaration(curve, 'cost_curve_increasing', 'latex')
+    line = typeset_line(curve, 'cost_curve_increasing', 'latex')
 
     assert 'is defined' not in line, 'the increasing condition is a comparison, not a definedness test'
-    assert line == typeset_declaration(curve.expand('piecewise'), 'cost_curve_increasing', 'latex'), (
+    assert line == typeset_line(curve.expand('piecewise'), 'cost_curve_increasing', 'latex'), (
         'and it prints the same line whether or not the curve has been written out'
     )
 
 
 #: One curve, varied per case: two links pinned to it, over one breakpoint dim.
 _CURVE = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'bp': {'dtype': 'int'}},
+    'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'bp': {'dtype': 'int', 'ordered': True}},
     'parameters': {
         'bp_x': {'dims': ['bp']},
         'bp_y': {'dims': ['bp']},
@@ -1034,7 +1018,7 @@ _CURVE = {
             id='bounded-links-beside-more-than-one-other-add-the-cone-their-signs-span',
         ),
         pytest.param(
-            {'piecewise.curve.where': 'reaches'},
+            {'piecewise.curve.where': 'reaches', 'parameters.bp_x.missing': 0, 'parameters.bp_y.missing': 0},
             r'\mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{reaches}_{b}}',
             id='a-ragged-where-narrows-the-breakpoints-to-the-ones-it-admits',
         ),
@@ -1046,8 +1030,8 @@ _CURVE = {
     ],
 )
 def test_a_curve_prints_as_the_curve_it_states(patch: dict[str, Any], expected: str):
-    """The block, not the rows it stands for: `typeset(spec.expand())` prints those."""
-    assert expected in typeset_declaration(varied(_CURVE, **patch), 'curve', 'latex')
+    """The entry, not the rows it stands for: `typeset(spec.expand())` prints those."""
+    assert expected in typeset_line(varied(_CURVE, **patch), 'curve', 'latex')
 
 
 def test_a_gate_that_does_not_exist_everywhere_prints_the_two_arms_the_expansion_writes_two_rows_for():
@@ -1061,7 +1045,7 @@ def test_a_gate_that_does_not_exist_everywhere_prints_the_two_arms_the_expansion
     assert (
         r'\begin{cases} \mathit{warm}_{t} & \text{if } \mathrm{committable}_{t} \\ 1 '
         r'& \text{otherwise} \end{cases} \cdot \mathrm{pwl}'
-    ) in typeset_declaration(spec, 'curve', 'latex'), 'and the factor on the curve carries the same two arms'
+    ) in typeset_line(spec, 'curve', 'latex'), 'and the factor on the curve carries the same two arms'
 
 
 def test_a_curve_prints_over_the_frame_its_expansion_builds_one_per_coordinate_of():
@@ -1081,14 +1065,14 @@ def test_a_curve_prints_over_the_frame_its_expansion_builds_one_per_coordinate_o
     spec = to_spec(model)
     emitted = spec.expand('piecewise').constraints['curve_p'].dims
 
-    printed = typeset_declaration(spec, 'curve', 'latex')
+    printed = typeset_line(spec, 'curve', 'latex')
     assert printed.endswith(r'\forall\, t \in \mathcal{T},\ g \in \mathcal{G}')
-    assert emitted == ['snapshot', 'generator'], 'the quantifier above is that frame, in that order'
+    assert emitted == ['snapshot', 'generator'], 'the quantifier above is that frame, in the order dims: wrote'
 
 
 def test_a_walked_link_prints_as_the_family_of_rows_that_read_one_curve():
     """Printed off the union of the links' dims, every flow sat on every converter's curve and no relation showed."""
-    printed = typeset_declaration(to_spec(EXAMPLES / 'piecewise_coupling.yaml'), 'operating_point', 'latex')
+    printed = typeset_line(to_spec(EXAMPLES / 'piecewise_coupling.yaml'), 'operating_point', 'latex')
 
     family = r'_{f \in \mathcal{F} \,:\, \mathrm{converter\_of}(f) = c}'
     assert printed.startswith(rf'\left( \mathit{{rate}}_{{f,t}} \right){family} \in'), 'a converter ties its own flows'
@@ -1098,8 +1082,8 @@ def test_a_walked_link_prints_as_the_family_of_rows_that_read_one_curve():
     )
 
 
-def test_the_expansion_prints_the_rows_the_block_states():
-    """Which is the whole reason the block prints as one line: the two readings are one call apart."""
+def test_the_expansion_prints_the_rows_the_entry_states():
+    """Which is the whole reason the entry prints as one line: the two readings are one call apart."""
     spec = to_spec(_CURVE)
 
     assert 'curve_lam' not in to_markdown(spec), 'nothing a curve emits is named where the curve itself prints'
@@ -1107,7 +1091,7 @@ def test_the_expansion_prints_the_rows_the_block_states():
 
 
 @EVERY_FORMAT
-def test_a_set_is_labelled_by_the_block_that_declares_it(name: FormatName, fmt: Format):
+def test_a_set_is_labelled_by_the_entry_that_declares_it(name: FormatName, fmt: Format):
     """The line was labelled ``<variable> sos``, a name the file never wrote, while every other line carries its key."""
     picked = varied(
         DISPATCH_MODEL,

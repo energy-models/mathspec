@@ -5,39 +5,53 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Power flow
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: Kirchhoff's voltage law around each cycle. It declares `Cycle_angle_sum` as an empty sum, `empty: true`, which the lines and transformers add to.
+This file states Kirchhoff's voltage law around each cycle. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It lists the sum `Cycle_angle_sum` under [`given`](../../reference/language/parameters-variables-constraints.md#given) and adds nothing to it. The lines and the transformers add their terms to it.
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  expressions:
+    Cycle_angle_sum:
+      dims: [scenario, snapshot, cycle]
+      description: >-
+        the voltage angle differences around a cycle: every branch flow times
+        its cycle weight, and every transformer phase shift
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   cycle:
-    description: independent cycles of the passive network graph — the cycle basis, data prep
-
-expressions:
-  Cycle_angle_sum:
-    dims: [scenario, snapshot, cycle]
-    empty: true
     description: >-
-      the voltage angle differences around a cycle: every branch flow times
-      its cycle weight, and every transformer phase shift
+      independent cycles of the passive network graph, the cycle basis, data
+      prep. Each period has its own basis, of the branches that are active in it. A
+      label is a position in that period's basis, so one label is a different
+      cycle in another period
 
 constraints:
   Kirchhoff_Voltage_Law:
     description: >-
       `Kirchhoff-Voltage-Law` — around every independent cycle the
-      impedance-weighted flows sum to nothing, which is what makes the linear
-      power flow physical rather than transport. A transformer's flow weighs its
-      effective reactance, and its phase shift enters the cycle sum too: a
-      constant where the shift is fixed, or the shift decision times its cycle
-      weight where the shift is a phase-shifting transformer's to choose
+      impedance-weighted flows sum to nothing. This makes the linear power
+      flow physical rather than transport. A transformer's flow weighs its
+      effective reactance, and its phase shift enters the cycle sum too. The
+      shift is a constant where it is fixed. Where a phase-shifting
+      transformer chooses its shift, it is the shift decision times its cycle
+      weight. A snapshot uses the cycles of its own period, of the branches
+      that are active in it (`constraints.py:1615-1631`). A cycle label that
+      period's basis does not reach has no row
     dims: [scenario, snapshot, cycle]
     expression: Cycle_angle_sum == 0
 ```
+
+#### Given
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$, an expression another file defines — the voltage angle differences around a cycle: every branch flow times its cycle weight, and every transformer phase shift |
 
 #### Sets
 
@@ -45,13 +59,7 @@ constraints:
 |---|---|
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep |
-
-#### Definitions
-
-| Symbol | Meaning |
-|---|---|
-| $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ — the voltage angle differences around a cycle: every branch flow times its cycle weight, and every transformer phase shift |
+| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph, the cycle basis, data prep. Each period has its own basis, of the branches that are active in it. A label is a position in that period's basis, so one label is a different cycle in another period |
 
 #### Subject to
 
@@ -60,12 +68,9 @@ constraints:
 ```math
 \mathit{Cycle\_angle\_sum}_{\xi,t,c} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
 ```
-
-#### Definitions
-
-**`Cycle_angle_sum`**
-
-```math
-\mathit{Cycle\_angle\_sum}_{\xi,t,c} = \cdots \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
-```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

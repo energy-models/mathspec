@@ -3,23 +3,50 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Generators, the commitment
+# Generator commitment
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Generator`, the commitment rows. It adds a term to `scenario_opex`. It reads `Generator_active`, `Generator_maintenance_capacity`, `Generator_maintenance_pu`, `Generator_maintenance_status`, `Generator_modules_installed`, `Generator_n_mod` and 10 more under [`given`](../../reference/language/declarations.md#given).
+This file states the commitment rows of PyPSA's `Generator`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Generator_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Generator_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    snapshot_weightings_objective: { dims: [snapshot] }
+    Generator_p_nom: { dims: [scenario, generator] }
+    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
+    Generator_p_min_pu: { dims: [scenario, snapshot, generator] }
+    Generator_p_max_pu: { dims: [scenario, snapshot, generator] }
+    Generator_p_nom_mod: { dims: [generator] }
+    Generator_modules_installed: { dims: [scenario, generator] }
+    Generator_p_min_pu_nonneg: { dims: [generator], dtype: bool }
+    Generator_maintenance_pu: { dims: [scenario, generator] }
+    period_weight_objective: { dims: [period] }
+    Generator_active: { dims: [snapshot, generator], dtype: bool }
+  variables:
+    Generator_p: { dims: [scenario, snapshot, generator] }
+    Generator_n_mod: { dims: [generator], domain: integer }
+    Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
+    Generator_maintenance_status: { dims: [scenario, snapshot, generator] }
+    Generator_p_nom_ext: { dims: [generator] }
+  expressions:
+    Generator_modules: { dims: [scenario, generator] }
+    scenario_opex: { dims: [scenario] }
+  conditions:
+    Generator_committed: { dims: [generator, snapshot] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   generator:
     description: generating units, each on one bus
   period:
-    description: investment periods — PyPSA's `investment_periods`
+    description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -41,166 +68,175 @@ parameters:
     dims: [scenario, generator]
     dtype: int
   Generator_status_initial:
-    description: one where the unit was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep
+    description: >-
+      one where the unit was on before the first snapshot, zero where off.
+      It is PyPSA's `up_time_before > 0` for a committable unit, and one for
+      a unit that is not, whose ramp rows PyPSA starts from on
+      (`constraints.py:286`), data prep
     dims: [scenario, generator]
     dtype: int
-  Generator_must_stay_up:
+  Generator_up_time_brought_in:
     description: >-
-      true while the up time a unit brought into the horizon still binds —
-      data prep, since `position()` compares against a literal rather than a
-      parameter
+      one while the up time a unit brought into the horizon is still
+      running, zero after. It is PyPSA's start `up_time_before` snapshots
+      before the first, counted while `min_up_time` has not passed since
+      (`constraints.py:265-286`, `:626-627`), data prep
     dims: [scenario, snapshot, generator]
-    dtype: bool
-  Generator_must_stay_down:
+    dtype: int
+  Generator_down_time_brought_in:
     description: >-
-      true while the down time a unit brought into the horizon still binds —
-      PyPSA's `min_down_time - down_time_before` snapshots, where
-      `down_time_before > 0`, data prep for the same reason
+      one while the down time a unit brought into the horizon is still
+      running, zero after. It is PyPSA's stop `down_time_before` snapshots
+      before the first, counted while `min_down_time` has not passed since
+      (`constraints.py:265-286`, `:626-627`), data prep
     dims: [scenario, snapshot, generator]
-    dtype: bool
+    dtype: int
   Generator_start_up_cost:
-    description: cost of one start
-    dims: [scenario, generator]
+    description: cost of one start in this snapshot
+    dims: [scenario, snapshot, generator]
   Generator_shut_down_cost:
-    description: cost of one stop
-    dims: [scenario, generator]
+    description: cost of one stop in this snapshot
+    dims: [scenario, snapshot, generator]
   Generator_stand_by_cost:
     description: cost of one snapshot spent on
     dims: [scenario, snapshot, generator]
   Generator_big_m:
-    description: a bound safely above any feasible output — the build cap at full availability, data prep
+    description: >-
+      the bound a committed extendable generator's big-M rows release it by,
+      data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`,
+      where the cap is finite and positive. Elsewhere it is
+      `committable_big_m` times the highest `p_max_pu`
+      (`components.py:1052-1123`). Without that keyword, it is ten times the
+      largest of the peak total load and the component's largest finite
+      `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below
+      the output a solve wants, it caps that output
     dims: [scenario, generator]
+    missing: absent
 
 variables:
   Generator_status:
     description: >-
-      `Generator-status` — how much of a committable unit is on: an integer
-      the rows below cap at one, or at the module count where the build is
-      modular
+      `Generator-status` — how much of a committable unit is on. It is an
+      integer the rows below cap at one, or at the module count where the
+      build is modular
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_active
+    where: Generator_committed
     domain: integer
     bounds:
       lower: 0
   Generator_start_up:
     description: "`Generator-start_up` — how much of a committable unit turns on this snapshot, capped as the status is"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_active
+    where: Generator_committed
     domain: integer
     bounds:
       lower: 0
   Generator_shut_down:
     description: "`Generator-shut_down` — how much of a committable unit turns off this snapshot, capped as the status is"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_active
+    where: Generator_committed
     domain: integer
     bounds:
       lower: 0
 
-given:
-  parameters:
-    snapshot_weightings_objective: { dims: [snapshot] }
-    Generator_p_nom: { dims: [scenario, generator] }
-    Generator_p_nom_extendable: { dims: [generator], dtype: bool }
-    Generator_p_min_pu: { dims: [scenario, snapshot, generator] }
-    Generator_p_max_pu: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom_mod: { dims: [generator] }
-    Generator_modules_installed: { dims: [scenario, generator] }
-    Generator_p_min_pu_nonneg: { dims: [generator], dtype: bool }
-    Generator_maintenance_pu: { dims: [scenario, generator] }
-    period_weight_objective: { dims: [period] }
-    Generator_active: { dims: [snapshot, generator], dtype: bool }
-  variables:
-    Generator_p: { dims: [scenario, snapshot, generator] }
-    Generator_n_mod: { dims: [generator], domain: integer }
-    Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
-    Generator_maintenance_status: { dims: [scenario, snapshot, generator] }
-    Generator_p_nom_ext: { dims: [generator] }
-  expressions:
-    scenario_opex: { dims: [scenario], term: Generator_commitment_opex }
-
 expressions:
   Generator_previous_status:
     description: >-
-      the commitment state a generator carries into a snapshot — the state it
-      brought into the horizon at the first, the previous snapshot's after that
+      the commitment state a generator carries into a snapshot. It is off at
+      the first snapshot it is active in past the first of the horizon. PyPSA
+      reads a status it did not build as off there (`constraints.py:354`). It
+      is the state carried over otherwise
+    dims: [scenario, snapshot, generator]
+    cases:
+      opening_late: { when: "position(snapshot) > 0 AND NOT shift(Generator_active, along=snapshot, offset=1)", expression: 0 }
+    otherwise: Generator_status_carried_over
+  Generator_status_carried_over:
+    description: >-
+      the state a generator carries over into a snapshot: the state it brought
+      into the horizon at the first, the previous snapshot's after that
     dims: [scenario, snapshot, generator]
     cases:
       opening: { when: "position(snapshot) == 0", expression: Generator_status_initial }
     otherwise: shift(Generator_status, along=snapshot, offset=1)
   Generator_commitment_opex:
     expression: >-
-      sum(sum(((Generator_status * Generator_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period, over=period, into=snapshot), over=generator), over=snapshot)
-      + sum(sum(Generator_start_up * Generator_start_up_cost, over=generator), over=snapshot)
-      + sum(sum(Generator_shut_down * Generator_shut_down_cost, over=generator), over=snapshot)
+      sum(sum(((Generator_status * Generator_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
+      + sum(sum((Generator_start_up * Generator_start_up_cost) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
+      + sum(sum((Generator_shut_down * Generator_shut_down_cost) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
+    adds_to: scenario_opex
+
+conditions:
+  Generator_com_ext:
+    description: >-
+      a committable generator with an extendable, non-modular build that
+      is active in the snapshot's period. These are PyPSA's `com-ext` rows, whose
+      status is relaxed against the chosen build
+    condition: >-
+      Generator_committable
+      AND Generator_p_nom_extendable
+      AND NOT (Generator_p_nom_mod > 0)
+      AND Generator_active
 
 constraints:
   Generator_com_p_lower:
-    description: "`Generator-com-p-lower` — a committed unit outputs at least its minimum; off, at least nothing"
+    description: "`Generator-com-p-lower` — a committed unit outputs at least its minimum. Off, it outputs at least nothing"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active
+    where: Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     expression: Generator_p >= Generator_p_min_pu * Generator_p_nom * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
   Generator_com_p_upper:
-    description: "`Generator-com-p-upper` — a committed unit outputs at most what is available; off, at most nothing"
+    description: "`Generator-com-p-upper` — a committed unit outputs at most what is available. Off, it outputs at most nothing"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND not Generator_p_nom_extendable AND Generator_active
+    where: Generator_committed AND NOT Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0)
     expression: Generator_p <= Generator_p_max_pu * Generator_p_nom * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
   Generator_com_transition_start_up:
     description: "`Generator-com-transition-start-up` — turning on is a start, counted against the state the unit carried into the snapshot"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_active
+    where: Generator_committed
     expression: Generator_start_up >= Generator_status - Generator_previous_status
   Generator_com_transition_shut_down:
     description: "`Generator-com-transition-shut-down` — turning off is a stop, counted against the state the unit carried into the snapshot"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_active
+    where: Generator_committed
     expression: Generator_shut_down >= Generator_previous_status - Generator_status
   Generator_com_up_time:
     description: >-
-      `Generator-com-up-time` — a unit started within its own minimum up time
-      is still on. The first snapshot's share of the window is the brought-in
-      up time's, which the must-stay-up mask carries
+      `Generator-com-up-time` — a unit started within its own minimum up time is
+      still on. The up time it brought into the horizon counts as a start
+      before the first snapshot
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_min_up_time > 0 AND position(snapshot) > 0 AND Generator_active
-    expression: sum_back(Generator_start_up, along=snapshot, window=Generator_min_up_time) <= Generator_status
+    where: Generator_committed AND Generator_min_up_time > 0
+    expression: >-
+      sum_back(Generator_start_up, along=snapshot, window=Generator_min_up_time)
+      + Generator_up_time_brought_in <= Generator_status
   Generator_com_down_time:
     description: >-
-      `Generator-com-down-time` — a unit stopped within its own minimum down
-      time is still off. The first snapshot's share of the window is the
-      brought-in down time's, which the must-stay-down mask carries
+      `Generator-com-down-time` — a unit stopped within its own minimum down time
+      is still off, and so are the modules of a modular unit that stopped.
+      The down time it brought into the horizon counts as one stop before the
+      first snapshot, also where the unit is modular (`constraints.py:605-632`)
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_min_down_time > 0 AND position(snapshot) > 0 AND Generator_active
-    expression: sum_back(Generator_shut_down, along=snapshot, window=Generator_min_down_time) <= 1 - Generator_status
-  Generator_com_status_must_stay_up:
-    description: "`Generator-com-status-min_up_time_must_stay_up` — a unit still serving the up time it brought in stays on"
-    dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_must_stay_up AND Generator_active
-    expression: Generator_status == 1
-  Generator_com_status_must_stay_down:
-    description: >-
-      `Generator-com-status-min_down_time_must_stay_up` — a unit still serving
-      the down time it brought in stays off; PyPSA names the row `_must_stay_up`
-    dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_must_stay_down AND Generator_active
-    expression: Generator_status == 0
+    where: Generator_committed AND Generator_min_down_time > 0
+    expression: >-
+      sum_back(Generator_shut_down, along=snapshot, window=Generator_min_down_time)
+      + Generator_down_time_brought_in <= Generator_modules - Generator_status
   Generator_com_ext_p_upper_cap:
     description: >-
       `Generator-com-ext-p-upper-cap` — a committed extendable unit outputs
       at most what is available of the chosen build, whatever its status
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_com_ext
     expression: Generator_p <= Generator_p_max_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
   Generator_com_ext_p_upper_big_m:
-    description: "`Generator-com-ext-p-upper-bigM` — off, a unit outputs nothing; on, the big M is no bound"
+    description: "`Generator-com-ext-p-upper-bigM` — off, a unit outputs nothing. On, the big M is no bound"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_com_ext
     expression: Generator_p <= Generator_big_m * Generator_status
   Generator_com_ext_p_lower:
     description: >-
       `Generator-com-ext-p-lower` — a committed extendable unit outputs at
-      least its minimum of the chosen build; off, the big M releases the row
+      least its minimum of the chosen build. Off, the big M releases the row
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_extendable AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_com_ext
     expression: >-
       Generator_p >=
       Generator_p_min_pu * (Generator_p_nom_ext - Generator_maintenance_pu * Generator_maintenance_capacity)
@@ -211,96 +247,74 @@ constraints:
       negative, output is also plainly non-negative, a row the big-M lower
       cannot assert while the unit is off
     dims: [scenario, snapshot, generator]
-    where: >-
-      Generator_committable AND Generator_p_nom_extendable
-      AND Generator_p_min_pu_nonneg AND NOT (Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_com_ext AND Generator_p_min_pu_nonneg
     expression: Generator_p >= 0
   Generator_com_mod_p_lower:
     description: >-
       `Generator-com-mod-p-lower` — a committed modular unit outputs at least
       its minimum of one module, whether the build is fixed or a decision
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_committed AND Generator_p_nom_mod > 0
     expression: Generator_p >= Generator_p_min_pu * Generator_p_nom_mod * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
   Generator_com_mod_p_upper:
     description: >-
       `Generator-com-mod-p-upper` — a committed modular unit outputs at most
       one module's share, whether the build is fixed or a decision
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_committed AND Generator_p_nom_mod > 0
     expression: Generator_p <= Generator_p_max_pu * Generator_p_nom_mod * (Generator_status - Generator_maintenance_pu * Generator_maintenance_status)
   Generator_status_p_fixed_upper:
     description: >-
       `Generator-status-p-fixed-upper` — a status is at most the modules in
-      place, an explicit row as PyPSA writes it: one where the build is not
-      modular, and the fixed build's whole count of modules where it is
+      place, an explicit row as PyPSA writes it. The bound is one where the
+      build is not modular, and the fixed build's whole count of modules where
+      it is
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_committed AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0)
     expression: Generator_status <= Generator_modules_installed
   Generator_start_up_p_fixed_upper:
     description: >-
       `Generator-start_up-p-fixed-upper` — a start is at most the modules in
-      place, an explicit row as PyPSA writes it: one where the build is not
-      modular, and the fixed build's whole count of modules where it is
+      place, an explicit row as PyPSA writes it. The bound is one where the
+      build is not modular, and the fixed build's whole count of modules where
+      it is
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_committed AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0)
     expression: Generator_start_up <= Generator_modules_installed
   Generator_shut_down_p_fixed_upper:
     description: >-
       `Generator-shut_down-p-fixed-upper` — a stop is at most the modules in
-      place, an explicit row as PyPSA writes it: one where the build is not
-      modular, and the fixed build's whole count of modules where it is
+      place, an explicit row as PyPSA writes it. The bound is one where the
+      build is not modular, and the fixed build's whole count of modules where
+      it is
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0) AND Generator_active
+    where: Generator_committed AND NOT (Generator_p_nom_extendable AND Generator_p_nom_mod > 0)
     expression: Generator_shut_down <= Generator_modules_installed
   Generator_status_p_nom_variable_upper:
     description: "`Generator-status-p_nom-variable-upper` — a modular unit is on only where a module is built"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_committed AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0
     expression: Generator_status <= Generator_n_mod
   Generator_start_up_p_nom_variable_upper:
     description: "`Generator-start_up-p_nom-variable-upper` — a modular unit starts only where a module is built"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_committed AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0
     expression: Generator_start_up <= Generator_n_mod
   Generator_shut_down_p_nom_variable_upper:
     description: "`Generator-shut_down-p_nom-variable-upper` — a modular unit stops only where a module is built"
     dims: [scenario, snapshot, generator]
-    where: Generator_committable AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active
+    where: Generator_committed AND Generator_p_nom_extendable AND Generator_p_nom_mod > 0
     expression: Generator_shut_down <= Generator_n_mod
+
+assumptions:
+  Generator_big_m_where_committed_and_extendable:
+    holds: "Generator_big_m"
+    where: "Generator_com_ext"
+    description: >-
+      a committable generator with an extendable, non-modular build has
+      the big-M its rows release it by — PyPSA computes one for each
+      (`get_committable_big_m_values`)
 ```
-
-#### Sets
-
-| Symbol | Meaning |
-|---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units, each on one bus |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
-
-#### Parameters
-
-| Symbol | Meaning |
-|---|---|
-| $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$ — whether output is gated by an on/off status decision |
-| $`\mathrm{UT}`$ | `Generator_min_up_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays on once started |
-| $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays off once stopped |
-| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$ — one where the unit was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
-| $`\mathrm{hold}`$ | `Generator_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true while the up time a unit brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
-| $`\mathrm{rest}`$ | `Generator_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true while the down time a unit brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
-| $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{G}`$ — cost of one start |
-| $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{G}`$ — cost of one stop |
-| $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$ — a bound safely above any feasible output — the build cap at full availability, data prep |
-
-#### Variables
-
-| Symbol | Meaning |
-|---|---|
-| $`u`$ | `Generator_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-status` — how much of a committable unit is on: an integer the rows below cap at one, or at the module count where the build is modular |
-| $`\mathit{up}`$ | `Generator_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-start_up` — how much of a committable unit turns on this snapshot, capped as the status is |
-| $`\mathit{dn}`$ | `Generator_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-shut_down` — how much of a committable unit turns off this snapshot, capped as the status is |
 
 #### Given
 
@@ -322,151 +336,68 @@ constraints:
 | $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`\mu^{u}`$ | `Generator_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ |
+| $`\mathrm{M}`$ | `Generator_modules` over $`\Xi \times \mathcal{G}`$, an expression another file defines |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Generator_commitment_opex` to |
+| $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{G} \times \mathcal{T}`$, a condition another file defines |
+
+#### Sets
+
+| Symbol | Meaning |
+|---|---|
+| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units, each on one bus |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
+
+#### Parameters
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$ — whether output is gated by an on/off status decision |
+| $`\mathrm{UT}`$ | `Generator_min_up_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays on once started |
+| $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays off once stopped |
+| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$ — one where the unit was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable unit, and one for a unit that is not, whose ramp rows PyPSA starts from on (`constraints.py:286`), data prep |
+| $`\mathrm{hold}`$ | `Generator_up_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — one while the up time a unit brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:265-286`, `:626-627`), data prep |
+| $`\mathrm{rest}`$ | `Generator_down_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — one while the down time a unit brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:265-286`, `:626-627`), data prep |
+| $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one start in this snapshot |
+| $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one stop in this snapshot |
+| $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
+| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, `absent` where the data has no row — the bound a committed extendable generator's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1052-1123`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the output a solve wants, it caps that output |
+
+#### Conditions
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{\mathrm{com,ext}}`$ | `Generator_com_ext` over $`\mathcal{G} \times \mathcal{T}`$ — a committable generator with an extendable, non-modular build that is active in the snapshot's period. These are PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
+
+#### Variables
+
+| Symbol | Meaning |
+|---|---|
+| $`u`$ | `Generator_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-status` — how much of a committable unit is on. It is an integer the rows below cap at one, or at the module count where the build is modular |
+| $`\mathit{up}`$ | `Generator_start_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-start_up` — how much of a committable unit turns on this snapshot, capped as the status is |
+| $`\mathit{dn}`$ | `Generator_shut_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — `Generator-shut_down` — how much of a committable unit turns off this snapshot, capped as the status is |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
+| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot. It is off at the first snapshot it is active in past the first of the horizon. PyPSA reads a status it did not build as off there (`constraints.py:354`). It is the state carried over otherwise |
+| $`\overleftarrow{u}^{\circ}`$ | `Generator_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the state a generator carries over into a snapshot: the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Generator\_commitment\_opex}`$ | `Generator_commitment_opex` over $`\Xi`$ |
 
-$`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own order — the order `shift` steps along, not the order labels sort in — counted from $`0`$. The index itself stays the coordinate, so $`t`$ compares against labels and $`\mathrm{pos}(t)`$ against positions.
+#### Notation
 
-#### Subject to
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 
-**`Generator_com_p_lower`**
+#### Conditions
 
-```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_p_upper`**
+**`Generator_com_ext`**
 
 ```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_transition_start_up`**
-
-```math
-\mathit{up}_{\xi,t,g} \ge u_{\xi,t,g} - \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_transition_shut_down`**
-
-```math
-\mathit{dn}_{\xi,t,g} \ge \overleftarrow{u}_{\xi,t,g} - u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_up_time`**
-
-```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}} \mathit{up}_{\xi,t',g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{UT}_{\xi,g} > 0 \wedge \mathrm{pos}(t) > 0 \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_down_time`**
-
-```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}} \mathit{dn}_{\xi,t',g} \le 1 - u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{DT}_{\xi,g} > 0 \wedge \mathrm{pos}(t) > 0 \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_status_must_stay_up`**
-
-```math
-u_{\xi,t,g} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{hold}_{\xi,t,g} \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_status_must_stay_down`**
-
-```math
-u_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{rest}_{\xi,t,g} \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_ext_p_upper_cap`**
-
-```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_ext_p_upper_big_m`**
-
-```math
-p_{\xi,t,g} \le \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_ext_p_lower`**
-
-```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) + \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} - \mathrm{M}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_ext_p_lower_nonneg`**
-
-```math
-p_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \mathrm{nonneg}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_mod_p_lower`**
-
-```math
-p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_com_mod_p_upper`**
-
-```math
-p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_status_p_fixed_upper`**
-
-```math
-u_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_start_up_p_fixed_upper`**
-
-```math
-\mathit{up}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_shut_down_p_fixed_upper`**
-
-```math
-\mathit{dn}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_status_p_nom_variable_upper`**
-
-```math
-u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_start_up_p_nom_variable_upper`**
-
-```math
-\mathit{up}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
-```
-
-**`Generator_shut_down_p_nom_variable_upper`**
-
-```math
-\mathit{dn}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \wedge \mathrm{on}_{t,g}
-```
-
-#### Definitions
-
-**`Generator_previous_status`**
-
-```math
-\overleftarrow{u}_{\xi,t,g} = \begin{cases} \mathrm{u}^{0}_{\xi,g} & \text{if } \mathrm{pos}(t) = 0 \\ u_{\xi,t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
-**`Generator_commitment_opex`**
-
-```math
-\mathit{Generator\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} u_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{on}}_{\xi,t,g} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{up}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{up}}_{\xi,g} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{dn}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{dn}}_{\xi,g} \qquad \forall\, \xi \in \Xi
+\mathrm{on}^{\mathrm{com,ext}}_{g,t} \iff \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{t,g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Variable domains
@@ -474,18 +405,161 @@ u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \
 **`Generator_status`**
 
 ```math
-u_{\xi,t,g} \ge 0, u_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+u_{\xi,t,g} \ge 0, u_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
 ```
 
 **`Generator_start_up`**
 
 ```math
-\mathit{up}_{\xi,t,g} \ge 0, \mathit{up}_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+\mathit{up}_{\xi,t,g} \ge 0, \mathit{up}_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
 ```
 
 **`Generator_shut_down`**
 
 ```math
-\mathit{dn}_{\xi,t,g} \ge 0, \mathit{dn}_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{com}_{g} \wedge \mathrm{on}_{t,g}
+\mathit{dn}_{\xi,t,g} \ge 0, \mathit{dn}_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
+```
+
+#### Definitions
+
+**`Generator_previous_status`**
+
+```math
+\overleftarrow{u}_{\xi,t,g} = \begin{cases} 0 & \text{if } \mathrm{pos}(t) > 0 \wedge \neg \mathrm{on}_{t - 1,g} \\ \overleftarrow{u}^{\circ}_{\xi,t,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+**`Generator_status_carried_over`**
+
+```math
+\overleftarrow{u}^{\circ}_{\xi,t,g} = \begin{cases} \mathrm{u}^{0}_{\xi,g} & \text{if } \mathrm{pos}(t) = 0 \\ u_{\xi,t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+**`Generator_commitment_opex`**
+
+```math
+\mathit{Generator\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} u_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{on}}_{\xi,t,g} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{up}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{up}}_{\xi,t,g} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{dn}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{dn}}_{\xi,t,g} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+```
+
+#### Subject to
+
+**`Generator_com_p_lower`**
+
+```math
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+```
+
+**`Generator_com_p_upper`**
+
+```math
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_{\xi,g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+```
+
+**`Generator_com_transition_start_up`**
+
+```math
+\mathit{up}_{\xi,t,g} \ge u_{\xi,t,g} - \overleftarrow{u}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
+```
+
+**`Generator_com_transition_shut_down`**
+
+```math
+\mathit{dn}_{\xi,t,g} \ge \overleftarrow{u}_{\xi,t,g} - u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t}
+```
+
+**`Generator_com_up_time`**
+
+```math
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}} \mathit{up}_{\xi,t',g} + \mathrm{hold}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{UT}_{\xi,g} > 0
+```
+
+**`Generator_com_down_time`**
+
+```math
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}} \mathit{dn}_{\xi,t',g} + \mathrm{rest}_{\xi,t,g} \le \mathrm{M}_{\xi,g} - u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{DT}_{\xi,g} > 0
+```
+
+**`Generator_com_ext_p_upper_cap`**
+
+```math
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
+```
+
+**`Generator_com_ext_p_upper_big_m`**
+
+```math
+p_{\xi,t,g} \le \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
+```
+
+**`Generator_com_ext_p_lower`**
+
+```math
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \left( P_{g} - \gamma_{\xi,g} \cdot \mu^{\mathrm{nom}}_{\xi,t,g} \right) + \mathrm{M}_{\xi,g} \cdot u_{\xi,t,g} - \mathrm{M}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
+```
+
+**`Generator_com_ext_p_lower_nonneg`**
+
+```math
+p_{\xi,t,g} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t} \wedge \mathrm{nonneg}_{g}
+```
+
+**`Generator_com_mod_p_lower`**
+
+```math
+p_{\xi,t,g} \ge \underline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+```
+
+**`Generator_com_mod_p_upper`**
+
+```math
+p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{mod}}_{g} \cdot \left( u_{\xi,t,g} - \gamma_{\xi,g} \cdot \mu^{u}_{\xi,t,g} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+```
+
+**`Generator_status_p_fixed_upper`**
+
+```math
+u_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+```
+
+**`Generator_start_up_p_fixed_upper`**
+
+```math
+\mathit{up}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+```
+
+**`Generator_shut_down_p_fixed_upper`**
+
+```math
+\mathit{dn}_{\xi,t,g} \le \mathrm{N}^{\mathrm{fix}}_{\xi,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \left( \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right)
+```
+
+**`Generator_status_p_nom_variable_upper`**
+
+```math
+u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+```
+
+**`Generator_start_up_p_nom_variable_upper`**
+
+```math
+\mathit{up}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+```
+
+**`Generator_shut_down_p_nom_variable_upper`**
+
+```math
+\mathit{dn}_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+```
+
+#### Assumptions
+
+**`Generator_big_m_where_committed_and_extendable`**
+
+```math
+\mathrm{M}_{\xi,g} \text{ is defined} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

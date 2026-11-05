@@ -1,9 +1,9 @@
 dimensions:
-  bp: { dtype: int }
+  bp: { dtype: int, ordered: true }
 
 parameters:
-  x_bp: { dims: [bp] }
-  y_bp: { dims: [bp] }
+  x_bp: { dims: [bp], missing: 0 }
+  y_bp: { dims: [bp], missing: 0 }
 
 variables:
   x: { dims: [], bounds: { lower: 0 } }

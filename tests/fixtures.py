@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The schema the tests build from, and the helpers that vary it."""
+"""The spec the tests build from, and the helpers that vary it."""
 
 from __future__ import annotations
 
@@ -10,13 +10,12 @@ import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from mathspec import Spec
+from mathspec._expansion import parse_and_expand
 from mathspec._expression_parser import ComparisonNode
+from mathspec._resolution import Namespace, mask_of, resolve_condition_text, resolve_expression
+from mathspec._validation import to_spec
 from mathspec._yaml import parse_yaml, read_yaml
-from mathspec.errors import SchemaError
-from mathspec.expansion import parse_and_expand
-from mathspec.resolution import Namespace, mask_of, resolve_expression, resolve_where_text
-from mathspec.validation import to_spec
+from mathspec.spec import Spec
 
 if TYPE_CHECKING:
     from mathspec.program import Expression, Mask
@@ -27,12 +26,17 @@ EXAMPLES = Path(__file__).resolve().parent.parent / 'examples'
 #: from the same directory, so a probe added for the page is swept here too.
 OPERATOR_PROBES = sorted((EXAMPLES / 'operators').glob('*.yaml'))
 
+#: Every spec in the repository, the operator probes included. The symbol
+#: tables under `examples/symbols/` and the patches under a `variants/` folder
+#: are not specs and do not load as one.
+SPECS = [path for path in sorted(EXAMPLES.rglob('*.yaml')) if not {'symbols', 'variants'} & set(path.parts)]
+
 #: The shape of ``examples/dispatch.yaml`` as a dict a test can vary with
 #: :func:`varied`: no ``where:``, the constraint named ``balance``, and short
 #: names, so a test that prints it asserts on the math rather than on the
 #: example's own vocabulary.
 DISPATCH_MODEL: dict[str, Any] = {
-    'dimensions': {'snapshot': {'dtype': 'int'}, 'generator': {'dtype': 'str'}},
+    'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'generator': {'dtype': 'str'}},
     'parameters': {
         'p_max': {'dims': ['generator']},
         'cost': {'dims': ['generator']},
@@ -44,11 +48,11 @@ DISPATCH_MODEL: dict[str, Any] = {
 }
 
 #: Two dimensions, a relation between them, a numeric, a scalar, a boolean and a
-#: label parameter, a variable on each frame — one declaration of every kind
+#: label parameter, a variable on each frame — one entry of every kind
 #: a rule can name, and no objective, so a test adds what it judges. `p` and `r`
 #: share no dimension, which is what a rule about *different* dims needs.
 SMALL_MODEL: dict[str, Any] = {
-    'dimensions': {'g': {'dtype': 'str'}, 'h': {'dtype': 'str'}},
+    'dimensions': {'g': {'dtype': 'str', 'ordered': True}, 'h': {'dtype': 'str', 'ordered': True}},
     'relations': {'lk': {'key': 'g', 'values': 'h'}},
     'parameters': {
         'c': {'dims': ['g']},
@@ -70,14 +74,6 @@ BALANCE: dict[str, Any] = {
     'constraints': {'balance': {'dims': BUS_FRAME, 'expression': 'injection == 0'}},
 }
 
-#: The network: it declares `injection` as an empty sum, for the component
-#: fragments to add their terms to, and balances it.
-NETWORK: dict[str, Any] = {
-    'dimensions': BUS_DIMS,
-    'expressions': {'injection': {'dims': BUS_FRAME, 'empty': True, 'description': INJECTION}},
-    'constraints': {'balance': {'dims': BUS_FRAME, 'expression': 'injection == 0'}},
-}
-
 
 def varied(base: dict[str, Any], **patch: Any) -> dict[str, Any]:
     """A deep copy of ``base`` with dotted paths replaced, missing parents created.
@@ -94,7 +90,18 @@ def varied(base: dict[str, Any], **patch: Any) -> dict[str, Any]:
     return raw
 
 
-def schema_of(source: str | Path | dict[str, Any], **patch: Any) -> Spec:
+def section(markdown: str, title: str) -> str:
+    """The body under ``#### title``, up to the next heading of that level.
+
+    A split on the title alone carried every section after it, so a name
+    printed under the wrong heading still passed.
+    """
+    _, found, after = markdown.partition(f'#### {title}\n')
+    assert found, f'no section {title!r} printed'
+    return after.split('\n#### ', 1)[0]
+
+
+def spec_of(source: str | Path | dict[str, Any], **patch: Any) -> Spec:
     """A ``Spec`` from a YAML path, YAML text, or a raw dict, ``**patch`` applied by :func:`varied`.
 
     ``Path`` means a file, ``str`` means the YAML itself.
@@ -104,9 +111,9 @@ def schema_of(source: str | Path | dict[str, Any], **patch: Any) -> Spec:
 
 
 def expanded(source: str | Path | dict[str, Any] | Spec, *kinds: Any, **patch: Any) -> Spec:
-    """:func:`schema_of` with its formulations written out — what a consumer building rows reads from a model with a curve."""
-    schema = source if isinstance(source, Spec) else schema_of(source, **patch)
-    return schema.expand(*kinds)
+    """:func:`spec_of` with its formulations written out — what a consumer building rows reads from a model with a curve."""
+    spec = source if isinstance(source, Spec) else spec_of(source, **patch)
+    return spec.expand(*kinds)
 
 
 def raw_of(source: str | Path | dict[str, Any]) -> dict[str, Any]:
@@ -123,7 +130,7 @@ def expression_of(text: str, ns: Namespace, context: str) -> Expression:
     assert not isinstance(ast, ComparisonNode), 'a comparison is a constraint, which comparison_of reads'
     resolved = resolve_expression(ast, ns, context, errors)
     if errors:
-        raise SchemaError('\n'.join(errors))
+        raise ns.error(errors)
     assert resolved is not None
     return resolved
 
@@ -135,15 +142,15 @@ def comparison_of(text: str, ns: Namespace, context: str) -> tuple[Expression, s
     assert isinstance(ast, ComparisonNode), 'a value is an expression, which expression_of reads'
     left, right = (resolve_expression(side, ns, context, errors) for side in (ast.left, ast.right))
     if errors:
-        raise SchemaError('\n'.join(errors))
+        raise ns.error(errors)
     assert left is not None and right is not None
     return left, ast.op, right
 
 
 def where_of(text: str | None, ns: Namespace, context: str, self_variable: str | None = None) -> Mask | None:
-    """Parse and resolve one where string into the mask a declaration carries, raising every problem at once."""
+    """Parse and resolve one where string into the mask an entry carries, raising every problem at once."""
     errors: list[str] = []
-    resolved = resolve_where_text(text, ns, context, errors, self_variable)
+    resolved = resolve_condition_text(text, ns, context, errors, self_variable)
     if errors:
-        raise SchemaError('\n'.join(errors))
+        raise ns.error(errors)
     return mask_of(resolved)

@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec import LanguageError, merge, override, to_markdown, to_spec
-from mathspec.typesetting import FORMATS, typeset
+from mathspec import merge, override, to_markdown, to_spec
+from mathspec._typesetting import FORMATS, typeset
+from mathspec.errors import LanguageError
 from tests.fixtures import EXAMPLES
 from tools import gallery
 
@@ -45,10 +46,11 @@ def test_the_library_composes_into_one_model():
     assert sorted(spec.constraints) == ['Bus_nodal_balance', 'Generator_injection', 'Load_withdrawal'], (
         'the composition carries every row family of every fragment, and no other'
     )
-    assert not spec.given, 'each read is folded into the declaration that introduces it'
-    assert spec.objective is not None and spec.objective.expression == 'sum(Generator_p * Generator_marginal_cost)', (
-        "the one fragment that priced anything carries the composed spec's objective, as it wrote it"
+    assert not spec.given, 'each read is folded into the entry that introduces it'
+    assert spec.objective is not None and spec.objective.expression == 'total_cost', (
+        'the surface sets the objective on the sum the components add their cost to'
     )
+    assert spec.expressions['total_cost'].expression == 'Generator_cost', 'the one priced fragment is the one term'
 
 
 @pytest.mark.parametrize(

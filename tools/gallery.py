@@ -21,15 +21,16 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
-from mathspec import merge, override, to_spec, typeset_declaration
-from mathspec.program import Add, Constant, Named
-from mathspec.typesetting import to_markdown
-from tools._page import ROOT, sidecar_for, splice, tab, without_header
+from mathspec import merge, override, to_spec, typeset_line
+from mathspec._typesetting import to_markdown
+from mathspec.program import Add, Constant, ExpressionReference
+from tools._page import ROOT, sidecar_for, splice, split_math, tab, without_header
 from tools._page import main as page_main
 from tools.notation import equations
 from tools.spec_math import OPERATORS, PROBES, _section, rendered_probe
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
     from mathspec.spec import Spec
@@ -74,12 +75,21 @@ COMPOSED = {
     ),
 }
 
-#: Page -> the spec it shows one declaration at a time — its YAML, then the
+#: Page -> the spec it shows one entry at a time: its YAML, then the
 #: equation it renders, headed by the name the other side gives it, read from
-#: the declaration's own description.
+#: the entry's own description.
 DECLARED = {
-    'pypsa.md': ROOT / 'examples' / 'pypsa.yaml',
-    'pypsa_linearized_uc.md': ROOT / 'examples' / 'pypsa_linearized_uc.yaml',
+    'pypsa_ladder.md': ROOT / 'examples' / 'pypsa.yaml',
+}
+
+#: Page -> the base and the patch laid over it, shown one entry of the
+#: patch at a time — its YAML, then the line it prints in the patched spec.
+#: The rest of the patched spec is the base's page.
+PATCHED = {
+    'pypsa_linearized_uc.md': (
+        ROOT / 'examples' / 'pypsa.yaml',
+        ROOT / 'examples' / 'variants' / 'pypsa_linearized_uc.yaml',
+    ),
 }
 
 #: One PyPSA reference network per rung, run out of band with the versions
@@ -114,6 +124,8 @@ def symbols_for(model: Spec, table_path: Path = LIBRARY_SYMBOLS) -> dict[str, An
         *given.variables,
         *given.expressions,
         *given.constraints,
+        *model.conditions,
+        *given.conditions,
     }
     return {
         'notation': table['notation'],
@@ -130,26 +142,45 @@ def fragment_block(path: Path, table_path: Path) -> str:
 
 
 def split_index_block() -> str:
-    """The PyPSA split's two tables: each sum with the fragment that declares it and the terms, and each fragment.
+    """The PyPSA split's two tables: each sum with the fragment that reads it and the terms, and each fragment.
 
-    Both are read off the fragments, so the index cannot name a term or an
-    owner the files no longer have.
+    Both are read off the fragments, so the index cannot name a term or a
+    reader the files no longer have. The reader is the fragment that reads
+    the sum with its description and adds nothing to it.
     """
-    specs = {path.stem: to_spec(path) for path in sorted(PYPSA.glob('*.yaml'))}
-    owners: dict[str, tuple[str, tuple[str, ...]]] = {}
-    terms: dict[str, dict[str, str]] = {}
+    return split_index({path.stem: to_spec(path) for path in sorted(PYPSA.glob('*.yaml'))})
+
+
+def split_index(specs: Mapping[str, Spec]) -> str:
+    """The two tables for *specs*, each fragment under its name.
+
+    Raises:
+        ValueError: A sum that no fragment reads with a description while
+            adding nothing to it, so the index has no reader to name.
+    """
+    readers: dict[str, tuple[str, tuple[str, ...]]] = {}
+    terms: dict[str, list[tuple[str, str]]] = {}
     for name, spec in specs.items():
+        adds = {expression.adds_to for expression in spec.expressions.values() if expression.adds_to is not None}
+        for term, expression in spec.expressions.items():
+            if expression.adds_to is not None:
+                terms.setdefault(expression.adds_to, []).append((name, term))
         for hub, entry in spec.given.expressions.items():
-            if entry.term is not None:
-                terms.setdefault(hub, {})[name] = entry.term
-        for hub, block in spec.expressions.items():
-            if block.expression is None and not block.cases:
-                owners[hub] = (name, tuple(block.dims or ()))
-    sums = ['| Sum | Over | Declared in | The terms, by the fragment that adds each |', '| --- | --- | --- | --- |']
+            if entry.description and hub not in adds:
+                readers[hub] = (name, tuple(entry.dims))
+    if unread := sorted(set(terms) - set(readers)):
+        spelled = ', '.join(f'{hub!r}' for hub in unread)
+        msg = (
+            f'no fragment that reads {spelled} without adding to it describes it. '
+            f"Describe each under 'given: expressions:' in the fragment that reads it."
+        )
+        raise ValueError(msg)
+    sums = ['| Sum | Over | Read in | The terms, by the fragment that adds each |', '| --- | --- | --- | --- |']
     for hub, by_fragment in sorted(terms.items(), key=lambda item: -len(item[1])):
-        reader, dims = owners[hub]
-        cells = ', '.join(f'[`{term}`]({fragment}.md)' for fragment, term in sorted(by_fragment.items()))
-        sums.append(f'| `{hub}` | `{", ".join(dims)}` | [{reader}]({reader}.md) | {cells} |')
+        reader, dims = readers[hub]
+        cells = ', '.join(f'[`{term}`]({fragment}.md)' for fragment, term in sorted(by_fragment))
+        over = f'`{", ".join(dims)}`' if dims else 'scalar'
+        sums.append(f'| `{hub}` | {over} | [{reader}]({reader}.md) | {cells} |')
     files = [
         '| Fragment | Parameters | Variables | Constraints | Reads | Adds to |',
         '| --- | --- | --- | --- | --- | --- |',
@@ -157,7 +188,10 @@ def split_index_block() -> str:
     for name, spec in specs.items():
         given = spec.given
         reads = len(given.parameters) + len(given.variables) + len(given.expressions) + len(given.constraints)
-        adds = ', '.join(f'`{hub}`' for hub, entry in given.expressions.items() if entry.term is not None)
+        hubs = dict.fromkeys(
+            expression.adds_to for expression in spec.expressions.values() if expression.adds_to is not None
+        )
+        adds = ', '.join(f'`{hub}`' for hub in hubs)
         files.append(
             f'| [{name}]({name}.md) | {len(spec.parameters)} | {len(spec.variables)} | {len(spec.constraints)} '
             f'| {reads} | {adds} |'
@@ -204,8 +238,8 @@ def probe_block() -> str:
     return '\n\n'.join(parts)
 
 
-def declaration(text: str, section: str, name: str | None = None) -> str:
-    """One declaration as written: ``section:`` itself, or ``name:`` under it."""
+def entry(text: str, section: str, name: str | None = None) -> str:
+    """One entry as written: ``section:`` itself, or ``name:`` under it."""
     lines = text.splitlines()
     i = lines.index(f'{section}:')
     if name is not None:
@@ -218,59 +252,92 @@ def declaration(text: str, section: str, name: str | None = None) -> str:
 
 
 def _names_for(name: str, description: str | None) -> list[str]:
-    """Every other-side name a declaration stands for: the backticked tokens before the ` — ` of its description.
+    """Every other-side name an entry stands for: the backticked tokens before the ` — ` of its description.
 
-    One declaration answers to one PyPSA name as a rule; a block whose rows PyPSA
+    One entry answers to one PyPSA name as a rule; an entry whose rows PyPSA
     names differently by mode lists them all before the dash, the first canonical.
     """
     text = description or ''
     head = text.split(' — ', 1)[0] if ' — ' in text else (re.match(r'`[^`]+`', text) or [''])[0]
     names = re.findall(r'`([^`]+)`', head)
     if not names:
-        msg = (
-            f'{name}: a declaration on a declared page opens its description with the name it stands for, in backticks'
-        )
+        msg = f'{name}: the description does not start with a name in backticks. Start it with the name it stands for.'
         raise ValueError(msg)
     return names
 
 
 def _stands_for(name: str, description: str | None) -> str:
-    """The other side's canonical name for a declaration — the backticked opening of its description."""
+    """The other side's canonical name for an entry — the backticked opening of its description."""
     return _names_for(name, description)[0]
 
 
 def declared_block(path: Path) -> str:
-    """The legend, the objective, then every constraint and every named expression as YAML beside its equation."""
+    """The legend, then every entry that prints a line, as YAML beside that line, in the document's order."""
     text = without_header(path)
     model = to_spec(path)
-    page = to_markdown(model, symbols=sidecar_for(path), numbered=False)
-    legend = page[: page.index('#### Objective')].strip()
-    objective = _section(page, 'Objective').strip().removeprefix('#### Objective').strip()
-    equation = equations(_section(page, 'Subject to'))
-    definition = equations(_section(page[page.index('#### Objective') :], 'Definitions')) if model.expressions else {}
-    domains = _section(page, 'Variable domains').strip()
-    assumption = equations(_section(page, 'Assumptions')) if model.assumptions else {}
-    parts = [legend, f'### Objective\n\n```yaml\n{declaration(text, "objective")}\n```\n\n{objective}']
-    for name, block in model.constraints.items():
-        printed = equation[name]
-        if _reads_a_sum(model, name):
-            line = typeset_declaration(model, name, 'markdown', symbols=sidecar_for(path), inline_expressions=True)
-            printed = f'```math\n{line}\n```'
-        parts.append(
-            f'### `{_stands_for(name, block.description)}`\n\n'
-            f'`{name}`\n\n'
-            f'```yaml\n{declaration(text, "constraints", name)}\n```\n\n'
-            f'{printed}'
-        )
+    legend, math = split_math(model, symbols=sidecar_for(path), numbered=False)
+    objective = _section(math, 'Objective').strip().removeprefix('#### Objective').strip()
+    equation = equations(_section(math, 'Subject to'))
+    definition = equations(_section(math, 'Definitions')) if model.expressions else {}
+    defined = equations(_section(math, 'Conditions')) if model.conditions else {}
+    domains = _section(math, 'Variable domains').strip()
+    assumption = equations(_section(math, 'Assumptions')) if model.assumptions else {}
+    parts = [legend.strip()]
     parts.extend(
-        f'### `{name}`\n\n```yaml\n{declaration(text, "expressions", name)}\n```\n\n{definition[name]}'
-        for name in model.expressions
+        f'### `{name}`\n\n```yaml\n{entry(text, "conditions", name)}\n```\n\n{defined[name]}'
+        for name in model.conditions
     )
     parts.append(domains)
     parts.extend(
-        f'### `{name}`\n\n```yaml\n{declaration(text, "assumptions", name)}\n```\n\n{assumption[name]}'
+        f'### `{name}`\n\n```yaml\n{entry(text, "expressions", name)}\n```\n\n{definition[name]}'
+        for name in model.expressions
+    )
+    parts.append(f'### Objective\n\n```yaml\n{entry(text, "objective")}\n```\n\n{objective}')
+    for name, constraint in model.constraints.items():
+        printed = equation[name]
+        if _reads_a_sum(model, name):
+            line = typeset_line(model, name, 'markdown', symbols=sidecar_for(path), inline_expressions=True)
+            printed = f'```math\n{line}\n```'
+        parts.append(
+            f'### `{_stands_for(name, constraint.description)}`\n\n'
+            f'`{name}`\n\n'
+            f'```yaml\n{entry(text, "constraints", name)}\n```\n\n'
+            f'{printed}'
+        )
+    parts.extend(
+        f'### `{name}`\n\n```yaml\n{entry(text, section, name)}\n```\n\n{equation[name]}'
+        for section, group in (('sos', model.sos), ('piecewise', model.piecewise))
+        for name in group
+    )
+    parts.extend(
+        f'### `{name}`\n\n```yaml\n{entry(text, "assumptions", name)}\n```\n\n{assumption[name]}'
         for name in model.assumptions
     )
+    return '\n\n'.join(parts)
+
+
+def patched_block(base: Path, patch: Path) -> str:
+    """The patch's description, then every entry it writes as YAML beside the line it prints once laid over *base*."""
+    text = without_header(patch)
+    model = override(base, [patch])
+    written = yaml.safe_load(text)
+    headings = {
+        'variables': {name: _stands_for(name, variable.description) for name, variable in model.variables.items()},
+        'constraints': {
+            name: _stands_for(name, constraint.description) for name, constraint in model.constraints.items()
+        },
+        'assumptions': {name: name for name in model.assumptions},
+    }
+    parts = [model.description]
+    for section, heading_of in headings.items():
+        for name in written.get(section, {}):
+            line = typeset_line(model, name, 'markdown', symbols=sidecar_for(base), inline_expressions=False)
+            parts.append(
+                f'### `{heading_of[name]}`\n\n'
+                f'`{name}`\n\n'
+                f'```yaml\n{entry(text, section, name)}\n```\n\n'
+                f'```math\n{line}\n```'
+            )
     return '\n\n'.join(parts)
 
 
@@ -289,10 +356,10 @@ def _reads_a_sum(model: Spec, name: str) -> bool:
     row = model.program.constraints[name]
     lhs, rhs = row.lhs, row.rhs
     return (
-        isinstance(lhs, Named)
+        isinstance(lhs, ExpressionReference)
         and isinstance(rhs, Constant)
         and rhs.value == 0
-        and all(isinstance(term, Named) for term in _summands(lhs.body))
+        and all(isinstance(term, ExpressionReference) for term in _summands(lhs.body))
         and len(_summands(lhs.body)) > 1
     )
 
@@ -365,6 +432,8 @@ def block(page: str) -> str:
         return probe_block()
     if page in DECLARED:
         return declared_block(DECLARED[page])
+    if page in PATCHED:
+        return patched_block(*PATCHED[page])
     if page in COMPOSED:
         return composed_block(*COMPOSED[page])
     if page == SPLIT_INDEX:
@@ -378,13 +447,13 @@ def block(page: str) -> str:
 
 def rendered(page: str, text: str) -> str:
     text = splice(text, BEGIN, END, block(page))
-    if page in DECLARED:
+    if page in DECLARED or page in PATCHED:
         text = with_references(text)
     return text
 
 
 def pages() -> list[str]:
-    return [*MODELS, *COMPOSED, *DECLARED, 'operators.md', SPLIT_INDEX]
+    return [*MODELS, *COMPOSED, *DECLARED, *PATCHED, 'operators.md', SPLIT_INDEX]
 
 
 def main(argv: list[str] | None = None) -> int:

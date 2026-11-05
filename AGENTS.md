@@ -43,7 +43,8 @@ To learn what the project _is_, read [docs/](docs/index.md), and
   deprecation cycle, `legacy_` path, or hand-written message for the old
   spelling. A test asserting the old behaviour is not a blocker; say in the PR
   where its coverage moved. A release that breaks a file or an import raises
-  the minor version, and its notes name the break.
+  the minor version, and its notes name the break. Every other release raises
+  the patch version, features included.
 - **Every `feat`, `fix`, `perf`, `refactor`, `docs` or `revert` PR adds its
   title under `## Upcoming version` in `CHANGELOG.md`**, with a link to the PR.
   The label `no changelog` opts one out; only the user sets it.
@@ -60,11 +61,11 @@ To learn what the project _is_, read [docs/](docs/index.md), and
   ```
 
 - **The version comes from the git tag.** Never write it into a file.
-- **Triage a language construct before designing it**: primitive, macro, or
+- **Triage a language construct before designing it**: operator, macro, or
   refused, against [limits.md](docs/about/limits.md). Whatever the loader
   admits, the typesetter prints in all three formats.
 - **Everything decidable without data is decided at load**, and the error
-  names the rewrite. `tests/test_validation.py` holds messages to that.
+  suggests the rewrite. `tests/test_validation.py` holds messages to that.
 
 ## Environment and gates
 
@@ -103,7 +104,7 @@ To learn what the project _is_, read [docs/](docs/index.md), and
   a tolerance, an absence.
 
   ```python
-  assert names == ['bus', 'snapshot', 'tech'], 'dimensions come back sorted, not in declaration order'
+  assert names == ['bus', 'snapshot', 'tech'], 'dimensions come back sorted, not in file order'
   ```
 
 - **Parametrize cases, with `id` as the label.** Not five `pytest.raises` in
@@ -185,6 +186,8 @@ closed and re-filed, not annotated.
 
 ## Prose
 
-Plain declarative sentences, Simplified Technical English (ASD-STE100), in
-pages, issues, PRs, commits and conversation. Documentation pages follow
+Plain declarative sentences in pages, issues, PRs, commits and conversation.
+All of them follow [the prose-writing skill](.claude/skills/prose-writing/SKILL.md),
+which names the published style guides that gate them.
+Documentation pages also follow
 [the docs-writing skill](.claude/skills/docs-writing/SKILL.md).

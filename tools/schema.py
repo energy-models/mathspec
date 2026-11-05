@@ -21,7 +21,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-from mathspec import Spec
+from mathspec.spec import Spec
 
 PATH = Path(__file__).resolve().parent.parent / 'schema' / 'mathspec.schema.json'
 DIALECT = 'https://json-schema.org/draft/2020-12/schema'
@@ -44,7 +44,7 @@ def _canonical(node: Any) -> Any:
       allows it unwrapped and newer pydantic writes it so;
     - ``additionalProperties: true`` is dropped — it is the dialect's default,
       which newer pydantic spells out on an open mapping and older leaves
-      implicit. The ``false`` every strict block carries is kept.
+      implicit. The ``false`` every strict spec class carries is kept.
     """
     if isinstance(node, list):
         return [_canonical(v) for v in node]

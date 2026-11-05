@@ -1,0 +1,74 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 256" width="760" height="256" style="max-width: 100%; height: auto" role="img" aria-labelledby="ash-t ash-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="ash-t">A shift without edge leaves the first position absent</title>
+  <desc id="ash-d">The variable x along the ordered dimension snapshot is a table with three rows: x of 1, x of 2 and x of 3. The expression shift of x along snapshot with offset 1 is a table in which snapshot 2 has x of 1 and snapshot 3 has x of 2. Snapshot 1 has no row, because nothing shifts in there, so the expression is absent at snapshot 1.</desc>
+  <defs>
+    <marker id="ash-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,154 H176 V211 A3,3 0 0 1 173,214 H19 A3,3 0 0 1 16,211 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M16,154 V135 A3,3 0 0 1 19,132 H173 A3,3 0 0 1 176,135 V154 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M324,154 H574 V221 A3,3 0 0 1 571,224 H327 A3,3 0 0 1 324,221 Z M328,158 V180 H570 V158 Z" fill="#009E73" fill-opacity="0.08" fill-rule="evenodd"/>
+    <path d="M324,154 V135 A3,3 0 0 1 327,132 H571 A3,3 0 0 1 574,135 V154 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
+      <text x="16" y="28">dimensions:</text>
+      <text x="31" y="46">snapshot: { dtype: int, <tspan font-weight="bold">ordered: true</tspan> }</text>
+      <text x="16" y="64">variables:</text>
+      <text x="31" y="82">x: { dims: [snapshot] }</text>
+    </g>
+    <text x="16" y="122" font-weight="bold">x</text>
+    <text x="30" y="122" fill-opacity="0.7">a variable</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="146" font-weight="bold">snapshot</text>
+      <text x="110" y="146" font-weight="bold">value</text>
+      <text x="24" y="170">1</text><text x="110" y="170">x[1]</text>
+      <text x="24" y="188">2</text><text x="110" y="188">x[2]</text>
+      <text x="24" y="206">3</text><text x="110" y="206">x[3]</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="132" width="160" height="82" rx="3"/>
+    <line x1="16" y1="154" x2="176" y2="154"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#ash-arrow)">
+    <path d="M186,166 C240,166 250,194 298,194 H316"/>
+    <path d="M186,184 C240,184 250,212 298,212 H316"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="198" y="146">offset=1</text>
+    <text x="198" y="228" fill-opacity="0.7">each value moves</text>
+    <text x="198" y="243" fill-opacity="0.7">one position on</text>
+  </g>
+  <g fill="currentColor">
+    <text x="324" y="122" font-weight="bold" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">shift(x, along=snapshot, offset=1)</text>
+    <text x="580" y="122" fill-opacity="0.7">an expression</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="332" y="146" font-weight="bold">snapshot</text>
+      <text x="418" y="146" font-weight="bold">value</text>
+      <text x="332" y="173">1</text>
+      <text x="332" y="198">2</text><text x="418" y="198">x[1]</text>
+      <text x="332" y="216">3</text><text x="418" y="216">x[2]</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="324" y="132" width="250" height="92" rx="3"/>
+    <line x1="324" y1="154" x2="574" y2="154"/>
+    <rect x="328" y="158" width="242" height="22" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="418" y="173" fill-opacity="0.7" font-style="italic">no row: nothing shifts in</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="600" y="138" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="620" y="149">absent: no row</text>
+  </g>
+</svg>

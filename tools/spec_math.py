@@ -16,8 +16,7 @@ from __future__ import annotations
 
 import re
 
-from mathspec.typesetting import to_markdown
-from tools._page import ROOT, inlined, splice
+from tools._page import ROOT, inlined, splice, split_math
 from tools._page import main as page_main
 
 PAGE = ROOT / 'docs' / 'reference' / 'language' / 'operators.md'
@@ -30,20 +29,20 @@ OPERATORS = {
     'sum(array)': 'sum_all',
     'sum(array, over=dim)': 'sum',
     'sum(array, over=[a, …])': 'sum_list',
-    'sum(array, by=relation, over=a, into=b)': 'sum_by',
-    'sum(array, by=relation, over=a, into=b), joining on the rest of the key': 'sum_by_columns',
-    'sum(array, by=relation, over=[a, …], into=[b, …])': 'sum_by_column_lists',
-    'at(array, by=relation, over=a, into=b)': 'at',
-    'at(array, by=relation, over=a, into=b), two columns over one dimension': 'at_columns',
+    'sum(array, over=dim, by=relation[c])': 'sum_by',
+    'sum(array, over=dim, by=relation[c]), joining on the rest of the key': 'sum_by_columns',
+    'sum(array, over=[dim, …], by=relation[c, …])': 'sum_by_column_lists',
+    'at(array, by=relation[c])': 'at',
+    'at(array, by=relation[c]), two columns over one dimension': 'at_columns',
     'shift(array, along=dim, offset=n)': 'shift',
     "shift(array, along=dim, offset=n, edge='wrap')": 'shift_wrap',
     'shift(array, along=dim, offset=n, edge=v)': 'shift_edge',
     'shift(array, along=dim, offset=p, edge=…)': 'shift_by_parameter',
-    'shift(array, along=dim, offset=n, by=relation, within=c)': 'shift_partitioned',
+    'shift(array, along=dim, offset=n, within=relation[c])': 'shift_partitioned',
     'sum_back(array, along=dim, window=n)': 'sum_back',
     'sum_back(array, along=dim, window=p)': 'sum_back_by_parameter',
     "sum_back(array, along=dim, window=p, edge='wrap')": 'sum_back_wrap',
-    'sum_back(array, along=dim, window=n, by=relation, within=c)': 'sum_back_partitioned',
+    'sum_back(array, along=dim, window=n, within=relation[c])': 'sum_back_partitioned',
     'dual(constraint)': 'dual',
 }
 
@@ -63,12 +62,11 @@ def rendered_probe(name: str) -> tuple[str, list[str]]:
     definition, whose constraint is scaffolding for the reference. The
     assertion says so rather than silently taking the first of several.
     """
-    page = to_markdown(PROBES / f'{name}.yaml', numbered=False)
-    math = page[page.index('#### Objective') :]
+    legend, math = split_math(PROBES / f'{name}.yaml', numbered=False)
     title = 'Definitions' if '#### Definitions' in math else 'Subject to'
     equations = re.findall(r'^```math\n.+?\n```$', _section(math, title), re.DOTALL | re.MULTILINE)
     assert len(equations) == 1, f'{name}.yaml should feature exactly one equation; it rendered {len(equations)}'
-    notes = [block.strip() for block in page.split('\n\n') if 'denotes' in block]
+    notes = [block.strip() for block in legend.split('\n\n') if 'denotes' in block]
     return inlined(equations[0]), notes
 
 

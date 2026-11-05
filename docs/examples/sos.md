@@ -31,6 +31,7 @@ dimensions:
   bp:
     description: breakpoints of the cost curve
     dtype: int
+    ordered: true
 
 parameters:
   capacity:
@@ -109,7 +110,19 @@ A piecewise-linear cost curve stated as a special-ordered set, so the solver is 
 | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{T} \times \mathcal{G}`$ — dispatched power |
 | $`\mathit{op\_cost}`$ | `op_cost` over $`\mathcal{T} \times \mathcal{G}`$ — operating cost, piecewise-linear in dispatch |
 
-Upright is what the data supplies — a parameter such as $`\mathrm{capacity}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{dispatch}`$. An index is italic too, being what a quantifier chooses, and a set is script.
+#### Variable domains
+
+**`dispatch`**
+
+```math
+0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+**`op_cost`**
+
+```math
+\mathit{op\_cost}_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
 
 #### Objective
 
@@ -129,20 +142,6 @@ Upright is what the data supplies — a parameter such as $`\mathrm{capacity}`$,
 
 ```math
 \left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
-#### Variable domains
-
-**`dispatch`**
-
-```math
-0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
-**`op_cost`**
-
-```math
-\mathit{op\_cost}_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 #### Assumptions

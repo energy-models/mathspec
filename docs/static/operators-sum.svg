@@ -1,0 +1,87 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 709 222" width="709" height="222" style="max-width: 100%; height: auto" role="img" aria-labelledby="osu-t osu-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="osu-t">A nodal balance sums each kind of component by bus</title>
+  <desc id="osu-d">The relation gen_bus puts the generators wind and gas on bus north, and solar on bus south. The relations line_from and line_to give the line l1 from north to south. The constraint nodal_balance has one row per bus. At north it adds p of wind and p of gas, and subtracts f of l1. At south it adds p of solar and f of l1.</desc>
+  <defs>
+    <pattern id="osu-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="osu-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,56 H163.5 V115 A3,3 0 0 1 160.5,118 H19 A3,3 0 0 1 16,115 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,56 V37 A3,3 0 0 1 19,34 H160.5 A3,3 0 0 1 163.5,37 V56 Z" fill="#0072B2" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="24" font-weight="bold">gen_bus</text>
+    <text x="79" y="24" fill-opacity="0.7">a relation</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="48" font-weight="bold">generator</text>
+      <text x="112" y="48" font-weight="bold">bus</text>
+      <text x="24" y="72">wind</text><text x="112" y="72">north</text>
+      <text x="24" y="90">gas</text><text x="112" y="90">north</text>
+      <text x="24" y="108">solar</text><text x="112" y="108">south</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="34" width="148" height="84" rx="3"/>
+    <line x1="16" y1="56" x2="164" y2="56"/>
+  </g>
+  <g stroke="none">
+    <path d="M16,184 H268.5 V207 A3,3 0 0 1 265.5,210 H19 A3,3 0 0 1 16,207 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,184 V165 A3,3 0 0 1 19,162 H265.5 A3,3 0 0 1 268.5,165 V184 Z" fill="#0072B2" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="152" font-weight="bold">line_from, line_to</text>
+    <text x="163" y="152" fill-opacity="0.7">two relations</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="176" font-weight="bold">line</text>
+      <text x="75" y="176" font-weight="bold">from</text>
+      <text x="134" y="176" font-weight="bold">to</text>
+      <text x="24" y="200">l1</text><text x="75" y="200">north</text><text x="134" y="200">south</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="162" width="252" height="48" rx="3"/>
+    <line x1="16" y1="184" x2="268" y2="184"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2">
+    <path d="M170,87 H278.5"/>
+    <path d="M274,197 H278.5"/>
+    <path d="M278.5,87 V197"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#osu-arrow)">
+    <path d="M278.5,122.0 L431.5,122.0"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="290" y="116">sum(…, by=…[bus])</text>
+    <text x="290" y="138" fill-opacity="0.7">one sum per bus</text>
+  </g>
+  <g stroke="none">
+    <path d="M443.5,100.0 H699.2 V141.0 A3,3 0 0 1 696.2,144.0 H446.5 A3,3 0 0 1 443.5,141.0 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M443.5,100.0 V81.0 A3,3 0 0 1 446.5,78.0 H696.2 A3,3 0 0 1 699.2,81.0 V100.0 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="443.5" y="68.0" font-weight="bold">nodal_balance</text>
+    <text x="552" y="68.0" fill-opacity="0.7">a constraint</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="452" y="92.0" font-weight="bold">bus</text>
+      <text x="510" y="92.0" font-weight="bold">left side</text>
+      <text x="452" y="116.0">north</text><text x="510" y="116.0">p[wind] + p[gas] − f[l1]</text>
+      <text x="452" y="134.0">south</text><text x="510" y="134.0">p[solar] + f[l1]</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="443.5" y="78.0" width="256" height="66" rx="3"/>
+    <line x1="443.5" y1="100.0" x2="699" y2="100.0"/>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+  </g>
+  <g fill="currentColor" font-size="12">
+  </g>
+</svg>
