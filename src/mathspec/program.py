@@ -660,7 +660,7 @@ class Dimension:
     value column against ``Parameter.dtype``. It is ``str`` when the file lists the labels under ``one_of``.
     """
     one_of: tuple[str, ...] | None = None
-    """The labels that the file lists under ``one_of:``, in file order, or ``None`` when it lists none. With data attached,
+    """The labels that the file lists under ``one_of:``, sorted by name, or ``None`` when it lists none. With data attached,
     a tool refuses any other label, in the table of the dimension and in every relation column over it.
     """
     ordered: bool = False

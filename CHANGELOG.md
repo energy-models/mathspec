@@ -14,7 +14,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 - feat(spec)!: a spec loads sorted, frozen and canonical ([#924](https://github.com/energy-models/mathspec/pull/924))
   - Breaks the spec API: a field cannot be set and a section cannot gain or lose an entry, so change a spec with `override(spec, [patch])`. A list is a tuple and a section is a `Frozen` mapping, not a `dict`.
-  - Sorted by name at load: entries, `dims:` lists, relation columns, `cases:` and a macro's `kwargs:`.
+  - Sorted by name at load: entries, `dims:` lists, relation columns, `cases:`, a macro's `kwargs:` and a dimension's `one_of:`.
   - Breaks the program API: `Mask.dims` is a sorted tuple, not a `frozenset`. `Relation.columns` lists the key first, each side sorted by role. Every `dims` and `frame` is sorted by name, so result layouts change.
   - Breaks a patch: over a dimension or a relation its base declares, a patch may write only `description`, `ordered` and `missing`, or else declares the whole entry.
   - `to_yaml()` writes the fields the file wrote, plus `version:`. The canonical form writes no defaults and reprints every condition from its parsed tree.

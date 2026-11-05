@@ -339,8 +339,11 @@ class DimensionSpec(_StrictSpec):
     _label: ClassVar[str] = 'a dimension entry'
 
     dtype: DimensionDtype = 'str'
-    one_of: Annotated[tuple[str, ...], Field(min_length=1, json_schema_extra={'uniqueItems': True})] | None = None
-    """The labels a ``str`` dimension allows, at least one and each once, in file order. At load, mathspec refuses a
+    one_of: (
+        Annotated[Listed[str], Field(min_length=1, json_schema_extra={'uniqueItems': True}), AfterValidator(_sorted)]
+        | None
+    ) = None
+    """The labels a ``str`` dimension allows, at least one and each once, sorted by name. At load, mathspec refuses a
     condition that compares the dimension, or a relation column over it, with any other label.
     """
     ordered: bool = False

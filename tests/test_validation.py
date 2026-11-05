@@ -549,10 +549,10 @@ class TestADimensionWithOneOf:
         with pytest.raises(ValidationError, match=refusal):
             DimensionSpec(one_of=labels)
 
-    def test_the_program_carries_one_of_and_the_dtype_str(self):
-        dimension = _spec(**_ONE_OF).program.dimensions['h']
+    def test_the_program_carries_one_of_sorted_and_the_dtype_str(self):
+        dimension = _spec(**{'dimensions.h': {'one_of': ['south', 'north']}}).program.dimensions['h']
         assert (dimension.dtype, dimension.one_of) == ('str', ('north', 'south')), (
-            'the labels in file order, and str wherever a dtype is read'
+            'the labels sorted by name, and str wherever a dtype is read'
         )
 
     @pytest.mark.parametrize(

@@ -88,6 +88,9 @@ A `one_of` list meets four rules:
   `dtype`.
 - In every other rule, the dimension is an ordinary `str` dimension.
 
+The order of the list changes nothing. mathspec sorts it by name at load, so
+`one_of: [wind, ccgt, ocgt]` declares the same dimension.
+
 At load, mathspec refuses a [condition](expressions.md#conditions) that
 compares the dimension, or a relation column over it, against a label that is
 not in the list. With `carrier_of == 'gnrtr'` in place of `'wind'` above, mathspec prints:
