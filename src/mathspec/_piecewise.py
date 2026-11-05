@@ -451,22 +451,29 @@ def resolve_walks(name: str, pw: PiecewiseSpec, ns: Namespace, errors: list[str]
     for key, link in pw.links.items():
         if link.by is None:
             continue
-        context = f"piecewise '{name}' link '{key}'"
-        resolver = ExpressionResolver(ns, context, errors)
-        if (columns := _columns_of(link.by)) is None:
-            errors.append(
-                f'{context}: by: {link.by!r} is not a relation with its columns in brackets. Write '
-                f'by: <relation>[<column>], as in at(..., by=).'
-            )
-            failed = True
-        elif (problem := resolver.not_a_relation(columns.relation, 'at', 'by')) is not None:
-            errors.append(problem)
-            failed = True
-        elif (walk := resolver.lookup(columns, weights)) is None:
+        resolver = ExpressionResolver(ns, f"piecewise '{name}' link '{key}'", errors)
+        columns = walked_columns(link.by, resolver)
+        if columns is None or (walk := resolver.lookup(columns, weights)) is None:
             failed = True
         else:
             walks[key] = walk
     return None if failed else walks
+
+
+def walked_columns(by: str, resolver: ExpressionResolver) -> ColumnsNode | None:
+    """A ``by:`` key as ``at(..., by=)`` reads it, or ``None`` with its refusal appended to *resolver*'s errors.
+
+    The expansion pastes *by* into an ``at`` call as text, so anything but
+    ``relation[column, ...]`` is refused before the text is read, and the
+    columns are then held to every rule ``at`` holds them to.
+    """
+    if (columns := _columns_of(by)) is None:
+        resolver.errors.append(
+            f'{resolver.context}: by: {by!r} is not a relation with its columns in brackets. Write '
+            f'by: <relation>[<column>], as in at(..., by=).'
+        )
+        return None
+    return resolver.columns_ref(columns, 'at', 'by')
 
 
 def _columns_of(text: str) -> ColumnsNode | None:

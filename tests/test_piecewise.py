@@ -951,6 +951,21 @@ def _walk(**written: object) -> dict[str, object]:
         pytest.param(_walk(by='generator_of'), 'is not a relation with its columns', id='a-walk-naming-no-column'),
         pytest.param(_walk(by='generator_of[]'), 'is not a relation with its columns', id='an-empty-column-list'),
         pytest.param(
+            _walk(by='generator_of[generator]) * (2'),
+            'is not a relation with its columns',
+            id='a-walk-closing-the-call-early',
+        ),
+        pytest.param(
+            _walk(by='generator_of[generator]) + (power'),
+            'is not a relation with its columns',
+            id='a-walk-adding-a-term',
+        ),
+        pytest.param(
+            _walk(by='generator_of[snapshot]'),
+            r"at\(by=generator_of\[snapshot\]\) names \['snapshot'\], which is no column of 'generator_of'",
+            id='a-walk-naming-a-column-the-relation-lacks',
+        ),
+        pytest.param(
             {'piecewise.coupling.dims': ['generator', 'snapshot', 'bp']},
             'breakpoint dim',
             id='dims-carrying-the-breakpoint-dim',
