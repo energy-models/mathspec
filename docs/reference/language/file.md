@@ -33,8 +33,8 @@ declares only `dimensions:` loads.
 The order of the sections, and the order of the entries in a section, change
 nothing. `to_spec` sorts the entries of each section by name, and the entries
 under each kind of `given:` too. The program, the typeset document and
-`to_yaml()` list them in that order, so a file that declares `p` before `flow`
-under `variables:` prints `flow` first.
+`to_yaml()` list them in that order. Where a file declares `p` before `flow`
+under `variables:`, the typesetter prints `flow` first.
 
 ## `version`
 

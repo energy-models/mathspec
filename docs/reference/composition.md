@@ -431,8 +431,7 @@ patched `dispatch` has no row at `old`.
 | a named expression as a [bare string](language/named.md#expressions) | replaces only its body, `expression:` or `cases:`, and keeps its `dims:`, description and `adds_to:`, so the new body may have no dimension outside those `dims:`              |
 | `null` on an entry, a field or a section                             | applies the rule in [`null` in a patch](#null-in-a-patch)                                                                                                                      |
 | a dimension or a relation                                            | adds it, or accepts it restated as the base declares it, field by field, where a field left out equals its default                                                             |
-| only `description`, `ordered` or `missing` on a restated entry       | changes only those fields ([a dimension restated differently](#a-dimension-restated-differently))                                                                              |
-| `description:` on a restated dimension or relation                   | replaces the description of the base, and `null` removes it                                                                                                                    |
+| `description:` on a dimension or a relation of the base              | replaces the description of the base, alone or with other fields, and `null` removes it                                                                                        |
 | `ordered:` on a restated dimension                                   | makes the dimension ordered for `true`, and refuses `false` over an ordered dimension                                                                                          |
 | `missing:` on a relation, alone or with other fields                 | changes whether every key combination needs a row, as on a parameter                                                                                                           |
 | an entry under one kind of `given:`                                  | edits, adds or removes it like any entry, and keeps the other kinds                                                                                                            |
@@ -512,12 +511,14 @@ patch 'project.yaml' edits the constraint 'power_balnce', which its base does no
 
 ### A dimension restated differently
 
+Over a dimension or a relation that its base declares, a patch may change
+only `description`, a dimension's `ordered` and a relation's `missing`. A patch
+that writes any other field restates the entry. Every other field must then be
+as the base declares it, and a field the patch leaves out equals its default.
+
 Here `relabelled.yaml` writes `snapshot: {dtype: str}` over a base that
 declares `snapshot: {dtype: int}`. `override` refuses the patch because the
-two `dtype` values differ. Over a dimension or a relation that its base
-declares, a patch may change only `description`, `ordered` and `missing`. A
-patch that writes any other field declares the whole entry, and a field it
-leaves out reads as its default:
+two `dtype` values differ:
 
 ```text
 patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch may change only `description` and `ordered` of a dimension its base declares, because the math in the base is already written over it. Every other field must be as the base declares it, and a field the patch leaves out reads as its default. Restate the dimension as its base declares it, leave it out, or give the patch a dimension of its own under a name of its own.

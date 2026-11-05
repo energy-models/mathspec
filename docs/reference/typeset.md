@@ -167,7 +167,7 @@ Named expressions, named conditions, curves and assumptions each print in a
 form of their own:
 
 - The typesetter prints the symbol of a named expression in each equation
-  that contains it, and its body once, sorted by name, under Definitions. With
+  that contains it, and its body once under Definitions, in name order. With
   [`inline_expressions`](cli.md#latex-markdown-and-typst), the typesetter
   substitutes each named expression into its equations. Under either
   setting, the typesetter prints the definition line of an expression with

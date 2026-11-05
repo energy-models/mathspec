@@ -35,9 +35,8 @@ labels in no order. `sum(dispatch, over=generator)` removes `generator`, so
 
 The order of the keys under `dimensions:`, and the order of a `dims:` list,
 change nothing. mathspec sorts both by name at load, and an entry is indexed
-over its dimensions in that order: `dispatch` above prints as
-$`\mathit{dispatch}_{g,t}`$, and the legend lists `generator` before
-`snapshot`.
+over its dimensions in that order. So `dispatch` above prints as
+$`\mathit{dispatch}_{g,t}`$, and the legend lists `generator` first.
 
 | Key           | What it sets                                                                | Default |
 | ------------- | --------------------------------------------------------------------------- | ------- |

@@ -12,12 +12,12 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(spec)!: a spec loads sorted, frozen and canonical ([#924](https://github.com/energy-models/mathspec/pull/924))
-  - Breaks the spec API: a field cannot be set and a section cannot gain or lose an entry, so change a spec with `override(spec, [patch])`. A list is a tuple and a section is a `Frozen` mapping, not a `dict`.
+- feat(spec)!: a loaded spec is sorted and read-only ([#924](https://github.com/energy-models/mathspec/pull/924))
   - Sorted by name at load: entries, `dims:` lists, relation columns, `cases:`, a macro's `kwargs:` and a dimension's `one_of:`.
-  - Breaks the program API: `Mask.dims` is a sorted tuple, not a `frozenset`. `Relation.columns` lists the key first, each side sorted by role. Every `dims` and `frame` is sorted by name, so result layouts change.
-  - Breaks a patch: over a dimension or a relation its base declares, a patch may write only `description`, `ordered` and `missing`, or else declares the whole entry.
-  - `to_yaml()` writes the fields the file wrote, plus `version:`. The canonical form writes no defaults and reprints every condition from its parsed tree.
+  - Breaks the spec API: a section is a read-only `Frozen` mapping, not a `dict`, a list is a tuple, and no field can be set. Change a spec with `override(spec, [patch])`.
+  - Breaks the program API: `Sealed` is now `Frozen`. `Mask.dims` is a sorted tuple, not a `frozenset`. `Relation.columns` lists the key first, each side sorted by role. Every `dims` and `frame` is sorted by name, so the layout of a result changes.
+  - Breaks a patch: over a dimension or a relation of its base, it may change only `description`, `ordered` and `missing`. Any other field restates the whole entry.
+  - Breaks `to_yaml()`: it writes only the fields the file wrote, plus `version:`. The canonical form writes no default, and prints every `where:`, `when:`, `condition:` and `holds:` from its parsed tree.
 - fix(api): the API pages describe every public attribute of a spec and a program ([#978](https://github.com/energy-models/mathspec/pull/978))
 - docs(examples): units connect to buses through numbered ports that one relation lists, and only the output ports have an efficiency ([#948](https://github.com/energy-models/mathspec/pull/948))
 - feat(language): a parameter may declare the coordinates it has with `where:`, and outside them it is absent ([#945](https://github.com/energy-models/mathspec/pull/945))

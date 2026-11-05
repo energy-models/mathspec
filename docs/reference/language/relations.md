@@ -52,8 +52,8 @@ Relation 'zp' names column 'period' after dimension 'period', but the column is 
 mathspec suggests one rewrite, which is to rename the column.
 
 The order of the columns under `key:` and under `values:` changes nothing. The
-key's columns come first, and each side is sorted by column name. The typeset
-legend prints the table in that order, so `connection` above prints as
+key's columns come first, and each side is sorted by column name. The
+typesetter prints the columns in that order, so `connection` above prints as
 $`\mathrm{connection} \subseteq \mathcal{B} \times \mathcal{G}`$.
 
 ### Cardinalities

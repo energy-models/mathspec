@@ -54,8 +54,8 @@ constraints:
     expression: sum(dispatch, over=generator) == load
 ```
 
-The sections come in a fixed order, the names within a section and the `dims`
-of `dispatch` are sorted, and a field at its default, such as `dtype: str` or
+The sections come in a fixed order, and the names within a section and the
+`dims` of `dispatch` are sorted. A field at its default, such as `dtype: str` or
 `sense: minimize`, is left out. The objective is `sum(cost * dispatch)`, although the file has
 `sum(dispatch * cost)`, because mathspec writes the factors of a product in a
 fixed order.

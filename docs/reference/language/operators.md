@@ -284,7 +284,7 @@ objective: { sense: minimize, expression: sum(order) }
 ```
 
 ```math
-\mathit{order}_{t,m \boxminus_{0} \mathrm{lead}} \ge \mathrm{demand}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}
+\mathit{order}_{m \boxminus_{0} \mathrm{lead},t} \ge \mathrm{demand}_{m,t} \qquad \forall\, m \in \mathcal{M},\ t \in \mathcal{T}
 ```
 
 <figure class="diagram">
@@ -360,7 +360,7 @@ objective: { sense: minimize, expression: sum(on) }
 ```
 
 ```math
-\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < \mathrm{min\_up}} \mathit{started}_{u,h'} \le \mathit{on}_{u,h} \qquad \forall\, u \in \mathcal{U},\ h \in \mathcal{H}
+\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < \mathrm{min\_up}} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}
 ```
 
 <figure class="diagram">

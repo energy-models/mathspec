@@ -14,9 +14,7 @@ describes what each object contains, and what a tool reads from it.
 
 A `Spec` contains the [`macros:`](language/named.md#macros), the descriptions,
 and each piecewise curve (a [`piecewise:`](language/piecewise.md) entry) as one
-entry. It sorts by name what no order reaches: the entries of each section,
-each `dims:` list, and each side of a relation, the columns of the key before
-the values. In a `Program`, every macro is expanded, every name is typed, and every
+entry. In a `Program`, every macro is expanded, every name is typed, and every
 operator is a node. mathspec checks how the dimensions of
 [each expression combine](language/expressions.md#how-dimensions-combine) and
 [where a product of variables is allowed](language/expressions.md#where-a-product-of-two-variables-is-allowed)
@@ -38,6 +36,16 @@ mapping, a list is a tuple, and no field can be set, so `spec.to_yaml()` writes
 the file that `spec.program` comes from. To change a spec, lay a patch over it
 with [`override`](api.md#mathspec.override), which loads the result as a new
 spec.
+
+At load, mathspec sorts each of these lists by name, because their order in
+the file changes nothing:
+
+- the entries of each section, and of each kind under `given:`
+- each `dims:` list
+- each side of a relation, with the columns of the key first
+- the cases under `cases:`
+- the `kwargs:` of a macro
+- the labels under `one_of:`
 
 A curve stays one entry in the program until
 [`spec.expand()`](#formulations-written-out) writes the curve out as rows. So
@@ -392,14 +400,16 @@ state whether the windowed answer equals the whole-horizon answer.
 `spec.to_dict()` returns the spec as plain data, and `spec.to_yaml()` returns
 that data as a file. Both round-trip, so `to_spec(spec.to_dict()) == spec`.
 
-`to_yaml()` writes the fields that the file wrote, and no others. A default
-that the file writes out, such as `ordered: false`, is written back, and a
-default that it leaves out, such as `domain: continuous`, is not. A spec that
-`merge`, `override` or `expand` builds writes the fields that its fragments and
-mathspec set. `to_yaml()` always writes `version:`, so a written file states
-the language version it is read in. It leaves out a `null` and an empty
-section. It writes `dims: []`, because `dims: []` declares a scalar, and an
-entry that the file wrote as `{}`, because that entry still declares its name.
+`to_yaml()` writes the fields that the file sets, and no others. A default
+that the file states, such as `ordered: false`, is written back, and a default
+that the file leaves out, such as `domain: continuous`, is not. For a spec that
+`merge`, `override` or `expand` builds, `to_yaml()` writes the fields that the
+fragments and mathspec set.
+
+`to_yaml()` always writes `version:`, so a written file states the language
+version it is read in. It leaves out a `null` and an empty section. It writes
+`dims: []`, because `dims: []` declares a scalar. It also writes an empty
+entry, such as `generator: {}`, because the entry still declares its name.
 
 `to_yaml()` writes a short list on one line, such as
 `dims: [generator, snapshot]`, and a short mapping of numbers and names, such
@@ -432,7 +442,8 @@ has these rules:
   `dimensions`, `relations`, `parameters`, `conditions`, `variables`,
   `expressions`, `objective`, `constraints`, `sos`, `piecewise`,
   `assumptions`, `macros`. The keys of an entry also come in one order.
-- Entries are sorted by name within each section, and so is `dimensions:`.
+- Entries are sorted by name within each section, and so is every other list
+  that mathspec [sorts at load](#spec-and-program).
 - A field that has its default value is left out, whether the file wrote it
   or not. `version` is the one exception, so `version: 0` stays.
 - Every expression is printed from its parsed tree, so the spacing and the
@@ -451,12 +462,8 @@ has these rules:
 - The two sides of a comparison keep their places, in an expression and in a
   condition, so `p_max > 0` and `0 < p_max` are two texts.
 - Division, exponentiation and a call's positional arguments keep the order of
-  the file. So do a piecewise entry's links, because the position of a link
-  names the rows it emits.
-
-The spec holds its entries, every `dims:` list, each side of a relation, the
-cases under `cases:` and the `kwargs` of a macro sorted by name, so the
-canonical form writes them in that order too.
+  the file. So do a piecewise entry's links, because mathspec names the rows of
+  each link after its position, as in `curve_link0`.
 
 The canonical form states the same spec, but it does not load to a `Spec`
 equal to the original. A reprinted expression is a different string.

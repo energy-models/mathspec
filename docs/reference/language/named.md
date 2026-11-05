@@ -257,8 +257,8 @@ constraints:
 objective: { sense: minimize, expression: sum(p) }
 ```
 
-The typesetter prints each case as one row of the definition, sorted by the
-name of the case, and `otherwise:` as the last row:
+mathspec sorts the cases by name at load. The typesetter prints each case as
+one row of the definition, in that order, and `otherwise:` as the last row:
 
 ```math
 \mathit{previous\_status}_{g,t} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \\ \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \\ \mathit{status}_{g,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
@@ -278,8 +278,8 @@ unit, so no row is lost.
 
 #### Refused cases
 
-The cases have no order, so mathspec sorts them by name at load and checks
-that no coordinate falls under two of them.
+The cases have no order, so mathspec checks at load that no coordinate falls
+under two of them.
 
 The first four messages below are the first line of the output. After each,
 mathspec prints this line once for each place where `ramp_up` uses
@@ -597,12 +597,12 @@ macro does not appear in the math.
 A template takes its arguments by the names under `args` and `kwargs` (its
 formals):
 
-| Key           | Required | Default | What it sets                           |
-| ------------- | -------- | ------- | -------------------------------------- |
-| `template`    | yes      |         | the expression, with the formals in it |
-| `args`        | no       | `[]`    | the positional formals, in call order  |
-| `kwargs`      | no       | `[]`    | the keyword formals, sorted by name    |
-| `description` | no       | `null`  | free text                              |
+| Key           | Required | Default | What it sets                                |
+| ------------- | -------- | ------- | ------------------------------------------- |
+| `template`    | yes      |         | the expression, with the formals in it      |
+| `args`        | no       | `[]`    | the positional formals, in call order       |
+| `kwargs`      | no       | `[]`    | the keyword formals, sorted by name at load |
+| `description` | no       | `null`  | free text                                   |
 
 A template contains arithmetic, and no comparison and no `cases:` entry. An
 argument may itself use macros and named expressions.
