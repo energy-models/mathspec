@@ -30,7 +30,7 @@ relations:
   rep_of: { key: snapshot, values: { rep: snapshot } } # a map into its own dimension: the representative snapshot
   connection: { key: [generator, bus], missing: absent } # a bare relation, with no value columns: many-to-many, read only by sum with both ends named
   gen_bt: { key: generator, values: [bus, technology] } # one table with two value columns, read to both at once
-  bus_zone: { key: [bus, zone], missing: excluded } # the pairs that exist: every parameter over bus and zone has coordinates only here
+  bus_zone: { key: [bus, zone], missing: absent, confines: true } # the pairs that exist: every parameter over bus and zone has coordinates only here
 
 parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as

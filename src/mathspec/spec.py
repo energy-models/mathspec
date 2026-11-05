@@ -36,7 +36,6 @@ from mathspec._operators import BUILTIN_NAMES
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
     DimensionDtype,
-    MissingWord,
     ObjectiveSense,
     ParameterDtype,
     PiecewiseMethod,
@@ -132,7 +131,7 @@ NUMERIC_DTYPES: frozenset[ParameterDtype] = frozenset({'float', 'int'})
 
 _MISSING_SCHEMA: dict[str, object] = {
     'anyOf': [
-        {'enum': list(get_args(MissingWord))},
+        {'enum': list(get_args(RelationMissing))},
         {'type': 'boolean'},
         {'type': 'number'},
         {'enum': ['inf', '-inf']},
@@ -141,7 +140,7 @@ _MISSING_SCHEMA: dict[str, object] = {
 
 _VARIABLE_MISSING_SCHEMA: dict[str, object] = {'anyOf': [{'enum': ['absent']}, {'type': 'number'}]}
 
-_WORDS = ', '.join(get_args(MissingWord))
+_WORDS = ', '.join(get_args(RelationMissing))
 
 
 def _without_refused(written: dict[str, object]) -> dict[str, object]:
@@ -230,8 +229,11 @@ class RelationSpec(_StrictSpec):
     values: str | list[str] | dict[str, str] | None = None
     missing: RelationMissing = 'refused'
     """Whether every combination of the dimensions of the key needs a row. Under ``refused``, a tool refuses data that
-    leaves one out. Under ``absent``, that combination has no row. Under ``excluded``, it has no row, and no parameter
-    over every dimension of the key has a coordinate there, so a tool refuses a row of that parameter's data there.
+    leaves one out. Under ``absent``, that combination has no row.
+    """
+    confines: bool = False
+    """Whether each parameter over all the dimensions of the key has coordinates only at the relation's rows. A tool refuses
+    a row of that parameter's data at a key combination the relation has no row for.
     """
     description: str | None = None
 
@@ -245,17 +247,19 @@ class RelationSpec(_StrictSpec):
             )
         if v not in get_args(RelationMissing):
             msg = (
-                f'missing: {_as_yaml(v)} on a relation, which takes refused, absent or excluded. A key combination '
-                f'with no row is refused, is not in the relation, or is not a coordinate of any parameter over '
-                f'the key.'
+                f'missing: {_as_yaml(v)} on a relation, which takes refused or absent. A key combination with no '
+                f'row is refused, or is not in the relation.'
             )
             raise ValueError(msg)
         return v
 
     @model_serializer(mode='wrap')
     def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """``missing`` is written where it is not ``refused``: refused is what leaving it out says."""
-        return _without_refused(cast('dict[str, object]', handler(self)))
+        """``missing`` is written where it is not ``refused``, and ``confines`` where it is true: leaving either out says the default."""
+        written = _without_refused(cast('dict[str, object]', handler(self)))
+        if not self.confines:
+            written.pop('confines', None)
+        return written
 
     @property
     def pairs(self) -> tuple[tuple[str, str], ...]:
@@ -353,10 +357,10 @@ class ParameterSpec(_StrictSpec):
     dtype: ParameterDtype = 'float'
     where: str | None = None
     """The condition that limits the coordinates of the parameter, in the condition grammar, inside each relation under
-    ``missing: excluded`` that confines it. Where it is false, the parameter is absent and a tool drops its rows of data
+    ``confines: true`` over its dimensions. Where it is false, the parameter is absent and a tool drops its rows of data
     there. ``missing:`` applies where it is true.
     """
-    missing: Annotated[MissingWord | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
+    missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -369,13 +373,7 @@ class ParameterSpec(_StrictSpec):
             )
         if v in ('inf', '-inf'):
             return float(cast('str', v))
-        if v == 'excluded':
-            msg = (
-                f'missing: excluded on a parameter, which takes {_WORDS}, or a value. Declare missing: excluded on a '
-                f'relation keyed by dimensions of the parameter, and the parameter has coordinates only at its rows.'
-            )
-            raise ValueError(msg)
-        if isinstance(v, str) and v not in get_args(MissingWord):
+        if isinstance(v, str) and v not in get_args(RelationMissing):
             msg = f'missing is the string {v!r}. It takes {_WORDS}, or a value: a number, true or false.'
             raise ValueError(msg)
         if isinstance(v, float) and math.isnan(v):

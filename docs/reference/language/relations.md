@@ -32,12 +32,13 @@ The **key** is the combination of columns that is unique per row, so
 are what that row determines, which for `gen_bus` is the bus. A relation with
 no `values:` is a **bare relation**, and its key is every column.
 
-| Key           | What it sets                                                                 | Default   |
-| ------------- | ---------------------------------------------------------------------------- | --------- |
-| `key`         | required. The columns that identify a row                                    |           |
-| `values`      | the columns that the key determines                                          | `null`    |
-| `missing`     | `refused`, `absent` or `excluded`: whether every key combination needs a row | `refused` |
-| `description` | free text                                                                    | `null`    |
+| Key           | What it sets                                                     | Default   |
+| ------------- | ---------------------------------------------------------------- | --------- |
+| `key`         | required. The columns that identify a row                        |           |
+| `values`      | the columns that the key determines                              | `null`    |
+| `missing`     | `refused` or `absent`: whether every key combination needs a row | `refused` |
+| `confines`    | whether every parameter over the key has data only at its rows   | `false`   |
+| `description` | free text                                                        | `null`    |
 
 A column is named after its dimension, or after no dimension. Where two
 columns share a dimension, each column has its own name in the mapping form, as in
@@ -88,7 +89,7 @@ a spec ([a tool](../glossary.md#tool)) requires five things of the table:
 - Every value is a label of its dimension, and a value that matches no label is
   refused.
 - The table has a row for every combination of the dimensions of its key,
-  unless the relation declares [`missing: absent` or `excluded`](#missing).
+  unless the relation declares [`missing: absent`](#missing).
 - A null in any column is refused.
 - The order of the rows has no meaning, because the order comes from the
   [dimension](dimensions.md#ordered).
@@ -127,7 +128,6 @@ At `l3`, the data of `line_to` has no row, so `line_to` is absent there.
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `refused`, by default | a tool refuses the relation when the data is attached, and names the key combination                                                |
 | `absent`              | a key combination with no row is not in the relation, so a line with no `line_to` row ends at no bus, which is [absent](absence.md) |
-| `excluded`            | as `absent`, and every parameter over every dimension of the key has no coordinate there ([`excluded`](#excluded))                  |
 
 `missing:` applies only to the key. The values cannot be missing, because a
 null is refused and every value must be a label of its dimension. No number can
@@ -135,10 +135,10 @@ replace a missing label, so at load mathspec refuses a value such as
 `missing: 0`:
 
 ```text
-relations.gen_bus.missing: missing: 0 on a relation, which takes refused, absent or excluded. A key combination with no row is refused, is not in the relation, or is not a coordinate of any parameter over the key.
+relations.gen_bus.missing: missing: 0 on a relation, which takes refused or absent. A key combination with no row is refused, or is not in the relation.
 ```
 
-mathspec lists the three values that a relation takes.
+mathspec lists the two values that a relation takes.
 
 A bare relation also needs a row for every key combination. So under the
 default `refused`, `connection` needs a row for every generator and bus. Most bare relations are sparse, so they declare `missing: absent`, and a
@@ -147,11 +147,13 @@ pair with no row is then not in the relation.
 The typeset legend lists `` `line_to` is `absent` where the data has no row ``
 beside each dimension of the relation, and nothing for `refused`.
 
-#### `excluded`
+### `confines`
 
-Under `missing: excluded`, a key combination with no row exists for no
-parameter. Each parameter whose dimensions include every dimension of the key
-has coordinates only where the relation has a row. In this example,
+Under `confines: true`, each parameter whose dimensions include every
+dimension of the key has coordinates only where the relation has a row. The
+relation declares this once, for every such parameter in the spec, including
+the parameters of other files [merged](../composition.md#merge) with it. A variable
+or a constraint is not confined: its rows come from its own `where:`. In this example,
 `efficiency` and `p_nom_max` have values only at the pairs that `connection`
 lists:
 
@@ -162,7 +164,7 @@ dimensions:
   snapshot: { dtype: int }
   role: { dtype: str }
 relations:
-  connection: { key: [entity, bus], values: role, missing: excluded }
+  connection: { key: [entity, bus], values: role, missing: absent, confines: true }
 parameters:
   efficiency: { dims: [entity, bus, snapshot], missing: 1 }
   p_nom_max: { dims: [entity, bus], missing: .inf }
@@ -189,8 +191,7 @@ bus it is not wired to is refused. The file declares this once, on the
 relation, for every parameter over `entity` and `bus`. A parameter over
 `entity` alone, or over `bus` alone, is not confined.
 
-`missing:` applies to the key, so a relation confines by its key columns and
-not by its values. Under `gen_bus: { key: generator, values: bus, missing: excluded }`,
+A relation confines by its key columns, not by its values. Under `gen_bus: { key: generator, values: bus, missing: absent, confines: true }`,
 every parameter over `generator` has coordinates only at the generators that
 `gen_bus` lists, at every bus. To confine a parameter to the pairs, key the
 relation by both columns, as `connection` is keyed by `[entity, bus]`.
@@ -201,7 +202,7 @@ if each relation that confines the parameter held. A `where:` that is then
 always true narrows nothing, as `where: connection` on `efficiency`:
 
 ```text
-Parameter 'efficiency': 'efficiency' has coordinates only where 'connection' has a row, under missing: excluded, so `where: connection` narrows nothing. Delete the `where:`, or the relation from it.
+Parameter 'efficiency': 'efficiency' has coordinates only where 'connection' has a row, under confines: true, so `where: connection` narrows nothing. Delete the `where:`, or the relation from it.
 ```
 
 mathspec suggests two rewrites: no `where:`, or a `where:` without the
@@ -210,20 +211,30 @@ leaves the parameter no coordinate, and mathspec suggests a `where:` that
 holds somewhere inside the relation.
 
 A parameter has each dimension once, so a key with two columns over one
-dimension confines no parameter. For `next: { key: { from: snapshot, to: snapshot }, missing: excluded }`,
+dimension confines no parameter. For `next: { key: { from: snapshot, to: snapshot }, missing: absent, confines: true }`,
 mathspec prints:
 
 ```text
-Relation 'next': missing: excluded confines each parameter over every dimension of the key, and a parameter has 'snapshot' once, so a key with two columns over 'snapshot' confines none. Key the relation by one column over each dimension, or write missing: absent.
+Relation 'next': confines: true confines each parameter over all the dimensions of the key, and a parameter has 'snapshot' once, so a key with two columns over 'snapshot' confines none. Key the relation by one column over each dimension, or delete confines:.
 ```
 
-mathspec suggests two rewrites: one key column over each dimension, or
-`missing: absent`.
+mathspec suggests two rewrites: one key column over each dimension, or no
+`confines:`.
+
+Under the default `missing: refused`, the relation has a row at every key
+combination, so it confines nothing. mathspec refuses `confines: true` there:
+
+```text
+Relation 'connection': confines: true confines parameters to the rows of the relation, and under missing: refused it has a row at every key combination, so it confines nothing. Write missing: absent, or delete confines:.
+```
+
+mathspec suggests two rewrites: `missing: absent`, or no `confines:`.
 
 The typeset legend lists
-``every parameter over the key of `connection` is `excluded` where `connection` has no row``
-beside each dimension of the relation. Beside each confined parameter, it lists
-the relation after `only where`, as it lists a `where:`.
+``every parameter over the key of `connection` has data only where `connection` has a row``
+beside each dimension of the key. Beside each confined parameter, it lists the
+relation after `a row of data refused unless`, apart from a `where:`, which it
+lists after `only where`.
 
 ## How a relation is used
 

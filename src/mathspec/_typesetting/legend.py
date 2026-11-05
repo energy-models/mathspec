@@ -133,6 +133,7 @@ class Legend:
     symbols: Symbols
     format: Format
     parameter_masks: Mapping[str, str] = field(default_factory=dict)
+    parameter_confinements: Mapping[str, str] = field(default_factory=dict)
 
     def _op(self, name: OperatorName) -> str:
         return self.format.operators[name]
@@ -155,7 +156,7 @@ class Legend:
         parameters = [
             self._item(
                 self.symbols.name[p],
-                f'{fmt.mono(p)}{self._over(list(entry.dims))}{self._only_where(p)}{self._missing(entry.missing)}',
+                f'{fmt.mono(p)}{self._over(list(entry.dims))}{self._confined(p)}{self._only_where(p)}{self._missing(entry.missing)}',
                 entry.description,
             )
             for p, entry in program.parameters.items()
@@ -242,6 +243,10 @@ class Legend:
         product = self.format.joined([self.symbols.set[d] for d in dims], self._op('times'))
         return f' over {self.format.math(product)}'
 
+    def _confined(self, parameter: str) -> str:
+        rows = self.parameter_confinements.get(parameter)
+        return '' if rows is None else f', a row of data refused unless {self.format.math(rows)}'
+
     def _only_where(self, parameter: str) -> str:
         mask = self.parameter_masks.get(parameter)
         return '' if mask is None else f', only where {self.format.math(mask)}'
@@ -282,15 +287,18 @@ class Legend:
         if carried:
             maps = self.format.joined([self._signature(c, lk) for c, lk in carried.items()], '')
             clauses.append(f' with {self.format.math(maps)}')
-            clauses.extend(f', {self._relation_missing(c, lk)}' for c, lk in carried.items() if lk.missing != 'refused')
+            clauses.extend(
+                f', {self.format.mono(c)} is {self.format.mono("absent")} {_NO_ROW}'
+                for c, lk in carried.items()
+                if lk.missing == 'absent'
+            )
+            clauses.extend(
+                f', every parameter over the key of {self.format.mono(c)} has data only where {self.format.mono(c)} '
+                f'has a row'
+                for c, lk in carried.items()
+                if lk.confines and dim in {lk.dim(role) for role in lk.key}
+            )
         return ''.join(clauses)
-
-    def _relation_missing(self, name: str, relation: Relation) -> str:
-        """What a key combination with no row of relation *name* means, which under ``excluded`` falls on parameters."""
-        mono = self.format.mono
-        if relation.missing == 'excluded':
-            return f'every parameter over the key of {mono(name)} is {mono("excluded")} where {mono(name)} has no row'
-        return f'{mono(name)} is {mono(relation.missing)} {_NO_ROW}'
 
     def _notation(self, noticed: Noticed) -> list[LegendItem]:
         """A row for each translation and position symbol printed; plain ``t-k`` needs none.

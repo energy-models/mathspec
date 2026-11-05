@@ -152,7 +152,9 @@ the colon is the description that the file sets.
 [`missing:`](language/absence.md#missing) for a missing row of that parameter.
 It is
 `'refused'`, `'absent'`, or the value that a tool uses for the row.
-`program.relations[name].missing` is `'refused'`, `'absent'` or `'excluded'`. The program of
+`program.relations[name].missing` is `'refused'` or `'absent'`, and
+`program.relations[name].confines` is `True` where the relation confines
+parameters. The program of
 `spec.expand(...)` has the same `missing` values.
 
 A [given](language/parameters-variables-constraints.md#given) parameter is a
@@ -178,12 +180,12 @@ describes. The condition contains no variable and no parameter with a `where:`
 of its own. So an engine can evaluate every such condition before it reads any
 parameter that has a `where:`.
 
-`program.parameters[name].confined_by` lists the relations under `missing: excluded` whose
+`program.parameters[name].confined_by` lists the relations under `confines: true` whose
 key dimensions the parameter has, by name. With data attached, an engine
 refuses a row of the parameter at a key combination that one of them has no
 row for, and reads the parameter as absent there. It does this before it
 applies the `where:`, and so before `missing:`, as
-[`excluded`](language/relations.md#excluded) describes. The confinement is not
+[`confines`](language/relations.md#confines) describes. The confinement is not
 part of `program.parameters[name].where`, because an engine drops a row
 outside the `where:` and refuses a row outside the relation.
 
