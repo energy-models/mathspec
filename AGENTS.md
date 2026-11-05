@@ -150,7 +150,8 @@ To learn what the project _is_, read [docs/](docs/index.md), and
 The PR title is also the line the PR adds to `CHANGELOG.md` by hand; nothing
 writes the changelog on merge. The title names the outcome, as a complete
 lower-case sentence a changelog reader can follow. Not an activity, not a
-mechanism, not `AST`, `dim` or `a pass`.
+mechanism, not `AST`, `dim` or `a pass`. A PR title and an issue title have at
+most 55 characters, the type included.
 
 The topmost row the diff touches decides the type:
 
