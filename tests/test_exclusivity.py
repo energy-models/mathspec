@@ -17,29 +17,30 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 
-from mathspec._where_parser import parse_where
-from mathspec.exclusivity import CELL_BUDGET, Special, Subject, _evaluate, _Grid, overlapping
+from mathspec._condition_parser import parse_condition
+from mathspec._exclusivity import CELL_BUDGET, Special, Subject, _evaluate, _Grid, overlapping
+from mathspec._resolution import Namespace, resolve_condition
+from mathspec._validation import to_spec
 from mathspec.program import And, Mask, Not, Or
-from mathspec.resolution import Namespace, resolve_where
-from mathspec.validation import to_spec
+from tests.fixtures import varied
 
 if TYPE_CHECKING:
-    from mathspec.program import Predicate
+    from mathspec.program import Condition
     from mathspec.spec import Spec
 
 #: A storage model carrying one atom of every kind a `when` can be built from.
 #: Every axis takes its coordinates from data, so nothing here sizes one.
 STORAGE: dict[str, Any] = {
     'dimensions': {
-        'snapshot': {'dtype': 'int'},
-        'storage': {},
+        'snapshot': {'dtype': 'int', 'ordered': True},
+        'storage': {'ordered': True},
         'period': {'dtype': 'int'},
     },
     'relations': {'period_of': {'key': 'snapshot', 'values': 'period'}},
     'parameters': {
         'cyclic': {'dims': ['storage'], 'dtype': 'bool'},
         'committable': {'dims': ['storage'], 'dtype': 'bool'},
-        'kind': {'dims': ['storage'], 'dtype': 'str'},
+        'kind': {'dims': ['storage'], 'dtype': 'str', 'missing': 'absent'},
         'soc_initial': {'dims': ['storage']},
         'capacity': {'dims': ['storage']},
         'age': {'dims': ['storage'], 'dtype': 'int'},
@@ -49,21 +50,39 @@ STORAGE: dict[str, Any] = {
 }
 
 
+#: A line has one row in `ends`, or none, and each comparison on `ends` reads that one row.
+NETWORK: dict[str, Any] = {
+    'dimensions': {'line': {}, 'bus': {}},
+    'relations': {'ends': {'key': 'line', 'values': {'bus0': 'bus', 'bus1': 'bus'}}},
+    'variables': {'flow': {'dims': ['line']}},
+    'constraints': {'c': {'dims': ['line'], 'expression': 'flow >= 0'}},
+}
+
+#: The same network with a third end, so two pairs of columns can share one.
+THREE_ENDS: dict[str, Any] = varied(NETWORK, **{'relations.ends.values': {'bus0': 'bus', 'bus1': 'bus', 'bus2': 'bus'}})
+
+
 @pytest.fixture(scope='module')
-def schema() -> Spec:
+def spec() -> Spec:
     return to_spec(STORAGE)
 
 
-def refusals(schema: Spec, cases: dict[str, str]) -> list[str]:
-    """Resolve each case's `when` against *schema*, then decide every pair."""
-    namespace = Namespace(schema)
-    return list(overlapping({name: _mask(when, namespace, name) for name, when in cases.items()}, namespace.dtypes))
+def refusals(spec: Spec, cases: dict[str, str]) -> list[str]:
+    """Resolve each case's `when` against *spec*, then decide every pair."""
+    namespace = Namespace(spec)
+    return list(
+        overlapping(
+            {name: _mask(when, namespace, name) for name, when in cases.items()},
+            namespace.dtypes,
+            namespace.defaults,
+        )
+    )
 
 
-def _mask(text: str, namespace: Namespace, name: str) -> Predicate:
+def _mask(text: str, namespace: Namespace, name: str) -> Condition:
     """Resolved but not folded, which is the shape a case's `when` reaches the prover in."""
     errors: list[str] = []
-    mask = resolve_where(parse_where(text), namespace, f"case '{name}'", errors)
+    mask = resolve_condition(parse_condition(text), namespace, f"case '{name}'", errors)
     assert not errors, errors
     assert mask is not None
     return mask
@@ -112,8 +131,8 @@ class TestProvesApart:
             ),
         ],
     )
-    def test_a_pair_that_shares_no_coordinate_is_proved_apart(self, schema: Spec, cases: dict[str, str], claim: str):
-        assert refusals(schema, cases) == [], claim
+    def test_a_pair_that_shares_no_coordinate_is_proved_apart(self, spec: Spec, cases: dict[str, str], claim: str):
+        assert refusals(spec, cases) == [], claim
 
     @pytest.mark.parametrize(
         'cases',
@@ -126,29 +145,29 @@ class TestProvesApart:
             ),
         ],
     )
-    def test_the_ramp_regimes_from_the_issue(self, schema: Spec, cases: dict[str, str]):
+    def test_the_ramp_regimes_from_the_issue(self, spec: Spec, cases: dict[str, str]):
         """The three quantities #2 factors a PyPSA ramp limit into, less each one's `otherwise`."""
-        assert refusals(schema, cases) == [], f'{cases} claims no coordinate twice'
+        assert refusals(spec, cases) == [], f'{cases} claims no coordinate twice'
 
-    def test_a_magnitude_still_admits_one(self, schema: Spec):
+    def test_a_magnitude_still_admits_one(self, spec: Spec):
         """The mirror: `capacity` is a float, so 0.5 is a coordinate it can take."""
         cases = {'small': 'capacity < 1', 'large': 'capacity > 0'}
-        assert refusals(schema, cases), 'a float between the two bands is claimed by both'
+        assert refusals(spec, cases), 'a float between the two bands is claimed by both'
 
-    def test_a_when_of_true_is_not_a_fallback(self, schema: Spec):
-        """The fallback is the block's `otherwise:`, and nothing inside `cases:` stands in for it.
+    def test_a_when_of_true_is_not_a_fallback(self, spec: Spec):
+        """The fallback is the entry's `otherwise:`, and nothing inside `cases:` stands in for it.
 
         A mask that happens to be true everywhere is read as any other mask is,
         so it collides with every case beside it.
         """
         cases = {'first': 'position(snapshot) == 0', 'everything': 'True'}
-        assert refusals(schema, cases), 'a case whose `when` is True claims every coordinate'
+        assert refusals(spec, cases), 'a case whose `when` is True claims every coordinate'
 
 
 @pytest.fixture(scope='module')
-def overlap(schema: Spec) -> str:
+def overlap(spec: Spec) -> str:
     """The one refusal a bool against a label draws, read once for every fragment asserted on it."""
-    [refusal] = refusals(schema, {'cyclic': 'cyclic', 'battery': "kind == 'battery'"})
+    [refusal] = refusals(spec, {'cyclic': 'cyclic', 'battery': "kind == 'battery'"})
     return refusal
 
 
@@ -158,42 +177,42 @@ class TestRefuses:
         [
             pytest.param("cases 'cyclic' and 'battery' both claim the value where", id='both-cases'),
             pytest.param('cyclic is true', id='a-witness'),
-            pytest.param('narrow one of the two `when:` strings by the negation of the other', id='the-rewrite'),
+            pytest.param('Narrow one of the two `when:` strings by the negation of the other', id='the-rewrite'),
         ],
     )
     def test_an_overlap_names_both_cases_a_witness_and_the_rewrite(self, overlap: str, fragment: str):
         assert fragment in overlap
 
-    def test_every_overlapping_pair_is_named(self, schema: Spec):
+    def test_every_overlapping_pair_is_named(self, spec: Spec):
         """Not the first: a set with three problems has three sentences."""
         cases = {'a': 'cyclic', 'b': 'committable', 'c': "kind == 'battery'"}
-        assert len(refusals(schema, cases)) == 3, 'each of the three pairs overlaps'
+        assert len(refusals(spec, cases)) == 3, 'each of the three pairs overlaps'
 
-    def test_defined_is_not_non_zero(self, schema: Spec):
+    def test_defined_is_not_non_zero(self, spec: Spec):
         """A bare name and `== 0` are different questions, so a zero capacity is in both."""
-        [refusal] = refusals(schema, {'has_initial': 'soc_initial', 'zero': 'soc_initial == 0'})
+        [refusal] = refusals(spec, {'has_initial': 'soc_initial', 'zero': 'soc_initial == 0'})
         assert 'soc_initial is 0.0' in refusal
 
 
 class TestWillNotDecide:
-    def test_both_ends_of_one_axis(self, schema: Spec):
+    def test_both_ends_of_one_axis(self, spec: Spec):
         """The one that matters: first and last are the same row on a one-member
         horizon, and how many members an axis has is data.
         """
-        [refusal] = refusals(schema, {'first': 'position(snapshot) == 0', 'last': 'position(snapshot) == -1'})
+        [refusal] = refusals(spec, {'first': 'position(snapshot) == 0', 'last': 'position(snapshot) == -1'})
         assert 'cannot be told apart before the data arrives' in refusal
-        assert 'count from one end only' in refusal
+        assert 'Count from one end only' in refusal
 
-    def test_a_group_is_named_as_the_group_it_is(self, schema: Spec):
-        """`by=` counts within each group, and the refusal says which."""
+    def test_a_group_is_named_as_the_group_it_is(self, spec: Spec):
+        """`within=` counts within each group, and the refusal says which."""
         cases = {
-            'first': 'position(snapshot, by=period_of, within=period) == 0',
-            'last': 'position(snapshot, by=period_of, within=period) == -1',
+            'first': 'position(snapshot, within=period_of[period]) == 0',
+            'last': 'position(snapshot, within=period_of[period]) == -1',
         }
-        [refusal] = refusals(schema, cases)
+        [refusal] = refusals(spec, cases)
         assert 'within each period_of group' in refusal
 
-    def test_a_literal_written_first_is_named_as_the_order_it_is(self, schema: Spec):
+    def test_a_literal_written_first_is_named_as_the_order_it_is(self, spec: Spec):
         """The advice was to do what the author had already done.
 
         `capacity > 2` is a parameter against a literal and proves apart;
@@ -201,8 +220,8 @@ class TestWillNotDecide:
         the general refusal for a comparison of expressions — which told the
         author to compare one parameter against a literal.
         """
-        [refusal, other] = refusals(schema, {'big': '2 < capacity', 'small': '2 >= capacity'})
-        assert "case 'big'" in refusal and "case 'small'" in other, 'each case is refused on its own, not as a pair'
+        [refusal] = refusals(spec, {'big': '2 < capacity', 'small': '2 >= capacity'})
+        assert "cases 'big' and 'small'" in refusal, 'the pair is refused once, not each case on its own'
         assert 'the literal is on the left' in refusal
         assert 'capacity > 2.0' not in refusal, 'the rewrite quotes the number as the file wrote it'
         assert 'capacity > 2' in refusal, 'the rewrite is the same test written the other way round'
@@ -216,14 +235,14 @@ class TestWillNotDecide:
             pytest.param('123456789 < capacity', 'capacity > 123456789', id='a-literal-longer-than-six-digits'),
         ],
     )
-    def test_the_rewrite_is_the_same_test_with_the_sides_swapped(self, schema: Spec, when: str, rewrite: str):
+    def test_the_rewrite_is_the_same_test_with_the_sides_swapped(self, spec: Spec, when: str, rewrite: str):
         """The literal is quoted as the file wrote it: rounded to six digits, `123456789` became `1.23457e+08`, a different test."""
-        [refusal] = refusals(schema, {'one': when, 'two': 'cyclic'})
+        [refusal] = refusals(spec, {'one': when, 'two': 'cyclic'})
         assert rewrite in refusal
 
-    def test_a_comparison_of_real_expressions_keeps_the_general_refusal(self, schema: Spec):
+    def test_a_comparison_of_real_expressions_keeps_the_general_refusal(self, spec: Spec):
         """Only the plain shape is named; anything else is still the data's to decide."""
-        [refusal, _] = refusals(schema, {'over': 'capacity > soc_initial', 'under': 'capacity <= soc_initial'})
+        [refusal] = refusals(spec, {'over': 'capacity > soc_initial', 'under': 'capacity <= soc_initial'})
         assert 'it compares expressions, whose values only the data decides' in refusal
 
     def test_a_pair_with_more_regions_than_the_budget(self):
@@ -240,10 +259,10 @@ class TestWillNotDecide:
         [refusal] = refusals(to_spec(model), {'wide': bands, 'rest': 'not (' + bands + ')'})
         assert f'exceeds the budget of {CELL_BUDGET}' in refusal
 
-    def test_a_bool_compared_to_a_number(self, schema: Spec):
+    def test_a_bool_compared_to_a_number(self, spec: Spec):
         """Resolution admits it, and truth is not a magnitude to put in order."""
-        [refusal] = refusals(schema, {'on': 'cyclic == 1', 'off': 'not cyclic'})
-        assert 'write the bare name, or `not cyclic`' in refusal
+        [refusal] = refusals(spec, {'on': 'cyclic == 1', 'off': 'not cyclic'})
+        assert 'Write the bare name, or `not cyclic`' in refusal
 
 
 class TestSoundness:
@@ -252,7 +271,8 @@ class TestSoundness:
     The claim the check rests on is that its regions cover every value a
     subject can take, so "no witness among the cells" means "no witness". This
     walks a concrete grid — several points inside single cells, both
-    infinities, an absent value, labels the masks never name — and asserts that
+    infinities, a missing row read as each value `missing:` may name, labels
+    the masks never name — and asserts that
     nothing it proved apart has a point claimed by both. Only pairs the check
     proves apart are walked; a complement pair asserts X and not X and cannot
     fail.
@@ -282,6 +302,13 @@ class TestSoundness:
         'storage': [0, 1, 2],
     }
 
+    #: The value a missing row reads as, drawn per pair: `None` is a reading
+    #: with no value, and a value sits on a literal, between two, or past them.
+    READINGS: ClassVar[dict[str, list[Any]]] = {
+        'capacity': [None, 0.0, 7.0, 10.0, float('inf')],
+        'cyclic': [None, True, False],
+    }
+
     def _random_mask(self, rng: random.Random, atoms: list[Any], depth: int = 0) -> Any:
         if depth >= 2 or rng.random() < 0.45:
             atom = rng.choice(atoms)
@@ -292,8 +319,8 @@ class TestSoundness:
         return Not(node) if rng.random() < 0.15 else node
 
     @pytest.mark.parametrize('seed', [1, 7])
-    def test_a_pair_proved_apart_stays_apart_on_a_finer_grid(self, schema: Spec, seed: int):
-        namespace = Namespace(schema)
+    def test_a_pair_proved_apart_stays_apart_on_a_finer_grid(self, spec: Spec, seed: int):
+        namespace = Namespace(spec)
         atoms = [_mask(text, namespace, 'a probe') for text in self.ATOMS]
         subjects = {
             'capacity': Subject('param', 'capacity'),
@@ -311,11 +338,169 @@ class TestSoundness:
         proved = 0
         for _ in range(2000):
             first, second = self._random_mask(rng, atoms), self._random_mask(rng, atoms)
-            if list(overlapping({'a': first, 'b': second}, dtypes)):
+            drawn = {name: rng.choice(values) for name, values in self.READINGS.items()}
+            defaults = {name: value for name, value in drawn.items() if value is not None}
+            if list(overlapping({'a': first, 'b': second}, dtypes, defaults)):
                 continue
             proved += 1
-            cells = _Grid.of([Mask(first), Mask(second)], dtypes)
+            cells = _Grid.of([Mask(first), Mask(second)], dtypes, defaults)
             for point in grid:
                 both = _evaluate(first, point, cells) and _evaluate(second, point, cells)
                 assert not both, f'both cases claim {point} — the cells hid a witness'
         assert proved > 150, f'only {proved} pairs proved apart; the fuzz is not exercising the check'
+
+    RELATION_ATOMS: ClassVar[tuple[str, ...]] = (
+        'ends',
+        "ends[bus0] == 'north'",
+        "ends[bus0] != 'north'",
+        "ends[bus1] == 'south'",
+        'ends[bus0] == ends[bus1]',
+        'ends[bus0] != ends[bus1]',
+        'ends[bus0] != ends[bus2]',
+        'ends[bus2] == ends[bus1]',
+    )
+
+    @pytest.mark.parametrize('seed', [1, 7])
+    def test_a_relation_proved_apart_stays_apart_on_every_row(self, seed: int):
+        """The same walk over a relation: no row, or a row whose columns hold labels the masks name or never name."""
+        namespace = Namespace(to_spec(THREE_ENDS))
+        atoms = [_mask(text, namespace, 'a probe') for text in self.RELATION_ATOMS]
+        columns = ('bus0', 'bus1', 'bus2')
+        pairs = list(itertools.combinations(columns, 2))
+        grid = [
+            {
+                Subject('relation', 'ends'): row,
+                **{Subject('relation', 'ends', column): label for column, label in zip(columns, labels, strict=True)},
+                **{
+                    Subject('relation_pair', 'ends', 'ends', pair): labels[columns.index(pair[0])]
+                    == labels[columns.index(pair[1])]
+                    for pair in pairs
+                },
+            }
+            for row in (True, Special.NULL)
+            for labels in itertools.product(['north', 'south', 'east'], repeat=len(columns))
+        ]
+
+        rng = random.Random(seed)
+        proved = 0
+        for _ in range(2000):
+            first, second = self._random_mask(rng, atoms), self._random_mask(rng, atoms)
+            if list(overlapping({'a': first, 'b': second}, namespace.dtypes, namespace.defaults)):
+                continue
+            proved += 1
+            cells = _Grid.of([Mask(first), Mask(second)], namespace.dtypes, namespace.defaults)
+            for point in grid:
+                both = _evaluate(first, point, cells) and _evaluate(second, point, cells)
+                assert not both, f'both cases claim {point} — the cells hid a witness'
+        assert proved > 150, f'only {proved} pairs proved apart; the fuzz is not exercising the check'
+
+
+class TestAMissingRow:
+    CASES: ClassVar[dict[str, str]] = {'lossless': 'efficiency == 1', 'not_given': 'not efficiency'}
+
+    def test_a_missing_row_compares_as_the_value_it_reads_as(self):
+        """Both cases claim a storage with no `efficiency` row: it is not given, and it reads 1.
+
+        The prover read a missing row as false in every comparison, so it proved
+        the two apart, and a coordinate the data leaves out had two values. The
+        witness said `efficiency is absent`, the name of a reading this
+        parameter does not have.
+        """
+        spec = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': 1}}))
+        [refusal] = refusals(spec, self.CASES)
+        assert 'efficiency has no row' in refusal, 'the witness is the missing row'
+        assert 'absent' not in refusal, 'the witness does not use the name of a reading for a missing row'
+
+    @pytest.mark.parametrize('reading', ['refused', 'absent'])
+    def test_under_a_reading_a_missing_row_compares_false(self, reading: str):
+        spec = to_spec(varied(STORAGE, **{'parameters.efficiency': {'dims': ['storage'], 'missing': reading}}))
+        assert refusals(spec, self.CASES) == [], 'a missing row with no value is in neither case'
+
+
+class TestARelationWithNoRow:
+    """A comparison on a relation is false where the relation has no row, whatever its operator."""
+
+    @pytest.mark.parametrize(
+        'cases',
+        [
+            pytest.param(
+                {'same': 'not ends[bus0] == ends[bus1]', 'different': 'not ends[bus0] != ends[bus1]'},
+                id='two-columns',
+            ),
+            pytest.param(
+                {'north': "not ends[bus0] == 'north'", 'elsewhere': "not ends[bus0] != 'north'"},
+                id='a-column-and-a-label',
+            ),
+        ],
+    )
+    def test_the_negations_of_two_complements_both_claim_a_missing_row(self, cases: dict[str, str]):
+        """Both cases claim a line with no `ends` row: `==` and `!=` are both false there.
+
+        The prover read `ends[bus0] == ends[bus1]` as true or false on every
+        line, so it proved the two negations apart, and a line `ends` leaves
+        out had two values.
+        """
+        [refusal] = refusals(to_spec(NETWORK), cases)
+        assert 'ends has no row' in refusal, 'the witness is the missing row'
+        assert 'ends[bus0]' not in refusal, 'a column of a missing row holds no value to name'
+
+    @pytest.mark.parametrize(
+        ('cases', 'model'),
+        [
+            pytest.param({'kept': "ends[bus0] != 'north'", 'left_out': 'not ends'}, NETWORK, id='a-label'),
+            pytest.param({'kept': 'ends[bus0] != ends[bus1]', 'left_out': 'not ends'}, NETWORK, id='two-columns'),
+            pytest.param({'later': 'period_of != 2030', 'left_out': 'not period_of'}, STORAGE, id='a-number'),
+        ],
+    )
+    def test_a_comparison_and_the_missing_row_are_apart(self, cases: dict[str, str], model: dict[str, Any]):
+        """A comparison is true only where the relation has a row, so `not` of the bare name excludes it.
+
+        The prover read the row a comparison needs and the row the bare name
+        asks for as two facts, and refused the pair with a witness where the
+        relation has no row and its column still holds a value.
+        """
+        assert refusals(to_spec(model), cases) == [], 'no line both has a row and has none'
+
+    @pytest.mark.parametrize(
+        ('cases', 'witness'),
+        [
+            pytest.param(
+                {'loop': 'ends[bus0] == ends[bus1]', 'north': "ends[bus0] == 'north'"},
+                "where ends[bus0] vs ends[bus1] is equal, ends[bus0] is 'north'.",
+                id='a-column-value-says-the-row-exists',
+            ),
+            pytest.param({'listed': 'ends', 'again': 'ends'}, 'where ends has a row.', id='the-bare-name-says-it'),
+        ],
+    )
+    def test_a_row_both_cases_read_is_still_found(self, cases: dict[str, str], witness: str):
+        """The mirror: the row is there for both cases, and the witness says so once."""
+        [refusal] = refusals(to_spec(NETWORK), cases)
+        assert witness in refusal
+
+
+class TestTwoPairsOfColumns:
+    """Each pair of columns is its own fact: a line can have `bus0 == bus1` and `bus0 != bus2` at once."""
+
+    def test_two_pairs_that_share_a_relation_both_claim_a_line(self):
+        """Both cases claim a line whose `bus0` is its `bus1` but not its `bus2`.
+
+        The prover keyed a comparison of two columns by the two relation names
+        and dropped the columns, so `ends[bus0] == ends[bus1]` and
+        `ends[bus0] != ends[bus2]` read one fact and were proved apart.
+        """
+        [refusal] = refusals(to_spec(THREE_ENDS), {'a': 'ends[bus0] == ends[bus1]', 'b': 'ends[bus0] != ends[bus2]'})
+        assert 'ends[bus0] vs ends[bus1] is equal' in refusal, 'the witness names the columns of each pair'
+        assert 'ends[bus0] vs ends[bus2] is different' in refusal, 'the witness names the columns of each pair'
+
+    @pytest.mark.parametrize(
+        'swapped',
+        [
+            pytest.param('ends[bus1] != ends[bus0]', id='the-columns-swapped'),
+            pytest.param('not ends[bus1] == ends[bus0]', id='the-columns-swapped-and-negated'),
+        ],
+    )
+    def test_one_pair_written_either_way_round_is_one_fact(self, swapped: str):
+        """`ends[bus1] != ends[bus0]` is the negation of `ends[bus0] == ends[bus1]`, so the two are apart."""
+        assert refusals(to_spec(THREE_ENDS), {'same': 'ends[bus0] == ends[bus1]', 'other': swapped}) == [], (
+            'a line has its two columns equal or different, not both'
+        )

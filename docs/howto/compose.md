@@ -5,332 +5,365 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Compose a spec from several files
 
-Build one spec out of files that each say part of it. `merge` composes
-**fragments**: the files of a component library, each owning part of the math.
-`override` lays **patches** over a **base**: the spec a framework ships, and
-the change a project makes to it. Each loads every fragment and the base with
-[`to_spec`](../reference/language/errors.md#what-to_spec-checks) before it
-composes them, and hands back the composed spec loaded the same way. Each
-takes its files as a list, and the two compose as `override(merge([…]), […])`.
+This guide shows how to build one specification
+([spec](../reference/glossary.md#spec)) out of several files. Use
+[`merge`](../reference/composition.md#merge) to join partial spec files
+([fragments](../reference/glossary.md#fragment)), such as the files of a
+component library. Use
+[`override`](../reference/composition.md#override) to lay files of changes
+([patches](../reference/glossary.md#patch)) over a whole spec
+([a base](../reference/glossary.md#base)), such as the spec a framework ships.
+You need mathspec [installed](installation.md), and Python to call the two
+functions.
 
-## A library of components
+## Build a spec from a library of components
 
-1. **Write the network as a spec.** It declares the injection at a bus as an
-   [empty sum](../reference/language/declarations.md#a-term-a-file-adds),
-   `empty: true` over its frame, and balances it. Nothing in it names a
-   component class.
+<!-- prettier-ignore -->
+1. Write the network as a spec. Its constraint `Bus_balance` sets
+    `Bus_injection` to zero at each bus, and its objective is to minimise
+    `total_cost`. The file lists both as names that another file declares
+    ([`given:`](../reference/language/parameters-variables-constraints.md#given)),
+    and `network.yaml` declares no component.
 
-   ```yaml title="network.yaml"
-   dimensions:
-     snapshot: { dtype: int }
-     bus: { dtype: str }
-   expressions:
-     Bus_injection:
-       dims: [snapshot, bus]
-       empty: true
-       description: what the components put into a bus
-   constraints:
-     Bus_balance:
-       dims: [snapshot, bus]
-       expression: Bus_injection == 0
-   ```
+    ```yaml title="network.yaml"
+    given:
+      expressions:
+        Bus_injection:
+          dims: [snapshot, bus]
+          description: what the components put into a bus
+        total_cost:
+          dims: []
+          description: what running the system costs
+    dimensions:
+      snapshot: { dtype: int }
+      bus: { dtype: str }
+    constraints:
+      Bus_balance:
+        dims: [snapshot, bus]
+        expression: Bus_injection == 0
+    objective:
+      sense: minimize
+      expression: total_cost
+    ```
 
-2. **Write each component file against the network.** It declares its own
-   dimension and its own math. It says what it puts into a bus as a named
-   expression, and names that expression as the `term:` of a
-   [`given`](../reference/language/declarations.md#given) entry for
-   `Bus_injection`.
+2. Write each component as a spec against the network. Each component
+    lists under `given:` each sum it adds to, and adds to each one a named
+    expression with `adds_to:`
+    ([a term](../reference/glossary.md#term)):
 
-   ```yaml title="generator.yaml"
-   dimensions:
-     snapshot: { dtype: int }
-     bus: { dtype: str }
-     generator: { dtype: str }
-   relations:
-     Generator_bus: { key: generator, values: bus }
-   parameters:
-     Generator_p_nom: { dims: [generator] }
-     Generator_marginal_cost: { dims: [generator] }
-   variables:
-     Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
-   expressions:
-     Generator_injection: sum(Generator_p, by=Generator_bus, over=generator, into=bus)
-   given:
-     expressions:
-       Bus_injection: { dims: [snapshot, bus], term: Generator_injection }
-   objective:
-     sense: minimize
-     expression: sum(Generator_p * Generator_marginal_cost)
-   ```
+    ```yaml title="generator.yaml"
+    given:
+      expressions:
+        Bus_injection: { dims: [snapshot, bus] }
+        total_cost: { dims: [] }
+    dimensions:
+      snapshot: { dtype: int }
+      bus: { dtype: str }
+      generator: { dtype: str }
+    relations:
+      Generator_bus: { key: generator, values: bus }
+    parameters:
+      Generator_p_nom: { dims: [generator] }
+      Generator_marginal_cost: { dims: [generator] }
+    variables:
+      Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
+    expressions:
+      Generator_injection:
+        expression: sum(Generator_p, over=generator, by=Generator_bus[bus])
+        adds_to: Bus_injection
+      Generator_cost:
+        expression: sum(Generator_p * Generator_marginal_cost)
+        adds_to: total_cost
+    ```
 
-   ```yaml title="load.yaml"
-   dimensions:
-     snapshot: { dtype: int }
-     bus: { dtype: str }
-     load: { dtype: str }
-   relations:
-     Load_bus: { key: load, values: bus }
-   parameters:
-     Load_p_set: { dims: [snapshot, load] }
-   expressions:
-     Load_injection: -sum(Load_p_set, by=Load_bus, over=load, into=bus)
-   given:
-     expressions:
-       Bus_injection: { dims: [snapshot, bus], term: Load_injection }
-   ```
+    ```yaml title="load.yaml"
+    given:
+      expressions:
+        Bus_injection: { dims: [snapshot, bus] }
+    dimensions:
+      snapshot: { dtype: int }
+      bus: { dtype: str }
+      load: { dtype: str }
+    relations:
+      Load_bus: { key: load, values: bus }
+    parameters:
+      Load_p_set: { dims: [snapshot, load] }
+    expressions:
+      Load_injection:
+        expression: -sum(Load_p_set, over=load, by=Load_bus[bus])
+        adds_to: Bus_injection
+    ```
 
-   Each file loads on its own and prints as math on its own.
+    Name each term after its component, such as `Generator_injection`, so that
+    no two fragments
+    [declare the same name](../reference/composition.md#a-name-two-fragments-declare).
 
-3. **Merge the files you need.** Give them as a list. A refusal names a file
-   by its path as the list gives it, and a mapping or a loaded spec by its
-   place in the list, such as `'#2'`.
+3. Check each file on its own. `check` prints a remark that is not a
+    refusal ([advice](../reference/glossary.md#advice)) for each name the file
+    lists under `given:`, and does not refuse the file. On `load.yaml`, the
+    command and the Python loop print one line:
 
-   ```python
-   import mathspec as ms
+    === "Command line"
 
-   spec = ms.merge(['network.yaml', 'generator.yaml', 'load.yaml'])
-   ```
+        ```bash
+        python -m mathspec check load.yaml
+        ```
 
-   `spec` writes `Bus_injection` as `Generator_injection + Load_injection`, and
-   keeps each term as a named expression. It carries no `given:`. The
-   objectives of the fragments are summed, each term in parentheses, in the
-   order of the list. The order changes no meaning:
-   [`canonical`](compare.md) writes the same text for every order.
+    === "Python"
 
-4. **Add a component without touching the network.** A new file adds its own
-   term, and `network.yaml` stays as it is.
+        ```python
+        import mathspec as ms
 
-   ```yaml title="store.yaml"
-   dimensions:
-     snapshot: { dtype: int }
-     bus: { dtype: str }
-     store: { dtype: str }
-   relations:
-     Store_bus: { key: store, values: bus }
-   parameters:
-     Store_e_nom: { dims: [store] }
-   variables:
-     Store_p: { dims: [snapshot, store] }
-     Store_e: { dims: [snapshot, store], bounds: { lower: 0, upper: Store_e_nom } }
-   constraints:
-     Store_energy_balance:
-       dims: [snapshot, store]
-       expression: Store_e == shift(Store_e, along=snapshot, offset=1, edge='wrap') - Store_p
-   expressions:
-     Store_injection: sum(Store_p, by=Store_bus, over=store, into=bus)
-   given:
-     expressions:
-       Bus_injection: { dims: [snapshot, bus], term: Store_injection }
-   ```
+        for note in ms.advice('load.yaml'):
+            print(note)
+        ```
 
-   With `'store.yaml'` added to the list, `Bus_injection` is
-   `Generator_injection + Load_injection + Store_injection`.
+    ```text
+    expression 'Bus_injection' is read here, and this file adds a term to it. merge() sums the term with the terms other files add under that name. Until then, the program reads it and does not build it.
+    ```
 
-A library can also couple its components through a flow variable per port,
-which each component pins at its own port.
-[A component library](../examples/library/index.md) is written that way.
+    mathspec advises that `merge` completes the sum. On `network.yaml`, mathspec advises instead that `merge` takes each
+    name from the file that declares it, or builds it from terms.
 
-## What a fragment may share
+    Keep this Python session open, because later steps use `ms`.
 
-| The entry                                         | What happens                                                                                                                                                                                                                                          |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| a dimension or a relation                         | every fragment may declare it, and the ones that do say the same thing about it                                                                                                                                                                       |
-| a `description` on a shared dimension or relation | it is prose rather than a claim, and the first wording in the list is carried                                                                                                                                                                         |
-| any other declaration                             | one fragment declares it, and a second is refused                                                                                                                                                                                                     |
-| an entry under `given:`                           | it is checked against the fragment that introduces the name, then folded into it. Its description fills the declaration where the introducer wrote none                                                                                               |
-| a given expression                                | the definition's body carries no dimension the reader's `dims` do not name                                                                                                                                                                            |
-| a given entry no fragment introduces              | it stays under `given:` until a host model provides it                                                                                                                                                                                                |
-| a given expression with a `term`                  | the name is an `expressions:` block of one fragment, empty or bodied; its body becomes that body, if any, plus every term by its name, in the order of the list. Each term stays a named expression. A term that names no fragment's block is refused |
-| `objective`                                       | the terms are summed in the order of the list, each in parentheses, and the senses agree. The first description in the list is carried                                                                                                                |
-| `version`                                         | every fragment is written against the same one                                                                                                                                                                                                        |
-| `description` at the top of a fragment            | it is about the fragment and is not carried. Pass the composed spec's as `description=`                                                                                                                                                               |
+4. Merge the files that you need, as a list:
 
-## A name two fragments declare
+    ```python
+    spec = ms.merge(['network.yaml', 'generator.yaml', 'load.yaml'])
+    print(spec.expressions['Bus_injection'].expression)
+    print(spec.expressions['total_cost'].expression)
+    ```
 
-Fragments own their math, so a name two of them declare is refused, both
-named. Here two files each say what a generator fleet is:
+    ```text
+    Generator_injection + Load_injection
+    Generator_cost
+    ```
 
-```text
-fragments 'gas.yaml' and 'coal.yaml' both declare the parameter 'Generator_p_nom'. Two of the same kind of thing are two rows of a dimension rather than two fragments: merge the fragment once, and let the data carry both. Different math under one spelling is a rename: call one of them something else.
+    `merge` builds each sum from its terms.
+
+## Add a component to a library
+
+Add a new file with a term of its own, and leave `network.yaml` as it is.
+
+<!-- prettier-ignore -->
+1. As in the steps above, write the component against the network:
+
+    ```yaml title="store.yaml"
+    given:
+      expressions:
+        Bus_injection: { dims: [snapshot, bus] }
+    dimensions:
+      snapshot: { dtype: int, ordered: true }
+      bus: { dtype: str }
+      store: { dtype: str }
+    relations:
+      Store_bus: { key: store, values: bus }
+    parameters:
+      Store_e_nom: { dims: [store] }
+    variables:
+      Store_p: { dims: [snapshot, store] }
+      Store_e: { dims: [snapshot, store], bounds: { lower: 0, upper: Store_e_nom } }
+    constraints:
+      Store_energy_balance:
+        dims: [snapshot, store]
+        expression: Store_e == shift(Store_e, along=snapshot, offset=1, edge='wrap') - Store_p
+    expressions:
+      Store_injection:
+        expression: sum(Store_p, over=store, by=Store_bus[bus])
+        adds_to: Bus_injection
+    ```
+
+2. Add the file to the list:
+
+    ```python
+    spec = ms.merge(['network.yaml', 'generator.yaml', 'load.yaml', 'store.yaml'])
+    ```
+
+    `Bus_injection` is now
+    `Generator_injection + Load_injection + Store_injection`.
+
+To add a term to a spec that is already merged, pass that spec as one item of
+the list:
+
+```python
+spec = ms.merge(['network.yaml', 'generator.yaml', 'load.yaml'])
+spec = ms.merge([spec, 'store.yaml'])
 ```
 
-A term is a named expression like any other, so the terms of two fragments
-need two names. Name each term after its component, such as
-`Generator_injection` and `Load_injection`.
+After this two-step merge, `Bus_injection` is the same sum as after the list
+of four files. Add a term with `merge` and not with a patch.
 
-## A column read one way and introduced another
+## Write part of the sum in the network file
 
-What a fragment states about a column it reads has to agree with the fragment
-that introduces the column. The reader may say less, such as the frame with no
-`domain`, and may not say something else. Here a file that caps emissions
-reads `Generator_p` as binary:
+To put part of the sum in the network file itself, define `Bus_injection`
+there, and leave it out of `given:`. The component files stay
+as they are.
 
-```yaml title="emissions.yaml"
-dimensions:
-  snapshot: { dtype: int }
-  generator: { dtype: str }
-given:
-  variables:
-    Generator_p: { dims: [snapshot, generator], domain: binary }
-parameters:
-  Generator_co2: { dims: [generator] }
-  co2_cap: { dims: [] }
+<!-- prettier-ignore -->
+1. Write the body of the sum in the network file:
+
+    ```yaml title="network_slack.yaml"
+    given:
+      expressions:
+        total_cost:
+          dims: []
+          description: what running the system costs
+    dimensions:
+      snapshot: { dtype: int }
+      bus: { dtype: str }
+    variables:
+      Bus_slack: { dims: [snapshot, bus] }
+    expressions:
+      Bus_injection:
+        dims: [snapshot, bus]
+        expression: Bus_slack
+        description: what the components put into a bus
+    constraints:
+      Bus_balance:
+        dims: [snapshot, bus]
+        expression: Bus_injection == 0
+    objective:
+      sense: minimize
+      expression: total_cost
+    ```
+
+2. Merge it with the components:
+
+    ```python
+    spec = ms.merge(['network_slack.yaml', 'generator.yaml', 'load.yaml'])
+    ```
+
+    `Bus_injection` is `Bus_slack + Generator_injection + Load_injection`. The
+    body in the network file comes first, and every term follows it.
+
+## Lay patches over a base
+
+<!-- prettier-ignore -->
+1. Write the base for [`override`](../reference/composition.md#override) as a
+    least-cost dispatch spec that mathspec loads on its own.
+
+    ```yaml title="base.yaml"
+    dimensions:
+      snapshot: { dtype: int }
+      generator: { dtype: str }
+    parameters:
+      capacity: { dims: [generator] }
+      cost: { dims: [generator] }
+      load: { dims: [snapshot] }
+    variables:
+      dispatch: { dims: [snapshot, generator], bounds: { lower: 0, upper: capacity } }
+    constraints:
+      power_balance:
+        dims: [snapshot]
+        expression: sum(dispatch, over=generator) == load
+    objective:
+      sense: minimize
+      expression: sum(dispatch * cost)
+    ```
+
+2. Write in each patch only the fields to change.
+    To add an entry, write it whole under a new name:
+
+    ```yaml title="operate.yaml"
+    variables:
+      dispatch: { where: "capacity > 0" }
+    ```
+
+    ```yaml title="carbon.yaml"
+    parameters:
+      emission_rate: { dims: [generator] }
+    constraints:
+      emission_cap:
+        dims: []
+        expression: sum(dispatch * emission_rate) <= 1000
+    ```
+
+3. Lay the patches on the base, as a list:
+
+    ```python
+    spec = ms.override('base.yaml', ['carbon.yaml', 'operate.yaml'])
+    ```
+
+    `spec` declares `emission_cap` beside `power_balance`. With data attached,
+    `dispatch` exists only where `capacity > 0` (a
+    [condition](../reference/glossary.md#condition)).
+
+## Remove an entry or a field with a patch
+
+<!-- prettier-ignore -->
+1. Write `null` under the name of each entry to remove:
+
+    ```yaml title="feasibility.yaml"
+    constraints:
+      emission_cap: null
+    objective: null
+    ```
+
+    The spec that `ms.override('base.yaml', ['carbon.yaml', 'feasibility.yaml'])`
+    returns has `power_balance` as its only constraint, and no objective.
+
+2. Write `null` on a field to give the field its default, and keep the entry.
+    With `dispatch: { where: null }`, the variable has no condition. With
+    `dispatch: { bounds: { upper: null } }`, it has no upper bound.
+
+To empty a section, write `null` on each of its entries, because mathspec
+refuses [`constraints: null`](../reference/composition.md#null-in-a-patch).
+
+## Refine one patch with another
+
+Here `project.yaml` is a patch on `carbon.yaml` from the steps above, with a
+new expression for `emission_cap` only:
+
+```yaml title="project.yaml"
 constraints:
-  co2_limit:
-    dims: []
-    expression: sum(Generator_p * Generator_co2) <= co2_cap
+  emission_cap:
+    expression: sum(dispatch * emission_rate) <= 500
+```
+
+[`override`](../reference/composition.md#override) replaces the fields of an
+earlier patch with those of a later one, so put the refining patch after the
+patch it refines:
+
+```python
+spec = ms.override('base.yaml', ['carbon.yaml', 'project.yaml'])
+print(spec.constraints['emission_cap'].expression)
 ```
 
 ```text
-fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'absence': 'undefined'}. A given declaration says the same as the declaration it is folded into, or less: restate the frame as the introducer declares it, or leave the field out.
+sum(dispatch * emission_rate) <= 500
 ```
 
-Two fragments that both only read a column have to read it the same way, and
-a difference is refused as it is for a dimension.
+`emission_cap` has the `dims: []` of `carbon.yaml` and the limit of
+`project.yaml`.
 
-## A fragment that does not load on its own
+## Remove a term from a merged sum
 
-A fragment is a whole spec, so `merge` loads each one before it composes
-them. A fragment `to_spec` refuses is refused under its own name, with the
-refusal `to_spec` gives. A sibling cannot make it load. Here the generator
-declares `Generator_p` and reads it under `given:` as well:
+To drop a term, write the body of the sum again without it, in a patch, and
+lay the patch after the last `merge`:
 
-```text
-fragment 'generator.yaml' does not load on its own. A fragment is a whole spec: it declares what it builds, and reads what a sibling builds under 'given:'.
-Given variable 'Generator_p' collides with the variable of the same name. Names share one flat namespace — rename one of them.
+```yaml title="no_load.yaml"
+expressions:
+  Bus_injection: Generator_injection
 ```
 
-## A base and its patches
-
-1. **Write the base as a spec**, and each patch as the change it makes. A
-   patch names only the fields it changes. A declaration a patch does not name
-   stays as the base wrote it. The base loads on its own, and `override` loads
-   it first. A patch is not a spec, so it is laid over as written, and the
-   patched spec is loaded after.
-
-   ```yaml title="base.yaml"
-   dimensions:
-     snapshot: { dtype: int }
-     generator: { dtype: str }
-   parameters:
-     capacity: { dims: [generator] }
-     cost: { dims: [generator] }
-     load: { dims: [snapshot] }
-   variables:
-     dispatch: { dims: [snapshot, generator], bounds: { lower: 0, upper: capacity } }
-   constraints:
-     power_balance:
-       dims: [snapshot]
-       expression: sum(dispatch, over=generator) == load
-   objective:
-     sense: minimize
-     expression: sum(dispatch * cost)
-   ```
-
-   ```yaml title="operate.yaml"
-   variables:
-     dispatch: { where: "capacity > 0" }
-   ```
-
-   ```yaml title="carbon.yaml"
-   parameters:
-     emission_rate: { dims: [generator] }
-   constraints:
-     emission_cap:
-       dims: []
-       expression: sum(dispatch * emission_rate) <= 1000
-   ```
-
-2. **Lay the patches on the base.** Give them as a list. A refusal names a
-   patch by its path, as `merge` names a fragment.
-
-   ```python
-   import mathspec as ms
-
-   spec = ms.override('base.yaml', ['carbon.yaml', 'operate.yaml'])
-   ```
-
-   `spec` declares `emission_cap` beside `power_balance`, and `dispatch` carries
-   the mask `capacity > 0`.
-
-3. **Remove a declaration with `null`.** A patch that does not mention a
-   declaration leaves it alone, so removal needs a marker of its own.
-
-   ```yaml title="feasibility.yaml"
-   constraints:
-     emission_cap: null
-   objective: null
-   ```
-
-   A `null` makes what it names absent. On a declaration, the declaration is
-   removed. On a field, the field takes its default and the declaration stays:
-   `dispatch: { where: null }` gives that variable no mask, and
-   `dispatch: { bounds: { upper: null } }` leaves it open above. Higher up,
-   `constraints: null` is refused, because a section is not a declaration and
-   nulling it removes nothing.
-
-4. **Put a patch that refines another after it.** `override` lays the
-   patches in the order of the list, each on the result of the ones before.
-   Where two patches write one field, the later one wins. A later patch may
-   also edit or remove a declaration an earlier one creates.
-
-   ```python
-   spec = ms.override('base.yaml', ['pathway.yaml', 'project.yaml'])
-   ```
-
-## What a patch may say
-
-| The entry                            | What happens                                                                  |
-| ------------------------------------ | ----------------------------------------------------------------------------- |
-| some fields of a declaration         | those fields change, and the rest of the declaration stays                    |
-| a whole declaration under a new name | it is added                                                                   |
-| `null` under a declaration's name    | it is removed                                                                 |
-| `null` on a field of a declaration   | the field takes its default, and the rest of the declaration stays            |
-| `null` under a section's name        | it is refused                                                                 |
-| a dimension or a relation            | it is added, or restated word for word as the base declares it                |
-| an entry under one kind of `given:`  | it is edited, added or removed like any declaration, and the other kinds stay |
-| `version`, `description`             | the patch's value replaces the base's                                         |
-| a field an earlier patch writes      | the later patch's value replaces it                                           |
-
-## A partial entry on a missing name
-
-An entry naming some fields has to land on a declaration the base or an
-earlier patch has. A mistyped name is refused rather than read as a new
-declaration:
-
-```text
-patch 'project.yaml' edits the constraint 'power_balnce', which its base does not declare. Did you mean 'power_balance'? A patch creates a declaration only by writing it whole, and this one is not: a constraint needs `expression`.
+```python
+spec = ms.override(ms.merge(['network.yaml', 'generator.yaml', 'load.yaml']), ['no_load.yaml'])
 ```
 
-To add a constraint, write the whole constraint. To change one, spell its name
-as the base spells it.
+`Bus_injection` is then `Generator_injection` alone, and `Load_injection` stays
+in the spec as a named expression that no sum includes.
 
-## A dimension redeclared
+!!! info "See also"
 
-A patch may add a dimension or a relation, and may restate one the base
-declares. The restatement is word for word: half a declaration is a second
-reading of the same name. Changing one under the expressions already written
-over it is refused, and so is removing one:
-
-```text
-patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch adjusts the math, not the coordinate space the math is already written over: restate the declaration word for word, leave it out, or give the patch a dimension of its own under a name of its own.
-```
-
-## A section set to `null`
-
-A `null` removes the declaration it names. A section holds declarations rather
-than being one, so nulling a section is refused rather than read as emptying
-it:
-
-```text
-patch 'project.yaml' sets 'constraints' to null, which removes nothing: the removal marker names one declaration, and a section is not one. Remove the declarations one at a time, each under its own name, or leave the section out of the patch.
-```
-
-## A stale removal
-
-A removal says what the base has, so a removal of a declaration the base does
-not have is refused with the near miss:
-
-```text
-patch 'stale.yaml' removes the constraint 'power_balnce', which its base does not declare. A removal is a claim about what is there, so a stale one is a patch that no longer describes the spec it lands on. Did you mean 'power_balance'?
-```
+    - [composing specs](../reference/composition.md), for every rule of `merge`
+      and `override`
+    - [what a patch writes](../reference/composition.md#what-a-patch-writes),
+      for each change you can make with a patch
+    - [a term on a merged sum](../reference/composition.md#a-term-on-a-merged-sum),
+      for why a term is added with `merge` and not with a patch
+    - [refusals](../reference/composition.md#refusals), for each message that
+      `merge` and `override` give
+    - [a spec in several files](../tutorials/several-files.md), for a lesson in which
+      you build a library step by step
+    - [a component library](../examples/library/index.md), for a larger library

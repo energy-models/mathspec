@@ -2,24 +2,24 @@
 #
 # SPDX-License-Identifier: MIT
 
-description: PyPSA's `Load`, wired to a port rather than straight to a bus. What it takes is data, so it decides nothing.
+description: PyPSA's `Load`, wired to a port rather than straight to a bus. What a load takes is data, so the file declares no variable.
+given:
+  variables:
+    Port_p:
+      dims: [snapshot, port]
+      description: declared by the surface, and fixed at each load's port by `Load_withdrawal`
 dimensions:
   snapshot: { dtype: datetime, description: dispatch periods }
   port: { dtype: str, description: "the connections components make, one label per connection" }
   load: { dtype: str, description: "demands, each on one port" }
 relations:
   Load_port: { key: load, values: port }
-given:
-  variables:
-    Port_p:
-      dims: [snapshot, port]
-      description: the surface introduces this flow, and this file pins it at its own ports
 parameters:
   Load_p_set: { dims: [snapshot, load], description: "`Load-p_set` — what a load takes in a snapshot" }
 constraints:
   Load_withdrawal:
     description: >-
-      what a load takes is what its port withdraws. No PyPSA row stands for
-      this: PyPSA writes the load into the balance instead
+      What a load takes is what its port withdraws. PyPSA has no row for this
+      constraint, because PyPSA writes the load into the balance.
     dims: [snapshot, load]
-    expression: at(Port_p, by=Load_port, over=port, into=load) == -Load_p_set
+    expression: at(Port_p, by=Load_port[port]) == -Load_p_set

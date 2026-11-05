@@ -26,8 +26,8 @@ from markdown.preprocessors import Preprocessor
 if TYPE_CHECKING:
     from markdown import Markdown
 
-#: A fenced block, indented or not — its contents are nobody's to rewrite, and
-#: a ```math one is the superfences entry's in `mkdocs.yml`. The closing run is
+#: A fenced block, indented or not. Nothing rewrites its contents, and the
+#: superfences entry in `mkdocs.yml` handles a ```math one. The closing run is
 #: matched against the opening one, as CommonMark reads a fence: a pattern that
 #: only ever closed on three backticks ran from a longer opening fence to the
 #: first bare one, and left every span between them unrewritten.
@@ -36,7 +36,7 @@ FENCED_BLOCK = re.compile(
     re.DOTALL | re.MULTILINE,
 )
 
-#: GitHub's verbatim inline math, `$`…`$` — the pair the typesetter prints so
+#: GitHub's verbatim inline math, `$`…`$`. The typesetter prints this pair so
 #: that GitHub's escape pass cannot reach into the span. A backtick on either
 #: outer edge means a code span quoting the syntax rather than math using it,
 #: which is how `docs/reference/typeset.md` spells it.

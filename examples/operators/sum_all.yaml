@@ -2,7 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
-description: Every dimension at once — `sum(array)` names none of them and takes them all.
+description: >-
+  Every dimension at once: `sum(array)` lists no dimension and collapses every
+  one.
 
 dimensions:
   snapshot: { dtype: int }

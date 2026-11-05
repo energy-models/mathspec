@@ -6,20 +6,22 @@
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
 import pytest
 
+from mathspec._typesetting import SymbolTable, to_latex, to_markdown, to_typst, typeset
+from mathspec._typesetting.format import number
+from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
-from mathspec.typesetting import SymbolTable, to_latex, to_markdown, to_typst, typeset
-from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, varied
 from tests.typesetting.fixtures import EVERY_FORMAT, TYPST_SYMBOLS
 
 if TYPE_CHECKING:
+    from mathspec._typesetting import FormatName
+    from mathspec._typesetting.format import Format
     from mathspec.spec import Spec
-    from mathspec.typesetting import FormatName
-    from mathspec.typesetting.format import Format
 
 
 WITH_MARGINAL_COST = varied(
@@ -71,7 +73,7 @@ DESCRIBED = varied(
 
 @EVERY_FORMAT
 def test_a_description_reaches_the_legend_without_hiding_the_name(name: FormatName, fmt: Format):
-    """The declaration's own `description:` is what the legend reads — no
+    """The entry's own `description:` is what the legend reads — no
     sidecar involved, so a model carries its prose wherever it goes."""
     out = typeset(DESCRIBED, name)
     for text in (
@@ -95,12 +97,70 @@ def test_a_named_expression_has_a_legend_row_exactly_while_its_symbol_prints(nam
     assert 'what a snapshot costs' not in typeset(DESCRIBED, name, inline_expressions=True)
 
 
+DEFAULTED = varied(
+    DISPATCH_MODEL,
+    **{
+        'dimensions.bus': {'dtype': 'str'},
+        'relations.gen_bus': {'key': 'generator', 'values': 'bus', 'missing': 'absent'},
+        'parameters.p_max.missing': 'inf',
+        'parameters.cost.missing': 1,
+        'parameters.load.missing': 0,
+        'parameters.floor': {'dims': [], 'missing': '-inf'},
+        'parameters.online': {'dims': ['generator'], 'dtype': 'bool', 'missing': True},
+        'parameters.p_set': {'dims': ['generator'], 'missing': 'absent'},
+        'parameters.ramp': {'dims': ['generator']},
+    },
+)
+
+
+@EVERY_FORMAT
+def test_the_legend_prints_what_a_missing_row_means(name: FormatName, fmt: Format):
+    """The legend printed a value and left out a reading, so `absent`, `0` and a partial map looked complete."""
+    out = typeset(DEFAULTED, name)
+    for shown in (
+        fmt.math(number(math.inf, fmt)),
+        fmt.math(number(-math.inf, fmt)),
+        fmt.math('1'),
+        fmt.mono('true'),
+        fmt.math(number(0, fmt)),
+        fmt.mono('absent'),
+        f'{fmt.mono("gen_bus")} is {fmt.mono("absent")}',
+    ):
+        assert f'{shown} where the data has no row' in out
+    assert out.count('where the data has no row') == 8, (
+        'six parameters and the map in each of its two sets say what a missing row means; '
+        '`ramp` keeps the default, refused, and says nothing'
+    )
+
+
+#: The dispatch model with a masked variable of each reading.
+MASKED = varied(
+    DISPATCH_MODEL,
+    **{
+        'parameters.on': {'dims': ['generator'], 'dtype': 'bool', 'missing': False},
+        'variables.spill': {'dims': ['snapshot', 'generator'], 'where': 'on', 'missing': 0},
+        'variables.store': {'dims': ['snapshot', 'generator'], 'where': 'on'},
+    },
+)
+
+
+@EVERY_FORMAT
+def test_the_legend_prints_what_a_masked_out_variable_means(name: FormatName, fmt: Format):
+    """The legend printed a parameter's reading and not a variable's, so `missing: 0` on a variable was unseen."""
+    out = typeset(MASKED, name)
+    [row] = [line for line in out.splitlines() if fmt.mono('spill') in line and ' over ' in line]
+    assert (
+        f'{fmt.mono("spill")} over ' in row and f', {fmt.math(number(0, fmt))} where the mask leaves it out' in row
+    ), row
+    assert out.count('where the mask leaves it out') == 1, '`store` keeps the default, absent, and says nothing'
+
+
 #: The dispatch model with a curve on it, so one model has two readings and one
 #: table has to spell both.
 CURVED = varied(
     DISPATCH_MODEL,
     **{
-        'dimensions.bp': {'dtype': 'int'},
+        'dimensions.bp': {'dtype': 'int', 'ordered': True},
         'parameters.bp_x': {'dims': ['generator', 'bp']},
         'parameters.bp_y': {'dims': ['generator', 'bp']},
         'variables.op_cost': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}},
@@ -113,8 +173,8 @@ CURVED = varied(
 )
 
 
-def test_one_table_spells_the_blocks_a_file_states_and_the_rows_they_state():
-    """The weights are named after the block, which no equation can carry, and the
+def test_one_table_spells_the_entries_a_file_states_and_the_rows_they_state():
+    """The weights are named after the entry, which no equation can carry, and the
     table that renames them has to render the file they came from too."""
     spec = to_spec(CURVED)
     table = {'notation': 'latex', 'names': {'curve_lam': r'\lambda'}}
@@ -211,14 +271,14 @@ def test_an_entry_naming_nothing_is_an_error_with_the_near_miss(symbols, match):
         pytest.param(
             to_typst,
             {'notation': 'latex', 'names': {'p_max': r'\bar p'}},
-            'written in latex, but this is a typst render',
+            'written in latex, but this render is typst',
             id='a-latex-table-into-typst',
         ),
-        pytest.param(to_latex, TYPST_SYMBOLS, 'written in typst, but this is a latex render', id='typst-table-latex'),
+        pytest.param(to_latex, TYPST_SYMBOLS, 'written in typst, but this render is latex', id='typst-table-latex'),
         pytest.param(
-            to_markdown, TYPST_SYMBOLS, 'written in typst, but this is a latex render', id='typst-table-markdown'
+            to_markdown, TYPST_SYMBOLS, 'written in typst, but this render is latex', id='typst-table-markdown'
         ),
-        pytest.param(to_latex, {'names': {'p': 'x'}}, "'notation:' is required", id='a-table-that-does-not-say'),
+        pytest.param(to_latex, {'names': {'p': 'x'}}, "'notation:' is missing", id='a-table-that-does-not-say'),
         pytest.param(
             to_latex,
             {'notation': 'latx', 'names': {'p': 'x'}},

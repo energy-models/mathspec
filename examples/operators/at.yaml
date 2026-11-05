@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  The adjoint of the membership reduction — `at(array, by=relation, over=a, into=b)` reads one
-  coarse value once per fine label pointing at it.
+  The join without a grouping: `at(array, by=relation[c])` takes, for each
+  `snapshot`, the value at the `period` the relation lists for that snapshot.
 
 dimensions:
   snapshot: { dtype: int }
@@ -24,6 +24,6 @@ variables:
 constraints:
   within_cap:
     dims: [snapshot]
-    expression: p <= at(cap, by=period_of, over=period, into=snapshot)
+    expression: p <= at(cap, by=period_of[period])
 
 objective: { sense: minimize, expression: sum(p) }

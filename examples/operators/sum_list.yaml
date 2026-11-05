@@ -2,7 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
-description: Several dimensions at once — `sum(array, over=[a, b])` collapses each one it names.
+description: >-
+  Several dimensions at once: `sum(array, over=[a, b])` collapses each
+  dimension in the list.
 
 dimensions:
   snapshot: { dtype: int }

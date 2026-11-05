@@ -16,6 +16,7 @@ dimensions:
   bp:
     description: breakpoints of the discretised square-root curve
     dtype: int
+    ordered: true
 
 parameters:
   capacity:

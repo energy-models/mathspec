@@ -1,0 +1,81 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 876 182" width="876" height="182" style="max-width: 100%; height: auto" role="img" aria-labelledby="ecn-t ecn-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="ecn-t">A count in a where condition keeps a generator by how many breakpoints are true</title>
+  <desc id="ecn-d">The parameter points is a table with six rows, one per generator and breakpoint. Wind is true at breakpoints 0 and 1 and false at 2. Gas is true at 0 and false at 1 and 2. The variable p, declared with where count of points over bp at least 2, is a table with one row, wind. Gas has only one true breakpoint, so p has no row for gas and is absent there.</desc>
+  <defs>
+    <pattern id="ecn-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="ecn-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g transform="translate(0,-98)">
+  <g stroke="none">
+    <path d="M16,154 H246 V265 A3,3 0 0 1 243,268 H19 A3,3 0 0 1 16,265 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,154 V135 A3,3 0 0 1 19,132 H243 A3,3 0 0 1 246,135 V154 Z" fill="#0072B2" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="122" font-weight="bold">points</text>
+    <text x="72" y="122" fill-opacity="0.7">a parameter</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="146" font-weight="bold">generator</text><text x="112" y="146" font-weight="bold">bp</text><text x="156" y="146" font-weight="bold">value</text>
+      <text x="24" y="170">wind</text><text x="112" y="170">0</text><text x="156" y="170">true</text>
+      <text x="24" y="188">wind</text><text x="112" y="188">1</text><text x="156" y="188">true</text>
+      <text x="24" y="206">wind</text><text x="112" y="206">2</text><text x="156" y="206">false</text>
+      <text x="24" y="224">gas</text><text x="112" y="224">0</text><text x="156" y="224">true</text>
+      <text x="24" y="242">gas</text><text x="112" y="242">1</text><text x="156" y="242">false</text>
+      <text x="24" y="260">gas</text><text x="112" y="260">2</text><text x="156" y="260">false</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="132" width="230" height="136" rx="3"/>
+    <line x1="16" y1="154" x2="246" y2="154"/>
+    <rect x="17" y="211" width="228" height="18" fill="url(#ecn-hatch)" stroke="none"/>
+    <rect x="17" y="229" width="228" height="18" fill="url(#ecn-hatch)" stroke="none"/>
+    <rect x="17" y="247" width="228" height="18" fill="url(#ecn-hatch)" stroke="none"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#ecn-arrow)">
+    <path d="M256,176 L458,176"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="268" y="149">where: "count(points,</text>
+    <text x="268" y="164">over=bp) &gt;= 2"</text>
+    <text x="268" y="194" fill-opacity="0.7">keeps a generator with</text>
+    <text x="268" y="209" fill-opacity="0.7">two or more true</text>
+  </g>
+  <g stroke="none">
+    <path d="M470,154 H700 V175 A3,3 0 0 1 697,178 H473 A3,3 0 0 1 470,175 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M470,154 V135 A3,3 0 0 1 473,132 H697 A3,3 0 0 1 700,135 V154 Z" fill="#E69F00" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="470" y="122" font-weight="bold">p</text>
+    <text x="488" y="122" fill-opacity="0.7">a variable</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="478" y="146" font-weight="bold">generator</text>
+      <text x="478" y="170">wind</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="470" y="132" width="230" height="46" rx="3"/>
+    <line x1="470" y1="154" x2="700" y2="154"/>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="470" y="182" width="230" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="478" y="198" fill-opacity="0.7" font-style="italic">no row for gas: p is absent</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="726" y="138" width="14" height="14" fill="url(#ecn-hatch)"/>
+    <rect x="726" y="162" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="746" y="149">condition is false</text>
+    <text x="746" y="173">absent: no row</text>
+  </g>
+  </g>
+</svg>

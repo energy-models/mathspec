@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Named sub-expressions and macros — YAML-defined, schema-local, expanded to core AST at load."""
+"""Named sub-expressions and macros — YAML-defined, spec-local, expanded to core AST at load."""
 
 from __future__ import annotations
 
@@ -11,11 +11,12 @@ from functools import partial
 
 import pytest
 
+from mathspec import to_spec
+from mathspec._expansion import parse_and_expand
+from mathspec._resolution import Namespace
 from mathspec.errors import LanguageError
-from mathspec.expansion import parse_and_expand
-from mathspec.program import Multiply, Named, Parameter, Sum, Translate, Variable
-from mathspec.resolution import Namespace
-from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, comparison_of, expression_of, schema_of
+from mathspec.program import Axis, ExpressionReference, Multiply, ParameterReference, Sum, Translate, VariableReference
+from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, comparison_of, expression_of, spec_of
 
 WEIGHTED_SUM = {
     'args': ['array', 'weights'],
@@ -23,7 +24,7 @@ WEIGHTED_SUM = {
     'template': 'sum(array * weights, over=over)',
 }
 
-schema = partial(schema_of, DISPATCH_MODEL)
+spec = partial(spec_of, DISPATCH_MODEL)
 
 
 def _resolved(text, ns):
@@ -35,7 +36,7 @@ def _resolved(text, ns):
 
 def _bodies(resolved):
     """*resolved* with every named expression's body standing bare where its name was."""
-    if isinstance(resolved, Named):
+    if isinstance(resolved, ExpressionReference):
         return _bodies(resolved.body)
     if isinstance(resolved, tuple):
         return tuple(_bodies(part) for part in resolved)
@@ -131,18 +132,20 @@ def _bodies(resolved):
 )
 def test_a_call_expands_to_core_ast(expressions, macros, call, want):
     """The math a call expands to is what `want` spells; a named expression's
-    body arrives under the `Named` node carrying its name, which `_bodies`
+    body arrives under the `ExpressionReference` node carrying its name, which `_bodies`
     inlines, as lowering does."""
-    ns = Namespace(schema(expressions=expressions, macros=macros))
+    ns = Namespace(spec(expressions=expressions, macros=macros))
     assert _bodies(_resolved(call, ns)) == _resolved(want, ns)
 
 
 def test_a_named_expression_arrives_under_the_node_carrying_its_name():
-    ns = Namespace(schema(expressions={'gen_cost': 'p * cost'}))
+    ns = Namespace(spec(expressions={'gen_cost': 'p * cost'}))
     resolved = expression_of('sum(gen_cost, over=generator)', ns, 'e')
-    assert resolved == Sum(Named('gen_cost', Multiply(Variable('p'), Parameter('cost'))), ('generator',)), (
-        'the body is inlined resolved and the name kept, for the typesetter to define it once'
-    )
+    frame = ('generator', 'snapshot')
+    body = Multiply(VariableReference('p', dims=frame), ParameterReference('cost', dims=('generator',)), dims=frame)
+    assert resolved == Sum(
+        ExpressionReference('gen_cost', body, dims=frame), (Axis('generator'),), dims=('snapshot',)
+    ), 'the body is inlined resolved and the name kept, for the typesetter to define it once'
     assert isinstance(resolved, Sum)
     assert resolved.operand is expression_of('gen_cost', ns, 'another use'), 'every use reads the one node'
 
@@ -151,7 +154,7 @@ def test_a_named_expression_arrives_under_the_node_carrying_its_name():
     ('expressions', 'match'),
     [
         pytest.param({'a': 'b + 1', 'b': 'a + 1'}, 'circular expression reference: a -> b -> a', id='a-cycle'),
-        pytest.param({'bad': 'p == load'}, 'must not contain a comparison', id='a-comparison'),
+        pytest.param({'bad': 'p == load'}, 'holds a comparison', id='a-comparison'),
         pytest.param({'load': 'p * cost'}, 'collides with the parameter of the same name', id='a-parameter-collision'),
         pytest.param(
             {'broken': 'sum(nope, over=generator)'},
@@ -162,7 +165,7 @@ def test_a_named_expression_arrives_under_the_node_carrying_its_name():
 )
 def test_a_bad_named_expression_is_refused_at_load(expressions, match):
     with pytest.raises(LanguageError, match=match):
-        schema(expressions=expressions)
+        spec(expressions=expressions)
 
 
 @pytest.mark.parametrize(
@@ -191,14 +194,16 @@ def test_a_bad_named_expression_is_refused_at_load(expressions, match):
 )
 def test_a_cycle_is_reported_with_the_chain_that_closes_it(expressions, macros, chain):
     """A cycle closed through a macro was reported as `a -> a`, the macro left out, and one closed through a case's `when` was a `RecursionError`."""
-    with pytest.raises(LanguageError, match=f'circular expression reference: {chain}$') as exc:
-        schema(expressions=expressions, macros=macros)
+    with pytest.raises(
+        LanguageError, match=rf'circular expression reference: {chain}\. Remove one reference\.$'
+    ) as exc:
+        spec(expressions=expressions, macros=macros)
     assert str(exc.value).count('circular') == 1, 'the cycle is reported once, where it closes'
 
 
 def test_a_refusal_names_its_context_once():
     with pytest.raises(LanguageError) as exc:
-        schema(expressions={'a': 'a + 1'})
+        spec(expressions={'a': 'a + 1'})
     assert str(exc.value).count("Named expression 'a'") == 1, 'the context is prefixed once, not once per pass'
 
 
@@ -211,7 +216,7 @@ def test_a_refusal_names_its_context_once():
 )
 def test_macro_arity_errors(call, match):
     with pytest.raises(LanguageError, match=match):
-        parse_and_expand(call, Namespace(schema(macros={'ws': WEIGHTED_SUM})), 'expression')
+        parse_and_expand(call, Namespace(spec(macros={'ws': WEIGHTED_SUM})), 'expression')
 
 
 @pytest.mark.parametrize(
@@ -245,9 +250,9 @@ def test_macro_arity_errors(call, match):
     ],
 )
 def test_macro_collisions_rejected(patch, match):
-    """Helper names are reserved for every kind of declaration, not just macros."""
+    """Helper names are reserved for every kind of entry, not just macros."""
     with pytest.raises(LanguageError, match=match):
-        schema(**patch)
+        spec(**patch)
 
 
 @pytest.mark.parametrize(
@@ -255,11 +260,11 @@ def test_macro_collisions_rejected(patch, match):
     [
         pytest.param(
             {'loop_a': {'template': 'loop_b() + 1'}, 'loop_b': {'template': 'loop_a() + 1'}},
-            'circular macro reference',
+            'calls itself through',
             id='a-cycle',
         ),
         pytest.param(
-            {'m': {'args': ['a'], 'kwargs': ['a'], 'template': 'a'}}, 'duplicate formal', id='a-duplicate-formal'
+            {'m': {'args': ['a'], 'kwargs': ['a'], 'template': 'a'}}, 'formal names repeat', id='a-duplicate-formal'
         ),
         pytest.param(
             {'unused': {'args': ['x'], 'template': 'x * cots'}},
@@ -268,7 +273,7 @@ def test_macro_collisions_rejected(patch, match):
         ),
         pytest.param(
             {'bad': {'args': ['a', 'b'], 'template': 'a == b'}},
-            'must not contain a comparison',
+            'holds a comparison',
             id='a-comparison-in-a-template',
         ),
         pytest.param(
@@ -277,23 +282,23 @@ def test_macro_collisions_rejected(patch, match):
             id='a-typo-in-an-amount',
         ),
         pytest.param(
-            {'grouped': {'args': ['x'], 'template': 'sum(x, by=nope)'}},
-            r"Macro 'grouped'.*sum\(by=nope\) does not name a relation",
+            {'grouped': {'args': ['x'], 'template': 'sum(x, over=g, by=nope[h])'}},
+            r"Macro 'grouped'.*sum\(by=nope\[\.\.\.\]\) does not name a relation",
             id='a-typo-in-a-relation-kwarg',
         ),
         pytest.param(
-            {'grouped': {'args': ['x'], 'template': 'sum(x, by=[nope, also])'}},
-            r"Macro 'grouped'.*sum\(by=\[nope, also\]\) names 2 relations",
-            id='a-list-of-relations',
+            {'grouped': {'args': ['x'], 'template': 'sum(x, over=g, by=[nope, also])'}},
+            r"Macro 'grouped'.*sum\(by=\.\.\.\) takes columns of one relation. Write relation\[column\]",
+            id='a-list-of-names-for-columns',
         ),
         pytest.param(
-            {'grouped': {'args': ['x', 'a', 'b'], 'template': 'sum(x, by=nope, over=a, into=b)'}},
-            r"Macro 'grouped'.*sum\(by=nope\) does not name a relation or a formal of this macro",
+            {'grouped': {'args': ['x', 'a', 'b'], 'template': 'sum(x, over=a, by=nope[b])'}},
+            r"Macro 'grouped'.*sum\(by=nope\[\.\.\.\]\) does not name a relation or a formal argument of this macro",
             id='a-typo-in-a-relation-beside-formal-columns',
         ),
         pytest.param(
             {'reduced': {'args': ['x'], 'template': 'sum(x, over=nope)'}},
-            r"Macro 'reduced'.*sum\(over=nope\) does not name a declared dimension or a formal of this macro",
+            r"Macro 'reduced'.*sum\(over=nope\) does not name a declared dimension or a formal argument of this macro",
             id='a-typo-in-a-dimension',
         ),
         pytest.param(
@@ -312,39 +317,43 @@ def test_macro_templates_validated_even_when_unused(macros, match):
     form of an amount was decided in resolution.
     """
     with pytest.raises(LanguageError, match=match):
-        schema(macros=macros)
+        spec(macros=macros)
 
 
 def test_an_entry_nothing_reads_is_held_to_the_rules_a_use_is():
     """`sum(k)` over a scalar loaded as an unread entry, since the bare sum was only decided where the math read it."""
-    with pytest.raises(LanguageError, match=r"Named expression 'e1': sum\(\) with no over= or by=.*already a scalar"):
-        schema_of(SMALL_MODEL, expressions={'e1': 'sum(k)'})
+    with pytest.raises(
+        LanguageError, match=r"Named expression 'e1': sum\(\) has no over= or by=, and its operand has no dimensions"
+    ):
+        spec_of(SMALL_MODEL, expressions={'e1': 'sum(k)'})
 
 
 @pytest.mark.parametrize(
     ('template', 'match'),
     [
         pytest.param('x * tag', "Macro 'm': 'tag' is declared dtype: str", id='a-label-parameter-as-a-value'),
-        pytest.param('sum(x, by=lk, over=nope, into=h)', "over=nope names no column of 'lk'", id='a-typo-in-a-column'),
+        pytest.param(
+            'sum(x, over=g, by=lk[nope])', r"names \['nope'\], which is no column of 'lk'", id='a-typo-in-a-column'
+        ),
     ],
 )
 def test_a_template_is_held_to_the_rules_a_call_site_is(template, match):
     """A template nothing calls was checked for names only: a label parameter or an unknown column passed load."""
     with pytest.raises(LanguageError, match=match):
-        schema_of(SMALL_MODEL, macros={'m': {'args': ['x'], 'template': template}})
+        spec_of(SMALL_MODEL, macros={'m': {'args': ['x'], 'template': template}})
 
 
 @pytest.mark.parametrize('fragment', ['my_python_helper', 'macros:', 'docs/about/limits.md'])
 def test_an_unknown_operator_is_refused_at_load_with_the_rewrite(fragment):
     with pytest.raises(LanguageError) as exc:
-        schema(constraints={'c': {'dims': ['snapshot'], 'expression': 'my_python_helper(p) <= load'}})
+        spec(constraints={'c': {'dims': ['snapshot'], 'expression': 'my_python_helper(p) <= load'}})
     assert fragment in str(exc.value)
 
 
 def test_an_unknown_operator_names_no_construct_the_language_lacks():
     """The refusal told the author to "use a declared escape", and the schema has no `escape:` key."""
     with pytest.raises(LanguageError) as exc:
-        schema(constraints={'c': {'dims': ['snapshot'], 'expression': 'my_python_helper(p) <= load'}})
+        spec(constraints={'c': {'dims': ['snapshot'], 'expression': 'my_python_helper(p) <= load'}})
     assert 'escape' not in str(exc.value), 'the message points at a key the closed schema refuses'
 
 
@@ -353,45 +362,23 @@ def test_an_unknown_operator_names_no_construct_the_language_lacks():
     [
         pytest.param(['x', 'e'], 'shift(x, along=g, offset=1, edge=e)', id='an-edge'),
         pytest.param(['row'], 'dual(row)', id='a-constraint'),
-        pytest.param(['x', 'rel', 'a', 'b'], 'sum(x, by=rel, over=a, into=b)', id='a-relation-and-its-columns'),
-        pytest.param(['x', 'a', 'b'], 'sum(x, by=lk, over=a, into=b)', id='the-columns-of-a-declared-relation'),
+        pytest.param(['x', 'rel', 'a', 'b'], 'sum(x, over=a, by=rel[b])', id='a-relation-and-its-columns'),
+        pytest.param(['x', 'a', 'b'], 'sum(x, over=a, by=lk[b])', id='the-columns-of-a-declared-relation'),
         pytest.param(
-            ['x', 'd'], 'shift(x, along=d, offset=1, by=lk, within=h)', id='the-dimension-a-partition-steps-along'
+            ['x', 'd'], 'shift(x, along=d, offset=1, within=lk[h])', id='the-dimension-a-partition-steps-along'
         ),
         pytest.param(
-            ['x', 'd'], 'sum_back(x, along=d, window=2, by=lk, within=h)', id='the-dimension-a-window-runs-along'
+            ['x', 'd'], 'sum_back(x, along=d, window=2, within=lk[h])', id='the-dimension-a-window-runs-along'
         ),
     ],
 )
 def test_a_formal_stands_where_a_call_site_will_bind_it(formals, template):
     """A formal has no kind until a call binds it, so the template check leaves it bare in every slot.
 
-    A formal `along=` beside a `by=` was handed to the partition as if it were
+    A formal `along=` beside a `within=` was handed to the partition as if it were
     a dimension, and refused as one the relation has no key column over.
     """
-    assert (
-        schema_of(SMALL_MODEL, macros={'m': {'args': formals, 'template': template}}).macros['m'].template == template
-    )
-
-
-@pytest.mark.parametrize(
-    ('template', 'call', 'want'),
-    [
-        pytest.param(
-            'sum(x, by=lk, over=[a], into=[b])', 'm(p, a=g, b=h)', 'sum(p, by=lk, over=g, into=h)', id='columns'
-        ),
-        pytest.param(
-            'shift(x, along=g, offset=1, by=lk, within=[b])',
-            'm(p, a=g, b=h)',
-            'shift(p, along=g, offset=1, by=lk, within=h)',
-            id='a-partition',
-        ),
-    ],
-)
-def test_a_formal_inside_a_column_list_takes_the_name_bound_to_it(template, call, want):
-    """A list after ``by=`` names columns, and a formal there is bound like one standing bare."""
-    ns = Namespace(schema_of(SMALL_MODEL, macros={'m': {'args': ['x'], 'kwargs': ['a', 'b'], 'template': template}}))
-    assert expression_of(call, ns, 'expression') == expression_of(want, ns, 'expression')
+    assert spec_of(SMALL_MODEL, macros={'m': {'args': formals, 'template': template}}).macros['m'].template == template
 
 
 @pytest.mark.parametrize(
@@ -409,13 +396,13 @@ def test_a_formal_inside_a_list_binds_a_name_or_a_list_of_names(call, match):
     """A list holds names, so what the call binds there is a name, or a list spliced in, and the list is checked once bound."""
     macros = {'tot': {'args': ['x'], 'kwargs': ['d'], 'template': 'sum(x, over=[d, snapshot])'}}
     with pytest.raises(LanguageError, match=match):
-        expression_of(call, Namespace(schema(macros=macros)), 'expression')
+        expression_of(call, Namespace(spec(macros=macros)), 'expression')
 
 
 def test_a_call_binding_the_dimension_a_partition_steps_along_builds_it():
     """The call site is where the formal gets its kind, so the partition is built there."""
-    template = 'shift(x, along=d, offset=1, by=lk, within=h)'
-    ns = Namespace(schema_of(SMALL_MODEL, macros={'m': {'args': ['x', 'd'], 'template': template}}))
+    template = 'shift(x, along=d, offset=1, within=lk[h])'
+    ns = Namespace(spec_of(SMALL_MODEL, macros={'m': {'args': ['x', 'd'], 'template': template}}))
     node = expression_of('m(p, g)', ns, 'expression')
     assert isinstance(node, Translate) and node.along == 'g'
     assert node.partition is not None and node.partition.name == 'lk', 'the relation is read once along= is bound'
@@ -423,7 +410,7 @@ def test_a_call_binding_the_dimension_a_partition_steps_along_builds_it():
 
 def test_a_named_expression_is_resolved_once_however_many_uses(monkeypatch):
     """Every use parsed, expanded and resolved the entry again, and a cased one's arms with it."""
-    from mathspec import resolution
+    from mathspec import _resolution as resolution
 
     resolved: list[str] = []
     named = resolution._named
@@ -433,7 +420,7 @@ def test_a_named_expression_is_resolved_once_however_many_uses(monkeypatch):
         return named(name, *args)
 
     monkeypatch.setattr(resolution, '_named', counted)
-    schema(
+    spec(
         expressions={'gen_cost': 'p * cost', 'total': 'sum(gen_cost, over=generator) + sum(gen_cost, over=generator)'},
         constraints={'balance': {'dims': ['snapshot'], 'expression': 'sum(gen_cost, over=generator) >= load'}},
     )
@@ -442,7 +429,61 @@ def test_a_named_expression_is_resolved_once_however_many_uses(monkeypatch):
 
 def test_a_use_of_a_refused_named_expression_names_it_rather_than_repeating_its_fault():
     with pytest.raises(LanguageError) as exc:
-        schema(expressions={'a': 'b + 1', 'b': 'nope'})
+        spec(expressions={'a': 'b + 1', 'b': 'nope'})
     message = str(exc.value)
     assert message.count("'nope' not found") == 1, 'the fault is the entry that holds it'
     assert "Named expression 'a': named expression 'b' does not load" in message
+
+
+GROUPED_MODEL = {
+    'dimensions': {'generator': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
+    'relations': {'gen_bus': {'key': 'generator', 'values': 'bus'}},
+    'parameters': {'cap': {'dims': ['bus']}},
+    'variables': {'p': {'dims': ['generator']}},
+    'objective': {'sense': 'minimize', 'expression': 'sum(p)'},
+}
+
+
+@pytest.mark.parametrize(
+    ('template', 'call'),
+    [
+        pytest.param('sum(x, over=d, by=rel[col])', 'grouped(p, d=generator, rel=gen_bus, col=bus)', id='names'),
+        pytest.param('sum(x, over=d, by=cols)', 'grouped(p, d=generator, cols=gen_bus[bus])', id='a-selection'),
+    ],
+)
+def test_a_call_site_binds_the_relation_and_its_columns(template, call):
+    """A formal inside `rel[col]` takes the bare name the call passes, as a whole selection bound to one formal does."""
+    kwargs = [k for k in ('d', 'rel', 'col', 'cols') if f'{k}=' in call]
+    model = GROUPED_MODEL | {
+        'macros': {'grouped': {'args': ['x'], 'kwargs': kwargs, 'template': template}},
+        'constraints': {'k': {'dims': ['bus'], 'expression': f'{call} <= cap'}},
+    }
+    written = GROUPED_MODEL | {
+        'constraints': {'k': {'dims': ['bus'], 'expression': 'sum(p, over=generator, by=gen_bus[bus]) <= cap'}}
+    }
+    assert to_spec(model).program.constraints['k'] == to_spec(written).program.constraints['k'], (
+        'the macro expands to the call written out'
+    )
+
+
+def test_a_selection_bound_into_arithmetic_is_refused():
+    """A selection names columns, not values, so a formal bound to one cannot stand as a term."""
+    model = GROUPED_MODEL | {
+        'macros': {'plus': {'args': ['x'], 'kwargs': ['cols'], 'template': 'x + cols'}},
+        'constraints': {'k': {'dims': ['generator'], 'expression': 'plus(p, cols=gen_bus[bus]) <= 1'}},
+    }
+    with pytest.raises(
+        LanguageError, match=r'gen_bus\[bus\] names columns of a relation, which is allowed only as an operator'
+    ):
+        to_spec(model)
+
+
+def test_a_formal_inside_a_selection_takes_a_name_and_nothing_else():
+    model = GROUPED_MODEL | {
+        'macros': {
+            'grouped': {'args': ['x'], 'kwargs': ['col'], 'template': 'sum(x, over=generator, by=gen_bus[col])'}
+        },
+        'constraints': {'k': {'dims': ['bus'], 'expression': 'grouped(p, col=2) <= cap'}},
+    }
+    with pytest.raises(LanguageError, match=r"the formal 'col' is inside gen_bus\[col\], where only a name is allowed"):
+        to_spec(model)

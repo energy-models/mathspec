@@ -23,9 +23,10 @@ import pytest
 import yaml
 
 import mathspec.spec as spec_module
-from mathspec import LanguageError, merge, override, to_markdown, to_spec
-from mathspec.canonical import canonical_yaml
-from tests.fixtures import DISPATCH_MODEL, varied
+from mathspec import merge, override, to_markdown, to_spec
+from mathspec._canonical import canonical_yaml
+from mathspec.errors import LanguageError
+from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, varied
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -38,7 +39,7 @@ SURFACE = {
     'relations': {'port_bus': {'key': 'port', 'values': 'bus'}},
     'variables': {'flow': {'dims': ['snapshot', 'port']}},
     'constraints': {
-        'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, by=port_bus, over=port, into=bus) == 0'}
+        'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, over=port, by=port_bus[bus]) == 0'}
     },
 }
 
@@ -51,7 +52,7 @@ SUPPLY = {
     'constraints': {
         'gen_injects': {
             'dims': ['snapshot', 'generator'],
-            'expression': 'at(flow, by=gen_port, over=port, into=generator) == gen_p',
+            'expression': 'at(flow, by=gen_port[port]) == gen_p',
         }
     },
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p * gen_cost)'},
@@ -65,12 +66,35 @@ DEMAND = {
     'constraints': {
         'dem_withdraws': {
             'dims': ['snapshot', 'demand'],
-            'expression': 'at(flow, by=dem_port, over=port, into=demand) == -dem_load',
+            'expression': 'at(flow, by=dem_port[port]) == -dem_load',
         }
     },
 }
 
 LIBRARY = [SURFACE, SUPPLY, DEMAND]
+
+#: The objective of a composed cost model, set by one file and read off a sum
+#: the other files add a term each to (#801).
+OBJECTIVE = {
+    'given': {'expressions': {'total_cost': {'dims': [], 'description': 'what the system costs'}}},
+    'objective': {'sense': 'minimize', 'expression': 'total_cost'},
+}
+
+
+def _priced(name: str) -> dict[str, object]:
+    """A fragment that builds *name* and adds what it costs to `total_cost`."""
+    return {
+        'dimensions': {name: {'dtype': 'str'}},
+        'parameters': {f'{name}_cost': {'dims': [name]}},
+        'variables': {f'{name}_p': {'dims': [name], 'bounds': {'lower': 0}}},
+        'given': {'expressions': {'total_cost': {'dims': []}}},
+        'expressions': {
+            f'{name}_spend': {'expression': f'sum({name}_p * {name}_cost)', 'adds_to': 'total_cost'},
+        },
+    }
+
+
+GENERATOR, STORE = _priced('generator'), _priced('store')
 
 
 def test_a_fragment_reads_what_a_sibling_declares():
@@ -83,7 +107,7 @@ def test_a_fragment_reads_what_a_sibling_declares():
 
 
 def test_a_fragment_that_does_not_load_on_its_own_is_refused():
-    """A sibling's declarations must not make a broken file load: a fragment is a spec before it is a piece."""
+    """A sibling's entries must not make a broken file load: a fragment is a spec before it is a piece."""
     unread = {key: value for key, value in SUPPLY.items() if key != 'given'}
     with pytest.raises(LanguageError, match=r"fragment '#2' does not load on its own") as raised:
         merge([SURFACE, unread, DEMAND])
@@ -102,7 +126,7 @@ def test_the_balance_does_not_grow_when_a_component_type_is_added():
         'constraints': {
             'st_injects': {
                 'dims': ['snapshot', 'store'],
-                'expression': 'at(flow, by=st_port, over=port, into=store) == st_p',
+                'expression': 'at(flow, by=st_port[port]) == st_p',
             }
         },
     }
@@ -114,10 +138,7 @@ def test_the_balance_does_not_grow_when_a_component_type_is_added():
     'fragments',
     [
         pytest.param(LIBRARY, id='one-objective'),
-        pytest.param(
-            [SURFACE, SUPPLY, {**DEMAND, 'objective': {'sense': 'minimize', 'expression': 'sum(dem_load)'}}],
-            id='an-objective-in-two-fragments',
-        ),
+        pytest.param([OBJECTIVE, GENERATOR, STORE], id='an-objective-on-a-sum'),
     ],
 )
 def test_the_order_of_the_fragments_reaches_no_canonical_text(fragments):
@@ -144,11 +165,6 @@ def test_the_fragments_are_never_mutated():
             'give one of them a name of its own',
             id='one-dimension-described-two-ways',
         ),
-        pytest.param(
-            [SUPPLY, {**DEMAND, 'objective': {'sense': 'maximize', 'expression': 'sum(dem_load)'}}],
-            'negate the terms',
-            id='objectives-that-run-opposite-ways',
-        ),
     ],
 )
 def test_a_disagreement_between_fragments_is_refused(fragments, says):
@@ -161,14 +177,14 @@ def test_a_disagreement_between_fragments_is_refused(fragments, says):
 
 
 def _said(fragment: dict[str, object], section: str, name: str, words: str) -> dict[str, object]:
-    """*fragment* with the declaration *name* under *section* described as *words*."""
-    block = copy.deepcopy(fragment)
-    entries = block[section] if section != 'given' else block['given']['variables']
+    """*fragment* with the entry *name* under *section* described as *words*."""
+    spec = copy.deepcopy(fragment)
+    entries = spec[section] if section != 'given' else spec['given']['variables']
     entries[name] = {**entries[name], 'description': words}
-    return block
+    return spec
 
 
-#: Two fragments that word one declaration differently.
+#: Two fragments that word one entry differently.
 WORDED = [
     pytest.param('dimensions', 'snapshot', id='a-shared-dimension'),
     pytest.param('given', 'flow', id='a-reading-nothing-introduces'),
@@ -191,6 +207,57 @@ def test_a_peer_s_description_is_carried_where_the_first_one_given_has_none():
     )
 
 
+def _ordered(fragment: dict[str, object]) -> dict[str, object]:
+    """*fragment* with ``snapshot`` declared ordered."""
+    return {**fragment, 'dimensions': {**fragment['dimensions'], 'snapshot': {'dtype': 'int', 'ordered': True}}}
+
+
+@pytest.mark.parametrize(
+    'fragments',
+    [
+        pytest.param([SUPPLY, _ordered(DEMAND)], id='the-second-says-ordered'),
+        pytest.param([_ordered(SUPPLY), DEMAND], id='the-first-says-ordered'),
+    ],
+)
+def test_a_dimension_one_fragment_declares_ordered_is_ordered_in_the_composition(fragments):
+    """Each fragment loads alone, and two that differed only in ``ordered`` were refused as saying different things."""
+    assert merge(fragments).dimensions['snapshot'].ordered, 'ordered is a claim one fragment adds to the space'
+
+
+def _mapped(missing: str | None) -> dict[str, object]:
+    """A fragment that declares only `port_bus`, with *missing* written, or no `missing:` where it is ``None``."""
+    relation = {'key': 'port', 'values': 'bus'} | ({} if missing is None else {'missing': missing})
+    return {'dimensions': {'port': {'dtype': 'str'}, 'bus': {'dtype': 'str'}}, 'relations': {'port_bus': relation}}
+
+
+@pytest.mark.parametrize(
+    ('fragments', 'missing'),
+    [
+        pytest.param([SURFACE, _mapped('refused')], 'refused', id='the-default-written-out'),
+        pytest.param(
+            [varied(SURFACE, **{'relations.port_bus.missing': 'absent'}), _mapped('absent')], 'absent', id='both-absent'
+        ),
+    ],
+)
+def test_two_fragments_that_say_one_missing_agree(fragments, missing):
+    """A written `missing: refused` was refused against an omitted one, as two fragments saying different things."""
+    assert merge(fragments).relations['port_bus'].missing == missing
+
+
+@pytest.mark.parametrize(
+    'fragments',
+    [
+        pytest.param([SURFACE, _mapped('absent')], id='refused-against-absent'),
+        pytest.param([_mapped('absent'), SURFACE], id='absent-against-refused'),
+    ],
+)
+def test_two_fragments_that_read_a_missing_key_apart_are_refused(fragments):
+    """Neither reading settles the other: a key left out is refused under one, and belongs to no group under the other."""
+    with pytest.raises(LanguageError, match=r"say different things about the relation 'port_bus'") as raised:
+        merge(fragments)
+    assert 'Make the two identical' in str(raised.value), 'the refusal names the rewrite'
+
+
 @pytest.mark.parametrize(
     ('owner', 'carried'),
     [
@@ -198,7 +265,7 @@ def test_a_peer_s_description_is_carried_where_the_first_one_given_has_none():
         pytest.param('a flow', 'a flow', id='the-owner-s-own-wins'),
     ],
 )
-def test_a_reader_s_description_fills_a_declaration_that_has_none(owner, carried):
+def test_a_reader_s_description_fills_an_entry_that_has_none(owner, carried):
     """A reader's words about a name were dropped when the name was folded, even where the owner wrote none."""
     surface = _said(SURFACE, 'variables', 'flow', owner) if owner else SURFACE
     supply = _said(SUPPLY, 'given', 'flow', 'what a port puts into its bus')
@@ -206,23 +273,49 @@ def test_a_reader_s_description_fills_a_declaration_that_has_none(owner, carried
     assert composed.variables['flow'].description == carried
 
 
-def test_the_objectives_are_summed_each_term_parenthesised():
-    """`a + b * k` reassociates, so an unparenthesised join composes a different objective."""
-    priced = {**DEMAND, 'objective': {'sense': 'minimize', 'expression': 'sum(dem_load) * 2'}}
-    composed = merge([SURFACE, SUPPLY, priced])
-    assert composed.objective is not None
-    assert composed.objective.expression == '(sum(gen_p * gen_cost)) + (sum(dem_load) * 2)', (
-        'the terms are summed in the order the fragments are given in'
+@pytest.mark.parametrize(
+    'composed',
+    [
+        pytest.param(lambda: merge([OBJECTIVE, GENERATOR, STORE]), id='in-one-list'),
+        pytest.param(lambda: merge([merge([OBJECTIVE, GENERATOR]), STORE]), id='in-steps'),
+    ],
+)
+def test_a_composed_objective_reads_the_sum_its_fragments_add_to(composed):
+    spec = composed()
+    assert spec.objective is not None
+    assert (spec.objective.sense, spec.objective.expression) == ('minimize', 'total_cost'), (
+        'the objective is carried as the one file that sets it wrote it'
+    )
+    assert spec.expressions['total_cost'].expression == 'generator_spend + store_spend', (
+        'each file adds its cost as a term of the sum the objective reads'
     )
 
 
-def test_a_composed_objective_keeps_the_first_description_a_fragment_gives_it():
-    """Prose, as on a shared dimension: the first fragment's wording is carried, and none is lost."""
-    said = {**SUPPLY, 'objective': {**SUPPLY['objective'], 'description': 'what running the fleet costs'}}
-    priced = {**DEMAND, 'objective': {'sense': 'minimize', 'expression': 'sum(dem_load) * 2'}}
-    composed = merge([SURFACE, said, priced])
-    assert composed.objective is not None
-    assert composed.objective.description == 'what running the fleet costs'
+@pytest.mark.parametrize(
+    'fragments',
+    [
+        pytest.param(
+            [SURFACE, SUPPLY, {**DEMAND, 'objective': {'sense': 'minimize', 'expression': 'sum(dem_load)'}}],
+            id='two-objectives',
+        ),
+        pytest.param(
+            [SUPPLY, {**DEMAND, 'objective': {'sense': 'maximize', 'expression': 'sum(dem_load)'}}],
+            id='two-objectives-that-run-opposite-ways',
+        ),
+        pytest.param(
+            [OBJECTIVE, GENERATOR, {**STORE, 'objective': {'sense': 'minimize', 'expression': 'total_cost'}}],
+            id='an-objective-on-a-sum-and-one-more',
+        ),
+    ],
+)
+def test_two_fragments_that_set_the_objective_are_refused(fragments):
+    """`merge` summed the objectives, by a rule that no other section has; a second objective now collides."""
+    with pytest.raises(LanguageError, match=r'both set the objective') as raised:
+        merge(fragments)
+    message = str(raised.value)
+    assert 'given: expressions:' in message and '`adds_to:`' in message, 'the refusal names the rewrite'
+    first, second = [i for i, f in enumerate(fragments, 1) if 'objective' in f]
+    assert f"'#{first}'" in message and f"'#{second}'" in message, 'both fragments that set it are named'
 
 
 def test_one_fragment_s_objective_is_carried_as_it_was_written():
@@ -234,7 +327,7 @@ def test_one_fragment_s_objective_is_carried_as_it_was_written():
 def test_fragments_written_against_two_language_versions_are_refused(monkeypatch):
     """This reader knows one version, so a second is stood up for the fragments to disagree about."""
     monkeypatch.setattr(spec_module, 'SUPPORTED_VERSIONS', (0, 1))
-    with pytest.raises(LanguageError, match=r'One spec has one version') as raised:
+    with pytest.raises(LanguageError, match=r'Write every fragment against the same version') as raised:
         merge([{**SUPPLY, 'version': 0}, {**DEMAND, 'version': 1}])
     assert "'#1' says 0" in str(raised.value) and "'#2' says 1" in str(raised.value), 'both are named'
 
@@ -329,7 +422,7 @@ def test_the_base_and_the_patches_are_never_mutated():
     assert before == (DISPATCH_MODEL, patches), 'a patched base is a new mapping, and both inputs are untouched'
 
 
-def test_a_whole_declaration_is_created_and_the_model_loads():
+def test_a_whole_entry_is_created_and_the_model_loads():
     spec = override(DISPATCH_MODEL, [CARBON])
     assert 'co2_cap' in spec.constraints
     assert to_markdown(spec), 'a composed spec is one a reviewer can read as math'
@@ -345,7 +438,7 @@ def test_a_whole_declaration_is_created_and_the_model_loads():
         pytest.param({'parameters': {'co2': {'dtype': 'float'}}}, 'a parameter needs `dims`', id='short-of-its-frame'),
         pytest.param(
             {'expressions': {'spend': {'dims': ['snapshot']}}},
-            'one `expression:` or a set of `cases:`',
+            'has neither `expression:` nor `cases:`',
             id='short-of-what-it-says',
         ),
         pytest.param(
@@ -356,15 +449,15 @@ def test_a_whole_declaration_is_created_and_the_model_loads():
     ],
 )
 def test_a_partial_entry_that_lands_on_nothing_is_refused(patch, says):
-    """The typo case: laying a partial entry on nothing would invent a declaration nothing refers to."""
+    """The typo case: laying a partial entry on nothing would invent an entry nothing refers to."""
     with pytest.raises(LanguageError, match=r'does not declare') as raised:
         override(DISPATCH_MODEL, [patch])
     assert says in str(raised.value), 'the refusal says what the entry is short of, or what it nearly named'
 
 
-def test_a_null_removes_a_declaration_and_the_model_still_loads():
+def test_a_null_removes_an_entry_and_the_model_still_loads():
     laid = override(DISPATCH_MODEL, [{'constraints': {'balance': None}}])
-    assert laid.constraints == {}, 'the declaration is gone rather than emptied'
+    assert laid.constraints == {}, 'the entry is gone rather than emptied'
 
 
 def test_a_stale_removal_is_refused():
@@ -392,7 +485,7 @@ def test_a_stale_removal_is_refused():
     ],
 )
 def test_a_null_field_takes_its_default(patch, field, default):
-    """`null` makes what it names absent: a declaration is removed, and a field takes its default.
+    """`null` makes what it names absent: an entry is removed, and a field takes its default.
 
     A field that takes no null was the case that failed: `domain: null` was laid
     as a value the schema refuses, so a patch could not put a field back to its
@@ -448,7 +541,7 @@ def test_a_later_patch_is_laid_on_what_the_earlier_ones_make(patches, field, val
 def test_a_patch_adds_a_dimension_and_may_restate_one_it_shares():
     laid = override(
         DISPATCH_MODEL,
-        [{'dimensions': {'snapshot': {'dtype': 'int'}, 'investment_period': {'dtype': 'int'}}}],
+        [{'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'investment_period': {'dtype': 'int'}}}],
     )
     assert sorted(laid.dimensions) == ['generator', 'investment_period', 'snapshot'], (
         'the dimension the patch adds joins the two the base declares, and the restated one is not doubled'
@@ -456,30 +549,106 @@ def test_a_patch_adds_a_dimension_and_may_restate_one_it_shares():
 
 
 @pytest.mark.parametrize(
+    ('dimension', 'restated', 'ordered'),
+    [
+        pytest.param('generator', {'dtype': 'str', 'ordered': False}, False, id='false-written-out'),
+        pytest.param('generator', {'dtype': 'str', 'ordered': True}, True, id='widened-to-ordered'),
+        pytest.param('snapshot', {'dtype': 'int'}, True, id='ordered-left-out'),
+        pytest.param('generator', {}, False, id='defaults-left-out'),
+    ],
+)
+def test_a_patch_restates_a_dimension_as_the_schema_reads_it(dimension, restated, ordered):
+    """A written ``ordered: false`` differed from the omitted one, and a patch could not add the claim."""
+    laid = override(DISPATCH_MODEL, [{'dimensions': {dimension: restated}}])
+    assert laid.dimensions[dimension].ordered is ordered
+
+
+def test_a_patch_that_withdraws_ordered_is_refused():
+    with pytest.raises(LanguageError, match=r"says the dimension 'snapshot' is not ordered") as raised:
+        override(DISPATCH_MODEL, [{'dimensions': {'snapshot': {'dtype': 'int', 'ordered': False}}}])
+    assert 'Leave `ordered` out of the patch' in str(raised.value), 'the refusal names the rewrite'
+
+
+@pytest.mark.parametrize(
     ('patch', 'says'),
     [
         pytest.param(
             {'dimensions': {'snapshot': {'dtype': 'str'}}},
-            'adjusts the math, not the coordinate space',
+            'Restate the dimension as its base declares it',
             id='declared-as-something-else',
         ),
         pytest.param(
             {'dimensions': {'snapshot': {}}},
-            'restate the declaration word for word',
+            'a field the patch leaves out reads as its default',
             id='restated-in-part',
         ),
         pytest.param(
             {'dimensions': {'snapshot': None}},
-            'remove the declarations written over it one at a time',
+            'remove the entries written over it one at a time',
             id='removed',
         ),
     ],
 )
 def test_a_patch_that_rewrites_a_dimension_is_refused(patch, says):
-    """A dimension changed under the expressions already written over it is a different spec, silently."""
+    """A dimension changed under the expressions already written over it is a different spec, silently.
+
+    The refusal asked for the declaration word for word, where a restatement that leaves out a field
+    at its default is accepted.
+    """
     with pytest.raises(LanguageError) as raised:
         override(DISPATCH_MODEL, [patch])
     assert says in str(raised.value), 'the refusal names the rewrite rather than only what is wrong'
+
+
+#: `SURFACE` with `port_bus` declared `missing: absent`.
+ABSENT_SURFACE = varied(SURFACE, **{'relations.port_bus.missing': 'absent'})
+
+
+@pytest.mark.parametrize(
+    ('base', 'relation', 'missing'),
+    [
+        pytest.param(SURFACE, {'missing': 'absent'}, 'absent', id='the-reading-alone'),
+        pytest.param(SURFACE, {'key': 'port', 'values': 'bus', 'missing': 'absent'}, 'absent', id='restated-absent'),
+        pytest.param(ABSENT_SURFACE, {'missing': 'refused'}, 'refused', id='back-to-the-default'),
+        pytest.param(ABSENT_SURFACE, {'missing': None}, 'refused', id='null-puts-back-the-default'),
+        pytest.param(SURFACE, {'key': 'port', 'values': 'bus', 'missing': 'refused'}, 'refused', id='default-written'),
+        pytest.param(ABSENT_SURFACE, {'key': 'port', 'values': 'bus'}, 'absent', id='restated-without-one'),
+    ],
+)
+def test_a_patch_changes_what_a_key_the_map_leaves_out_means(base, relation, missing):
+    """`missing:` is a claim about the data, not the coordinate space, and a patch that wrote it was refused as one."""
+    assert override(base, [{'relations': {'port_bus': relation}}]).relations['port_bus'].missing == missing
+
+
+@pytest.mark.parametrize(
+    ('base', 'written', 'missing'),
+    [
+        pytest.param(DISPATCH_MODEL, 'absent', 'absent', id='a-reading'),
+        pytest.param(
+            varied(DISPATCH_MODEL, **{'parameters.cost.missing': 'absent'}),
+            None,
+            'refused',
+            id='null-puts-back-the-default',
+        ),
+    ],
+)
+def test_a_patch_changes_what_a_missing_row_of_a_parameter_means(base, written, missing):
+    assert override(base, [{'parameters': {'cost': {'missing': written}}}]).parameters['cost'].missing == missing
+
+
+@pytest.mark.parametrize(
+    ('section', 'name', 'declared'),
+    [
+        pytest.param('parameters', 'c', {'dims': ['g']}, id='a-parameter'),
+        pytest.param('relations', 'lk', {'key': 'g', 'values': 'h'}, id='a-relation'),
+    ],
+)
+def test_the_default_missing_written_out_is_the_spec_that_leaves_it_out(section, name, declared):
+    """`missing: refused` loaded to a different spec than no `missing:`, and wrote a different canonical text."""
+    omitted = to_spec(varied(SMALL_MODEL, **{f'{section}.{name}': declared}))
+    written = to_spec(varied(SMALL_MODEL, **{f'{section}.{name}': {**declared, 'missing': 'refused'}}))
+    assert written == omitted, 'the default written out is the default'
+    assert canonical_yaml(written) == canonical_yaml(omitted), 'so both spellings write one text'
 
 
 @pytest.mark.parametrize(
@@ -494,7 +663,7 @@ def test_a_whole_section_set_to_null_is_refused(patch):
     """Nulling a section reads as emptying it, and laying it silently changed nothing at all."""
     with pytest.raises(LanguageError, match=r'removes nothing') as raised:
         override(DISPATCH_MODEL, [patch])
-    assert 'one at a time' in str(raised.value), 'the refusal names the rewrite, which is one null per declaration'
+    assert 'one at a time' in str(raised.value), 'the refusal names the rewrite, which is one null per entry'
 
 
 def test_the_objective_is_laid_over_field_by_field():
@@ -518,7 +687,9 @@ def test_a_whole_objective_is_created_where_the_base_has_none():
 @pytest.mark.parametrize(
     ('patch', 'says'),
     [
-        pytest.param({'objective': None}, 'already the feasibility problem', id='removing-one-that-is-not-there'),
+        pytest.param(
+            {'objective': None}, "Delete 'objective: null' from the patch", id='removing-one-that-is-not-there'
+        ),
         pytest.param(
             {'objective': {'sense': 'maximize'}}, 'an objective needs `expression`', id='editing-one-that-is-not-there'
         ),
@@ -534,7 +705,7 @@ def test_a_patch_over_one_kind_of_given_leaves_the_other_alone():
     """`given:` is laid over a kind at a time, so patching the columns cannot drop the row families."""
     laid = override(GIVEN_BASE, [{'given': {'variables': {'p': {'domain': 'binary'}}}}])
     p = laid.given.variables['p']
-    assert (p.dims, p.domain) == (['g'], 'binary'), 'the given column is edited field by field like any declaration'
+    assert (p.dims, p.domain) == (['g'], 'binary'), 'the given column is edited field by field like any entry'
     assert sorted(laid.given.constraints) == ['cap'], 'the kind the patch did not name is still there'
 
 
@@ -546,7 +717,7 @@ def test_a_patch_over_one_kind_of_given_leaves_the_other_alone():
     ],
 )
 def test_a_whole_given_entry_is_created_and_the_model_loads(base, reads):
-    """A patch adds a column to read, whether or not the base opened the block."""
+    """A patch adds a column to read, whether or not the base opened the `given:` section."""
     laid = override(base, [{'given': {'variables': {'q': {'dims': ['g']}}}}])
     assert sorted(laid.given.variables) == reads, 'the created column joins whatever the base read'
 
@@ -583,3 +754,41 @@ def test_a_patch_creates_a_given_entry_of_every_kind(kind, entry):
     laid = override(GIVEN_BASE, [{'given': {kind: {'r': entry}}}])
     assert getattr(laid.given, kind)['r'].dims == ['g']
     assert sorted(laid.given.variables) == ['p'], 'the kinds the patch did not name are still there'
+
+
+def _bidder(name: str) -> dict[str, object]:
+    """A fragment that reads `price` under `given:`, as a fragment that leaves its dtype unstated."""
+    return {
+        'dimensions': {'snapshot': {'dtype': 'int'}},
+        'given': {'parameters': {'price': {'dims': ['snapshot']}}},
+        'variables': {name: {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
+        'expressions': {f'{name}_value': f'sum({name} * price)'},
+    }
+
+
+@pytest.mark.parametrize(
+    'again',
+    [
+        pytest.param(lambda fragment: to_spec(to_spec(fragment).to_dict()), id='written-out-and-read-back'),
+        pytest.param(lambda fragment: override(fragment, []), id='an-empty-override'),
+    ],
+)
+@pytest.mark.parametrize(
+    'fragments',
+    [
+        pytest.param([_bidder('buy'), _bidder('sell')], id='two-readers'),
+        pytest.param(
+            [varied(SURFACE, **{'variables.flow.domain': 'binary'}), SUPPLY], id='a-reader-and-its-introducer'
+        ),
+    ],
+)
+def test_a_fragment_written_out_and_read_back_merges_as_it_did(again, fragments):
+    """`to_dict` wrote a given entry's defaults, a parameter's `dtype` and a variable's `domain`, which the file left out.
+
+    So a fragment that went through `to_dict`, as every `override` result
+    does, read the name as saying more than its file wrote. `merge` then
+    refused two readers as saying different things, and refused a reader
+    against an introducer that it fits.
+    """
+    reloaded = [fragments[0], again(fragments[1]), *fragments[2:]]
+    assert canonical_yaml(merge(reloaded)) == canonical_yaml(merge(fragments))

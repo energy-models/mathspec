@@ -2,31 +2,39 @@
 #
 # SPDX-License-Identifier: MIT
 
+given:
+  expressions:
+    Cycle_angle_sum:
+      dims: [scenario, snapshot, cycle]
+      description: >-
+        the voltage angle differences around a cycle: every branch flow times
+        its cycle weight, and every transformer phase shift
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   cycle:
-    description: independent cycles of the passive network graph — the cycle basis, data prep
-
-expressions:
-  Cycle_angle_sum:
-    dims: [scenario, snapshot, cycle]
-    empty: true
     description: >-
-      the voltage angle differences around a cycle: every branch flow times
-      its cycle weight, and every transformer phase shift
+      independent cycles of the passive network graph, the cycle basis, data
+      prep. Each period has its own basis, of the branches that are active in it. A
+      label is a position in that period's basis, so one label is a different
+      cycle in another period
 
 constraints:
   Kirchhoff_Voltage_Law:
     description: >-
       `Kirchhoff-Voltage-Law` — around every independent cycle the
-      impedance-weighted flows sum to nothing, which is what makes the linear
-      power flow physical rather than transport. A transformer's flow weighs its
-      effective reactance, and its phase shift enters the cycle sum too: a
-      constant where the shift is fixed, or the shift decision times its cycle
-      weight where the shift is a phase-shifting transformer's to choose
+      impedance-weighted flows sum to nothing. This makes the linear power
+      flow physical rather than transport. A transformer's flow weighs its
+      effective reactance, and its phase shift enters the cycle sum too. The
+      shift is a constant where it is fixed. Where a phase-shifting
+      transformer chooses its shift, it is the shift decision times its cycle
+      weight. A snapshot uses the cycles of its own period, of the branches
+      that are active in it (`constraints.py:1615-1631`). A cycle label that
+      period's basis does not reach has no row
     dims: [scenario, snapshot, cycle]
     expression: Cycle_angle_sum == 0

@@ -26,6 +26,7 @@ dimensions:
   bp:
     description: breakpoints of the operating curve
     dtype: int
+    ordered: true
 
 relations:
   converter_of:
@@ -87,21 +88,19 @@ piecewise:
       rate:
         expression: rate
         values: bp_rate
-        by: converter_of
-        over: converter
-        into: flow
+        by: converter_of[converter]
     method: sos2
 
 constraints:
   fixed_ratio:
     description: every flow of a converter with no curve runs in proportion to that converter's level
     dims: [flow, snapshot]
-    where: NOT at(has_curve, by=converter_of, over=converter, into=flow)
-    expression: rate == ratio * at(level, by=converter_of, over=converter, into=flow)
+    where: NOT at(has_curve, by=converter_of[converter])
+    expression: rate == ratio * at(level, by=converter_of[converter])
   balance:
     description: every carrier is delivered by the converters, or bought
     dims: [carrier, snapshot]
-    expression: sum(rate, by=carrier_of, over=flow, into=carrier) + bought == demand
+    expression: sum(rate, over=flow, by=carrier_of[carrier]) + bought == demand
 
 objective:
   sense: minimize

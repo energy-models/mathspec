@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from mathspec.operators import AMOUNTS, BUILTINS
+from mathspec._operators import AMOUNTS, BUILTINS
 
 
 def test_the_amount_words_cover_every_operator_taking_an_amount():

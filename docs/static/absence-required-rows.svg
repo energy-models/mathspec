@@ -1,0 +1,83 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 266" width="760" height="266" style="max-width: 100%; height: auto" role="img" aria-labelledby="arr-t arr-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="arr-t">An absent table needs a row only where the condition is true</title>
+  <desc id="arr-d">The parameter capacity is a table with three rows: wind 10, gas 5 and old 0. The parameter p_max, declared missing: absent, has rows wind 8 and gas 4, and no row for old, which the data may leave out, because the assumption needs a row only where capacity is greater than zero. The variable dispatch, with where capacity greater than zero and upper bound p_max, has rows at wind with upper bound 8 and at gas with upper bound 4. The row for old is absent.</desc>
+  <defs>
+    <pattern id="arr-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="arr-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,56 H196 V113 A3,3 0 0 1 193,116 H19 A3,3 0 0 1 16,113 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,56 V37 A3,3 0 0 1 19,34 H193 A3,3 0 0 1 196,37 V56 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,184 H196 V223 A3,3 0 0 1 193,226 H19 A3,3 0 0 1 16,223 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,184 V165 A3,3 0 0 1 19,162 H193 A3,3 0 0 1 196,165 V184 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M344,56 H594 V95 A3,3 0 0 1 591,98 H347 A3,3 0 0 1 344,95 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M344,56 V37 A3,3 0 0 1 347,34 H591 A3,3 0 0 1 594,37 V56 Z" fill="#E69F00" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="24" font-weight="bold">capacity</text>
+    <text x="80" y="24" fill-opacity="0.7">a parameter</text>
+    <text x="16" y="152" font-weight="bold">p_max</text>
+    <text x="62" y="152" fill-opacity="0.7">a parameter, missing: absent</text>
+    <text x="344" y="24" font-weight="bold">dispatch</text>
+    <text x="410" y="24" fill-opacity="0.7">a variable</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="48" font-weight="bold">g</text>
+      <text x="110" y="48" font-weight="bold">value</text>
+      <text x="24" y="72">wind</text><text x="110" y="72">10</text>
+      <text x="24" y="90">gas</text><text x="110" y="90">5</text>
+      <text x="24" y="108">old</text><text x="110" y="108">0</text>
+      <text x="24" y="176" font-weight="bold">g</text>
+      <text x="110" y="176" font-weight="bold">value</text>
+      <text x="24" y="200">wind</text><text x="110" y="200">8</text>
+      <text x="24" y="218">gas</text><text x="110" y="218">4</text>
+      <text x="352" y="48" font-weight="bold">g</text>
+      <text x="430" y="48" font-weight="bold">upper</text>
+      <text x="352" y="72">wind</text><text x="430" y="72">8</text>
+      <text x="352" y="90">gas</text><text x="430" y="90">4</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="34" width="180" height="82" rx="3"/>
+    <line x1="16" y1="56" x2="196" y2="56"/>
+    <rect x="17" y="95" width="178" height="20" fill="url(#arr-hatch)" stroke="none"/>
+    <rect x="16" y="162" width="180" height="64" rx="3"/>
+    <line x1="16" y1="184" x2="196" y2="184"/>
+    <rect x="16" y="230" width="180" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+    <rect x="344" y="34" width="250" height="64" rx="3"/>
+    <line x1="344" y1="56" x2="594" y2="56"/>
+    <rect x="344" y="102" width="250" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="24" y="246" fill-opacity="0.7" font-style="italic">no row for old: allowed</text>
+    <text x="352" y="118" fill-opacity="0.7" font-style="italic">no row for old: dispatch is absent</text>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#arr-arrow)">
+    <path d="M206,76 L332,76"/>
+    <path d="M206,205 H264 V88 H332"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="214" y="52">where:</text>
+    <text x="214" y="67">capacity &gt; 0</text>
+    <text x="274" y="150">bounds:</text>
+    <text x="274" y="165">upper: p_max</text>
+    <text x="274" y="190" fill-opacity="0.7">the assumption needs</text>
+    <text x="274" y="205" fill-opacity="0.7">a row only where</text>
+    <text x="274" y="220" fill-opacity="0.7">capacity &gt; 0</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="610" y="40" width="14" height="14" fill="url(#arr-hatch)"/>
+    <rect x="610" y="64" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="630" y="51">condition is false</text>
+    <text x="630" y="75">absent: no row</text>
+  </g>
+</svg>

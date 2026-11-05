@@ -17,7 +17,8 @@ from typing import get_args
 
 import pytest
 
-from mathspec import AdviceKind, advice, to_spec
+from mathspec import advice, to_spec
+from mathspec.program import AdviceKind
 from tests.fixtures import SMALL_MODEL, raw_of, varied
 
 EXAMPLES = Path(__file__).resolve().parents[1] / 'examples'
@@ -32,13 +33,13 @@ TARGET_ONLY = varied(
 #: The same with the relation gone, so nothing reaches ``h`` at all.
 UNREACHED = varied(TARGET_ONLY, relations={})
 
-#: A curve on ``p``, so the program of the file as written carries a block and
+#: A curve on ``p``, so the program of the file as written carries a piecewise entry and
 #: the program of its expansion carries the rows. The objective drives ``p``
 #: down unopposed by anything but the curve.
 CURVED = varied(
     UNREACHED,
     objective={'sense': 'minimize', 'expression': 'sum(p)'},
-    dimensions={'g': {'dtype': 'str'}, 'h': {'dtype': 'str'}, 'bp': {'dtype': 'int'}},
+    dimensions={'g': {'dtype': 'str'}, 'h': {'dtype': 'str'}, 'bp': {'dtype': 'int', 'ordered': True}},
     parameters={'c': {'dims': ['g']}, 'bp_x': {'dims': ['bp']}, 'bp_y': {'dims': ['bp']}},
     variables={'p': {'dims': ['g']}, 'cost': {'dims': ['g']}},
     piecewise={'curve': {'along': 'bp', 'dims': ['g'], 'links': {'p': ['p', 'bp_x'], 'cost': ['cost', 'bp_y']}}},
@@ -56,7 +57,7 @@ def test_a_dimension_nothing_reaches_is_named():
     [
         pytest.param({}, id='targeted-by-a-relation'),
         pytest.param(
-            {'constraints': {'cap': {'dims': ['h'], 'expression': 'sum(p, by=lk, over=g, into=h) <= k'}}},
+            {'constraints': {'cap': {'dims': ['h'], 'expression': 'sum(p, over=g, by=lk[h]) <= k'}}},
             id='grouping-into-it',
         ),
         pytest.param({'variables.r': {'dims': ['h']}}, id='indexing-by-it'),
@@ -64,7 +65,7 @@ def test_a_dimension_nothing_reaches_is_named():
 )
 def test_a_dimension_something_reaches_is_in_use(patch):
     assert not advice(varied(TARGET_ONLY, **patch)), (
-        'a dimension a relation targets, a declaration indexes or a grouping lands on is in use'
+        'a dimension a relation targets, an entry indexes or a grouping groups by is in use'
     )
 
 
@@ -137,19 +138,19 @@ def test_the_answer_does_not_turn_on_which_state_it_is_asked_of(form, tmp_path):
 )
 def test_a_curve_is_read_as_the_rows_it_states_however_the_model_arrives(arrive):
     """Advice expanded a curve on the caller's behalf, then refused one left as written; a program with a
-    block was once let through and advised on the file's rows as if the curve stated none.
+    piecewise entry was once let through and advised on the file's rows as if the curve stated none.
 
     A curve states its rows the way a set does: each link names the variables
     a link row would. Nothing is expanded, and the answer is the expansion's.
     """
     rows = [(n.kind, n.subject) for n in advice(to_spec(CURVED).expand('piecewise'))]
     assert rows == [('never-an-axis', 'h')], 'the link row holds p, so only the unreached dimension draws a note'
-    assert [(n.kind, n.subject) for n in advice(arrive(CURVED))] == rows, 'the block and its rows get one answer'
+    assert [(n.kind, n.subject) for n in advice(arrive(CURVED))] == rows, 'the entry and its rows get one answer'
 
 
 @pytest.mark.parametrize('example', ['piecewise', 'piecewise_lp', 'piecewise_ragged', 'sos'])
 def test_every_shipped_formulation_gets_the_answer_its_expansion_gets(example):
-    """The claim of the test above on every model the repository ships with a block.
+    """The claim of the test above on every model the repository ships with a `piecewise:` or `sos:` entry.
 
     As shipped, each example's constraints hold its variables, so the answer
     was empty however the curve was read and the test passed with the curve
@@ -163,5 +164,5 @@ def test_every_shipped_formulation_gets_the_answer_its_expansion_gets(example):
     spec = to_spec(raw)
     as_written = [(n.kind, n.subject) for n in advice(spec)]
     assert as_written == [(n.kind, n.subject) for n in advice(spec.expand())] == [], (
-        'one model, one answer, block or rows'
+        'one model, one answer, entry or rows'
     )

@@ -1,0 +1,80 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 846 222" width="846" height="222" style="max-width: 100%; height: auto" role="img" aria-labelledby="epo-t epo-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="epo-t">position within a partition keeps the first snapshot of each period</title>
+  <desc id="epo-d">The relation period_of maps snapshots 1 and 2 to period 2030 and snapshots 3 and 4 to period 2040. position of snapshot within period_of period is 0 at snapshots 1 and 3 and 1 at snapshots 2 and 4. The condition position equal to 0 is true at snapshots 1 and 3, so the constraint soc_start has one row per period, at snapshots 1 and 3, and no row at snapshots 2 and 4.</desc>
+  <defs>
+    <pattern id="epo-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="epo-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,62 V43 A3,3 0 0 1 19,40 H183 A3,3 0 0 1 186,43 V62 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M16,62 H186 V137 A3,3 0 0 1 183,140 H19 A3,3 0 0 1 16,137 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M356,62 V43 A3,3 0 0 1 359,40 H523 A3,3 0 0 1 526,43 V62 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M356,62 H526 V137 A3,3 0 0 1 523,140 H359 A3,3 0 0 1 356,137 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M640,62 V43 A3,3 0 0 1 643,40 H827 A3,3 0 0 1 830,43 V62 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M640,62 H830 V101 A3,3 0 0 1 827,104 H643 A3,3 0 0 1 640,101 Z" fill="#009E73" fill-opacity="0.08"/>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="40" width="170" height="100" rx="3"/>
+    <line x1="16" y1="62" x2="186" y2="62"/>
+    <rect x="356" y="40" width="170" height="100" rx="3"/>
+    <line x1="356" y1="62" x2="526" y2="62"/>
+    <rect x="357" y="85" width="168" height="18" fill="url(#epo-hatch)" stroke="none"/>
+    <rect x="357" y="121" width="168" height="18" fill="url(#epo-hatch)" stroke="none"/>
+    <rect x="640" y="40" width="190" height="64" rx="3"/>
+    <line x1="640" y1="62" x2="830" y2="62"/>
+    <rect x="640" y="108" width="190" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+    <rect x="356" y="170" width="14" height="14" fill="url(#epo-hatch)"/>
+    <rect x="356" y="194" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#epo-arrow)">
+    <path d="M196,100 L346,100"/>
+    <path d="M536,100 L630,100"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">period_of</text>
+    <text x="89" y="30" font-size="12" fill-opacity="0.7">a relation</text>
+    <text x="24" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">snapshot</text>
+    <text x="112" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">period</text>
+    <text x="24" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">1</text>
+    <text x="112" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2030</text>
+    <text x="24" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2</text>
+    <text x="112" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2030</text>
+    <text x="24" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">3</text>
+    <text x="112" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2040</text>
+    <text x="24" y="134" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">4</text>
+    <text x="112" y="134" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2040</text>
+    <text x="356" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">position</text>
+    <text x="422" y="30" font-size="12" fill-opacity="0.7">within each period</text>
+    <text x="364" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">snapshot</text>
+    <text x="452" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">value</text>
+    <text x="364" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">1</text>
+    <text x="452" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">0</text>
+    <text x="364" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">2</text>
+    <text x="452" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">1</text>
+    <text x="364" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">3</text>
+    <text x="452" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">0</text>
+    <text x="364" y="134" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">4</text>
+    <text x="452" y="134" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">1</text>
+    <text x="640" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">soc_start</text>
+    <text x="713" y="30" font-size="12" fill-opacity="0.7">a constraint</text>
+    <text x="648" y="55" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">snapshot</text>
+    <text x="648" y="80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">1</text>
+    <text x="648" y="98" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">3</text>
+    <text x="648" y="124" font-size="12" font-style="italic" fill-opacity="0.7">no row for 2 and 4: absent</text>
+    <text x="206" y="73" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">position(snapshot,</text>
+    <text x="206" y="88" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">within=…)</text>
+    <text x="206" y="120" font-size="12" fill-opacity="0.7">counts from 0</text>
+    <text x="206" y="135" font-size="12" fill-opacity="0.7">inside each period</text>
+    <text x="546" y="88" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">== 0</text>
+    <text x="376" y="181" font-size="12">condition is false</text>
+    <text x="376" y="205" font-size="12">absent: no row</text>
+  </g>
+</svg>

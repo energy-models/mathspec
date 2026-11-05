@@ -10,12 +10,12 @@ hide:
 
 # mathspec
 
-**Write the specification (spec) of an optimisation model as a YAML file. Check it and print it
-as math, with no data and no solver.**
+--8<-- "README.md:tagline"
 
 --8<-- "README.md:badges"
 
-[See the examples](examples/index.md){ .md-button .md-button--primary }
+[Start the tutorial](tutorials/first-spec.md){ .md-button .md-button--primary }
+[See the examples](examples/index.md){ .md-button }
 [Read the language](reference/language/index.md){ .md-button }
 
 </div>
@@ -32,25 +32,22 @@ as math, with no data and no solver.**
 
 </div>
 
-## A spec is one file
+## The spec
 
-A file states one specification, or spec. A spec declares four things: the
-axes it runs over, the data it expects, the decisions the solver makes, and
-the rules those decisions obey. It holds no data: an engine attaches the data
-and builds a model. The file below is a complete spec.
+--8<-- "README.md:spec"
 
 --8<-- "README.md:model"
 
 ## The math it prints
 
-Printed from the file above, with no data and no solver. **How** shows the
-call.
+mathspec prints the math below from the file above. The call that prints it
+is in the How tab.
 
 <!-- home-math:begin -->
 
 === "The math"
 
-    Least-cost dispatch of a generator fleet against an hourly load.
+    Least-cost dispatch of a generator fleet against a load in each dispatch period.
 
     #### Sets
 
@@ -73,6 +70,14 @@ call.
     |---|---|
     | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{S} \times \mathcal{G}`$ — output of a generator in a snapshot |
 
+    #### Variable domains
+
+    **`dispatch`**
+
+    ```math
+    0 \le \mathit{dispatch}_{s,g} \le \bar p_{g} \qquad \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0
+    ```
+
     #### Objective
 
     ```math
@@ -87,18 +92,10 @@ call.
     \sum_{g \in \mathcal{G}} \mathit{dispatch}_{s,g} = \ell_{s} \qquad \forall\, s \in \mathcal{S}
     ```
 
-    #### Variable domains
-
-    **`dispatch`**
-
-    ```math
-    0 \le \mathit{dispatch}_{s,g} \le \bar p_{g} \qquad \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0
-    ```
-
 === "LaTeX"
 
     ```latex
-    \noindent Least-cost dispatch of a generator fleet against an hourly load.
+    \noindent Least-cost dispatch of a generator fleet against a load in each dispatch period.
 
     \paragraph{Sets}
     \begin{description}
@@ -118,6 +115,11 @@ call.
     \item[{$\mathit{dispatch}$}] \texttt{dispatch} over $\mathcal{S} \times \mathcal{G}$ --- output of a generator in a snapshot
     \end{description}
 
+    \paragraph{Variable domains}
+    \begin{align*}
+    \text{dispatch} && 0 \le \mathit{dispatch}_{s,g} & \le \bar p_{g} && \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0
+    \end{align*}
+
     \paragraph{Objective}
     \begin{align*}
      && \min & \sum_{s \in \mathcal{S},\ g \in \mathcal{G}} \mathit{dispatch}_{s,g} \cdot c_{g}
@@ -126,11 +128,6 @@ call.
     \paragraph{Subject to}
     \begin{align*}
     \text{power\_balance} && \sum_{g \in \mathcal{G}} \mathit{dispatch}_{s,g} & = \ell_{s} && \forall\, s \in \mathcal{S}
-    \end{align*}
-
-    \paragraph{Variable domains}
-    \begin{align*}
-    \text{dispatch} && 0 \le \mathit{dispatch}_{s,g} & \le \bar p_{g} && \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0
     \end{align*}
     ```
 
@@ -159,7 +156,7 @@ call.
     ms.to_markdown(spec)
     ```
 
-    `symbols` gives every name its conventional spelling. Pass a dict, a YAML path
+    `symbols` sets the symbol for each name. Pass a dict, a YAML path
     or a `SymbolTable`. It is optional: drop it and the same spec prints from the
     names in the file, as $\mathrm{load}_t$ and $\mathrm{capacity}_g$.
 
@@ -171,7 +168,7 @@ call.
     python -m mathspec typst dispatch.yaml --standalone -o dispatch.typ
     ```
 
-    [Typeset the math](reference/typeset.md) documents the three functions, their
+    [Typeset output](reference/typeset.md) documents the three functions, their
     options and symbol tables. Each reads the same file every other page here
     loads.
 
@@ -181,25 +178,37 @@ call.
 
 --8<-- "README.md:engines"
 
+## Background
+
+--8<-- "README.md:background"
+
 ## Where to next
 
-- [Your first spec](first-spec.md): write the file above one block at a
-  time, check it and print it.
-- [The language](reference/language/index.md): what a file may contain, and
-  what it means.
-- [Examples](examples/index.md): whole specs, each beside the math it prints.
-- [Print a spec as math](howto/print.md): LaTeX, Typst or Markdown, from the
-  file alone.
-- [Check a spec without data](howto/check.md): on your machine and in CI.
-- [Reading a spec and its program](reference/reading.md): for whoever writes an engine
-  or a renderer.
+<div class="grid cards" markdown>
+
+<!-- prettier-ignore -->
+- **[Tutorials](tutorials/index.md)** teach the language in three lessons, and
+    in the first you build the file above one section at a time.
+- **[How-to guides](howto/index.md)** list the steps for one task, such as
+    checking a spec without data or printing it as math.
+- **[Reference](reference/index.md)** describes what a file may contain and
+    what it means, key by key, with whole specs beside their math.
+- **[About](about/index.md)** explains why the language has the shape it has.
+- **[Development](reference/reading.md)** covers how an engine or a renderer reads
+    a spec, and how to contribute to mathspec.
+
+</div>
 
 ## Install it
 
-See [installation](howto/installation.md).
+[Install mathspec](howto/installation.md) from PyPI with pip, uv or pixi.
 
-!!! warning "Alpha, pre-1.0"
+!!! warning "Alpha software"
 
     --8<-- "README.md:status"
+
+## Contributors
+
+--8<-- "README.md:contributors"
 
 </div>

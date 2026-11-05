@@ -5,37 +5,60 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Lines
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Line`. It adds a term to `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum`. It reads `scenario_weight`, `transmission_losses` under [`given`](../../reference/language/declarations.md#given).
+This file states PyPSA's `Line`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to each of these sums: `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection` and `Cycle_angle_sum`. `Line_loss_tangents_forward` states PyPSA's tangent and secant loss rows over one segment dimension. `Line_s_monitored` is the flow that the security rows contain.
 
 <!-- gallery:begin -->
 ```yaml
+given:
+  parameters:
+    scenario_weight: { dims: [scenario] }
+    transmission_losses: { dims: [], dtype: bool }
+  expressions:
+    transmission_volume_expansion: { dims: [scenario, global_constraint] }
+    transmission_expansion_cost: { dims: [scenario, global_constraint] }
+    tech_capacity_expansion: { dims: [global_constraint] }
+    total_cost: { dims: [] }
+    Carrier_additions: { dims: [period, carrier] }
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
+
 dimensions:
   scenario:
     description: the futures dispatch is chosen in, each with a weight
   snapshot:
     description: dispatch periods
     dtype: datetime
+    ordered: true
   bus:
     description: network nodes
   line:
     description: passive branches, each between two buses, their flow set by impedance
   cycle:
-    description: independent cycles of the passive network graph — the cycle basis, data prep
+    description: >-
+      independent cycles of the passive network graph, the cycle basis, data
+      prep. Each period has its own basis, of the branches that are active in it. A
+      label is a position in that period's basis, so one label is a different
+      cycle in another period
   segment:
     description: >-
-      the cuts a passive branch's loss curve is held above — PyPSA's tangents,
-      as many as its `segments` count, or its secants, as many as its tolerance
-      loop places; none in a lossless run
+      the cuts a passive branch's loss curve is held above. They are PyPSA's
+      tangents, as many as its `segments` count, or its secants, as many as
+      its tolerance loop places. A lossless run has none
     dtype: int
   global_constraint:
     description: PyPSA's `GlobalConstraint` rows, one label per declared limit
   period:
-    description: investment periods — PyPSA's `investment_periods`
+    description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
+    ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
 
 relations:
+  snapshot_period:
+    description: the investment period a snapshot falls in
+    key: snapshot
+    values: period
   Line_carrier:
     description: the carrier a line carries
     key: line
@@ -51,18 +74,24 @@ relations:
 
 parameters:
   Line_active:
-    description: whether a line stands in a snapshot's period — PyPSA's `active`, data prep
+    description: whether a line is active in a snapshot's period. It is PyPSA's `active`, data prep
     dims: [snapshot, line]
     dtype: bool
+  Line_active_asset:
+    description: >-
+      whether a line is one of PyPSA's `active_assets`, by its `active` flag
+      alone, without build year and lifetime. A unit that is active in no
+      snapshot of the horizon still counts. PyPSA refuses one that differs by
+      scenario (`constants.py:51`)
+    dims: [line]
+    dtype: bool
   Line_capital_weight:
-    description: the sum of period weights a line stands in — PyPSA's `active * period_weighting`, summed, data prep
+    description: the sum of period weights a line is active in. It is PyPSA's `active * period_weighting`, summed, data prep
     dims: [line]
   Line_first_active:
     description: >-
-      one in the first period a line stands in, zero elsewhere, data prep.
-      PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a line
-      that has retired in every later period (`global_constraints.py:276`,
-      PyPSA/PyPSA#1938)
+      one in the first period a line is active in, zero elsewhere, data prep.
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
     dims: [period, line]
   Line_s_nom:
     description: nominal apparent power
@@ -71,6 +100,10 @@ parameters:
     description: whether the nominal apparent power is a decision
     dims: [line]
     dtype: bool
+  Line_s_nom_mod:
+    description: the module size a build comes in whole numbers of. No value means the build is continuous
+    dims: [line]
+    missing: absent
   Line_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, line]
@@ -81,56 +114,81 @@ parameters:
     description: most nominal apparent power an extendable line may be built at
     dims: [scenario, line]
   Line_capital_cost:
-    description: cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep
+    description: >-
+      cost of one unit of nominal apparent power for the modelled horizon
+      (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an
+      annuity over `lifetime` at `discount_rate`, times `nyears`, where
+      `overnight_cost` is given, and `capital_cost` where it is not. Both add
+      `fom_cost` (`components.py:1128-1149`, `costs.py:102-203`)
     dims: [scenario, line]
   Line_s_nom_set:
-    description: a given nominal apparent power for an extendable line; one without a value has no row here
-    dims: [scenario, line]
+    description: a given nominal apparent power for an extendable line. One without a value has no row here
+    dims: [line]
+    missing: absent
   Line_s_set:
-    description: a given flow schedule; a line without one has no row here
+    description: a given flow schedule. A line without one has no row here
     dims: [scenario, snapshot, line]
+    missing: absent
+  Line_v_ang_max:
+    description: >-
+      the most the voltage angle difference across a line may be either way,
+      in degrees. It is PyPSA's `v_ang_max`. Infinite, and so no row, by
+      default. A line whose carrier is not AC has no row either. The
+      deprecated `v_ang_min` is ignored, as PyPSA ignores it with a
+      `DeprecationWarning` (`constraints.py:1695-1702`)
+    dims: [scenario, line]
+    missing: absent
+  Line_x_pu_eff:
+    description: >-
+      the line's effective series reactance. It is PyPSA's `x_pu_eff`, `x`
+      over the square of its bus's nominal voltage, data prep
+    dims: [scenario, line]
   Line_cycle_weight:
     description: >-
-      the line's series impedance, signed by its orientation in the cycle —
-      the cycle basis, data prep; a line in no cycle has no row. PyPSA builds
-      the cycle basis from the first scenario only (`networks.py:1354-1361`)
-    dims: [line, cycle]
+      the line's series impedance, signed by its orientation in the cycle: the
+      cycle basis, data prep. A line in no cycle has no row. PyPSA builds the
+      cycle basis from the first scenario only (`networks.py:1430-1437`)
+    dims: [period, line, cycle]
+    missing: absent
   Line_loss_max:
-    description: the loss at a line's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep
+    description: the loss at a line's rating. It is PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep
     dims: [scenario, snapshot, line]
   Line_loss_slope:
     description: >-
-      the slope of a cut to the loss curve — a tangent's `2 * r_pu_eff * p_k`
-      at its segment's flow, a secant's `r_pu_eff * (p_k + p_k+1)` between
-      consecutive breakpoints, data prep
+      the slope of a cut to the loss curve, data prep. It is a tangent's `2 *
+      r_pu_eff * p_k` at its segment's flow, or a secant's `r_pu_eff * (p_k +
+      p_k+1)` between consecutive breakpoints
     dims: [scenario, snapshot, line, segment]
   Line_loss_offset:
     description: >-
-      where that cut meets the loss axis — a tangent's `loss_k - slope_k * p_k`,
-      a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep
+      where that cut meets the loss axis: a tangent's `loss_k - slope_k *
+      p_k`, a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep
     dims: [scenario, snapshot, line, segment]
   Line_volume_weight:
     description: >-
-      the line's length where its carrier is in the row's set, the first
-      scenario's length as PyPSA reads it (`global_constraints.py:835-836`) —
-      data prep; a
-      line outside it, or one that does not stand in the row's
-      `investment_period`, has no row
+      the line's length in each scenario where its carrier is in the row's set
+      (`global_constraints.py:847-848`), data prep. A line outside it, or one
+      that is not active in the row's `investment_period`, has no row
     dims: [scenario, global_constraint, line]
+    missing: absent
   Line_expansion_cost_weight:
     description: >-
-      the line's capital cost where its carrier is in the row's set, times
-      the objective weights of the periods it stands in where the row names
-      no `investment_period` under `multi_investment_periods` — data prep; a
-      line outside the set, or one that does not stand in the row's period,
-      has no row
+      the line's capital cost where its carrier is in the row's set, data
+      prep. Where the row states no `investment_period` under
+      `multi_investment_periods`, it is times the objective weights of the
+      periods the line is active in. A line outside the set, or one that is not
+      active in the row's period, has no row. The capital cost is PyPSA's
+      `capital_cost` property, which is `Line_capital_cost` without `fom_cost`
+      (`components.py:1153-1171`, `global_constraints.py:870-879`)
     dims: [scenario, global_constraint, line]
+    missing: absent
   Line_tech_capacity_weight:
     description: >-
-      one where the line is in the row's carrier-and-bus set — data prep; one
-      outside it, or one that does not stand in the row's `investment_period`,
+      one where the line is in the row's carrier-and-bus set, data prep. One
+      outside it, or one that is not active in the row's `investment_period`,
       has no row
     dims: [global_constraint, line]
+    missing: absent
 
 variables:
   Line_s:
@@ -141,47 +199,49 @@ variables:
     where: Line_active
   Line_loss:
     description: >-
-      `Line-loss` — what a line dissipates carrying its flow, pushed down by the
-      cost and held up by the cuts; absent, and zero in the balance, where
+      `Line-loss` — what a line dissipates carrying its flow, pushed down by
+      the cost and held up by the cuts. Absent, and zero in the balance, where
       the network is lossless
     dims: [scenario, snapshot, line]
-    where: transmission_losses AND Line_active
-    absence: zero
+    where: Line_lossy
+    missing: 0
     bounds:
       lower: 0
   Line_s_nom_ext:
     description: >-
-      `Line-s_nom` — nominal apparent power where it is a decision; the
-      parameter of the same PyPSA name carries the fixed regime
+      `Line-s_nom` — nominal apparent power where it is a decision, for a line
+      that is active. A fixed build is the parameter of the same PyPSA name
     dims: [line]
-    where: Line_s_nom_extendable
-
-given:
-  parameters:
-    scenario_weight: { dims: [scenario] }
-    transmission_losses: { dims: [], dtype: bool }
-  expressions:
-    transmission_volume_expansion: { dims: [scenario, global_constraint], term: Line_transmission_volume_expansion }
-    transmission_expansion_cost: { dims: [scenario, global_constraint], term: Line_transmission_expansion_cost }
-    tech_capacity_expansion: { dims: [global_constraint], term: Line_tech_capacity_expansion }
-    Carrier_additions: { dims: [period, carrier], term: Line_additions }
-    Bus_injection: { dims: [scenario, snapshot, bus], term: Line_injection }
-    Cycle_angle_sum: { dims: [scenario, snapshot, cycle], term: Line_angle_sum }
+    where: Line_s_nom_extendable AND Line_active_asset
+  Line_n_mod:
+    description: "`Line-n_mod` — how many modules of an extendable modular build. A unit that is not active has none"
+    dims: [line]
+    where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND Line_active_asset
+    domain: integer
+    bounds:
+      lower: 0
 
 expressions:
   Line_transmission_volume_expansion:
     expression: sum(Line_s_nom_ext * Line_volume_weight, over=line)
+    adds_to: transmission_volume_expansion
   Line_transmission_expansion_cost:
     expression: sum(Line_s_nom_ext * Line_expansion_cost_weight, over=line)
+    adds_to: transmission_expansion_cost
   Line_tech_capacity_expansion:
     expression: sum(Line_s_nom_ext * Line_tech_capacity_weight, over=line)
+    adds_to: tech_capacity_expansion
+  Line_capex:
+    expression: sum(scenario_weight * Line_s_nom_ext * Line_capital_cost * Line_capital_weight)
+    adds_to: total_cost
   Line_additions:
     expression: >-
-      sum(Line_s_nom_ext * Line_first_active, by=Line_carrier, over=line, into=carrier)
+      sum(Line_s_nom_ext * Line_first_active, over=line, by=Line_carrier[carrier])
+    adds_to: Carrier_additions
   Line_s_monitored:
     description: >-
-      the flow a line's post-contingency rows read — its flow where it stands,
-      nothing where it does not, since PyPSA builds those rows for every
+      the flow in a line's post-contingency rows. It is its flow where it
+      is active, and nothing where it does not. PyPSA builds those rows for every
       branch of the sub-network in every snapshot
     dims: [scenario, snapshot, line]
     cases:
@@ -189,11 +249,21 @@ expressions:
     otherwise: 0
   Line_injection:
     expression: >-
-      -sum(Line_s, by=Line_bus0, over=line, into=bus)
-      + sum(Line_s, by=Line_bus1, over=line, into=bus)
-      - (0.5 * sum(Line_loss, by=Line_bus0, over=line, into=bus))
-      - (0.5 * sum(Line_loss, by=Line_bus1, over=line, into=bus))
-  Line_angle_sum: sum(Line_s * Line_cycle_weight, over=line)
+      -sum(Line_s, over=line, by=Line_bus0[bus])
+      + sum(Line_s, over=line, by=Line_bus1[bus])
+      - (0.5 * sum(Line_loss, over=line, by=Line_bus0[bus]))
+      - (0.5 * sum(Line_loss, over=line, by=Line_bus1[bus]))
+    adds_to: Bus_injection
+  Line_angle_sum:
+    expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period[period]), over=line)
+    adds_to: Cycle_angle_sum
+
+conditions:
+  Line_lossy:
+    description: >-
+      a line that is active in the snapshot's period, where the run models
+      transmission losses
+    condition: transmission_losses AND Line_active
 
 constraints:
   Line_fix_s_lower:
@@ -219,95 +289,65 @@ constraints:
   Line_ext_s_nom_lower:
     description: "`Line-ext-s_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, line]
-    where: Line_s_nom_extendable
+    where: Line_s_nom_extendable AND Line_active_asset
     expression: Line_s_nom_ext >= Line_s_nom_min
   Line_ext_s_nom_upper:
-    description: "`Line-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Line-ext-s_nom-upper` — the chosen build is at most its cap in every scenario. A cap of infinity is no row"
     dims: [scenario, line]
-    where: Line_s_nom_extendable AND Line_s_nom_max
+    where: Line_s_nom_extendable AND Line_active_asset AND Line_s_nom_max
     expression: Line_s_nom_ext <= Line_s_nom_max
   Line_s_nom_set:
     description: "`Line-s_nom_set` — the chosen build pinned, wherever a value is given"
-    dims: [scenario, line]
-    where: Line_s_nom_extendable AND Line_s_nom_set
+    dims: [line]
+    where: Line_s_nom_extendable AND Line_active_asset AND Line_s_nom_set
     expression: Line_s_nom_ext == Line_s_nom_set
+  Line_s_nom_modularity:
+    description: "`Line-s_nom_modularity` — the chosen build is a whole number of modules"
+    dims: [line]
+    where: Line_s_nom_extendable AND Line_s_nom_mod > 0 AND Line_active_asset
+    expression: Line_s_nom_ext == Line_s_nom_mod * Line_n_mod
   Line_s_set:
     description: "`Line-s_set` — flow pinned to the given schedule, wherever one is given"
     dims: [scenario, snapshot, line]
     where: Line_s_set AND Line_active
     expression: Line_s == Line_s_set
+  Line_v_ang_lower:
+    description: >-
+      `Line-v_ang-lower` — an AC line carries at least the flow at which the
+      voltage angle difference across it is the negative of its limit. That
+      difference is `x_pu_eff` times the flow in radians
+    dims: [scenario, snapshot, line]
+    where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+    expression: Line_s >= -Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
+  Line_v_ang_upper:
+    description: >-
+      `Line-v_ang-upper` — an AC line carries at most the flow at which the
+      voltage angle difference across it reaches its limit
+    dims: [scenario, snapshot, line]
+    where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+    expression: Line_s <= Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
   Line_loss_upper:
     description: "`Line-loss_upper` — a line dissipates at most the loss at its rating"
     dims: [scenario, snapshot, line]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     expression: Line_loss <= Line_loss_max
   Line_loss_tangents_forward:
     description: >-
-      `Line-loss_tangents-{k}-1`, `Line-loss_secants-pos` — the loss sits above
-      every cut to its curve for flow one way; PyPSA names one row per tangent
-      `k`, or one row stacked over its `secant` axis, and this block states them
-      all over the segment dimension
+      `Line-loss_tangents-{k}-1`, `Line-loss_secants-pos` — the loss sits
+      above every cut to its curve for flow one way. PyPSA names one row per
+      tangent `k`, or one row stacked over its `secant` axis, and this entry
+      states them all over the segment dimension
     dims: [scenario, snapshot, line, segment]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     expression: Line_loss + Line_loss_slope * Line_s >= Line_loss_offset
   Line_loss_tangents_reverse:
     description: >-
       `Line-loss_tangents-{k}--1`, `Line-loss_secants-neg` — the same fan
       mirrored, the loss depending on the flow's magnitude
     dims: [scenario, snapshot, line, segment]
-    where: transmission_losses AND Line_active
+    where: Line_lossy
     expression: Line_loss - Line_loss_slope * Line_s >= Line_loss_offset
-
-objective:
-  sense: minimize
-  expression: >-
-    sum(((scenario_weight * Line_s_nom_ext) * Line_capital_cost) * Line_capital_weight)
 ```
-
-#### Sets
-
-| Symbol | Meaning |
-|---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N}`$ — network nodes |
-| $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I},\ \mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N}`$ — passive branches, each between two buses, their flow set by impedance |
-| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep |
-| $`\mathcal{E}`$ | index $`e`$ — `segment` — the cuts a passive branch's loss curve is held above — PyPSA's tangents, as many as its `segments` count, or its secants, as many as its tolerance loop places; none in a lossless run |
-| $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` — investment periods — PyPSA's `investment_periods` |
-| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
-
-#### Parameters
-
-| Symbol | Meaning |
-|---|---|
-| $`\mathrm{on}^{s}`$ | `Line_active` over $`\mathcal{T} \times \mathcal{K}`$ — whether a line stands in a snapshot's period — PyPSA's `active`, data prep |
-| $`\mathrm{W}^{s}`$ | `Line_capital_weight` over $`\mathcal{K}`$ — the sum of period weights a line stands in — PyPSA's `active * period_weighting`, summed, data prep |
-| $`\mathrm{new}^{s}`$ | `Line_first_active` over $`\mathcal{Y} \times \mathcal{K}`$ — one in the first period a line stands in, zero elsewhere, data prep. PyPSA `1.3.0` takes `active.cumsum() == 1`, which also counts a line that has retired in every later period (`global_constraints.py:276`, PyPSA/PyPSA\#1938) |
-| $`\mathrm{s}^{\mathrm{nom}}`$ | `Line_s_nom` over $`\Xi \times \mathcal{K}`$ — nominal apparent power |
-| $`\mathrm{ext}^{s}`$ | `Line_s_nom_extendable` over $`\mathcal{K}`$ — whether the nominal apparent power is a decision |
-| $`\overline{\mathrm{s}}`$ | `Line_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — most flow either way, per unit of nominal apparent power |
-| $`\underline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_min` over $`\Xi \times \mathcal{K}`$ — least nominal apparent power an extendable line may be built at |
-| $`\overline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_max` over $`\Xi \times \mathcal{K}`$ — most nominal apparent power an extendable line may be built at |
-| $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\Xi \times \mathcal{K}`$ — cost of one unit of nominal apparent power — PyPSA's `capital_cost`, periodized as an annuity in data prep |
-| $`\mathrm{s}^{\mathrm{nom,set}}`$ | `Line_s_nom_set` over $`\Xi \times \mathcal{K}`$ — a given nominal apparent power for an extendable line; one without a value has no row here |
-| $`\mathrm{s}^{\mathrm{set}}`$ | `Line_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — a given flow schedule; a line without one has no row here |
-| $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{K} \times \mathcal{C}`$ — the line's series impedance, signed by its orientation in the cycle — the cycle basis, data prep; a line in no cycle has no row. PyPSA builds the cycle basis from the first scenario only (`networks.py:1354-1361`) |
-| $`\overline{\ell}`$ | `Line_loss_max` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the loss at a line's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep |
-| $`\mathrm{a}`$ | `Line_loss_slope` over $`\Xi \times \mathcal{T} \times \mathcal{K} \times \mathcal{E}`$ — the slope of a cut to the loss curve — a tangent's `2 * r_pu_eff * p_k` at its segment's flow, a secant's `r_pu_eff * (p_k + p_k+1)` between consecutive breakpoints, data prep |
-| $`\mathrm{b}`$ | `Line_loss_offset` over $`\Xi \times \mathcal{T} \times \mathcal{K} \times \mathcal{E}`$ — where that cut meets the loss axis — a tangent's `loss_k - slope_k * p_k`, a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep |
-| $`\mathrm{len}`$ | `Line_volume_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$ — the line's length where its carrier is in the row's set, the first scenario's length as PyPSA reads it (`global_constraints.py:835-836`) — data prep; a line outside it, or one that does not stand in the row's `investment_period`, has no row |
-| $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$ — the line's capital cost where its carrier is in the row's set, times the objective weights of the periods it stands in where the row names no `investment_period` under `multi_investment_periods` — data prep; a line outside the set, or one that does not stand in the row's period, has no row |
-| $`\mathrm{m}^{l}`$ | `Line_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{K}`$ — one where the line is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
-
-#### Variables
-
-| Symbol | Meaning |
-|---|---|
-| $`s`$ | `Line_s` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — `Line-s` — PyPSA's `p0`, the flow measured at the `Line_bus0` end: a positive value withdraws there and injects at `Line_bus1`, lossless |
-| $`\ell`$ | `Line_loss` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — `Line-loss` — what a line dissipates carrying its flow, pushed down by the cost and held up by the cuts; absent, and zero in the balance, where the network is lossless |
-| $`S`$ | `Line_s_nom_ext` over $`\mathcal{K}`$ — `Line-s_nom` — nominal apparent power where it is a decision; the parameter of the same PyPSA name carries the fixed regime |
 
 #### Given
 
@@ -318,26 +358,162 @@ objective:
 | $`\mathit{transmission\_volume\_expansion}`$ | `transmission_volume_expansion` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Line_transmission_volume_expansion` to |
 | $`\mathit{transmission\_expansion\_cost}`$ | `transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Line_transmission_expansion_cost` to |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression this file adds `Line_tech_capacity_expansion` to |
+| $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Line_capex` to |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression this file adds `Line_additions` to |
 | $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Line_injection` to |
 | $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$, an expression this file adds `Line_angle_sum` to |
+
+#### Sets
+
+| Symbol | Meaning |
+|---|---|
+| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N}`$ — network nodes |
+| $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I},\ \mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N}`$ — passive branches, each between two buses, their flow set by impedance |
+| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph, the cycle basis, data prep. Each period has its own basis, of the branches that are active in it. A label is a position in that period's basis, so one label is a different cycle in another period |
+| $`\mathcal{E}`$ | index $`e`$ — `segment` — the cuts a passive branch's loss curve is held above. They are PyPSA's tangents, as many as its `segments` count, or its secants, as many as its tolerance loop places. A lossless run has none |
+| $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
+| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
+
+#### Parameters
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{s}`$ | `Line_active` over $`\mathcal{T} \times \mathcal{K}`$ — whether a line is active in a snapshot's period. It is PyPSA's `active`, data prep |
+| $`\mathrm{act}^{s}`$ | `Line_active_asset` over $`\mathcal{K}`$ — whether a line is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:51`) |
+| $`\mathrm{W}^{s}`$ | `Line_capital_weight` over $`\mathcal{K}`$ — the sum of period weights a line is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
+| $`\mathrm{new}^{s}`$ | `Line_first_active` over $`\mathcal{Y} \times \mathcal{K}`$ — one in the first period a line is active in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
+| $`\mathrm{s}^{\mathrm{nom}}`$ | `Line_s_nom` over $`\Xi \times \mathcal{K}`$ — nominal apparent power |
+| $`\mathrm{ext}^{s}`$ | `Line_s_nom_extendable` over $`\mathcal{K}`$ — whether the nominal apparent power is a decision |
+| $`\mathrm{s}^{\mathrm{mod}}`$ | `Line_s_nom_mod` over $`\mathcal{K}`$, `absent` where the data has no row — the module size a build comes in whole numbers of. No value means the build is continuous |
+| $`\overline{\mathrm{s}}`$ | `Line_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — most flow either way, per unit of nominal apparent power |
+| $`\underline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_min` over $`\Xi \times \mathcal{K}`$ — least nominal apparent power an extendable line may be built at |
+| $`\overline{\mathrm{s}}^{\mathrm{nom}}`$ | `Line_s_nom_max` over $`\Xi \times \mathcal{K}`$ — most nominal apparent power an extendable line may be built at |
+| $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\Xi \times \mathcal{K}`$ — cost of one unit of nominal apparent power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1128-1149`, `costs.py:102-203`) |
+| $`\mathrm{s}^{\mathrm{nom,set}}`$ | `Line_s_nom_set` over $`\mathcal{K}`$, `absent` where the data has no row — a given nominal apparent power for an extendable line. One without a value has no row here |
+| $`\mathrm{s}^{\mathrm{set}}`$ | `Line_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$, `absent` where the data has no row — a given flow schedule. A line without one has no row here |
+| $`\overline{\delta}`$ | `Line_v_ang_max` over $`\Xi \times \mathcal{K}`$, `absent` where the data has no row — the most the voltage angle difference across a line may be either way, in degrees. It is PyPSA's `v_ang_max`. Infinite, and so no row, by default. A line whose carrier is not AC has no row either. The deprecated `v_ang_min` is ignored, as PyPSA ignores it with a `DeprecationWarning` (`constraints.py:1695-1702`) |
+| $`\mathrm{x}^{\mathrm{eff}}`$ | `Line_x_pu_eff` over $`\Xi \times \mathcal{K}`$ — the line's effective series reactance. It is PyPSA's `x_pu_eff`, `x` over the square of its bus's nominal voltage, data prep |
+| $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{Y} \times \mathcal{K} \times \mathcal{C}`$, `absent` where the data has no row — the line's series impedance, signed by its orientation in the cycle: the cycle basis, data prep. A line in no cycle has no row. PyPSA builds the cycle basis from the first scenario only (`networks.py:1430-1437`) |
+| $`\overline{\ell}`$ | `Line_loss_max` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the loss at a line's rating. It is PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep |
+| $`\mathrm{a}`$ | `Line_loss_slope` over $`\Xi \times \mathcal{T} \times \mathcal{K} \times \mathcal{E}`$ — the slope of a cut to the loss curve, data prep. It is a tangent's `2 * r_pu_eff * p_k` at its segment's flow, or a secant's `r_pu_eff * (p_k + p_k+1)` between consecutive breakpoints |
+| $`\mathrm{b}`$ | `Line_loss_offset` over $`\Xi \times \mathcal{T} \times \mathcal{K} \times \mathcal{E}`$ — where that cut meets the loss axis: a tangent's `loss_k - slope_k * p_k`, a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep |
+| $`\mathrm{len}`$ | `Line_volume_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$, `absent` where the data has no row — the line's length in each scenario where its carrier is in the row's set (`global_constraints.py:847-848`), data prep. A line outside it, or one that is not active in the row's `investment_period`, has no row |
+| $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{K}`$, `absent` where the data has no row — the line's capital cost where its carrier is in the row's set, data prep. Where the row states no `investment_period` under `multi_investment_periods`, it is times the objective weights of the periods the line is active in. A line outside the set, or one that is not active in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Line_capital_cost` without `fom_cost` (`components.py:1153-1171`, `global_constraints.py:870-879`) |
+| $`\mathrm{m}^{l}`$ | `Line_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{K}`$, `absent` where the data has no row — one where the line is in the row's carrier-and-bus set, data prep. One outside it, or one that is not active in the row's `investment_period`, has no row |
+
+#### Conditions
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{s,\mathrm{lossy}}`$ | `Line_lossy` over $`\mathcal{K} \times \mathcal{T}`$ — a line that is active in the snapshot's period, where the run models transmission losses |
+
+#### Variables
+
+| Symbol | Meaning |
+|---|---|
+| $`s`$ | `Line_s` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — `Line-s` — PyPSA's `p0`, the flow measured at the `Line_bus0` end: a positive value withdraws there and injects at `Line_bus1`, lossless |
+| $`\ell`$ | `Line_loss` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$, $`0`$ where the mask leaves it out — `Line-loss` — what a line dissipates carrying its flow, pushed down by the cost and held up by the cuts. Absent, and zero in the balance, where the network is lossless |
+| $`S`$ | `Line_s_nom_ext` over $`\mathcal{K}`$ — `Line-s_nom` — nominal apparent power where it is a decision, for a line that is active. A fixed build is the parameter of the same PyPSA name |
+| $`N^{s}`$ | `Line_n_mod` over $`\mathcal{K}`$ — `Line-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{Line\_transmission\_volume\_expansion}`$ | `Line_transmission_volume_expansion` over $`\Xi \times \mathcal{G}`$ |
-| $`\mathit{Line\_transmission\_expansion\_cost}`$ | `Line_transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$ |
+| $`\mathit{Line\_transmission\_volume\_expansion}`$ | `Line_transmission_volume_expansion` over $`\mathcal{G} \times \Xi`$ |
+| $`\mathit{Line\_transmission\_expansion\_cost}`$ | `Line_transmission_expansion_cost` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{Line\_tech\_capacity\_expansion}`$ | `Line_tech_capacity_expansion` over $`\mathcal{G}`$ |
-| $`\mathit{Line\_additions}`$ | `Line_additions` over $`\mathcal{Y} \times \mathcal{I}`$ |
-| $`\check{s}`$ | `Line_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the flow a line's post-contingency rows read — its flow where it stands, nothing where it does not, since PyPSA builds those rows for every branch of the sub-network in every snapshot |
-| $`\mathit{Line\_injection}`$ | `Line_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
-| $`\mathit{Line\_angle\_sum}`$ | `Line_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ |
+| $`\mathit{Line\_capex}`$ | `Line_capex` (scalar) |
+| $`\mathit{Line\_additions}`$ | `Line_additions` over $`\mathcal{I} \times \mathcal{Y}`$ |
+| $`\check{s}`$ | `Line_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{K}`$ — the flow in a line's post-contingency rows. It is its flow where it is active, and nothing where it does not. PyPSA builds those rows for every branch of the sub-network in every snapshot |
+| $`\mathit{Line\_injection}`$ | `Line_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ |
+| $`\mathit{Line\_angle\_sum}`$ | `Line_angle_sum` over $`\mathcal{C} \times \Xi \times \mathcal{T}`$ |
 
-#### Objective
+#### Conditions
+
+**`Line_lossy`**
 
 ```math
-\min \sum_{\xi \in \Xi,\ k \in \mathcal{K}} \pi_{\xi} \cdot S_{k} \cdot \mathrm{c}^{\mathrm{cap},s}_{\xi,k} \cdot \mathrm{W}^{s}_{k}
+\mathrm{on}^{s,\mathrm{lossy}}_{k,t} \iff \mathrm{lossy} \wedge \mathrm{on}^{s}_{t,k} \qquad \forall\, k \in \mathcal{K},\ t \in \mathcal{T}
+```
+
+#### Variable domains
+
+**`Line_s`**
+
+```math
+s_{\xi,t,k} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s}_{t,k}
+```
+
+**`Line_loss`**
+
+```math
+\ell_{\xi,t,k} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{k,t}
+```
+
+**`Line_s_nom_ext`**
+
+```math
+S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k}
+```
+
+**`Line_n_mod`**
+
+```math
+N^{s}_{k} \ge 0, N^{s}_{k} \in \mathbb{Z} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0 \wedge \mathrm{act}^{s}_{k}
+```
+
+#### Definitions
+
+**`Line_transmission_volume_expansion`**
+
+```math
+\mathit{Line\_transmission\_volume\_expansion}_{g,\xi} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{len}_{\xi,g,k} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+```
+
+**`Line_transmission_expansion_cost`**
+
+```math
+\mathit{Line\_transmission\_expansion\_cost}_{g,\xi} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{cc}_{\xi,g,k} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+```
+
+**`Line_tech_capacity_expansion`**
+
+```math
+\mathit{Line\_tech\_capacity\_expansion}_{g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{m}^{l}_{g,k} \qquad \forall\, g \in \mathcal{G}
+```
+
+**`Line_capex`**
+
+```math
+\mathit{Line\_capex} = \sum_{\xi \in \Xi,\ k \in \mathcal{K}} \pi_{\xi} \cdot S_{k} \cdot \mathrm{c}^{\mathrm{cap},s}_{\xi,k} \cdot \mathrm{W}^{s}_{k}
+```
+
+**`Line_additions`**
+
+```math
+\mathit{Line\_additions}_{i,y} = \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_carrier}(k) = i} S_{k} \cdot \mathrm{new}^{s}_{y,k} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
+```
+
+**`Line_s_monitored`**
+
+```math
+\check{s}_{\xi,t,k} = \begin{cases} s_{\xi,t,k} & \text{if } \mathrm{on}^{s}_{t,k} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K}
+```
+
+**`Line_injection`**
+
+```math
+\mathit{Line\_injection}_{n,\xi,t} = -\left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} s_{\xi,t,k} \right) + \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} s_{\xi,t,k} - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} \ell_{\xi,t,k} \right) - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} \ell_{\xi,t,k} \right) \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+**`Line_angle_sum`**
+
+```math
+\mathit{Line\_angle\_sum}_{c,\xi,t} = \sum_{k \in \mathcal{K}} s_{\xi,t,k} \cdot \mathrm{x}_{\mathrm{snapshot\_period}(t),k,c} \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Subject to
@@ -369,19 +545,25 @@ s_{\xi,t,k} + \ell_{\xi,t,k} \le \overline{\mathrm{s}}_{\xi,t,k} \cdot S_{k} \qq
 **`Line_ext_s_nom_lower`**
 
 ```math
-S_{k} \ge \underline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k}
+S_{k} \ge \underline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k}
 ```
 
 **`Line_ext_s_nom_upper`**
 
 ```math
-S_{k} \le \overline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \overline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \text{ is defined}
+S_{k} \le \overline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k} \wedge \overline{\mathrm{s}}^{\mathrm{nom}}_{\xi,k} \text{ is defined}
 ```
 
 **`Line_s_nom_set`**
 
 ```math
-S_{k} = \mathrm{s}^{\mathrm{nom,set}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{nom,set}}_{\xi,k} \text{ is defined}
+S_{k} = \mathrm{s}^{\mathrm{nom,set}}_{k} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{act}^{s}_{k} \wedge \mathrm{s}^{\mathrm{nom,set}}_{k} \text{ is defined}
+```
+
+**`Line_s_nom_modularity`**
+
+```math
+S_{k} = \mathrm{s}^{\mathrm{mod}}_{k} \cdot N^{s}_{k} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k} \wedge \mathrm{s}^{\mathrm{mod}}_{k} > 0 \wedge \mathrm{act}^{s}_{k}
 ```
 
 **`Line_s_set`**
@@ -390,85 +572,38 @@ S_{k} = \mathrm{s}^{\mathrm{nom,set}}_{\xi,k} \qquad \forall\, \xi \in \Xi,\ k \
 s_{\xi,t,k} = \mathrm{s}^{\mathrm{set}}_{\xi,t,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{s}^{\mathrm{set}}_{\xi,t,k} \text{ is defined} \wedge \mathrm{on}^{s}_{t,k}
 ```
 
+**`Line_v_ang_lower`**
+
+```math
+s_{\xi,t,k} \ge \frac{-\overline{\delta}_{\xi,k} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{\xi,k}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \overline{\delta}_{\xi,k} \text{ is defined} \wedge \mathrm{Line\_carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{t,k}
+```
+
+**`Line_v_ang_upper`**
+
+```math
+s_{\xi,t,k} \le \frac{\overline{\delta}_{\xi,k} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{\xi,k}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \overline{\delta}_{\xi,k} \text{ is defined} \wedge \mathrm{Line\_carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{t,k}
+```
+
 **`Line_loss_upper`**
 
 ```math
-\ell_{\xi,t,k} \le \overline{\ell}_{\xi,t,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{lossy} \wedge \mathrm{on}^{s}_{t,k}
+\ell_{\xi,t,k} \le \overline{\ell}_{\xi,t,k} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{k,t}
 ```
 
 **`Line_loss_tangents_forward`**
 
 ```math
-\ell_{\xi,t,k} + \mathrm{a}_{\xi,t,k,e} \cdot s_{\xi,t,k} \ge \mathrm{b}_{\xi,t,k,e} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ e \in \mathcal{E} \,:\, \mathrm{lossy} \wedge \mathrm{on}^{s}_{t,k}
+\ell_{\xi,t,k} + \mathrm{a}_{\xi,t,k,e} \cdot s_{\xi,t,k} \ge \mathrm{b}_{\xi,t,k,e} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ e \in \mathcal{E} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{k,t}
 ```
 
 **`Line_loss_tangents_reverse`**
 
 ```math
-\ell_{\xi,t,k} - \mathrm{a}_{\xi,t,k,e} \cdot s_{\xi,t,k} \ge \mathrm{b}_{\xi,t,k,e} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ e \in \mathcal{E} \,:\, \mathrm{lossy} \wedge \mathrm{on}^{s}_{t,k}
-```
-
-#### Definitions
-
-**`Line_transmission_volume_expansion`**
-
-```math
-\mathit{Line\_transmission\_volume\_expansion}_{\xi,g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{len}_{\xi,g,k} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
-```
-
-**`Line_transmission_expansion_cost`**
-
-```math
-\mathit{Line\_transmission\_expansion\_cost}_{\xi,g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{cc}_{\xi,g,k} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G}
-```
-
-**`Line_tech_capacity_expansion`**
-
-```math
-\mathit{Line\_tech\_capacity\_expansion}_{g} = \sum_{k \in \mathcal{K}} S_{k} \cdot \mathrm{m}^{l}_{g,k} \qquad \forall\, g \in \mathcal{G}
-```
-
-**`Line_additions`**
-
-```math
-\mathit{Line\_additions}_{y,i} = \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_carrier}(k) = i} S_{k} \cdot \mathrm{new}^{s}_{y,k} \qquad \forall\, y \in \mathcal{Y},\ i \in \mathcal{I}
-```
-
-**`Line_s_monitored`**
-
-```math
-\check{s}_{\xi,t,k} = \begin{cases} s_{\xi,t,k} & \text{if } \mathrm{on}^{s}_{t,k} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K}
-```
-
-**`Line_injection`**
-
-```math
-\mathit{Line\_injection}_{\xi,t,n} = -\left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} s_{\xi,t,k} \right) + \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} s_{\xi,t,k} - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} \ell_{\xi,t,k} \right) - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} \ell_{\xi,t,k} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
-```
-
-**`Line_angle_sum`**
-
-```math
-\mathit{Line\_angle\_sum}_{\xi,t,c} = \sum_{k \in \mathcal{K}} s_{\xi,t,k} \cdot \mathrm{x}_{k,c} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
-```
-
-#### Variable domains
-
-**`Line_s`**
-
-```math
-s_{\xi,t,k} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{on}^{s}_{t,k}
-```
-
-**`Line_loss`**
-
-```math
-\ell_{\xi,t,k} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K} \,:\, \mathrm{lossy} \wedge \mathrm{on}^{s}_{t,k}
-```
-
-**`Line_s_nom_ext`**
-
-```math
-S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{k}
+\ell_{\xi,t,k} - \mathrm{a}_{\xi,t,k,e} \cdot s_{\xi,t,k} \ge \mathrm{b}_{\xi,t,k,e} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ k \in \mathcal{K},\ e \in \mathcal{E} \,:\, \mathrm{on}^{s,\mathrm{lossy}}_{k,t}
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

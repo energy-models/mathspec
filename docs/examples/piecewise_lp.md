@@ -35,6 +35,7 @@ dimensions:
   bp:
     description: breakpoints of the cost curve
     dtype: int
+    ordered: true
 
 parameters:
   capacity:
@@ -114,13 +115,27 @@ The same least-cost dispatch as `piecewise.yaml`, with each generator's cost cur
 | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{T} \times \mathcal{G}`$ — dispatched power |
 | $`\mathit{op\_cost}`$ | `op_cost` over $`\mathcal{T} \times \mathcal{G}`$ — operating cost, held above every segment of the generator's curve |
 
-Upright is what the data supplies — a parameter such as $`\mathrm{capacity}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{dispatch}`$. An index is italic too, being what a quantifier chooses, and a set is script.
+#### Notation
 
-$`t \boxminus_{v} k`$ denotes translation with $`v`$ standing where index $`t-k`$ leaves the dimension (`shift(edge=v)`), so the row at that boundary is built and carries $`v`$ rather than being dropped.
+| Symbol | Meaning |
+|---|---|
+| $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
+| $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
+| $`\lvert \mathcal{T} \rvert`$ | the size of $`\mathcal{T}`$; $`\lvert \mathcal{T} \rvert - 1`$ is the last position |
 
-$`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own order — the order `shift` steps along, not the order labels sort in — counted from $`0`$. The index itself stays the coordinate, so $`t`$ compares against labels and $`\mathrm{pos}(t)`$ against positions.
+#### Variable domains
 
-$`\lvert \mathcal{T} \rvert`$ denotes the size of the set being counted along, and a position counted from the end prints against it — $`\lvert \mathcal{T} \rvert - 1`$ is the last position, one less than the size because the first is $`0`$.
+**`dispatch`**
+
+```math
+0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+**`op_cost`**
+
+```math
+\mathit{op\_cost}_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
 
 #### Objective
 
@@ -140,20 +155,6 @@ $`\lvert \mathcal{T} \rvert`$ denotes the size of the set being counted along, a
 
 ```math
 \mathit{op\_cost}_{t,g} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b})(\mathit{dispatch}_{t,g}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
-#### Variable domains
-
-**`dispatch`**
-
-```math
-0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
-**`op_cost`**
-
-```math
-\mathit{op\_cost}_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 #### Assumptions

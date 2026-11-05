@@ -15,18 +15,18 @@ from typing import TYPE_CHECKING, Any, get_args
 
 import pytest
 
-from mathspec.operators import BUILTIN_NAMES
-from mathspec.program import Dual, Expression, GroupSum, Named, Predicate, Pullback, Sum, Translate, WindowSum
-from mathspec.typesetting import FORMATS, legend, to_latex, typeset, walk
-from mathspec.typesetting.format import OPERATOR_NAMES
-from mathspec.validation import to_spec
+from mathspec._operators import BUILTIN_NAMES
+from mathspec._typesetting import FORMATS, legend, to_latex, typeset, walk
+from mathspec._typesetting.format import OPERATOR_NAMES
+from mathspec._validation import to_spec
+from mathspec.program import Condition, Dual, Expression, ExpressionReference, Join, Sum, Translate, WindowSum
 from tests.typesetting import golden
 from tests.typesetting.fixtures import LATEX
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from mathspec.typesetting.format import Format
+    from mathspec._typesetting.format import Format
 
 
 @pytest.mark.parametrize('name', list(FORMATS), ids=list(FORMATS))
@@ -125,24 +125,24 @@ def _rendered_trees() -> Iterator[object]:
     curve's links are trees of its own, and the rows it stands for are not
     printed at all.
     """
-    schema = to_spec(golden.MODEL)
-    program = schema.program
+    spec = to_spec(golden.MODEL)
+    program = spec.program
     assert program.objective is not None
     yield program.objective.expression
-    for name in schema.constraints:
+    for name in spec.constraints:
         constraint = program.constraints[name]
         yield constraint.lhs
         yield constraint.rhs
         if constraint.where is not None:
             yield constraint.where.root
-    for name in schema.variables:
+    for name in spec.variables:
         if (mask := program.variables[name].where) is not None:
             yield mask.root
     for assumption in program.assumptions.values():
-        yield assumption.predicate.root
+        yield assumption.holds.root
         if assumption.where is not None:
             yield assumption.where.root
-    for name in schema.expressions:
+    for name in spec.expressions:
         yield program.expressions[name].expression
     for curve in program.piecewise.values():
         yield from (link.expression for link in curve.links)
@@ -151,12 +151,12 @@ def _rendered_trees() -> Iterator[object]:
 
 
 #: A dataclass the walk steps *through* rather than renders: a region has no
-#: branch of its own — its ``when`` and ``value`` do — a direction and the
-#: relation it reads are the facts a node carries rather than nodes, and a
-#: ``Mask`` is the wrapper a leaf carries a predicate in. None is a member of
-#: any node union, so they are subtracted from what the tree walk finds rather
-#: than added to what the vocabulary declares.
-CARRIERS = {'Region', 'Direction', 'Mask', 'Partition', 'RelationDeclaration'}
+#: branch of its own — its ``when`` and ``value`` do — the columns a join
+#: names, the axes a sum is over and the relation it reads are the facts a
+#: node carries rather than nodes, and a ``Mask`` is the wrapper a leaf carries a condition in. None is a
+#: member of any node union, so they are subtracted from what the tree walk
+#: finds rather than added to what the vocabulary declares.
+CARRIERS = {'Axis', 'Column', 'Region', 'JoinColumns', 'Mask', 'Partition', 'Relation'}
 
 
 def test_the_golden_model_carries_every_node_kind_the_walk_renders():
@@ -168,7 +168,7 @@ def test_the_golden_model_carries_every_node_kind_the_walk_renders():
     `coverage` installed, and its failure names the construct rather than a line.
     """
     kinds = {type(node).__name__ for tree in _rendered_trees() for node in _nodes(tree)} - CARRIERS
-    declared = {node.__name__ for node in (*get_args(Predicate), *get_args(Expression), Named)}
+    declared = {node.__name__ for node in (*get_args(Condition), *get_args(Expression), ExpressionReference)}
     assert kinds == declared, (
         f'tests/typesetting/golden/model.yaml reaches {sorted(kinds - declared)} and misses '
         f'{sorted(declared - kinds)}. Every node the walk renders needs a case here, '
@@ -182,9 +182,10 @@ def test_the_golden_model_calls_every_operator_in_the_language():
     Each operator resolves to the node it is, so the census counts the nodes
     by the verb the file writes them with.
     """
-    verbs = {Sum: 'sum', GroupSum: 'sum', Pullback: 'at', Translate: 'shift', WindowSum: 'sum_back', Dual: 'dual'}
+    verbs = {Sum: 'sum', Translate: 'shift', WindowSum: 'sum_back', Dual: 'dual'}
     nodes = [node for tree in _rendered_trees() for node in _nodes(tree)]
     calls = {verb for node in nodes for kind, verb in verbs.items() if isinstance(node, kind)}
+    calls |= {'at' for node in nodes if isinstance(node, Join) and not node.columns.axes}
     assert calls == BUILTIN_NAMES, (
         f'tests/typesetting/golden/model.yaml never calls {sorted(BUILTIN_NAMES - calls)}. '
         f'An operator with no case here renders untested.'
@@ -192,19 +193,14 @@ def test_the_golden_model_calls_every_operator_in_the_language():
 
 
 #: What the fixture cannot reach, by module and the source text of the line.
-#: A bare ``Cases`` stands under the ``Named`` node resolution builds for its
+#: A bare ``Cases`` stands under the ``ExpressionReference`` node resolution builds for its
 #: entry and nowhere else, so the arm that would print one in place is the
 #: type's closure rather than a case. The absent objective is the arm a
 #: *different* model takes — a file declares at most one — and
-#: `test_a_model_with_no_objective_prints_the_rest` covers it; that model
-#: declares no parameter, which is the legend's convention note with nothing
-#: to quote. A refusal of the name asked for renders nothing, and
-#: `test_declaration.py` pins both. An empty sum draws advice until its terms
-#: arrive, and `check` accepts the fixture in silence, so the fixture declares
-#: none; `test_terms.py` prints one.
+#: `test_a_model_with_no_objective_prints_the_rest` covers it. A refusal of the name asked for renders nothing, and
+#: `test_line.py` pins both.
 UNREACHABLE = {
     walk: {
-        'rendered = self.format.ellipsis',
         'return self.format.cases(self._arms(node, ctx)), _ATOM',
         'assert_never(node)',
         'assert_never(check)',
@@ -213,9 +209,9 @@ UNREACHABLE = {
         'everything = {n for group, _ in kinds.values() for n in group}',
         'msg = (',
         'raise SchemaError(msg)',
-        'msg = f"\'{name}\' is declared twice, as {found[0]} and as {found[1]}, and one line prints one of them — rename one."',
+        'msg = f"\'{name}\' is declared twice, as {found[0]} and as {found[1]}. Rename one."',
     },
-    legend: {'return []'},
+    legend: set(),
 }
 
 
@@ -235,13 +231,13 @@ def test_the_golden_model_reaches_every_line_of_the_walk(tmp_path: Path, module:
     data = tmp_path / f'{module.__name__}.coverage'
     render = tmp_path / 'render.py'
     render.write_text(
-        'from mathspec import to_latex, to_spec, typeset_declaration\n'
+        'from mathspec import to_latex, to_spec, typeset_line\n'
         f'model = {str(golden.MODEL)!r}\n'
         'to_latex(model)\n'
         'to_latex(model, inline_expressions=True)\n'
         'spec = to_spec(model)\n'
         'for name in (*spec.expressions, *spec.constraints, *spec.assumptions, *spec.piecewise, *spec.variables):\n'
-        "    typeset_declaration(model, name, 'latex')\n"
+        "    typeset_line(model, name, 'latex')\n"
         'to_latex(spec.expand())\n'
     )
     subprocess.run(

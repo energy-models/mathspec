@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import pytest
 
-from mathspec.boundedness import unbounded_notes
-from mathspec.operators import BUILTIN_NAMES
-from tests.fixtures import SMALL_MODEL, schema_of, varied
+from mathspec._boundedness import unbounded_notes
+from mathspec._operators import BUILTIN_NAMES
+from tests.fixtures import SMALL_MODEL, spec_of, varied
 
 BASE = varied(
     SMALL_MODEL,
@@ -24,7 +24,7 @@ BASE = varied(
 
 
 def _advice(**patch):
-    return unbounded_notes(schema_of(BASE, **patch).program)
+    return unbounded_notes(spec_of(BASE, **patch).program)
 
 
 def _notes(**patch) -> list[str]:
@@ -73,7 +73,7 @@ def test_a_variable_the_objective_drives_unopposed_is_named_with_its_side(patch,
 )
 def test_a_named_constant_coefficient_carries_its_sign(objective, side):
     """A coefficient written as an ``expressions:`` entry reaches the pass as a
-    ``Named`` node over its constant. The sign was read off the node alone, so a
+    ``ExpressionReference`` node over its constant. The sign was read off the node alone, so a
     named ``2`` claimed nothing and the unbounded variable went unnamed."""
     notes = _notes(
         **{
@@ -103,7 +103,7 @@ def test_a_named_constant_coefficient_carries_its_sign(objective, side):
         ),
         pytest.param(
             {
-                'dimensions.bp': {'dtype': 'int'},
+                'dimensions.bp': {'dtype': 'int', 'ordered': True},
                 'parameters.bp_x': {'dims': ['bp']},
                 'parameters.bp_y': {'dims': ['bp']},
                 'piecewise': {
@@ -125,10 +125,6 @@ def test_a_named_constant_coefficient_carries_its_sign(objective, side):
             {'given': {'expressions': {'e': {'dims': ['g']}}}, 'objective.expression': 'sum(e, over=g)'},
             id='a-given-expression-is-bounded-by-whoever-defines-it',
         ),
-        pytest.param(
-            {'expressions.e': {'dims': ['g'], 'empty': True}, 'objective.expression': 'sum(e, over=g)'},
-            id='an-empty-sum-is-bounded-by-its-terms',
-        ),
     ],
 )
 def test_nothing_is_claimed_where_the_file_does_not_decide_it(patch):
@@ -143,7 +139,7 @@ THROUGH_EACH_OPERATOR = {
     'shift': {'objective.expression': 'sum(shift(v, along=g, offset=1), over=g)'},
     'sum_back': {'objective.expression': 'sum(sum_back(v, along=g, window=2), over=g)'},
     # `at` reads onto the relation's source, so the variable it drives is on `h`
-    'at': {'variables.u': {'dims': ['h']}, 'objective.expression': 'sum(at(u, by=lk, over=h, into=g), over=g)'},
+    'at': {'variables.u': {'dims': ['h']}, 'objective.expression': 'sum(at(u, by=lk[h]), over=g)'},
 }
 
 #: `dual` is refused in any objective, and boundedness walks the objective —
