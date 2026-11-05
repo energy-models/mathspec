@@ -36,6 +36,9 @@ if TYPE_CHECKING:
     from mathspec.program import Expression, JoinColumns, Mask, Program
 
 
+_UNGATED = '_ungated'
+
+
 # ---------------------------------------------------------------------------
 # the mask, as each shape of row reads it
 # ---------------------------------------------------------------------------
@@ -212,7 +215,6 @@ def assumptions_of(name: str, curve: Piecewise, where: str | None) -> dict[str, 
     return assumed
 
 
-#: Why a gap in a ragged ``where:`` breaks each method, in the rows that method writes.
 _GAP: dict[PiecewiseMethod, str] = {
     'adjacency': 'the weights are nonzero only on two neighbouring breakpoints, and a gap leaves no neighbour across it',
     'sos2': 'the weights are nonzero only on two neighbouring breakpoints, and a gap leaves no neighbour across it',
@@ -223,8 +225,6 @@ _GAP: dict[PiecewiseMethod, str] = {
 }
 
 
-#: What an entry may assume of its numbers, by suffix — the names
-#: [`assumptions_of`][] writes, reserved whether or not the method states each.
 _ASSUMED = ('complete', 'increasing', 'curvature', 'breakpoints', 'contiguous')
 
 
@@ -310,9 +310,6 @@ def _bends(
 # ---------------------------------------------------------------------------
 # the names an entry writes
 # ---------------------------------------------------------------------------
-
-#: The suffix on the second gate row, where the gate variable does not exist.
-_UNGATED = '_ungated'
 
 
 @dataclass(frozen=True)
@@ -754,13 +751,10 @@ class _Expansion:
         self.spec = spec
         self.raw = raw
         self.name = name
-        #: The entry as the file wrote it, for the link text the rows repeat and the where they carry.
         self.pw = pw
-        #: The entry as the program carries it, for each link's row, how it reads the where, and the names it writes.
         self.curve = curve
         self.emitted = Emitted.of(name, curve)
         self.frame = list(curve.frame)
-        #: The where as a ragged row, a frame row, and a row over the frame alone read it.
         self.mask, self.frame_mask, self.exists = _masks(pw.where, pw.along, ragged=curve.ragged)
 
     def expand(self) -> None:

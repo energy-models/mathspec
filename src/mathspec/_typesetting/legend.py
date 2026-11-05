@@ -11,7 +11,7 @@ nothing the walk decides is asked of it twice.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
 from mathspec._typesetting.format import LegendItem, number
@@ -28,17 +28,14 @@ from mathspec.program import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
     from mathspec._typesetting.format import Format, OperatorName
     from mathspec._typesetting.symbols import Symbols
     from mathspec.program import Expression, Mask, ParameterMissing, Program, Relation
 
-#: What a translation does with the row the shift vacates. Three policies get
-#: three spellings because they are three different equations at the boundary.
 TranslationPolicy = Literal['plain', 'wrap', 'edge']
 
-#: The positional forms an equation can print, each of which the legend explains once.
 PositionForm = Literal['plain', 'grouped', 'from_end']
 
 
@@ -113,7 +110,7 @@ def notice(program: Program) -> Noticed:
         expressions(*(link.expression for link in curve.links))
     for named in program.conditions.values():
         masks(named.condition)
-    for entry in (*program.constraints.values(), *program.variables.values()):
+    for entry in (*program.constraints.values(), *program.variables.values(), *program.parameters.values()):
         if entry.where is not None:
             masks(entry.where)
     for assumption in program.assumptions.values():
@@ -123,10 +120,8 @@ def notice(program: Program) -> Noticed:
     return Noticed(frozenset(policies), grouped, frozenset(positions), frozenset(numeric))
 
 
-#: Where a parameter's or a relation's ``missing:`` applies, as the legend says it.
 _NO_ROW = 'where the data has no row'
 
-#: Where a variable's ``missing:`` applies, as the legend says it.
 _MASKED_OUT = 'where the mask leaves it out'
 
 
@@ -137,6 +132,7 @@ class Legend:
     program: Program
     symbols: Symbols
     format: Format
+    parameter_masks: Mapping[str, str] = field(default_factory=dict)
 
     def _op(self, name: OperatorName) -> str:
         return self.format.operators[name]
@@ -159,7 +155,7 @@ class Legend:
         parameters = [
             self._item(
                 self.symbols.name[p],
-                f'{fmt.mono(p)}{self._over(list(entry.dims))}{self._missing(entry.missing)}',
+                f'{fmt.mono(p)}{self._over(list(entry.dims))}{self._only_where(p)}{self._missing(entry.missing)}',
                 entry.description,
             )
             for p, entry in program.parameters.items()
@@ -245,6 +241,10 @@ class Legend:
             return ' (scalar)'
         product = self.format.joined([self.symbols.set[d] for d in dims], self._op('times'))
         return f' over {self.format.math(product)}'
+
+    def _only_where(self, parameter: str) -> str:
+        mask = self.parameter_masks.get(parameter)
+        return '' if mask is None else f', only where {self.format.math(mask)}'
 
     def _missing(self, value: ParameterMissing, default: str = 'refused', where: str = _NO_ROW) -> str:
         """What *where* means: the reading or the value ``missing:`` names, and nothing for the *default* reading."""

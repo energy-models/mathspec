@@ -51,6 +51,7 @@ BEGIN, END = '<!-- gallery:begin -->', '<!-- gallery:end -->'
 MODELS = {
     'dispatch.md': ROOT / 'examples' / 'dispatch.yaml',
     'commitment.md': ROOT / 'examples' / 'commitment.yaml',
+    'connection.md': ROOT / 'examples' / 'connection.yaml',
     'piecewise.md': ROOT / 'examples' / 'piecewise.yaml',
     'piecewise_adjacency.md': ROOT / 'examples' / 'piecewise_adjacency.yaml',
     'sos.md': ROOT / 'examples' / 'sos.yaml',

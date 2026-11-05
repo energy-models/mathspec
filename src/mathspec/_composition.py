@@ -130,7 +130,6 @@ GIVEN_KINDS = {
     'conditions': 'given condition',
 }
 
-#: What a fragment, a base or a patch may be given as.
 type Source = str | Path | Mapping[str, object] | Spec
 
 IRREGULAR = {

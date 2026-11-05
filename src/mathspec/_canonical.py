@@ -24,14 +24,8 @@ if TYPE_CHECKING:
     from mathspec._expression_parser import ArithmeticNode, ParsedNode
     from mathspec.spec import Spec
 
-#: Which sign a term of a sum is written under, which is also the operator that
-#: rebuilds it.
 Sign = Literal['+', '-']
 
-#: Where an entry's expression text sits under a section, once the spec is
-#: plain data. A link is different: it serialises back to the ``[expression,
-#: values]`` list the file wrote, so its expression is a position rather than a
-#: key.
 _EXPRESSION_KEYS = ('expression', 'otherwise', 'template')
 
 

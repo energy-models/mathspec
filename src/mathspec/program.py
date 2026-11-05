@@ -35,7 +35,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
-#: The public names of ``mathspec.program``, sorted.
 __all__ = [
     'Add',
     'Advice',
@@ -127,51 +126,50 @@ __all__ = [
 
 ConstraintSense = Sense
 
-#: Where a degree-2 product may stand in the math a solver sees. An objective
-#: and a constraint take ``variable * variable``; a bound and a ``piecewise:``
-#: link are read affinely (``mathspec._degree``), so those are the two.
 QuadraticPosition = Literal['objective', 'constraint']
+"""Where the math may contain a product of two variables: the objective or a constraint. A bound and a ``piecewise:`` link
+are affine.
+"""
 
-#: The dtype a dimension index may declare (the entry rules), and what
-#: its labels are. Only a dimension may declare ``datetime``, because labels
-#: on a timeline order and compare, but no expression computes with a moment.
 DimensionDtype = Literal['float', 'int', 'str', 'datetime']
+"""The dtypes a dimension may declare, which set what its labels are. Only a dimension may declare ``datetime``."""
 
-#: The dtype a parameter may declare (the entry rules), and what its bound
-#: column must be. Only a parameter may declare ``bool``, because a condition reads
-#: a flag column, and nothing indexes by a dimension of two labels.
 ParameterDtype = Literal['float', 'int', 'bool', 'str']
+"""The dtypes a parameter may declare, which set the dtype of its data column. Only a parameter may declare ``bool``."""
 
-#: The dtype of a *name* that a comparison in a condition tests: a parameter's or a
-#: dimension's, because a relation takes its target's dtype. It is the union of
-#: both, because a condition names all three kinds and reads the dtype the same way.
 DeclaredDtype = ParameterDtype | DimensionDtype
+"""The dtype of a name that a comparison in a condition tests. A parameter and a dimension declare it, and a relation
+column has the dtype of its dimension.
+"""
 
-#: The domain a variable may declare.
 VariableDomain = Literal['continuous', 'integer', 'binary']
+"""The domains a variable may declare."""
 
-#: A relation's ``missing:``. ``refused`` refuses data that leaves a key
-#: combination out, and ``absent`` reads it as no row.
 RelationMissing = Literal['refused', 'absent']
+"""The values of ``missing:`` on a relation. Under ``refused``, a tool refuses data that leaves out a combination of the
+key. Under ``absent``, that combination has no row.
+"""
 
-#: A parameter's ``missing:``: what a relation takes, or the value a missing row reads as.
 ParameterMissing = RelationMissing | bool | float
+"""The values of ``missing:`` on a parameter: a value of [`RelationMissing`][], or the value that a missing row takes.
+"""
 
-#: A variable's ``missing:``. ``absent``, the default, removes the row of a term
-#: that carries the variable where its ``where`` masks it out. A number is what
-#: the quantity is there, so the term reads that number and the row stands.
 VariableMissing = Literal['absent'] | float
+"""The values of ``missing:`` on a variable. Under ``absent``, the default, a term that contains the variable has no row
+where its ``where`` is false. A number is the value of the variable there, so the term takes that number and keeps its
+row.
+"""
 
-#: Which way an objective is optimised (the entry rules).
 ObjectiveSense = Literal['minimize', 'maximize']
+"""The directions an objective may declare."""
 
-#: The order of special ordered set.
 SosType = Literal[1, 2]
+"""The types of special ordered set: 1 or 2."""
 
-#: How a ``piecewise:`` entry restricts its interpolation weights. Kept in step
-#: with [`PIECEWISE_METHODS`][mathspec.spec.PIECEWISE_METHODS], which says what each one
-#: emits, by ``tests/test_schema.py``.
 PiecewiseMethod = Literal['adjacency', 'sos2', 'incremental', 'convex', 'lp']
+"""The methods a ``piecewise:`` entry may declare to restrict its interpolation weights.
+[`PIECEWISE_METHODS`][mathspec.spec.PIECEWISE_METHODS] lists what each method adds.
+"""
 
 
 # --------------------------------------------------------------------------
@@ -438,19 +436,6 @@ class ExpressionReference:
     dims: tuple[str, ...] = field(kw_only=True)
 
 
-#: Every expression node, as one type — what a walk takes. The set is
-#: *closed*: nothing registers into it, so a tool that walks it ends in
-#: ``assert_never`` and a node added without a branch is a type error at the
-#: site that must grow one, rather than a ``LanguageError`` raised at the first
-#: spec that uses it. The degree rules (``mathspec._degree``) hold on every
-#: tree the math reads — [`Program.roots`][], a bound, and a named expression
-#: that is ``in_math`` — affine but where a [`QuadraticPosition`][] admits a
-#: [`Multiply`][] of two variable-carrying operands. A
-#: [`NamedExpression`][] the math never reads is held to none of them.
-#: No node records which tree it stands in. Every node states ``dims``, the
-#: dimensions over which it is indexed, sorted by name, so a consumer reads a
-#: node's dims rather than deriving them. An
-#: [`ExpressionReference`][] states its body's dims.
 Expression = (
     Constant
     | ParameterReference
@@ -468,6 +453,11 @@ Expression = (
     | Cases
     | ExpressionReference
 )
+"""The union of every expression node, which a walk over an expression takes. The set is closed, so a walk can end in
+``assert_never``. Every node has ``dims``, the dimensions it is indexed over, sorted by name. An
+[`ExpressionReference`][] has the ``dims`` of its body. [`Program.roots`][], a bound and a named expression that is
+``in_math`` are affine, except that at a [`QuadraticPosition`][] a [`Multiply`][] may have a variable on both sides.
+"""
 
 
 def children(expression: Expression) -> tuple[Expression, ...]:
@@ -512,9 +502,8 @@ class Relation:
 
     columns: tuple[tuple[str, str], ...]
     key: tuple[str, ...]
-    #: Whether every combination of the key's roles needs a row: ``refused``
-    #: or ``absent``.
     missing: RelationMissing = 'refused'
+    """Whether every combination of the key needs a row: ``refused`` or ``absent``."""
     description: str | None = None
 
     @property
@@ -657,20 +646,18 @@ class Partition:
 class Dimension:
     """A dimension, as the file declares it."""
 
-    #: What the labels are, as the file declares them. A dimension is read from
-    #: whatever table carries it, so the declared type is what that column is
-    #: checked against, as ``Parameter.dtype`` is for a value column. It is
-    #: ``str`` where the file lists the labels under ``one_of``.
     dtype: DimensionDtype = 'str'
-    #: The labels the file allows under ``one_of: [...]``, in file
-    #: order, or ``None`` where it lists none. A consumer attaching data refuses
-    #: a coordinate that is not one of them, in the dimension's own table and in
-    #: every relation column over it, as it refuses a column of the wrong dtype.
-    #: The loader has already refused a condition that names another label.
+    """The dtype of the labels, as the file declares it. A tool checks the column of labels against it, as it checks a
+    value column against ``Parameter.dtype``. It is ``str`` when the file lists the labels under ``one_of``.
+    """
     one_of: tuple[str, ...] | None = None
-    #: Whether the order of the labels is part of the model. Where it is, a
-    #: tool keeps the labels in the order the data gives them.
+    """The labels that the file lists under ``one_of:``, in file order, or ``None`` when it lists none. With data attached,
+    a tool refuses any other label, in the table of the dimension and in every relation column over it.
+    """
     ordered: bool = False
+    """Whether the order of the labels is part of the spec. When it is, a tool keeps the labels in the order the data gives
+    them.
+    """
     description: str | None = None
 
 
@@ -687,10 +674,10 @@ class Assumption:
 
     holds: Mask
     where: Mask | None = None
-    #: What the file wrote under ``description:``, or the sentence a
-    #: ``piecewise:`` method implies. The refusal trails it: the names alone
-    #: say which columns are wrong, and not why the rule is there.
     description: str | None = None
+    """The ``description:`` that the file sets, or the sentence that a ``piecewise:`` method implies. A tool quotes it in a
+    refusal, after the names of the columns, to say why the rule exists.
+    """
 
 
 def assumption_message(name: str, assumption: Assumption) -> str:
@@ -720,22 +707,27 @@ class Parameter:
 
     dims: tuple[str, ...]
     dtype: ParameterDtype = 'float'
-    #: What a missing row means, or the value it reads as wherever a value is
-    #: read. A bare numeric name in a ``where`` still asks whether the data has
-    #: a row.
     missing: ParameterMissing = 'refused'
+    """What a missing row means where the parameter has coordinates, or the value it takes wherever an expression uses a
+    value. A bare numeric name in a ``where`` is still true only where the data has a row.
+    """
     description: str | None = None
+    where: Mask | None = None
+    """The condition that limits the coordinates of the parameter, or ``None`` when it has every coordinate of its
+    ``dims``. Where the condition is false, the parameter is absent and a tool drops its rows of data there. ``missing``
+    applies where the condition is true.
+    """
 
 
 @dataclass(frozen=True)
 class Variable:
     dims: tuple[str, ...]
     where: Mask | None = None
-    #: A number or a parameter, or ``None`` where that side is open. What stands
-    #: for an open side in a solve is the engine's choice.
     lower: Expression | None = None
-    #: As [`lower`][], for the other side.
+    """A number, a parameter, or ``None`` when that side is open. An engine decides how an open side enters the model.
+    """
     upper: Expression | None = None
+    """As [`lower`][], for the upper side."""
     domain: VariableDomain = 'continuous'
     missing: VariableMissing = 'absent'
     description: str | None = None
@@ -774,17 +766,18 @@ class GivenTargets:
     is sealed at construction, like every group of [`Program`][].
     """
 
-    #: Data another file declares, by name, with the dtype a condition compares against.
     parameters: Mapping[str, GivenParameter] = Sealed({})
-    #: Columns the host model provides, by name.
+    """The parameters another file declares, by name, with the dtype that a comparison in a condition tests."""
     variables: Mapping[str, Given] = Sealed({})
-    #: Row families the host model provides, by name, read back after the solve.
+    """The variables the host model provides, by name."""
     constraints: Mapping[str, Given] = Sealed({})
-    #: Named expressions the host model defines, by name.
+    """The constraints the host model builds, by name. A tool reads them back after the solver runs."""
     expressions: Mapping[str, Given] = Sealed({})
-    #: Named conditions the host model defines, by name. A condition reads one as the data it
-    #: is: a [`ParameterDefined`][] of a boolean over its frame.
+    """The named expressions the host model defines, by name."""
     conditions: Mapping[str, Given] = Sealed({})
+    """The named conditions the host model defines, by name. In a condition, one is data: a [`ParameterDefined`][] of a
+    boolean over its dimensions.
+    """
 
     def __post_init__(self) -> None:
         for f in fields(self):
@@ -852,13 +845,14 @@ class NamedExpression:
     """
 
     expression: Expression
-    #: The frame the entry is read over: the ``dims:`` a cased entry
-    #: declares, or the dims a plain entry's body carries.
     dims: tuple[str, ...]
+    """The dimensions of the entry: the ``dims:`` that an entry with cases declares, or the dimensions of the body of a
+    plain entry.
+    """
     in_math: bool
     description: str | None = None
-    #: The sum this entry adds to as a term, or ``None``.
     adds_to: str | None = None
+    """The sum this entry adds to as a term, or ``None``."""
 
 
 @dataclass(frozen=True)
@@ -871,9 +865,8 @@ class NamedCondition:
     """
 
     condition: Mask
-    #: The frame the condition is read over: the dims its condition carries,
-    #: sorted by name.
     dims: tuple[str, ...]
+    """The dimensions of the condition, sorted by name."""
     description: str | None = None
 
 
@@ -1102,34 +1095,34 @@ class Program:
     parameters: Mapping[str, Parameter]
     variables: Mapping[str, Variable]
     constraints: Mapping[str, Constraint]
-    #: ``None`` where the file declares no objective. The solve then only asks
-    #: whether the constraints can be met.
     objective: Objective | None
+    """The objective, or ``None`` when the file declares none. A solver then only tests whether the constraints can be met.
+    """
     dimensions: Mapping[str, Dimension] = Sealed({})
     relations: Mapping[str, Relation] = Sealed({})
     sos: Mapping[str, Sos] = Sealed({})
-    #: Each ``piecewise:`` entry the spec still declares, as the curve it
-    #: states; empty on a program of a spec whose curves are written out.
     piecewise: Mapping[str, Piecewise] = Sealed({})
-    #: What the data has to satisfy for the answer to mean anything, by the
-    #: name a refusal quotes: every ``assumptions:`` entry the file wrote, then
-    #: what each ``piecewise:`` entry's method assumes of its breakpoints. The
-    #: language decides none of it, so the tool that attaches the data checks
-    #: each and refuses with [`assumption_message`][].
+    """Each ``piecewise:`` entry of the spec, as the curve it states. It is empty for the program of a spec whose curves
+    are expanded.
+    """
     assumptions: Mapping[str, Assumption] = Sealed({})
-    #: Declared ``expressions:``, each saying whether the math reads it. None
-    #: builds a row of its own, and one the math reads stands as an [`ExpressionReference`][]
-    #: where it is read. All are lowered with the program, so a file whose
-    #: named expression is outside the language is refused by every verb that
-    #: reads the file rather than only by the one that reads the expression.
+    """What the data must satisfy, by the name that a tool quotes when it refuses data: each ``assumptions:`` entry of the
+    file, then what the method of each ``piecewise:`` entry assumes of its breakpoints. mathspec checks none of them at
+    load. A tool checks each when it attaches data, and refuses with [`assumption_message`][].
+    """
     expressions: Mapping[str, NamedExpression] = Sealed({})
-    #: Declared ``conditions:``. Each use stands as a [`ConditionReference`][] where it is
-    #: read, so a consumer building rows needs nothing from this group.
+    """The ``expressions:`` that the file declares, each with whether the math uses it. None of them has a row of its own,
+    and where the math uses one, it contains an [`ExpressionReference`][]. mathspec compiles every named expression, so
+    it refuses at load a file whose named expression is outside the language, even one the math does not use.
+    """
     conditions: Mapping[str, NamedCondition] = Sealed({})
-    #: What this program reads and does not build ([`GivenTargets`][]), for a host model to provide.
+    """The ``conditions:`` that the file declares. Each use in the program is a [`ConditionReference`][], so a tool that
+    builds rows needs nothing from this mapping.
+    """
     given: GivenTargets = GivenTargets()
-    #: What the file as a whole is, as its ``description:`` says.
+    """What this program uses and does not build ([`GivenTargets`][]), for the host model to provide."""
     description: str | None = None
+    """The ``description:`` of the file as a whole."""
 
     def __post_init__(self) -> None:
         """Seal every group, so a program handed out cannot be written to."""
@@ -1500,9 +1493,6 @@ class ConditionReference:
     body: Condition
 
 
-#: Every condition resolution has typed: it names an entry and the kind is
-#: settled. Resolution passes these straight through, having nothing left to
-#: decide about them.
 TypedCondition = (
     ParameterComparison
     | ExpressionComparison
@@ -1517,17 +1507,17 @@ TypedCondition = (
     | TranslatedCondition
     | JoinedCondition
 )
+"""The condition nodes that refer to an entry whose kind mathspec knows at load."""
 
-#: The boolean connectives. With [`ConditionReference`][], they are the only condition nodes
-#: that carry other condition nodes, so a walk over a condition recurses only here.
-#: The grammar builds these classes directly over unresolved leaves, so a tree
-#: before resolution shares them, and resolution then replaces those leaves.
 Connective = Not | And | Or
+"""The boolean connectives. With [`ConditionReference`][], they are the only condition nodes that contain other condition
+nodes, so a walk over a condition recurses only into these.
+"""
 
-#: Every resolved condition node. The parser's ``Unresolved*`` nodes are not members: they live with the
-#: grammar in [`mathspec._condition_parser`][], and resolution rewrites them away
-#: before anything here is asked.
 Condition = BooleanLiteral | TypedCondition | Connective | ConditionReference
+"""The union of every condition node in a program. The parser's ``Unresolved*`` nodes are not part of it, because mathspec
+replaces them at load.
+"""
 
 
 def condition_children(condition: Condition) -> tuple[Condition, ...]:
@@ -1766,9 +1756,8 @@ class Mask:
 # --------------------------------------------------------------------------
 
 
-#: Which pass an [`Advice`][] comes from. The set is closed, like the operator
-#: set, so a tool that filters on it can list every value.
 AdviceKind = Literal['never-an-axis', 'given', 'unbounded']
+"""The checks that an [`Advice`][] comes from. The set is closed, so a tool that filters on it can list every value."""
 
 
 @dataclass(frozen=True)

@@ -13,6 +13,9 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(language)!: a piecewise entry declares its dimensions and its links by name, a link may walk a relation, and `method: incremental` fills a curve segment by segment ([#630](https://github.com/energy-models/mathspec/pull/630))
+- fix(api): the API pages describe every public attribute of a spec and a program ([#978](https://github.com/energy-models/mathspec/pull/978))
+- docs(examples): units connect to buses through numbered ports that one relation lists, and only the output ports have an efficiency ([#948](https://github.com/energy-models/mathspec/pull/948))
+- feat(language): a parameter may declare the coordinates it has with `where:`, and outside them it is absent ([#945](https://github.com/energy-models/mathspec/pull/945))
 - docs(pypsa): the PyPSA reference targets master at 061974e3, where a Store charges, spills and is rated like a StorageUnit, and the spec states energy limits on every dispatching component, a Store's cycle limit and flow-based market coupling ([#977](https://github.com/energy-models/mathspec/pull/977))
 - docs(pypsa): the PyPSA reference targets master at d21e028, where starts and stops take the period weight and the commitment rows start at the first snapshot ([#976](https://github.com/energy-models/mathspec/pull/976))
 - fix(language): under `missing: 0`, a divisor that a `where:`, a case or an absent variable guards loads, and so does a variable number outside its bounds ([#942](https://github.com/energy-models/mathspec/pull/942))

@@ -72,6 +72,7 @@ nav:
           - examples/index.md
           - Least-cost dispatch: examples/dispatch.md
           - Unit commitment: examples/commitment.md
+          - Units with ports: examples/connection.md
           - One construct per spec: examples/operators.md
           - A curve by convex combination: examples/piecewise.md
           - A curve that is not convex: examples/piecewise_adjacency.md

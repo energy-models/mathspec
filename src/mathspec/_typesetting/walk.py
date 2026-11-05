@@ -68,18 +68,11 @@ if TYPE_CHECKING:
     from mathspec._typesetting.symbols import Symbols
     from mathspec.program import Link, Piecewise, Program
 
-#: Operator precedence, for deciding brackets. A reduction sits at the bottom
-#: with ``+``: an unbracketed sum reads as capturing whatever follows it, so as
-#: a factor it has to be bracketed.
 _PRECEDENCE: dict[BinaryOperator, int] = {'+': 1, '-': 1, '*': 2, '/': 2, '**': 3}
 _ATOM = 5
 
-#: The same for a condition: ``OR`` binds loosest, then ``AND``, then ``NOT``;
-#: a comparison sits above the connectives and is bracketed under none.
 _CONDITION_PRECEDENCE = {'or': 0, 'and': 1, 'comparison': 2, 'not': 3}
 
-#: The conditions that are one relation between two sides, which a line may
-#: align on the way it aligns a constraint.
 AlignedComparison = (
     ParameterComparison
     | ExpressionComparison
@@ -99,13 +92,9 @@ _COMPARISONS: dict[ComparisonOperator, OperatorName] = {
     '>': 'gt',
 }
 
-#: What a link's sign leaves between its expression and the curve's coordinate:
-#: nothing where it is pinned, a half-line where the curve bounds it.
 _HALF_LINES: dict[ComparisonOperator, OperatorName] = {'==': 'origin', '>=': 'nonnegative', '<=': 'nonpositive'}
 
 
-#: Edge policy -> the operator pair that renders it, backward then forward:
-#: the vacated row dropped, wrapped, or filled.
 _TRANSLATIONS: dict[TranslationPolicy, tuple[OperatorName, OperatorName]] = {
     'plain': ('minus', 'plus'),
     'wrap': ('cyclic_minus', 'cyclic_plus'),
@@ -127,7 +116,6 @@ class _Step:
     by: int | str
     policy: TranslationPolicy
     fill: str = ''
-    #: The rendered group a partitioned translation walks inside, or empty.
     within: str = ''
 
     def merged(self, other: _Step) -> _Step | None:
@@ -156,10 +144,7 @@ class _Context:
 
     walk: Walk
     offsets: dict[str, tuple[_Step, ...]] = field(default_factory=dict)
-    #: dim -> the rendered subscript that replaces its index, as ``at`` looks a leaf up through a relation.
     lookups: dict[str, str] = field(default_factory=dict)
-    #: Every dimension whose index is in use here — the frame, then one entry
-    #: per reduction entered — so a reduction over one takes a fresh dummy.
     bound: tuple[str, ...] = ()
 
     def translated(self, dim: str, step: _Step) -> _Context:
@@ -239,8 +224,6 @@ class Walk:
         self.program = program
         self.symbols = symbols
         self.format = fmt
-        #: Substitute each plain named expression where it is used, rather than
-        #: printing its symbol there and its definition once.
         self.inline_expressions = inline_expressions
         self._parameters = {**program.parameters, **program.given.parameters}
 
@@ -722,6 +705,14 @@ class Walk:
         nowhere to be substituted *into*, so both still print.
         """
         return [self.definition(name) for name in self.defined()]
+
+    def parameter_masks(self) -> dict[str, str]:
+        """Each masked parameter's mask, printed over the parameter's own indices for its legend row."""
+        return {
+            name: self._condition(entry.where.root, self._context(entry.dims))
+            for name, entry in self.program.parameters.items()
+            if entry.where is not None
+        }
 
     def defined(self) -> list[str]:
         """The named expressions that print under their own symbol: every one, or only the unsubstitutable when inlining.
