@@ -23,8 +23,6 @@ from mathspec.spec import Spec
 if TYPE_CHECKING:
     from mathspec.program import SosType
 
-#: One member's two linking coefficients, below and above. ``None`` on a side is
-#: a side the spec leaves open, where no rewrite can hold the member at zero.
 Coefficients = tuple[float | str | None, float | str | None]
 
 
@@ -75,7 +73,6 @@ class Emitted:
         return (('variable', (self.seg,)), ('constraint', (self.pick, self.link, self.below)))
 
 
-#: What the binary means, per order. Its legend entry carries this description.
 _SEGMENTS = {
     1: 'a binary per member, 1 where that member may be nonzero',
     2: 'a binary per segment, 1 where the two members it spans may be nonzero',

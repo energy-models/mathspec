@@ -7,8 +7,9 @@ description: House rules for any prose written in this project — who reads it,
 
 These rules apply to every Markdown page, to `AGENTS.md` and
 [CONTRIBUTING.md](../../../CONTRIBUTING.md), to PR titles and bodies, issues,
-comments and commit messages, and to every exception, warning, advice and log
-message in `src/` and `tools/`. A documentation page also follows
+comments and commit messages, to every docstring in `src/`, and to every
+exception, warning, advice and log message in `src/` and `tools/`. A
+documentation page also follows
 [the docs-writing skill](../docs-writing/SKILL.md), which sets the shape of
 each kind of page. The layout of a PR body, a PR title and an issue is in
 `AGENTS.md`.
