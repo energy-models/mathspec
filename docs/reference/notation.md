@@ -1418,6 +1418,21 @@ assumptions:
 \mathrm{load}_{t,b} \ge 0 \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{zone\_of}(b) = \text{'}\mathrm{north}\text{'}
 ```
 
+#### Assumption on the rows of a constraint and a variable
+
+a constraint's row where a variable exists: decided at load from their `where:`, then checked on the data
+
+```yaml
+assumptions:
+  every_dispatch_has_a_start_row:
+    holds: "starts"
+    where: "p"
+```
+
+```math
+\mathrm{starts}_{t,g} \text{ has a row} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, p_{t,g} \text{ exists}
+```
+
 ### Where conditions
 
 #### Parameter as a condition

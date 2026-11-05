@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language): assumptions may require a row to exist ([#982](https://github.com/energy-models/mathspec/pull/982))
 - feat(language): a relation may confine its parameters ([#980](https://github.com/energy-models/mathspec/pull/980))
 - fix(api): the API pages describe every public attribute of a spec and a program ([#978](https://github.com/energy-models/mathspec/pull/978))
 - docs(examples): units connect to buses through numbered ports that one relation lists, and only the output ports have an efficiency ([#948](https://github.com/energy-models/mathspec/pull/948))

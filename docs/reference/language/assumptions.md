@@ -7,7 +7,9 @@ SPDX-License-Identifier: CC-BY-4.0
 
 This page describes the `assumptions:` section, which states what the data
 attached to a spec must satisfy. mathspec reads each assumption at load,
-checks the dimensions and dtypes of its condition, and prints it in the
+checks the dimensions and dtypes of its condition, refuses one that the
+`where:` of the model's own entries already break
+([rows of the model](#rows-of-the-model)), and prints it in the
 [typeset document](../typeset.md). mathspec does not check the data itself,
 because mathspec holds no data. Software that reads a spec
 ([a tool](../glossary.md#tool)), such as the tool that attaches data and builds
@@ -115,6 +117,92 @@ attached, the tool never checks a row that the `where:` leaves out. Where a
 parameter in the `where:` has no value, its comparison is false, so the
 `where:` leaves that row out too.
 
+## Rows of the model
+
+A bare variable name in an assumption is true where the variable exists, and a
+bare constraint name is true where the constraint has a row. Which rows exist
+is known once the data is attached, before any solve. The spec below bounds the
+dispatch `p` of each generator with one constraint for each combination of two
+flags, and the assumption requires a bound wherever `p` exists:
+
+```yaml
+dimensions:
+  generator: { dtype: str }
+  snapshot: { dtype: int, ordered: true }
+parameters:
+  p_nom: { dims: [generator] }
+  p_max_pu: { dims: [snapshot, generator], missing: 1 }
+  extendable: { dims: [generator], dtype: bool, missing: false }
+  committable: { dims: [generator], dtype: bool, missing: false }
+variables:
+  p: { dims: [snapshot, generator] }
+  p_nom_opt: { dims: [generator], where: extendable, bounds: { lower: 0 } }
+  status: { dims: [snapshot, generator], where: committable, domain: binary }
+constraints:
+  p_upper_fixed:
+    dims: [snapshot, generator]
+    where: NOT extendable AND NOT committable
+    expression: p <= p_max_pu * p_nom
+  p_upper_extendable:
+    dims: [snapshot, generator]
+    where: extendable AND NOT committable
+    expression: p <= p_max_pu * p_nom_opt
+  p_upper_committable:
+    dims: [snapshot, generator]
+    where: committable
+    expression: p <= p_max_pu * p_nom * status
+assumptions:
+  dispatch_has_an_upper_bound:
+    holds: p_upper_fixed OR p_upper_extendable OR p_upper_committable
+    where: p
+    description: every dispatch row is bounded above
+```
+
+```math
+\mathrm{p}^{\mathrm{upper,fixed}}_{t,g} \text{ has a row} \vee \mathrm{p}^{\mathrm{upper,extendable}}_{t,g} \text{ has a row} \vee \mathrm{p}^{\mathrm{upper,committable}}_{t,g} \text{ has a row} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, p_{t,g} \text{ exists}
+```
+
+At load, mathspec decides an assumption whose every test is a bare variable
+or constraint name. It reads each variable as existing where its `where:`
+holds, and each constraint as having a row where its `where:` holds. If
+`p_upper_committable` had `where: committable AND NOT extendable`, no
+constraint would bound a unit that is both extendable and committable, and
+mathspec prints:
+
+```text
+Assumption 'dispatch_has_an_upper_bound': the `where:` conditions of the entries it names leave a gap where extendable is true, committable is true. There its `where:` holds and its `holds:` does not, so data with a row there fails it. Add a constraint whose `where:` holds there, or widen the `where:` of an entry that `holds:` names.
+```
+
+mathspec suggests two rewrites: a constraint for the missing case, or a wider
+`where:` on a constraint that `holds:` names.
+
+A constraint row can still be absent where its `where:` holds, for example
+where a term outside a `sum` is [absent](absence.md#how-absence-travels). So
+the tool that attaches the data also checks the assumption, row by row.
+For the same reason, the `where:` of a constraint shows a gap only in
+`holds:`, outside any `NOT`. In the assumption's own `where:`, or under a
+`NOT`, it would claim rows that the data can leave out. mathspec leaves the
+whole check to the tool in five cases:
+
+- the assumption also compares a value, such as `where: "p AND p_nom > 0"`
+- it names a constraint in its `where:`, or under a `NOT`
+- it names an entry that another file declares under
+  [`given:`](parameters-variables-constraints.md#given)
+- it reads two variables whose `where:` name each other
+- it contains a condition that mathspec cannot split into regions without
+  data, as [refused cases](named.md#refused-cases) lists, or more than 8192
+  regions
+
+Only an assumption may name a constraint in a condition. In the `where:` of a
+variable or in a named condition, mathspec refuses the name, as for
+`where: p_upper_committable` on `p`:
+
+```text
+Variable 'p': 'p_upper_committable' is a constraint, and only an assumption's `holds:` or `where:` may test whether it has a row, by its bare name. Test the `where:` of 'p_upper_committable' here instead.
+```
+
+mathspec suggests the constraint's own `where:` as the rewrite.
+
 ## Refused assumptions
 
 mathspec refuses an assumption at load when it can decide the condition
@@ -155,15 +243,16 @@ Assumption 'sound': the `where:` condition 'c > 0 AND false' folds to false, so 
 
 That `where:` admits no row, so the tool checks nothing.
 
-A tool checks an assumption against the data only, so mathspec refuses a
-variable in its condition. For a bare variable name `p` in `holds:`, mathspec prints:
+The solver decides the value of a variable, and a tool checks an assumption
+before any solve. So mathspec refuses a variable compared with a value or
+inside arithmetic. For `holds: "p > 0"`, mathspec prints:
 
 ```text
-Assumption 'sound': variable 'p' appears in 'holds:', and an assumption checks only data. Name a parameter, or state the rule as a constraint.
+Assumption 'sound': 'p' is a variable. The solver decides its value, so an assumption tests only whether it has a row: write its bare name, or state the bound as a constraint.
 ```
 
-mathspec suggests two rewrites: a parameter in the condition, or the rule
-stated as a constraint.
+mathspec suggests two rewrites: the bare name `p`, which tests whether the
+variable exists ([rows of the model](#rows-of-the-model)), or a constraint.
 
 mathspec also
 [refuses](parameters-variables-constraints.md#constraints) a constraint with

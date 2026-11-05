@@ -194,6 +194,7 @@
 \text{ramps\_are\_gentle} && \mathrm{load}_{t,b} - \mathrm{load}_{t \boxminus_{0} 1,b} & \le \mathrm{budget} && \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{pos}(t) > 0 \\
 \text{flexible\_units\_have\_headroom} && \mathrm{p}^{\mathrm{min}}_{g} & < \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G} \,:\, \mathrm{is\_flexible}_{g} \\
 \text{northern\_demand\_is\_real} && \mathrm{load}_{t,b} & \ge 0 && \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{zone\_of}(b) = \text{'}\mathrm{north}\text{'} \\
+\text{every\_dispatch\_has\_a\_start\_row} && \mathrm{starts}_{t,g} \text{ has a row} &  && \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, p_{t,g} \text{ exists} \\
 \text{fuel\_curve\_complete} && \mathrm{bp\_x}_{g,a} \text{ is defined} \wedge \mathrm{bp\_y}_{g,a} \text{ is defined} \wedge \mathrm{bp\_heat}_{g,a} \text{ is defined} &  && \forall\, g \in \mathcal{G},\ a \in \mathcal{A} \\
 \text{cost\_curve\_complete} && \mathrm{bp\_x}_{g,a} \text{ is defined} \wedge \mathrm{bp\_y}_{g,a} \text{ is defined} &  && \forall\, g \in \mathcal{G},\ a \in \mathcal{A} \,:\, \mathrm{bp\_run}_{g,a} \\
 \text{cost\_curve\_contiguous} && \lvert \{ a \in \mathcal{A} \,:\, \mathrm{bp\_run}_{g,a} \wedge \neg \mathrm{bp\_run}_{g,a - 1} \} \rvert & = 1 && \forall\, g \in \mathcal{G} \\

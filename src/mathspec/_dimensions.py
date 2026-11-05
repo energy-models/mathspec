@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, assert_never
 from mathspec.errors import DimensionError, case_context
 from mathspec.program import (
     Cases,
+    ConstraintDefined,
     CountComparison,
     DimensionComparison,
     DimensionPosition,
@@ -345,6 +346,8 @@ def _check_condition_dims(
                 leaf = f"where-parameter '{atom.name}'"
             case VariableDefined():
                 leaf = f"where-variable '{atom.name}'"
+            case ConstraintDefined():
+                leaf = f"where-constraint '{atom.name}'"
             case DimensionComparison() | DimensionPosition():
                 leaf = f"where-dimension '{atom.name}'"
             case RelationComparison() | RelationPairComparison() | RelationDefined():

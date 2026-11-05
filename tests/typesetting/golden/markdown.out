@@ -618,6 +618,12 @@ p_{t,g} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, t \in \mathcal{T},\ g
 \mathrm{load}_{t,b} \ge 0 \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{zone\_of}(b) = \text{'}\mathrm{north}\text{'}
 ```
 
+**`every_dispatch_has_a_start_row`**
+
+```math
+\mathrm{starts}_{t,g} \text{ has a row} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, p_{t,g} \text{ exists}
+```
+
 **`fuel_curve_complete`**
 
 ```math
