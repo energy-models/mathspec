@@ -11,6 +11,7 @@ methods exist, and which gates an entry will accept.
 
 from __future__ import annotations
 
+import re
 from typing import get_args
 
 import pytest
@@ -1086,10 +1087,20 @@ SLOT_OF = {'relations.slot_of': {'key': 'flow', 'values': {'generator': 'generat
             {'variables.u.dims': ['snapshot']},
             id='a-gate-over-the-breakpoint-dim',
         ),
+        pytest.param(
+            WALKED,
+            {
+                'dimensions.period': {'dtype': 'int'},
+                'relations.generator_of': {'key': ['flow', 'period'], 'values': 'generator'},
+            },
+            r"link 'power' expression is not over \['period'\], which by: generator_of\[generator\] adds",
+            {'relations.generator_of.key': 'flow'},
+            id='a-walk-adding-a-dim-the-expression-lacks',
+        ),
     ],
 )
 def test_a_refusal_suggests_a_rewrite_that_loads(model, refused, match, rewrite):
-    """Each refusal advised adding a dim to `dims:` that `dims:` refuses, or already lists.
+    """Each refusal advised adding a dim to `dims:` that `dims:` refuses, or already lists, or dropping one it lacks.
 
     The breakpoint dim cannot be listed, a dim a walk adds is then refused as
     one the curve is already over, and a walked link's values are over its
@@ -1097,7 +1108,7 @@ def test_a_refusal_suggests_a_rewrite_that_loads(model, refused, match, rewrite)
     """
     with pytest.raises(LanguageError, match=match) as refused_at_load:
         spec_of(model, **refused)
-    assert 'to dims:' not in str(refused_at_load.value), 'no advice that the language refuses'
+    assert not re.search(r'(to|from) dims:', str(refused_at_load.value)), 'no advice that the language refuses'
     spec_of(varied(model, **refused), **rewrite)
 
 

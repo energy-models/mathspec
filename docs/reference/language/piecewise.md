@@ -445,8 +445,9 @@ These rules apply to a walked link:
 - The values parameter is over the row of the link, so `bp_rate` is per flow,
   not per converter.
 - `column` is over a dimension of `dims:`. The walk adds the key columns of the
-  relation that are over dimensions outside `dims:` and `along`, and joins on
-  the others.
+  relation that are over dimensions outside `dims:`, and joins on those over
+  dimensions of `dims:`. mathspec refuses a key column over `along`, because a
+  row could then take each breakpoint from a different curve.
 - mathspec holds a walk to every rule of [`at`](relations.md#lookups), and quotes
   the link in the refusal.
 - If the relation declares [`missing: absent`](relations.md#missing), the

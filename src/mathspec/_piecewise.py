@@ -659,6 +659,13 @@ def _link_fits(ctx: str, key: str, entry: PiecewiseSpec, found: frozenset[str], 
             f'coordinate of {stray} would share one curve. Add {stray} to dims:, sum it out, or look the curve '
             f'up through a relation with by: <relation>[<column>].'
         )
+    if added := sorted(set(own) - found - set(entry.dims)):
+        by = entry.links[key].by
+        raise DimensionError(
+            f"{ctx}: link '{key}' expression is not over {added}, which by: {by} adds to its row {list(own)}, "
+            f'so one value of the expression would lie on every curve along {added} at once. Write an '
+            f'expression over {added}, or walk through a relation whose key leaves out {added}.'
+        )
     if missing := sorted(set(own) - found):
         raise DimensionError(
             f"{ctx}: link '{key}' expression is not over {missing}, and its row {list(own)} is, so one value "
