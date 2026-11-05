@@ -103,6 +103,15 @@ for every file that states the same dimensions.
 """
 
 
+def _by_name[V](entries: Mapping[str, V]) -> Frozen[str, V]:
+    """*entries* sorted by name, still frozen, so the order a file lists them in reaches nothing a consumer reads."""
+    return Frozen(dict(sorted(entries.items())))
+
+
+ByName = Annotated[Frozen[str, _T], AfterValidator(_by_name)]
+"""A mapping keyed by name, such as a section's entries, sorted by name as it loads."""
+
+
 class _StrictSpec(BaseModel):
     """Base for every part of a spec: unknown keys are an error, not a shrug.
 
@@ -261,25 +270,13 @@ class RelationSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'a relation entry'
 
-    key: str | Listed[str] | Frozen[str, str]
-    values: str | Listed[str] | Frozen[str, str] | None = None
+    key: str | Dims | ByName[str]
+    values: str | Dims | ByName[str] | None = None
     missing: RelationMissing = 'refused'
     """Whether every combination of the dimensions of the key needs a row. Under ``refused``, a tool refuses data that
     leaves one out. Under ``absent``, that combination has no row.
     """
     description: str | None = None
-
-    @field_validator('key', 'values')
-    @classmethod
-    def _sorted_by_role(
-        cls, v: str | tuple[str, ...] | Mapping[str, str] | None
-    ) -> str | tuple[str, ...] | Mapping[str, str] | None:
-        """One side's columns sorted by role as it loads, since their order reaches nothing a consumer reads."""
-        if isinstance(v, tuple):
-            return _sorted(v)
-        if isinstance(v, Mapping):
-            return Frozen(dict(sorted(v.items())))
-        return v
 
     @field_validator('missing', mode='before')
     @classmethod
@@ -607,31 +604,21 @@ class GivenConditionSpec(_GivenEntrySpec):
     description: str | None = None
 
 
-def _by_name(section: object) -> object:
-    """*section*'s entries sorted by name, so the order a file lists them in reaches nothing a consumer reads."""
-    return Frozen(dict(sorted(section.items()))) if isinstance(section, Mapping) else section
-
-
 class GivenSpec(_StrictSpec):
     """What this file reads and does not build, by kind. Closed at the five kinds."""
 
     _label: ClassVar[str] = "the 'given:' section"
 
-    parameters: Frozen[str, GivenParameterSpec] = Frozen({})
+    parameters: ByName[GivenParameterSpec] = Frozen({})
     """The parameters another file declares ([`GivenParameterSpec`][])."""
-    variables: Frozen[str, GivenVariableSpec] = Frozen({})
+    variables: ByName[GivenVariableSpec] = Frozen({})
     """The variables another file declares ([`GivenVariableSpec`][])."""
-    constraints: Frozen[str, GivenConstraintSpec] = Frozen({})
+    constraints: ByName[GivenConstraintSpec] = Frozen({})
     """The constraints another model builds ([`GivenConstraintSpec`][])."""
-    expressions: Frozen[str, GivenExpressionSpec] = Frozen({})
+    expressions: ByName[GivenExpressionSpec] = Frozen({})
     """The named expressions another file defines ([`GivenExpressionSpec`][])."""
-    conditions: Frozen[str, GivenConditionSpec] = Frozen({})
+    conditions: ByName[GivenConditionSpec] = Frozen({})
     """The named conditions another file defines ([`GivenConditionSpec`][])."""
-
-    @field_validator('*')
-    @classmethod
-    def _entries_by_name(cls, v: object) -> object:
-        return _by_name(v)
 
     def __bool__(self) -> bool:
         """Whether the file reads anything it does not build."""
@@ -754,7 +741,7 @@ class ExpressionSpec(_StrictSpec):
     """The dimensions of the expression, sorted by name. An entry with ``cases:`` requires it, and a plain entry without
     it takes the dimensions of its body.
     """
-    cases: Annotated[Mapping[str, ExpressionCaseSpec], Field(min_length=1), AfterValidator(Frozen)] = Frozen({})
+    cases: Annotated[Mapping[str, ExpressionCaseSpec], Field(min_length=1), AfterValidator(_by_name)] = Frozen({})
     """The cases, by the name of the row each prints, sorted by that name. mathspec proves at load that no two ``when``
     conditions overlap, so their order has no meaning.
     """
@@ -768,11 +755,6 @@ class ExpressionSpec(_StrictSpec):
     @classmethod
     def _from_string(cls, data: object) -> object:
         return {'expression': data} if isinstance(data, str) else data
-
-    @field_validator('cases')
-    @classmethod
-    def _regions_by_name(cls, v: Mapping[str, ExpressionCaseSpec]) -> object:
-        return _by_name(v)
 
     @model_validator(mode='after')
     def _one_form_or_the_other(self) -> Self:
@@ -1127,18 +1109,18 @@ class Spec(_StrictSpec):
     """
     given: GivenSpec = GivenSpec()
     """What this file uses and does not build ([`GivenSpec`][]). It is empty when the file has no ``given:``."""
-    dimensions: Frozen[str, DimensionSpec] = Frozen({})
-    relations: Frozen[str, RelationSpec] = Frozen({})
-    parameters: Frozen[str, ParameterSpec] = Frozen({})
-    conditions: Frozen[str, ConditionSpec] = Frozen({})
-    variables: Frozen[str, VariableSpec] = Frozen({})
-    expressions: Frozen[str, ExpressionSpec] = Frozen({})
+    dimensions: ByName[DimensionSpec] = Frozen({})
+    relations: ByName[RelationSpec] = Frozen({})
+    parameters: ByName[ParameterSpec] = Frozen({})
+    conditions: ByName[ConditionSpec] = Frozen({})
+    variables: ByName[VariableSpec] = Frozen({})
+    expressions: ByName[ExpressionSpec] = Frozen({})
     objective: ObjectiveSpec | None = None
-    constraints: Frozen[str, ConstraintSpec] = Frozen({})
-    sos: Frozen[str, SosSpec] = Frozen({})
-    piecewise: Frozen[str, PiecewiseSpec] = Frozen({})
-    assumptions: Frozen[str, AssumptionSpec] = Frozen({})
-    macros: Frozen[str, MacroSpec] = Frozen({})
+    constraints: ByName[ConstraintSpec] = Frozen({})
+    sos: ByName[SosSpec] = Frozen({})
+    piecewise: ByName[PiecewiseSpec] = Frozen({})
+    assumptions: ByName[AssumptionSpec] = Frozen({})
+    macros: ByName[MacroSpec] = Frozen({})
 
     @cached_property
     def program(self) -> Program:
@@ -1186,11 +1168,6 @@ class Spec(_StrictSpec):
             )
         except ValidationError as exc:
             raise schema_error(exc) from None
-
-    @field_validator('*')
-    @classmethod
-    def _entries_by_name(cls, v: object) -> object:
-        return _by_name(v)
 
     @field_validator('version')
     @classmethod
