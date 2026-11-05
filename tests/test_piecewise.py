@@ -951,6 +951,21 @@ def _walk(**written: object) -> dict[str, object]:
         pytest.param(_walk(by='generator_of'), 'is not a relation with its columns', id='a-walk-naming-no-column'),
         pytest.param(_walk(by='generator_of[]'), 'is not a relation with its columns', id='an-empty-column-list'),
         pytest.param(
+            _walk(by='generator_of[generator]) * (2'),
+            'is not a relation with its columns',
+            id='a-walk-closing-the-call-early',
+        ),
+        pytest.param(
+            _walk(by='generator_of[generator]) + (power'),
+            'is not a relation with its columns',
+            id='a-walk-adding-a-term',
+        ),
+        pytest.param(
+            _walk(by='generator_of[snapshot]'),
+            r"at\(by=generator_of\[snapshot\]\) names \['snapshot'\], which is no column of 'generator_of'",
+            id='a-walk-naming-a-column-the-relation-lacks',
+        ),
+        pytest.param(
             {'piecewise.coupling.dims': ['generator', 'snapshot', 'bp']},
             'breakpoint dim',
             id='dims-carrying-the-breakpoint-dim',
@@ -1149,6 +1164,38 @@ def test_a_block_mask_reaches_a_walked_link_through_its_relation():
     )
 
 
+#: The relation of the walk with a flow that belongs to no generator.
+PARTIAL = {'relations.generator_of': {'key': 'flow', 'values': 'generator', 'missing': 'absent'}}
+
+
+@pytest.mark.parametrize(
+    ('patch', 'where'),
+    [
+        pytest.param({}, None, id='every-flow-has-a-generator'),
+        pytest.param(PARTIAL | {'piecewise.coupling.method': 'adjacency'}, 'generator_of', id='adjacency'),
+        pytest.param(PARTIAL | {'piecewise.coupling.method': 'sos2'}, 'generator_of', id='sos2'),
+        pytest.param(
+            PARTIAL | {'piecewise.coupling.method': 'incremental'},
+            '(generator_of) AND (position(bp) == 0)',
+            id='incremental',
+        ),
+        pytest.param(
+            PARTIAL | {'parameters.curved': CURVED['parameters']['curved'], 'piecewise.coupling.where': 'curved'},
+            'at(curved, by=generator_of[generator])',
+            id='a-mask-read-through-the-relation',
+        ),
+    ],
+)
+def test_a_walked_row_exists_only_where_its_relation_has_a_row(patch, where):
+    """A flow with no generator read no weights, and its row pinned `power` to an empty sum, or to the first breakpoint.
+
+    Under the default `missing: refused` every flow has a row, and the row
+    is written as before.
+    """
+    expanded = spec_of(WALKED, **patch).expand()
+    assert expanded.constraints['coupling_power'].where == where
+
+
 #: fluxopt's investment cost curve (fluxopt/fluxopt#26): each effect of a sized flow is read off its curve.
 INVESTED = {
     'dimensions': {name: {'dtype': 'str'} for name in ('cost_curve', 'effect', 'flow')}
@@ -1240,16 +1287,32 @@ def test_a_mask_over_a_dim_the_walk_joins_on_reaches_the_walked_row_as_written()
     assert expanded.constraints['coupling_power'].where == 'season'
 
 
-def test_a_mask_carrying_part_of_what_a_walk_reads_through_is_refused():
-    """The relation is keyed by flow and snapshot, so the read joins on snapshot and needs the mask to carry it too."""
-    model = varied(
+@pytest.mark.parametrize(
+    ('method', 'where'),
+    [
+        pytest.param('sos2', 'at(curved, by=generator_of[generator])', id='sos2'),
+        pytest.param(
+            'incremental', 'at((curved) AND (position(bp) == 0), by=generator_of[generator])', id='incremental'
+        ),
+    ],
+)
+def test_a_mask_over_part_of_what_a_walk_joins_on_reaches_the_walked_row_through_its_relation(method, where):
+    """The relation is keyed by flow and snapshot, and `curved` tests only `generator`.
+
+    The mask was refused for not testing `snapshot` too, though reading it
+    through the relation at each flow and snapshot is the row a hand-written
+    constraint with that where loads to.
+    """
+    expanded = spec_of(
         CURVED,
         **{
             'relations.generator_of': {'key': ['flow', 'snapshot'], 'values': 'generator'},
+            'piecewise.coupling.method': method,
         },
-    )
-    with pytest.raises(LanguageError, match=r"where 'curved' tests \['generator'\] but not \['snapshot'\]"):
-        spec_of(model)
+    ).expand()
+    assert expanded.constraints['coupling_power'].where == where
+    assert expanded.assumptions['coupling_power_complete'].where == 'at(curved, by=generator_of[generator])'
+    assert to_spec(expanded.to_yaml()).program == expanded.program, 'the rows it writes load again'
 
 
 @pytest.mark.parametrize(
