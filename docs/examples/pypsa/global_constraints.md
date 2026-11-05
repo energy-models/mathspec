@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Global constraints
 
-This file states the five system totals that PyPSA caps. Each total is a sum that the components add to. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. Each total has an upper-bound, a lower-bound and an equality row, such as `GlobalConstraint_primary_energy_ub`.
+This file states the five system totals that PyPSA caps. Each total is a sum that the components add to. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. Each total has an upper-bound, a lower-bound and an equality row, such as `GlobalConstraint_primary_energy_ub`.
 
 <!-- gallery:begin -->
 ```yaml
@@ -30,13 +30,14 @@ parameters:
     description: >-
       which formula the row takes: `primary_energy`, `operational_limit`,
       `transmission_volume_expansion_limit`,
-      `transmission_expansion_cost_limit` or `tech_capacity_expansion_limit`
+      `transmission_expansion_cost_limit`, `tech_capacity_expansion_limit` or
+      `flow_based`
     dims: [global_constraint]
     dtype: str
   GlobalConstraint_sense:
     description: >-
       the row's sense in each scenario: `<=`, `>=` or `==`. PyPSA reads a
-      row's sense per scenario (`global_constraints.py:551`, `:749`, `:829`)
+      row's sense per scenario (`global_constraints.py:553`, `:751`, `:831`)
     dims: [scenario, global_constraint]
     dtype: str
   GlobalConstraint_constant:
@@ -45,7 +46,7 @@ parameters:
       is folded in here in data prep. That is an initial charge, times its
       period's years for each counted period where the storage reopens per
       period, or a non-extendable build. PyPSA reads it per scenario
-      (`global_constraints.py:552`, `:750`, `:829`)
+      (`global_constraints.py:554`, `:752`, `:831`)
     dims: [scenario, global_constraint]
 
 constraints:
@@ -158,9 +159,9 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{type}`$ | `GlobalConstraint_type` over $`\mathcal{G}`$ — which formula the row takes: `primary_energy`, `operational_limit`, `transmission_volume_expansion_limit`, `transmission_expansion_cost_limit` or `tech_capacity_expansion_limit` |
-| $`\mathrm{sense}`$ | `GlobalConstraint_sense` over $`\Xi \times \mathcal{G}`$ — the row's sense in each scenario: `<=`, `>=` or `==`. PyPSA reads a row's sense per scenario (`global_constraints.py:551`, `:749`, `:829`) |
-| $`\mathrm{K}`$ | `GlobalConstraint_constant` over $`\Xi \times \mathcal{G}`$ — the constant the total is held against. What a variable cannot represent is folded in here in data prep. That is an initial charge, times its period's years for each counted period where the storage reopens per period, or a non-extendable build. PyPSA reads it per scenario (`global_constraints.py:552`, `:750`, `:829`) |
+| $`\mathrm{type}`$ | `GlobalConstraint_type` over $`\mathcal{G}`$ — which formula the row takes: `primary_energy`, `operational_limit`, `transmission_volume_expansion_limit`, `transmission_expansion_cost_limit`, `tech_capacity_expansion_limit` or `flow_based` |
+| $`\mathrm{sense}`$ | `GlobalConstraint_sense` over $`\Xi \times \mathcal{G}`$ — the row's sense in each scenario: `<=`, `>=` or `==`. PyPSA reads a row's sense per scenario (`global_constraints.py:553`, `:751`, `:831`) |
+| $`\mathrm{K}`$ | `GlobalConstraint_constant` over $`\Xi \times \mathcal{G}`$ — the constant the total is held against. What a variable cannot represent is folded in here in data prep. That is an initial charge, times its period's years for each counted period where the storage reopens per period, or a non-extendable build. PyPSA reads it per scenario (`global_constraints.py:554`, `:752`, `:831`) |
 
 #### Subject to
 
@@ -265,5 +266,5 @@ assumptions:
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

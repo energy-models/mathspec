@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generator maintenance
 
-This file states the maintenance rows of PyPSA's `Generator`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Generator_maint_window` states that a unit is in maintenance exactly where an event it started covers the snapshot, through a [`sum`](../../reference/language/operators.md#sum) by a relation.
+This file states the maintenance rows of PyPSA's `Generator`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Generator_maint_window` states that a unit is in maintenance exactly where an event it started covers the snapshot, through a [`sum`](../../reference/language/operators.md#sum) by a relation.
 
 <!-- gallery:begin -->
 ```yaml
@@ -49,7 +49,7 @@ parameters:
     description: >-
       whether a generator must be taken off for maintenance within the
       horizon: in any scenario, as PyPSA takes the union over them
-      (`components.py:1016-1019`)
+      (`components.py:1018-1021`)
     dims: [generator]
     dtype: bool
   Generator_maintenance_pu:
@@ -209,33 +209,33 @@ assumptions:
     where: "Generator_maintainable"
     description: >-
       a maintainable generator with no event schedules no maintenance. PyPSA
-      refuses it (`consistency.py:1493`)
+      refuses it (`consistency.py:1541`)
   Generator_maintenance_duration_positive:
     holds: "Generator_maintenance_duration > 0"
     where: "Generator_maintainable"
     description: >-
       an event that covers no hours is no maintenance window. PyPSA refuses it
-      (`consistency.py:1483`)
+      (`consistency.py:1531`)
   Generator_maintenance_duration_fits_the_horizon:
     holds: "Generator_maintenance_duration <= sum(snapshot_weightings_generators, over=snapshot)"
     where: "Generator_maintainable"
     description: >-
       one event longer than the horizon, in generator weightings, blocks every
       start and makes the event count infeasible. PyPSA refuses it
-      (`consistency.py:1504`)
+      (`consistency.py:1552`)
   Generator_maintenance_events_fit_the_horizon:
     holds: "Generator_maintenance_duration * Generator_maintenance_events <= sum(snapshot_weightings_generators, over=snapshot)"
     where: "Generator_maintainable"
     description: >-
       the events together longer than the horizon, in generator weightings,
-      cannot all be scheduled. PyPSA refuses it (`consistency.py:1516`)
+      cannot all be scheduled. PyPSA refuses it (`consistency.py:1564`)
   Generator_maintenance_build_cap_is_finite:
     holds: "Generator_p_nom_max < inf"
     where: "Generator_maintainable AND Generator_p_nom_extendable"
     description: >-
       the `maintcap` rows bound the chosen build in maintenance by
       `p_nom_max`, so an infinite cap is an infinite coefficient. PyPSA
-      refuses it (`consistency.py:1528`)
+      refuses it (`consistency.py:1576`)
   Generator_maintenance_module_count_is_finite:
     holds: "Generator_p_nom_max < inf"
     where: "Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_p_nom_mod > 0"
@@ -243,7 +243,7 @@ assumptions:
       the `maint-modstatus` rows bound the modules on in maintenance by
       `p_nom_max / p_nom_mod`, so an infinite cap is an infinite coefficient.
       PyPSA does not check it, and the solver HiGHS refuses the model PyPSA
-      builds (`constraints.py:504-507`)
+      builds (`constraints.py:557-560`)
 ```
 
 #### Given
@@ -273,7 +273,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{mnt}`$ | `Generator_maintainable` over $`\mathcal{G}`$ — whether a generator must be taken off for maintenance within the horizon: in any scenario, as PyPSA takes the union over them (`components.py:1016-1019`) |
+| $`\mathrm{mnt}`$ | `Generator_maintainable` over $`\mathcal{G}`$ — whether a generator must be taken off for maintenance within the horizon: in any scenario, as PyPSA takes the union over them (`components.py:1018-1021`) |
 | $`\gamma`$ | `Generator_maintenance_pu` over $`\Xi \times \mathcal{G}`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{n}^{\mathrm{mnt}}`$ | `Generator_maintenance_events` over $`\Xi \times \mathcal{G}`$ — how many maintenance events occur within the horizon |
 | $`\tau^{\mathrm{mnt}}`$ | `Generator_maintenance_duration` over $`\Xi \times \mathcal{G}`$, `absent` where the data has no row — the hours of generator weightings one maintenance event covers, PyPSA's `maintenance_duration`. It has no value where the generator is not maintainable. No row contains it. In data prep you turn it into `Generator_maintenance_cover` and `Generator_maintenance_start_blocked`. The assumptions state that it fits the horizon |
@@ -449,5 +449,5 @@ assumptions:
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

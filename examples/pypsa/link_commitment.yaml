@@ -22,6 +22,7 @@ given:
     Link_maintenance_status: { dims: [scenario, snapshot, link] }
     Link_p_nom_ext: { dims: [link] }
   expressions:
+    Link_modules: { dims: [scenario, link] }
     scenario_opex: { dims: [scenario] }
   conditions:
     Link_committed: { dims: [link, snapshot] }
@@ -60,22 +61,29 @@ parameters:
     dims: [scenario, link]
     dtype: int
   Link_status_initial:
-    description: one where the link was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0`, data prep
+    description: >-
+      one where the link was on before the first snapshot, zero where off.
+      It is PyPSA's `up_time_before > 0` for a committable link, and one for
+      a link that is not, whose ramp rows PyPSA starts from on
+      (`constraints.py:300`), data prep
     dims: [scenario, link]
     dtype: int
-  Link_must_stay_up:
+  Link_up_time_brought_in:
     description: >-
-      true while the up time a link brought into the horizon is still running. It
-      is data prep
+      one while the up time a link brought into the horizon is still
+      running, zero after. It is PyPSA's start `up_time_before` snapshots
+      before the first, counted while `min_up_time` has not passed since
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, link]
-    dtype: bool
-  Link_must_stay_down:
+    dtype: int
+  Link_down_time_brought_in:
     description: >-
-      true while the down time a link brought into the horizon is still running. It
-      is PyPSA's `min_down_time - down_time_before` snapshots, where
-      `down_time_before > 0`, data prep
+      one while the down time a link brought into the horizon is still
+      running, zero after. It is PyPSA's stop `down_time_before` snapshots
+      before the first, counted while `min_down_time` has not passed since
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, link]
-    dtype: bool
+    dtype: int
   Link_start_up_cost:
     description: cost of one start in this snapshot
     dims: [scenario, snapshot, link]
@@ -91,7 +99,7 @@ parameters:
       prep. It is the build cap `p_nom_max` times the highest `p_max_pu`,
       where the cap is finite and positive. Elsewhere it is
       `committable_big_m` times the highest `p_max_pu`
-      (`components.py:1050-1121`). Without that keyword, it is ten times the
+      (`components.py:1052-1123`). Without that keyword, it is ten times the
       largest of the peak total load and the component's largest finite
       `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below
       the flow a solve wants, it caps that flow
@@ -129,7 +137,7 @@ expressions:
     description: >-
       the commitment state a link carries into a snapshot. It is off at the
       first snapshot it is active in past the first of the horizon. PyPSA reads a
-      status it did not build as off there (`constraints.py:298`). It is the
+      status it did not build as off there (`constraints.py:368`). It is the
       state carried over otherwise
     dims: [scenario, snapshot, link]
     cases:
@@ -146,8 +154,8 @@ expressions:
   Link_commitment_opex:
     expression: >-
       sum(sum(((Link_status * Link_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
-      + sum(sum(Link_start_up * Link_start_up_cost, over=link), over=snapshot)
-      + sum(sum(Link_shut_down * Link_shut_down_cost, over=link), over=snapshot)
+      + sum(sum((Link_start_up * Link_start_up_cost) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
+      + sum(sum((Link_shut_down * Link_shut_down_cost) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
     adds_to: scenario_opex
 
 conditions:
@@ -186,31 +194,24 @@ constraints:
   Link_com_up_time:
     description: >-
       `Link-com-up-time` — a link started within its own minimum up time is
-      still on. The first snapshot's share of the window is the brought-in up
-      time's, which the must-stay-up condition states
+      still on. The up time it brought into the horizon counts as a start
+      before the first snapshot
     dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_min_up_time > 0 AND position(snapshot) > 0
-    expression: sum_back(Link_start_up, along=snapshot, window=Link_min_up_time) <= Link_status
+    where: Link_committed AND Link_min_up_time > 0
+    expression: >-
+      sum_back(Link_start_up, along=snapshot, window=Link_min_up_time)
+      + Link_up_time_brought_in <= Link_status
   Link_com_down_time:
     description: >-
       `Link-com-down-time` — a link stopped within its own minimum down time
-      is still off. The first snapshot's share of the window is the brought-in
-      down time's, which the must-stay-down condition states
+      is still off, and so are the modules of a modular link that stopped.
+      The down time it brought into the horizon counts as one stop before the
+      first snapshot, also where the link is modular (`constraints.py:619-646`)
     dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_min_down_time > 0 AND position(snapshot) > 0
-    expression: sum_back(Link_shut_down, along=snapshot, window=Link_min_down_time) <= 1 - Link_status
-  Link_com_status_must_stay_up:
-    description: "`Link-com-status-min_up_time_must_stay_up` — a link still serving the up time it brought in stays on"
-    dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_must_stay_up
-    expression: Link_status == 1
-  Link_com_status_must_stay_down:
-    description: >-
-      `Link-com-status-min_down_time_must_stay_up` — a link still serving the
-      down time it brought in stays off. PyPSA names the row `_must_stay_up`
-    dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_must_stay_down
-    expression: Link_status == 0
+    where: Link_committed AND Link_min_down_time > 0
+    expression: >-
+      sum_back(Link_shut_down, along=snapshot, window=Link_min_down_time)
+      + Link_down_time_brought_in <= Link_modules - Link_status
   Link_com_ext_p_upper_cap:
     description: >-
       `Link-com-ext-p-upper-cap` — a committed extendable link flows
