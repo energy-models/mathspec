@@ -981,8 +981,9 @@ class Walk:
 
         The gate prints as each curve reads it: the variable on the curve's
         own frame, or read through its relation. Where some curve does not read
-        it, a masked variable or a relation with no row, the factor is the gate
-        where it is read and 1 elsewhere: the two rows the expansion writes
+        it, off a masked variable or where a relation declared
+        ``missing: absent`` has no row, the factor is the gate where it is
+        read and 1 elsewhere: the two rows the expansion writes
         there, because a gate that is not there takes its row with it and would
         leave the curve unstated rather than ungated. ``missing: 0`` is the
         other reading and pins the curve off, which is the factor on its own.

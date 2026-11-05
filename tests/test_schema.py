@@ -30,7 +30,6 @@ def test_the_checked_in_json_schema_has_not_drifted():
     [
         pytest.param('PiecewiseLinkSpec', 'array', '`[expression, values, sign?]`', id='link-shorthand'),
         pytest.param('ExpressionSpec', 'string', 'bare-string', id='bare-string-expression'),
-        pytest.param('PiecewiseActivitySpec', 'string', 'bare-name', id='bare-name-activity'),
     ],
 )
 def test_the_json_schema_admits_the_shorthand_the_loader_admits(definition, shorthand, spelling):

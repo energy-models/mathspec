@@ -192,7 +192,7 @@ def lower(spec: Spec) -> Program:
         where = mask_of(resolve_condition_text(pdef.where, ns, f"piecewise '{pname}' where", errors))
         gate = None
         if pdef.activity is not None:
-            gate = resolve_gate(pname, pdef, variables[pdef.activity.variable], ns, errors)
+            gate = resolve_gate(pname, pdef, variables, ns, errors)
             if gate is None:
                 continue
         if links is None or walks is None:

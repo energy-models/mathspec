@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 
 from mathspec._operators import BUILTIN_NAMES
 from mathspec._piecewise import Emitted as EmittedCurve
+from mathspec._piecewise import gate_of
 from mathspec._sos import Emitted as EmittedSet
 from mathspec._sos import coefficients
 from mathspec._yaml import read_spec
@@ -341,7 +342,13 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             yield from _piecewise_link_shape(spec, name, pw, key, link)
         if pw.activity is None:
             continue
-        activity = pw.activity.variable
+        if (gate := gate_of(pw.activity)) is None:
+            yield (
+                f'{context}: activity: {pw.activity!r} is neither a binary variable nor one read through a '
+                f'relation. Write activity: <variable>, or activity: at(<variable>, by=<relation>[<column>]).'
+            )
+            continue
+        activity, by = gate
         if activity not in spec.variables:
             yield (
                 f"{context}: activity '{activity}' is not a declared variable. Declare it as a binary "
@@ -352,11 +359,11 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
                 f"{context}: activity variable '{activity}' is {spec.variables[activity].domain}. "
                 f'Declare it domain: binary.'
             )
-        elif pw.activity.by is None and (stray := [d for d in spec.variables[activity].dims if d not in pw.dims]):
+        elif by is None and (stray := [d for d in spec.variables[activity].dims if d not in pw.dims]):
             yield (
                 f"{context}: activity '{activity}' is over {stray}, which is not in dims: {pw.dims}. The gate "
                 f'switches the curve of one coordinate of dims:. Add {stray} to dims:, gate with a variable over '
-                f'dims:, or look the gate up through a relation with by: <relation>[<column>].'
+                f'dims:, or read the gate through a relation with activity: at({activity}, by=<relation>[<column>]).'
             )
 
 

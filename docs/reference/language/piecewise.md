@@ -212,14 +212,14 @@ A link that [walks a relation](#a-link-that-walks-a-relation) is a mapping
 instead, with the keys `expression`, `values`, `by` and, where it has one,
 `sign`.
 
-| Key        | Required | Default     | What it does                                                                                                             |
-| ---------- | -------- | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `along`    | yes      |             | Sets the breakpoint dimension.                                                                                           |
-| `dims`     | yes      |             | Sets the dimensions of the curves. The entry states one curve per coordinate ([`dims`](#dims)).                          |
-| `links`    | yes      |             | Lists the links by name: two or more, or one link that walks a relation.                                                 |
-| `where`    | no       | `null`      | Sets which curves exist, and how far each one runs ([`where`](#where)).                                                  |
-| `method`   | no       | `adjacency` | Sets the rows that the expansion writes for each curve ([`method`](#method)).                                            |
-| `activity` | no       | `null`      | Sets a binary variable that switches the curve on and off, over `dims:` or through a relation ([`activity`](#activity)). |
+| Key        | Required | Default     | What it does                                                                                                                                        |
+| ---------- | -------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `along`    | yes      |             | Sets the breakpoint dimension.                                                                                                                      |
+| `dims`     | yes      |             | Sets the dimensions of the curves. The entry states one curve per coordinate ([`dims`](#dims)).                                                     |
+| `links`    | yes      |             | Lists the links by name: two or more, or one link that walks a relation.                                                                            |
+| `where`    | no       | `null`      | Sets which curves exist, and how far each one runs ([`where`](#where)).                                                                             |
+| `method`   | no       | `adjacency` | Sets the rows that the expansion writes for each curve ([`method`](#method)).                                                                       |
+| `activity` | no       | `null`      | Sets the binary variable that switches the curve on and off, by its name or as `at(<variable>, by=<relation>[<column>])` ([`activity`](#activity)). |
 
 The breakpoints follow the order of the `along` dimension, so that dimension
 must be declared [ordered](dimensions.md#ordered). Without `ordered: true`,
@@ -735,11 +735,11 @@ at every snapshot.
 
 #### A gate that walks a relation
 
-On a gate with `by: relation[column]`, mathspec looks the gate up through a
-[relation](relations.md#lookups), as
-[`at(x, by=relation[column])`](operators.md#at) looks up the value of `x`. The
-gate is then a mapping with the keys `variable` and `by`. Here `running` is
-per unit, and the status of its unit switches the curve of each generator:
+On a gate written as
+[`at(<variable>, by=<relation>[<column>])`](operators.md#at), mathspec looks
+the variable up through a [relation](relations.md#lookups), as `at` looks up
+any value. Here `running` is per unit, and the status of its unit switches
+the curve of each generator:
 
 ```yaml
 dimensions:
@@ -748,7 +748,7 @@ dimensions:
   generator: { dtype: str }
   bp: { dtype: int, ordered: true }
 relations:
-  unit_of: { key: generator, values: unit }
+  unit_of: { key: generator, values: unit, missing: absent }
 parameters:
   power_bp: { dims: [generator, bp] }
   fuel_bp: { dims: [generator, bp] }
@@ -763,9 +763,7 @@ piecewise:
     links:
       power: [power, power_bp]
       fuel: [fuel, fuel_bp]
-    activity:
-      variable: running
-      by: unit_of[unit]
+    activity: at(running, by=unit_of[unit])
 objective:
   sense: minimize
   expression: sum(fuel)
@@ -775,11 +773,17 @@ objective:
 \left( \mathit{power}_{t,g},\ \mathit{fuel}_{t,g} \right) \in \begin{cases} \mathit{running}_{t,\mathrm{unit\_of}(g)} & \text{if } \mathit{running}_{t,\mathrm{unit\_of}(g)} \text{ exists} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
-The weights of each curve sum to `at(running, by=unit_of[unit])`. A generator
-with no row in `unit_of` has no gate, so its curve is ungated. With
+The weights of each curve sum to `at(running, by=unit_of[unit])`. Because
+`unit_of` declares [`missing: absent`](relations.md#missing), a generator may
+have no row in it. That generator has no gate, so its curve is ungated. With
 `missing: 0` on the gate, the gate is `0` outside its `where:`, so the curve
 is switched off there. Only a generator with no row in `unit_of` then stays
 ungated.
+
+Under the default `missing: refused`, every generator has a row in `unit_of`.
+A curve is then ungated only where `running` is absent, as for a gate over
+`dims:`. Where `running` has no `where:`, every curve reads the gate, and the
+typesetter prints the gate alone.
 
 After the lookup, the gate must be over dimensions of `dims:` only. With
 `running` over `[snapshot, unit, period]`, mathspec refuses the file at load:
