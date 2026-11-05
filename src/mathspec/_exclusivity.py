@@ -2,14 +2,15 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Can two of a named expression's cases claim one coordinate? Decided without data.
+"""What a model's conditions decide without data: whether two cases overlap, and whether entries leave a gap.
 
 Each ``when`` is read over cells: regions of one subject's value on which every
 atom is constant. The cells of the pair's subjects are multiplied out, both
 masks are evaluated on each, and a cell where both hold is a witness.
 Independence between subjects over-approximates, so it can manufacture a
-witness but never hide one. The rule itself is stated in
-``docs/reference/language/expressions.md``.
+witness but never hide one. The overlap rule is stated in
+``docs/reference/language/expressions.md``, the gap rule in
+``docs/reference/language/assumptions.md``.
 """
 
 from __future__ import annotations
@@ -117,36 +118,57 @@ def left_out(
     which only the data decides, so ``None`` proves nothing about the data.
 
     Raises:
-        Undecidable: A name whose ``where`` another file declares, or an atom
-            the cells do not decide, or more cells than [`CELL_BUDGET`][].
+        Undecidable: A name whose ``where`` another file declares, a constraint
+            whose ``where`` would widen the assumption's ``where:``, two
+            variables whose ``where`` name each other, an atom the cells do
+            not decide, or more cells than [`CELL_BUDGET`][].
     """
-    written = _written_out(holds, entries)
-    within = BooleanLiteral(value=True) if where is None else _written_out(where, entries)
+    written = _written_out(holds, entries, wider=True)
+    within = BooleanLiteral(value=True) if where is None else _written_out(where, entries, wider=False)
     return _witness(within, Not(written), dtypes, defaults)
 
 
-def _written_out(node: Condition, entries: Existence) -> Condition:
+def _written_out(
+    node: Condition, entries: Existence, *, wider: bool, through: frozenset[str] = frozenset()
+) -> Condition:
     """*node* with each bare variable or constraint name replaced by the ``where`` it exists under, recursively.
 
-    A variable's ``where`` may name another variable, and a constraint's a
-    variable. Neither names itself, so the replacement ends.
+    A variable exists exactly where its ``where`` holds, but a constraint row
+    only within it, so a constraint is written out only where *wider* says a
+    wider region keeps a gap a real one: in ``holds:`` and not under a ``NOT``.
+    *through* holds the variables being written out, since nothing yet refuses
+    two variables whose ``where`` name each other.
     """
+
+    def inner(child: Condition, *, flip: bool = False) -> Condition:
+        return _written_out(child, entries, wider=wider != flip, through=through)
+
     match node:
         case VariableDefined(name=name) | ConstraintDefined(name=name):
             declared = entries.variables if isinstance(node, VariableDefined) else entries.constraints
             if name not in declared:
                 msg = f"the `where:` of '{name}' is declared in another file"
                 raise Undecidable(msg)
+            if isinstance(node, ConstraintDefined) and not wider:
+                msg = f"a row of '{name}' can be absent where its `where:` holds"
+                raise Undecidable(msg)
+            if name in through:
+                msg = f"the `where:` of '{name}' names itself through another variable"
+                raise Undecidable(msg)
             mask = declared[name]
-            return BooleanLiteral(value=True) if mask is None else _written_out(mask.root, entries)
+            return (
+                BooleanLiteral(value=True)
+                if mask is None
+                else _written_out(mask.root, entries, wider=wider, through=through | {name})
+            )
         case Not(operand=operand):
-            return Not(_written_out(operand, entries))
+            return Not(inner(operand, flip=True))
         case And(left=left, right=right):
-            return And(_written_out(left, entries), _written_out(right, entries))
+            return And(inner(left), inner(right))
         case Or(left=left, right=right):
-            return Or(_written_out(left, entries), _written_out(right, entries))
+            return Or(inner(left), inner(right))
         case ConditionReference(body=body):
-            return _written_out(body, entries)
+            return inner(body)
         case _:
             return node
 

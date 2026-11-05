@@ -292,7 +292,7 @@ def test_the_dual_takes_its_frame_from_the_given_entry():
 def test_a_given_row_family_prints_under_the_given_heading():
     given = section(to_markdown(LAYER), 'Given')
     assert '`balance`' in given
-    assert 'reads the dual of' in given, 'the legend says what the file may do with it'
+    assert 'a row family another file builds' in given, 'the legend says where the rows come from'
 
 
 def test_a_row_family_both_built_and_given_is_refused():

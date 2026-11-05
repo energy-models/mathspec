@@ -277,6 +277,9 @@ class Namespace:
     def unknown(self, name: str, context: str, *, allow_dims: bool, formals: Iterable[str] = ()) -> str:
         """The refusal for a *name* declared nowhere, listing what it could have been.
 
+        A constraint's name in a condition is declared, but only an assumption
+        may test it, so it gets a refusal of its own.
+
         Args:
             name: The name the file wrote.
             context: The entry it was found in.
@@ -286,6 +289,11 @@ class Namespace:
                 value, lists the variables instead.
             formals: A macro's formals, listed first when there are any.
         """
+        if allow_dims and name in self.constraints:
+            return (
+                f"{context}: '{name}' is a constraint, and only an assumption's `holds:` or `where:` may test "
+                f"whether it has a row, by its bare name. Test the `where:` of '{name}' here instead."
+            )
         shown: list[tuple[str, Iterable[str]]] = [('Formals', formals)] if formals else []
         shown += (
             [

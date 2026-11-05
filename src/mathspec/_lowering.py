@@ -429,16 +429,16 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
 
 
 def _assumption(
-    name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str], entries: Existence | None = None
+    name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str], existence: Existence | None = None
 ) -> Assumption | None:
     """One ``assumptions:`` entry typed, or ``None`` once anything in it failed.
 
     A condition the connectives decide is refused: one that folds to true
     assumes nothing, and one that folds to false refuses every dataset. A
     bare variable or constraint name asks whether a row exists, which the
-    data decides before any solve. An assumption on rows alone that the
-    ``where:`` of those *entries* already leave a gap in is refused with the
-    region ([`left_out`][mathspec._exclusivity.left_out]).
+    data decides before any solve. An assumption on rows alone is refused
+    with the region that the ``where:`` of the entries in *existence* leave
+    out ([`left_out`][mathspec._exclusivity.left_out]).
     """
     context = f"Assumption '{name}'"
     found = len(errors)
@@ -452,7 +452,7 @@ def _assumption(
     if len(errors) > found:
         return None
     assert holds is not None, 'a condition that read to nothing appended an error'
-    if entries is not None and (gap := _rows_left_out(holds, where, entries, ns)) is not None:
+    if existence is not None and (gap := _rows_left_out(holds, where, existence, ns)) is not None:
         errors.append(
             f'{context}: the `where:` conditions of the entries it names leave a gap where {gap}. There its `where:` holds '
             f'and its `holds:` does not, so data with a row there fails it. Add a constraint whose `where:` holds '

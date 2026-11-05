@@ -1975,6 +1975,12 @@ _SPLIT = {
     'constraints.off': {'dims': ['g'], 'where': 'NOT flag', 'expression': 'p <= k'},
 }
 
+#: A constraint whose rows `x` drops inside its `where:`, since `x` is absent where the data has no row.
+_NARROWED = {
+    'parameters.x': {'dims': ['g'], 'missing': 'absent'},
+    'constraints.n': {'dims': ['g'], 'where': 'flag', 'expression': 'p <= x'},
+}
+
 
 class TestAssumptions:
     """What an ``assumptions:`` entry may state, and what the load refuses.
@@ -2000,13 +2006,18 @@ class TestAssumptions:
             ),
             pytest.param(
                 'p > 0',
-                ("where references variable 'p'", 'Test only parameters and dimension coordinates'),
+                ("'p' is a variable. The solver decides its value", 'write its bare name, or state the bound'),
                 id='a-variable-value-in-the-condition',
             ),
             pytest.param(
                 {'holds': 'c > 0', 'where': 'p > 1'},
-                ("where references variable 'p'",),
+                ("'p' is a variable.",),
                 id='a-variable-value-in-the-where',
+            ),
+            pytest.param(
+                'p + c > 0',
+                ('one side names a variable', 'write its bare name, or state the bound'),
+                id='a-variable-in-arithmetic',
             ),
             pytest.param(
                 {'holds': 'c > 0', 'where': 'false'},
@@ -2083,13 +2094,31 @@ class TestAssumptions:
                 {'holds': 'dispatched', 'where': 'q'},
                 id='a-named-condition-that-names-a-variable',
             ),
+            pytest.param(
+                {**_NARROWED, 'constraints.d': {'dims': ['g'], 'where': 'flag AND x', 'expression': 'p <= c'}},
+                {'holds': 'd', 'where': 'n'},
+                id='a-constraint-in-the-where-whose-term-drops-rows',
+            ),
+            pytest.param(
+                {**_NARROWED, 'variables.p.where': 'flag AND x'},
+                {'holds': 'NOT n', 'where': 'p'},
+                id='a-negated-constraint-whose-term-drops-rows',
+            ),
+            pytest.param(
+                {'variables.s': {'dims': ['g'], 'where': 'p'}, 'variables.p.where': 's'},
+                {'holds': 's', 'where': 'p'},
+                id='two-variables-whose-where-name-each-other',
+            ),
         ],
     )
     def test_an_assumption_on_rows_the_conditions_cannot_fault_loads(self, patch, entry):
         """A bare variable or constraint name asks whether a row exists, which the data decides before any solve.
 
         Where the assumption also tests a value, it is about the data, and a gap
-        the conditions leave is the tool's to find.
+        the conditions leave is the tool's to find. A constraint row can be
+        absent inside its ``where:``, so its ``where:`` decides nothing where a
+        wider region would hide a row: in the assumption's own ``where:``, or
+        under a ``NOT``.
         """
         spec = _spec(**patch, assumptions={'covered': entry})
         assert 'covered' in spec.program.assumptions, 'the tool still checks it, where a term can leave a row out'
@@ -2128,6 +2157,19 @@ class TestAssumptions:
     )
     def test_an_assumption_the_conditions_already_fail_is_refused(self, patch, entry, fragment):
         assert fragment in _refusal(**patch, assumptions={'gap': entry})
+
+    @pytest.mark.parametrize(
+        'patch',
+        [
+            pytest.param({'variables.p.where': 'on'}, id='in-a-variable-where'),
+            pytest.param({'conditions.covered': 'on', 'assumptions': {'a': 'covered'}}, id='in-a-named-condition'),
+        ],
+    )
+    def test_a_constraint_name_outside_an_assumption_is_refused(self, patch):
+        assert (
+            "'on' is a constraint, and only an assumption's `holds:` or `where:` may test whether it has a row, by "
+            "its bare name. Test the `where:` of 'on' here instead."
+        ) in _refusal(**_SPLIT, **patch)
 
     def test_an_entry_round_trips_as_the_form_it_was_written_in(self):
         """A bare string stays one, and a mapping keeps only the keys it carried."""

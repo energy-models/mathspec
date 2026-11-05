@@ -7,7 +7,9 @@ SPDX-License-Identifier: CC-BY-4.0
 
 This page describes the `assumptions:` section, which states what the data
 attached to a spec must satisfy. mathspec reads each assumption at load,
-checks the dimensions and dtypes of its condition, and prints it in the
+checks the dimensions and dtypes of its condition, refuses one that the
+`where:` of the model's own entries already break
+([rows of the model](#rows-of-the-model)), and prints it in the
 [typeset document](../typeset.md). mathspec does not check the data itself,
 because mathspec holds no data. Software that reads a spec
 ([a tool](../glossary.md#tool)), such as the tool that attaches data and builds
@@ -177,13 +179,29 @@ mathspec suggests two rewrites: a constraint for the missing case, or a wider
 A constraint row can still be absent where its `where:` holds, for example
 where a term outside a `sum` is [absent](absence.md#how-absence-travels). So
 the tool that attaches the data also checks the assumption, row by row.
-mathspec leaves the whole check to that tool in three cases:
+For the same reason, the `where:` of a constraint shows a gap only in
+`holds:`, outside any `NOT`. In the assumption's own `where:`, or under a
+`NOT`, it would claim rows that the data can leave out. mathspec leaves the
+whole check to the tool in five cases:
 
 - the assumption also compares a value, such as `where: "p AND p_nom > 0"`
+- it names a constraint in its `where:`, or under a `NOT`
 - it names an entry that another file declares under
   [`given:`](parameters-variables-constraints.md#given)
-- it contains a condition that mathspec cannot split into cases without data,
-  as [refused cases](named.md#refused-cases) lists
+- it reads two variables whose `where:` name each other
+- it contains a condition that mathspec cannot split into regions without
+  data, as [refused cases](named.md#refused-cases) lists, or more than 8192
+  regions
+
+Only an assumption may name a constraint in a condition. In the `where:` of a
+variable or in a named condition, mathspec refuses the name, as for
+`where: p_upper_committable` on `p`:
+
+```text
+Variable 'p': 'p_upper_committable' is a constraint, and only an assumption's `holds:` or `where:` may test whether it has a row, by its bare name. Test the `where:` of 'p_upper_committable' here instead.
+```
+
+mathspec suggests the constraint's own `where:` as the rewrite.
 
 ## Refused assumptions
 
@@ -230,12 +248,11 @@ before any solve. So mathspec refuses a variable compared with a value or
 inside arithmetic. For `holds: "p > 0"`, mathspec prints:
 
 ```text
-Assumption 'sound': where references variable 'p'. Test only parameters and dimension coordinates.
+Assumption 'sound': 'p' is a variable. The solver decides its value, so an assumption tests only whether it has a row: write its bare name, or state the bound as a constraint.
 ```
 
-mathspec suggests a test on parameters or dimension coordinates as the
-rewrite. A bare variable name loads, because it tests whether the variable
-exists ([rows of the model](#rows-of-the-model)).
+mathspec suggests two rewrites: the bare name `p`, which tests whether the
+variable exists ([rows of the model](#rows-of-the-model)), or a constraint.
 
 mathspec also
 [refuses](parameters-variables-constraints.md#constraints) a constraint with

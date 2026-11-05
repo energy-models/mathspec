@@ -133,6 +133,16 @@ class ConditionResolver:
         """Every named condition this file declares or is given."""
         return self.ns.conditions | self.ns.given_conditions
 
+    @property
+    def _variable_value_rewrite(self) -> str:
+        """The rewrite for a variable's value in a condition, which the solver decides only after every condition is read."""
+        if self.rows:
+            return (
+                'The solver decides its value, so an assumption tests only whether it has a row: write its bare '
+                'name, or state the bound as a constraint.'
+            )
+        return 'Test only parameters and dimension coordinates.'
+
     def _child(self, node: Condition | UnresolvedConditionNode) -> Condition:
         """A connective's child, typed as resolved: an unresolved one survives only with its refusal appended."""
         return cast('Condition', self.build(node))
@@ -422,8 +432,8 @@ class ConditionResolver:
                 )
             elif carries_variable(side):
                 self.errors.append(
-                    f'{context}: a condition compares expressions, and one side names a variable. Test only '
-                    f'parameters and dimension coordinates.'
+                    f'{context}: a condition compares expressions, and one side names a variable. '
+                    f'{self._variable_value_rewrite}'
                 )
             elif degree.calls_dual(side):
                 self.errors.append(
@@ -558,10 +568,8 @@ class ConditionResolver:
                     f"{context}: where references the given expression '{left_name}'. {GIVEN_IN_A_CONDITION}"
                 )
             case 'variable':
-                self.errors.append(
-                    f"{context}: where references variable '{left_name}'. Test only parameters "
-                    f'and dimension coordinates.'
-                )
+                head = f"'{left_name}' is a variable" if self.rows else f"where references variable '{left_name}'"
+                self.errors.append(f'{context}: {head}. {self._variable_value_rewrite}')
         return node
 
     def _relation_column(self, name: str, column: str | None, spelling: str, op: ComparisonOperator) -> str | None:
