@@ -21,10 +21,10 @@ SPDX-License-Identifier: CC-BY-4.0
     <text x="16" y="24" font-weight="bold">running</text>
     <text x="79" y="24" fill-opacity="0.7">a variable</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
-      <text x="24" y="48" font-weight="bold">snapshot</text>
-      <text x="104" y="48" font-weight="bold">generator</text>
-      <text x="24" y="72">0</text><text x="104" y="72">gas</text>
-      <text x="24" y="90">1</text><text x="104" y="90">gas</text>
+      <text x="24" y="48" font-weight="bold">generator</text>
+      <text x="104" y="48" font-weight="bold">snapshot</text>
+      <text x="24" y="72">gas</text><text x="104" y="72">0</text>
+      <text x="24" y="90">gas</text><text x="104" y="90">1</text>
     </g>
   </g>
   <g fill="none" stroke="currentColor" stroke-width="1">
@@ -53,13 +53,13 @@ SPDX-License-Identifier: CC-BY-4.0
     <text x="459.4" y="24" font-weight="bold">scale of fuel_use</text>
     <text x="599" y="24" fill-opacity="0.7">an expression</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
-      <text x="467" y="48" font-weight="bold">snapshot</text>
-      <text x="548" y="48" font-weight="bold">generator</text>
+      <text x="467" y="48" font-weight="bold">generator</text>
+      <text x="548" y="48" font-weight="bold">snapshot</text>
       <text x="636" y="48" font-weight="bold">value</text>
-      <text x="467" y="72">0</text><text x="548" y="72">gas</text><text x="636" y="72">running[0, gas]</text>
-      <text x="467" y="90">0</text><text x="548" y="90">wind</text><text x="636" y="90">1</text>
-      <text x="467" y="108">1</text><text x="548" y="108">gas</text><text x="636" y="108">running[1, gas]</text>
-      <text x="467" y="126">1</text><text x="548" y="126">wind</text><text x="636" y="126">1</text>
+      <text x="467" y="72">gas</text><text x="548" y="72">0</text><text x="636" y="72">running[gas, 0]</text>
+      <text x="467" y="90">gas</text><text x="548" y="90">1</text><text x="636" y="90">running[gas, 1]</text>
+      <text x="467" y="108">wind</text><text x="548" y="108">0</text><text x="636" y="108">1</text>
+      <text x="467" y="126">wind</text><text x="548" y="126">1</text><text x="636" y="126">1</text>
     </g>
   </g>
   <g fill="none" stroke="currentColor" stroke-width="1">
@@ -74,13 +74,13 @@ SPDX-License-Identifier: CC-BY-4.0
     <text x="459.4" y="170" font-weight="bold">scale of fuel_use</text>
     <text x="599" y="170" fill-opacity="0.7">an expression</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
-      <text x="467" y="194" font-weight="bold">snapshot</text>
-      <text x="548" y="194" font-weight="bold">generator</text>
+      <text x="467" y="194" font-weight="bold">generator</text>
+      <text x="548" y="194" font-weight="bold">snapshot</text>
       <text x="636" y="194" font-weight="bold">value</text>
-      <text x="467" y="218">0</text><text x="548" y="218">gas</text><text x="636" y="218">running[0, gas]</text>
-      <text x="467" y="236">0</text><text x="548" y="236">wind</text><text x="636" y="236">0</text>
-      <text x="467" y="254">1</text><text x="548" y="254">gas</text><text x="636" y="254">running[1, gas]</text>
-      <text x="467" y="272">1</text><text x="548" y="272">wind</text><text x="636" y="272">0</text>
+      <text x="467" y="218">gas</text><text x="548" y="218">0</text><text x="636" y="218">running[gas, 0]</text>
+      <text x="467" y="236">gas</text><text x="548" y="236">1</text><text x="636" y="236">running[gas, 1]</text>
+      <text x="467" y="254">wind</text><text x="548" y="254">0</text><text x="636" y="254">0</text>
+      <text x="467" y="272">wind</text><text x="548" y="272">1</text><text x="636" y="272">0</text>
     </g>
   </g>
   <g fill="none" stroke="currentColor" stroke-width="1">
