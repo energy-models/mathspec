@@ -168,7 +168,7 @@ accepts is `feat` or `fix` on that outcome.
 
 ```
 yes  fix(parser): a where clause with a trailing comma loads
-yes  feat(language): a coordinate may declare its own label space
+yes  feat(language): a coordinate declares its own labels
 no   fix(schema): fix schema bug                                  (activity)
 no   fix(parser): strip the trailing token before the pyparsing pass  (mechanism)
 no   feat: rung 15 — investment periods with a growth limit       (docs: by the table)

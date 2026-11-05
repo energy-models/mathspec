@@ -63,8 +63,10 @@ jobs:
               fail=1
               return
             fi
-            if (( ${#subject} > 72 )); then
-              echo "::warning::${what} is ${#subject} chars; git and the GitHub UI truncate around 72."
+            if (( ${#subject} > 55 )); then
+              echo "::error::${what} is ${#subject} chars; the limit is 55: ${subject}"
+              fail=1
+              return
             fi
             echo "ok: ${what} — ${subject}"
           }
@@ -84,7 +86,7 @@ jobs:
           if (( fail )); then
             cat <<'MSG'
 
-          Expected: <type>[(scope)][!]: <subject>
+          Expected: <type>[(scope)][!]: <subject>, at most 55 chars
 
             types    feat, fix, perf, refactor, docs, chore, test, ci, build, style, revert
             examples feat: AST parsing for indexed constraints
