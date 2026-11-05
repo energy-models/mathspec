@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The cost
 
-This file states the expected operating cost and its tail, weighted by scenario. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `total_cost`. `CVaR_excess` and `CVaR_def` state the conditional value at risk (CVaR) of the operating cost over the scenarios.
+This file states the expected operating cost and its tail, weighted by scenario. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `total_cost`. `CVaR_excess` and `CVaR_def` state the conditional value at risk (CVaR) of the operating cost over the scenarios.
 
 <!-- gallery:begin -->
 ```yaml
@@ -144,5 +144,5 @@ a_{\xi} - \mathit{scenario\_opex}_{\xi} + \theta \ge 0 \qquad \forall\, \xi \in 
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

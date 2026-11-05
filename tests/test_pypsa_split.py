@@ -52,7 +52,8 @@ def test_the_fragments_merge_to_the_one_file(model):
 def test_each_sum_is_its_terms_by_name_and_each_term_stays(model):
     merged = merge(list(PATHS.values()))
     assert merged.expressions['Bus_injection'].expression == (
-        'Generator_injection + Line_injection + Link_injection + Load_injection + Process_injection'
+        'FlowBased_injection + Generator_injection + Line_injection + Link_injection + Load_injection'
+        ' + Process_injection'
         ' + StorageUnit_injection + Store_injection + Transformer_injection'
     ), 'the terms in the order the files are given in'
     assert set(model.terms) <= set(merged.expressions), 'every term is a named expression of the composed spec'
@@ -71,13 +72,14 @@ def test_the_fragments_are_what_the_splitter_writes(model):
 OPTIONAL = [
     'carrier',
     'cost',
-    'global_constraints',
+    'global_constraints flow_based',
     'security',
+    'flow_based',
     'load',
     'storage_unit',
     'store',
     'generator',
-    'link',
+    'link flow_based',
     'process',
     'generator_ramping',
     'link_ramping',

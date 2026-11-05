@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Link ramping
 
-This file states the ramping rows of PyPSA's `Link`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Link_previous_p` is the output carried into each snapshot, from `p_init` at the first where the unit came in running. `Link_ramp_up_allowance` adds the start-up ramp in the snapshot the unit turns on.
+This file states the ramping rows of PyPSA's `Link`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Link_previous_p` is the output carried into each snapshot, from `p_init` at the first where the unit came in running. `Link_ramp_up_allowance` adds the start-up ramp in the snapshot the unit turns on.
 
 <!-- gallery:begin -->
 ```yaml
@@ -81,7 +81,7 @@ expressions:
     description: >-
       the output a link carries into a snapshot. It is nothing at the first
       snapshot it is active in past the first of the horizon: PyPSA fills an
-      output it did not build with zero (`constraints.py:665`). It is the
+      output it did not build with zero (`constraints.py:679`). It is the
       output carried over otherwise
     dims: [scenario, snapshot, link]
     cases:
@@ -135,7 +135,7 @@ expressions:
       the status a committed link's ramp rows carry into a snapshot. At the
       first snapshot, a fixed modular link that came in running has every
       module on, since the state it brought in is on or off
-      (`constraints.py:1078-1083`). It is the state carried in otherwise
+      (`constraints.py:1092-1097`). It is the state carried in otherwise
     dims: [scenario, snapshot, link]
     cases:
       opening_modules:
@@ -308,13 +308,13 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{f}`$ | `Link_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the output a link carries into a snapshot. It is nothing at the first snapshot it is active in past the first of the horizon: PyPSA fills an output it did not build with zero (`constraints.py:665`). It is the output carried over otherwise |
+| $`\overleftarrow{f}`$ | `Link_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the output a link carries into a snapshot. It is nothing at the first snapshot it is active in past the first of the horizon: PyPSA fills an output it did not build with zero (`constraints.py:679`). It is the output carried over otherwise |
 | $`\overleftarrow{f}^{\circ}`$ | `Link_p_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the output a link carries over into a snapshot. At the first, it is the `p_init` it brought in where it came in running, and nothing where it came in off. After that, it is the previous snapshot's |
 | $`\widetilde{\mathrm{ru}}^{f}`$ | `Link_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the ramp limit in a link's up row, PyPSA's `ramp_limit_up`. It is the full build where PyPSA has none, since a start-up ramp alone builds the row |
 | $`\widetilde{\mathrm{rd}}^{f}`$ | `Link_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the ramp limit in a link's down row, PyPSA's `ramp_limit_down`. It is the full build where PyPSA has none, since a shut-down ramp alone builds the row |
 | $`\widetilde{\mathrm{ru}}^{f,\mathrm{up}}`$ | `Link_start_up_rate` over $`\Xi \times \mathcal{L}`$ — the start-up ramp in a link's up row (PyPSA's `ramp_limit_start_up`), or the full build where it has none |
 | $`\widetilde{\mathrm{rd}}^{f,\mathrm{dn}}`$ | `Link_shut_down_rate` over $`\Xi \times \mathcal{L}`$ — the shut-down ramp in a link's down row (PyPSA's `ramp_limit_shut_down`), or the full build where it has none |
-| $`\overleftarrow{\bar u}^{f}`$ | `Link_ramp_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the status a committed link's ramp rows carry into a snapshot. At the first snapshot, a fixed modular link that came in running has every module on, since the state it brought in is on or off (`constraints.py:1078-1083`). It is the state carried in otherwise |
+| $`\overleftarrow{\bar u}^{f}`$ | `Link_ramp_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the status a committed link's ramp rows carry into a snapshot. At the first snapshot, a fixed modular link that came in running has every module on, since the state it brought in is on or off (`constraints.py:1092-1097`). It is the state carried in otherwise |
 | $`\Delta^{f,+}`$ | `Link_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how far a link may raise flow between two snapshots. It is its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
 | $`\Delta^{f,-}`$ | `Link_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — how far a link may lower flow between two snapshots. It is its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 
@@ -430,5 +430,5 @@ f_{\xi,t,l} - \overleftarrow{f}_{\xi,t,l} \le \Delta^{f,+}_{\xi,t,l} \qquad \for
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

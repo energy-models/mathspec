@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Security
 
-This file states the security-constrained flows over the outages. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Outage_s` is the flow an outage takes off its branch. Each security row adds a share of it through the outage factors `Line_BODF` and `Transformer_BODF`.
+This file states the security-constrained flows over the outages. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Outage_s` is the flow an outage takes off its branch. Each security row adds a share of it through the outage factors `Line_BODF` and `Transformer_BODF`.
 
 <!-- gallery:begin -->
 ```yaml
@@ -68,16 +68,18 @@ parameters:
       goes out (PyPSA's `BODF`), data prep. It comes from the PTDF of the
       sub-network the period's active branches form. A row exists only where
       the line and the outage are active in the period and share a
-      sub-network. It is -1 at the outaged line itself. The factors are the
-      same in every scenario, because PyPSA takes those of the first scenario
-      (`abstract.py:636`)
+      sub-network. It is -1 at the outaged line itself. PyPSA takes the factors
+      of the first scenario (`abstract.py:645`), and refuses impedances that
+      differ by scenario (`constants.py:33-35`). So the factors are the same in
+      every scenario
     dims: [period, line, outage]
     missing: absent
   Transformer_BODF:
     description: >-
       the share of an outaged branch's flow a transformer takes on when that
       branch goes out, as a line's. A row only where the transformer and the
-      outage are active in the period and share a sub-network
+      outage are active in the period and share a sub-network. It is the same
+      in every scenario, as a line's
     dims: [period, transformer, outage]
     missing: absent
 
@@ -215,8 +217,8 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\beta`$ | `Line_BODF` over $`\mathcal{Y} \times \mathcal{K} \times \mathcal{K}^{\mathrm{out}}`$, `absent` where the data has no row — the share of an outaged branch's flow a line takes on when that branch goes out (PyPSA's `BODF`), data prep. It comes from the PTDF of the sub-network the period's active branches form. A row exists only where the line and the outage are active in the period and share a sub-network. It is -1 at the outaged line itself. The factors are the same in every scenario, because PyPSA takes those of the first scenario (`abstract.py:636`) |
-| $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{K}^{\mathrm{out}}`$, `absent` where the data has no row — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's. A row only where the transformer and the outage are active in the period and share a sub-network |
+| $`\beta`$ | `Line_BODF` over $`\mathcal{Y} \times \mathcal{K} \times \mathcal{K}^{\mathrm{out}}`$, `absent` where the data has no row — the share of an outaged branch's flow a line takes on when that branch goes out (PyPSA's `BODF`), data prep. It comes from the PTDF of the sub-network the period's active branches form. A row exists only where the line and the outage are active in the period and share a sub-network. It is -1 at the outaged line itself. PyPSA takes the factors of the first scenario (`abstract.py:645`), and refuses impedances that differ by scenario (`constants.py:33-35`). So the factors are the same in every scenario |
+| $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{K}^{\mathrm{out}}`$, `absent` where the data has no row — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's. A row only where the transformer and the outage are active in the period and share a sub-network. It is the same in every scenario, as a line's |
 
 #### Definitions
 
@@ -285,5 +287,5 @@ constraints:
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The network
 
-This file states the buses and the balance at each bus. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It lists the sum `Bus_injection` under [`given`](../../reference/language/parameters-variables-constraints.md#given) and adds nothing to it. Every component adds its injection to that sum. `Bus_nodal_balance` is the row `Bus_injection == 0`.
+This file states the buses and the balance at each bus. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It lists the sum `Bus_injection` under [`given`](../../reference/language/parameters-variables-constraints.md#given) and adds nothing to it. Every component adds its injection to that sum. `Bus_nodal_balance` is the row `Bus_injection == 0`.
 
 <!-- gallery:begin -->
 ```yaml
@@ -39,7 +39,7 @@ constraints:
       its own rate, and each passive branch carries its flow. PyPSA dissipates
       a branch's loss half at either end. Each generator, storage unit, store
       and load term enters with its component's `sign`
-      (`constraints.py:1397-1398`, `:1507`), and an inactive load not at all.
+      (`constraints.py:1411-1412`, `:1522`), and an inactive load not at all.
       A bus nothing is attached to has no row. PyPSA refuses one that carries
       load. The file states no assumption for it.
     dims: [scenario, snapshot, bus]
@@ -71,5 +71,5 @@ constraints:
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

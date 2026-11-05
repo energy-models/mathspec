@@ -15,6 +15,7 @@ given:
     Process_maintenance: { dims: [scenario, snapshot, process] }
     Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
   expressions:
+    energy_limit_weight: { dims: [snapshot] }
     tech_capacity_expansion: { dims: [global_constraint] }
     scenario_opex: { dims: [scenario] }
     total_cost: { dims: [] }
@@ -88,7 +89,7 @@ parameters:
       and positive where it injects. A link is a process whose `bus0` rate is
       minus one and whose output rates are its efficiencies. The rate at the
       snapshot the transfer arrives applies, so a delayed port transfers at
-      its arrival snapshot's rate (`constraints.py:1491`)
+      its arrival snapshot's rate (`constraints.py:1505`)
     dims: [scenario, snapshot, process_output]
   Process_output_delay:
     description: >-
@@ -117,6 +118,12 @@ parameters:
     description: a given internal power schedule. A process without one has no row here
     dims: [scenario, snapshot, process]
     missing: absent
+  Process_e_sum_min:
+    description: least energy of its internal power over the horizon. It is minus infinity where no floor is meant
+    dims: [scenario, process]
+  Process_e_sum_max:
+    description: most energy of its internal power over the horizon. It is infinity where no cap is meant
+    dims: [scenario, process]
   Process_p_nom_min:
     description: least nominal power an extendable process may be built at
     dims: [scenario, process]
@@ -162,7 +169,7 @@ parameters:
       whether a process is one of PyPSA's `active_assets`, by its `active`
       flag alone, without build year and lifetime. A unit that is active in no
       snapshot of the horizon still counts. PyPSA refuses one that differs by
-      scenario (`constants.py:51`)
+      scenario (`constants.py:54`)
     dims: [process]
     dtype: bool
   Process_capital_weight:
@@ -215,7 +222,7 @@ expressions:
     description: >-
       how many modules a committed process's status counts: the chosen number
       where the build is extendable and modular, and the modules installed
-      otherwise (`constraints.py:605-610`)
+      otherwise (`constraints.py:619-624`)
     dims: [scenario, process]
     cases:
       chosen: { when: Process_p_nom_extendable AND Process_p_nom_mod > 0, expression: Process_n_mod }
@@ -224,7 +231,7 @@ expressions:
     description: >-
       the build a committed process's ramp rows are taken against: one module
       where the build is modular, since its status counts modules, and the
-      given build otherwise (`constraints.py:1057-1060`)
+      given build otherwise (`constraints.py:1071-1074`)
     dims: [scenario, process]
     cases:
       modular_build: { when: "Process_p_nom_mod > 0", expression: Process_p_nom_mod }
@@ -272,6 +279,16 @@ conditions:
     condition: Process_committable AND Process_active
 
 constraints:
+  Process_e_sum_min:
+    description: "`Process-e_sum_min` — energy of the internal power over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row"
+    dims: [scenario, process]
+    where: Process_e_sum_min
+    expression: sum(Process_p * energy_limit_weight, over=snapshot) >= Process_e_sum_min
+  Process_e_sum_max:
+    description: "`Process-e_sum_max` — energy of the internal power over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row"
+    dims: [scenario, process]
+    where: Process_e_sum_max
+    expression: sum(Process_p * energy_limit_weight, over=snapshot) <= Process_e_sum_max
   Process_fix_p_lower:
     description: "`Process-fix-p-lower` — a fixed process runs at least its minimum, negative for the other way"
     dims: [scenario, snapshot, process]
@@ -330,5 +347,5 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row. PyPSA
       refuses quadratic costs under any risk preference, `omega = 0` included
-      (`optimize.py:477-484`). In data prep you write a `CVaR_omega` row only
+      (`optimize.py:501-508`). In data prep you write a `CVaR_omega` row only
       where a risk preference is set

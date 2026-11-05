@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Process commitment
 
-This file states the commitment rows of PyPSA's `Process`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Process_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Process_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
+This file states the commitment rows of PyPSA's `Process`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Process_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Process_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
 
 <!-- gallery:begin -->
 ```yaml
@@ -72,7 +72,7 @@ parameters:
       one where the process was on before the first snapshot, zero where off.
       It is PyPSA's `up_time_before > 0` for a committable process, and one for
       a process that is not, whose ramp rows PyPSA starts from on
-      (`constraints.py:286`), data prep
+      (`constraints.py:300`), data prep
     dims: [scenario, process]
     dtype: int
   Process_up_time_brought_in:
@@ -80,7 +80,7 @@ parameters:
       one while the up time a process brought into the horizon is still
       running, zero after. It is PyPSA's start `up_time_before` snapshots
       before the first, counted while `min_up_time` has not passed since
-      (`constraints.py:265-286`, `:626-627`), data prep
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, process]
     dtype: int
   Process_down_time_brought_in:
@@ -88,7 +88,7 @@ parameters:
       one while the down time a process brought into the horizon is still
       running, zero after. It is PyPSA's stop `down_time_before` snapshots
       before the first, counted while `min_down_time` has not passed since
-      (`constraints.py:265-286`, `:626-627`), data prep
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, process]
     dtype: int
   Process_start_up_cost:
@@ -144,7 +144,7 @@ expressions:
     description: >-
       the commitment state a process carries into a snapshot. It is off at the
       first snapshot it is active in past the first of the horizon. PyPSA reads a
-      status it did not build as off there (`constraints.py:354`). It is the
+      status it did not build as off there (`constraints.py:368`). It is the
       state carried over otherwise
     dims: [scenario, snapshot, process]
     cases:
@@ -213,7 +213,7 @@ constraints:
       `Process-com-down-time` — a process stopped within its own minimum down time
       is still off, and so are the modules of a modular process that stopped.
       The down time it brought into the horizon counts as one stop before the
-      first snapshot, also where the process is modular (`constraints.py:605-632`)
+      first snapshot, also where the process is modular (`constraints.py:619-646`)
     dims: [scenario, snapshot, process]
     where: Process_committed AND Process_min_down_time > 0
     expression: >-
@@ -356,9 +356,9 @@ assumptions:
 | $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$ — whether internal power is gated by an on/off status decision |
 | $`\mathrm{UT}^{z}`$ | `Process_min_up_time` over $`\Xi \times \mathcal{J}`$ — least snapshots a process stays on once started |
 | $`\mathrm{DT}^{z}`$ | `Process_min_down_time` over $`\Xi \times \mathcal{J}`$ — least snapshots a process stays off once stopped |
-| $`\mathrm{u}^{z,0}`$ | `Process_status_initial` over $`\Xi \times \mathcal{J}`$ — one where the process was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable process, and one for a process that is not, whose ramp rows PyPSA starts from on (`constraints.py:286`), data prep |
-| $`\mathrm{hold}^{z}`$ | `Process_up_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — one while the up time a process brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:265-286`, `:626-627`), data prep |
-| $`\mathrm{rest}^{z}`$ | `Process_down_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — one while the down time a process brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:265-286`, `:626-627`), data prep |
+| $`\mathrm{u}^{z,0}`$ | `Process_status_initial` over $`\Xi \times \mathcal{J}`$ — one where the process was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable process, and one for a process that is not, whose ramp rows PyPSA starts from on (`constraints.py:300`), data prep |
+| $`\mathrm{hold}^{z}`$ | `Process_up_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — one while the up time a process brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:279-300`, `:640-641`), data prep |
+| $`\mathrm{rest}^{z}`$ | `Process_down_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — one while the down time a process brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:279-300`, `:640-641`), data prep |
 | $`\mathrm{c}^{z,\mathrm{up}}`$ | `Process_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{z,\mathrm{dn}}`$ | `Process_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{z,\mathrm{on}}`$ | `Process_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — cost of one snapshot spent on |
@@ -382,7 +382,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the commitment state a process carries into a snapshot. It is off at the first snapshot it is active in past the first of the horizon. PyPSA reads a status it did not build as off there (`constraints.py:354`). It is the state carried over otherwise |
+| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the commitment state a process carries into a snapshot. It is off at the first snapshot it is active in past the first of the horizon. PyPSA reads a status it did not build as off there (`constraints.py:368`). It is the state carried over otherwise |
 | $`\overleftarrow{u}^{\circ z}`$ | `Process_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the state a process carries over into a snapshot: the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Process\_commitment\_opex}`$ | `Process_commitment_opex` over $`\Xi`$ |
 
@@ -561,5 +561,5 @@ u^{z}_{\xi,t,j} \le N^{z}_{j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung
