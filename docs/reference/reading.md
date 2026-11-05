@@ -178,7 +178,7 @@ describes. The condition contains no variable and no parameter with a `where:`
 of its own. So an engine can evaluate every such condition before it reads any
 parameter that has a `where:`.
 
-`program.confining(name)` lists the relations under `missing: excluded` whose
+`program.parameters[name].confined_by` lists the relations under `missing: excluded` whose
 key dimensions the parameter has, by name. With data attached, an engine
 refuses a row of the parameter at a key combination that one of them has no
 row for, and reads the parameter as absent there. It does this before it
