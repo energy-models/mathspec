@@ -2933,6 +2933,12 @@ def test_a_variable_missing_outside_what_the_variable_takes_is_refused(declared,
     assert fragment in _refusal(**{'variables.p': {'dims': ['g'], 'where': 'c', **declared}})
 
 
+def test_a_variable_missing_is_not_blamed_for_a_where_that_failed_to_load():
+    """A `where:` that fails to load is absent from what `missing:` is checked against, not null."""
+    message = _refusal(**{'variables.p': {'dims': ['g'], 'where': 3, 'missing': 0}})
+    assert 'needs a `where:`' not in message, f'only the where: is refused: {message}'
+
+
 @pytest.mark.parametrize(
     'declared',
     [

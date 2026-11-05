@@ -290,13 +290,29 @@ def test_the_order_a_macro_lists_its_keywords_in_is_no_difference():
             'position(snapshot) == 0 AND committable',
             id='the-when-of-a-case',
         ),
+        pytest.param(DISPATCH_MODEL, 'parameters.cost.missing', 1, 1.0, id='a-missing-value-of-a-float-parameter'),
+        pytest.param(
+            DISPATCH_MODEL,
+            'variables.p',
+            {'dims': ['snapshot', 'generator'], 'where': 'p_max > 0', 'missing': 0},
+            {'dims': ['snapshot', 'generator'], 'where': 'p_max > 0', 'missing': 0.0},
+            id='a-missing-value-of-a-continuous-variable',
+        ),
+        pytest.param(
+            DISPATCH_MODEL,
+            'variables.p',
+            {'dims': ['snapshot', 'generator'], 'where': 'p_max > 0', 'domain': 'integer', 'missing': 1},
+            {'dims': ['snapshot', 'generator'], 'where': 'p_max > 0', 'domain': 'integer', 'missing': 1.0},
+            id='a-missing-value-of-an-integer-variable',
+        ),
     ],
 )
 def test_two_spellings_of_one_spec_write_one_canonical_text(source, key, written, respelled):
     """A list of names and the columns of a relation in a call name a set, and the program reads them sorted. A
     condition is read by its own grammar. The form printed each as the file wrote it, so two files whose lists
     differ in order, or whose conditions differ in the order of AND or OR, the case of a keyword, a bracket or a
-    space, stated one spec and wrote two texts."""
+    space, stated one spec and wrote two texts. A ``missing:`` number written as ``1`` stayed an int where ``1.0``
+    was a float, so the two loaded to equal specs and wrote two texts."""
     texts = {ms.to_spec(varied(source, **{key: text})).to_yaml(canonical=True) for text in (written, respelled)}
     assert len(texts) == 1, 'one canonical text for both spellings'
 

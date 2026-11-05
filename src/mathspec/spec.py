@@ -393,8 +393,11 @@ class ParameterSpec(_StrictSpec):
 
     @field_validator('missing', mode='before')
     @classmethod
-    def _a_reading_or_a_value(cls, v: object) -> object:
-        """``inf`` is a string to YAML and a number to the expression grammar, so it is taken as the number."""
+    def _a_reading_or_a_value(cls, v: object, info: ValidationInfo[object]) -> object:
+        """``inf`` is a string to YAML and a number to the expression grammar, so it is taken as the number.
+
+        A number on a float parameter loads as a float, so ``1`` and ``1.0`` are one spec and write one text.
+        """
         if v is None:
             raise _missing_null(
                 'a parameter', 'Write absent for a row that is not there, or leave the key out for refused.'
@@ -407,6 +410,8 @@ class ParameterSpec(_StrictSpec):
         if isinstance(v, float) and math.isnan(v):
             msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _WORDS + '.'
             raise ValueError(msg)
+        if info.data.get('dtype') == 'float' and isinstance(v, int) and not isinstance(v, bool):
+            return float(v)
         return v
 
     @model_validator(mode='after')
@@ -478,44 +483,39 @@ class VariableSpec(_StrictSpec):
     where: str | None = None
     bounds: BoundsSpec = BoundsSpec()
     domain: VariableDomain = 'continuous'
-    missing: Annotated[Literal['absent'] | int | float, WithJsonSchema(_VARIABLE_MISSING_SCHEMA)] = 'absent'
+    missing: Annotated[Literal['absent'] | float, WithJsonSchema(_VARIABLE_MISSING_SCHEMA)] = 'absent'
     description: str | None = None
 
     @field_validator('missing', mode='before')
     @classmethod
-    def _absent_or_a_number(cls, v: object) -> object:
-        """A variable has no data, so ``refused`` does not apply to it, and only a finite number can stand for it."""
+    def _absent_or_a_number(cls, v: object, info: ValidationInfo[object]) -> object:
+        """A variable has no data, so ``refused`` does not apply to it, and only a finite number can stand for it.
+
+        The number stands for the variable where its mask leaves it out, so a mask must leave something out. The number
+        lies in the variable's domain. The bounds hold only inside the mask, so the number may lie outside them. It
+        loads as a float, as a bound does, so ``0`` and ``0.0`` are one spec. The checks run on the number as written,
+        so a refusal quotes it, and skip a ``where:`` or ``domain:`` that failed to load.
+        """
         if v is None:
             raise _missing_null('a variable', 'Write a number, or leave the key out for absent.')
-        if v == 'absent' or (isinstance(v, int | float) and not isinstance(v, bool) and math.isfinite(v)):
+        if v == 'absent':
             return v
-        msg = (
-            f'missing: {_as_yaml(v)} on a variable, which takes absent or a finite number. A variable has no data, '
-            f'so refused and a flag apply only to a parameter.'
-        )
-        raise ValueError(msg)
-
-    @model_validator(mode='after')
-    def _a_number_fits_the_variable(self) -> VariableSpec:
-        """The number stands for the variable where its mask leaves it out, so a mask must leave something out.
-
-        The number lies in the variable's domain. The bounds hold only inside
-        the mask, so the number may lie outside them.
-        """
-        v = self.missing
-        if isinstance(v, str):
-            return self
-        if self.where is None:
+        if not isinstance(v, int | float) or isinstance(v, bool) or not math.isfinite(v):
+            msg = (
+                f'missing: {_as_yaml(v)} on a variable, which takes absent or a finite number. A variable has no '
+                f'data, so refused and a flag apply only to a parameter.'
+            )
+        elif 'where' in info.data and info.data['where'] is None:
             msg = (
                 f'missing: {_as_yaml(v)} needs a `where:`. A variable with no `where:` exists at every '
                 f'coordinate of its dimensions, so no coordinate is missing. Add a `where:`, or delete `missing:`.'
             )
-        elif self.domain == 'binary' and v not in (0, 1):
+        elif info.data.get('domain') == 'binary' and v not in (0, 1):
             msg = f'missing: {_as_yaml(v)} on a binary variable, which takes 0 or 1.'
-        elif self.domain == 'integer' and not float(v).is_integer():
+        elif info.data.get('domain') == 'integer' and not float(v).is_integer():
             msg = f'missing: {_as_yaml(v)} on an integer variable, which takes an integer.'
         else:
-            return self
+            return float(v)
         raise ValueError(msg)
 
 
