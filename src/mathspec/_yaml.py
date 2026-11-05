@@ -30,7 +30,6 @@ import yaml
 
 from mathspec.errors import SchemaError
 
-#: The YAML 1.2 core-schema booleans. No other scalar loads as a bool.
 _BOOL_1_2 = re.compile(r'^(?:true|True|TRUE|false|False|FALSE)$')
 
 
@@ -54,7 +53,6 @@ _StrictLoader.yaml_implicit_resolvers = {
 _StrictLoader.add_implicit_resolver('tag:yaml.org,2002:bool', _BOOL_1_2, list('tTfF'))
 
 
-#: PyYAML's tag for ``<<:``, the one key a mapping may carry more than once.
 _MERGE = 'tag:yaml.org,2002:merge'
 
 
@@ -138,12 +136,9 @@ def parse_yaml(text: str, origin: str = '<string>') -> dict[str, object]:
     return data
 
 
-#: The space between two sentences: one space after a full stop, a question mark or an exclamation mark, and
-#: before a capital letter or a backtick, so the space in ``e.g. the`` is not one.
 _SENTENCE_BREAK = re.compile(r'(?<=[.!?]) (?=[A-Z`])')
 
 
-#: The longest line, indent and key included, that a list or a mapping is written on.
 _LINE_LIMIT = 100
 
 
@@ -181,7 +176,6 @@ class _Dumper(yaml.SafeDumper):
             self.column += len(sentence)
 
 
-#: A value a one-line mapping may hold: a number, a boolean, or a name such as ``p_max``, ``binary`` or ``-inf``.
 _WORD = re.compile(r'[\w.+-]+')
 
 

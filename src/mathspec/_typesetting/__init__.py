@@ -59,7 +59,6 @@ __all__ = [
 FormatName = Literal['latex', 'markdown', 'typst']
 """The name of an output format, as the command line takes it."""
 
-#: Every format, by name. Adding one is a module plus a row.
 FORMATS: dict[FormatName, Format] = {
     'latex': LatexFormat(),
     'markdown': MarkdownFormat(),

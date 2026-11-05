@@ -96,9 +96,12 @@ To learn what the project _is_, read [docs/](docs/index.md), and
 ## Code and tests
 
 - **No explanatory inline comments.** Complex logic becomes a helper with a
-  docstring. Inline stays: pragmas with their reason, `#:` attribute docs,
-  section banners, a case label where parametrizing would distort the test,
-  and a one-line justification of a line that reads as a mistake.
+  docstring. Inline stays: pragmas with their reason, section banners, a case
+  label where parametrizing would distort the test, and a one-line
+  justification of a line that reads as a mistake.
+- **A public attribute has a docstring on the line after it.** The API pages
+  render that docstring and ignore a `#:` comment. A private attribute has
+  neither.
 - **Put the claim in the message that prints.** An assertion message is
   required where the claim is not on the line: a literal collection, a count,
   a tolerance, an absence.
@@ -118,7 +121,8 @@ To learn what the project _is_, read [docs/](docs/index.md), and
   takes, returns, how it fails, and what it guarantees, in the caller's terms.
   A private helper carries the constraint that made it exist. Where the
   signature already says what a function takes, write the one-line docstring
-  and no `Args:` block. `to_spec` is the model.
+  and no `Args:` block. `to_spec` is the model. A docstring is prose, so the
+  [prose-writing skill](.claude/skills/prose-writing/SKILL.md) gates its words.
 - **Rationale goes in the PR, history goes in git.** Neither goes in the code.
 - **A number in the tree carries a `#nnn`** to the PR of this repository that
   measured it, beside its conclusion. The method and base commit stay in that

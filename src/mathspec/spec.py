@@ -53,7 +53,6 @@ if TYPE_CHECKING:
     from pydantic_core import CoreSchema
 
 
-#: What ``mathspec.spec`` promises a consumer, sorted.
 __all__ = [
     'BUILTIN_NAMES',
     'AssumptionSpec',
@@ -93,7 +92,6 @@ class _StrictSpec(BaseModel):
 
     model_config = ConfigDict(extra='forbid')
 
-    #: What this entry or section is called in a YAML file, for the error message.
     _label: ClassVar[str]
 
     @model_validator(mode='before')
@@ -131,8 +129,6 @@ NUMERIC_DTYPES: frozenset[ParameterDtype] = frozenset({'float', 'int'})
 ``str`` parameter is a label and a ``bool`` parameter is a condition, so neither is a number.
 """
 
-#: What a parameter's ``missing:`` is written as. The validator takes ``inf``
-#: and ``-inf`` as the numbers they name, which an editor would otherwise flag.
 _MISSING_SCHEMA: dict[str, object] = {
     'anyOf': [
         {'enum': list(get_args(RelationMissing))},
@@ -142,10 +138,8 @@ _MISSING_SCHEMA: dict[str, object] = {
     ],
 }
 
-#: What a variable's ``missing:`` is written as: ``absent``, or a finite number.
 _VARIABLE_MISSING_SCHEMA: dict[str, object] = {'anyOf': [{'enum': ['absent']}, {'type': 'number'}]}
 
-#: The words a parameter's ``missing:`` takes beside a value, for a refusal to list.
 _WORDS = ', '.join(get_args(RelationMissing))
 
 

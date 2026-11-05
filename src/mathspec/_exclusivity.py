@@ -51,7 +51,6 @@ if TYPE_CHECKING:
 
     from mathspec.program import ComparisonOperator, Condition, DeclaredDtype, Expression
 
-#: The most cells one pair of masks may multiply out to. Split a larger pair into several expressions.
 CELL_BUDGET = 8192
 
 
@@ -122,21 +121,14 @@ def _witness(
 class Special(Enum):
     """Values a cell can hold that are not values of the subject's own type."""
 
-    #: No row in the table: compares false under every comparator, and is not `defined`.
     NULL = 'null'
-    #: Positive infinity: every comparison reads it as a number, and it is not `defined`.
     POS_INF = '+inf'
-    #: Negative infinity, read the same way.
     NEG_INF = '-inf'
-    #: A label none of the masks names, which stands for every such label at once.
     OTHER = 'other'
 
 
-#: What one subject's value is, in one cell.
 Cell = float | str | bool | int | datetime.date | Special
 
-#: What a comparison in a condition is written against: a number, a label, or a date.
-#: ``position()`` counts in integers, which are numbers here.
 _Literal = float | str | datetime.date
 
 
@@ -157,7 +149,6 @@ class Subject:
     kind: Literal['param', 'expression', 'dim', 'rank', 'relation', 'relation_pair', 'variable']
     name: str
     qualifier: str | None = None
-    #: A rank's group columns, or the two columns a pair compares, in the order of ``name`` and ``qualifier``.
     group: tuple[str, ...] = ()
 
     def __str__(self) -> str:
@@ -218,7 +209,6 @@ class _Grid:
         )
 
 
-#: A comparator against its mirror, for a test written with its sides swapped.
 _FLIPPED: Mapping[ComparisonOperator, ComparisonOperator] = {
     '<': '>',
     '>': '<',
