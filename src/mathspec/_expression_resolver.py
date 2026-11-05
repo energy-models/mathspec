@@ -71,15 +71,8 @@ if TYPE_CHECKING:
     from mathspec._resolution import Namespace
 
 
-#: An ``edge=`` as a translation carries it: whether it wraps, and the number
-#: the vacated positions contribute where it does not.
 _Edge = tuple[bool, float | None]
 
-#: How deep a resolved tree may be, with every named expression it reads
-#: written in. Every pass after resolution recurses over this tree. The limit
-#: is three times what one text may nest, because a text reads other texts: a
-#: chain of 200 entries survived every pass on a default stack and 250 did not
-#: (#643).
 MAX_RESOLVED_DEPTH = 3 * MAX_DEPTH
 
 

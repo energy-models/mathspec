@@ -3,9 +3,9 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Processes, the commitment
+# Process commitment
 
-This file states the commitment rows of PyPSA's `Process`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to the sum `scenario_opex`. It reads `Process_active`, `Process_maintenance_capacity`, `Process_maintenance_pu`, `Process_maintenance_status`, `Process_modules_installed`, `Process_n_mod` and 10 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states the commitment rows of PyPSA's `Process`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Process_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Process_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
 
 <!-- gallery:begin -->
 ```yaml
@@ -29,6 +29,7 @@ given:
     Process_maintenance_status: { dims: [scenario, snapshot, process] }
     Process_p_nom_ext: { dims: [process] }
   expressions:
+    Process_modules: { dims: [process, scenario] }
     scenario_opex: { dims: [scenario] }
   conditions:
     Process_committed: { dims: [process, snapshot] }
@@ -41,9 +42,9 @@ dimensions:
     dtype: datetime
     ordered: true
   process:
-    description: generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate
+    description: generalised multi-port converters, each with an internal power that every port draws or delivers at its own rate
   period:
-    description: investment periods — PyPSA's `investment_periods`
+    description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
     ordered: true
 
@@ -67,23 +68,29 @@ parameters:
     dims: [scenario, process]
     dtype: int
   Process_status_initial:
-    description: one where the process was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep
+    description: >-
+      one where the process was on before the first snapshot, zero where off.
+      It is PyPSA's `up_time_before > 0` for a committable process, and one for
+      a process that is not, whose ramp rows PyPSA starts from on
+      (`constraints.py:300`), data prep
     dims: [scenario, process]
     dtype: int
-  Process_must_stay_up:
+  Process_up_time_brought_in:
     description: >-
-      true while the up time a process brought into the horizon still binds —
-      data prep, since `position()` compares against a literal rather than a
-      parameter
+      one while the up time a process brought into the horizon is still
+      running, zero after. It is PyPSA's start `up_time_before` snapshots
+      before the first, counted while `min_up_time` has not passed since
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, process]
-    dtype: bool
-  Process_must_stay_down:
+    dtype: int
+  Process_down_time_brought_in:
     description: >-
-      true while the down time a process brought into the horizon still binds —
-      PyPSA's `min_down_time - down_time_before` snapshots, where
-      `down_time_before > 0`, data prep for the same reason
+      one while the down time a process brought into the horizon is still
+      running, zero after. It is PyPSA's stop `down_time_before` snapshots
+      before the first, counted while `min_down_time` has not passed since
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, process]
-    dtype: bool
+    dtype: int
   Process_start_up_cost:
     description: cost of one start in this snapshot
     dims: [scenario, snapshot, process]
@@ -95,23 +102,23 @@ parameters:
     dims: [scenario, snapshot, process]
   Process_big_m:
     description: >-
-      the bound a committed extendable process's big-M rows release it by — the
-      build cap `p_nom_max` times the highest `p_max_pu`, where the cap is
-      finite and positive. Elsewhere it is `committable_big_m` times the
-      highest `p_max_pu`, and where that keyword is not given, ten times the
+      the bound a committed extendable process's big-M rows release it by,
+      data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`,
+      where the cap is finite and positive. Elsewhere it is
+      `committable_big_m` times the highest `p_max_pu`
+      (`components.py:1052-1123`). Without that keyword, it is ten times the
       largest of the peak total load and the component's largest finite
-      `p_nom` and `p_nom_max`, or 1e6 where there is none of them
-      (`components.py:1050-1121`). Below the internal power a solve wants, it caps that
-      internal power; data prep
+      `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below
+      the internal power a solve wants, it caps that internal power
     dims: [scenario, process]
-    missing: neutral
+    missing: absent
 
 variables:
   Process_status:
     description: >-
-      `Process-status` — how much of a committable process is on: an integer
-      the rows below cap at one, or at the module count where the build is
-      modular
+      `Process-status` — how much of a committable process is on. It is an
+      integer the rows below cap at one, or at the module count where the
+      build is modular
     dims: [scenario, snapshot, process]
     where: Process_committed
     domain: integer
@@ -135,17 +142,17 @@ variables:
 expressions:
   Process_previous_status:
     description: >-
-      the commitment state a process carries into a snapshot — off at the
-      first snapshot it stands in past the first of the horizon, as PyPSA
-      reads a status it did not build (`constraints.py:298`), and the state
-      carried over otherwise
+      the commitment state a process carries into a snapshot. It is off at the
+      first snapshot it is active in past the first of the horizon. PyPSA reads a
+      status it did not build as off there (`constraints.py:368`). It is the
+      state carried over otherwise
     dims: [scenario, snapshot, process]
     cases:
       opening_late: { when: "position(snapshot) > 0 AND NOT shift(Process_active, along=snapshot, offset=1)", expression: 0 }
     otherwise: Process_status_carried_over
   Process_status_carried_over:
     description: >-
-      the state a process carries over into a snapshot — the state it brought
+      the state a process carries over into a snapshot: the state it brought
       into the horizon at the first, the previous snapshot's after that
     dims: [scenario, snapshot, process]
     cases:
@@ -154,16 +161,16 @@ expressions:
   Process_commitment_opex:
     expression: >-
       sum(sum(((Process_status * Process_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
-      + sum(sum(Process_start_up * Process_start_up_cost, over=process), over=snapshot)
-      + sum(sum(Process_shut_down * Process_shut_down_cost, over=process), over=snapshot)
+      + sum(sum((Process_start_up * Process_start_up_cost) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
+      + sum(sum((Process_shut_down * Process_shut_down_cost) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
     adds_to: scenario_opex
 
 conditions:
   Process_com_ext:
     description: >-
-      a committable process with an extendable, non-modular build that stands
-      in the snapshot's period — PyPSA's `com-ext` rows, whose status is
-      relaxed against the chosen build
+      a committable process with an extendable, non-modular build that is active
+      in the snapshot's period. These are PyPSA's `com-ext` rows, whose status
+      is relaxed against the chosen build
     condition: >-
       Process_committable
       AND Process_p_nom_extendable
@@ -172,12 +179,12 @@ conditions:
 
 constraints:
   Process_com_p_lower:
-    description: "`Process-com-p-lower` — a committed process runs at least its minimum; off, at least nothing"
+    description: "`Process-com-p-lower` — a committed process runs at least its minimum. Off, it runs at least nothing"
     dims: [scenario, snapshot, process]
     where: Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
     expression: Process_p >= Process_p_min_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
   Process_com_p_upper:
-    description: "`Process-com-p-upper` — a committed process runs at most what is available; off, at most nothing"
+    description: "`Process-com-p-upper` — a committed process runs at most what is available. Off, it runs at most nothing"
     dims: [scenario, snapshot, process]
     where: Process_committed AND NOT Process_p_nom_extendable AND NOT (Process_p_nom_mod > 0)
     expression: Process_p <= Process_p_max_pu * Process_p_nom * (Process_status - Process_maintenance_pu * Process_maintenance_status)
@@ -193,32 +200,25 @@ constraints:
     expression: Process_shut_down >= Process_previous_status - Process_status
   Process_com_up_time:
     description: >-
-      `Process-com-up-time` — a process started within its own minimum up time
-      is still on. The first snapshot's share of the window is the brought-in
-      up time's, which the must-stay-up mask carries
+      `Process-com-up-time` — a process started within its own minimum up time is
+      still on. The up time it brought into the horizon counts as a start
+      before the first snapshot
     dims: [scenario, snapshot, process]
-    where: Process_committed AND Process_min_up_time > 0 AND position(snapshot) > 0
-    expression: sum_back(Process_start_up, along=snapshot, window=Process_min_up_time) <= Process_status
+    where: Process_committed AND Process_min_up_time > 0
+    expression: >-
+      sum_back(Process_start_up, along=snapshot, window=Process_min_up_time)
+      + Process_up_time_brought_in <= Process_status
   Process_com_down_time:
     description: >-
-      `Process-com-down-time` — a process stopped within its own minimum down
-      time is still off. The first snapshot's share of the window is the
-      brought-in down time's, which the must-stay-down mask carries
+      `Process-com-down-time` — a process stopped within its own minimum down time
+      is still off, and so are the modules of a modular process that stopped.
+      The down time it brought into the horizon counts as one stop before the
+      first snapshot, also where the process is modular (`constraints.py:619-646`)
     dims: [scenario, snapshot, process]
-    where: Process_committed AND Process_min_down_time > 0 AND position(snapshot) > 0
-    expression: sum_back(Process_shut_down, along=snapshot, window=Process_min_down_time) <= 1 - Process_status
-  Process_com_status_must_stay_up:
-    description: "`Process-com-status-min_up_time_must_stay_up` — a process still serving the up time it brought in stays on"
-    dims: [scenario, snapshot, process]
-    where: Process_committed AND Process_must_stay_up
-    expression: Process_status == 1
-  Process_com_status_must_stay_down:
-    description: >-
-      `Process-com-status-min_down_time_must_stay_up` — a process still serving
-      the down time it brought in stays off; PyPSA names the row `_must_stay_up`
-    dims: [scenario, snapshot, process]
-    where: Process_committed AND Process_must_stay_down
-    expression: Process_status == 0
+    where: Process_committed AND Process_min_down_time > 0
+    expression: >-
+      sum_back(Process_shut_down, along=snapshot, window=Process_min_down_time)
+      + Process_down_time_brought_in <= Process_modules - Process_status
   Process_com_ext_p_upper_cap:
     description: >-
       `Process-com-ext-p-upper-cap` — a committed extendable process runs
@@ -227,14 +227,14 @@ constraints:
     where: Process_com_ext
     expression: Process_p <= Process_p_max_pu * (Process_p_nom_ext - Process_maintenance_pu * Process_maintenance_capacity)
   Process_com_ext_p_upper_big_m:
-    description: "`Process-com-ext-p-upper-bigM` — off, a process does not run; on, the big M is no bound"
+    description: "`Process-com-ext-p-upper-bigM` — off, a process does not run. On, the big M is no bound"
     dims: [scenario, snapshot, process]
     where: Process_com_ext
     expression: Process_p <= Process_big_m * Process_status
   Process_com_ext_p_lower:
     description: >-
-      `Process-com-ext-p-lower` — a committed extendable process runs at
-      least its minimum of the chosen build; off, the big M releases the row
+      `Process-com-ext-p-lower` — a committed extendable process runs at least
+      its minimum of the chosen build. Off, the big M releases the row
     dims: [scenario, snapshot, process]
     where: Process_com_ext
     expression: >-
@@ -266,24 +266,27 @@ constraints:
   Process_status_p_fixed_upper:
     description: >-
       `Process-status-p-fixed-upper` — a status is at most the modules in
-      place, an explicit row as PyPSA writes it: one where the build is not
-      modular, and the fixed build's whole count of modules where it is
+      place, an explicit row as PyPSA writes it. The bound is one where the
+      build is not modular, and the fixed build's whole count of modules where
+      it is
     dims: [scenario, snapshot, process]
     where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
     expression: Process_status <= Process_modules_installed
   Process_start_up_p_fixed_upper:
     description: >-
       `Process-start_up-p-fixed-upper` — a start is at most the modules in
-      place, an explicit row as PyPSA writes it: one where the build is not
-      modular, and the fixed build's whole count of modules where it is
+      place, an explicit row as PyPSA writes it. The bound is one where the
+      build is not modular, and the fixed build's whole count of modules where
+      it is
     dims: [scenario, snapshot, process]
     where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
     expression: Process_start_up <= Process_modules_installed
   Process_shut_down_p_fixed_upper:
     description: >-
       `Process-shut_down-p-fixed-upper` — a stop is at most the modules in
-      place, an explicit row as PyPSA writes it: one where the build is not
-      modular, and the fixed build's whole count of modules where it is
+      place, an explicit row as PyPSA writes it. The bound is one where the
+      build is not modular, and the fixed build's whole count of modules where
+      it is
     dims: [scenario, snapshot, process]
     where: Process_committed AND NOT (Process_p_nom_extendable AND Process_p_nom_mod > 0)
     expression: Process_shut_down <= Process_modules_installed
@@ -302,6 +305,15 @@ constraints:
     dims: [scenario, snapshot, process]
     where: Process_committed AND Process_p_nom_extendable AND Process_p_nom_mod > 0
     expression: Process_shut_down <= Process_n_mod
+
+assumptions:
+  Process_big_m_where_committed_and_extendable:
+    holds: "Process_big_m"
+    where: "Process_com_ext"
+    description: >-
+      a committable process with an extendable, non-modular build has
+      the big-M its rows release it by — PyPSA computes one for each
+      (`get_committable_big_m_values`)
 ```
 
 #### Given
@@ -324,6 +336,7 @@ constraints:
 | $`N^{z}`$ | `Process_n_mod` over $`\mathcal{J}`$ |
 | $`z`$ | `Process_p` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ |
+| $`\mathrm{M}^{z}`$ | `Process_modules` over $`\mathcal{J} \times \Xi`$, an expression another file defines |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Process_commitment_opex` to |
 | $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{J} \times \mathcal{T}`$, a condition another file defines |
 
@@ -331,8 +344,8 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
-| $`\mathcal{J}`$ | index $`j`$ — `process` — generalized multi-port converters, each with an internal power that every port draws or delivers at its own rate |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
+| $`\mathcal{J}`$ | index $`j`$ — `process` — generalised multi-port converters, each with an internal power that every port draws or delivers at its own rate |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 
@@ -340,22 +353,22 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\mathcal{J} \times \Xi`$, `neutral` where the data has no row — the bound a committed extendable process's big-M rows release it by — the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu`, and where that keyword is not given, ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`, or 1e6 where there is none of them (`components.py:1050-1121`). Below the internal power a solve wants, it caps that internal power; data prep |
+| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\mathcal{J} \times \Xi`$, `absent` where the data has no row — the bound a committed extendable process's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1052-1123`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the internal power a solve wants, it caps that internal power |
 | $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$ — whether internal power is gated by an on/off status decision |
+| $`\mathrm{rest}^{z}`$ | `Process_down_time_brought_in` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — one while the down time a process brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:279-300`, `:640-641`), data prep |
 | $`\mathrm{DT}^{z}`$ | `Process_min_down_time` over $`\mathcal{J} \times \Xi`$ — least snapshots a process stays off once stopped |
 | $`\mathrm{UT}^{z}`$ | `Process_min_up_time` over $`\mathcal{J} \times \Xi`$ — least snapshots a process stays on once started |
-| $`\mathrm{rest}^{z}`$ | `Process_must_stay_down` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — true while the down time a process brought into the horizon still binds — PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep for the same reason |
-| $`\mathrm{hold}^{z}`$ | `Process_must_stay_up` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — true while the up time a process brought into the horizon still binds — data prep, since `position()` compares against a literal rather than a parameter |
 | $`\mathrm{c}^{z,\mathrm{dn}}`$ | `Process_shut_down_cost` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{z,\mathrm{on}}`$ | `Process_stand_by_cost` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — cost of one snapshot spent on |
 | $`\mathrm{c}^{z,\mathrm{up}}`$ | `Process_start_up_cost` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — cost of one start in this snapshot |
-| $`\mathrm{u}^{z,0}`$ | `Process_status_initial` over $`\mathcal{J} \times \Xi`$ — one where the process was on before the first snapshot, zero where off — PyPSA's `up_time_before > 0`, data prep |
+| $`\mathrm{u}^{z,0}`$ | `Process_status_initial` over $`\mathcal{J} \times \Xi`$ — one where the process was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable process, and one for a process that is not, whose ramp rows PyPSA starts from on (`constraints.py:300`), data prep |
+| $`\mathrm{hold}^{z}`$ | `Process_up_time_brought_in` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — one while the up time a process brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:279-300`, `:640-641`), data prep |
 
 #### Conditions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{on}^{z,\mathrm{com,ext}}`$ | `Process_com_ext` over $`\mathcal{J} \times \mathcal{T}`$ — a committable process with an extendable, non-modular build that stands in the snapshot's period — PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
+| $`\mathrm{on}^{z,\mathrm{com,ext}}`$ | `Process_com_ext` over $`\mathcal{J} \times \mathcal{T}`$ — a committable process with an extendable, non-modular build that is active in the snapshot's period. These are PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
 
 #### Variables
 
@@ -363,15 +376,15 @@ constraints:
 |---|---|
 | $`\mathit{dn}^{z}`$ | `Process_shut_down` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-shut_down` — how much of a committable process turns off this snapshot, capped as the status is |
 | $`\mathit{up}^{z}`$ | `Process_start_up` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-start_up` — how much of a committable process turns on this snapshot, capped as the status is |
-| $`u^{z}`$ | `Process_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-status` — how much of a committable process is on: an integer the rows below cap at one, or at the module count where the build is modular |
+| $`u^{z}`$ | `Process_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-status` — how much of a committable process is on. It is an integer the rows below cap at one, or at the module count where the build is modular |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
 | $`\mathit{Process\_commitment\_opex}`$ | `Process_commitment_opex` over $`\Xi`$ |
-| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the commitment state a process carries into a snapshot — off at the first snapshot it stands in past the first of the horizon, as PyPSA reads a status it did not build (`constraints.py:298`), and the state carried over otherwise |
-| $`\overleftarrow{u}^{\circ z}`$ | `Process_status_carried_over` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the state a process carries over into a snapshot — the state it brought into the horizon at the first, the previous snapshot's after that |
+| $`\overleftarrow{u}^{z}`$ | `Process_previous_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the commitment state a process carries into a snapshot. It is off at the first snapshot it is active in past the first of the horizon. PyPSA reads a status it did not build as off there (`constraints.py:368`). It is the state carried over otherwise |
+| $`\overleftarrow{u}^{\circ z}`$ | `Process_status_carried_over` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the state a process carries over into a snapshot: the state it brought into the horizon at the first, the previous snapshot's after that |
 
 #### Notation
 
@@ -412,7 +425,7 @@ u^{z}_{j,\xi,t} \ge 0, u^{z}_{j,\xi,t} \in \mathbb{Z} \qquad \forall\, j \in \ma
 **`Process_commitment_opex`**
 
 ```math
-\mathit{Process\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} u^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{on}}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{up}^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{up}}_{j,\xi,t} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{dn}^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{dn}}_{j,\xi,t} \qquad \forall\, \xi \in \Xi
+\mathit{Process\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} u^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{on}}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{up}^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{up}}_{j,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{dn}^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{dn}}_{j,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 **`Process_previous_status`**
@@ -432,7 +445,7 @@ u^{z}_{j,\xi,t} \ge 0, u^{z}_{j,\xi,t} \in \mathbb{Z} \qquad \forall\, j \in \ma
 **`Process_com_down_time`**
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}^{z}} \mathit{dn}^{z}_{j,\xi,t'} \le 1 - u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{DT}^{z}_{j,\xi} > 0 \wedge \mathrm{pos}(t) > 0
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}^{z}} \mathit{dn}^{z}_{j,\xi,t'} + \mathrm{rest}^{z}_{j,\xi,t} \le \mathrm{M}^{z}_{j,\xi} - u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{DT}^{z}_{j,\xi} > 0
 ```
 
 **`Process_com_ext_p_lower`**
@@ -483,18 +496,6 @@ z_{j,\xi,t} \ge \underline{\mathrm{z}}_{j,\xi,t} \cdot \mathrm{z}^{\mathrm{nom}}
 z_{j,\xi,t} \le \overline{\mathrm{z}}_{j,\xi,t} \cdot \mathrm{z}^{\mathrm{nom}}_{j,\xi} \cdot \left( u^{z}_{j,\xi,t} - \gamma^{z}_{j,\xi} \cdot \mu^{z,u}_{j,\xi,t} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right)
 ```
 
-**`Process_com_status_must_stay_down`**
-
-```math
-u^{z}_{j,\xi,t} = 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{rest}^{z}_{j,\xi,t}
-```
-
-**`Process_com_status_must_stay_up`**
-
-```math
-u^{z}_{j,\xi,t} = 1 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{hold}^{z}_{j,\xi,t}
-```
-
 **`Process_com_transition_shut_down`**
 
 ```math
@@ -510,7 +511,7 @@ u^{z}_{j,\xi,t} = 1 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \ma
 **`Process_com_up_time`**
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}^{z}} \mathit{up}^{z}_{j,\xi,t'} \le u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{UT}^{z}_{j,\xi} > 0 \wedge \mathrm{pos}(t) > 0
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}^{z}} \mathit{up}^{z}_{j,\xi,t'} + \mathrm{hold}^{z}_{j,\xi,t} \le u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{UT}^{z}_{j,\xi} > 0
 ```
 
 **`Process_shut_down_p_fixed_upper`**
@@ -548,4 +549,17 @@ u^{z}_{j,\xi,t} \le \mathrm{N}^{z,\mathrm{fix}}_{j,\xi} \qquad \forall\, j \in \
 ```math
 u^{z}_{j,\xi,t} \le N^{z}_{j} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
+
+#### Assumptions
+
+**`Process_big_m_where_committed_and_extendable`**
+
+```math
+\mathrm{M}^{z}_{j,\xi} \text{ is defined} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t}
+```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 25 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

@@ -12,7 +12,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T},\ \mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E}`$ |
-| $`\mathcal{Z}`$ | index $`z`$ — `zone` with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
+| $`\mathcal{Z}`$ | index $`z`$ — `zone` (labels `north`, `south`) with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
 
 #### Parameters
 
@@ -20,14 +20,15 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 |---|---|
 | $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{B} \times \mathcal{G}`$ |
 | $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{B} \times \mathcal{G}`$ |
-| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$, `neutral` where the data has no row |
-| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{B} \times \mathcal{G}`$, `neutral` where the data has no row |
+| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$, $`0`$ where the data has no row |
+| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{B} \times \mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{budget}`$ | `budget` (scalar) |
-| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, `neutral` where the data has no row |
+| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{eta}`$ | `eta` over $`\mathcal{G}`$ |
 | $`\mathrm{growth}`$ | `growth` (scalar) |
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
+| $`\mathrm{link\_eff}`$ | `link_eff` over $`\mathcal{U} \times \mathcal{G}`$, only where $`\left( u,\ g \right) \in \mathrm{connection}`$, $`1`$ where the data has no row |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{U} \times \mathcal{T}`$ |
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
@@ -47,7 +48,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | Symbol | Meaning |
 |---|---|
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{G} \times \mathcal{T}`$ |
-| $`\mathit{headroom}`$ | `headroom` (scalar), `neutral` where the mask leaves it out |
+| $`\mathit{headroom}`$ | `headroom` (scalar), $`0`$ where the mask leaves it out |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{on}`$ | `on` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{op\_cost}`$ | `op_cost` over $`\mathcal{G} \times \mathcal{T}`$ |

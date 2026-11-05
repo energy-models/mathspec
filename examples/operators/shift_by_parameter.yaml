@@ -3,9 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  Translation by an offset that differs per entity — `by:` names an integer
-  parameter, so each technology is reached by its own lead time rather than by
-  one the file had to fix.
+  A shift by an offset that differs per entity: `offset=` is an integer
+  parameter. Each technology is shifted by its own lead time.
 
 dimensions:
   technology: { dtype: str }

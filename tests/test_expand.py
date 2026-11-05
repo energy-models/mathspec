@@ -32,8 +32,8 @@ if TYPE_CHECKING:
 MASKED = varied(
     CURVE,
     **{
-        'parameters.bp_x.missing': 'neutral',
-        'parameters.bp_y.missing': 'neutral',
+        'parameters.bp_x.missing': 0,
+        'parameters.bp_y.missing': 0,
         'piecewise.cost_curve.method': 'lp',
         'piecewise.cost_curve.points': 'bp_x',
         'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '>=']],
@@ -195,7 +195,7 @@ SMALL_CURVE = {
 
 
 #: A curve under `points:` names what a missing row of each values table means.
-UNDER_POINTS = {'piecewise.curve.points': 'bx', 'parameters.bx.missing': 'neutral', 'parameters.by.missing': 'neutral'}
+UNDER_POINTS = {'piecewise.curve.points': 'bx', 'parameters.bx.missing': 0, 'parameters.by.missing': 0}
 
 
 @pytest.mark.parametrize(
@@ -210,14 +210,14 @@ UNDER_POINTS = {'piecewise.curve.points': 'bx', 'parameters.bx.missing': 'neutra
     ],
 )
 def test_a_spec_and_its_expansion_read_a_missing_row_alike(points):
-    """Lowering reported `None` for every parameter an entry consumes, and the expansion declared it `neutral`."""
+    """Lowering reported `None` for every parameter an entry consumes, and the expansion declared it `0`."""
     spec = spec_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **points))
     declared = {name: p.missing for name, p in spec.program.parameters.items()}
     expanded = {name: p.missing for name, p in spec.expand('piecewise').program.parameters.items()}
     assert declared == expanded, 'a spec and its expansion read a missing row of every parameter alike'
 
 
-@pytest.mark.parametrize('missing', ['absent', 'neutral', 0])
+@pytest.mark.parametrize('missing', ['absent', 0, 1])
 def test_a_curve_parameter_takes_the_missing_it_declares(missing):
     """`missing:` on a curve's parameter was refused at load, so a row outside the curve could not say what it reads."""
     spec = to_spec(

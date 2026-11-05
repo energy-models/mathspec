@@ -79,6 +79,7 @@ PREFIX_TOPIC = {
     'Carrier': 'carrier',
     'GlobalConstraint': 'global_constraints',
     'Outage': 'security',
+    'FlowBased': 'flow_based',
 }
 
 #: The system totals, whose names carry no component, and the data every
@@ -94,6 +95,13 @@ NAME_TOPIC = {
     'transmission_volume_expansion': 'global_constraints',
     'transmission_expansion_cost': 'global_constraints',
     'tech_capacity_expansion': 'global_constraints',
+    'Bus_flow_based_zone': 'flow_based',
+    'Bus_flow_based_domain': 'flow_based',
+    'GlobalConstraint_ram': 'flow_based',
+    'GlobalConstraint_zonal_ptdf': 'flow_based',
+    'GlobalConstraint_link_ptdf': 'flow_based',
+    'GlobalConstraint_flow_based_ub': 'flow_based',
+    'GlobalConstraint_flow_based_sense_is_le': 'flow_based',
 }
 
 #: The hubs: the named expressions the one file writes as the sum of one term
@@ -131,8 +139,8 @@ COMMITTABLE = ('Generator', 'Link', 'Process')
 #: the first that matches wins, and a name none matches is the component's own.
 FEATURES = (
     ('maintenance', re.compile(r'maint')),
-    ('ramping', re.compile(r'ramp|_rate$|allowance|previous_p$|p_init|came_in_running')),
-    ('commitment', re.compile(r'status|start_up|shut_down|stand_by|committable|com_|must_stay|min_up|min_down|big_m')),
+    ('ramping', re.compile(r'ramp|_rate$|allowance|previous_p$|p_carried_over$|p_init')),
+    ('commitment', re.compile(r'status|start_up|shut_down|stand_by|committable|com_|brought_in|min_up|min_down|big_m')),
 )
 
 

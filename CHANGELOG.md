@@ -12,10 +12,27 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(spec)!: a loaded spec is sorted by name and cannot be changed, writes back the fields its file wrote, and prints one canonical text for two files that differ only in order or spelling ([#924](https://github.com/energy-models/mathspec/pull/924))
-  - This breaks the spec API. A spec field cannot be set, and a section cannot gain or lose an entry: use `override(spec, [patch])`. A list in a spec is a tuple, and a section is a `Frozen` mapping, not a `dict`. Entries, `dims:` lists, relation columns, `cases:` regions and a macro's `kwargs:` are sorted by name.
-  - This breaks the program API. `Mask.dims` is a tuple sorted by name, not a `frozenset`, so a tool that compares it with a set (`where.dims <= set(dims)`) must build a set first. `Relation.columns` lists the key's columns first, each side sorted by role, and `Relation.dims` lists each dimension once, sorted by name. Every `dims` and `frame` in the program is sorted by name, so a tool that lays out its result by them gets a new order.
-  - This breaks a patch. A patch entry over a dimension or a relation that its base declares may write only `description`, `ordered` and `missing`, or else must declare the whole entry.
+- feat(spec)!: a spec loads sorted, frozen and canonical ([#924](https://github.com/energy-models/mathspec/pull/924))
+  - Breaks the spec API: a field cannot be set and a section cannot gain or lose an entry, so change a spec with `override(spec, [patch])`. A list is a tuple and a section is a `Frozen` mapping, not a `dict`.
+  - Sorted by name at load: entries, `dims:` lists, relation columns, `cases:` and a macro's `kwargs:`.
+  - Breaks the program API: `Mask.dims` is a sorted tuple, not a `frozenset`. `Relation.columns` lists the key first, each side sorted by role. Every `dims` and `frame` is sorted by name, so result layouts change.
+  - Breaks a patch: over a dimension or a relation its base declares, a patch may write only `description`, `ordered` and `missing`, or else declares the whole entry.
+  - `to_yaml()` writes the fields the file wrote, plus `version:`. The canonical form writes no defaults and reprints every condition from its parsed tree.
+- fix(api): the API pages describe every public attribute of a spec and a program ([#978](https://github.com/energy-models/mathspec/pull/978))
+- docs(examples): units connect to buses through numbered ports that one relation lists, and only the output ports have an efficiency ([#948](https://github.com/energy-models/mathspec/pull/948))
+- feat(language): a parameter may declare the coordinates it has with `where:`, and outside them it is absent ([#945](https://github.com/energy-models/mathspec/pull/945))
+- docs(pypsa): the PyPSA reference targets master at 061974e3, where a Store charges, spills and is rated like a StorageUnit, and the spec states energy limits on every dispatching component, a Store's cycle limit and flow-based market coupling ([#977](https://github.com/energy-models/mathspec/pull/977))
+- docs(pypsa): the PyPSA reference targets master at d21e028, where starts and stops take the period weight and the commitment rows start at the first snapshot ([#976](https://github.com/energy-models/mathspec/pull/976))
+- fix(language): under `missing: 0`, a divisor that a `where:`, a case or an absent variable guards loads, and so does a variable number outside its bounds ([#942](https://github.com/energy-models/mathspec/pull/942))
+- docs(pypsa): a PyPSA schedule, weight or limit that the data leaves out is absent rather than zero, and a committable extendable unit is assumed to have its big-M ([#912](https://github.com/energy-models/mathspec/pull/912))
+- feat(language)!: a missing row takes the value that `missing:` sets, and mathspec refuses `missing: neutral` ([#894](https://github.com/energy-models/mathspec/pull/894))
+- docs(attribution): add background page to describe how mathspec came to be ([#972](https://github.com/energy-models/mathspec/pull/972)).
+- docs: added figures throughout docs to support descriptions of operations applied with the math language ([#970](https://github.com/energy-models/mathspec/pull/970)).
+- docs: rewritten with updated language and structure to more closely follow best practice set out by [Diátaxis](https://diataxis.fr/), the [Google developer documentation style guide](https://developers.google.com/style), and others ([#968](https://github.com/energy-models/mathspec/pull/968)).
+- docs(attribution): the README credits each contributor in an all-contributors table, linking work on the YAML math in Calliope and lpspec from before mathspec began ([#955](https://github.com/energy-models/mathspec/pull/955), [#956](https://github.com/energy-models/mathspec/pull/956) to [#965](https://github.com/energy-models/mathspec/pull/965), [#966](https://github.com/energy-models/mathspec/pull/966), [#967](https://github.com/energy-models/mathspec/pull/967))
+- fix(language): the case check tells two pairs of columns of one relation apart ([#951](https://github.com/energy-models/mathspec/pull/951))
+- fix(language): the case check reads a comparison on a relation as false where the relation has no row ([#949](https://github.com/energy-models/mathspec/pull/949))
+- feat(language): a dimension may list the labels it allows, and a condition that names another label fails at load ([#915](https://github.com/energy-models/mathspec/pull/915))
 - docs(language): a comparison on a relation is false where the relation has no row, whatever its operator ([#947](https://github.com/energy-models/mathspec/pull/947))
 - docs(language): the relations page shows a variable masked by a bare relation, so it exists only at the pairs the relation lists ([#946](https://github.com/energy-models/mathspec/pull/946))
 

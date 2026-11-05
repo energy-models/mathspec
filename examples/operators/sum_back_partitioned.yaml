@@ -3,9 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  A window that stops at each group's edge: representative days are separate
-  samples rather than consecutive hours, so a window must not reach across the
-  boundary between two of them.
+  A window inside a group: the window stops at the first hour of each day.
 
 dimensions:
   unit: { dtype: str }

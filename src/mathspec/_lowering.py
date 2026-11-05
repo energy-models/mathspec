@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from mathspec._dimensions import check_spec
+from mathspec._divisors import zero_divisor_refusals
 from mathspec._expansion import expand, parse_template
 from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
 from mathspec._resolution import (
@@ -39,6 +40,7 @@ from mathspec.program import (
     Dimension,
     ExpressionReference,
     Given,
+    GivenParameter,
     GivenTargets,
     Link,
     Mask,
@@ -137,6 +139,8 @@ def lower(spec: Spec) -> Program:
             body = Mask(named.body)
             conditions[mname] = NamedCondition(body, body.dims, mdef.description)
 
+    parameter_masks = _parameter_masks(spec, ns, errors)
+
     variables = {}
     for vname, vdef in spec.variables.items():
         where = resolve_condition_text(vdef.where, ns, f"Variable '{vname}'", errors, self_variable=vname)
@@ -184,6 +188,7 @@ def lower(spec: Spec) -> Program:
             errors.append(refusal)
         curves[pname] = links
 
+    errors.extend(_zero_divisor_refusals(spec, variables, entries, constraints, objective, curves))
     if errors:
         raise ns.error(errors)
 
@@ -213,14 +218,14 @@ def lower(spec: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: Parameter(pdef.dims, pdef.dtype, pdef.missing, pdef.description)
+            name: Parameter(pdef.dims, pdef.dtype, pdef.missing, pdef.description, parameter_masks.get(name))
             for name, pdef in spec.parameters.items()
         },
         variables=variables,
         constraints=constraints,
         objective=objective,
         dimensions={
-            name: Dimension(dtype=ddef.dtype, ordered=ddef.ordered, description=ddef.description)
+            name: Dimension(dtype=ddef.dtype, one_of=ddef.one_of, ordered=ddef.ordered, description=ddef.description)
             for name, ddef in spec.dimensions.items()
         },
         relations=ns.relations,
@@ -243,7 +248,7 @@ def lower(spec: Spec) -> Program:
         conditions=conditions,
         given=GivenTargets(
             parameters={
-                name: Parameter(g.dims, g.dtype, None, g.description) for name, g in spec.given.parameters.items()
+                name: GivenParameter(g.dims, g.dtype, g.description) for name, g in spec.given.parameters.items()
             },
             variables={name: Given(g.dims, g.description) for name, g in spec.given.variables.items()},
             constraints={name: Given(g.dims, g.description) for name, g in spec.given.constraints.items()},
@@ -335,12 +340,73 @@ def _loop(target: str, entry: ExpressionReference, sums: Mapping[str, list[Expre
     return None
 
 
+def _zero_divisor_refusals(
+    spec: Spec,
+    variables: Mapping[str, Variable],
+    entries: Mapping[str, ExpressionReference],
+    constraints: Mapping[str, Constraint],
+    objective: Objective | None,
+    curves: Mapping[str, tuple[Expression, ...]],
+) -> list[str]:
+    """[`zero_divisor_refusals`][mathspec._divisors.zero_divisor_refusals] over every expression the file declares.
+
+    Read once every variable mask is resolved, because a masked factor spares
+    a divisor wherever its mask leaves a missing row out. Only a variable that
+    is absent outside its mask spares one: a ``missing:`` number stands for it
+    there, and the quotient is read.
+    """
+    masks = {name: v.where for name, v in variables.items() if v.missing == 'absent'}
+    found: list[str] = []
+    for name, entry in entries.items():
+        found += zero_divisor_refusals(entry.body, f"Named expression '{name}'", spec.parameters, masks)
+    for name, c in constraints.items():
+        for side in (c.lhs, c.rhs):
+            found += zero_divisor_refusals(side, f"Constraint '{name}'", spec.parameters, masks, c.where)
+    if objective is not None:
+        found += zero_divisor_refusals(objective.expression, 'The objective', spec.parameters, masks)
+    for name, links in curves.items():
+        for link in links:
+            found += zero_divisor_refusals(link, f"piecewise '{name}'", spec.parameters, masks)
+    return list(dict.fromkeys(found))
+
+
 def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterReference | None:
     if value is None:
         return None
     if isinstance(value, str):
         return ParameterReference(value, dims=ns.leaf_dims[value])
     return Constant(value, dims=())
+
+
+def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, Mask | None]:
+    """Each parameter's ``where:`` typed, a refusal appended for each mask that reads what it may not.
+
+    A tool evaluates a parameter's mask from the data alone, before any
+    variable has a value and before any mask has been applied. So a mask reads
+    dimensions, relations and unmasked parameters, and no masks can wait on
+    one another.
+    """
+    masked = {name for name, pdef in spec.parameters.items() if pdef.where is not None}
+    masks: dict[str, Mask | None] = {}
+    for pname in sorted(masked):
+        context = f"Parameter '{pname}'"
+        mask = masks[pname] = mask_of(resolve_condition_text(spec.parameters[pname].where, ns, context, errors))
+        if mask is None:
+            continue
+        errors.extend(
+            f"{context}: its `where:` contains variable '{v}', and a tool evaluates the `where:` of a parameter "
+            f'from the data alone, before any variable has a value. Test a parameter or a relation instead.'
+            for v in sorted(mask.names_read & {*spec.variables, *spec.given.variables})
+        )
+        errors.extend(
+            f"{context}: its `where:` contains '{pname}' itself, and a tool evaluates that `where:` before it "
+            f"reads '{pname}'. Test a relation or another parameter."
+            if read == pname
+            else f"{context}: its `where:` contains '{read}', which has a `where:` of its own. Test the "
+            f"condition in the `where:` of '{read}', or a relation."
+            for read in sorted(mask.names_read & masked)
+        )
+    return masks
 
 
 def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:

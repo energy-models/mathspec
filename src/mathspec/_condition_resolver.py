@@ -26,6 +26,7 @@ from mathspec._condition_parser import (
     UnresolvedCountNode,
 )
 from mathspec._dimensions import join_dims, sorted_dims
+from mathspec._divisors import zero_divisor_refusals
 from mathspec._expansion import expand
 from mathspec._expression_parser import (
     ArithmeticNode,
@@ -77,9 +78,6 @@ if TYPE_CHECKING:
     from mathspec._resolution import Namespace
     from mathspec.program import DeclaredDtype
 
-#: Why a mask may not read a given expression. The namespace stores a given
-#: expression with the variables, because it is read as a column, so this
-#: refusal names it separately.
 GIVEN_IN_A_CONDITION = (
     'A given expression may hold a variable, and a condition is read before variables exist — it may test '
     'parameters and dimension coordinates only.'
@@ -152,11 +150,16 @@ class ConditionResolver:
         match kind:
             case 'parameter':
                 declared = ns.spec.parameters.get(node.name)
-                if declared is not None and declared.missing == 'refused' and declared.dtype in ('int', 'str'):
+                if (
+                    declared is not None
+                    and declared.missing == 'refused'
+                    and declared.where is None
+                    and declared.dtype in ('int', 'str')
+                ):
                     rewrite = (
                         f'Declare `missing: absent`, or compare the label: where: "{node.name} == \'...\'".'
                         if declared.dtype == 'str'
-                        else f'Declare `missing: neutral` or `absent`, or compare the value: where: "{node.name} > 0".'
+                        else f'Declare `missing: absent` or a value, or compare the value: where: "{node.name} > 0".'
                     )
                     self.errors.append(
                         f"{context}: '{node.name}' is declared dtype: {declared.dtype} and missing: refused, so it "
@@ -411,6 +414,7 @@ class ConditionResolver:
                     dims |= set(side.dims)
                 except LanguageError as e:
                     self.errors.append(str(e))
+                self.errors.extend(zero_divisor_refusals(side, context, ns.spec.parameters, {}))
         if len(self.errors) > found:
             return node
         left, right = sides
@@ -495,18 +499,27 @@ class ConditionResolver:
             return node
         column = None
         dtype: DeclaredDtype | None = None
+        labelled: str | None = None
         if kind == 'relation':
             column = self._relation_column(left_name, left_column or None, plain.name, plain.op)
             if column is None:
                 return node
-            dtype = ns.dtypes[ns.relations[left_name].dim(column)]
+            labelled = ns.relations[left_name].dim(column)
+            dtype = ns.dtypes[labelled]
         elif kind in ('parameter', 'dimension'):
             dtype = ns.dtypes[left_name]
+            labelled = left_name if kind == 'dimension' else None
         if dtype is not None:
             typed = self._typed_literal(plain, dtype)
             if typed is None:
                 return node
             value = typed
+        if labelled in ns.one_of and value not in ns.one_of[labelled]:
+            self.errors.append(
+                f"{context}: {value!r} is not a label of '{labelled}', which allows only "
+                f"{list(ns.one_of[labelled])}. Write one of them, or add {value!r} to the one_of of '{labelled}'."
+            )
+            return node
 
         match kind:
             case 'parameter':
@@ -637,11 +650,8 @@ class ConditionResolver:
         return value
 
 
-#: An ISO literal carrying a time-of-day, which decides date vs datetime.
 _HAS_TIME = re.compile(r'[T ]\d')
 
-#: The dtypes on which a condition may use an inequality: <, <=, > or >=. A
-#: ``str`` or ``bool`` compares only with == and !=.
 _INEQUALITY_DTYPES: tuple[DeclaredDtype, ...] = ('float', 'int', 'datetime')
 
 

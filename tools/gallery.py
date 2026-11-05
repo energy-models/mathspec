@@ -51,6 +51,7 @@ BEGIN, END = '<!-- gallery:begin -->', '<!-- gallery:end -->'
 MODELS = {
     'dispatch.md': ROOT / 'examples' / 'dispatch.yaml',
     'commitment.md': ROOT / 'examples' / 'commitment.yaml',
+    'connection.md': ROOT / 'examples' / 'connection.yaml',
     'library/surface.md': LIBRARY / 'surface.yaml',
     'library/generator.md': LIBRARY / 'generator.yaml',
     'library/load.md': LIBRARY / 'load.yaml',
@@ -75,7 +76,7 @@ COMPOSED = {
 #: equation it renders, headed by the name the other side gives it, read from
 #: the entry's own description.
 DECLARED = {
-    'pypsa.md': ROOT / 'examples' / 'pypsa.yaml',
+    'pypsa_ladder.md': ROOT / 'examples' / 'pypsa.yaml',
 }
 
 #: Page -> the base and the patch laid over it, shown one entry of the

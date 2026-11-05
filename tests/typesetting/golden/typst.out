@@ -10,19 +10,20 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $cal(S)$: index $s$ --- `season` with $upright("season_of"): cal(T) arrow.r cal(S)$
 / $cal(T)$: index $t$ --- `snapshot` (`int` coordinates) with $upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("rep_of"): cal(T) arrow.r cal(T), upright("season_of"): cal(T) arrow.r cal(S)$
 / $cal(E)$: index $e$ --- `technology` with $upright("gen_bt"): cal(G) arrow.r cal(U) times cal(E)$
-/ $cal(Z)$: index $z$ --- `zone` with $upright("area_of"): cal(U) arrow.r cal(Z), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("zone_of"): cal(U) arrow.r cal(Z)$, `area_of` is `absent` where the data has no row
+/ $cal(Z)$: index $z$ --- `zone` (labels `north`, `south`) with $upright("area_of"): cal(U) arrow.r cal(Z), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("zone_of"): cal(U) arrow.r cal(Z)$, `area_of` is `absent` where the data has no row
 
 == Parameters
 / $upright("bp_heat")$: `bp_heat` over $cal(B) times cal(G)$
 / $upright("bp_run")$: `bp_run` over $cal(B) times cal(G)$
-/ $upright("bp_x")$: `bp_x` over $cal(B) times cal(G)$, `neutral` where the data has no row
-/ $upright("bp_y")$: `bp_y` over $cal(B) times cal(G)$, `neutral` where the data has no row
+/ $upright("bp_x")$: `bp_x` over $cal(B) times cal(G)$, $0$ where the data has no row
+/ $upright("bp_y")$: `bp_y` over $cal(B) times cal(G)$, $0$ where the data has no row
 / $upright("budget")$: `budget` (scalar)
-/ $upright("cost")$: `cost` over $cal(G)$, `neutral` where the data has no row
+/ $upright("cost")$: `cost` over $cal(G)$, $0$ where the data has no row
 / $upright("eta")$: `eta` over $cal(G)$
 / $upright("growth")$: `growth` (scalar)
 / $upright("is_flexible")$: `is_flexible` over $cal(G)$, `false` where the data has no row
 / $upright("lead")$: `lead` over $cal(G)$
+/ $upright("link_eff")$: `link_eff` over $cal(U) times cal(G)$, only where $(u, g) in upright("connection")$, $1$ where the data has no row
 / $upright("load")$: `load` over $cal(U) times cal(T)$
 / $upright("min_up")$: `min_up` over $cal(G)$
 / $upright("p")^(upright("max"))$: `p_max` over $cal(G)$, $infinity$ where the data has no row
@@ -36,7 +37,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 == Variables
 / $italic("fuel")$: `fuel` over $cal(G) times cal(T)$
-/ $italic("headroom")$: `headroom` (scalar), `neutral` where the mask leaves it out
+/ $italic("headroom")$: `headroom` (scalar), $0$ where the mask leaves it out
 / $italic("heat")$: `heat` over $cal(G) times cal(T)$
 / $italic("on")$: `on` over $cal(G) times cal(T)$
 / $italic("op_cost")$: `op_cost` over $cal(G) times cal(T)$

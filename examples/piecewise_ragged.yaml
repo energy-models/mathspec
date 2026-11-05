@@ -37,11 +37,11 @@ parameters:
   bp_x:
     description: breakpoint dispatch levels, bound where `metered` is true
     dims: [generator, bp]
-    missing: neutral
+    missing: 0
   bp_y:
     description: cost at each breakpoint, bound where `metered` is true
     dims: [generator, bp]
-    missing: neutral
+    missing: 0
 
 variables:
   dispatch:

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generators
 
-This file states PyPSA's `Generator`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to each of these sums: `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions` and `Bus_injection`. It reads `CVaR_omega`, `Generator_committable`, `Generator_maintenance`, `Generator_maintenance_capacity`, `Generator_maintenance_pu`, `GlobalConstraint_energy_weight` and 4 more names that other fragments declare, and lists them under [`given`](../../reference/language/parameters-variables-constraints.md#given).
+This file states PyPSA's `Generator`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to each of these sums: `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions` and `Bus_injection`. `Generator_p_nom_effective` is the build the limits use: the chosen one where the generator is extendable, the given one otherwise.
 
 <!-- gallery:begin -->
 ```yaml
@@ -17,11 +17,11 @@ given:
     scenario_weight: { dims: [scenario] }
     CVaR_omega: { dims: [] }
     period_weight_objective: { dims: [period] }
-    snapshot_weightings_generators: { dims: [snapshot] }
   variables:
     Generator_maintenance: { dims: [scenario, snapshot, generator] }
     Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
   expressions:
+    energy_limit_weight: { dims: [snapshot] }
     GlobalConstraint_energy_weight: { dims: [global_constraint, scenario, snapshot] }
     primary_energy: { dims: [global_constraint, scenario] }
     operational_limit: { dims: [global_constraint, scenario] }
@@ -45,7 +45,7 @@ dimensions:
   global_constraint:
     description: PyPSA's `GlobalConstraint` rows, one label per declared limit
   period:
-    description: investment periods — PyPSA's `investment_periods`
+    description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
     ordered: true
   carrier:
@@ -77,7 +77,7 @@ parameters:
     description: least output, per unit of nominal power
     dims: [scenario, snapshot, generator]
   Generator_p_max_pu:
-    description: most output, per unit of nominal power — an availability profile
+    description: "most output, per unit of nominal power: an availability profile"
     dims: [scenario, snapshot, generator]
   Generator_marginal_cost:
     description: cost of one unit of output
@@ -87,51 +87,52 @@ parameters:
     dims: [scenario, snapshot, generator]
   Generator_sign:
     description: >-
-      the sign output enters its bus's balance with — PyPSA's `sign`, `1`
+      the sign output enters its bus's balance with. It is PyPSA's `sign`, `1`
       unless given, `-1` for a unit that draws power. PyPSA refuses one that
-      differs by scenario (`constants.py:43`)
+      differs by scenario (`constants.py:46`)
     dims: [generator]
   Generator_p_nom_mod:
-    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    description: the module size a build comes in whole numbers of. No value means the build is continuous
     dims: [generator]
-    missing: neutral
+    missing: absent
   Generator_modules_installed:
     description: >-
-      how many whole modules a committable build has in place: `Generator_p_nom
-      / Generator_p_nom_mod` where a fixed build is modular, one where it is
-      not, data prep. PyPSA refuses a fixed modular build whose nominal power
-      is not a whole number of modules
+      how many whole modules a committable build has in place, data prep. It
+      is `Generator_p_nom / Generator_p_nom_mod` where a fixed build is
+      modular, and one where it is not. PyPSA refuses a fixed modular build
+      whose nominal power is not a whole number of modules
     dims: [scenario, generator]
   Generator_p_min_pu_nonneg:
     description: >-
-      true where none of the generator's own minimums-per-unit is negative —
-      PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and scenario, data prep
+      true where none of the generator's own minimums-per-unit is negative. It
+      is PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and
+      scenario, data prep
     dims: [generator]
     dtype: bool
   Generator_active:
-    description: whether a generator stands in a snapshot's period — PyPSA's `active`, from build year and lifetime, data prep
+    description: whether a generator is active in a snapshot's period. It is PyPSA's `active`, from build year and lifetime, data prep
     dims: [snapshot, generator]
     dtype: bool
   Generator_active_asset:
     description: >-
-      whether a generator is one of PyPSA's `active_assets` — its `active` flag
-      alone, without build year and lifetime, so a unit that stands in no
-      snapshot of the horizon still counts. PyPSA refuses one that differs
-      by scenario (`constants.py:51`)
+      whether a generator is one of PyPSA's `active_assets`, by its `active`
+      flag alone, without build year and lifetime. A unit that is active in no
+      snapshot of the horizon still counts. PyPSA refuses one that differs by
+      scenario (`constants.py:54`)
     dims: [generator]
     dtype: bool
   Generator_capital_weight:
-    description: the sum of period weights a generator stands in — PyPSA's `active * period_weighting`, summed, data prep
+    description: the sum of period weights a generator is active in. It is PyPSA's `active * period_weighting`, summed, data prep
     dims: [generator]
   Generator_first_active:
     description: >-
-      one in the first period a generator stands in, zero elsewhere, data prep.
+      one in the first period a generator is active in, zero elsewhere, data prep.
       PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
     dims: [period, generator]
   Generator_p_set:
-    description: a given output schedule; a generator without one has no row here
+    description: a given output schedule. A generator without one has no row here
     dims: [scenario, snapshot, generator]
-    missing: neutral
+    missing: absent
   Generator_p_nom_min:
     description: least nominal power an extendable generator may be built at
     dims: [scenario, generator]
@@ -140,40 +141,40 @@ parameters:
     dims: [scenario, generator]
   Generator_capital_cost:
     description: >-
-      cost of one unit of nominal power for the modelled horizon —
-      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
-      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
-      `capital_cost` where it is not, plus `fom_cost`
-      (`components.py:1126-1147`, `costs.py:102-203`), data prep
+      cost of one unit of nominal power for the modelled horizon (PyPSA's
+      `periodized_cost`), data prep. It is `overnight_cost` as an annuity over
+      `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is
+      given, and `capital_cost` where it is not. Both add `fom_cost`
+      (`components.py:1128-1149`, `costs.py:102-203`)
     dims: [scenario, generator]
   Generator_p_nom_set:
-    description: a given nominal power for an extendable generator; one without a value has no row here
+    description: a given nominal power for an extendable generator. One without a value has no row here
     dims: [generator]
-    missing: neutral
+    missing: absent
   Generator_e_sum_min:
-    description: least energy over the horizon; minus infinity where no floor is meant
+    description: least energy over the horizon. It is minus infinity where no floor is meant
     dims: [scenario, generator]
   Generator_e_sum_max:
-    description: most energy over the horizon — a fuel or emission budget in energy terms; infinity where no cap is meant
+    description: "most energy over the horizon: a fuel or emission budget in energy terms. It is infinity where no cap is meant"
     dims: [scenario, generator]
   Generator_primary_energy_weight:
     description: >-
-      the constrained attribute per unit of energy at the bus — the carrier's
-      `co2_emissions` over the generator's efficiency at the snapshot, data prep; a generator
-      of an unweighted carrier has no row
+      the constrained attribute per unit of energy at the bus: the carrier's
+      `co2_emissions` over the generator's efficiency at the snapshot, data
+      prep. A generator of an unweighted carrier has no row
     dims: [scenario, global_constraint, snapshot, generator]
-    missing: neutral
+    missing: absent
   Generator_operational_limit_weight:
-    description: one where the generator is in the row's set — data prep; one outside it has no row
+    description: one where the generator is in the row's set, data prep. One outside it has no row
     dims: [scenario, global_constraint, generator]
-    missing: neutral
+    missing: absent
   Generator_tech_capacity_weight:
     description: >-
-      one where the generator is in the row's carrier-and-bus set — data
-      prep; one outside it, or one that does not stand in the row's
+      one where the generator is in the row's carrier-and-bus set, data prep.
+      One outside it, or one that is not active in the row's
       `investment_period`, has no row
     dims: [global_constraint, generator]
-    missing: neutral
+    missing: absent
 
 variables:
   Generator_p:
@@ -181,7 +182,7 @@ variables:
     dims: [scenario, snapshot, generator]
     where: Generator_active
   Generator_n_mod:
-    description: "`Generator-n_mod` — how many modules of an extendable modular build; none for a unit that is not active"
+    description: "`Generator-n_mod` — how many modules of an extendable modular build. A unit that is not active has none"
     dims: [generator]
     where: Generator_p_nom_extendable AND Generator_p_nom_mod > 0 AND Generator_active_asset
     domain: integer
@@ -190,25 +191,35 @@ variables:
   Generator_p_nom_ext:
     description: >-
       `Generator-p_nom` — nominal power where it is a decision, for a
-      generator that is active; the parameter of the same PyPSA name carries
-      the fixed regime
+      generator that is active. A fixed build is the parameter of the same
+      PyPSA name
     dims: [generator]
     where: Generator_p_nom_extendable AND Generator_active_asset
 
 expressions:
   Generator_p_nom_effective:
-    description: the build a generator's limits are taken against — the chosen one where it is extendable, the given one otherwise
+    description: "the build a generator's limits are taken against: the chosen one where it is extendable, the given one otherwise"
     dims: [scenario, generator]
     cases:
       extendable: { when: Generator_p_nom_extendable, expression: Generator_p_nom_ext }
     otherwise: Generator_p_nom
-  Generator_p_nom_committed:
+  Generator_modules:
     description: >-
-      the build a committed unit's ramp rows are taken against — one module
-      where the build is extendable and modular, the given build otherwise
+      how many modules a committed unit's status counts: the chosen number
+      where the build is extendable and modular, and the modules installed
+      otherwise (`constraints.py:619-624`)
     dims: [scenario, generator]
     cases:
-      modular_build: { when: Generator_p_nom_extendable AND Generator_p_nom_mod > 0, expression: Generator_p_nom_mod }
+      chosen: { when: Generator_p_nom_extendable AND Generator_p_nom_mod > 0, expression: Generator_n_mod }
+    otherwise: Generator_modules_installed
+  Generator_p_nom_committed:
+    description: >-
+      the build a committed unit's ramp rows are taken against: one module
+      where the build is modular, since its status counts modules, and the
+      given build otherwise (`constraints.py:1071-1074`)
+    dims: [scenario, generator]
+    cases:
+      modular_build: { when: "Generator_p_nom_mod > 0", expression: Generator_p_nom_mod }
     otherwise: Generator_p_nom
   Generator_primary_energy:
     expression: >-
@@ -240,7 +251,7 @@ expressions:
 conditions:
   Generator_committed:
     description: >-
-      a committable generator that stands in the snapshot's period — every
+      a committable generator that is active in the snapshot's period: every
       unit-commitment row's set
     condition: Generator_committable AND Generator_active
 
@@ -271,7 +282,7 @@ constraints:
     where: Generator_p_nom_extendable AND Generator_active_asset
     expression: Generator_p_nom_ext >= Generator_p_nom_min
   Generator_ext_p_nom_upper:
-    description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Generator-ext-p_nom-upper` — the chosen build is at most its cap in every scenario. A cap of infinity is no row"
     dims: [scenario, generator]
     where: Generator_p_nom_extendable AND Generator_active_asset AND Generator_p_nom_max
     expression: Generator_p_nom_ext <= Generator_p_nom_max
@@ -281,15 +292,15 @@ constraints:
     where: Generator_p_nom_extendable AND Generator_active_asset AND Generator_p_nom_set
     expression: Generator_p_nom_ext == Generator_p_nom_set
   Generator_e_sum_min:
-    description: "`Generator-e_sum_min` — energy over the horizon is at least its floor; a floor of minus infinity is no row"
+    description: "`Generator-e_sum_min` — energy over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row"
     dims: [scenario, generator]
     where: Generator_e_sum_min
-    expression: sum(Generator_p * snapshot_weightings_generators, over=snapshot) >= Generator_e_sum_min
+    expression: sum(Generator_p * energy_limit_weight, over=snapshot) >= Generator_e_sum_min
   Generator_e_sum_max:
-    description: "`Generator-e_sum_max` — energy over the horizon is at most its budget; a budget of infinity is no row"
+    description: "`Generator-e_sum_max` — energy over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row"
     dims: [scenario, generator]
     where: Generator_e_sum_max
-    expression: sum(Generator_p * snapshot_weightings_generators, over=snapshot) <= Generator_e_sum_max
+    expression: sum(Generator_p * energy_limit_weight, over=snapshot) <= Generator_e_sum_max
   Generator_p_nom_modularity:
     description: "`Generator-p_nom_modularity` — the chosen build is a whole number of modules"
     dims: [generator]
@@ -306,10 +317,10 @@ assumptions:
     holds: "Generator_marginal_cost_quadratic == 0"
     where: "CVaR_omega"
     description: >-
-      a quadratic cost puts a square into every `CVaR-excess` row, and PyPSA
-      refuses quadratic costs under any risk preference
-      (`optimize.py:470-477`), `omega = 0` included. Data prep writes a
-      `CVaR_omega` row only where a risk preference is set
+      a quadratic cost puts a square into every `CVaR-excess` row. PyPSA
+      refuses quadratic costs under any risk preference, `omega = 0` included
+      (`optimize.py:501-508`). In data prep you write a `CVaR_omega` row only
+      where a risk preference is set
 ```
 
 #### Given
@@ -321,13 +332,13 @@ assumptions:
 | $`\gamma`$ | `Generator_maintenance_pu` over $`\mathcal{G} \times \Xi`$, data another file declares |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
 | $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
-| $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
 | $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$, data another file declares |
 | $`\mu`$ | `Generator_maintenance` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ |
 | $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ |
 | $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$, an expression this file adds `Generator_injection` to |
 | $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{I} \times \mathcal{Y}`$, an expression this file adds `Generator_additions` to |
 | $`\mathit{w}^{\mathrm{gc}}`$ | `GlobalConstraint_energy_weight` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, an expression another file defines |
+| $`\mathit{w}^{E}`$ | `energy_limit_weight` over $`\mathcal{T}`$, an expression another file defines |
 | $`\mathit{operational\_limit}`$ | `operational_limit` over $`\mathcal{L} \times \Xi`$, an expression this file adds `Generator_operational_limit` to |
 | $`\mathit{primary\_energy}`$ | `primary_energy` over $`\mathcal{L} \times \Xi`$, an expression this file adds `Generator_primary_energy` to |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Generator_opex` to |
@@ -342,7 +353,7 @@ assumptions:
 | $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Generator\_carrier}: \mathcal{G} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_bus}: \mathcal{G} \to \mathcal{N},\ \mathrm{Generator\_carrier}: \mathcal{G} \to \mathcal{I}`$ — generating units, each on one bus |
 | $`\mathcal{L}`$ | index $`l`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 
@@ -350,44 +361,44 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{G} \times \mathcal{T}`$ — whether a generator stands in a snapshot's period — PyPSA's `active`, from build year and lifetime, data prep |
-| $`\mathrm{act}`$ | `Generator_active_asset` over $`\mathcal{G}`$ — whether a generator is one of PyPSA's `active_assets` — its `active` flag alone, without build year and lifetime, so a unit that stands in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:51`) |
-| $`\mathrm{c}^{\mathrm{cap}}`$ | `Generator_capital_cost` over $`\mathcal{G} \times \Xi`$ — cost of one unit of nominal power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
-| $`\mathrm{W}`$ | `Generator_capital_weight` over $`\mathcal{G}`$ — the sum of period weights a generator stands in — PyPSA's `active * period_weighting`, summed, data prep |
-| $`\overline{\mathrm{E}}`$ | `Generator_e_sum_max` over $`\mathcal{G} \times \Xi`$ — most energy over the horizon — a fuel or emission budget in energy terms; infinity where no cap is meant |
-| $`\underline{\mathrm{E}}`$ | `Generator_e_sum_min` over $`\mathcal{G} \times \Xi`$ — least energy over the horizon; minus infinity where no floor is meant |
-| $`\mathrm{new}`$ | `Generator_first_active` over $`\mathcal{G} \times \mathcal{Y}`$ — one in the first period a generator stands in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
+| $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{G} \times \mathcal{T}`$ — whether a generator is active in a snapshot's period. It is PyPSA's `active`, from build year and lifetime, data prep |
+| $`\mathrm{act}`$ | `Generator_active_asset` over $`\mathcal{G}`$ — whether a generator is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:54`) |
+| $`\mathrm{c}^{\mathrm{cap}}`$ | `Generator_capital_cost` over $`\mathcal{G} \times \Xi`$ — cost of one unit of nominal power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1128-1149`, `costs.py:102-203`) |
+| $`\mathrm{W}`$ | `Generator_capital_weight` over $`\mathcal{G}`$ — the sum of period weights a generator is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
+| $`\overline{\mathrm{E}}`$ | `Generator_e_sum_max` over $`\mathcal{G} \times \Xi`$ — most energy over the horizon: a fuel or emission budget in energy terms. It is infinity where no cap is meant |
+| $`\underline{\mathrm{E}}`$ | `Generator_e_sum_min` over $`\mathcal{G} \times \Xi`$ — least energy over the horizon. It is minus infinity where no floor is meant |
+| $`\mathrm{new}`$ | `Generator_first_active` over $`\mathcal{G} \times \mathcal{Y}`$ — one in the first period a generator is active in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\mathrm{c}`$ | `Generator_marginal_cost` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — cost of one unit of output |
 | $`\mathrm{c}^{(2)}`$ | `Generator_marginal_cost_quadratic` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — cost of the square of one unit of output |
-| $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\mathcal{G} \times \Xi`$ — how many whole modules a committable build has in place: `Generator_p_nom / Generator_p_nom_mod` where a fixed build is modular, one where it is not, data prep. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
-| $`\mathrm{b}`$ | `Generator_operational_limit_weight` over $`\mathcal{G} \times \mathcal{L} \times \Xi`$, `neutral` where the data has no row — one where the generator is in the row's set — data prep; one outside it has no row |
-| $`\overline{\mathrm{p}}`$ | `Generator_p_max_pu` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — most output, per unit of nominal power — an availability profile |
+| $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\mathcal{G} \times \Xi`$ — how many whole modules a committable build has in place, data prep. It is `Generator_p_nom / Generator_p_nom_mod` where a fixed build is modular, and one where it is not. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
+| $`\mathrm{b}`$ | `Generator_operational_limit_weight` over $`\mathcal{G} \times \mathcal{L} \times \Xi`$, `absent` where the data has no row — one where the generator is in the row's set, data prep. One outside it has no row |
+| $`\overline{\mathrm{p}}`$ | `Generator_p_max_pu` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — most output, per unit of nominal power: an availability profile |
 | $`\underline{\mathrm{p}}`$ | `Generator_p_min_pu` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — least output, per unit of nominal power |
-| $`\mathrm{nonneg}`$ | `Generator_p_min_pu_nonneg` over $`\mathcal{G}`$ — true where none of the generator's own minimums-per-unit is negative — PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and scenario, data prep |
+| $`\mathrm{nonneg}`$ | `Generator_p_min_pu_nonneg` over $`\mathcal{G}`$ — true where none of the generator's own minimums-per-unit is negative. It is PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and scenario, data prep |
 | $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\mathcal{G} \times \Xi`$ — nominal power |
 | $`\mathrm{ext}`$ | `Generator_p_nom_extendable` over $`\mathcal{G}`$ — whether the nominal power is a decision |
 | $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\mathcal{G} \times \Xi`$ — most nominal power an extendable generator may be built at |
 | $`\underline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_min` over $`\mathcal{G} \times \Xi`$ — least nominal power an extendable generator may be built at |
-| $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of; no value means the build is continuous |
-| $`\mathrm{p}^{\mathrm{nom,set}}`$ | `Generator_p_nom_set` over $`\mathcal{G}`$, `neutral` where the data has no row — a given nominal power for an extendable generator; one without a value has no row here |
-| $`\mathrm{p}^{\mathrm{set}}`$ | `Generator_p_set` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, `neutral` where the data has no row — a given output schedule; a generator without one has no row here |
-| $`\mathrm{a}`$ | `Generator_primary_energy_weight` over $`\mathcal{G} \times \mathcal{L} \times \Xi \times \mathcal{T}`$, `neutral` where the data has no row — the constrained attribute per unit of energy at the bus — the carrier's `co2_emissions` over the generator's efficiency at the snapshot, data prep; a generator of an unweighted carrier has no row |
-| $`\mathrm{sgn}`$ | `Generator_sign` over $`\mathcal{G}`$ — the sign output enters its bus's balance with — PyPSA's `sign`, `1` unless given, `-1` for a unit that draws power. PyPSA refuses one that differs by scenario (`constants.py:43`) |
-| $`\mathrm{m}`$ | `Generator_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{L}`$, `neutral` where the data has no row — one where the generator is in the row's carrier-and-bus set — data prep; one outside it, or one that does not stand in the row's `investment_period`, has no row |
+| $`\mathrm{p}^{\mathrm{mod}}`$ | `Generator_p_nom_mod` over $`\mathcal{G}`$, `absent` where the data has no row — the module size a build comes in whole numbers of. No value means the build is continuous |
+| $`\mathrm{p}^{\mathrm{nom,set}}`$ | `Generator_p_nom_set` over $`\mathcal{G}`$, `absent` where the data has no row — a given nominal power for an extendable generator. One without a value has no row here |
+| $`\mathrm{p}^{\mathrm{set}}`$ | `Generator_p_set` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, `absent` where the data has no row — a given output schedule. A generator without one has no row here |
+| $`\mathrm{a}`$ | `Generator_primary_energy_weight` over $`\mathcal{G} \times \mathcal{L} \times \Xi \times \mathcal{T}`$, `absent` where the data has no row — the constrained attribute per unit of energy at the bus: the carrier's `co2_emissions` over the generator's efficiency at the snapshot, data prep. A generator of an unweighted carrier has no row |
+| $`\mathrm{sgn}`$ | `Generator_sign` over $`\mathcal{G}`$ — the sign output enters its bus's balance with. It is PyPSA's `sign`, `1` unless given, `-1` for a unit that draws power. PyPSA refuses one that differs by scenario (`constants.py:46`) |
+| $`\mathrm{m}`$ | `Generator_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{L}`$, `absent` where the data has no row — one where the generator is in the row's carrier-and-bus set, data prep. One outside it, or one that is not active in the row's `investment_period`, has no row |
 
 #### Conditions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{G} \times \mathcal{T}`$ — a committable generator that stands in the snapshot's period — every unit-commitment row's set |
+| $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{G} \times \mathcal{T}`$ — a committable generator that is active in the snapshot's period: every unit-commitment row's set |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`N`$ | `Generator_n_mod` over $`\mathcal{G}`$ — `Generator-n_mod` — how many modules of an extendable modular build; none for a unit that is not active |
+| $`N`$ | `Generator_n_mod` over $`\mathcal{G}`$ — `Generator-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 | $`p`$ | `Generator_p` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — `Generator-p` — output of a generator in a snapshot |
-| $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ — `Generator-p_nom` — nominal power where it is a decision, for a generator that is active; the parameter of the same PyPSA name carries the fixed regime |
+| $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ — `Generator-p_nom` — nominal power where it is a decision, for a generator that is active. A fixed build is the parameter of the same PyPSA name |
 
 #### Definitions
 
@@ -396,10 +407,11 @@ assumptions:
 | $`\mathit{Generator\_additions}`$ | `Generator_additions` over $`\mathcal{I} \times \mathcal{Y}`$ |
 | $`\mathit{Generator\_capex}`$ | `Generator_capex` (scalar) |
 | $`\mathit{Generator\_injection}`$ | `Generator_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ |
+| $`\mathrm{M}`$ | `Generator_modules` over $`\mathcal{G} \times \Xi`$ — how many modules a committed unit's status counts: the chosen number where the build is extendable and modular, and the modules installed otherwise (`constraints.py:619-624`) |
 | $`\mathit{Generator\_operational\_limit}`$ | `Generator_operational_limit` over $`\mathcal{L} \times \Xi`$ |
 | $`\mathit{Generator\_opex}`$ | `Generator_opex` over $`\Xi`$ |
-| $`\widehat{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_committed` over $`\mathcal{G} \times \Xi`$ — the build a committed unit's ramp rows are taken against — one module where the build is extendable and modular, the given build otherwise |
-| $`\widetilde{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_effective` over $`\mathcal{G} \times \Xi`$ — the build a generator's limits are taken against — the chosen one where it is extendable, the given one otherwise |
+| $`\widehat{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_committed` over $`\mathcal{G} \times \Xi`$ — the build a committed unit's ramp rows are taken against: one module where the build is modular, since its status counts modules, and the given build otherwise (`constraints.py:1071-1074`) |
+| $`\widetilde{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_effective` over $`\mathcal{G} \times \Xi`$ — the build a generator's limits are taken against: the chosen one where it is extendable, the given one otherwise |
 | $`\mathit{Generator\_primary\_energy}`$ | `Generator_primary_energy` over $`\mathcal{L} \times \Xi`$ |
 | $`\mathit{Generator\_tech\_capacity\_expansion}`$ | `Generator_tech_capacity_expansion` over $`\mathcal{L}`$ |
 
@@ -451,6 +463,12 @@ P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \
 \mathit{Generator\_injection}_{n,\xi,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_bus}(g) = n} \mathrm{sgn}_{g} \cdot p_{g,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
+**`Generator_modules`**
+
+```math
+\mathrm{M}_{g,\xi} = \begin{cases} N_{g} & \text{if } \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \\ \mathrm{N}^{\mathrm{fix}}_{g,\xi} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+```
+
 **`Generator_operational_limit`**
 
 ```math
@@ -466,7 +484,7 @@ P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \
 **`Generator_p_nom_committed`**
 
 ```math
-\widehat{\mathrm{p}}^{\mathrm{nom}}_{g,\xi} = \begin{cases} \mathrm{p}^{\mathrm{mod}}_{g} & \text{if } \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0 \\ \mathrm{p}^{\mathrm{nom}}_{g,\xi} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+\widehat{\mathrm{p}}^{\mathrm{nom}}_{g,\xi} = \begin{cases} \mathrm{p}^{\mathrm{mod}}_{g} & \text{if } \mathrm{p}^{\mathrm{mod}}_{g} > 0 \\ \mathrm{p}^{\mathrm{nom}}_{g,\xi} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
 ```
 
 **`Generator_p_nom_effective`**
@@ -492,13 +510,13 @@ P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \
 **`Generator_e_sum_max`**
 
 ```math
-\sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathrm{w}^{\mathrm{gen}}_{t} \le \overline{\mathrm{E}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \overline{\mathrm{E}}_{g,\xi} \text{ is defined}
+\sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathit{w}^{E}_{t} \le \overline{\mathrm{E}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \overline{\mathrm{E}}_{g,\xi} \text{ is defined}
 ```
 
 **`Generator_e_sum_min`**
 
 ```math
-\sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathrm{w}^{\mathrm{gen}}_{t} \ge \underline{\mathrm{E}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \underline{\mathrm{E}}_{g,\xi} \text{ is defined}
+\sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathit{w}^{E}_{t} \ge \underline{\mathrm{E}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \underline{\mathrm{E}}_{g,\xi} \text{ is defined}
 ```
 
 **`Generator_ext_p_lower`**
@@ -563,3 +581,8 @@ p_{g,\xi,t} = \mathrm{p}^{\mathrm{set}}_{g,\xi,t} \qquad \forall\, g \in \mathca
 \mathrm{c}^{(2)}_{g,\xi,t} = 0 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \omega \text{ is defined}
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 25 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

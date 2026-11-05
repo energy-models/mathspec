@@ -133,7 +133,6 @@ def joined(columns: JoinColumns, inner: Iterable[str]) -> frozenset[str]:
     return (frozenset(inner) - set(columns.joined_dims)) | set(columns.grouped_dims)
 
 
-#: The operator name a file writes for each translation, which its refusals quote.
 _VERBS: dict[type[Translate | WindowSum], str] = {Translate: 'shift', WindowSum: 'sum_back'}
 
 
@@ -212,6 +211,9 @@ def check_spec(spec: Spec, program: Program) -> None:
     Raises:
         DimensionError: On the first entry that breaks one.
     """
+    for pname, parameter in program.parameters.items():
+        _check_condition_dims(parameter.where, frozenset(parameter.dims), f"Parameter '{pname}'")
+
     for vname, vdef in spec.variables.items():
         frame = frozenset(vdef.dims)
         context = f"Variable '{vname}'"

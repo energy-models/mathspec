@@ -21,12 +21,8 @@ _PREAMBLE = """#set page(margin: 2.5cm)
 """
 
 
-#: What Typst reads as markup in text mode, each escaped by a leading
-#: backslash. They are not LaTeX's: ``%`` and ``&`` are ordinary characters
-#: here, while ``*``, ``@``, ``<``, ``/`` and the square brackets are not.
 _SPECIALS = frozenset('\\#$*_@`<>~/[]')
 
-#: A list or heading marker is markup only at the start of a line.
 _LEADING_MARKER = re.compile(r'(^|\n)([-+=])(?= )')
 
 
@@ -53,7 +49,6 @@ class TypstFormat:
     """
 
     notation: ClassVar[Notation] = 'typst'
-    #: Typst applies the same substitution TeX does.
     dash: ClassVar[str] = '---'
 
     operators: ClassVar[Mapping[OperatorName, str]] = {name: typst for name, (_, typst) in OPERATOR_SPELLINGS.items()}

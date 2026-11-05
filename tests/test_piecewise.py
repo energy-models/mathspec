@@ -71,7 +71,7 @@ LP = varied(
     },
 )
 #: The values tables of a curve under ``points:``, which stop where the curve stops.
-RAGGED = {'parameters.bp_x.missing': 'neutral', 'parameters.bp_y.missing': 'neutral'}
+RAGGED = {'parameters.bp_x.missing': 0, 'parameters.bp_y.missing': 0}
 #: The ``lp`` curve masked by one of its own values-parameters, so every check an entry can carry is on it.
 LP_MASKED = varied(LP, **RAGGED, **{'piecewise.cost_curve.points': 'bp_x'})
 #: Two dims in the frame, so the emitted ``dims`` has an order to get wrong.

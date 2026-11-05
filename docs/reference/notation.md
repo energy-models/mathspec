@@ -5,21 +5,20 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Every construct, as math
 
-Look up any construct of the language to see the math that
-[the typesetter](typeset.md) prints for it. You can also start from a symbol and
-find the construct that printed it.
+This page lists each construct of the language beside the math that
+[the typesetter](typeset.md) prints for it. Each section has the math of one
+kind of construct, and the legend lists the symbol of each dimension, relation and parameter.
 
-Each section shows the YAML of one construct, then its equation. Most fragments
-come from one test spec,
+Each construct is printed as its YAML and then its equation. Most of the YAML
+comes from one test spec,
 [`tests/typesetting/golden/model.yaml`](https://github.com/energy-models/mathspec/blob/main/tests/typesetting/golden/model.yaml),
-which holds every construct and does not make sense as an optimisation
-problem. The curves come from the example specs that their section names.
-[Operators](language/operators.md) says what each operator does.
+which contains every construct and is not a meaningful optimisation problem.
+The curves come from the example specs named in each section.
 
-The symbols are **derived** from the names in the file, so you see
-$\mathrm{load}_{t}$ rather than $\ell_t$. A
-[symbol table](typeset.md#symbol-tables) replaces the symbols and changes
-nothing else.
+The typesetter derives each symbol from the name in the file, so the
+symbol is $\mathrm{load}_{t}$ rather than $\ell_t$. A
+[symbol table](typeset.md#symbol-tables) sets other symbols, and the
+typesetter changes nothing else.
 
 <!-- notation:begin -->
 ### Legend
@@ -31,7 +30,7 @@ dimensions:
   snapshot: { dtype: int, ordered: true }
   generator: { dtype: str, ordered: true }
   bus: { dtype: str }
-  zone: { dtype: str }
+  zone: { dtype: str, one_of: [north, south] } # the labels a condition may name: the legend lists them
   season: { dtype: str }
   technology: { dtype: str }
   bp: { dtype: int, ordered: true } # the breakpoints every curve below runs through
@@ -49,18 +48,19 @@ relations:
 parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
-  cost: { dims: [generator], missing: neutral } # a reading: the legend names it
+  cost: { dims: [generator], missing: 0 } # a reading: the legend names it
   load: { dims: [snapshot, bus] }
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
+  link_eff: { dims: [generator, bus], where: connection, missing: 1 }
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }
   budget: { dims: [] } # scalar: the legend says so rather than printing an empty product
   growth: { dims: [] } # the base of a power; the exponent is `lead`, a column
-  bp_x: { dims: [generator, bp], missing: neutral } # the x-axis of every curve below, and what a derived mask is read from
-  bp_y: { dims: [generator, bp], missing: neutral }
+  bp_x: { dims: [generator, bp], missing: 0 } # the x-axis of every curve below, and what a derived mask is read from
+  bp_y: { dims: [generator, bp], missing: 0 }
   bp_heat: { dims: [generator, bp] }
   bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a piecewise entry has a mask to print
 ```
@@ -75,7 +75,7 @@ parameters:
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T},\ \mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E}`$ |
-| $`\mathcal{Z}`$ | index $`z`$ — `zone` with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
+| $`\mathcal{Z}`$ | index $`z`$ — `zone` (labels `north`, `south`) with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
 
 #### Parameters
 
@@ -83,14 +83,15 @@ parameters:
 |---|---|
 | $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{B} \times \mathcal{G}`$ |
 | $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{B} \times \mathcal{G}`$ |
-| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$, `neutral` where the data has no row |
-| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{B} \times \mathcal{G}`$, `neutral` where the data has no row |
+| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$, $`0`$ where the data has no row |
+| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{B} \times \mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{budget}`$ | `budget` (scalar) |
-| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, `neutral` where the data has no row |
+| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{eta}`$ | `eta` over $`\mathcal{G}`$ |
 | $`\mathrm{growth}`$ | `growth` (scalar) |
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
+| $`\mathrm{link\_eff}`$ | `link_eff` over $`\mathcal{U} \times \mathcal{G}`$, only where $`\left( u,\ g \right) \in \mathrm{connection}`$, $`1`$ where the data has no row |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{U} \times \mathcal{T}`$ |
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
@@ -110,7 +111,7 @@ parameters:
 | Symbol | Meaning |
 |---|---|
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{G} \times \mathcal{T}`$ |
-| $`\mathit{headroom}`$ | `headroom` (scalar), `neutral` where the mask leaves it out |
+| $`\mathit{headroom}`$ | `headroom` (scalar), $`0`$ where the mask leaves it out |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{on}`$ | `on` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{op\_cost}`$ | `op_cost` over $`\mathcal{G} \times \mathcal{T}`$ |
@@ -266,14 +267,14 @@ variables:
 
 #### Scalar variable with a condition
 
-scalar too, but masked, so the condition stands with no set beside it; neutral, so the legend names the reading
+scalar too, but masked, so the condition stands with no set beside it; 0, so the legend names the value
 
 ```yaml
 variables:
   headroom:
     dims: []
     where: "budget"
-    missing: neutral
+    missing: 0
     bounds: { lower: 0 }
 ```
 
@@ -1656,3 +1657,9 @@ constraints:
 \theta_{u} \le \mathrm{budget} \qquad \forall\, u \in \mathcal{U} \,:\, \mathrm{zone\_cap}_{\mathrm{zone\_of}(u)} \text{ is defined}
 ```
 <!-- notation:end -->
+
+!!! info "See also"
+
+    - [typeset output](typeset.md), for the three formats and their options
+    - [operators](language/operators.md), for what each operator does
+    - [symbol tables](typeset.md#symbol-tables), to set other symbols

@@ -118,9 +118,10 @@ if TYPE_CHECKING:
 
 SHARED_SECTIONS = ('dimensions', 'relations')
 
-#: The fields of a dimension or a relation, other than ``description``, that a
-#: patch may change. A patch may not change any other field of one its base declares.
 SETTINGS: dict[str, frozenset[str]] = {'dimensions': frozenset({'ordered'}), 'relations': frozenset({'missing'})}
+"""The fields of a dimension or a relation, other than ``description``, that a patch may change. A patch may change no
+other field of one that its base declares.
+"""
 
 OWNED_SECTIONS = tuple(
     name
@@ -136,7 +137,6 @@ GIVEN_KINDS = {
     'conditions': 'given condition',
 }
 
-#: What a fragment, a base or a patch may be given as.
 type Source = str | Path | Mapping[str, object] | Spec
 
 IRREGULAR = {

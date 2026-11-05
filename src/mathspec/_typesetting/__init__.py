@@ -56,10 +56,9 @@ __all__ = [
     'typeset_line',
 ]
 
-#: A format by the name the CLI takes. Every renderer here is asked for one.
 FormatName = Literal['latex', 'markdown', 'typst']
+"""The name of an output format, as the command line takes it."""
 
-#: Every format, by name. Adding one is a module plus a row.
 FORMATS: dict[FormatName, Format] = {
     'latex': LatexFormat(),
     'markdown': MarkdownFormat(),
@@ -154,7 +153,7 @@ def typeset(
 
     blocks = [format_.note(format_.escape(program.description))] if program.description else []
     if legend:
-        explained, noticed = Legend(program, walk.symbols, format_), notice(program)
+        explained, noticed = Legend(program, walk.symbols, format_, walk.parameter_masks()), notice(program)
         blocks += [
             format_.section(title, format_.glossary(items))
             for title, items in explained.glossaries(noticed, walk.defined())

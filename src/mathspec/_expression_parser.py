@@ -23,22 +23,14 @@ from mathspec.errors import SchemaError
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
-#: The three comparison operators a constraint may use: its sense.
 Sense = Literal['<=', '>=', '==']
 
-#: The sign a unary operator applies to its operand.
 UnaryOperator = Literal['+', '-']
 
-#: The arithmetic a binary operator may spell. The grammar closes the set, and
-#: a renderer that dispatches on [`BinaryOperatorNode.op`][] switches over it
-#: and keeps no list of its own.
 BinaryOperator = Literal['+', '-', '*', '/', '**']
 
-#: What an expression writes to refer to an entry, and so what an
-#: entry may be named.
 NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
-#: A float has a fractional part or an exponent. The unary operator carries the sign.
 REAL = r'\d+\.\d*([eE][+-]?\d+)?|\d+[eE][+-]?\d+'
 
 # ---------------------------------------------------------------------------
@@ -146,9 +138,6 @@ class FunctionCallNode:
         return f'{self.name}({", ".join(passed)})'
 
 
-#: Every arithmetic node the grammar builds. A name, a name list, a column
-#: selection and a quoted keyword are what resolution reads for their kind; the
-#: rest is structure.
 ArithmeticNode = (
     NumberNode
     | NameNode
@@ -172,7 +161,6 @@ class ComparisonNode:
         return f'{self.left} {self.op} {self.right}'
 
 
-#: A whole parsed expression: arithmetic, or one comparison over it.
 ParsedNode = ArithmeticNode | ComparisonNode
 
 
@@ -243,8 +231,6 @@ def with_children(node: ArithmeticNode, recurse: Callable[[ArithmeticNode], Arit
 # ---------------------------------------------------------------------------
 
 
-#: A bracketed list of names as a kwarg value, in an expression and in a condition
-#: string alike.
 NAME_LIST = (pp.Suppress('[') + pp.DelimitedList(pp.Regex(NAME)) + pp.Suppress(']')).set_parse_action(
     lambda t: NameListNode(tuple(str(x) for x in t))
 )
@@ -332,16 +318,9 @@ def _make_power(tokens: pp.ParseResults) -> ArithmeticNode:
     return items[0] if len(items) == 1 else BinaryOperatorNode('**', items[0], items[2])
 
 
-#: The arithmetic half on its own, for the condition grammar to put a condition's
-#: comparator over: one grammar for what a side may say, wherever it stands.
-#: The column selection is shared too, so a kwarg reads one the same way in
-#: both grammars.
 ARITHMETIC, _GRAMMAR, COLUMNS = _build_grammar()
 
 
-#: How deep a tree the language admits. Every pass over an expression recurses,
-#: so a deeper one exhausts the interpreter's stack instead of failing as a
-#: ``LanguageError``; the whole pipeline survives 300 on a default stack (#359).
 MAX_DEPTH = 100
 
 
@@ -421,9 +400,6 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     return None
 
 
-#: The rewrite an over-deep expression is given. Writing the terms out is
-#: what ``sum`` exists to replace, so the refusal points at the language's own
-#: answer before it offers the general one.
 _DEEP_REWRITE = (
     'Reduce over a dimension with sum() rather than writing the terms out, or name an intermediate '
     'quantity under expressions: and refer to it by name.'

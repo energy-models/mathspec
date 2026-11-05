@@ -114,13 +114,8 @@ class UnresolvedComparisonNode:
     right: ArithmeticNode | ColumnNode | KeywordNode
 
 
-#: The condition nodes that resolution replaces: their leaves are names not yet
-#: looked up in the spec.
 UnresolvedConditionNode = NameNode | UnresolvedComparisonNode | UnresolvedConditionCallNode | UnresolvedCountNode
 
-#: Every node a parsed condition is built of: the connectives and literals,
-#: the unresolved leaves, and the arithmetic and the two side nodes under a
-#: comparison. The depth check walks these.
 ParsedCondition = Condition | UnresolvedConditionNode | ArithmeticNode | ColumnNode | KeywordNode
 
 
@@ -252,8 +247,6 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     return None
 
 
-#: The rewrite for a condition that nests too deep. The file can carry part
-#: of a long chain of conditions as data, so this rewrite comes first.
 _DEEP_REWRITE = (
     'Declare a parameter or relation carrying part of the test and name that here, or split the '
     'entry into two, each masked by one half.'

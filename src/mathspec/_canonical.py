@@ -38,19 +38,10 @@ if TYPE_CHECKING:
     from mathspec.program import Condition
     from mathspec.spec import Spec
 
-#: Which sign a term of a sum is written under, which is also the operator that
-#: rebuilds it.
 Sign = Literal['+', '-']
 
-#: Where an entry's expression text sits under a section, once the spec is
-#: plain data. A link is different: it serialises back to the ``[expression,
-#: values]`` list the file wrote, so its expression is a position rather than a
-#: key.
 _EXPRESSION_KEYS = ('expression', 'otherwise', 'template')
 
-#: Where an entry's condition text sits under a section, once the spec is plain
-#: data. A condition is read by its own grammar, so it is printed by its own
-#: printer.
 _CONDITION_KEYS = ('where', 'when', 'condition', 'holds')
 
 
@@ -315,7 +306,6 @@ def _canonical_field(key: str, value: object) -> object:
     return _canonical_entry(value)
 
 
-#: What an entry written as a bare string is, by the section it sits in.
 _BARE: dict[str, Callable[[str], str]] = {
     'expressions': canonical_text,
     'conditions': canonical_condition,

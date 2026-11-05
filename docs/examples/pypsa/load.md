@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Loads
 
-This file states PyPSA's `Load`. It is one of the [24 fragments](index.md) that merge back into `examples/pypsa.yaml`. It adds a term to the sum `Bus_injection`.
+This file states PyPSA's `Load`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `Bus_injection`. `Load_demand` is the demand times the sign where the load is active, and nothing where it is not.
 
 <!-- gallery:begin -->
 ```yaml
@@ -37,24 +37,24 @@ parameters:
     dims: [scenario, snapshot, load]
   Load_sign:
     description: >-
-      the sign a load's demand enters its bus's balance with — PyPSA's
+      the sign a load's demand enters its bus's balance with. It is PyPSA's
       `sign`, `-1` unless given, `1` for a load that feeds its bus. PyPSA
-      refuses one that differs by scenario (`constants.py:43`)
+      refuses one that differs by scenario (`constants.py:46`)
     dims: [load]
   Load_active:
     description: >-
-      whether a load stands in the model — PyPSA's `active`. A load has no
-      build year and no lifetime, so the flag holds in every snapshot. PyPSA
-      refuses one that differs by scenario (`constants.py:51`)
+      whether a load is active in the network, PyPSA's `active`. A load has no
+      build year and no lifetime, so the flag is the same in every snapshot.
+      PyPSA refuses one that differs by scenario (`constants.py:54`)
     dims: [load]
     dtype: bool
 
 expressions:
   Load_demand:
     description: >-
-      what a load draws from its bus's balance — its demand times its sign
-      where it is active, nothing where it is not, since PyPSA drops an
-      inactive load from the balance (`constraints.py:1513-1514`)
+      what a load draws from its bus's balance. It is its demand times its
+      sign where it is active, and nothing where it is not. PyPSA drops an
+      inactive load from the balance (`constraints.py:1521-1522`)
     dims: [scenario, snapshot, load]
     cases:
       active: { when: Load_active, expression: Load_sign * Load_p_set }
@@ -83,15 +83,15 @@ expressions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{on}^{\mathrm{load}}`$ | `Load_active` over $`\mathcal{D}`$ — whether a load stands in the model — PyPSA's `active`. A load has no build year and no lifetime, so the flag holds in every snapshot. PyPSA refuses one that differs by scenario (`constants.py:51`) |
+| $`\mathrm{on}^{\mathrm{load}}`$ | `Load_active` over $`\mathcal{D}`$ — whether a load is active in the network, PyPSA's `active`. A load has no build year and no lifetime, so the flag is the same in every snapshot. PyPSA refuses one that differs by scenario (`constants.py:54`) |
 | $`\mathrm{load}`$ | `Load_p_set` over $`\mathcal{D} \times \Xi \times \mathcal{T}`$ — demand |
-| $`\mathrm{sgn}^{\mathrm{load}}`$ | `Load_sign` over $`\mathcal{D}`$ — the sign a load's demand enters its bus's balance with — PyPSA's `sign`, `-1` unless given, `1` for a load that feeds its bus. PyPSA refuses one that differs by scenario (`constants.py:43`) |
+| $`\mathrm{sgn}^{\mathrm{load}}`$ | `Load_sign` over $`\mathcal{D}`$ — the sign a load's demand enters its bus's balance with. It is PyPSA's `sign`, `-1` unless given, `1` for a load that feeds its bus. PyPSA refuses one that differs by scenario (`constants.py:46`) |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\check{\mathrm{load}}`$ | `Load_demand` over $`\mathcal{D} \times \Xi \times \mathcal{T}`$ — what a load draws from its bus's balance — its demand times its sign where it is active, nothing where it is not, since PyPSA drops an inactive load from the balance (`constraints.py:1513-1514`) |
+| $`\check{\mathrm{load}}`$ | `Load_demand` over $`\mathcal{D} \times \Xi \times \mathcal{T}`$ — what a load draws from its bus's balance. It is its demand times its sign where it is active, and nothing where it is not. PyPSA drops an inactive load from the balance (`constraints.py:1521-1522`) |
 | $`\mathrm{Load\_injection}`$ | `Load_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ |
 
 #### Definitions
@@ -108,3 +108,8 @@ expressions:
 \mathrm{Load\_injection}_{n,\xi,t} = \sum_{d \in \mathcal{D} \,:\, \mathrm{Load\_bus}(d) = n} \check{\mathrm{load}}_{d,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 25 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

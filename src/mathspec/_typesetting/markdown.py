@@ -25,12 +25,8 @@ if TYPE_CHECKING:
     from mathspec._typesetting.format import LegendItem, Line
 
 
-#: What Markdown reads as markup inside a paragraph, each escaped by a leading
-#: backslash, which CommonMark allows for any ASCII punctuation. ``$`` is GitHub's
-#: inline math, ``~`` its strikethrough; the pipe is a table cell's to escape.
 _SPECIALS = frozenset('\\`*_[]<>~$#')
 
-#: A list, quote or heading marker is markup only at the start of a line.
 _LEADING_MARKER = re.compile(r'(^|\n)([-+>]|\d+[.)])(?= )')
 
 
@@ -47,9 +43,6 @@ def _cell(text: str) -> str:
 class MarkdownFormat(LatexFormat):
     """See [`mathspec._typesetting.format.Format`][]. Math is LaTeX's; prose is not."""
 
-    #: The character, not TeX's ligature: no Markdown renderer this output
-    #: is aimed at substitutes one, so `---` reaches the reader as three
-    #: hyphens in the middle of a legend row.
     dash: ClassVar[str] = '\N{EM DASH}'
 
     @override

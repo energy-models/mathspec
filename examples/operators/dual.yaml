@@ -2,7 +2,10 @@
 #
 # SPDX-License-Identifier: MIT
 
-description: The row dual — `dual(constraint)` reads a solved constraint's shadow price over its own frame.
+description: >-
+  After the solver runs, `dual(constraint)` has the constraint's dimensions,
+  and each value is the marginal value of the constraint at that
+  coordinate (its shadow price).
 
 dimensions:
   snapshot: { dtype: int }
