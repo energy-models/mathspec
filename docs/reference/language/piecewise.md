@@ -717,9 +717,65 @@ Where the gate is [absent](absence.md), the curve is ungated, as under
 With `missing: 0` on the gate, the typesetter prints the curve scaled by
 `running` alone.
 
-The gate must have no dimension that `dims:` does not include. A gate over fewer
-dimensions switches every curve that it covers, so a gate over `[generator]`
-switches the curve of a generator at every snapshot.
+The gate must have no dimension that `dims:` does not include, unless it is
+read through a relation. A gate over fewer dimensions switches every curve
+that it covers, so a gate over `[generator]` switches the curve of a generator
+at every snapshot.
+
+#### A gate read through a relation
+
+A gate over another dimension is read through a
+[relation](relations.md#lookups), as
+[`at(x, by=relation[column])`](operators.md#at) reads `x`. Write the gate as
+a mapping with `variable:` and `by:`. Here `running` is per unit, and the
+curve of each generator reads the status of its unit:
+
+```yaml
+dimensions:
+  snapshot: { dtype: int, ordered: true }
+  unit: { dtype: str }
+  generator: { dtype: str }
+  bp: { dtype: int, ordered: true }
+relations:
+  unit_of: { key: generator, values: unit }
+parameters:
+  power_bp: { dims: [generator, bp] }
+  fuel_bp: { dims: [generator, bp] }
+variables:
+  power: { dims: [snapshot, generator], bounds: { lower: 0 } }
+  fuel: { dims: [snapshot, generator], bounds: { lower: 0 } }
+  running: { dims: [snapshot, unit], domain: binary }
+piecewise:
+  fuel_use:
+    along: bp
+    dims: [snapshot, generator]
+    links:
+      power: [power, power_bp]
+      fuel: [fuel, fuel_bp]
+    activity:
+      variable: running
+      by: unit_of[unit]
+objective:
+  sense: minimize
+  expression: sum(fuel)
+```
+
+```math
+\left( \mathit{power}_{t,g},\ \mathit{fuel}_{t,g} \right) \in \begin{cases} \mathit{running}_{t,\mathrm{unit\_of}(g)} & \text{if } \mathit{running}_{t,\mathrm{unit\_of}(g)} \text{ exists} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+The weights of each curve sum to `at(running, by=unit_of[unit])`. A generator
+with no row in `unit_of` has no gate, so its curve is ungated. With
+`missing: 0` on the gate, the gate is `0` outside its `where:`, so the curve
+is switched off there, and only a generator with no row in `unit_of` is
+ungated.
+
+The read must land on dimensions of `dims:`. With `running` over
+`[snapshot, unit, period]`, mathspec refuses the file at load:
+
+```text
+piecewise 'fuel_use': activity 'running' lands on ['period'], which dims ['snapshot', 'generator'] does not carry. The gate switches the curve of one coordinate of dims:. Read it through a relation that lands it on dims:, or add ['period'] to dims:.
+```
 
 !!! info "See also"
 
