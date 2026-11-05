@@ -846,7 +846,7 @@ def test_a_loaded_spec_is_a_base_as_readily_as_a_mapping():
 def test_a_patch_creates_a_given_entry_of_every_kind(kind, entry):
     """`override` lays `given:` over by the kinds `merge` folds, so a kind added to one reaches the other."""
     laid = override(GIVEN_BASE, [{'given': {kind: {'r': entry}}}])
-    assert getattr(laid.given, kind)['r'].dims == ('g',)
+    assert getattr(laid.given, kind)['r'].dims == ('g',), 'the patch creates the entry with the frame it wrote'
     assert sorted(laid.given.variables) == ['p'], 'the kinds the patch did not name are still there'
 
 

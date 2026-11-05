@@ -16,7 +16,7 @@ from mathspec._typesetting.format import OPERATOR_NAMES
 from mathspec._typesetting.symbols import _derive_name_symbol, chosen_expressions, symbols_for
 from mathspec._validation import to_spec
 from mathspec.errors import LanguageError
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SPECS, dims_reversed, entries_reversed, varied
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SPECS, entries_reversed, sets_reversed, varied
 from tests.typesetting import golden
 from tests.typesetting.fixtures import EVERY_FORMAT, LATEX
 
@@ -1096,6 +1096,6 @@ def test_the_order_a_dims_list_is_written_in_prints_nowhere(path, fmt):
     """An entry printed its indices in the order its `dims:` wrote them, so two files that state one model
     printed two documents."""
     spec = to_spec(path)
-    assert typeset(to_spec(dims_reversed(spec.to_dict())), fmt) == typeset(spec, fmt), (
+    assert typeset(to_spec(sets_reversed(spec.to_dict())), fmt) == typeset(spec, fmt), (
         'every index prints sorted by name, whatever order a dims: list is written in'
     )

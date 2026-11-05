@@ -35,7 +35,7 @@ from mathspec._expression_parser import (
     parse_expression,
 )
 from mathspec.program import And, BooleanLiteral, Not, Or
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, dims_reversed, raw_of, varied
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, raw_of, sets_reversed, varied
 
 if TYPE_CHECKING:
     from mathspec._expression_parser import ArithmeticNode, ParsedNode
@@ -173,7 +173,7 @@ def test_a_file_written_backwards_writes_the_same_text(path):
     each entry and the order of each `dims:` list are spelling. A file that
     writes all four in reverse is the same spec, so it writes the same text."""
     raw = raw_of(path)
-    backwards = ms.to_spec(dims_reversed(_written_backwards(raw))).to_yaml(canonical=True)
+    backwards = ms.to_spec(sets_reversed(_written_backwards(raw))).to_yaml(canonical=True)
     assert backwards == ms.to_spec(raw).to_yaml(canonical=True), 'four orders reversed, one text'
 
 

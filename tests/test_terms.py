@@ -20,7 +20,7 @@ from mathspec import advice, merge, override, to_markdown, to_spec, typeset, typ
 from mathspec._canonical import canonical_yaml
 from mathspec._typesetting import FORMATS
 from mathspec.errors import DimensionError, LanguageError
-from tests.fixtures import BALANCE, BUS_DIMS, BUS_FRAME, INJECTION, dims_reversed, section
+from tests.fixtures import BALANCE, BUS_DIMS, BUS_FRAME, INJECTION, section, sets_reversed
 
 #: A generator fleet: what it puts in is its term.
 FLEET = {
@@ -529,7 +529,7 @@ def test_a_sum_a_sibling_declares_as_another_kind_names_that_kind():
 def test_readers_that_list_the_frame_in_two_orders_compose_one_sum():
     """Two readers of one sum that wrote its dims in two orders were refused, because the first reader's order
     reached the canonical text."""
-    assert canonical_yaml(merge([dims_reversed(BALANCE), FLEET])) == canonical_yaml(merge([BALANCE, FLEET])), (
+    assert canonical_yaml(merge([sets_reversed(BALANCE), FLEET])) == canonical_yaml(merge([BALANCE, FLEET])), (
         'the order a reader lists the dims in reaches no canonical text'
     )
 

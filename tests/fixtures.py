@@ -90,20 +90,26 @@ def varied(base: dict[str, Any], **patch: Any) -> dict[str, Any]:
     return raw
 
 
-def dims_reversed(data: Any) -> Any:
-    """*data* with every ``dims:`` list reversed, at any depth, and each relation's ``key`` and ``values``."""
-    if isinstance(data, dict):
-        return {
-            key: value[::-1]
-            if key == 'dims' and isinstance(value, list)
-            else {name: _columns_reversed(entry) for name, entry in value.items()}
-            if key == 'relations' and isinstance(value, dict)
-            else dims_reversed(value)
-            for key, value in data.items()
-        }
+def sets_reversed(data: Any) -> Any:
+    """*data* with every list or mapping that names a set reversed, at any depth.
+
+    Each ``dims:``, ``one_of:`` and ``kwargs:`` list, and each relation's
+    ``key`` and ``values``.
+    """
     if isinstance(data, list):
-        return [dims_reversed(item) for item in data]
-    return data
+        return [sets_reversed(item) for item in data]
+    if not isinstance(data, dict):
+        return data
+    return {key: _reversed_under(key, value) for key, value in data.items()}
+
+
+def _reversed_under(key: str, value: Any) -> Any:
+    """*value* reversed where *key* names a set, its relations' sides reversed under ``relations``, else searched on."""
+    if key in ('dims', 'one_of', 'kwargs'):
+        return _reversed(value)
+    if key == 'relations' and isinstance(value, dict):
+        return {name: _columns_reversed(entry) for name, entry in value.items()}
+    return sets_reversed(value)
 
 
 def entries_reversed(data: dict[str, Any]) -> dict[str, Any]:
@@ -122,14 +128,16 @@ def _columns_reversed(relation: Any) -> Any:
     """A relation entry with its ``key`` and ``values`` columns in reverse order."""
     if not isinstance(relation, dict):
         return relation
-    return {
-        key: value[::-1]
-        if key in ('key', 'values') and isinstance(value, list)
-        else dict(reversed(value.items()))
-        if key in ('key', 'values') and isinstance(value, dict)
-        else value
-        for key, value in relation.items()
-    }
+    return {key: _reversed(value) if key in ('key', 'values') else value for key, value in relation.items()}
+
+
+def _reversed(value: Any) -> Any:
+    """A list or a mapping in reverse order, and anything else as it is."""
+    if isinstance(value, list):
+        return value[::-1]
+    if isinstance(value, dict):
+        return dict(reversed(value.items()))
+    return value
 
 
 def section(markdown: str, title: str) -> str:

@@ -41,9 +41,9 @@ from tests.fixtures import (
     DISPATCH_MODEL,
     EXAMPLES,
     SPECS,
-    dims_reversed,
     entries_reversed,
     expression_of,
+    sets_reversed,
     spec_of,
     varied,
     where_of,
@@ -880,7 +880,7 @@ def test_the_order_a_file_writes_dimensions_in_reaches_no_value_of_the_program(p
     """An entry kept the order its `dims:` wrote, and a frame the loader derived took the order `dimensions:`
     declares. Two files that differ only in those orders loaded to different programs."""
     spec = to_spec(path)
-    data = dims_reversed(spec.to_dict())
+    data = sets_reversed(spec.to_dict())
     reversed_order = to_spec({**data, 'dimensions': dict(reversed(cast('dict', data['dimensions']).items()))})
     assert reversed_order.program == spec.program, 'the order of dimensions: and of every dims: changes no value'
     assert reversed_order.expand().program == spec.expand().program, 'nor of the program its expansion lowers to'
@@ -891,8 +891,10 @@ def test_the_order_a_file_writes_a_list_in_reaches_no_value_of_the_spec(path):
     """A spec held each `dims:` list and each side of a relation as its file wrote them, so two files that state
     one spec loaded to two specs, and wrote back two texts."""
     spec = to_spec(path)
-    backwards = to_spec(dims_reversed(spec.to_dict()))
-    assert backwards == spec, 'every dims: list and each side of a relation is sorted as the spec loads'
+    backwards = to_spec(sets_reversed(spec.to_dict()))
+    assert backwards == spec, (
+        'every dims:, one_of: and kwargs: list and each side of a relation is sorted as the spec loads'
+    )
     assert backwards.to_yaml() == spec.to_yaml(), 'so the spec writes back one text'
 
 
