@@ -754,7 +754,7 @@ def _columns_over(shape: Relation, dims: tuple[str, ...]) -> str:
     over = {d: [r for r in shape.roles if shape.dim(r) == d] for d in dims}
     if named := [f'the columns over {d!r} are {roles}' for d, roles in over.items() if roles]:
         return ', '.join(named)
-    return f'its columns are {list(shape.roles)}, over {sorted(set(shape.dims))}'
+    return f'its columns are {list(shape.roles)}, over {list(shape.dims)}'
 
 
 def _or_a_formal(formals: frozenset[str]) -> str:
