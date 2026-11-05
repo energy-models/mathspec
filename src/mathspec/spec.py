@@ -137,7 +137,7 @@ NUMERIC_DTYPES: frozenset[ParameterDtype] = frozenset({'float', 'int'})
 #: and ``-inf`` as the numbers they name, which an editor would otherwise flag.
 _MISSING_SCHEMA: dict[str, object] = {
     'anyOf': [
-        {'enum': list(get_args(RelationMissing))},
+        {'enum': ['refused', 'absent']},
         {'type': 'boolean'},
         {'type': 'number'},
         {'enum': ['inf', '-inf']},
@@ -148,7 +148,7 @@ _MISSING_SCHEMA: dict[str, object] = {
 _VARIABLE_MISSING_SCHEMA: dict[str, object] = {'anyOf': [{'enum': ['absent']}, {'type': 'number'}]}
 
 #: The words a parameter's ``missing:`` takes beside a value, for a refusal to list.
-_WORDS = ', '.join(get_args(RelationMissing))
+_WORDS = 'refused, absent'
 
 
 def _without_refused(written: dict[str, object]) -> dict[str, object]:
@@ -236,7 +236,9 @@ class RelationSpec(_StrictSpec):
     values: str | list[str] | dict[str, str] | None = None
     #: Whether every combination of the key's dimensions needs a row:
     #: ``refused`` refuses data that leaves one out, and ``absent`` reads it
-    #: as no row.
+    #: as no row. ``excluded`` reads it as no row too, and as no coordinate of
+    #: any parameter over every dimension of the key, so a tool refuses a row
+    #: of that parameter's data there.
     missing: RelationMissing = 'refused'
     description: str | None = None
 
@@ -250,8 +252,9 @@ class RelationSpec(_StrictSpec):
             )
         if v not in get_args(RelationMissing):
             msg = (
-                f'missing: {_as_yaml(v)} on a relation, which takes refused or absent. A key combination with no '
-                f'row is refused, or is not in the relation.'
+                f'missing: {_as_yaml(v)} on a relation, which takes refused, absent or excluded. A key combination '
+                f'with no row is refused, is not in the relation, or is not a coordinate of any parameter over '
+                f'the key.'
             )
             raise ValueError(msg)
         return v
@@ -359,7 +362,7 @@ class ParameterSpec(_StrictSpec):
     #: comes first: outside it the parameter is absent, and a row of its data
     #: there is dropped. ``missing:`` then applies to the coordinates it keeps.
     where: str | None = None
-    missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
+    missing: Annotated[Literal['refused', 'absent'] | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -372,7 +375,7 @@ class ParameterSpec(_StrictSpec):
             )
         if v in ('inf', '-inf'):
             return float(cast('str', v))
-        if isinstance(v, str) and v not in get_args(RelationMissing):
+        if isinstance(v, str) and v not in ('refused', 'absent'):
             msg = f'missing is the string {v!r}. It takes {_WORDS}, or a value: a number, true or false.'
             raise ValueError(msg)
         if isinstance(v, float) and math.isnan(v):

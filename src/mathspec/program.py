@@ -32,7 +32,7 @@ from mathspec.errors import did_you_mean
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
 
 
 #: The public names of ``mathspec.program``, sorted.
@@ -151,11 +151,12 @@ DeclaredDtype = ParameterDtype | DimensionDtype
 VariableDomain = Literal['continuous', 'integer', 'binary']
 
 #: A relation's ``missing:``. ``refused`` refuses data that leaves a key
-#: combination out, and ``absent`` reads it as no row.
-RelationMissing = Literal['refused', 'absent']
+#: combination out, and ``absent`` reads it as no row. ``excluded`` reads it as
+#: no row too, and as no coordinate of any parameter over the key's dimensions.
+RelationMissing = Literal['refused', 'absent', 'excluded']
 
-#: A parameter's ``missing:``: what a relation takes, or the value a missing row reads as.
-ParameterMissing = RelationMissing | bool | float
+#: A parameter's ``missing:``: ``refused``, ``absent``, or the value a missing row reads as.
+ParameterMissing = Literal['refused', 'absent'] | bool | float
 
 #: A variable's ``missing:``. ``absent``, the default, removes the row of a term
 #: that carries the variable where its ``where`` masks it out. A number is what
@@ -512,8 +513,8 @@ class Relation:
 
     columns: tuple[tuple[str, str], ...]
     key: tuple[str, ...]
-    #: Whether every combination of the key's roles needs a row: ``refused``
-    #: or ``absent``.
+    #: Whether every combination of the key's roles needs a row: ``refused``,
+    #: ``absent``, or ``excluded``, which also confines parameters ([`confines`][]).
     missing: RelationMissing = 'refused'
     description: str | None = None
 
@@ -537,6 +538,15 @@ class Relation:
 
     def dim(self, role: str) -> str:
         return self._dim_of[role]
+
+    def confines(self, dims: Iterable[str]) -> bool:
+        """Whether a parameter over *dims* has coordinates only at this relation's rows.
+
+        It does under ``missing: excluded`` where *dims* carry every dimension
+        of the key. The key then has one column per dimension, which the
+        relation entry is refused without.
+        """
+        return self.missing == 'excluded' and {self.dim(role) for role in self.key} <= set(dims)
 
 
 @dataclass(frozen=True)
@@ -1130,6 +1140,17 @@ class Program:
     def relations_of(self, dimension: str) -> Mapping[str, Relation]:
         """The relations with a column over *dimension*, by name."""
         return Sealed({n: lk for n, lk in self.relations.items() if dimension in lk.dims})
+
+    def confining(self, parameter: str) -> tuple[str, ...]:
+        """The ``missing: excluded`` relations that confine *parameter*, by name, in file order.
+
+        A tool attaching the data refuses a row of *parameter* at a key
+        combination one of them has no row for, and reads the parameter as
+        absent there, before its ``where:`` drops anything and before
+        ``missing:`` fills anything.
+        """
+        dims = self.parameters[parameter].dims
+        return tuple(name for name, relation in self.relations.items() if relation.confines(dims))
 
     @property
     def roots(self) -> tuple[Expression, ...]:

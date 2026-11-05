@@ -202,6 +202,14 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
                 for d, count in Counter(dict(lk.pairs)[k] for k in lk.key_roles).items()
                 if count > 1
             )
+        elif lk.missing == 'excluded':
+            yield from (
+                f"Relation '{lname}': missing: excluded confines each parameter over every dimension of the key, and "
+                f"a parameter has '{d}' once, so a key with two columns over '{d}' confines none. Key the relation "
+                f'by one column over each dimension, or write missing: absent.'
+                for d, count in Counter(dict(lk.pairs)[k] for k in lk.key_roles).items()
+                if count > 1
+            )
 
 
 def _bound_names(spec: Spec) -> Iterator[str]:

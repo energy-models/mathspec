@@ -865,7 +865,8 @@
           "default": "refused",
           "enum": [
             "refused",
-            "absent"
+            "absent",
+            "excluded"
           ],
           "title": "Missing",
           "type": "string"

@@ -51,6 +51,7 @@ from mathspec.program import (
     ParameterReference,
     Piecewise,
     Program,
+    RelationDefined,
     Sos,
     Variable,
     VariableDefined,
@@ -401,6 +402,11 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
         mask = masks[pname] = mask_of(resolve_condition_text(spec.parameters[pname].where, ns, context, errors))
         if mask is None:
             continue
+        if isinstance(mask.root, RelationDefined) and mask.root.name in ns.confining(spec.parameters[pname].dims):
+            errors.append(
+                f"{context}: relation '{mask.root.name}' declares missing: excluded, so it already confines "
+                f"'{pname}' to its rows, and `where: {mask.root.name}` narrows nothing. Delete the `where:`."
+            )
         errors.extend(
             f"{context}: its `where:` contains variable '{v}', and a tool evaluates the `where:` of a parameter "
             f'from the data alone, before any variable has a value. Test a parameter or a relation instead.'

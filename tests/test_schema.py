@@ -60,7 +60,7 @@ def test_no_definition_refers_only_to_itself():
         pytest.param('VariableSpec', 'domain', spec.VariableDomain, id='domain'),
         pytest.param('VariableSpec', 'missing', Literal['absent'], id='variable-missing'),
         pytest.param('RelationSpec', 'missing', spec.RelationMissing, id='relation-missing'),
-        pytest.param('ParameterSpec', 'missing', spec.RelationMissing, id='parameter-missing'),
+        pytest.param('ParameterSpec', 'missing', Literal['refused', 'absent'], id='parameter-missing'),
         pytest.param('ParameterSpec', 'dtype', spec.ParameterDtype, id='parameter-dtype'),
         pytest.param('DimensionSpec', 'dtype', spec.DimensionDtype, id='dimension-dtype'),
         pytest.param('PiecewiseSpec', 'method', spec.PiecewiseMethod, id='method'),

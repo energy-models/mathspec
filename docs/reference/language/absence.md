@@ -51,18 +51,19 @@ contain.
 
 ## What creates absence
 
-Eight constructs make a coordinate absent:
+Nine constructs make a coordinate absent:
 
-| Construct                                         | What is absent                                                                                                                 |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `where:` on a variable                            | the variable, at the coordinates the condition excludes ([`where`](#where))                                                    |
-| `where:` on a parameter                           | the parameter, at the coordinates the condition excludes ([`where` on a parameter](parameters-variables-constraints.md#where)) |
-| `where:` on a constraint                          | the row ([`where`](#where))                                                                                                    |
-| `shift(x, along=d, offset=n)` without `edge=`     | the expression, at the edge coordinate ([shift](operators.md#shift))                                                           |
-| a key with no row in a `missing: absent` relation | the relation, at that key ([relations](relations.md#missing))                                                                  |
-| a missing row of a `missing: absent` parameter    | the parameter, at that coordinate ([`missing`](#missing))                                                                      |
-| `within=` at a coordinate in no group             | the expression, at that coordinate ([`within=`](operators.md#within))                                                          |
-| a quotient whose divisor is zero                  | the quotient, at that coordinate ([reported values](#reported-values))                                                         |
+| Construct                                           | What is absent                                                                                                                 |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `where:` on a variable                              | the variable, at the coordinates the condition excludes ([`where`](#where))                                                    |
+| `where:` on a parameter                             | the parameter, at the coordinates the condition excludes ([`where` on a parameter](parameters-variables-constraints.md#where)) |
+| `where:` on a constraint                            | the row ([`where`](#where))                                                                                                    |
+| `shift(x, along=d, offset=n)` without `edge=`       | the expression, at the edge coordinate ([shift](operators.md#shift))                                                           |
+| a key with no row in a `missing: absent` relation   | the relation, at that key ([relations](relations.md#missing))                                                                  |
+| a key with no row in a `missing: excluded` relation | each parameter over every dimension of the key, at that key ([`excluded`](relations.md#excluded))                              |
+| a missing row of a `missing: absent` parameter      | the parameter, at that coordinate ([`missing`](#missing))                                                                      |
+| `within=` at a coordinate in no group               | the expression, at that coordinate ([`within=`](operators.md#within))                                                          |
+| a quotient whose divisor is zero                    | the quotient, at that coordinate ([reported values](#reported-values))                                                         |
 
 No value shifts in at the edge, so a `shift` without `edge=` has no row there:
 

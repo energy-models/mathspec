@@ -441,7 +441,11 @@ snapshot of the example, and drops every other row.
 
 A tool drops a row of the data outside the condition without refusing the
 data. An [assumption](assumptions.md) on the parameter does not test that row
-either, because the parameter has no row there.
+either, because the parameter has no row there. To have a tool refuse a row at
+a pair that is not wired, declare the relation
+[`missing: excluded`](relations.md#excluded) instead. It then confines
+`efficiency`, and every other parameter over `entity` and `bus`, and the
+parameter takes no `where:`.
 
 A tool evaluates the condition from the data alone, before it reads the
 parameter. So the condition may contain [dimensions](dimensions.md),

@@ -6,8 +6,8 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 == Sets
 / $cal(T)$: index $t$ --- `snapshot` (`int` coordinates) with $upright("season_of"): cal(T) arrow.r cal(S), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("rep_of"): cal(T) arrow.r cal(T)$
 / $cal(G)$: index $g$ --- `generator` with $upright("gen_bus"): cal(G) arrow.r cal(B), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("connection") subset.eq cal(G) times cal(B), upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$, `connection` is `absent` where the data has no row
-/ $cal(B)$: index $b$ --- `bus` with $upright("gen_bus"): cal(G) arrow.r cal(B), upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("connection") subset.eq cal(G) times cal(B), upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row
-/ $cal(Z)$: index $z$ --- `zone` (labels `north`, `south`) with $upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z)$, `area_of` is `absent` where the data has no row
+/ $cal(B)$: index $b$ --- `bus` with $upright("gen_bus"): cal(G) arrow.r cal(B), upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("connection") subset.eq cal(G) times cal(B), upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E), upright("bus_zone") subset.eq cal(B) times cal(Z)$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row, `bus_zone` is `excluded` where the data has no row
+/ $cal(Z)$: index $z$ --- `zone` (labels `north`, `south`) with $upright("zone_of"): cal(B) arrow.r cal(Z), upright("area_of"): cal(B) arrow.r cal(Z), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("bus_zone") subset.eq cal(B) times cal(Z)$, `area_of` is `absent` where the data has no row, `bus_zone` is `excluded` where the data has no row
 / $cal(S)$: index $s$ --- `season` with $upright("season_of"): cal(T) arrow.r cal(S)$
 / $cal(E)$: index $e$ --- `technology` with $upright("gen_bt"): cal(G) arrow.r cal(B) times cal(E)$
 / $cal(A)$: index $a$ --- `bp`
@@ -21,6 +21,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("zone_cap")$: `zone_cap` over $cal(Z)$
 / $upright("tech_cap")$: `tech_cap` over $cal(B) times cal(E)$, `absent` where the data has no row
 / $upright("link_eff")$: `link_eff` over $cal(G) times cal(B)$, only where $(g, b) in upright("connection")$, $1$ where the data has no row
+/ $upright("zone_share")$: `zone_share` over $cal(B) times cal(Z)$, only where $(b, z) in upright("bus_zone")$, $1$ where the data has no row
 / $upright("min_up")$: `min_up` over $cal(G)$
 / $upright("eta")$: `eta` over $cal(G)$
 / $upright("lead")$: `lead` over $cal(G)$

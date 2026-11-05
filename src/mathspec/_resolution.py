@@ -124,16 +124,19 @@ class Namespace:
         self.one_of: dict[str, tuple[str, ...]] = {
             d: dd.one_of for d, dd in spec.dimensions.items() if dd.one_of is not None
         }
-        #: parameter name -> the value its ``missing:`` reads a missing row as,
-        #: for the unmasked parameters that name one; what a comparison in a
-        #: condition reads there. A masked parameter is absent outside its mask,
-        #: so its missing row may also compare false, and none is assumed.
-        self.defaults: dict[str, bool | float] = {
-            p: pd.missing for p, pd in spec.parameters.items() if not isinstance(pd.missing, str) and pd.where is None
-        }
         #: relation name -> its columns and key, as declared.
         self.relations: dict[str, Relation] = {
             n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()
+        }
+        #: parameter name -> the value its ``missing:`` reads a missing row as,
+        #: for the parameters that name one and have every coordinate; what a
+        #: comparison in a condition reads there. A masked or confined parameter
+        #: is absent outside its mask or its relation, so its missing row may
+        #: also compare false, and none is assumed.
+        self.defaults: dict[str, bool | float] = {
+            p: pd.missing
+            for p, pd in spec.parameters.items()
+            if not isinstance(pd.missing, str) and pd.where is None and not self.confining(pd.dims)
         }
         #: parameter or variable name -> the ``dims`` it is read through. Stamped onto
         #: each leaf a condition names, the way a relation leaf carries ``over``.
@@ -158,6 +161,10 @@ class Namespace:
         #: The refusals that only point at an entry's own, which leave the
         #: class of the error to that entry's.
         self.follow_ons: set[str] = set()
+
+    def confining(self, dims: Iterable[str]) -> list[str]:
+        """The ``missing: excluded`` relations that confine a parameter over *dims*, by name."""
+        return [name for name, relation in self.relations.items() if relation.confines(dims)]
 
     def refused_dims(self, refusal: DimensionError) -> str:
         """*refusal*'s text, recorded as a dim rule's."""

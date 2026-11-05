@@ -12,6 +12,7 @@ of it is about syntax, so none is duplicated per format.
 
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, assert_never
 
@@ -720,12 +721,25 @@ class Walk:
         return [self.definition(name) for name in self.defined()]
 
     def parameter_masks(self) -> dict[str, str]:
-        """Each masked parameter's mask, printed over the parameter's own indices for its legend row."""
+        """Each masked or confined parameter's coordinates, printed over its own indices for its legend row."""
         return {
-            name: self._condition(entry.where.root, self._context(entry.dims))
+            name: self._condition(condition, self._context(entry.dims))
             for name, entry in self.program.parameters.items()
-            if entry.where is not None
+            if (condition := self._coordinates(name)) is not None
         }
+
+    def _coordinates(self, parameter: str) -> Condition | None:
+        """Where *parameter* has coordinates: each relation confining it, then its ``where:``. ``None`` for everywhere."""
+        relations = self.program.relations
+        conjuncts: list[Condition] = [
+            RelationDefined(name, tuple(relations[name].dim(role) for role in relations[name].key))
+            for name in self.program.confining(parameter)
+        ]
+        if (where := self.program.parameters[parameter].where) is not None:
+            conjuncts.append(where.root)
+        if not conjuncts:
+            return None
+        return functools.reduce(And, conjuncts)
 
     def defined(self) -> list[str]:
         """The named expressions that print under their own symbol: every one, or only the unsubstitutable when inlining.

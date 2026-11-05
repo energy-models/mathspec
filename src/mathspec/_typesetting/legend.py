@@ -290,9 +290,9 @@ class Legend:
             maps = self.format.joined([self._signature(c, lk) for c, lk in carried.items()], '')
             clauses.append(f' with {self.format.math(maps)}')
             clauses.extend(
-                f', {self.format.mono(c)} is {self.format.mono("absent")} {_NO_ROW}'
+                f', {self.format.mono(c)} is {self.format.mono(lk.missing)} {_NO_ROW}'
                 for c, lk in carried.items()
-                if lk.missing == 'absent'
+                if lk.missing != 'refused'
             )
         return ''.join(clauses)
 
