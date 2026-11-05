@@ -701,40 +701,6 @@
       "title": "ParameterSpec",
       "type": "object"
     },
-    "PiecewiseActivitySpec": {
-      "anyOf": [
-        {
-          "additionalProperties": false,
-          "description": "A piecewise entry's gate: the binary the weights sum to, on the entry's own dims or read through a relation.\n\nWritten in YAML as the variable's name, and serialised back to it. A gate\nthat names ``by: relation[column]`` is written as a mapping, and reads the\nbinary as ``at(variable, by=relation[column])`` reads it, so a unit's\non/off variable over its own dimension switches the curves it maps to. A\ncurve whose coordinate has no row in the relation is ungated.",
-          "properties": {
-            "by": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null,
-              "title": "By"
-            },
-            "variable": {
-              "title": "Variable",
-              "type": "string"
-            }
-          },
-          "required": [
-            "variable"
-          ],
-          "title": "PiecewiseActivitySpec",
-          "type": "object"
-        },
-        {
-          "type": "string"
-        }
-      ]
-    },
     "PiecewiseLinkSpec": {
       "anyOf": [
         {
@@ -796,13 +762,14 @@
         "activity": {
           "anyOf": [
             {
-              "$ref": "#/$defs/PiecewiseActivitySpec"
+              "type": "string"
             },
             {
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "title": "Activity"
         },
         "along": {
           "title": "Along",

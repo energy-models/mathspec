@@ -22,24 +22,17 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 import mathspec._sos as sos
-from mathspec._expression_parser import NAME, ColumnsNode
+from mathspec._expression_parser import NAME, ColumnsNode, FunctionCallNode, NameNode, parse_expression
 from mathspec._expression_resolver import ExpressionResolver
 from mathspec._resolution import mask_of, resolve_condition_text, resolve_expression_text
-from mathspec.errors import DimensionError
-from mathspec.program import Gate, Link, Piecewise, PiecewiseMethod, Variable, carries_variable
-from mathspec.spec import (
-    AssumptionSpec,
-    Curvature,
-    PiecewiseActivitySpec,
-    PiecewiseLinkSpec,
-    PiecewiseSpec,
-    Spec,
-    VariableSpec,
-)
+from mathspec.errors import DimensionError, SchemaError
+from mathspec.program import Gate, Join, Link, Piecewise, PiecewiseMethod, Variable, carries_variable
+from mathspec.spec import AssumptionSpec, Curvature, PiecewiseLinkSpec, PiecewiseSpec, Spec, VariableSpec
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable, Iterator, Mapping
 
+    from mathspec._expression_parser import ArithmeticNode
     from mathspec._resolution import Namespace
     from mathspec.program import Expression, JoinColumns, Mask, Program
 
@@ -443,32 +436,48 @@ class Emitted:
         )
 
 
-def leaves_ungated(gate: VariableSpec | Variable | None) -> bool:
+def leaves_ungated(gate: VariableSpec | Variable) -> bool:
     """Whether a curve gated by *gate* runs ungated where the gate does not exist, which takes a second convexity row.
 
     A masked gate is absent off its mask, and there the curve sums to 1;
     ``missing: 0`` reads the gate as 0 there instead, which one row states.
     """
-    return gate is not None and gate.where is not None and gate.missing != 0
+    return gate.where is not None and gate.missing != 0
 
 
-def gate_text(activity: PiecewiseActivitySpec, gate: VariableSpec | Variable) -> tuple[str, str | None]:
+def gate_of(text: str) -> tuple[str, ArithmeticNode | None] | None:
+    """An ``activity:`` as its variable and the ``by=`` it is read through, or ``None`` where it is neither shape.
+
+    The weights sum to the gate, so it is a binary as written, or read
+    through a relation as ``at`` reads it. What the ``by=`` names is
+    resolution's to refuse, with the refusals ``at`` gives.
+    """
+    try:
+        node = parse_expression(text)
+    except SchemaError:
+        return None
+    match node:
+        case NameNode(name):
+            return name, None
+        case FunctionCallNode('at', (NameNode(name),), kwargs) if set(kwargs) == {'by'}:
+            return name, kwargs['by']
+        case _:
+            return None
+
+
+def gate_text(text: str, gate: VariableSpec | Variable, read: Expression) -> tuple[str, str | None]:
     """The gate as a curve reads it, and the where a curve reads it under, or ``None`` where every curve does.
 
-    A gate on the entry's own dims is ungated where it does not exist, as
-    [`leaves_ungated`][] says. A walked gate is also ungated where the
-    relation has no row, so it always has a where: the read itself, which
-    exists where both do, or, under ``missing: 0``, the relation alone, since
-    the variable then reads 0 off its mask.
+    *text* is the ``activity:`` the file wrote, and *read* the expression it
+    resolved to. A gate on the entry's own dims is ungated where it does not
+    exist, as [`leaves_ungated`][] says. A walked gate is also ungated where
+    the relation has no row, so it always has a where: the read itself,
+    which exists where both do, or, under ``missing: 0``, the relation alone,
+    since the variable then reads 0 off its mask.
     """
-    if activity.by is None:
-        return activity.variable, activity.variable if leaves_ungated(gate) else None
-    read = f'at({activity.variable}, by={activity.by})'
-    if gate.missing != 0:
-        return read, read
-    columns = _columns_of(activity.by)
-    assert columns is not None, 'a gate whose read resolved names a relation and its columns'
-    return read, columns.relation
+    if not isinstance(read, Join):
+        return text, text if leaves_ungated(gate) else None
+    return text, text if gate.missing != 0 else read.columns.name
 
 
 # ---------------------------------------------------------------------------
@@ -536,24 +545,29 @@ def _columns_of(text: str) -> ColumnsNode | None:
     return ColumnsNode(match.group(1), tuple(c.strip() for c in match.group(2).split(',')))
 
 
-def resolve_gate(name: str, pw: PiecewiseSpec, declared: Variable, ns: Namespace, errors: list[str]) -> Gate | None:
-    """Entry *name*'s gate typed, *declared* being its variable as lowered, or ``None`` once it failed.
+def resolve_gate(
+    name: str, pw: PiecewiseSpec, variables: Mapping[str, Variable], ns: Namespace, errors: list[str]
+) -> Gate | None:
+    """Entry *name*'s gate typed, *variables* being the spec's as lowered, or ``None`` once it failed.
 
-    A walked gate is read as ``at(..., by=)`` reads it, so the walk is held to
-    every rule that call is held to, and refused on the gate the file wrote.
-    Each refusal is appended to *errors*.
+    The gate is resolved as the expression the file wrote, so a walked gate
+    is held to every rule ``at(..., by=)`` is held to before anything reads
+    its relation. Each refusal is appended to *errors*.
     """
     assert pw.activity is not None
+    parts = gate_of(pw.activity)
+    assert parts is not None, 'reference_errors refuses a gate of any other shape'
+    declared = variables[parts[0]]
     context = f"piecewise '{name}' activity"
-    read_text, exists_text = gate_text(pw.activity, declared)
-    if (read := resolve_expression_text(read_text, ns, context, errors, ceiling=1)) is None:
+    if (read := resolve_expression_text(pw.activity, ns, context, errors, ceiling=1)) is None:
         return None
+    _, exists_text = gate_text(pw.activity, declared, read)
     if exists_text is None:
-        return Gate(pw.activity.variable, read)
-    if pw.activity.by is None:
-        return Gate(pw.activity.variable, read, declared.where)
+        return Gate(parts[0], read)
+    if not isinstance(read, Join):
+        return Gate(parts[0], read, declared.where)
     exists = mask_of(resolve_condition_text(exists_text, ns, context, errors))
-    return None if exists is None else Gate(pw.activity.variable, read, exists)
+    return None if exists is None else Gate(parts[0], read, exists)
 
 
 def lp_domain_refusal(name: str, pw: PiecewiseSpec, links: tuple[Expression, ...]) -> str | None:
@@ -929,12 +943,12 @@ class _Expansion:
         gate, activity = self.curve.activity, self.pw.activity
         if gate is None or activity is None:
             return (('', None, None),)
-        read, exists = gate_text(activity, self.spec.variables[gate.variable])
+        read, exists = gate_text(activity, self.spec.variables[gate.variable], gate.read)
         read = _walked(read, gate.read.dims, link)
         if exists is None:
             return (('', None, read),)
         assert gate.exists is not None
-        exists = _walked(exists, gate.read.dims if activity.by is None else gate.exists.dims, link)
+        exists = _walked(exists, gate.exists.dims if isinstance(gate.read, Join) else gate.read.dims, link)
         return (('', exists, read), (_UNGATED, f'NOT {_operand(exists)}', None))
 
     def _segment_lines(self) -> None:

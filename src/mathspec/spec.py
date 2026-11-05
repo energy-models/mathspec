@@ -74,7 +74,6 @@ __all__ = [
     'MacroSpec',
     'ObjectiveSpec',
     'ParameterSpec',
-    'PiecewiseActivitySpec',
     'PiecewiseLinkSpec',
     'PiecewiseSpec',
     'RelationSpec',
@@ -927,40 +926,6 @@ class PiecewiseLinkSpec(_StrictSpec):
         return written if self.sign == '==' else {**written, 'sign': self.sign}
 
 
-class PiecewiseActivitySpec(_StrictSpec):
-    """A piecewise entry's gate: the binary the weights sum to, on the entry's own dims or read through a relation.
-
-    Written in YAML as the variable's name, and serialised back to it. A gate
-    that names ``by: relation[column]`` is written as a mapping, and reads the
-    binary as ``at(variable, by=relation[column])`` reads it, so a unit's
-    on/off variable over its own dimension switches the curves it maps to. A
-    curve whose coordinate has no row in the relation is ungated.
-    """
-
-    _label: ClassVar[str] = 'a piecewise activity'
-
-    #: The binary variable the weights sum to.
-    variable: str
-    #: The relation column the gate is read at, as ``at(..., by=)`` names it.
-    by: str | None = None
-
-    @model_validator(mode='before')
-    @classmethod
-    def _from_name(cls, data: object) -> object:
-        return {'variable': data} if isinstance(data, str) else data
-
-    @classmethod
-    @override
-    def __get_pydantic_json_schema__(cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler) -> dict[str, object]:
-        """The published schema admits the bare variable name a gate on the entry's own dims is written as."""
-        return _also_written_as(core_schema, handler, {'type': 'string'})
-
-    @model_serializer
-    def _as_written(self) -> str | dict[str, str]:
-        """The variable's name, or the mapping form a walk cannot be written in a name."""
-        return self.variable if self.by is None else {'variable': self.variable, 'by': self.by}
-
-
 #: How a ``piecewise:`` entry restricts its interpolation weights, and what
 #: each one emits. The key is ``method:`` because that is
 #: ``linopy.Spec.add_piecewise_formulation``'s (#695); ``sos2``, ``incremental``
@@ -1029,8 +994,9 @@ class PiecewiseSpec(_StrictSpec):
     where: str | None = None
     #: Which of [`PIECEWISE_METHODS`][] restricts the weights.
     method: PiecewiseMethod = 'adjacency'
-    #: What the weights sum to: 1 where absent, or a binary that pins the formulation to 0 when it is 0.
-    activity: PiecewiseActivitySpec | None = None
+    #: What the weights sum to: 1 where absent, or a binary that pins the formulation to 0 when it is 0,
+    #: written as the variable's name or as ``at(<variable>, by=<relation>[<column>])``.
+    activity: str | None = None
     description: str | None = None
 
     @property
