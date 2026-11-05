@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Power flow
 
-This file states Kirchhoff's voltage law around each cycle. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It lists the sum `Cycle_angle_sum` under [`given`](../../reference/language/parameters-variables-constraints.md#given) and adds nothing to it. The lines and the transformers add their terms to it.
+This file states Kirchhoff's voltage law around each cycle. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It lists the sum `Cycle_angle_sum` under [`given`](../../reference/language/parameters-variables-constraints.md#given) and adds nothing to it. The lines and the transformers add their terms to it.
 
 <!-- gallery:begin -->
 ```yaml
@@ -41,7 +41,7 @@ constraints:
       shift is a constant where it is fixed. Where a phase-shifting
       transformer chooses its shift, it is the shift decision times its cycle
       weight. A snapshot uses the cycles of its own period, of the branches
-      that are active in it (`constraints.py:1622-1638`). A cycle label that
+      that are active in it (`constraints.py:1630-1646`). A cycle label that
       period's basis does not reach has no row
     dims: [scenario, snapshot, cycle]
     expression: Cycle_angle_sum == 0
@@ -72,5 +72,5 @@ constraints:
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

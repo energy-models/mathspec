@@ -8,6 +8,7 @@ given:
     Generator_committable: { dims: [generator], dtype: bool }
     Generator_status_initial: { dims: [scenario, generator], dtype: int }
     Generator_p_nom_mod: { dims: [generator] }
+    Generator_modules_installed: { dims: [scenario, generator] }
     Generator_big_m: { dims: [scenario, generator] }
     Generator_active: { dims: [snapshot, generator], dtype: bool }
   variables:
@@ -71,9 +72,19 @@ parameters:
 expressions:
   Generator_previous_p:
     description: >-
-      the output a generator carries into a snapshot. At the first, it is the
-      `p_init` it brought in where it came in running, and nothing where it
-      came in off. After that, it is the previous snapshot's
+      the output a generator carries into a snapshot. It is nothing at the
+      first snapshot it is active in past the first of the horizon: PyPSA
+      fills an output it did not build with zero (`constraints.py:679`).
+      It is the output carried over otherwise
+    dims: [scenario, snapshot, generator]
+    cases:
+      opening_late: { when: "position(snapshot) > 0 AND NOT shift(Generator_active, along=snapshot, offset=1)", expression: 0 }
+    otherwise: Generator_p_carried_over
+  Generator_p_carried_over:
+    description: >-
+      the output a generator carries over into a snapshot. At the first, it is
+      the `p_init` it brought in where it came in running, and nothing where
+      it came in off. After that, it is the previous snapshot's
     dims: [scenario, snapshot, generator]
     cases:
       opening: { when: "position(snapshot) == 0", expression: Generator_status_initial * Generator_p_init }
@@ -112,6 +123,18 @@ expressions:
     cases:
       given: { when: Generator_ramp_limit_shut_down, expression: Generator_ramp_limit_shut_down }
     otherwise: 1
+  Generator_ramp_previous_status:
+    description: >-
+      the status a committed unit's ramp rows carry into a snapshot. At the
+      first snapshot, a fixed modular unit that came in running has every
+      module on, since the state it brought in is on or off
+      (`constraints.py:1092-1097`). It is the state carried in otherwise
+    dims: [scenario, snapshot, generator]
+    cases:
+      opening_modules:
+        when: "position(snapshot) == 0 AND NOT Generator_p_nom_extendable AND Generator_p_nom_mod > 0"
+        expression: Generator_status_initial * Generator_modules_installed
+    otherwise: Generator_previous_status
   Generator_ramp_up_allowance:
     description: >-
       how far a generator may raise output between two snapshots. It is its
@@ -122,9 +145,9 @@ expressions:
       committed:
         when: Generator_committable
         expression: >-
-          Generator_ramp_up_rate * Generator_p_nom_committed * Generator_previous_status
+          Generator_ramp_up_rate * Generator_p_nom_committed * Generator_ramp_previous_status
           + Generator_start_up_rate * Generator_p_nom_committed
-          * (Generator_status - Generator_previous_status)
+          * (Generator_status - Generator_ramp_previous_status)
     otherwise: Generator_ramp_up_rate * Generator_p_nom_effective
   Generator_ramp_down_allowance:
     description: >-
@@ -138,7 +161,7 @@ expressions:
         expression: >-
           Generator_ramp_down_rate * Generator_p_nom_committed * Generator_status
           + Generator_shut_down_rate * Generator_p_nom_committed
-          * (Generator_previous_status - Generator_status)
+          * (Generator_ramp_previous_status - Generator_status)
     otherwise: Generator_ramp_down_rate * Generator_p_nom_effective
 
 conditions:
@@ -238,19 +261,3 @@ constraints:
       AND Generator_ramps_from_previous
       AND Generator_active
     expression: Generator_previous_p - Generator_p <= Generator_ramp_down_allowance
-
-assumptions:
-  Generator_came_in_running_unless_committable:
-    holds: "Generator_status_initial == 1"
-    where: "NOT Generator_committable AND (Generator_ramp_limit_up OR Generator_ramp_limit_down OR Generator_ramp_limit_start_up OR Generator_ramp_limit_shut_down)"
-    description: >-
-      PyPSA reads `up_time_before` of a unit that is not committable in its
-      ramp rows (`constraints.py:1018-1019`). A ramp limit, a start-up ramp or
-      a shut-down ramp alone builds those rows. Where it is zero, PyPSA builds
-      a row at the first snapshot with nothing carried in
-      (`constraints.py:1063-1066`, `1082-1084`). It caps the unit there at
-      zero, or at its start-up ramp where another unit of the component is
-      committable with a fixed build. PyPSA documents the attribute as read
-      only for a committable unit and does not check it. PyPSA has not decided
-      which row is intended (PyPSA/PyPSA#1943). The spec does not state that
-      row, and a tool refuses such data through this assumption

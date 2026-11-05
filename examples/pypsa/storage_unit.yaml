@@ -64,7 +64,7 @@ parameters:
       whether a storage unit is one of PyPSA's `active_assets`, by its
       `active` flag alone, without build year and lifetime. A unit that is active
       in no snapshot of the horizon still counts. PyPSA refuses one that
-      differs by scenario (`constants.py:51`)
+      differs by scenario (`constants.py:54`)
     dims: [storage_unit]
     dtype: bool
   StorageUnit_capital_weight:
@@ -87,7 +87,7 @@ parameters:
       `periodized_cost`), data prep. It is `overnight_cost` as an annuity over
       `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is
       given, and `capital_cost` where it is not. Both add `fom_cost`
-      (`components.py:1126-1147`, `costs.py:102-203`)
+      (`components.py:1128-1149`, `costs.py:102-203`)
     dims: [scenario, storage_unit]
   StorageUnit_p_nom_set:
     description: a given nominal power for an extendable storage unit. One without a value has no row here
@@ -123,7 +123,7 @@ parameters:
     description: >-
       the sign net dispatch enters its bus's balance with. It is PyPSA's
       `sign`, `1` unless given. PyPSA refuses one that differs by scenario
-      (`constants.py:43`)
+      (`constants.py:46`)
     dims: [storage_unit]
   StorageUnit_retention:
     description: share of charge kept over a snapshot. It is PyPSA's `(1 - standing_loss) ** elapsed hours`, data prep
@@ -293,7 +293,7 @@ expressions:
       one at the last snapshot a row counts where a unit is active, and zero
       elsewhere. A unit that retires before the last counted snapshot closes
       on its last active level. PyPSA forward-fills the level over the counted
-      snapshots (`global_constraints.py:455-458`)
+      snapshots (`global_constraints.py:457-460`)
     dims: [scenario, global_constraint, snapshot, storage_unit]
     cases:
       last:
@@ -500,13 +500,15 @@ assumptions:
       a storage unit that opens past the first snapshot of the horizon opens
       on its initial level, or its last level where it is cyclic. This holds
       only where `StorageUnit_opens_late` is true at the snapshot
-  StorageUnit_primary_energy_per_period_closes_over_the_horizon:
-    holds: "count(NOT GlobalConstraint_counts_snapshot, over=snapshot) == 0"
-    where: "StorageUnit_primary_energy_weight AND StorageUnit_state_of_charge_initial_per_period"
+  StorageUnit_primary_energy_per_period_without_scenarios:
+    holds: "NOT StorageUnit_state_of_charge_initial_per_period"
+    where: "StorageUnit_primary_energy_weight AND count(scenario_weight, over=scenario) > 1"
     description: >-
-      PyPSA reads the closing charge of a unit that reopens per period at the
-      last snapshot of every period. It fails on a `primary_energy` row that
-      states an `investment_period` (`global_constraints.py:469`)
+      PyPSA reads the closing charge of a unit that reopens per period by
+      snapshot alone, and fails on a network with scenarios
+      (`global_constraints.py:471`). It fails with or without an
+      `investment_period`. A tool refuses the unit only where there is more
+      than one scenario, since the spec cannot tell one scenario from none
   StorageUnit_primary_energy_carried_over_has_unit_years:
     holds: "period_weight_years == 1"
     where: "StorageUnit_primary_energy_weight AND NOT StorageUnit_state_of_charge_initial_per_period"
@@ -514,18 +516,18 @@ assumptions:
       a unit that carries its charge from one period to the next closes once,
       at the last counted snapshot. No period's years weighs that level. PyPSA
       refuses it where any period's years is not one
-      (`global_constraints.py:443`)
+      (`global_constraints.py:445`)
   StorageUnit_operational_limit_carried_over_has_unit_years:
     holds: "at(period_weight_years == 1, by=snapshot_period[period])"
     where: "StorageUnit_operational_limit_weight AND NOT StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot"
     description: >-
       the same for an `operational_limit` row, over the periods it counts.
-      PyPSA refuses it (`global_constraints.py:648`)
+      PyPSA refuses it (`global_constraints.py:650`)
   StorageUnit_marginal_cost_quadratic_without_risk_preference:
     holds: "StorageUnit_marginal_cost_quadratic == 0"
     where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row. PyPSA
       refuses quadratic costs under any risk preference, `omega = 0` included
-      (`optimize.py:470-477`). In data prep you write a `CVaR_omega` row only
+      (`optimize.py:501-508`). In data prep you write a `CVaR_omega` row only
       where a risk preference is set

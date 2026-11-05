@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Process ramping
 
-This file states the ramping rows of PyPSA's `Process`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Process_previous_p` is the output carried into each snapshot, from `p_init` at the first where the unit came in running. `Process_ramp_up_allowance` adds the start-up ramp in the snapshot the unit turns on.
+This file states the ramping rows of PyPSA's `Process`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Process_previous_p` is the output carried into each snapshot, from `p_init` at the first where the unit came in running. `Process_ramp_up_allowance` adds the start-up ramp in the snapshot the unit turns on.
 
 <!-- gallery:begin -->
 ```yaml
@@ -15,6 +15,7 @@ given:
     Process_committable: { dims: [process], dtype: bool }
     Process_status_initial: { dims: [scenario, process], dtype: int }
     Process_p_nom_mod: { dims: [process] }
+    Process_modules_installed: { dims: [scenario, process] }
     Process_big_m: { dims: [scenario, process] }
     Process_active: { dims: [snapshot, process], dtype: bool }
   variables:
@@ -79,9 +80,19 @@ parameters:
 expressions:
   Process_previous_p:
     description: >-
-      the internal power a process carries into a snapshot. At the first, it
-      is the `p_init` it brought in where it came in running, and nothing
-      where it came in off. After that, it is the previous snapshot's
+      the output a process carries into a snapshot. It is nothing at the first
+      snapshot it is active in past the first of the horizon: PyPSA fills an
+      output it did not build with zero (`constraints.py:679`). It is the
+      output carried over otherwise
+    dims: [scenario, snapshot, process]
+    cases:
+      opening_late: { when: "position(snapshot) > 0 AND NOT shift(Process_active, along=snapshot, offset=1)", expression: 0 }
+    otherwise: Process_p_carried_over
+  Process_p_carried_over:
+    description: >-
+      the output a process carries over into a snapshot. At the first, it is
+      the `p_init` it brought in where it came in running, and nothing where
+      it came in off. After that, it is the previous snapshot's
     dims: [scenario, snapshot, process]
     cases:
       opening: { when: "position(snapshot) == 0", expression: Process_status_initial * Process_p_init }
@@ -120,6 +131,18 @@ expressions:
     cases:
       given: { when: Process_ramp_limit_shut_down, expression: Process_ramp_limit_shut_down }
     otherwise: 1
+  Process_ramp_previous_status:
+    description: >-
+      the status a committed process's ramp rows carry into a snapshot. At the
+      first snapshot, a fixed modular process that came in running has every
+      module on, since the state it brought in is on or off
+      (`constraints.py:1092-1097`). It is the state carried in otherwise
+    dims: [scenario, snapshot, process]
+    cases:
+      opening_modules:
+        when: "position(snapshot) == 0 AND NOT Process_p_nom_extendable AND Process_p_nom_mod > 0"
+        expression: Process_status_initial * Process_modules_installed
+    otherwise: Process_previous_status
   Process_ramp_up_allowance:
     description: >-
       how far a process may raise internal power between two snapshots. It is
@@ -130,9 +153,9 @@ expressions:
       committed:
         when: Process_committable
         expression: >-
-          Process_ramp_up_rate * Process_p_nom_committed * Process_previous_status
+          Process_ramp_up_rate * Process_p_nom_committed * Process_ramp_previous_status
           + Process_start_up_rate * Process_p_nom_committed
-          * (Process_status - Process_previous_status)
+          * (Process_status - Process_ramp_previous_status)
     otherwise: Process_ramp_up_rate * Process_p_nom_effective
   Process_ramp_down_allowance:
     description: >-
@@ -146,7 +169,7 @@ expressions:
         expression: >-
           Process_ramp_down_rate * Process_p_nom_committed * Process_status
           + Process_shut_down_rate * Process_p_nom_committed
-          * (Process_previous_status - Process_status)
+          * (Process_ramp_previous_status - Process_status)
     otherwise: Process_ramp_down_rate * Process_p_nom_effective
 
 conditions:
@@ -242,22 +265,6 @@ constraints:
       AND Process_ramps_from_previous
       AND Process_active
     expression: Process_previous_p - Process_p <= Process_ramp_down_allowance
-
-assumptions:
-  Process_came_in_running_unless_committable:
-    holds: "Process_status_initial == 1"
-    where: "NOT Process_committable AND (Process_ramp_limit_up OR Process_ramp_limit_down OR Process_ramp_limit_start_up OR Process_ramp_limit_shut_down)"
-    description: >-
-      PyPSA reads `up_time_before` of a process that is not committable in its
-      ramp rows (`constraints.py:1018-1019`). A ramp limit, a start-up ramp or
-      a shut-down ramp alone builds those rows. Where it is zero, PyPSA builds
-      a row at the first snapshot with nothing carried in
-      (`constraints.py:1063-1066`, `1082-1084`). It caps the process there at
-      zero, or at its start-up ramp where another process of the component is
-      committable with a fixed build. PyPSA documents the attribute as read
-      only for a committable process and does not check it. PyPSA has not
-      decided which row is intended (PyPSA/PyPSA#1943). The spec does not
-      state that row, and a tool refuses such data through this assumption
 ```
 
 #### Given
@@ -268,6 +275,7 @@ assumptions:
 | $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$, data another file declares |
 | $`\mathrm{u}^{z,0}`$ | `Process_status_initial` over $`\Xi \times \mathcal{J}`$, data another file declares |
 | $`\mathrm{z}^{\mathrm{mod}}`$ | `Process_p_nom_mod` over $`\mathcal{J}`$, data another file declares |
+| $`\mathrm{N}^{z,\mathrm{fix}}`$ | `Process_modules_installed` over $`\Xi \times \mathcal{J}`$, data another file declares |
 | $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\Xi \times \mathcal{J}`$, data another file declares |
 | $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{T} \times \mathcal{J}`$, data another file declares |
 | $`z`$ | `Process_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ |
@@ -309,11 +317,13 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{z}`$ | `Process_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the internal power a process carries into a snapshot. At the first, it is the `p_init` it brought in where it came in running, and nothing where it came in off. After that, it is the previous snapshot's |
+| $`\overleftarrow{z}`$ | `Process_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the output a process carries into a snapshot. It is nothing at the first snapshot it is active in past the first of the horizon: PyPSA fills an output it did not build with zero (`constraints.py:679`). It is the output carried over otherwise |
+| $`\overleftarrow{z}^{\circ}`$ | `Process_p_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the output a process carries over into a snapshot. At the first, it is the `p_init` it brought in where it came in running, and nothing where it came in off. After that, it is the previous snapshot's |
 | $`\widetilde{\mathrm{ru}}^{z}`$ | `Process_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the ramp limit in a process's up row, PyPSA's `ramp_limit_up`. It is the full build where PyPSA has none, since a start-up ramp alone builds the row |
 | $`\widetilde{\mathrm{rd}}^{z}`$ | `Process_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the ramp limit in a process's down row, PyPSA's `ramp_limit_down`. It is the full build where PyPSA has none, since a shut-down ramp alone builds the row |
 | $`\widetilde{\mathrm{ru}}^{z,\mathrm{up}}`$ | `Process_start_up_rate` over $`\Xi \times \mathcal{J}`$ — the start-up ramp in a process's up row (PyPSA's `ramp_limit_start_up`), or the full build where it has none |
 | $`\widetilde{\mathrm{rd}}^{z,\mathrm{dn}}`$ | `Process_shut_down_rate` over $`\Xi \times \mathcal{J}`$ — the shut-down ramp in a process's down row (PyPSA's `ramp_limit_shut_down`), or the full build where it has none |
+| $`\overleftarrow{\bar u}^{z}`$ | `Process_ramp_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — the status a committed process's ramp rows carry into a snapshot. At the first snapshot, a fixed modular process that came in running has every module on, since the state it brought in is on or off (`constraints.py:1092-1097`). It is the state carried in otherwise |
 | $`\Delta^{z,+}`$ | `Process_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — how far a process may raise internal power between two snapshots. It is its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
 | $`\Delta^{z,-}`$ | `Process_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{J}`$ — how far a process may lower internal power between two snapshots. It is its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 
@@ -337,7 +347,13 @@ assumptions:
 **`Process_previous_p`**
 
 ```math
-\overleftarrow{z}_{\xi,t,j} = \begin{cases} \mathrm{u}^{z,0}_{\xi,j} \cdot \mathrm{z}^{0}_{\xi,j} & \text{if } \mathrm{pos}(t) = 0 \\ z_{\xi,t - 1,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+\overleftarrow{z}_{\xi,t,j} = \begin{cases} 0 & \text{if } \mathrm{pos}(t) > 0 \wedge \neg \mathrm{on}^{z}_{t - 1,j} \\ \overleftarrow{z}^{\circ}_{\xi,t,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
+**`Process_p_carried_over`**
+
+```math
+\overleftarrow{z}^{\circ}_{\xi,t,j} = \begin{cases} \mathrm{u}^{z,0}_{\xi,j} \cdot \mathrm{z}^{0}_{\xi,j} & \text{if } \mathrm{pos}(t) = 0 \\ z_{\xi,t - 1,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
 ```
 
 **`Process_ramp_up_rate`**
@@ -364,16 +380,22 @@ assumptions:
 \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} = \begin{cases} \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} & \text{if } \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ j \in \mathcal{J}
 ```
 
+**`Process_ramp_previous_status`**
+
+```math
+\overleftarrow{\bar u}^{z}_{\xi,t,j} = \begin{cases} \mathrm{u}^{z,0}_{\xi,j} \cdot \mathrm{N}^{z,\mathrm{fix}}_{\xi,j} & \text{if } \mathrm{pos}(t) = 0 \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \\ \overleftarrow{u}^{z}_{\xi,t,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+```
+
 **`Process_ramp_up_allowance`**
 
 ```math
-\Delta^{z,+}_{\xi,t,j} = \begin{cases} \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \overleftarrow{u}^{z}_{\xi,t,j} + \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \overleftarrow{u}^{z}_{\xi,t,j} \right) & \text{if } \mathrm{com}^{z}_{j} \\ \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot \widetilde{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+\Delta^{z,+}_{\xi,t,j} = \begin{cases} \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \overleftarrow{\bar u}^{z}_{\xi,t,j} + \widetilde{\mathrm{ru}}^{z,\mathrm{up}}_{\xi,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \left( u^{z}_{\xi,t,j} - \overleftarrow{\bar u}^{z}_{\xi,t,j} \right) & \text{if } \mathrm{com}^{z}_{j} \\ \widetilde{\mathrm{ru}}^{z}_{\xi,t,j} \cdot \widetilde{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
 ```
 
 **`Process_ramp_down_allowance`**
 
 ```math
-\Delta^{z,-}_{\xi,t,j} = \begin{cases} \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot u^{z}_{\xi,t,j} + \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \left( \overleftarrow{u}^{z}_{\xi,t,j} - u^{z}_{\xi,t,j} \right) & \text{if } \mathrm{com}^{z}_{j} \\ \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot \widetilde{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
+\Delta^{z,-}_{\xi,t,j} = \begin{cases} \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot u^{z}_{\xi,t,j} + \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{\xi,j} \cdot \widehat{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} \cdot \left( \overleftarrow{\bar u}^{z}_{\xi,t,j} - u^{z}_{\xi,t,j} \right) & \text{if } \mathrm{com}^{z}_{j} \\ \widetilde{\mathrm{rd}}^{z}_{\xi,t,j} \cdot \widetilde{\mathrm{z}}^{\mathrm{nom}}_{\xi,j} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J}
 ```
 
 #### Subject to
@@ -413,17 +435,9 @@ z_{\xi,t,j} - \overleftarrow{z}_{\xi,t,j} \le \Delta^{z,+}_{\xi,t,j} \qquad \for
 ```math
 \overleftarrow{z}_{\xi,t,j} - z_{\xi,t,j} \le \Delta^{z,-}_{\xi,t,j} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \left( \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right) \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right) \wedge \mathrm{prev}^{z}_{j,\xi,t} \wedge \mathrm{on}^{z}_{t,j}
 ```
-
-#### Assumptions
-
-**`Process_came_in_running_unless_committable`**
-
-```math
-\mathrm{u}^{z,0}_{\xi,j} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ j \in \mathcal{J} \,:\, \neg \mathrm{com}^{z}_{j} \wedge \left( \mathrm{ru}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{rd}^{z}_{\xi,t,j} \text{ is defined} \vee \mathrm{ru}^{z,\mathrm{up}}_{\xi,j} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{\xi,j} \text{ is defined} \right)
-```
 <!-- gallery:end -->
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

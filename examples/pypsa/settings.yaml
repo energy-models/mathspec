@@ -39,7 +39,7 @@ given:
         what a future costs to run: every operating term, weighted by the
         snapshot's hours and its period, before the scenario's own weight. A
         start and a stop cost what they cost, unweighted, as PyPSA adds them
-        (`optimize.py:415-432`)
+        (`optimize.py:443-463`)
     total_cost:
       dims: []
       description: >-
@@ -92,12 +92,12 @@ parameters:
       PyPSA's `investment_period_weightings.objective` — what a period's cost
       weighs. PyPSA reads it only under `multi_investment_periods`. Otherwise
       you feed one in data prep, whatever the column contains
-      (`optimize.py:205-207`, `:264-266`)
+      (`optimize.py:231-233`, `:290-294`)
     dims: [period]
   period_weight_years:
     description: >-
       PyPSA's `investment_period_weightings.years` — what a period's energy
-      weighs in a `primary_energy` or `operational_limit` row. PyPSA reads it
+      weighs in a `primary_energy`, `operational_limit` or `e_sum` row. PyPSA reads it
       only under `multi_investment_periods`. Otherwise you feed one in data
       prep
     dims: [period]
@@ -115,7 +115,7 @@ parameters:
       the same. False with no segments is a lossless run. A
       security-constrained run over a network with passive branches builds no
       loss. PyPSA hands the keyword not to `create_model`
-      (`abstract.py:528-532`) but to the solver (`:548`), so you feed false
+      (`abstract.py:639-643`) but to the solver (`:548`), so you feed false
       there in data prep
     dims: []
     dtype: bool
@@ -125,14 +125,21 @@ parameters:
       `investment_period`), data prep. It is every snapshot where the row
       states no period, and only that period's where it states one. A row that
       states a period the run does not model has no label here, as PyPSA skips
-      it (`global_constraints.py:372`). PyPSA reads the column only under
+      it (`global_constraints.py:369`). PyPSA reads the column only under
       `multi_investment_periods`. It fails on a row that states a period
-      without it (`global_constraints.py:364-369`)
+      without it (`global_constraints.py:361-366`)
     dims: [scenario, global_constraint, snapshot]
     dtype: bool
     missing: false
 
 expressions:
+  energy_limit_weight:
+    description: >-
+      what one unit of power at a snapshot counts for in an `e_sum` row: the
+      generator weighting times the years of the snapshot's period, as in an
+      `operational_limit` row (`constraints.py:2787-2789`)
+    dims: [snapshot]
+    expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
   GlobalConstraint_energy_weight:
     description: >-
       what one unit of power at a snapshot counts for in a row. Where the row

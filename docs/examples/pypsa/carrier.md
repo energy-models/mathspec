@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Carriers
 
-This file states the growth limits of each carrier. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. Its limits contain the sum `Carrier_additions`, which it lists under [`given`](../../reference/language/parameters-variables-constraints.md#given). `Carrier_growth_limit` compares the additions of each period with those of the period before through [`shift`](../../reference/language/operators.md#shift). Its `edge=0` leaves the first period its bare allowance.
+This file states the growth limits of each carrier. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. Its limits contain the sum `Carrier_additions`, which it lists under [`given`](../../reference/language/parameters-variables-constraints.md#given). `Carrier_growth_limit` compares the additions of each period with those of the period before through [`shift`](../../reference/language/operators.md#shift). Its `edge=0` leaves the first period its bare allowance.
 
 <!-- gallery:begin -->
 ```yaml
@@ -115,5 +115,5 @@ constraints:
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

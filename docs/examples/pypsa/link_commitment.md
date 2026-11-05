@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Link commitment
 
-This file states the commitment rows of PyPSA's `Link`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Link_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Link_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
+This file states the commitment rows of PyPSA's `Link`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Link_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Link_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
 
 <!-- gallery:begin -->
 ```yaml
@@ -29,6 +29,7 @@ given:
     Link_maintenance_status: { dims: [scenario, snapshot, link] }
     Link_p_nom_ext: { dims: [link] }
   expressions:
+    Link_modules: { dims: [scenario, link] }
     scenario_opex: { dims: [scenario] }
   conditions:
     Link_committed: { dims: [link, snapshot] }
@@ -67,22 +68,29 @@ parameters:
     dims: [scenario, link]
     dtype: int
   Link_status_initial:
-    description: one where the link was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0`, data prep
+    description: >-
+      one where the link was on before the first snapshot, zero where off.
+      It is PyPSA's `up_time_before > 0` for a committable link, and one for
+      a link that is not, whose ramp rows PyPSA starts from on
+      (`constraints.py:300`), data prep
     dims: [scenario, link]
     dtype: int
-  Link_must_stay_up:
+  Link_up_time_brought_in:
     description: >-
-      true while the up time a link brought into the horizon is still running. It
-      is data prep
+      one while the up time a link brought into the horizon is still
+      running, zero after. It is PyPSA's start `up_time_before` snapshots
+      before the first, counted while `min_up_time` has not passed since
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, link]
-    dtype: bool
-  Link_must_stay_down:
+    dtype: int
+  Link_down_time_brought_in:
     description: >-
-      true while the down time a link brought into the horizon is still running. It
-      is PyPSA's `min_down_time - down_time_before` snapshots, where
-      `down_time_before > 0`, data prep
+      one while the down time a link brought into the horizon is still
+      running, zero after. It is PyPSA's stop `down_time_before` snapshots
+      before the first, counted while `min_down_time` has not passed since
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, link]
-    dtype: bool
+    dtype: int
   Link_start_up_cost:
     description: cost of one start in this snapshot
     dims: [scenario, snapshot, link]
@@ -98,7 +106,7 @@ parameters:
       prep. It is the build cap `p_nom_max` times the highest `p_max_pu`,
       where the cap is finite and positive. Elsewhere it is
       `committable_big_m` times the highest `p_max_pu`
-      (`components.py:1050-1121`). Without that keyword, it is ten times the
+      (`components.py:1052-1123`). Without that keyword, it is ten times the
       largest of the peak total load and the component's largest finite
       `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below
       the flow a solve wants, it caps that flow
@@ -136,7 +144,7 @@ expressions:
     description: >-
       the commitment state a link carries into a snapshot. It is off at the
       first snapshot it is active in past the first of the horizon. PyPSA reads a
-      status it did not build as off there (`constraints.py:298`). It is the
+      status it did not build as off there (`constraints.py:368`). It is the
       state carried over otherwise
     dims: [scenario, snapshot, link]
     cases:
@@ -153,8 +161,8 @@ expressions:
   Link_commitment_opex:
     expression: >-
       sum(sum(((Link_status * Link_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
-      + sum(sum(Link_start_up * Link_start_up_cost, over=link), over=snapshot)
-      + sum(sum(Link_shut_down * Link_shut_down_cost, over=link), over=snapshot)
+      + sum(sum((Link_start_up * Link_start_up_cost) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
+      + sum(sum((Link_shut_down * Link_shut_down_cost) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
     adds_to: scenario_opex
 
 conditions:
@@ -193,31 +201,24 @@ constraints:
   Link_com_up_time:
     description: >-
       `Link-com-up-time` — a link started within its own minimum up time is
-      still on. The first snapshot's share of the window is the brought-in up
-      time's, which the must-stay-up condition states
+      still on. The up time it brought into the horizon counts as a start
+      before the first snapshot
     dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_min_up_time > 0 AND position(snapshot) > 0
-    expression: sum_back(Link_start_up, along=snapshot, window=Link_min_up_time) <= Link_status
+    where: Link_committed AND Link_min_up_time > 0
+    expression: >-
+      sum_back(Link_start_up, along=snapshot, window=Link_min_up_time)
+      + Link_up_time_brought_in <= Link_status
   Link_com_down_time:
     description: >-
       `Link-com-down-time` — a link stopped within its own minimum down time
-      is still off. The first snapshot's share of the window is the brought-in
-      down time's, which the must-stay-down condition states
+      is still off, and so are the modules of a modular link that stopped.
+      The down time it brought into the horizon counts as one stop before the
+      first snapshot, also where the link is modular (`constraints.py:619-646`)
     dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_min_down_time > 0 AND position(snapshot) > 0
-    expression: sum_back(Link_shut_down, along=snapshot, window=Link_min_down_time) <= 1 - Link_status
-  Link_com_status_must_stay_up:
-    description: "`Link-com-status-min_up_time_must_stay_up` — a link still serving the up time it brought in stays on"
-    dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_must_stay_up
-    expression: Link_status == 1
-  Link_com_status_must_stay_down:
-    description: >-
-      `Link-com-status-min_down_time_must_stay_up` — a link still serving the
-      down time it brought in stays off. PyPSA names the row `_must_stay_up`
-    dims: [scenario, snapshot, link]
-    where: Link_committed AND Link_must_stay_down
-    expression: Link_status == 0
+    where: Link_committed AND Link_min_down_time > 0
+    expression: >-
+      sum_back(Link_shut_down, along=snapshot, window=Link_min_down_time)
+      + Link_down_time_brought_in <= Link_modules - Link_status
   Link_com_ext_p_upper_cap:
     description: >-
       `Link-com-ext-p-upper-cap` — a committed extendable link flows
@@ -332,6 +333,7 @@ assumptions:
 | $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
 | $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
 | $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ |
+| $`\mathrm{M}^{f}`$ | `Link_modules` over $`\Xi \times \mathcal{L}`$, an expression another file defines |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Link_commitment_opex` to |
 | $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{L} \times \mathcal{T}`$, a condition another file defines |
 
@@ -351,13 +353,13 @@ assumptions:
 | $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$ — whether flow is gated by an on/off status decision |
 | $`\mathrm{UT}^{f}`$ | `Link_min_up_time` over $`\Xi \times \mathcal{L}`$ — least snapshots a link stays on once started |
 | $`\mathrm{DT}^{f}`$ | `Link_min_down_time` over $`\Xi \times \mathcal{L}`$ — least snapshots a link stays off once stopped |
-| $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\Xi \times \mathcal{L}`$ — one where the link was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0`, data prep |
-| $`\mathrm{hold}^{f}`$ | `Link_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true while the up time a link brought into the horizon is still running. It is data prep |
-| $`\mathrm{rest}^{f}`$ | `Link_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — true while the down time a link brought into the horizon is still running. It is PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep |
+| $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\Xi \times \mathcal{L}`$ — one where the link was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable link, and one for a link that is not, whose ramp rows PyPSA starts from on (`constraints.py:300`), data prep |
+| $`\mathrm{hold}^{f}`$ | `Link_up_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — one while the up time a link brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:279-300`, `:640-641`), data prep |
+| $`\mathrm{rest}^{f}`$ | `Link_down_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — one while the down time a link brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:279-300`, `:640-641`), data prep |
 | $`\mathrm{c}^{f,\mathrm{up}}`$ | `Link_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{f,\mathrm{dn}}`$ | `Link_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{f,\mathrm{on}}`$ | `Link_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\Xi \times \mathcal{L}`$, `absent` where the data has no row — the bound a committed extendable link's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1050-1121`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the flow a solve wants, it caps that flow |
+| $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\Xi \times \mathcal{L}`$, `absent` where the data has no row — the bound a committed extendable link's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1052-1123`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the flow a solve wants, it caps that flow |
 
 #### Conditions
 
@@ -377,7 +379,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the commitment state a link carries into a snapshot. It is off at the first snapshot it is active in past the first of the horizon. PyPSA reads a status it did not build as off there (`constraints.py:298`). It is the state carried over otherwise |
+| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the commitment state a link carries into a snapshot. It is off at the first snapshot it is active in past the first of the horizon. PyPSA reads a status it did not build as off there (`constraints.py:368`). It is the state carried over otherwise |
 | $`\overleftarrow{u}^{\circ f}`$ | `Link_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the state a link carries over into a snapshot: the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Link\_commitment\_opex}`$ | `Link_commitment_opex` over $`\Xi`$ |
 
@@ -432,7 +434,7 @@ u^{f}_{\xi,t,l} \ge 0, u^{f}_{\xi,t,l} \in \mathbb{Z} \qquad \forall\, \xi \in \
 **`Link_commitment_opex`**
 
 ```math
-\mathit{Link\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} u^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{on}}_{\xi,t,l} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{up}^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{up}}_{\xi,t,l} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{dn}^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{dn}}_{\xi,t,l} \qquad \forall\, \xi \in \Xi
+\mathit{Link\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} u^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{on}}_{\xi,t,l} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{up}^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{up}}_{\xi,t,l} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{dn}^{f}_{\xi,t,l} \cdot \mathrm{c}^{f,\mathrm{dn}}_{\xi,t,l} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 #### Subject to
@@ -464,25 +466,13 @@ f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_
 **`Link_com_up_time`**
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}^{f}} \mathit{up}^{f}_{\xi,t',l} \le u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{UT}^{f}_{\xi,l} > 0 \wedge \mathrm{pos}(t) > 0
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}^{f}} \mathit{up}^{f}_{\xi,t',l} + \mathrm{hold}^{f}_{\xi,t,l} \le u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{UT}^{f}_{\xi,l} > 0
 ```
 
 **`Link_com_down_time`**
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}^{f}} \mathit{dn}^{f}_{\xi,t',l} \le 1 - u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{DT}^{f}_{\xi,l} > 0 \wedge \mathrm{pos}(t) > 0
-```
-
-**`Link_com_status_must_stay_up`**
-
-```math
-u^{f}_{\xi,t,l} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{hold}^{f}_{\xi,t,l}
-```
-
-**`Link_com_status_must_stay_down`**
-
-```math
-u^{f}_{\xi,t,l} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{rest}^{f}_{\xi,t,l}
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}^{f}} \mathit{dn}^{f}_{\xi,t',l} + \mathrm{rest}^{f}_{\xi,t,l} \le \mathrm{M}^{f}_{\xi,l} - u^{f}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{DT}^{f}_{\xi,l} > 0
 ```
 
 **`Link_com_ext_p_upper_cap`**
@@ -568,5 +558,5 @@ u^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

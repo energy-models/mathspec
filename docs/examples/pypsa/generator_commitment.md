@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generator commitment
 
-This file states the commitment rows of PyPSA's `Generator`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Generator_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Generator_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
+This file states the commitment rows of PyPSA's `Generator`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Generator_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Generator_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
 
 <!-- gallery:begin -->
 ```yaml
@@ -29,6 +29,7 @@ given:
     Generator_maintenance_status: { dims: [scenario, snapshot, generator] }
     Generator_p_nom_ext: { dims: [generator] }
   expressions:
+    Generator_modules: { dims: [scenario, generator] }
     scenario_opex: { dims: [scenario] }
   conditions:
     Generator_committed: { dims: [generator, snapshot] }
@@ -67,22 +68,29 @@ parameters:
     dims: [scenario, generator]
     dtype: int
   Generator_status_initial:
-    description: one where the unit was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0`, data prep
+    description: >-
+      one where the unit was on before the first snapshot, zero where off.
+      It is PyPSA's `up_time_before > 0` for a committable unit, and one for
+      a unit that is not, whose ramp rows PyPSA starts from on
+      (`constraints.py:300`), data prep
     dims: [scenario, generator]
     dtype: int
-  Generator_must_stay_up:
+  Generator_up_time_brought_in:
     description: >-
-      true while the up time a unit brought into the horizon is still running. It
-      is data prep
+      one while the up time a unit brought into the horizon is still
+      running, zero after. It is PyPSA's start `up_time_before` snapshots
+      before the first, counted while `min_up_time` has not passed since
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, generator]
-    dtype: bool
-  Generator_must_stay_down:
+    dtype: int
+  Generator_down_time_brought_in:
     description: >-
-      true while the down time a unit brought into the horizon is still running. It
-      is PyPSA's `min_down_time - down_time_before` snapshots, where
-      `down_time_before > 0`, data prep
+      one while the down time a unit brought into the horizon is still
+      running, zero after. It is PyPSA's stop `down_time_before` snapshots
+      before the first, counted while `min_down_time` has not passed since
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, generator]
-    dtype: bool
+    dtype: int
   Generator_start_up_cost:
     description: cost of one start in this snapshot
     dims: [scenario, snapshot, generator]
@@ -98,7 +106,7 @@ parameters:
       data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`,
       where the cap is finite and positive. Elsewhere it is
       `committable_big_m` times the highest `p_max_pu`
-      (`components.py:1050-1121`). Without that keyword, it is ten times the
+      (`components.py:1052-1123`). Without that keyword, it is ten times the
       largest of the peak total load and the component's largest finite
       `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below
       the output a solve wants, it caps that output
@@ -136,7 +144,7 @@ expressions:
     description: >-
       the commitment state a generator carries into a snapshot. It is off at
       the first snapshot it is active in past the first of the horizon. PyPSA
-      reads a status it did not build as off there (`constraints.py:298`). It
+      reads a status it did not build as off there (`constraints.py:368`). It
       is the state carried over otherwise
     dims: [scenario, snapshot, generator]
     cases:
@@ -153,8 +161,8 @@ expressions:
   Generator_commitment_opex:
     expression: >-
       sum(sum(((Generator_status * Generator_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
-      + sum(sum(Generator_start_up * Generator_start_up_cost, over=generator), over=snapshot)
-      + sum(sum(Generator_shut_down * Generator_shut_down_cost, over=generator), over=snapshot)
+      + sum(sum((Generator_start_up * Generator_start_up_cost) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
+      + sum(sum((Generator_shut_down * Generator_shut_down_cost) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
     adds_to: scenario_opex
 
 conditions:
@@ -192,33 +200,25 @@ constraints:
     expression: Generator_shut_down >= Generator_previous_status - Generator_status
   Generator_com_up_time:
     description: >-
-      `Generator-com-up-time` — a unit started within its own minimum up time
-      is still on. The first snapshot's share of the window is the brought-in
-      up time's, which the must-stay-up condition states
+      `Generator-com-up-time` — a unit started within its own minimum up time is
+      still on. The up time it brought into the horizon counts as a start
+      before the first snapshot
     dims: [scenario, snapshot, generator]
-    where: Generator_committed AND Generator_min_up_time > 0 AND position(snapshot) > 0
-    expression: sum_back(Generator_start_up, along=snapshot, window=Generator_min_up_time) <= Generator_status
+    where: Generator_committed AND Generator_min_up_time > 0
+    expression: >-
+      sum_back(Generator_start_up, along=snapshot, window=Generator_min_up_time)
+      + Generator_up_time_brought_in <= Generator_status
   Generator_com_down_time:
     description: >-
-      `Generator-com-down-time` — a unit stopped within its own minimum down
-      time is still off. The first snapshot's share of the window is the
-      brought-in down time's, which the must-stay-down condition states
+      `Generator-com-down-time` — a unit stopped within its own minimum down time
+      is still off, and so are the modules of a modular unit that stopped.
+      The down time it brought into the horizon counts as one stop before the
+      first snapshot, also where the unit is modular (`constraints.py:619-646`)
     dims: [scenario, snapshot, generator]
-    where: Generator_committed AND Generator_min_down_time > 0 AND position(snapshot) > 0
-    expression: sum_back(Generator_shut_down, along=snapshot, window=Generator_min_down_time) <= 1 - Generator_status
-  Generator_com_status_must_stay_up:
-    description: "`Generator-com-status-min_up_time_must_stay_up` — a unit still serving the up time it brought in stays on"
-    dims: [scenario, snapshot, generator]
-    where: Generator_committed AND Generator_must_stay_up
-    expression: Generator_status == 1
-  Generator_com_status_must_stay_down:
-    description: >-
-      `Generator-com-status-min_down_time_must_stay_up` — a unit still serving
-      the down time it brought in stays off. PyPSA names the row
-      `_must_stay_up`
-    dims: [scenario, snapshot, generator]
-    where: Generator_committed AND Generator_must_stay_down
-    expression: Generator_status == 0
+    where: Generator_committed AND Generator_min_down_time > 0
+    expression: >-
+      sum_back(Generator_shut_down, along=snapshot, window=Generator_min_down_time)
+      + Generator_down_time_brought_in <= Generator_modules - Generator_status
   Generator_com_ext_p_upper_cap:
     description: >-
       `Generator-com-ext-p-upper-cap` — a committed extendable unit outputs
@@ -336,6 +336,7 @@ assumptions:
 | $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`\mu^{u}`$ | `Generator_maintenance_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ |
+| $`\mathrm{M}`$ | `Generator_modules` over $`\Xi \times \mathcal{G}`$, an expression another file defines |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Generator_commitment_opex` to |
 | $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{G} \times \mathcal{T}`$, a condition another file defines |
 
@@ -355,13 +356,13 @@ assumptions:
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$ — whether output is gated by an on/off status decision |
 | $`\mathrm{UT}`$ | `Generator_min_up_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays on once started |
 | $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays off once stopped |
-| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$ — one where the unit was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0`, data prep |
-| $`\mathrm{hold}`$ | `Generator_must_stay_up` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true while the up time a unit brought into the horizon is still running. It is data prep |
-| $`\mathrm{rest}`$ | `Generator_must_stay_down` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — true while the down time a unit brought into the horizon is still running. It is PyPSA's `min_down_time - down_time_before` snapshots, where `down_time_before > 0`, data prep |
+| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$ — one where the unit was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable unit, and one for a unit that is not, whose ramp rows PyPSA starts from on (`constraints.py:300`), data prep |
+| $`\mathrm{hold}`$ | `Generator_up_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — one while the up time a unit brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:279-300`, `:640-641`), data prep |
+| $`\mathrm{rest}`$ | `Generator_down_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — one while the down time a unit brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:279-300`, `:640-641`), data prep |
 | $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
-| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, `absent` where the data has no row — the bound a committed extendable generator's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1050-1121`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the output a solve wants, it caps that output |
+| $`\mathrm{M}`$ | `Generator_big_m` over $`\Xi \times \mathcal{G}`$, `absent` where the data has no row — the bound a committed extendable generator's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1052-1123`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the output a solve wants, it caps that output |
 
 #### Conditions
 
@@ -381,7 +382,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot. It is off at the first snapshot it is active in past the first of the horizon. PyPSA reads a status it did not build as off there (`constraints.py:298`). It is the state carried over otherwise |
+| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot. It is off at the first snapshot it is active in past the first of the horizon. PyPSA reads a status it did not build as off there (`constraints.py:368`). It is the state carried over otherwise |
 | $`\overleftarrow{u}^{\circ}`$ | `Generator_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the state a generator carries over into a snapshot: the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Generator\_commitment\_opex}`$ | `Generator_commitment_opex` over $`\Xi`$ |
 
@@ -436,7 +437,7 @@ u_{\xi,t,g} \ge 0, u_{\xi,t,g} \in \mathbb{Z} \qquad \forall\, \xi \in \Xi,\ t \
 **`Generator_commitment_opex`**
 
 ```math
-\mathit{Generator\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} u_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{on}}_{\xi,t,g} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{up}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{up}}_{\xi,t,g} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{dn}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{dn}}_{\xi,t,g} \qquad \forall\, \xi \in \Xi
+\mathit{Generator\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} u_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{on}}_{\xi,t,g} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{up}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{up}}_{\xi,t,g} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{dn}_{\xi,t,g} \cdot \mathrm{c}^{\mathrm{dn}}_{\xi,t,g} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 #### Subject to
@@ -468,25 +469,13 @@ p_{\xi,t,g} \le \overline{\mathrm{p}}_{\xi,t,g} \cdot \mathrm{p}^{\mathrm{nom}}_
 **`Generator_com_up_time`**
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}} \mathit{up}_{\xi,t',g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{UT}_{\xi,g} > 0 \wedge \mathrm{pos}(t) > 0
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{UT}} \mathit{up}_{\xi,t',g} + \mathrm{hold}_{\xi,t,g} \le u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{UT}_{\xi,g} > 0
 ```
 
 **`Generator_com_down_time`**
 
 ```math
-\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}} \mathit{dn}_{\xi,t',g} \le 1 - u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{DT}_{\xi,g} > 0 \wedge \mathrm{pos}(t) > 0
-```
-
-**`Generator_com_status_must_stay_up`**
-
-```math
-u_{\xi,t,g} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{hold}_{\xi,t,g}
-```
-
-**`Generator_com_status_must_stay_down`**
-
-```math
-u_{\xi,t,g} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{rest}_{\xi,t,g}
+\sum_{t' \in \mathcal{T} \,:\, 0 \le t - t' < \mathrm{DT}} \mathit{dn}_{\xi,t',g} + \mathrm{rest}_{\xi,t,g} \le \mathrm{M}_{\xi,g} - u_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{DT}_{\xi,g} > 0
 ```
 
 **`Generator_com_ext_p_upper_cap`**
@@ -572,5 +561,5 @@ u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung
