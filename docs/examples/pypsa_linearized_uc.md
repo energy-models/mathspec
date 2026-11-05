@@ -134,7 +134,7 @@ network contains them under the keyword:
 The rung adds five cheap units under a load that swings. A start costs more
 than a stop, so PyPSA builds no tightening rows for them, and each row is
 tight at the optimum. PyPSA solves the rung and its variants to these objectives
-(#PRNUM):
+(#977):
 
 | network | objective |
 | --- | --- |
@@ -248,7 +248,7 @@ shut-down ramps. One committable unit has a ramp limit that lifts at the third s
 a dear committable unit came in running at `p_init=40`. A fixed unit with ramp limits, a unit of sign `-1`, a load of sign
 `1` and a dear backup complete the bus. The row of each unit is tight at
 the optimum, and PyPSA solves the rung and its variants to these objectives
-(#PRNUM):
+(#977):
 
 | network | objective |
 | --- | --- |
@@ -470,7 +470,7 @@ The rung's unit has equal start and stop costs, so PyPSA tightens it. It opens
 in 2030 and its start-up ramp of `30` is tight at the period's first snapshot.
 PyPSA solves to `24825.2778`. With the unit built in 2020, PyPSA solves to
 `3462.5`. With a start that costs more than a stop, PyPSA does not tighten
-the unit, and it solves to `23226.3333` (#PRNUM).
+the unit, and it solves to `23226.3333` (#977).
 
 | PyPSA | status | note |
 | --- | --- | --- |

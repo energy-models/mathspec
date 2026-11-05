@@ -5547,7 +5547,7 @@ committable, so `Generator_previous_p` opens on its `p_init`.
 The cheap unit ramps from `10` by `10` a snapshot, and its ramp row is tight at
 the optimum. PyPSA solves to `4836.1111`. With `up_time_before = 1`, or without
 the committable unit, it solves to the same objective. Without the `p_init`,
-it solves to `4500.0` (#PRNUM).
+it solves to `4500.0` (#977).
 
 | PyPSA                                                                                                           | status | note                                                         |
 | --------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------ |
@@ -5610,7 +5610,7 @@ Both units come in off, and the load dips below what one module can run at its
 minimum part load. Modules that stop at the dip stay off for two snapshots.
 PyPSA solves to `17190.0`. Without the minimum down times, it solves to
 `9390.0`. At `51986084`, before PyPSA/PyPSA#2051, it solved to `43495.0`
-(#PRNUM).
+(#977).
 
 | PyPSA                                                                 | status | note                                       |
 | --------------------------------------------------------------------- | ------ | ------------------------------------------ |
@@ -5686,7 +5686,7 @@ The unit has three modules of `20` and ramps by `10` per module that is on.
 Its first-snapshot ramp from `15` to `45` and the ramps that follow are tight
 at the optimum. PyPSA solves to `12300.0`. Without the `p_init`, it solves to
 `11320.0`, and without the ramp limits, to `8135.0`. At `51986084`, before
-PyPSA/PyPSA#2055, it solved to `8135.0` (#PRNUM).
+PyPSA/PyPSA#2055, it solved to `8135.0` (#977).
 
 | PyPSA                                                                                        | status | note                                                                                 |
 | -------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------ |
@@ -5757,7 +5757,7 @@ each counted period. On a network with scenarios, PyPSA still raises: see
 The cap of `600` binds, and the row counts `10` years of each storage's
 opening level against it. PyPSA solves to `12900.0`. Without the cap, it solves
 to `9000.0`, and with the cap over the horizon, to `16500.0`. With the storage
-on a carrier that emits nothing, it solves to `11400.0` (#PRNUM).
+on a carrier that emits nothing, it solves to `11400.0` (#977).
 
 | PyPSA                                                                                                   | status | note                                                                         |
 | ------------------------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------- |
@@ -5862,7 +5862,7 @@ The rung adds to the south bus a rated battery with an efficiency each way and
 a discharge cost, a reservoir with inflow that spills at its rating, and an
 extendable lossy store with a charging cost. An unrated extendable store sits
 on the north bus. PyPSA solves to `11362.9444`. The variants solve to these
-objectives (#PRNUM):
+objectives (#977):
 
 | network | objective |
 | --- | --- |
@@ -5970,7 +5970,7 @@ tight at the optimum. The three other limits are not. PyPSA solves to
 With the years at `1`, it solves to `16428.125`. Without the generator's
 cap, it solves to `7900.625`. Without the link's floor, it solves to
 `11508.75`, without the process's cap to `8677.5`, and without the store's
-cap to `6225.0` (#PRNUM).
+cap to `6225.0` (#977).
 
 | PyPSA                                                                                                                              | status | note                                       |
 | ---------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------ |
@@ -6053,7 +6053,7 @@ the store is extendable and the given one otherwise.
 
 Both rows are tight at the optimum. PyPSA solves to `15004.0`, and the
 extendable store builds `114`. Without the fixed store's limit, PyPSA solves
-to `14974.0`, and without the extendable store's limit, to `14947.0` (#PRNUM).
+to `14974.0`, and without the extendable store's limit, to `14947.0` (#977).
 
 | PyPSA                                         | status | note                                     |
 | --------------------------------------------- | ------ | ---------------------------------------- |
@@ -6122,7 +6122,7 @@ tight in every snapshot, and the centre-south one where it has a `ram`.
 PyPSA solves to `17005.3191`. With the corridor link's factor at `0`, it
 solves to `22596.8085`. With the centre-south `ram` at `30` in every
 snapshot, it solves to `16872.3404`. Without the domain, the zones cannot
-trade and PyPSA solves to `45000.0` (#PRNUM).
+trade and PyPSA solves to `45000.0` (#977).
 
 | PyPSA                                                                                           | status  | note                                                                         |
 | ----------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------- |
